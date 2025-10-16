@@ -17,7 +17,6 @@ Game::Game()
 
 void Game::UpdateGame()
 {
-	int gitTest;
 }
 
 void Game::DrawGame()
