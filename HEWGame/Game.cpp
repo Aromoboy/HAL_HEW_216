@@ -5,6 +5,8 @@
 
 // GitHub‚Ì—ûK—p
 
+int i; 
+
 Game::Game()
 {
 	HRESULT hr = LoadTextureFromFile(GetDevice(), "rom/HelloWorld.png", &m_pTexture);
