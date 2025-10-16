@@ -3,12 +3,8 @@
 #include "VertexBuffer.h"
 #include "DirectXTex/TextureLoad.h"
 
-/// <summary>
-///‚ ‚¢‚¤‚¦‚¨
-/// </summary>
+//aaaaaaa
 
-
-//test
 Game::Game()
 {
 	HRESULT hr = LoadTextureFromFile(GetDevice(), "rom/HelloWorld.png", &m_pTexture);
