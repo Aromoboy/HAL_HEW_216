@@ -3,7 +3,9 @@
 #include "VertexBuffer.h"
 #include "DirectXTex/TextureLoad.h"
 
-
+/// <summary>
+///‚ ‚¢‚¤‚¦‚¨
+/// </summary>
 
 Game::Game()
 {
