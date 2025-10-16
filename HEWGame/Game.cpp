@@ -7,8 +7,6 @@
 ///‚ ‚¢‚¤‚¦‚¨
 /// </summary>
 
-
-//test
 Game::Game()
 {
 	HRESULT hr = LoadTextureFromFile(GetDevice(), "rom/HelloWorld.png", &m_pTexture);
