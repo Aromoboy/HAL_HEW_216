@@ -8,7 +8,6 @@
 #include "Keyboard.h"
 #include "VertexBuffer.h"
 
-//こんにちは
 // mm マルチメディア
 // lib cppファイルをまとめたようなもの
 #pragma comment(lib, "winmm.lib")
