@@ -12,6 +12,7 @@
 // lib cppƒtƒ@ƒCƒ‹‚ð‚Ü‚Æ‚ß‚½‚æ‚¤‚È‚à‚Ì
 #pragma comment(lib, "winmm.lib")
 
+int i;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
