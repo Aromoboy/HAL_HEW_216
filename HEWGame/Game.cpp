@@ -17,6 +17,7 @@ Game::Game()
 
 void Game::UpdateGame()
 {
+	kafwkjk
 }
 
 void Game::DrawGame()
