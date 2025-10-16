@@ -3,7 +3,8 @@
 #include "VertexBuffer.h"
 #include "DirectXTex/TextureLoad.h"
 
-
+//baka
+int y;
 
 Game::Game()
 {
