@@ -1,10 +1,11 @@
 
 /**
 * @file Game.h
-* @brief テスト画面表示
-* @author 越智晴彦
+	~Game();
+	ID3D11ShaderResourceView* m_pTexture = nullptr;
+* @author 雜頑匱譎ｴ蠖ｦ
 * @date 2025/10/15
-* @details 一応メインゲームとしての形で作ってある
+* @details 荳蠢懊Γ繧､繝ｳ繧ｲ繝ｼ繝縺ｨ縺励※縺ｮ蠖｢縺ｧ菴懊▲縺ｦ縺ゅｋ
 */
 
 #ifndef ___GAME_H___

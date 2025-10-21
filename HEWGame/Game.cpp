@@ -2,13 +2,28 @@
 #include "SpriteDrawer.h"
 #include "VertexBuffer.h"
 #include "DirectXTex/TextureLoad.h"
+#include <Windows.h>
+#include <cstdio>
 
 Game::Game()
 {
 	HRESULT hr = LoadTextureFromFile(GetDevice(), "rom/HelloWorld.png", &m_pTexture);
 	if (FAILED(hr))
 	{
-		MessageBox(NULL, "‰æ‘œƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½B", "Error", MB_OK);
+		char errorMessage[256];
+		sprintf_s(errorMessage, "æ‘œt@CÌ“Ç‚İİ‚ÉsÜ‚B(HRESULT=0x%08lX)", hr);
+		MessageBoxA(NULL, errorMessage, "Error", MB_OK | MB_ICONERROR);
+		OutputDebugStringA(errorMessage);
+		OutputDebugStringA("\n");
+		m_pTexture = nullptr;
+	}
+}
+
+Game::~Game()
+{
+	if (m_pTexture != nullptr)
+	{
+		m_pTexture->Release();
 		m_pTexture = nullptr;
 	}
 }
@@ -19,7 +34,7 @@ void Game::UpdateGame()
 
 void Game::DrawGame()
 {
-	// Å’áŒÀ‚Ì•`‰æˆ—
+	// æœ€ä½é™ã®æç”»å‡¦ç†
 	SetSpriteScale(500.0f, 500.0f);
 	SetSpriteTexture(m_pTexture);
 
