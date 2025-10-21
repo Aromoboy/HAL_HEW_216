@@ -8,8 +8,8 @@
 #include "Keyboard.h"
 #include "VertexBuffer.h"
 
-// mm É}ÉãÉ`ÉÅÉfÉBÉA
-// lib cppÉtÉ@ÉCÉãÇÇ‹Ç∆ÇﬂÇΩÇÊÇ§Ç»Ç‡ÇÃ
+// mm „Éû„É´„ÉÅ„É°„Éá„Ç£„Ç¢
+// lib cpp„Éï„Ç°„Ç§„É´„Çí„Åæ„Å®„ÇÅ„Åü„Çà„ÅÜ„Å™„ÇÇ„ÅÆ
 #pragma comment(lib, "winmm.lib")
 
 
@@ -21,15 +21,15 @@ bool bFlag = false;
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) 
 {
 
-	//èIóπéûÇÃÉÅÉÇÉäÉäÅ[ÉNÉ`ÉFÉbÉN
+	//ÁµÇ‰∫ÜÊôÇ„ÅÆ„É°„É¢„É™„É™„Éº„ÇØ„ÉÅ„Çß„ÉÉ„ÇØ
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 
 	WNDCLASSEX wcex;
-	ZeroMemory(&wcex, sizeof(wcex));//ÉEÉBÉìÉhÉEÇÃèÓïÒÇÇ∑Ç◊ÇƒÉ[ÉçÇ≈ñÑÇﬂÇÈ
-	wcex.hInstance = hInstance;//ÉAÉvÉäÉPÅ[ÉVÉáÉìÇÃéØï î‘çÜ
+	ZeroMemory(&wcex, sizeof(wcex));//„Ç¶„Ç£„É≥„Éâ„Ç¶„ÅÆÊÉÖÂ†±„Çí„Åô„Åπ„Å¶„Çº„É≠„ÅßÂüã„ÇÅ„Çã
+	wcex.hInstance = hInstance;//„Ç¢„Éó„É™„Ç±„Éº„Ç∑„Éß„É≥„ÅÆË≠òÂà•Áï™Âè∑
 	wcex.lpszClassName = "ClassName";
-	wcex.lpfnWndProc = WndProc;//ÉEÉBÉìÉhÉEÉvÉçÉVÅ[ÉWÉÉÇÃê›íË
+	wcex.lpfnWndProc = WndProc;//„Ç¶„Ç£„É≥„Éâ„Ç¶„Éó„É≠„Ç∑„Éº„Ç∏„É£„ÅÆË®≠ÂÆö
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -41,7 +41,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	if (!RegisterClassEx(&wcex))
 	{
-		MessageBox(NULL, "ÉEÉBÉìÉhÉEÉNÉâÉXÇÃìoò^Ç…é∏îs", "ÉGÉâÅ[", MB_OK);
+		MessageBox(NULL, "„Ç¶„Ç£„É≥„Éâ„Ç¶„ÇØ„É©„Çπ„ÅÆÁôªÈå≤„Å´Â§±Êïó", "„Ç®„É©„Éº", MB_OK);
 	}
 
 	HWND hwnd;
@@ -50,18 +50,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	hwnd = CreateWindowEx(
 		WS_EX_OVERLAPPEDWINDOW,
-		wcex.lpszClassName, "ècâ°ñ≥êsÇ…íµÇÀâÒÇÈÉEÉBÉìÉhÉE",
+		wcex.lpszClassName, "Á∏¶Ê®™ÁÑ°Â∞Ω„Å´Ë∑≥„Å≠Âõû„Çã„Ç¶„Ç£„É≥„Éâ„Ç¶",
 		WS_CAPTION | WS_SYSMENU,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		WINX, WINY,
 		HWND_DESKTOP, NULL, hInstance, NULL);
 	if (hwnd == nullptr)
 	{
-		MessageBox(NULL, "ÉEÉBÉìÉhÉEÇÃçÏê¨Ç…é∏îs", "ÉGÉâÅ[", MB_OK);
+		MessageBox(NULL, "„Ç¶„Ç£„É≥„Éâ„Ç¶„ÅÆ‰ΩúÊàê„Å´Â§±Êïó", "„Ç®„É©„Éº", MB_OK);
 	}
 
 
-	if (hwnd == NULL)//çÏê¨Ç≥ÇÍÇ»Ç©Ç¡ÇΩÇÁèIóπÇ∑ÇÈ
+	if (hwnd == NULL)//‰ΩúÊàê„Åï„Çå„Å™„Åã„Å£„Åü„ÇâÁµÇ‰∫Ü„Åô„Çã
 	{
 		return 0;
 	}
@@ -83,12 +83,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	timeBeginPeriod(1);
 
 
-	//ÉÅÉbÉZÅ[ÉWÉLÉÖÅ[Ç…ÉÅÉbÉZÅ[ÉWÇ™Ç†ÇÈÇ©
+	//„É°„ÉÉ„Çª„Éº„Ç∏„Ç≠„É•„Éº„Å´„É°„ÉÉ„Çª„Éº„Ç∏„Åå„ÅÇ„Çã„Åã
 	MSG message;
 
 	if (FAILED(InitDirectX(hwnd, WINX, WINY, false)))
 	{
-		MessageBox(hwnd, "DirectXÇÃèâä˙âªÇ…é∏îs", "ÉGÉâÅ[", MB_OK);
+		MessageBox(hwnd, "DirectX„ÅÆÂàùÊúüÂåñ„Å´Â§±Êïó", "„Ç®„É©„Éº", MB_OK);
 		return 0;
 	}
 
@@ -122,7 +122,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		else 
 		{
-			// FPSÇÃèàóù
+			// FPS„ÅÆÂá¶ÁêÜ
 			nowTime = timeGetTime();
 			
 			if (nowTime - oldTime >= 1000 / 60)
@@ -167,27 +167,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-
-	int id;
-	static HRGN hRgn1, hRgn2, hRgn3, hRgn, hRgnX;
-	WINDOWPLACEMENT wndpl;
-	RECT rc;
-	static int def; //ÉÅÉjÉÖÅ[ÅAÉ^ÉCÉgÉãÉoÅ[ÇÃçÇÇ≥
-	POINT pta[3], ptb[3];
-
-
-
 	switch (message)
 	{
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
-	
 
+	default:
+		break;
 	}
 
 	return DefWindowProc(hwnd, message, wParam, lParam);
-
 }
 
 

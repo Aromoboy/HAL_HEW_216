@@ -1,5 +1,8 @@
 #include "EnemyWaveManager.h"
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
 #include <algorithm>
 #include <cmath>

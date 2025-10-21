@@ -1,5 +1,8 @@
 #include "Player.h"
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
 #include <Xinput.h>
 #include <algorithm>
@@ -213,7 +216,7 @@ void Player::UpdateMouse(float)
 
         m_rotation.x += static_cast<float>(deltaX) * m_mouseSensitivity;
         m_rotation.y -= static_cast<float>(deltaY) * m_mouseSensitivity;
-        m_rotation.y = std::clamp(m_rotation.y, kMinPitch, kMaxPitch);
+        m_rotation.y = std::max(kMinPitch, std::min(m_rotation.y, kMaxPitch));
 }
 
 void Player::UpdateGamepad(float deltaTime)
@@ -260,7 +263,7 @@ void Player::UpdateGamepad(float deltaTime)
 
         m_rotation.x += rightX * m_mouseSensitivity * m_gamepadSensitivity * 60.0f * deltaTime;
         m_rotation.y -= rightY * m_mouseSensitivity * m_gamepadSensitivity * 60.0f * deltaTime;
-        m_rotation.y = std::clamp(m_rotation.y, kMinPitch, kMaxPitch);
+        m_rotation.y = std::max(kMinPitch, std::min(m_rotation.y, kMaxPitch));
 
         bool fire = (state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
                 (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
