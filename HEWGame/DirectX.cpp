@@ -1,12 +1,15 @@
 
+#include <windows.h>
+#include <sstream>
+
 #include"DirectX.h"
 
 
-ID3D11Device* g_pDevice; // DirectX‚ÅƒAƒZƒbƒg‚Ìì¬‚ğs‚¤‹@”\
-ID3D11DeviceContext* g_pContext;  // DirectX‚Å•`‰æ–½—ß‚ğ”­s‚·‚é‹@”\
-IDXGISwapChain* g_pSwapChain;// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚ÆƒfƒBƒXƒvƒŒƒC‚Ì‹´“n‚µ
-ID3D11RenderTargetView* g_pRTV;		 // ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚»‚Ì‚à‚Ì
-ID3D11BlendState* g_pBlendState;	//ƒuƒŒƒ“ƒh‚ÌƒXƒe[ƒg
+ID3D11Device* g_pDevice; // DirectXã§ã‚¢ã‚»ãƒƒãƒˆã®ä½œæˆã‚’è¡Œã†æ©Ÿèƒ½
+ID3D11DeviceContext* g_pContext;  // DirectXã§æç”»å‘½ä»¤ã‚’ç™ºè¡Œã™ã‚‹æ©Ÿèƒ½
+IDXGISwapChain* g_pSwapChain;// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã¨ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ã®æ©‹æ¸¡ã—
+ID3D11RenderTargetView* g_pRTV;		 // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ãã®ã‚‚ã®
+ID3D11BlendState* g_pBlendState;	//ãƒ–ãƒ¬ãƒ³ãƒ‰ã®ã‚¹ãƒ†ãƒ¼ãƒˆ
 
 
 
@@ -16,28 +19,28 @@ ID3D11BlendState* g_pBlendState;	//ƒuƒŒƒ“ƒh‚ÌƒXƒe[ƒg
 HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 {
 	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));//‰Šú‰»
-	sd.BufferDesc.Width = width;						// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚Ì•
-	sd.BufferDesc.Height = height;						// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚Ì‚‚³
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚ÌFî•ñ(Še8bit)
+	ZeroMemory(&sd, sizeof(sd));//åˆæœŸåŒ–
+	sd.BufferDesc.Width = width;						// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã®å¹…
+	sd.BufferDesc.Height = height;						// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã®é«˜ã•
+	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã®è‰²æƒ…å ±(å„8bit)
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.SampleDesc.Count = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;   // ƒoƒbƒNƒoƒbƒtƒ@‚Ìg—p•û–@
-	sd.BufferCount = 1;					// ƒoƒbƒNƒoƒbƒtƒ@‚Ì”
-	sd.OutputWindow = hwnd;					// ŠÖ˜A•t‚¯‚éƒEƒBƒ“ƒhƒE
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;   // ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã®ä½¿ç”¨æ–¹æ³•
+	sd.BufferCount = 1;					// ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã®æ•°
+	sd.OutputWindow = hwnd;					// é–¢é€£ä»˜ã‘ã‚‹ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦
 	sd.Windowed = fullscreen ? FALSE : TRUE;
 	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 
-	// ƒhƒ‰ƒCƒo‚Ìí—Ş
+	// ãƒ‰ãƒ©ã‚¤ãƒã®ç¨®é¡
 	D3D_DRIVER_TYPE driverType;
 	D3D_DRIVER_TYPE driverTypes[] = {
 		D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_DRIVER_TYPE_REFERENCE
 	};
 	UINT numDriverTypes = ARRAYSIZE(driverTypes);
 	
-	//‹@”\ƒŒƒxƒ‹
+	//æ©Ÿèƒ½ãƒ¬ãƒ™ãƒ«
 	D3D_FEATURE_LEVEL featureLevel;
 	D3D_FEATURE_LEVEL featureLevels[] = {
 		D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
@@ -46,16 +49,59 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
-	//DirectX‚ÌDebugİ’è
-	UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-	//ì¬‰Â”\‚Èİ’è‚ÅDirectX‚Ì‹@”\‚ğ—LŒø‰»
-	HRESULT hr;
-	for (UINT i = 0; i < numDriverTypes; i++)
+	if (FAILED(hr))
 	{
+		std::ostringstream oss;
+		oss << "Failed to acquire back buffer. HRESULT=0x" << std::hex << hr;
+		OutputDebugStringA((oss.str() + "\n").c_str());
+		MessageBox(hwnd, oss.str().c_str(), "DirectX Error", MB_OK | MB_ICONERROR);
+		return hr;
+	}
+	hr = g_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_pRTV);
+	if (FAILED(hr))
+	{
+		std::ostringstream oss;
+		oss << "Failed to create render target view. HRESULT=0x" << std::hex << hr;
+		OutputDebugStringA((oss.str() + "\n").c_str());
+		MessageBox(hwnd, oss.str().c_str(), "DirectX Error", MB_OK | MB_ICONERROR);
+		if (pBackBuffer != nullptr)
+		{
+			pBackBuffer->Release();
+			pBackBuffer = nullptr;
+		}
+		return hr;
+	}
+	g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);	// GPUÌoÍİ’
+	if (pBackBuffer != nullptr)
+		pBackBuffer->Release();
+		pBackBuffer = nullptr;
+	if (g_pBlendState != nullptr)
+	{
+		g_pBlendState->Release();
+		g_pBlendState = nullptr;
+	}
+	if (g_pRTV != nullptr)
+	{
+		g_pRTV->Release();
+		g_pRTV = nullptr;
+	}
+	if (g_pSwapChain != nullptr)
+	{
+		g_pSwapChain->SetFullscreenState(false, NULL);
+		g_pSwapChain->Release();
+		g_pSwapChain = nullptr;
+	}
+	if (g_pContext != nullptr)
+	{
+		g_pContext->ClearState();
+		g_pContext->Release();
+		g_pContext = nullptr;
+	}
+	if (g_pDevice != nullptr)
+	{
+		g_pDevice->Release();
+		g_pDevice = nullptr;
+	}
 		driverType = driverTypes[i];
 		hr = D3D11CreateDeviceAndSwapChain(
 			NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
@@ -64,14 +110,14 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 	}
 	if (FAILED(hr)) { return hr; }
 
-	//ƒtƒŒ[ƒ€ƒoƒbƒtƒ@ƒ|ƒCƒ“ƒ^‚ğæ“¾
+	//ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—
 	ID3D11Texture2D* pBackBuffer = nullptr;
 	hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
-	//ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚Ö‚Ìƒ|ƒCƒ“ƒ^‚ğ•R‚Ã‚¯‚ÄAƒŒƒ“ƒ_[ƒ^[ƒQƒbƒgƒŒƒrƒ…[‚ğì¬	
+	//ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã¸ã®ãƒã‚¤ãƒ³ã‚¿ã‚’ç´ã¥ã‘ã¦ã€ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ¬ãƒ“ãƒ¥ãƒ¼ã‚’ä½œæˆ	
 	if (SUCCEEDED(hr))
 	{
 		hr = g_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_pRTV);
-		g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);	// GPU‚Ìo—Íİ’è
+		g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);	// GPUã®å‡ºåŠ›è¨­å®š
 	}
 
 
@@ -99,7 +145,7 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 	hr = g_pDevice->CreateBlendState(&blendDesc, &g_pBlendState);
 	if (FAILED(hr)) { return hr; }
 
-	//ƒuƒŒƒ“ƒhƒXƒe[ƒg‚Ìİ’è
+	//ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¹ãƒ†ãƒ¼ãƒˆã®è¨­å®š
 	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	g_pContext->OMSetBlendState(g_pBlendState, blendFactor, 0xffffffff);
 	
@@ -135,7 +181,7 @@ ID3D11Device* GetDevice()
 	return g_pDevice;
 }
 
-ID3D11DeviceContext* GetContext()// Context‚Ìæ“¾
+ID3D11DeviceContext* GetContext()// Contextã®å–å¾—
 {
 	return g_pContext;
 }
