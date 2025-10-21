@@ -18,30 +18,31 @@ ID3D11BlendState* g_pBlendState;	//ブレンドのステート
 
 HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 {
+	HRESULT hr = S_OK;
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));//初期化
-	sd.BufferDesc.Width = width;						// フレームバッファの幅
-	sd.BufferDesc.Height = height;						// フレームバッファの高さ
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// フレームバッファの色情報(各8bit)
+	sd.BufferDesc.Width = width;                                            // フレームバッファの幅
+	sd.BufferDesc.Height = height;                                          // フレームバッファの高さ
+	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;      // フレームバッファの色情報(各8bit)
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.SampleDesc.Count = 1;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;   // バックバッファの使用方法
-	sd.BufferCount = 1;					// バックバッファの数
-	sd.OutputWindow = hwnd;					// 関連付けるウィンドウ
+	sd.BufferCount = 1;                                     // バックバッファの数
+	sd.OutputWindow = hwnd;                                 // 関連付けるウィンドウ
 	sd.Windowed = fullscreen ? FALSE : TRUE;
 	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 
 	// ドライバの種類
-	D3D_DRIVER_TYPE driverType;
+	D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_NULL;
 	D3D_DRIVER_TYPE driverTypes[] = {
 		D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_DRIVER_TYPE_REFERENCE
 	};
 	UINT numDriverTypes = ARRAYSIZE(driverTypes);
-	
+
 	//機能レベル
-	D3D_FEATURE_LEVEL featureLevel;
+	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
 	D3D_FEATURE_LEVEL featureLevels[] = {
 		D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
@@ -49,14 +50,60 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
+	UINT createDeviceFlags = 0;
+#ifdef _DEBUG
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+	for (UINT i = 0; i < numDriverTypes; ++i)
+	{
+		driverType = driverTypes[i];
+		hr = D3D11CreateDeviceAndSwapChain(
+			NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
+			D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pDevice, &featureLevel, &g_pContext);
+		if (SUCCEEDED(hr)) { break; }
+	}
+	if (FAILED(hr)) { return hr; }
+
+	//フレームバッファポインタを取得
+	ID3D11Texture2D* pBackBuffer = nullptr;
+	hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
 	if (FAILED(hr))
 	{
 		std::ostringstream oss;
 		oss << "Failed to acquire back buffer. HRESULT=0x" << std::hex << hr;
 		OutputDebugStringA((oss.str() + "\n").c_str());
 		MessageBox(hwnd, oss.str().c_str(), "DirectX Error", MB_OK | MB_ICONERROR);
+		if (g_pBlendState != nullptr)
+		{
+			g_pBlendState->Release();
+			g_pBlendState = nullptr;
+		}
+		if (g_pRTV != nullptr)
+		{
+			g_pRTV->Release();
+			g_pRTV = nullptr;
+		}
+		if (g_pSwapChain != nullptr)
+		{
+			g_pSwapChain->SetFullscreenState(false, NULL);
+			g_pSwapChain->Release();
+			g_pSwapChain = nullptr;
+		}
+		if (g_pContext != nullptr)
+		{
+			g_pContext->ClearState();
+			g_pContext->Release();
+			g_pContext = nullptr;
+		}
+		if (g_pDevice != nullptr)
+		{
+			g_pDevice->Release();
+			g_pDevice = nullptr;
+		}
 		return hr;
 	}
+
 	hr = g_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_pRTV);
 	if (FAILED(hr))
 	{
@@ -69,58 +116,42 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 			pBackBuffer->Release();
 			pBackBuffer = nullptr;
 		}
+		if (g_pBlendState != nullptr)
+		{
+			g_pBlendState->Release();
+			g_pBlendState = nullptr;
+		}
+		if (g_pRTV != nullptr)
+		{
+			g_pRTV->Release();
+			g_pRTV = nullptr;
+		}
+		if (g_pSwapChain != nullptr)
+		{
+			g_pSwapChain->SetFullscreenState(false, NULL);
+			g_pSwapChain->Release();
+			g_pSwapChain = nullptr;
+		}
+		if (g_pContext != nullptr)
+		{
+			g_pContext->ClearState();
+			g_pContext->Release();
+			g_pContext = nullptr;
+		}
+		if (g_pDevice != nullptr)
+		{
+			g_pDevice->Release();
+			g_pDevice = nullptr;
+		}
 		return hr;
 	}
-	g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);	// GPȔo͐ݒ
+
+	g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);    // GPUの出力設定
 	if (pBackBuffer != nullptr)
+	{
 		pBackBuffer->Release();
 		pBackBuffer = nullptr;
-	if (g_pBlendState != nullptr)
-	{
-		g_pBlendState->Release();
-		g_pBlendState = nullptr;
 	}
-	if (g_pRTV != nullptr)
-	{
-		g_pRTV->Release();
-		g_pRTV = nullptr;
-	}
-	if (g_pSwapChain != nullptr)
-	{
-		g_pSwapChain->SetFullscreenState(false, NULL);
-		g_pSwapChain->Release();
-		g_pSwapChain = nullptr;
-	}
-	if (g_pContext != nullptr)
-	{
-		g_pContext->ClearState();
-		g_pContext->Release();
-		g_pContext = nullptr;
-	}
-	if (g_pDevice != nullptr)
-	{
-		g_pDevice->Release();
-		g_pDevice = nullptr;
-	}
-		driverType = driverTypes[i];
-		hr = D3D11CreateDeviceAndSwapChain(
-			NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-			D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pDevice, &featureLevel, &g_pContext);
-		if (SUCCEEDED(hr)) { break; }
-	}
-	if (FAILED(hr)) { return hr; }
-
-	//フレームバッファポインタを取得
-	ID3D11Texture2D* pBackBuffer = nullptr;
-	hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
-	//フレームバッファへのポインタを紐づけて、レンダーターゲットレビューを作成	
-	if (SUCCEEDED(hr))
-	{
-		hr = g_pDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_pRTV);
-		g_pContext->OMSetRenderTargets(1, &g_pRTV, nullptr);	// GPUの出力設定
-	}
-
-
 
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
@@ -148,7 +179,7 @@ HRESULT InitDirectX(HWND hwnd, UINT width, UINT height, BOOL fullscreen)
 	//ブレンドステートの設定
 	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	g_pContext->OMSetBlendState(g_pBlendState, blendFactor, 0xffffffff);
-	
+
 
 	return hr;
 }
