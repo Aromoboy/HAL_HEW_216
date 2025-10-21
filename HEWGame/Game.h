@@ -1,40 +1,48 @@
-/**
-* @file Game.h
-* @author 越智晴彦
-* @date 2025/10/15
-* @details 一応メインゲームとしての形で作ってある
-*/
-
-/*
-@update author ドロスミハイル
-@date 2025/10/21
-@details クラス・インターフェイスでGameデストラクタを宣言し、m_pTextureをnullptrにデフォルト初期化
-*/
-
 #ifndef ___GAME_H___
 #define ___GAME_H___
 
+#include <DirectXMath.h>
+#include <chrono>
+#include <vector>
 
-#include "SpriteDrawer.h"
-#include "DirectX.h"
-
+#include "EnemyWaveManager.h"
+#include "Player.h"
+#include "ProjectileManager.h"
+#include "Renderer3D.h"
 
 class Game
 {
 public:
-    Game();
+        Game();
+        ~Game();
 
-    ~Game();
-
-    void UpdateGame();
-
-    void DrawGame();
-
+        void UpdateGame();
+        void DrawGame();
 
 private:
+        struct HitEffect
+        {
+                DirectX::XMFLOAT3 position;
+                DirectX::XMFLOAT4 color;
+                float age;
+                float lifetime;
+        };
 
-    ID3D11ShaderResourceView* m_pTexture = nullptr;
+        void HandleShooting();
+        void ResolveCombat();
+        void UpdateEffects(float deltaTime);
+        void DrawEffects() const;
+        void LogWaveStatus(float deltaTime);
 
+        Renderer3D::Mesh m_cubeMesh;
+        Player m_player;
+        ProjectileManager m_projectiles;
+        EnemyWaveManager m_waveManager;
+        std::vector<HitEffect> m_hitEffects;
+
+        std::chrono::steady_clock::time_point m_lastFrameTime;
+        float m_debugLogTimer;
+        int m_totalCandy;
 };
 
 #endif // !___GAME_H___
