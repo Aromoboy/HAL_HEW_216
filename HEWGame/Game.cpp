@@ -1,16 +1,20 @@
 #include "Game.h"
-#include "SpriteDrawer.h"
-#include "VertexBuffer.h"
-#include "DirectXTex/TextureLoad.h"
 
-Game::Game()
+#include <windows.h>
+
+#include "SpriteDrawer.h"
+#include "DirectXTex/TextureLoad.h"
+#include "VertexBuffer.h"
+
+Game::Game(ID3D11Device* device)
+        : m_pTexture(nullptr)
 {
-	HRESULT hr = LoadTextureFromFile(GetDevice(), "rom/HelloWorld.png", &m_pTexture);
-	if (FAILED(hr))
-	{
-		MessageBox(NULL, "‰æ‘œƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½B", "Error", MB_OK);
-		m_pTexture = nullptr;
-	}
+        HRESULT hr = LoadTextureFromFile(device, "rom/HelloWorld.png", &m_pTexture);
+        if (FAILED(hr))
+        {
+                MessageBox(NULL, "æ‘œt@CÌ“Ç‚İİ‚ÉsÜ‚B", "Error", MB_OK);
+                m_pTexture = nullptr;
+        }
 }
 
 void Game::UpdateGame()
@@ -19,10 +23,10 @@ void Game::UpdateGame()
 
 void Game::DrawGame()
 {
-	// Å’áŒÀ‚Ì•`‰æˆ—
-	SetSpriteScale(500.0f, 500.0f);
-	SetSpriteTexture(m_pTexture);
+        // Å’Ì•`æˆ
+        SetSpriteScale(500.0f, 500.0f);
+        SetSpriteTexture(m_pTexture);
 
-	DrawSprite(GetUnitVertexBuffer());
-
+        DrawSprite(GetUnitVertexBuffer());
 }
+

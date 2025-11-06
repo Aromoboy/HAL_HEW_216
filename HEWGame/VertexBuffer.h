@@ -1,19 +1,21 @@
 #ifndef ___VERTEX_BUFFER_H___
 #define ___VERTEX_BUFFER_H___
 
+#include <d3d11.h>
+
 #include "SpriteDrawer.h"
-#include "DirectX.h"
 
-// @brief ’¸“_ƒoƒbƒtƒ@‚Ìì¬
-// @param[in] vtxData ’¸“_ƒf[ƒ^‚Ì”z—ñ
-// @param[in] vtxNum ’¸“_‚Ì”
-ID3D11Buffer* CreateVertexBuffer(Vertex* vtxData, UINT vtxNum);
+// @brief _obt@Ìì¬
+// @param[in] device Direct3D device
+// @param[in] vtxData _f[^Ì”z
+// @param[in] vtxNum _Ì
+ID3D11Buffer* CreateVertexBuffer(ID3D11Device* device, Vertex* vtxData, UINT vtxNum);
 
-void InitVertex();
+void InitVertex(ID3D11Device* device);
 
 void UninitVertex();
 
 ID3D11Buffer* GetUnitVertexBuffer();
 
-
 #endif
+

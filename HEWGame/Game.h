@@ -1,34 +1,30 @@
-
 /**
 * @file Game.h
-* @brief ƒeƒXƒg‰æ–Ê•\¦
-* @author ‰z’q°•F
+* @brief eXgÊ•\
+* @author zqF
 * @date 2025/10/15
-* @details ˆê‰ƒƒCƒ“ƒQ[ƒ€‚Æ‚µ‚Ä‚ÌŒ`‚Åì‚Á‚Ä‚ ‚é
+* @details ê‰CQ[Æ‚Ä‚ÌŒ`ÅÄ‚
 */
 
 #ifndef ___GAME_H___
 #define ___GAME_H___
 
+#include <d3d11.h>
 
 #include "SpriteDrawer.h"
-#include "DirectX.h"
-
 
 class Game
 {
 public:
-	Game();
+        explicit Game(ID3D11Device* device);
 
-	void UpdateGame();
+        void UpdateGame();
 
-	void DrawGame();
-
+        void DrawGame();
 
 private:
-
-	ID3D11ShaderResourceView* m_pTexture;
-
+        ID3D11ShaderResourceView* m_pTexture;
 };
 
 #endif // !___GAME_H___
+

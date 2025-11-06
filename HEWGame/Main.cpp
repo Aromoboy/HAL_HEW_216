@@ -2,14 +2,14 @@
 #include <windows.h>
 #include <string>
 #include <memory>
-#include "DirectX.h"
+#include "Core/DXContext.h"
 #include "SpriteDrawer.h"
 #include "Game.h"
 #include "Keyboard.h"
 #include "VertexBuffer.h"
 
-// mm ƒ}ƒ‹ƒ`ƒƒfƒBƒA
-// lib cppƒtƒ@ƒCƒ‹‚ğ‚Ü‚Æ‚ß‚½‚æ‚¤‚È‚à‚Ì
+// mm ãƒãƒ«ãƒãƒ¡ãƒ‡ã‚£ã‚¢
+// lib cppãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã¾ã¨ã‚ãŸã‚ˆã†ãªã‚‚ã®
 #pragma comment(lib, "winmm.lib")
 
 
@@ -21,15 +21,15 @@ bool bFlag = false;
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) 
 {
 
-	//I—¹‚Ìƒƒ‚ƒŠƒŠ[ƒNƒ`ƒFƒbƒN
+	//çµ‚äº†æ™‚ã®ãƒ¡ãƒ¢ãƒªãƒªãƒ¼ã‚¯ãƒã‚§ãƒƒã‚¯
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 
 	WNDCLASSEX wcex;
-	ZeroMemory(&wcex, sizeof(wcex));//ƒEƒBƒ“ƒhƒE‚Ìî•ñ‚ğ‚·‚×‚Äƒ[ƒ‚Å–„‚ß‚é
-	wcex.hInstance = hInstance;//ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚Ì¯•Ê”Ô†
+	ZeroMemory(&wcex, sizeof(wcex));//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®æƒ…å ±ã‚’ã™ã¹ã¦ã‚¼ãƒ­ã§åŸ‹ã‚ã‚‹
+	wcex.hInstance = hInstance;//ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã®è­˜åˆ¥ç•ªå·
 	wcex.lpszClassName = "ClassName";
-	wcex.lpfnWndProc = WndProc;//ƒEƒBƒ“ƒhƒEƒvƒƒV[ƒWƒƒ‚Ìİ’è
+	wcex.lpfnWndProc = WndProc;//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£ã®è¨­å®š
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -41,7 +41,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	if (!RegisterClassEx(&wcex))
 	{
-		MessageBox(NULL, "ƒEƒBƒ“ƒhƒEƒNƒ‰ƒX‚Ì“o˜^‚É¸”s", "ƒGƒ‰[", MB_OK);
+		MessageBox(NULL, "ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚¯ãƒ©ã‚¹ã®ç™»éŒ²ã«å¤±æ•—", "ã‚¨ãƒ©ãƒ¼", MB_OK);
 	}
 
 	HWND hwnd;
@@ -50,29 +50,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	hwnd = CreateWindowEx(
 		WS_EX_OVERLAPPEDWINDOW,
-		wcex.lpszClassName, "c‰¡–³s‚É’µ‚Ë‰ñ‚éƒEƒBƒ“ƒhƒE",
+		wcex.lpszClassName, "ç¸¦æ¨ªç„¡å°½ã«è·³ã­å›ã‚‹ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦",
 		WS_CAPTION | WS_SYSMENU,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		WINX, WINY,
 		HWND_DESKTOP, NULL, hInstance, NULL);
 	if (hwnd == nullptr)
 	{
-		MessageBox(NULL, "ƒEƒBƒ“ƒhƒE‚Ìì¬‚É¸”s", "ƒGƒ‰[", MB_OK);
+		MessageBox(NULL, "ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ä½œæˆã«å¤±æ•—", "ã‚¨ãƒ©ãƒ¼", MB_OK);
 	}
 
 
-	if (hwnd == NULL)//ì¬‚³‚ê‚È‚©‚Á‚½‚çI—¹‚·‚é
+	Core::DXContext dxContext;
+
+	if (FAILED(dxContext.Init(hwnd, WINX, WINY, false)))
 	{
 		return 0;
 	}
-	else
-	{
 
-			ShowWindow(hwnd, nCmdShow);
-			UpdateWindow(hwnd);
-		
-	}
-	
+	InitSpriteDrawer(dxContext.GetDevice(), dxContext.GetContext(), WINX, WINY);
+
+	InitVertex(dxContext.GetDevice());
+	std::unique_ptr<Game> pMainGame = std::make_unique<Game>(dxContext.GetDevice());
+				dxContext.BeginDraw();
+				dxContext.EndDraw();
+	dxContext.Shutdown();
 
 	DWORD  nowTime = 0;
 	DWORD oldTime = 0;
@@ -83,12 +85,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	timeBeginPeriod(1);
 
 
-	//ƒƒbƒZ[ƒWƒLƒ…[‚ÉƒƒbƒZ[ƒW‚ª‚ ‚é‚©
+	//ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚­ãƒ¥ãƒ¼ã«ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ãŒã‚ã‚‹ã‹
 	MSG message;
 
 	if (FAILED(InitDirectX(hwnd, WINX, WINY, false)))
 	{
-		MessageBox(hwnd, "DirectX‚Ì‰Šú‰»‚É¸”s", "ƒGƒ‰[", MB_OK);
+		MessageBox(hwnd, "DirectXã®åˆæœŸåŒ–ã«å¤±æ•—", "ã‚¨ãƒ©ãƒ¼", MB_OK);
 		return 0;
 	}
 
@@ -122,7 +124,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		else 
 		{
-			// FPS‚Ìˆ—
+			// FPSã®å‡¦ç†
 			nowTime = timeGetTime();
 			
 			if (nowTime - oldTime >= 1000 / 60)
@@ -172,7 +174,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static HRGN hRgn1, hRgn2, hRgn3, hRgn, hRgnX;
 	WINDOWPLACEMENT wndpl;
 	RECT rc;
-	static int def; //ƒƒjƒ…[Aƒ^ƒCƒgƒ‹ƒo[‚Ì‚‚³
+	static int def; //ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã€ã‚¿ã‚¤ãƒˆãƒ«ãƒãƒ¼ã®é«˜ã•
 	POINT pta[3], ptb[3];
 
 

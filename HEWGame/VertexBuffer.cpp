@@ -1,51 +1,60 @@
 #include "VertexBuffer.h"
 
-ID3D11Buffer* g_pUnitVertexBuffer;
+ID3D11Buffer* g_pUnitVertexBuffer = nullptr;
 #define SPRITE_VERTEX (4)
 
 
-ID3D11Buffer* CreateVertexBuffer(Vertex* vtxData, UINT vtxNum)
+ID3D11Buffer* CreateVertexBuffer(ID3D11Device* device, Vertex* vtxData, UINT vtxNum)
 {
+        if (!device)
+        {
+                return nullptr;
+        }
 
-	D3D11_BUFFER_DESC vtxBufDesc;
-	ZeroMemory(&vtxBufDesc, sizeof(vtxBufDesc));
-	vtxBufDesc.ByteWidth = sizeof(Vertex) * vtxNum; // ƒoƒbƒtƒ@‚Ì‘å‚«‚³
-	vtxBufDesc.Usage = D3D11_USAGE_DEFAULT; // ƒƒ‚ƒŠã‚Å‚ÌŠÇ—•û–@
-	vtxBufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER; // GPUã‚Å‚Ì—˜—p•û–@
+        D3D11_BUFFER_DESC vtxBufDesc;
+        ZeroMemory(&vtxBufDesc, sizeof(vtxBufDesc));
+        vtxBufDesc.ByteWidth = sizeof(Vertex) * vtxNum; // obt@Ì‘å‚«
+        vtxBufDesc.Usage = D3D11_USAGE_DEFAULT; // Å‚ÌŠÇ—@
+        vtxBufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER; // GPUÅ‚Ì—p@
 
-	// ƒoƒbƒtƒ@‰Šúƒf[ƒ^@Ý’è
-	D3D11_SUBRESOURCE_DATA vtxSubResource;
-	ZeroMemory(&vtxSubResource, sizeof(vtxSubResource));
-	vtxSubResource.pSysMem = vtxData; // ƒoƒbƒtƒ@‚É—¬‚µž‚Þƒf[ƒ^
+        // obt@f[^@Ý’
+        D3D11_SUBRESOURCE_DATA vtxSubResource;
+        ZeroMemory(&vtxSubResource, sizeof(vtxSubResource));
+        vtxSubResource.pSysMem = vtxData; // obt@É—Þƒf[^
 
 
-	// ì¬
-	HRESULT hr;
-	ID3D11Buffer *pVtxBuf;
-	hr = GetDevice()->CreateBuffer(&vtxBufDesc, &vtxSubResource, &pVtxBuf);
-	if (FAILED(hr)) { return nullptr; }
-	return pVtxBuf;
+        // ì¬
+        HRESULT hr;
+        ID3D11Buffer *pVtxBuf;
+        hr = device->CreateBuffer(&vtxBufDesc, &vtxSubResource, &pVtxBuf);
+        if (FAILED(hr)) { return nullptr; }
+        return pVtxBuf;
 }
 
 ID3D11Buffer* GetUnitVertexBuffer()
 {
-	return g_pUnitVertexBuffer;
+        return g_pUnitVertexBuffer;
 }
 
-void InitVertex()
+void InitVertex(ID3D11Device* device)
 {
-	Vertex vtx[] = {
-	{{-0.5f,-0.5f,0.0f,}, {0.0f,0.0f}},
-	{{-0.5f, 0.5f,0.0f,}, {0.0f,1.0f}},
-	{{ 0.5f,-0.5f,0.0f,}, {1.0f,0.0f}},
-	{{ 0.5f, 0.5f,0.0f,}, {1.0f,1.0f}},
-	};
+        Vertex vtx[] = {
+        {{-0.5f,-0.5f,0.0f,}, {0.0f,0.0f}},
+        {{-0.5f, 0.5f,0.0f,}, {0.0f,1.0f}},
+        {{ 0.5f,-0.5f,0.0f,}, {1.0f,0.0f}},
+        {{ 0.5f, 0.5f,0.0f,}, {1.0f,1.0f}},
+        };
 
 
-	g_pUnitVertexBuffer = CreateVertexBuffer(vtx, SPRITE_VERTEX);
+        g_pUnitVertexBuffer = CreateVertexBuffer(device, vtx, SPRITE_VERTEX);
 }
 
 void UninitVertex()
 {
-	if (g_pUnitVertexBuffer) g_pUnitVertexBuffer->Release();
+        if (g_pUnitVertexBuffer)
+        {
+                g_pUnitVertexBuffer->Release();
+                g_pUnitVertexBuffer = nullptr;
+        }
 }
+

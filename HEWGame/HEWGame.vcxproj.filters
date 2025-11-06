@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Core\DXContext.cpp">
+      <Filter>ソース ファイル\Core</Filter>
+    </ClCompile>
     <ClCompile Include="DirectX.cpp">
       <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
@@ -45,6 +48,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Data.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\DXContext.h">
       <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
     <ClInclude Include="DirectX.h">
