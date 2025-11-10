@@ -22,8 +22,3 @@ void CEntity::Draw()
 {
 
 }
-
-int CEntity::GetTransform()
-{
-
-}
