@@ -8,9 +8,14 @@ using namespace std;
 class CEntity
 {
 public:
+	//コンストラクタ
+	CEntity();
+	//デストラクタ
+	~CEntity();
+
 	void Update();
 	void Draw();
-	void GetTransform();
+	int GetTransform() { return Transform; }
 private:
 	int Transform;
 	string tag;
