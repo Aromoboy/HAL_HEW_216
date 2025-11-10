@@ -9,7 +9,7 @@ TestObject::TestObject(std::string a_szModelKey, float3 a_fPosition, float3 a_fS
 {
 	m_pModel = std::make_unique<Model>();
 
-	std::string modelName = "Assets/Model/LowPolyNature/Model/" + a_szModelKey + ".fbx";
+	std::string modelName = "Assets/Model/LowPolyNature/Models/" + a_szModelKey + ".fbx";
 
 	if (!m_pModel->Load(modelName.c_str(), 0.3f, Model::Flip::None))
 	{
