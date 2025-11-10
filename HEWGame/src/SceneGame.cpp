@@ -18,9 +18,9 @@ SceneGame::SceneGame()
 	SetRenderTargets(1, &pRTV, pDSV);
 	SetDepthTest(true);
 	m_pModel = std::make_unique<Model>();
-	if (!m_pModel->Load("Assets/Model/LowPolyNature/Boxs.fbx", 1.0f, Model::Flip::None))
+	if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Boxs.fbx", 1.0f, Model::Flip::None))
 	{
-		MessageBox(NULL, "ƒ‚ƒfƒ‹‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½B", "Error", MB_OK);
+	no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
 	}
 
 	no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
@@ -49,53 +49,53 @@ void SceneGame::Update()
 
 void SceneGame::Draw()
 {
-	// •`‰æŠm”F—p‚Ì”’l
+	// æç”»ç¢ºèªç”¨ã®æ•°å€¤
 
-	// ” ‚Ì•`‰æ 
-	DirectX::XMFLOAT4X4 fMat; // s—ñ‚ÌŠi”[æ
+	// ç®±ã®æç”» 
+	DirectX::XMFLOAT4X4 fMat; // è¡Œåˆ—ã®æ ¼ç´å…ˆ
 	DirectX::XMFLOAT4X4 wvp[3];
 
 
 	wvp[1] = m_pCamera->GetViewMatrix();
 	wvp[2] = m_pCamera->GetProjectionMatrix();
 
-	// ƒJƒƒ‰‚Ìİ’è
+	// ã‚«ãƒ¡ãƒ©ã®è¨­å®š
 	Geometory::SetView(m_pCamera->GetViewMatrix());
 	Geometory::SetProjection(m_pCamera->GetProjectionMatrix());
 
 	DrawMatrix::CreateWorldMatrix(fMat, float3{ 0.0f, 1.0f,-3.0f }, float3{ 1.0f, 2.0f, 1.0f }, fRads);
-	Geometory::SetWorld(fMat); // ƒ{ƒbƒNƒX‚É•ÏŠ·s—ñ‚ğİ’è Geometory::DrawBox();
+	Geometory::SetWorld(fMat); // ãƒœãƒƒã‚¯ã‚¹ã«å¤‰æ›è¡Œåˆ—ã‚’è¨­å®š Geometory::DrawBox();
 	Geometory::DrawBox();
 
 	DrawMatrix::CreateWorldMatrix(fMat, float3{ 3.0f, 0.0f, 2.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
-	Geometory::SetWorld(fMat); // ƒ{ƒbƒNƒX‚É•ÏŠ·s—ñ‚ğİ’è Geometory::DrawBox();
+	Geometory::SetWorld(fMat); // ãƒœãƒƒã‚¯ã‚¹ã«å¤‰æ›è¡Œåˆ—ã‚’è¨­å®š Geometory::DrawBox();
 	Geometory::DrawBox();
 
 	DrawMatrix::CreateWorldMatrix(fMat, float3{-3.0f, 0.0f, 2.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
-	Geometory::SetWorld(fMat); // ƒ{ƒbƒNƒX‚É•ÏŠ·s—ñ‚ğİ’è Geometory::DrawBox();
+	Geometory::SetWorld(fMat); // ãƒœãƒƒã‚¯ã‚¹ã«å¤‰æ›è¡Œåˆ—ã‚’è¨­å®š Geometory::DrawBox();
 	Geometory::DrawBox();
 	
 	
-	// ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌXV
-	m_pModel->Step(0.015f); // –{—ˆ‚ÍdeltaTime‚È‚Ç‚ğ“ü‚ê‚é
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®æ›´æ–°
+	m_pModel->Step(0.015f); // æœ¬æ¥ã¯deltaTimeãªã©ã‚’å…¥ã‚Œã‚‹
 
-	// •ÏŠ·s—ñ‚Ì“]’u
+	// å¤‰æ›è¡Œåˆ—ã®è»¢ç½®
 	DrawMatrix::CreateWorldMatrix(wvp[0], float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 170.0f * RAD, 0.0f }, m_pModel->GetBone(1));
 	
 	
-	// ƒVƒF[ƒ_[‚Ì“o˜^
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ç™»éŒ²
 	ShaderList::SetWVP(wvp);
 	m_pModel->SetVertexShader(ShaderList::GetVS(ShaderList::VS_WORLD));
 	m_pModel->SetPixelShader(ShaderList::GetPS(ShaderList::PS_LAMBERT));
 
 
 	DebugConsole::SetDrawPos(1, 5);
-	std::cout << "ƒƒbƒVƒ…”" << m_pModel->GetMeshNum();
+	std::cout << "ãƒ¡ãƒƒã‚·ãƒ¥æ•°" << m_pModel->GetMeshNum();
 
 	DebugConsole::SetDrawPos(1, 6);
-	std::cout << "ƒ}ƒeƒŠƒAƒ‹”" << m_pModel->GetMaterialNum();
+	std::cout << "ãƒãƒ†ãƒªã‚¢ãƒ«æ•°" << m_pModel->GetMaterialNum();
 
-	// •`‰æˆ—
+	// æç”»å‡¦ç†
 	for (int i = 0; i < m_pModel->GetMeshNum(); i++)
 	{
 		
@@ -117,7 +117,7 @@ void SceneGame::Draw()
 	{
 		DrawMatrix::CreateWorldMatrix(wvp[0], it->GetPosition(), it->GetScale(), it->GetfRads());
 
-		// ƒVƒF[ƒ_[‚Ì“o˜^
+		// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ç™»éŒ²
 		ShaderList::SetWVP(wvp);
 
 		Model &model = it->GetModel();
@@ -126,7 +126,7 @@ void SceneGame::Draw()
 		model.SetPixelShader(ShaderList::GetPS(ShaderList::PS_FOG));
 
 
-		// •`‰æˆ—
+		// æç”»å‡¦ç†
 		for (int i = 0; i < model.GetMeshNum(); i++)
 		{
 
