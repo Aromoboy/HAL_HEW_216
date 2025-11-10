@@ -160,6 +160,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Debug.cpp" />
     <ClCompile Include="src\DebugConsole.cpp" />
@@ -167,10 +168,15 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\ICamera.cpp" />
+    <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\ModelRender.cpp" />
+    <ClCompile Include="src\MaterialDX.cpp" />
+    <ClCompile Include="src\MeshDX.cpp" />
+    <ClCompile Include="src\ModelDX.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Shader.cpp" />
@@ -185,6 +191,7 @@
     <ClCompile Include="src\_model.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugConsole.h" />
@@ -193,10 +200,15 @@
     <ClInclude Include="include\DrawMatrix.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\ICamera.h" />
+    <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
+    <ClInclude Include="include\ModelRender.h" />
+    <ClInclude Include="include\MaterialDX.h" />
+    <ClInclude Include="include\MeshDX.h" />
+    <ClInclude Include="include\ModelDX.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\Shader.h" />

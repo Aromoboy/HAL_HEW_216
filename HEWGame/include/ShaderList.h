@@ -4,6 +4,8 @@
 #include "Shader.h"
 #include "Model.h"
 
+#include "MaterialDX.h"
+
 
 class ShaderList
 {
@@ -40,6 +42,8 @@ public:
 	static void SetWVP(DirectX::XMFLOAT4X4* wvp);
 	static void SetBones(DirectX::XMFLOAT4X4* bones200);
 	static void SetMaterial(const Model::Material& material);
+	static void SetMaterial(const MaterialDX& material);
+
 	static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
 	static void SetCameraPos(const DirectX::XMFLOAT3 pos);
 	static void SetFog(DirectX::XMFLOAT4 color, float start, float range);
