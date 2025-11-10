@@ -1,5 +1,5 @@
 #include "Model.h"
-#include "DirectXTex/TextureLoad.h"
+#include "TextureLoad.h"
 #include <algorithm>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -32,7 +32,7 @@
 #endif
 #endif
 
-// staticƒƒ“ƒo•Ï”’è‹`
+// staticãƒ¡ãƒ³ãƒå¤‰æ•°å®šç¾©
 VertexShader*	Model::m_pDefVS		= nullptr;
 PixelShader*	Model::m_pDefPS		= nullptr;
 unsigned int	Model::m_shaderRef	= 0;
@@ -41,9 +41,9 @@ std::string		Model::m_errorStr	= "";
 #endif
 
 /*
-* @brief assimp“à‚Ìs—ñ‚ğXMMATRIXŒ^‚É•ÏŠ·
-* @param[in] M assimp‚Ìs—ñ
-* @return •ÏŠ·Œã‚Ìs—ñ
+* @brief assimpå†…ã®è¡Œåˆ—ã‚’XMMATRIXå‹ã«å¤‰æ›
+* @param[in] M assimpã®è¡Œåˆ—
+* @return å¤‰æ›å¾Œã®è¡Œåˆ—
 */
 DirectX::XMMATRIX GetMatrixFromAssimpMatrix(aiMatrix4x4 M)
 {
@@ -56,9 +56,9 @@ DirectX::XMMATRIX GetMatrixFromAssimpMatrix(aiMatrix4x4 M)
 }
 
 /*
-* @brief ƒfƒtƒHƒ‹ƒg‚ÌƒVƒF[ƒ_[‚ğì¬
-* @param[out] vs ’¸“_ƒVƒF[ƒ_[Ši”[æ
-* @param[out] ps ƒsƒNƒZƒ‹ƒVƒF[ƒ_[Ši”[æ
+* @brief ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ä½œæˆ
+* @param[out] vs é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼æ ¼ç´å…ˆ
+* @param[out] ps ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼æ ¼ç´å…ˆ
 */
 void MakeModelDefaultShader(VertexShader** vs, PixelShader** ps)
 {
@@ -103,7 +103,7 @@ float4 main(PS_IN pin) : SV_TARGET
 
 
 /*
-* @brief ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+* @brief ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 */
 Model::Model()
 	: m_loadScale(1.0f)
@@ -115,7 +115,7 @@ Model::Model()
 	, m_blendTotalTime(0.0f)
 	, m_parametricBlend(0.0f)
 {
-	// ƒfƒtƒHƒ‹ƒgƒVƒF[ƒ_[‚Ì“K—p
+	// ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®é©ç”¨
 	if (m_shaderRef == 0)
 	{
 		MakeModelDefaultShader(&m_pDefVS, &m_pDefPS);
@@ -126,7 +126,7 @@ Model::Model()
 }
 
 /*
-* @brief ƒfƒXƒgƒ‰ƒNƒ^
+* @brief ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 */
 Model::~Model()
 {
@@ -140,7 +140,7 @@ Model::~Model()
 }
 
 /*
-* @brief “à•”ƒf[ƒ^íœ
+* @brief å†…éƒ¨ãƒ‡ãƒ¼ã‚¿å‰Šé™¤
 */
 void Model::Reset()
 {
@@ -160,7 +160,7 @@ void Model::Reset()
 }
 
 /*
-* @brief ’¸“_ƒVƒF[ƒ_[İ’è
+* @brief é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼è¨­å®š
 */
 void Model::SetVertexShader(VertexShader* vs)
 {
@@ -168,7 +168,7 @@ void Model::SetVertexShader(VertexShader* vs)
 }
 
 /*
-* @brief ƒsƒNƒZƒ‹ƒVƒF[ƒ_[İ’è
+* @brief ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼è¨­å®š
 */
 void Model::SetPixelShader(PixelShader* ps)
 {
@@ -176,11 +176,11 @@ void Model::SetPixelShader(PixelShader* ps)
 }
 
 /*
-* @brief ƒ‚ƒfƒ‹ƒf[ƒ^“Ç‚İ‚İ
-* @param[in] file “Ç‚İ‚Şƒ‚ƒfƒ‹ƒtƒ@ƒCƒ‹‚Ö‚ÌƒpƒX
-* @param[in] scale ƒ‚ƒfƒ‹‚ÌƒTƒCƒY•ÏX
-* @param[in] flip ”½“]İ’è
-* @return “Ç‚İ‚İŒ‹‰Ê
+* @brief ãƒ¢ãƒ‡ãƒ«ãƒ‡ãƒ¼ã‚¿èª­ã¿è¾¼ã¿
+* @param[in] file èª­ã¿è¾¼ã‚€ãƒ¢ãƒ‡ãƒ«ãƒ•ã‚¡ã‚¤ãƒ«ã¸ã®ãƒ‘ã‚¹
+* @param[in] scale ãƒ¢ãƒ‡ãƒ«ã®ã‚µã‚¤ã‚ºå¤‰æ›´
+* @param[in] flip åè»¢è¨­å®š
+* @return èª­ã¿è¾¼ã¿çµæœ
 */
 bool Model::Load(const char* file, float scale, Flip flip)
 {
@@ -189,14 +189,14 @@ bool Model::Load(const char* file, float scale, Flip flip)
 #endif
 	Reset();
 
-	// assimp‚Ìİ’è
+	// assimpã®è¨­å®š
 	Assimp::Importer importer;
 	int flag = 0;
 	flag |= aiProcess_Triangulate;
 	flag |= aiProcess_FlipUVs;
 	//flag |= aiProcess_MakeLeftHanded;
 
-	// assimp‚Å“Ç‚İ‚İ
+	// assimpã§èª­ã¿è¾¼ã¿
 	const aiScene* pScene = importer.ReadFile(file, flag);
 	if (!pScene) {
 #ifdef _DEBUG
@@ -205,11 +205,11 @@ bool Model::Load(const char* file, float scale, Flip flip)
 		return false;
 	}
 
-	// “Ç‚İ‚İ‚Ìİ’è‚ğ•Û‘¶
+	// èª­ã¿è¾¼ã¿æ™‚ã®è¨­å®šã‚’ä¿å­˜
 	m_loadScale = scale;
 	m_loadFlip = flip;
 
-	// ƒfƒBƒŒƒNƒgƒŠ‚Ì“Ç‚İæ‚è
+	// ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã®èª­ã¿å–ã‚Š
 	std::string directory = file;
 	auto strIt = directory.begin();
 	while (strIt != directory.end()) {
@@ -219,31 +219,31 @@ bool Model::Load(const char* file, float scale, Flip flip)
 	}
 	directory = directory.substr(0, directory.find_last_of('\\') + 1);
 
-	// ƒm[ƒh‚Ìì¬
+	// ãƒãƒ¼ãƒ‰ã®ä½œæˆ
 	MakeBoneNodes(pScene);
-	// ƒƒbƒVƒ…ì¬
+	// ãƒ¡ãƒƒã‚·ãƒ¥ä½œæˆ
 	MakeMesh(pScene, scale, flip);
-	// ƒ}ƒeƒŠƒAƒ‹‚Ìì¬
+	// ãƒãƒ†ãƒªã‚¢ãƒ«ã®ä½œæˆ
 	MakeMaterial(pScene, directory);
 
 	return true;
 }
 
 /*
-* @brief •`‰æ
-* @param[in] meshNo •`‰æ‚·‚éƒƒbƒVƒ…A-1‚Í‘S•”•\¦
-* @param[in] func ƒƒbƒVƒ…•`‰æƒR[ƒ‹ƒoƒbƒN
+* @brief æç”»
+* @param[in] meshNo æç”»ã™ã‚‹ãƒ¡ãƒƒã‚·ãƒ¥ã€-1ã¯å…¨éƒ¨è¡¨ç¤º
+* @param[in] func ãƒ¡ãƒƒã‚·ãƒ¥æç”»ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
 */
 void Model::Draw(int meshNo)
 {
-	// ƒVƒF[ƒ_[İ’è
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼è¨­å®š
 	m_pVS->Bind();
 	m_pPS->Bind();
 
-	// ƒeƒNƒXƒ`ƒƒ©“®İ’è
+	// ãƒ†ã‚¯ã‚¹ãƒãƒ£è‡ªå‹•è¨­å®š
 	bool isAutoTexture = (meshNo == -1);
 
-	// •`‰æ”İ’è
+	// æç”»æ•°è¨­å®š
 	size_t drawNum = m_meshes.size();
 	if (meshNo != -1)
 		drawNum = meshNo + 1;
@@ -251,7 +251,7 @@ void Model::Draw(int meshNo)
 		meshNo = 0;
 
 
-	// •`‰æ
+	// æç”»
 	for (UINT i = meshNo; i < drawNum; ++i)
 	{
 		if (isAutoTexture) {
@@ -262,9 +262,9 @@ void Model::Draw(int meshNo)
 }
 
 /*
-* @brief ƒƒbƒVƒ…î•ñæ“¾
-* @param[in] index ƒƒbƒVƒ…”Ô†
-* @return ŠY“–ƒƒbƒVƒ…î•ñ
+* @brief ãƒ¡ãƒƒã‚·ãƒ¥æƒ…å ±å–å¾—
+* @param[in] index ãƒ¡ãƒƒã‚·ãƒ¥ç•ªå·
+* @return è©²å½“ãƒ¡ãƒƒã‚·ãƒ¥æƒ…å ±
 */
 const Model::Mesh* Model::GetMesh(unsigned int index)
 {
@@ -276,7 +276,7 @@ const Model::Mesh* Model::GetMesh(unsigned int index)
 }
 
 /*
-* @brief ƒƒbƒVƒ…”æ“¾
+* @brief ãƒ¡ãƒƒã‚·ãƒ¥æ•°å–å¾—
 */
 uint32_t Model::GetMeshNum()
 {
@@ -284,9 +284,9 @@ uint32_t Model::GetMeshNum()
 }
 
 /*
-* @brief ƒ}ƒeƒŠƒAƒ‹î•ñæ“¾
-* @param[in] index ƒ}ƒeƒŠƒAƒ‹”Ô†
-* @return ŠY“–ƒ}ƒeƒŠƒAƒ‹î•ñ
+* @brief ãƒãƒ†ãƒªã‚¢ãƒ«æƒ…å ±å–å¾—
+* @param[in] index ãƒãƒ†ãƒªã‚¢ãƒ«ç•ªå·
+* @return è©²å½“ãƒãƒ†ãƒªã‚¢ãƒ«æƒ…å ±
 */
 const Model::Material* Model::GetMaterial(unsigned int index)
 {
@@ -298,7 +298,7 @@ const Model::Material* Model::GetMaterial(unsigned int index)
 }
 
 /*
-* @brief ƒ}ƒeƒŠƒAƒ‹”æ“¾
+* @brief ãƒãƒ†ãƒªã‚¢ãƒ«æ•°å–å¾—
 */
 uint32_t Model::GetMaterialNum()
 {
@@ -306,9 +306,9 @@ uint32_t Model::GetMaterialNum()
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“Œã‚Ì•ÏŠ·s—ñæ“¾
-* @param[in] index ƒ{[ƒ“”Ô†
-* @return ŠY“–ƒ{[ƒ“‚Ì•ÏŠ·s—ñ
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³å¾Œã®å¤‰æ›è¡Œåˆ—å–å¾—
+* @param[in] index ãƒœãƒ¼ãƒ³ç•ªå·
+* @return è©²å½“ãƒœãƒ¼ãƒ³ã®å¤‰æ›è¡Œåˆ—
 */
 DirectX::XMMATRIX Model::GetBone(NodeIndex index)
 {
@@ -321,9 +321,9 @@ DirectX::XMMATRIX Model::GetBone(NodeIndex index)
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“î•ñæ“¾
-* @param[in] no ƒAƒjƒ”Ô†
-* @return ŠY“–ƒAƒjƒ[ƒVƒ‡ƒ“î•ñ
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³æƒ…å ±å–å¾—
+* @param[in] no ã‚¢ãƒ‹ãƒ¡ç•ªå·
+* @return è©²å½“ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³æƒ…å ±
 */
 const Model::Animation* Model::GetAnimation(AnimeNo no)
 {
@@ -336,9 +336,9 @@ const Model::Animation* Model::GetAnimation(AnimeNo no)
 
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ““Ç‚İ‚İ
-* @param[in] file “Ç‚İ‚ŞƒAƒjƒ[ƒVƒ‡ƒ“ƒtƒ@ƒCƒ‹‚Ö‚ÌƒpƒX
-* @return “à•”‚ÅŠ„‚è“–‚Ä‚ç‚ê‚½ƒAƒjƒ[ƒVƒ‡ƒ“”Ô†
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³èª­ã¿è¾¼ã¿
+* @param[in] file èª­ã¿è¾¼ã‚€ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒ•ã‚¡ã‚¤ãƒ«ã¸ã®ãƒ‘ã‚¹
+* @return å†…éƒ¨ã§å‰²ã‚Šå½“ã¦ã‚‰ã‚ŒãŸã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·
 */
 Model::AnimeNo Model::AddAnimation(const char* file)
 {
@@ -346,14 +346,14 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 	m_errorStr = "";
 #endif
 
-	// assimp‚Ìİ’è
+	// assimpã®è¨­å®š
 	Assimp::Importer importer;
 	int flag = 0;
 	flag |= aiProcess_Triangulate;
 	flag |= aiProcess_FlipUVs;
 	if (m_loadFlip == Flip::XFlip)  flag |= aiProcess_MakeLeftHanded;
 
-	// assimp‚Å“Ç‚İ‚İ
+	// assimpã§èª­ã¿è¾¼ã¿
 	const aiScene* pScene = importer.ReadFile(file, flag);
 	if (!pScene)
 	{
@@ -363,7 +363,7 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 		return ANIME_NONE;
 	}
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ`ƒFƒbƒN
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒã‚§ãƒƒã‚¯
 	if (!pScene->HasAnimations())
 	{
 #ifdef _DEBUG
@@ -372,20 +372,20 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 		return ANIME_NONE;
 	}
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ƒf[ƒ^Šm•Û
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒ‡ãƒ¼ã‚¿ç¢ºä¿
 	aiAnimation* assimpAnime = pScene->mAnimations[0];
 	m_animes.push_back(Animation());
 	Animation& anime = m_animes.back();
 
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“İ’è
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¨­å®š
 	float animeFrame = static_cast<float>(assimpAnime->mTicksPerSecond);
 	anime.totalTime = static_cast<float>(assimpAnime->mDuration )/ animeFrame;
 	anime.channels.resize(assimpAnime->mNumChannels);
 	Channels::iterator channelIt = anime.channels.begin();
 	while (channelIt != anime.channels.end())
 	{
-		// ‘Î‰‚·‚éƒ`ƒƒƒ“ƒlƒ‹(ƒ{[ƒ“)‚ğ’Tõ
+		// å¯¾å¿œã™ã‚‹ãƒãƒ£ãƒ³ãƒãƒ«(ãƒœãƒ¼ãƒ³)ã‚’æ¢ç´¢
 		uint32_t channelIdx = static_cast<uint32_t>(channelIt - anime.channels.begin());
 		aiNodeAnim* assimpChannel = assimpAnime->mChannels[channelIdx];
 		Model::Nodes::iterator nodeIt = std::find_if(m_nodes.begin(), m_nodes.end(),
@@ -399,15 +399,15 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 			continue;
 		}
 
-		// ŠeƒL[‚Ì’l‚ğİ’è
+		// å„ã‚­ãƒ¼ã®å€¤ã‚’è¨­å®š
 		channelIt->index = static_cast<NodeIndex>(nodeIt - m_nodes.begin());
 		Timeline& timeline = channelIt->timeline;
 
-		// ˆê“xXMVECTORŒ^‚ÅŠi”[
+		// ä¸€åº¦XMVECTORå‹ã§æ ¼ç´
 		using XMVectorKey = std::pair<float, DirectX::XMVECTOR>;
 		using XMVectorKeys = std::map<float, DirectX::XMVECTOR>;
 		XMVectorKeys keys[3];
-		// ˆÊ’u
+		// ä½ç½®
 		for (UINT i = 0; i < assimpChannel->mNumPositionKeys; ++i)
 		{
 			aiVectorKey& key = assimpChannel->mPositionKeys[i];
@@ -415,14 +415,14 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 					DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, 0.0f)
 			));
 		}
-		// ‰ñ“]
+		// å›è»¢
 		for (UINT i = 0; i < assimpChannel->mNumRotationKeys; ++i)
 		{
 			aiQuatKey& key = assimpChannel->mRotationKeys[i];
 			keys[1].insert(XMVectorKey(static_cast<float>(key.mTime) / animeFrame,
 				DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, key.mValue.w)));
 		}
-		// Šgk
+		// æ‹¡ç¸®
 		for (UINT i = 0; i < assimpChannel->mNumScalingKeys; ++i)
 		{
 			aiVectorKey& key = assimpChannel->mScalingKeys[i];
@@ -430,19 +430,19 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 				DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, 0.0f)));
 		}
 
-		// Šeƒ^ƒCƒ€ƒ‰ƒCƒ“‚Ìæ“ª‚ÌQÆ‚ğİ’è
+		// å„ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ã®å…ˆé ­ã®å‚ç…§ã‚’è¨­å®š
 		XMVectorKeys::iterator it[] = {keys[0].begin(), keys[1].begin(), keys[2].begin()};
 		for (int i = 0; i < 3; ++i)
 		{
-			// ƒL[‚ªˆê‚Â‚µ‚©‚È‚¢ê‡‚ÍAQÆI—¹
+			// ã‚­ãƒ¼ãŒä¸€ã¤ã—ã‹ãªã„å ´åˆã¯ã€å‚ç…§çµ‚äº†
 			if (keys[i].size() == 1)
 				++ it[i];
 		}
 
-		// Še—v‘f‚²‚Æ‚Ìƒ^ƒCƒ€ƒ‰ƒCƒ“‚Å‚Í‚È‚­A‚·‚×‚Ä‚Ì•ÏŠ·‚ğŠÜ‚ß‚½ƒ^ƒCƒ€ƒ‰ƒCƒ“‚Ìì¬
+		// å„è¦ç´ ã”ã¨ã®ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ã§ã¯ãªãã€ã™ã¹ã¦ã®å¤‰æ›ã‚’å«ã‚ãŸã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ã®ä½œæˆ
 		while (it[0] != keys[0].end() && it[1] != keys[1].end() && it[2] != keys[2].end())
 		{
-			// Œ»ó‚ÌQÆˆÊ’u‚Åˆê”Ô¬‚³‚¢ŠÔ‚ğæ“¾
+			// ç¾çŠ¶ã®å‚ç…§ä½ç½®ã§ä¸€ç•ªå°ã•ã„æ™‚é–“ã‚’å–å¾—
 			float time = anime.totalTime;
 			for (int i = 0; i < 3; ++i)
 			{
@@ -452,31 +452,31 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 				}
 			}
 
-			// ŠÔ‚ÉŠî‚Ã‚¢‚Ä•âŠÔ’l‚ğŒvZ
+			// æ™‚é–“ã«åŸºã¥ã„ã¦è£œé–“å€¤ã‚’è¨ˆç®—
 			DirectX::XMVECTOR result[3];
 			for (int i = 0; i < 3; ++i)
 			{
-				// æ“ª‚ÌƒL[‚æ‚è¬‚³‚¢ŠÔ‚Å‚ ‚ê‚ÎAæ“ª‚Ì’l‚ğİ’è
+				// å…ˆé ­ã®ã‚­ãƒ¼ã‚ˆã‚Šå°ã•ã„æ™‚é–“ã§ã‚ã‚Œã°ã€å…ˆé ­ã®å€¤ã‚’è¨­å®š
 				if (time < keys[i].begin()->first)
 				{
 					result[i] = keys[i].begin()->second;
 				}
-				// ÅIƒL[‚æ‚è‘å‚«‚¢ŠÔ‚Å‚ ‚ê‚ÎAÅI‚Ì’l‚ğİ’è
+				// æœ€çµ‚ã‚­ãƒ¼ã‚ˆã‚Šå¤§ãã„æ™‚é–“ã§ã‚ã‚Œã°ã€æœ€çµ‚ã®å€¤ã‚’è¨­å®š
 				else if (keys[i].rbegin()->first <= time)
 				{
 					result[i] = keys[i].rbegin()->second;
 					it[i] = keys[i].end();
 				}
-				// ƒL[“¯m‚É‹²‚Ü‚ê‚½ŠÔ‚Å‚ ‚ê‚ÎA•âŠÔ’l‚ğŒvZ
+				// ã‚­ãƒ¼åŒå£«ã«æŒŸã¾ã‚ŒãŸæ™‚é–“ã§ã‚ã‚Œã°ã€è£œé–“å€¤ã‚’è¨ˆç®—
 				else
 				{
-					// QÆ‚µ‚Ä‚¢‚éŠÔ‚Æ“¯‚¶‚Å‚ ‚ê‚ÎAŸ‚ÌQÆ‚ÖƒL[‚ği‚ß‚é
+					// å‚ç…§ã—ã¦ã„ã‚‹æ™‚é–“ã¨åŒã˜ã§ã‚ã‚Œã°ã€æ¬¡ã®å‚ç…§ã¸ã‚­ãƒ¼ã‚’é€²ã‚ã‚‹
 					if (it[i]->first <= time)
 					{
 						++it[i];
 					}
 
-					// •âŠÔ’l‚ÌŒvZ
+					// è£œé–“å€¤ã®è¨ˆç®—
 					XMVectorKeys::iterator prev = it[i];
 					--prev;
 					float rate = (time - prev->first) / (it[i]->first - prev->first);
@@ -484,7 +484,7 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 				}
 			}
 
-			// w’èŠÔ‚ÉŠî‚Ã‚¢‚½ƒL[‚ğ’Ç‰Á
+			// æŒ‡å®šæ™‚é–“ã«åŸºã¥ã„ãŸã‚­ãƒ¼ã‚’è¿½åŠ 
 			Transform transform;
 			DirectX::XMStoreFloat3(&transform.translate, result[0]);
 			DirectX::XMStoreFloat4(&transform.quaternion, result[1]);
@@ -496,58 +496,58 @@ Model::AnimeNo Model::AddAnimation(const char* file)
 	}
 
 
-	// ƒAƒjƒ”Ô†‚ğ•Ô‚·
+	// ã‚¢ãƒ‹ãƒ¡ç•ªå·ã‚’è¿”ã™
 	return static_cast<AnimeNo>(m_animes.size() - 1);
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌXVˆ—
-* @param[in] tick ƒAƒjƒ[ƒVƒ‡ƒ“Œo‰ßŠÔ
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®æ›´æ–°å‡¦ç†
+* @param[in] tick ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³çµŒéæ™‚é–“
 */
 void Model::Step(float tick)
 {
-	// ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌÄ¶Šm”F
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®å†ç”Ÿç¢ºèª
 	if (m_playNo == ANIME_NONE) { return; }
 
-	//--- ƒAƒjƒ[ƒVƒ‡ƒ“s—ñ‚ÌXV
-	// ƒpƒ‰ƒƒgƒŠƒbƒN
+	//--- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¡Œåˆ—ã®æ›´æ–°
+	// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯
 	if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
 	{
 		CalcAnime(PARAMETRIC0, m_parametric[0]);
 		CalcAnime(PARAMETRIC1, m_parametric[1]);
 	}
-	// ƒƒCƒ“ƒAƒjƒ
+	// ãƒ¡ã‚¤ãƒ³ã‚¢ãƒ‹ãƒ¡
 	if (m_playNo != ANIME_NONE && m_playNo != PARAMETRIC_ANIME)
 	{
 		CalcAnime(MAIN, m_playNo);
 	}
-	// ƒuƒŒƒ“ƒhƒAƒjƒ
+	// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡
 	if (m_blendNo != ANIME_NONE && m_blendNo != PARAMETRIC_ANIME)
 	{
 		CalcAnime(BLEND, m_blendNo);
 	}
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“s—ñ‚ÉŠî‚Ã‚¢‚Äœs—ñ‚ğXV
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¡Œåˆ—ã«åŸºã¥ã„ã¦éª¨è¡Œåˆ—ã‚’æ›´æ–°
 	CalcBones(0, DirectX::XMMatrixScaling(m_loadScale, m_loadScale, m_loadScale));
 
-	//--- ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌŠÔXV
-	// ƒƒCƒ“ƒAƒjƒ
+	//--- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®æ™‚é–“æ›´æ–°
+	// ãƒ¡ã‚¤ãƒ³ã‚¢ãƒ‹ãƒ¡
 	UpdateAnime(m_playNo, tick);
-	// ƒuƒŒƒ“ƒhƒAƒjƒ
+	// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡
 	if (m_blendNo != ANIME_NONE)
 	{
 		UpdateAnime(m_blendNo, tick);
 		m_blendTime += tick;
 		if (m_blendTime <= m_blendTime)
 		{
-			// ƒuƒŒƒ“ƒhƒAƒjƒ‚Ì©“®I—¹
+			// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡ã®è‡ªå‹•çµ‚äº†
 			m_blendTime = 0.0f;
 			m_blendTotalTime = 0.0f;
 			m_playNo = m_blendNo;
 			m_blendNo = ANIME_NONE;
 		}
 	}
-	// ƒpƒ‰ƒƒgƒŠƒbƒN
+	// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯
 	if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
 	{
 		UpdateAnime(m_parametric[0], tick);
@@ -556,28 +556,28 @@ void Model::Step(float tick)
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“Ä¶
-* @param[in] no Ä¶‚·‚éƒAƒjƒ[ƒVƒ‡ƒ“”Ô†
-* @param[in] loop ƒ‹[ƒvÄ¶ƒtƒ‰ƒO
-* @param[in] speed Ä¶‘¬“x
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³å†ç”Ÿ
+* @param[in] no å†ç”Ÿã™ã‚‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·
+* @param[in] loop ãƒ«ãƒ¼ãƒ—å†ç”Ÿãƒ•ãƒ©ã‚°
+* @param[in] speed å†ç”Ÿé€Ÿåº¦
 */
 void Model::Play(AnimeNo no, bool loop, float speed)
 {
-	// Ä¶ƒ`ƒFƒbƒN
+	// å†ç”Ÿãƒã‚§ãƒƒã‚¯
 	if (!AnimeNoCheck(no)) { return; }
 	if (m_playNo == no) { return; }
 
-	// ‡¬ƒAƒjƒ[ƒVƒ‡ƒ“‚©ƒ`ƒFƒbƒN
+	// åˆæˆã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‹ãƒã‚§ãƒƒã‚¯
 	if (no != PARAMETRIC_ANIME)
 	{
-		// ’Êí‚Ì‰Šú‰»
+		// é€šå¸¸ã®åˆæœŸåŒ–
 		InitAnime(no);
 		m_animes[no].isLoop = loop;
 		m_animes[no].speed = speed;
 	}
 	else
 	{
-		// ‡¬ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌŒ³‚É‚È‚Á‚Ä‚¢‚éƒAƒjƒ[ƒVƒ‡ƒ“‚ğ‰Šú‰»
+		// åˆæˆã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®å…ƒã«ãªã£ã¦ã„ã‚‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’åˆæœŸåŒ–
 		InitAnime(m_parametric[0]);
 		InitAnime(m_parametric[1]);
 		m_animes[m_parametric[0]].isLoop = loop;
@@ -585,23 +585,23 @@ void Model::Play(AnimeNo no, bool loop, float speed)
 		SetParametricBlend(0.0f);
 	}
 
-	// Ä¶ƒAƒjƒ[ƒVƒ‡ƒ“‚Ìİ’è
+	// å†ç”Ÿã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®è¨­å®š
 	m_playNo = no;
 }
 
 /*
-* @brief ƒuƒŒƒ“ƒhÄ¶
-* @param[in] no ƒAƒjƒ[ƒVƒ‡ƒ“”Ô†
-* @param[in] blendTime ƒuƒŒƒ“ƒh‚ÉŠ|‚¯‚éŠÔ
-* @param[in] loop ƒ‹[ƒvƒtƒ‰ƒO
-* @param[in] speed Ä¶‘¬“x
+* @brief ãƒ–ãƒ¬ãƒ³ãƒ‰å†ç”Ÿ
+* @param[in] no ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·
+* @param[in] blendTime ãƒ–ãƒ¬ãƒ³ãƒ‰ã«æ›ã‘ã‚‹æ™‚é–“
+* @param[in] loop ãƒ«ãƒ¼ãƒ—ãƒ•ãƒ©ã‚°
+* @param[in] speed å†ç”Ÿé€Ÿåº¦
 */
 void Model::PlayBlend(AnimeNo no, float blendTime, bool loop, float speed)
 {
-	// Ä¶ƒ`ƒFƒbƒN
+	// å†ç”Ÿãƒã‚§ãƒƒã‚¯
 	if (!AnimeNoCheck(no)) { return; }
 
-	// ‡¬ƒAƒjƒ[ƒVƒ‡ƒ“‚©ƒ`ƒFƒbƒN
+	// åˆæˆã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‹ãƒã‚§ãƒƒã‚¯
 	if (no != PARAMETRIC_ANIME)
 	{
 		InitAnime(no);
@@ -610,7 +610,7 @@ void Model::PlayBlend(AnimeNo no, float blendTime, bool loop, float speed)
 	}
 	else
 	{
-		// ‡¬ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌŒ³‚É‚È‚Á‚Ä‚¢‚éƒAƒjƒ[ƒVƒ‡ƒ“‚ğ‰Šú‰»
+		// åˆæˆã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®å…ƒã«ãªã£ã¦ã„ã‚‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’åˆæœŸåŒ–
 		InitAnime(m_parametric[0]);
 		InitAnime(m_parametric[1]);
 		m_animes[m_parametric[0]].isLoop = loop;
@@ -618,42 +618,42 @@ void Model::PlayBlend(AnimeNo no, float blendTime, bool loop, float speed)
 		SetParametricBlend(0.0f);
 	}
 
-	// ƒuƒŒƒ“ƒh‚Ìİ’è
+	// ãƒ–ãƒ¬ãƒ³ãƒ‰ã®è¨­å®š
 	m_blendTime = 0.0f;
 	m_blendTotalTime = blendTime;
 	m_blendNo = no;
 }
 
 /*
-* @brief ‡¬Œ³ƒAƒjƒ[ƒVƒ‡ƒ“‚Ìİ’è
-* @param[in] no1 ‡¬Œ³ƒAƒjƒ1
-* @param[in] no2 ‡¬Œ³ƒAƒjƒ2
+* @brief åˆæˆå…ƒã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®è¨­å®š
+* @param[in] no1 åˆæˆå…ƒã‚¢ãƒ‹ãƒ¡1
+* @param[in] no2 åˆæˆå…ƒã‚¢ãƒ‹ãƒ¡2
 */
 void Model::SetParametric(AnimeNo no1, AnimeNo no2)
 {
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ`ƒFƒbƒN
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒã‚§ãƒƒã‚¯
 	if (!AnimeNoCheck(no1)) { return; }
 	if (!AnimeNoCheck(no2)) { return; }
 
-	// ‡¬İ’è
+	// åˆæˆè¨­å®š
 	m_parametric[0] = no1;
 	m_parametric[1] = no2;
 	SetParametricBlend(0.0f);
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“‚Ì‡¬Š„‡İ’è
-* @param[in] blendRate ‡¬Š„‡
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®åˆæˆå‰²åˆè¨­å®š
+* @param[in] blendRate åˆæˆå‰²åˆ
 */
 void Model::SetParametricBlend(float blendRate)
 {
-	// ‡¬Œ³ƒAƒjƒ‚ªİ’è‚³‚ê‚Ä‚¢‚é‚©Šm”F
+	// åˆæˆå…ƒã‚¢ãƒ‹ãƒ¡ãŒè¨­å®šã•ã‚Œã¦ã„ã‚‹ã‹ç¢ºèª
 	if (m_parametric[0] == ANIME_NONE || m_parametric[1] == ANIME_NONE) return;
 
-	// ‡¬Š„‡İ’è
+	// åˆæˆå‰²åˆè¨­å®š
 	m_parametricBlend = blendRate;
 
-	// Š„‡‚ÉŠî‚Ã‚¢‚ÄƒAƒjƒ[ƒVƒ‡ƒ“‚ÌÄ¶‘¬“x‚ğİ’è
+	// å‰²åˆã«åŸºã¥ã„ã¦ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®å†ç”Ÿé€Ÿåº¦ã‚’è¨­å®š
 	Animation& anime1 = m_animes[m_parametric[0]];
 	Animation& anime2 = m_animes[m_parametric[1]];
 	float blendTotalTime = anime1.totalTime * (1.0f - m_parametricBlend) + anime2.totalTime * m_parametricBlend;
@@ -662,16 +662,16 @@ void Model::SetParametricBlend(float blendRate)
 }
 
 /*
-* @brief ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌÄ¶ŠÔ‚ğ•ÏX
-* @param[in] no •ÏX‚·‚éƒAƒjƒ
-* @param[in] time V‚µ‚¢Ä¶ŠÔ
+* @brief ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®å†ç”Ÿæ™‚é–“ã‚’å¤‰æ›´
+* @param[in] no å¤‰æ›´ã™ã‚‹ã‚¢ãƒ‹ãƒ¡
+* @param[in] time æ–°ã—ã„å†ç”Ÿæ™‚é–“
 */
 void Model::SetAnimationTime(AnimeNo no, float time)
 {
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ`ƒFƒbƒN
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒã‚§ãƒƒã‚¯
 	if (!AnimeNoCheck(no)) { return; }
 
-	// Ä¶ŠÔ•ÏX
+	// å†ç”Ÿæ™‚é–“å¤‰æ›´
 	Animation& anime = m_animes[no];
 	anime.nowTime = time;
 	while (anime.nowTime >= anime.totalTime)
@@ -681,22 +681,22 @@ void Model::SetAnimationTime(AnimeNo no, float time)
 }
 
 /*
-* @brief Ä¶ƒtƒ‰ƒO‚Ìæ“¾
-* @param[in] no ’²‚×‚éƒAƒjƒ”Ô†
-* @return Œ»İÄ¶’†‚È‚çtrue
+* @brief å†ç”Ÿãƒ•ãƒ©ã‚°ã®å–å¾—
+* @param[in] no èª¿ã¹ã‚‹ã‚¢ãƒ‹ãƒ¡ç•ªå·
+* @return ç¾åœ¨å†ç”Ÿä¸­ãªã‚‰true
 */
 bool Model::IsPlay(AnimeNo no)
 {
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ`ƒFƒbƒN
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒã‚§ãƒƒã‚¯
 	if (!AnimeNoCheck(no)) { return false; }
 
-	// ƒpƒ‰ƒƒgƒŠƒbƒN‚Í‡¬Œ³‚ÌƒAƒjƒ‚ğŠî€‚É”»’f
+	// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã¯åˆæˆå…ƒã®ã‚¢ãƒ‹ãƒ¡ã‚’åŸºæº–ã«åˆ¤æ–­
 	if (no == PARAMETRIC_ANIME) { no = m_parametric[0]; }
 
-	// Ä¶ŠÔ‚Ì”»’è
+	// å†ç”Ÿæ™‚é–“ã®åˆ¤å®š
 	if (m_animes[no].totalTime < m_animes[no].nowTime) { return false; }
 
-	// ‚»‚ê‚¼‚ê‚ÌÄ¶”Ô†‚Éİ’è‚³‚ê‚Ä‚¢‚é‚©Šm”F
+	// ãã‚Œãã‚Œã®å†ç”Ÿç•ªå·ã«è¨­å®šã•ã‚Œã¦ã„ã‚‹ã‹ç¢ºèª
 	if (m_playNo == no) { return true; }
 	if (m_blendNo == no) { return true; }
 	if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
@@ -705,13 +705,13 @@ bool Model::IsPlay(AnimeNo no)
 		if (m_parametric[1] == no) { return true; }
 	}
 
-	// Ä¶’†‚Å‚È‚¢
+	// å†ç”Ÿä¸­ã§ãªã„
 	return false;
 }
 
 /*
-* @brief Ä¶’†‚Ì”Ô†‚Ìæ“¾
-* @return ƒAƒjƒ”Ô†
+* @brief å†ç”Ÿä¸­ã®ç•ªå·ã®å–å¾—
+* @return ã‚¢ãƒ‹ãƒ¡ç•ªå·
 */
 Model::AnimeNo Model::GetPlayNo()
 {
@@ -719,8 +719,8 @@ Model::AnimeNo Model::GetPlayNo()
 }
 
 /*
-* @brief Ä¶’†‚ÌƒuƒŒƒ“ƒhƒAƒjƒ‚Ìæ“¾
-* @return ƒAƒjƒ”Ô†
+* @brief å†ç”Ÿä¸­ã®ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡ã®å–å¾—
+* @return ã‚¢ãƒ‹ãƒ¡ç•ªå·
 */
 Model::AnimeNo Model::GetBlendNo()
 {
@@ -731,8 +731,8 @@ Model::AnimeNo Model::GetBlendNo()
 #ifdef _DEBUG
 
 /*
-* @brief ƒGƒ‰[ƒƒbƒZ[ƒWæ“¾
-* @returnn ƒGƒ‰[ƒƒbƒZ[ƒW
+* @brief ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å–å¾—
+* @returnn ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
 */
 std::string Model::GetError()
 {
@@ -740,20 +740,20 @@ std::string Model::GetError()
 }
 
 /*
-* @brief ƒ{[ƒ“ƒfƒoƒbƒO•`‰æ
+* @brief ãƒœãƒ¼ãƒ³ãƒ‡ãƒãƒƒã‚°æç”»
 */
 void Model::DrawBone()
 {
-	// Ä‹Aˆ—
+	// å†å¸°å‡¦ç†
 	std::function<void(int, DirectX::XMFLOAT3)> FuncDrawBone =
 		[&FuncDrawBone, this](int idx, DirectX::XMFLOAT3 parent)
 	{
-		// eƒm[ƒh‚©‚çŒ»İˆÊ’u‚Ü‚Å•`‰æ
+		// è¦ªãƒãƒ¼ãƒ‰ã‹ã‚‰ç¾åœ¨ä½ç½®ã¾ã§æç”»
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMStoreFloat3(&pos, DirectX::XMVector3TransformCoord(DirectX::XMVectorZero(), m_nodes[idx].mat));
 		Geometory::AddLine(parent, pos, DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
 
-		// qƒm[ƒh‚Ì•`‰æ
+		// å­ãƒãƒ¼ãƒ‰ã®æç”»
 		auto it = m_nodes[idx].children.begin();
 		while (it != m_nodes[idx].children.end())
 		{
@@ -762,7 +762,7 @@ void Model::DrawBone()
 		}
 	};
 
-	// •`‰æÀs
+	// æç”»å®Ÿè¡Œ
 	FuncDrawBone(0, DirectX::XMFLOAT3());
 	Geometory::DrawLines();
 }
@@ -772,7 +772,7 @@ void Model::DrawBone()
 
 void Model::MakeBoneNodes(const void* ptr)
 {
-	// Ä‹Aˆ—‚ÅAssimp‚Ìƒm[ƒhî•ñ‚ğ“Ç‚İæ‚è
+	// å†å¸°å‡¦ç†ã§Assimpã®ãƒãƒ¼ãƒ‰æƒ…å ±ã‚’èª­ã¿å–ã‚Š
 	std::function<NodeIndex(aiNode*, NodeIndex, DirectX::XMMATRIX mat)> FuncAssimpNodeConvert =
 		[&FuncAssimpNodeConvert, this](aiNode* assimpNode, NodeIndex parent, DirectX::XMMATRIX mat)
 	{
@@ -785,18 +785,18 @@ void Model::MakeBoneNodes(const void* ptr)
 		}
 		else
 		{
-			// Assimp‚Ìƒm[ƒhî•ñ‚ğƒ‚ƒfƒ‹ƒNƒ‰ƒX‚ÖŠi”[
+			// Assimpã®ãƒãƒ¼ãƒ‰æƒ…å ±ã‚’ãƒ¢ãƒ‡ãƒ«ã‚¯ãƒ©ã‚¹ã¸æ ¼ç´
 			Node node;
 			node.name = assimpNode->mName.data;
 			node.parent = parent;
 			node.children.resize(assimpNode->mNumChildren);
 			node.mat = mat;
 
-			// ƒm[ƒhƒŠƒXƒg‚É’Ç‰Á
+			// ãƒãƒ¼ãƒ‰ãƒªã‚¹ãƒˆã«è¿½åŠ 
 			m_nodes.push_back(node);
 			NodeIndex nodeIndex = static_cast<NodeIndex>(m_nodes.size() - 1);
 
-			// q—v‘f‚à“¯—l‚É•ÏŠ·
+			// å­è¦ç´ ã‚‚åŒæ§˜ã«å¤‰æ›
 			for (UINT i = 0; i < assimpNode->mNumChildren; ++i)
 			{
 				m_nodes[nodeIndex].children[i] = FuncAssimpNodeConvert(
@@ -806,11 +806,11 @@ void Model::MakeBoneNodes(const void* ptr)
 		}
 	};
 
-	// ƒm[ƒhì¬
+	// ãƒãƒ¼ãƒ‰ä½œæˆ
 	m_nodes.clear();
 	FuncAssimpNodeConvert(reinterpret_cast<const aiScene*>(ptr)->mRootNode, INDEX_NONE, DirectX::XMMatrixIdentity());
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ŒvZ—Ìˆæ‚ÉAƒm[ƒh”•ª‚Ì‰Šúƒf[ƒ^‚ğì¬
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¨ˆç®—é ˜åŸŸã«ã€ãƒãƒ¼ãƒ‰æ•°åˆ†ã®åˆæœŸãƒ‡ãƒ¼ã‚¿ã‚’ä½œæˆ
 	Transform init = {
 		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
 		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -826,12 +826,12 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 {
 	const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
 
-	// ƒƒbƒVƒ…‚É‘Î‰‚·‚éƒ{[ƒ“‚ª‚ ‚é‚©
+	// ãƒ¡ãƒƒã‚·ãƒ¥ã«å¯¾å¿œã™ã‚‹ãƒœãƒ¼ãƒ³ãŒã‚ã‚‹ã‹
 	aiMesh* assimpMesh = pScene->mMeshes[meshIdx];
 	Mesh& mesh = m_meshes[meshIdx];
 	if (assimpMesh->HasBones())
 	{
-		// ƒƒbƒVƒ…“à‚Ì’¸“_—Ìˆæì¬
+		// ãƒ¡ãƒƒã‚·ãƒ¥å†…ã®é ‚ç‚¹é ˜åŸŸä½œæˆ
 		struct WeightPair
 		{
 			unsigned int idx;
@@ -841,26 +841,26 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 		weights.resize(mesh.vertices.size());
 
 
-		// ƒƒbƒVƒ…‚ÉŠ„‚è“–‚Ä‚ç‚ê‚Ä‚¢‚éƒ{[ƒ“—ÌˆæŠm•Û
+		// ãƒ¡ãƒƒã‚·ãƒ¥ã«å‰²ã‚Šå½“ã¦ã‚‰ã‚Œã¦ã„ã‚‹ãƒœãƒ¼ãƒ³é ˜åŸŸç¢ºä¿
 		mesh.bones.resize(assimpMesh->mNumBones);
 		for (auto boneIt = mesh.bones.begin(); boneIt != mesh.bones.end(); ++boneIt)
 		{
 			UINT boneIdx = static_cast<UINT>(boneIt - mesh.bones.begin());
 			aiBone* assimpBone = assimpMesh->mBones[boneIdx];
-			// \’zÏ‚İ‚Ìƒ{[ƒ“ƒm[ƒh‚©‚çŠY“–ƒm[ƒh‚ğæ“¾
+			// æ§‹ç¯‰æ¸ˆã¿ã®ãƒœãƒ¼ãƒ³ãƒãƒ¼ãƒ‰ã‹ã‚‰è©²å½“ãƒãƒ¼ãƒ‰ã‚’å–å¾—
 			std::string boneName = assimpBone->mName.data;
 			auto nodeIt = std::find_if(m_nodes.begin(), m_nodes.end(),
 				[boneName](const Node& val) {
 				return val.name == boneName;
 			});
-			// ƒƒbƒVƒ…‚ÉŠ„‚è“–‚Ä‚ç‚ê‚Ä‚¢‚éƒ{[ƒ“‚ªAƒm[ƒh‚É‘¶İ‚µ‚È‚¢
+			// ãƒ¡ãƒƒã‚·ãƒ¥ã«å‰²ã‚Šå½“ã¦ã‚‰ã‚Œã¦ã„ã‚‹ãƒœãƒ¼ãƒ³ãŒã€ãƒãƒ¼ãƒ‰ã«å­˜åœ¨ã—ãªã„
 			if (nodeIt == m_nodes.end())
 			{
 				boneIt->index = INDEX_NONE;
 				continue;
 			}
 
-			// ƒƒbƒVƒ…‚Ìƒ{[ƒ“‚Æƒm[ƒh‚Ì•R‚Ã‚¯
+			// ãƒ¡ãƒƒã‚·ãƒ¥ã®ãƒœãƒ¼ãƒ³ã¨ãƒãƒ¼ãƒ‰ã®ç´ã¥ã‘
 			boneIt->index = static_cast<NodeIndex>(nodeIt - m_nodes.begin());
 			boneIt->invOffset = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
 			boneIt->invOffset.r[3].m128_f32[0] *= m_loadScale;
@@ -871,7 +871,7 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 				boneIt->invOffset * 
 				DirectX::XMMatrixScaling(1.f / m_loadScale, 1.f / m_loadScale, 1.f / m_loadScale);
 
-			// ƒEƒFƒCƒg‚Ìİ’è
+			// ã‚¦ã‚§ã‚¤ãƒˆã®è¨­å®š
 			UINT weightNum = assimpBone->mNumWeights;
 			for (UINT i = 0; i < weightNum; ++i)
 			{
@@ -880,7 +880,7 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 			}
 		}
 
-		// æ“¾‚µ‚Ä‚«‚½’¸“_ƒEƒFƒCƒg‚ğİ’è
+		// å–å¾—ã—ã¦ããŸé ‚ç‚¹ã‚¦ã‚§ã‚¤ãƒˆã‚’è¨­å®š
 		for (int i = 0; i < weights.size(); ++i)
 		{
 			if (weights[i].size() >= 4)
@@ -888,7 +888,7 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 				std::sort(weights[i].begin(), weights[i].end(), [](WeightPair& a, WeightPair& b) {
 					return a.weight > b.weight;
 				});
-				// ƒEƒFƒCƒg”4‚É‡‚í‚¹‚Ä³‹K‰»
+				// ã‚¦ã‚§ã‚¤ãƒˆæ•°4ã«åˆã‚ã›ã¦æ­£è¦åŒ–
 				float total = 0.0f;
 				for (int j = 0; j < 4; ++j)
 					total += weights[i][j].weight;
@@ -904,7 +904,7 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 	}
 	else
 	{
-		// ƒƒbƒVƒ…‚Ìeƒm[ƒh‚ğƒgƒ‰ƒ“ƒXƒtƒH[ƒ€Œ³‚Æ‚µ‚ÄŒvZ
+		// ãƒ¡ãƒƒã‚·ãƒ¥ã®è¦ªãƒãƒ¼ãƒ‰ã‚’ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ å…ƒã¨ã—ã¦è¨ˆç®—
 		std::string nodeName = assimpMesh->mName.data;
 		auto nodeIt = std::find_if(m_nodes.begin(), m_nodes.end(),
 			[nodeName](const Node& val) {
@@ -912,10 +912,10 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 			});
 		if (nodeIt == m_nodes.end())
 		{
-			return;	// ƒ{[ƒ“ƒf[ƒ^‚È‚µ
+			return;	// ãƒœãƒ¼ãƒ³ãƒ‡ãƒ¼ã‚¿ãªã—
 		}
 
-		// ƒƒbƒVƒ…‚Å‚È‚¢eƒm[ƒh‚ğÄ‹A’Tõ
+		// ãƒ¡ãƒƒã‚·ãƒ¥ã§ãªã„è¦ªãƒãƒ¼ãƒ‰ã‚’å†å¸°æ¢ç´¢
 		std::function<int(int)> FuncFindNode =
 			[&FuncFindNode, this, pScene](NodeIndex parent)
 		{
@@ -947,23 +947,23 @@ void Model::MakeWeight(const void* ptr, int meshIdx)
 
 bool Model::AnimeNoCheck(AnimeNo no)
 {
-	// ƒpƒ‰ƒƒgƒŠƒbƒNƒAƒjƒ[ƒVƒ‡ƒ“Šm”F
+	// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç¢ºèª
 	if (no == PARAMETRIC_ANIME)
 	{
-		// ƒpƒ‰ƒƒgƒŠƒbƒN‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ª—¼•û³‚µ‚­İ’è‚³‚ê‚Ä‚¢‚é‚©
+		// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒä¸¡æ–¹æ­£ã—ãè¨­å®šã•ã‚Œã¦ã„ã‚‹ã‹
 		return
 			m_parametric[0] != ANIME_NONE &&
 			m_parametric[1] != ANIME_NONE;
 	}
 	else
 	{
-		// –â‘è‚È‚¢ƒAƒjƒ[ƒVƒ‡ƒ“”Ô†‚©‚Ç‚¤‚©
+		// å•é¡Œãªã„ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·ã‹ã©ã†ã‹
 		return 0 <= no && no < m_animes.size();
 	}
 }
 void Model::InitAnime(AnimeNo no)
 {
-	// ƒAƒjƒ‚Ìİ’è‚È‚µAƒpƒ‰ƒƒgƒŠƒbƒN‚Åİ’è‚³‚ê‚Ä‚¢‚é‚È‚ç‰Šú‰»‚µ‚È‚¢
+	// ã‚¢ãƒ‹ãƒ¡ã®è¨­å®šãªã—ã€ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã§è¨­å®šã•ã‚Œã¦ã„ã‚‹ãªã‚‰åˆæœŸåŒ–ã—ãªã„
 	if (no == ANIME_NONE || no == PARAMETRIC_ANIME) { return; }
 
 	Animation& anime = m_animes[no];
@@ -977,7 +977,7 @@ void Model::CalcAnime(AnimeTransform kind, AnimeNo no)
 	Channels::iterator channelIt = anime.channels.begin();
 	while (channelIt != anime.channels.end())
 	{
-		// ˆê’v‚·‚éƒ{[ƒ“‚ª‚È‚¯‚ê‚ÎƒXƒLƒbƒv
+		// ä¸€è‡´ã™ã‚‹ãƒœãƒ¼ãƒ³ãŒãªã‘ã‚Œã°ã‚¹ã‚­ãƒƒãƒ—
 		Timeline& timeline = channelIt->timeline;
 		if (channelIt->index == INDEX_NONE || timeline.empty())
 		{
@@ -985,11 +985,11 @@ void Model::CalcAnime(AnimeTransform kind, AnimeNo no)
 			continue;
 		}
 
-		//--- ŠY“–ƒm[ƒh‚Ìp¨‚ğƒAƒjƒ[ƒVƒ‡ƒ“‚ÅXV
+		//--- è©²å½“ãƒãƒ¼ãƒ‰ã®å§¿å‹¢ã‚’ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã§æ›´æ–°
 		Transform& transform = m_nodeTransform[kind][channelIt->index];
 		if (timeline.size() <= 1)
 		{
-			// ƒL[‚ªˆê‚Â‚µ‚©‚È‚¢‚Ì‚Å’l‚ğ‚»‚Ì‚Ü‚Üg—p
+			// ã‚­ãƒ¼ãŒä¸€ã¤ã—ã‹ãªã„ã®ã§å€¤ã‚’ãã®ã¾ã¾ä½¿ç”¨
 			transform = channelIt->timeline[0];
 		}
 		else
@@ -997,19 +997,19 @@ void Model::CalcAnime(AnimeTransform kind, AnimeNo no)
 			Timeline::iterator startIt = timeline.begin();
 			if (anime.nowTime <= startIt->first)
 			{
-				// æ“ªƒL[‚æ‚è‚à‘O‚ÌŠÔ‚È‚çAæ“ª‚Ì’l‚ğg—p
+				// å…ˆé ­ã‚­ãƒ¼ã‚ˆã‚Šã‚‚å‰ã®æ™‚é–“ãªã‚‰ã€å…ˆé ­ã®å€¤ã‚’ä½¿ç”¨
 				transform = startIt->second;
 
 				
 			}
 			else if (timeline.rbegin()->first <= anime.nowTime)
 			{
-				// ÅIƒL[‚æ‚è‚àŒã‚ÌŠÔ‚È‚çAÅŒã‚Ì’l‚ğg—p
+				// æœ€çµ‚ã‚­ãƒ¼ã‚ˆã‚Šã‚‚å¾Œã®æ™‚é–“ãªã‚‰ã€æœ€å¾Œã®å€¤ã‚’ä½¿ç”¨
 				transform = timeline.rbegin()->second;
 			}
 			else
 			{
-				// w’è‚³‚ê‚½ŠÔ‚ğ‹²‚Ş2‚Â‚ÌƒL[‚©‚çA•âŠÔ‚³‚ê‚½’l‚ğŒvZ
+				// æŒ‡å®šã•ã‚ŒãŸæ™‚é–“ã‚’æŒŸã‚€2ã¤ã®ã‚­ãƒ¼ã‹ã‚‰ã€è£œé–“ã•ã‚ŒãŸå€¤ã‚’è¨ˆç®—
 				Timeline::iterator nextIt = timeline.upper_bound(anime.nowTime);
 				startIt = nextIt;
 				--startIt;
@@ -1039,9 +1039,9 @@ void Model::UpdateAnime(AnimeNo no, float tick)
 }
 void Model::CalcBones(NodeIndex index, const DirectX::XMMATRIX parent)
 {
-	//--- ƒAƒjƒ[ƒVƒ‡ƒ“‚²‚Æ‚Ìƒpƒ‰ƒ[ƒ^‚ğ‡¬
+	//--- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã”ã¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’åˆæˆ
 	Transform transform;
-	// ƒpƒ‰ƒƒgƒŠƒbƒN
+	// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯
 	if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
 	{
 		LerpTransform(&transform, m_nodeTransform[PARAMETRIC0][index], m_nodeTransform[PARAMETRIC1][index], m_parametricBlend);
@@ -1054,25 +1054,25 @@ void Model::CalcBones(NodeIndex index, const DirectX::XMMATRIX parent)
 			m_nodeTransform[BLEND][index] = transform;
 		}
 	}
-	// ƒuƒŒƒ“ƒhƒAƒjƒ
+	// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡
 	if (m_blendNo != ANIME_NONE)
 	{
 		LerpTransform(&transform, m_nodeTransform[MAIN][index], m_nodeTransform[BLEND][index], m_blendTime / m_blendTotalTime);
 	}
 	else
 	{
-		// ƒƒCƒ“ƒAƒjƒ‚Ì‚İ
+		// ãƒ¡ã‚¤ãƒ³ã‚¢ãƒ‹ãƒ¡ã®ã¿
 		transform = m_nodeTransform[MAIN][index];
 	}
 
-	// ŠY“–ƒm[ƒh‚Ìp¨s—ñ‚ğŒvZ
+	// è©²å½“ãƒãƒ¼ãƒ‰ã®å§¿å‹¢è¡Œåˆ—ã‚’è¨ˆç®—
 	Node& node = m_nodes[index];
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&transform.translate));
 	DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&transform.quaternion));
 	DirectX::XMMATRIX S = DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&transform.scale));
 	node.mat = (S * R * T) * parent;
 
-	// q—v‘f‚Ìp¨‚ğXV
+	// å­è¦ç´ ã®å§¿å‹¢ã‚’æ›´æ–°
 	Children::iterator it = node.children.begin();
 	while (it != node.children.end())
 	{
