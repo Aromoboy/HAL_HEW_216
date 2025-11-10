@@ -36,144 +36,144 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Startup.cpp">
+    <ClCompile Include="src\Startup.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="Sprite.cpp">
+    <ClCompile Include="src\Sprite.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Input.cpp">
+    <ClCompile Include="src\Input.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Geometory.cpp">
+    <ClCompile Include="src\Geometory.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="SceneGame.cpp">
+    <ClCompile Include="src\SceneGame.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="src\Main.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
-    <ClCompile Include="_model.cpp">
+    <ClCompile Include="src\_model.cpp">
       <Filter>ソース ファイル\Work</Filter>
     </ClCompile>
-    <ClCompile Include="_geometory.cpp">
+    <ClCompile Include="src\_geometory.cpp">
       <Filter>ソース ファイル\Work</Filter>
     </ClCompile>
-    <ClCompile Include="Model.cpp">
+    <ClCompile Include="src\Model.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Scene.cpp">
+    <ClCompile Include="src\Scene.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="DirectX.cpp">
+    <ClCompile Include="src\DirectX.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="MeshBuffer.cpp">
+    <ClCompile Include="src\MeshBuffer.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="Shader.cpp">
+    <ClCompile Include="src\Shader.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="ShaderList.cpp">
+    <ClCompile Include="src\ShaderList.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="Texture.cpp">
+    <ClCompile Include="src\Texture.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="DrawMatrix.cpp">
+    <ClCompile Include="src\DrawMatrix.cpp">
       <Filter>ソース ファイル\System\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="Debug.cpp">
+    <ClCompile Include="src\Debug.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="ICamera.cpp">
+    <ClCompile Include="src\ICamera.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
-    <ClCompile Include="CameraDebug.cpp">
+    <ClCompile Include="src\CameraDebug.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
-    <ClCompile Include="SoundSystem.cpp">
+    <ClCompile Include="src\SoundSystem.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="TestObject.cpp">
+    <ClCompile Include="src\TestObject.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
-    <ClCompile Include="DebugConsole.cpp">
+    <ClCompile Include="src\DebugConsole.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="SoundManagerEX.cpp">
+    <ClCompile Include="src\SoundManagerEX.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Defines.h">
+    <ClInclude Include="include\Defines.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="Geometory.h">
+    <ClInclude Include="include\Geometory.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Input.h">
+    <ClInclude Include="include\Input.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Sprite.h">
+    <ClInclude Include="include\Sprite.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Main.h">
+    <ClInclude Include="include\Main.h">
       <Filter>ヘッダー ファイル\Application</Filter>
     </ClInclude>
-    <ClInclude Include="SceneGame.h">
+    <ClInclude Include="include\SceneGame.h">
       <Filter>ヘッダー ファイル\Application</Filter>
     </ClInclude>
-    <ClInclude Include="Model.h">
+    <ClInclude Include="include\Model.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Scene.h">
+    <ClInclude Include="include\Scene.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="DirectX.h">
+    <ClInclude Include="include\DirectX.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="MeshBuffer.h">
+    <ClInclude Include="include\MeshBuffer.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="Shader.h">
+    <ClInclude Include="include\Shader.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="ShaderList.h">
+    <ClInclude Include="include\ShaderList.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="Texture.h">
+    <ClInclude Include="include\Texture.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="DrawMatrix.h">
+    <ClInclude Include="include\DrawMatrix.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="Vector.h">
+    <ClInclude Include="include\Vector.h">
       <Filter>ヘッダー ファイル\System\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="Debug.h">
+    <ClInclude Include="include\Debug.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="ICamera.h">
+    <ClInclude Include="include\ICamera.h">
       <Filter>ヘッダー ファイル\Application</Filter>
     </ClInclude>
-    <ClInclude Include="CameraDebug.h">
+    <ClInclude Include="include\CameraDebug.h">
       <Filter>ヘッダー ファイル\Application</Filter>
     </ClInclude>
-    <ClInclude Include="SoundSystem.h">
+    <ClInclude Include="include\SoundSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="TestObject.h">
+    <ClInclude Include="include\TestObject.h">
       <Filter>ヘッダー ファイル\Application</Filter>
     </ClInclude>
-    <ClInclude Include="DebugConsole.h">
+    <ClInclude Include="include\DebugConsole.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="conioex.h">
+    <ClInclude Include="include\conioex.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="SoundManagerEX.h">
+    <ClInclude Include="include\SoundManagerEX.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
