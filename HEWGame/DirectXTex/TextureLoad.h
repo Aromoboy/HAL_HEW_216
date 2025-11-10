@@ -30,7 +30,7 @@ inline HRESULT LoadTextureFromFile(
 	MultiByteToWideChar(0, 0, pszFileName, -1, wPath, MAX_PATH);
 	if (strstr(pszFileName, ".tga"))
 	{
-		//hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
+		hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
 	}
 	else
 	{

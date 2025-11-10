@@ -1,195 +1,136 @@
-
-#include <windows.h>
-#include <string>
+#include "Main.h"
 #include <memory>
 #include "DirectX.h"
-#include "SpriteDrawer.h"
-#include "Game.h"
-#include "Keyboard.h"
-#include "VertexBuffer.h"
+#include "Geometory.h"
+#include "Sprite.h"
+#include "Input.h"
+#include "SceneGame.h"
+#include "Defines.h"
+#include "ShaderList.h"
 
-// mm マルチメディア
-// lib cppファイルをまとめたようなもの
-#pragma comment(lib, "winmm.lib")
-
-
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+#include "DebugConsole.h"
 
 
-bool bFlag = false;
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) 
+
+//--- グローバル変数
+Scene* g_pScene;
+
+HRESULT Init(HWND hWnd, UINT width, UINT height)
 {
+	HRESULT hr;
+	// DirectX初期化
+	hr = InitDirectX(hWnd, width, height, false);
+	if (FAILED(hr)) { return hr; }
 
-	//終了時のメモリリークチェック
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	// 他機能初期化
+	Geometory::Init();
+	Sprite::Init();
+	InitInput();
+	ShaderList::Init();
 
+	// シーン
+	g_pScene = new SceneGame();
 
-	WNDCLASSEX wcex;
-	ZeroMemory(&wcex, sizeof(wcex));//ウィンドウの情報をすべてゼロで埋める
-	wcex.hInstance = hInstance;//アプリケーションの識別番号
-	wcex.lpszClassName = "ClassName";
-	wcex.lpfnWndProc = WndProc;//ウィンドウプロシージャの設定
-	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-	wcex.hIconSm = wcex.hIcon;
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	return hr;
+}
 
-	
-	
-	if (!RegisterClassEx(&wcex))
-	{
-		MessageBox(NULL, "ウィンドウクラスの登録に失敗", "エラー", MB_OK);
-	}
+void Uninit()
+{
+	if (g_pScene) delete g_pScene;
 
-	HWND hwnd;
-
-	
-	
-	hwnd = CreateWindowEx(
-		WS_EX_OVERLAPPEDWINDOW,
-		wcex.lpszClassName, "縦横無尽に跳ね回るウィンドウ",
-		WS_CAPTION | WS_SYSMENU,
-		CW_USEDEFAULT, CW_USEDEFAULT,
-		WINX, WINY,
-		HWND_DESKTOP, NULL, hInstance, NULL);
-	if (hwnd == nullptr)
-	{
-		MessageBox(NULL, "ウィンドウの作成に失敗", "エラー", MB_OK);
-	}
-
-
-	if (hwnd == NULL)//作成されなかったら終了する
-	{
-		return 0;
-	}
-	else
-	{
-
-			ShowWindow(hwnd, nCmdShow);
-			UpdateWindow(hwnd);
-		
-	}
-	
-
-	DWORD  nowTime = 0;
-	DWORD oldTime = 0;
-	DWORD fpsCount = 0;
-	DWORD fpsOldTime = 0;
-	std::string txtFps;
-
-	timeBeginPeriod(1);
-
-
-	//メッセージキューにメッセージがあるか
-	MSG message;
-
-	if (FAILED(InitDirectX(hwnd, WINX, WINY, false)))
-	{
-		MessageBox(hwnd, "DirectXの初期化に失敗", "エラー", MB_OK);
-		return 0;
-	}
-
-	
-
-	InitSpriteDrawer(GetDevice(), GetContext(), WINX, WINY);
-
-	InitVertex();
-
-	std::unique_ptr<Game> pMainGame = std::make_unique<Game>();
-
-
-
-	int nMoveCnt = 0;
-	while (1)
-	{	
-
-		if (PeekMessage(&message, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (!GetMessage(&message, NULL, 0, 0))
-			{
-				break;
-			}
-			else
-			{
-
-				TranslateMessage(&message);
-				DispatchMessage(&message);
-
-			}
-		}
-		else 
-		{
-			// FPSの処理
-			nowTime = timeGetTime();
-			
-			if (nowTime - oldTime >= 1000 / 60)
-			{
-				
-
-				KeyboardUpdate();
-				pMainGame->UpdateGame();
-				BeginDrawDirectX();
-				pMainGame->DrawGame();
-				EndDrawDirectX();
-				oldTime = nowTime;
-
-				
-				
-				fpsCount++;
-			}
-
-			if (nowTime - fpsOldTime >= 1000)
-			{
-#ifdef _DEBUG
-				std::string txtFPS =
-					std::to_string(fpsCount);
-				txtFps = "FPS:" + txtFps;
-				SetWindowText(hwnd, txtFPS.c_str());
-#endif
-				fpsCount = 0;
-				fpsOldTime = nowTime;
-			}
-		}
-	}
-
-
-	timeEndPeriod(1);
-	UninitVertex();
-	UninitSpriteDrawer();
+	ShaderList::Uninit();
+	UninitInput();
+	Sprite::Uninit();
+	Geometory::Uninit();
 	UninitDirectX();
-	return 0;
-
 }
 
-
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+void Update()
 {
+	UpdateInput();
 
-	int id;
-	static HRGN hRgn1, hRgn2, hRgn3, hRgn, hRgnX;
-	WINDOWPLACEMENT wndpl;
-	RECT rc;
-	static int def; //メニュー、タイトルバーの高さ
-	POINT pta[3], ptb[3];
+#ifdef _DEBUG
+	if (IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+#endif
 
+	g_pScene->RootUpdate();
+}
 
+void Draw()
+{
+	BeginDrawDirectX();
 
-	switch (message)
+	// 軸線の表示
+#ifdef _DEBUG
+	// グリッド
+	DirectX::XMFLOAT4 lineColor(0.5f, 0.5f, 0.5f, 1.0f);
+	float size = DEBUG_GRID_NUM * DEBUG_GRID_MARGIN;
+	for (int i = 1; i <= DEBUG_GRID_NUM; ++i)
 	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	
+		float grid = i * DEBUG_GRID_MARGIN;
+		DirectX::XMFLOAT3 pos[2] = {
+			DirectX::XMFLOAT3(grid, 0.0f, size),
+			DirectX::XMFLOAT3(grid, 0.0f,-size),
+		};
+		Geometory::AddLine(pos[0], pos[1], lineColor);
+		pos[0].x = pos[1].x = -grid;
+		Geometory::AddLine(pos[0], pos[1], lineColor);
+		pos[0].x = size;
+		pos[1].x = -size;
+		pos[0].z = pos[1].z = grid;
+		Geometory::AddLine(pos[0], pos[1], lineColor);
+		pos[0].z = pos[1].z = -grid;
+		Geometory::AddLine(pos[0], pos[1], lineColor);
+	}
+	// 軸
+	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(size,0,0), DirectX::XMFLOAT4(1,0,0,1));
+	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,size,0), DirectX::XMFLOAT4(0,1,0,1));
+	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,0,size), DirectX::XMFLOAT4(0,0,1,1));
+	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(-size,0,0),  DirectX::XMFLOAT4(0,0,0,1));
+	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,0,-size),  DirectX::XMFLOAT4(0,0,0,1));
 
+	Geometory::DrawLines();
+
+	// カメラの値
+	static bool camAutoSwitch = false;
+	static bool camUpDownSwitch = true;
+	static float camAutoRotate = 1.0f;
+	if (IsKeyTrigger(VK_RETURN)) {
+		camAutoSwitch ^= true;
+	}
+	if (IsKeyTrigger(VK_SPACE)) {
+		camUpDownSwitch ^= true;
 	}
 
-	return DefWindowProc(hwnd, message, wParam, lParam);
+	DirectX::XMVECTOR camPos;
+	if (camAutoSwitch) {
+		camAutoRotate += 0.01f;
+	}
+	camPos = DirectX::XMVectorSet(
+		cosf(camAutoRotate) * 5.0f,
+		3.5f * (camUpDownSwitch ? 1.0f : -1.0f),
+		sinf(camAutoRotate) * 5.0f,
+		0.0f);
 
+	// ジオメトリ用カメラ初期化
+	DirectX::XMFLOAT4X4 mat[2];
+	DirectX::XMStoreFloat4x4(&mat[0], DirectX::XMMatrixTranspose(
+		DirectX::XMMatrixLookAtLH(
+			camPos,
+			DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f),
+			DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)
+		)));
+	DirectX::XMStoreFloat4x4(&mat[1], DirectX::XMMatrixTranspose(
+		DirectX::XMMatrixPerspectiveFovLH(
+			DirectX::XMConvertToRadians(60.0f), (float)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 1000.0f)
+	));
+	Geometory::SetView(mat[0]);
+	Geometory::SetProjection(mat[1]);
+#endif
+
+	g_pScene->RootDraw();
+	EndDrawDirectX();
 }
 
-
-
-
+// EOF
