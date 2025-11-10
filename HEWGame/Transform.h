@@ -12,11 +12,6 @@ struct Transform
 	float3 Scale;
 };
 
-
-void Update();
-void Draw();
-Transform GetTransform() { return  m_Transform; }
-
 Transform m_Transform;
 string tag;
 

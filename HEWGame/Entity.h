@@ -14,7 +14,9 @@ public:
 	//デストラクタ
 	~CEntity();
 
-
+	void Update();
+	void Draw();
+	Transform GetTransform() { return  m_Transform; }
 	
 private:
 	Transform m_Transform;
