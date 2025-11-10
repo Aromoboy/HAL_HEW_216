@@ -51,5 +51,10 @@ _ReSharper*/
 [Dd]ebug*/
 [Rr]elease*/
 x64/
+# DirectXTex のプリビルド済みバイナリを誤って除外しないための例外設定。
+!HEWGame/DirectXTex/Win32/Debug/**
+!HEWGame/DirectXTex/Win32/Release/**
+!HEWGame/DirectXTex/x64/Debug/**
+!HEWGame/DirectXTex/x64/Release/**
 x86
 
