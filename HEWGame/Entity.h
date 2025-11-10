@@ -1,8 +1,9 @@
-
 #ifndef ___ENTITY_H___
 #define ___ENTITY_H___
 
+
 #include <string>
+#include <Vector.h>
 using namespace std;
 
 class CEntity
@@ -15,9 +16,15 @@ public:
 
 	void Update();
 	void Draw();
-	int GetTransform() { return Transform; }
+	float3 GetTransform() { return struct Transform; }
 private:
-	int Transform;
+	struct Transform
+	{
+		float3 Position;
+		float3 Rotation;
+		float3 Scale;
+
+	}; 
 	string tag;
 };
 
