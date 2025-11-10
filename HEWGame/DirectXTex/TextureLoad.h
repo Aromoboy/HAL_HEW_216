@@ -1,7 +1,7 @@
 #ifndef __TEXTURE_LOAD_H__
 #define __TEXTURE_LOAD_H__
 
-#include "DirectXTex/DirectXTex.h"
+#include "DirectXTex.h"
 
 #ifdef _X86_
 #ifdef _DEBUG
@@ -30,7 +30,7 @@ inline HRESULT LoadTextureFromFile(
 	MultiByteToWideChar(0, 0, pszFileName, -1, wPath, MAX_PATH);
 	if (strstr(pszFileName, ".tga"))
 	{
-		//hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
+		hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
 	}
 	else
 	{

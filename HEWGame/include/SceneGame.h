@@ -1,0 +1,29 @@
+#ifndef __SCENE_GAME_H__
+#define __SCENE_GAME_H__
+
+#include "Scene.h"
+#include "Model.h"
+#include "ICamera.h"
+#include "TestObject.h"
+#include "SoundManagerEX.h"
+
+#include <memory>
+
+class SceneGame : public Scene
+{
+public:
+	SceneGame();
+	~SceneGame();
+	void Update() final;
+	void Draw() final;
+
+
+private:
+	std::unique_ptr<Model> m_pModel;
+	std::unique_ptr<ICamera> m_pCamera;
+	std::unique_ptr<SoundManagerEX> m_pManager;
+
+	std::vector<std::shared_ptr<TestObject>> m_pObjects;
+};
+
+#endif // __SCENE_GAME_H__
