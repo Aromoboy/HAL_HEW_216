@@ -94,10 +94,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration);$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)" xcopy /y "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -115,10 +115,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration);$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)" xcopy /y "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -132,10 +132,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration);$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)" xcopy /y "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -153,10 +153,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration);$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)" xcopy /y "$(ProjectDir)ThirdParty\Assimp\lib\$(Configuration)\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
