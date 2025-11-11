@@ -3,7 +3,9 @@
 #include "DirectX.h"
 #include "Geometory.h"
 #include "Sprite.h"
-#include "Input.h"
+#include "Core/Input.h"
+#include "Core/IUpdatable.h"
+#include "Core/StepTimer.h"
 #include "SceneGame.h"
 #include "Defines.h"
 #include "ShaderList.h"
@@ -12,23 +14,31 @@
 
 
 
-//--- ƒOƒ[ƒoƒ‹•Ï”
-Scene* g_pScene;
+static Core::Input g_input;
+static Core::StepTimer g_timer;
+	hr = g_input.Initialize();
+	if (FAILED(hr)) { return hr; }
+	g_timer.Reset();
+	g_input.Shutdown();
 
-HRESULT Init(HWND hWnd, UINT width, UINT height)
-{
-	HRESULT hr;
-	// DirectX‰Šú‰»
-	hr = InitDirectX(hWnd, width, height, false);
+	g_input.Update();
+	g_timer.Tick();
+	if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+	Core::UpdateContext ctx(g_timer, g_input);
+	ctx.dt = g_timer.DeltaTime();
+	ctx.scene = g_pScene;
+	g_pScene->RootUpdate(ctx);
+	if (g_input.IsKeyTrigger(VK_RETURN)) {
+	if (g_input.IsKeyTrigger(VK_SPACE)) {
 	if (FAILED(hr)) { return hr; }
 
-	// ‘¼‹@”\‰Šú‰»
+	// ä»–æ©Ÿèƒ½åˆæœŸåŒ–
 	Geometory::Init();
 	Sprite::Init();
 	InitInput();
 	ShaderList::Init();
 
-	// ƒV[ƒ“
+	// ã‚·ãƒ¼ãƒ³
 	g_pScene = new SceneGame();
 
 	return hr;
@@ -60,9 +70,9 @@ void Draw()
 {
 	BeginDrawDirectX();
 
-	// ²ü‚Ì•\¦
+	// è»¸ç·šã®è¡¨ç¤º
 #ifdef _DEBUG
-	// ƒOƒŠƒbƒh
+	// ã‚°ãƒªãƒƒãƒ‰
 	DirectX::XMFLOAT4 lineColor(0.5f, 0.5f, 0.5f, 1.0f);
 	float size = DEBUG_GRID_NUM * DEBUG_GRID_MARGIN;
 	for (int i = 1; i <= DEBUG_GRID_NUM; ++i)
@@ -82,7 +92,7 @@ void Draw()
 		pos[0].z = pos[1].z = -grid;
 		Geometory::AddLine(pos[0], pos[1], lineColor);
 	}
-	// ²
+	// è»¸
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(size,0,0), DirectX::XMFLOAT4(1,0,0,1));
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,size,0), DirectX::XMFLOAT4(0,1,0,1));
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,0,size), DirectX::XMFLOAT4(0,0,1,1));
@@ -91,7 +101,7 @@ void Draw()
 
 	Geometory::DrawLines();
 
-	// ƒJƒƒ‰‚Ì’l
+	// ã‚«ãƒ¡ãƒ©ã®å€¤
 	static bool camAutoSwitch = false;
 	static bool camUpDownSwitch = true;
 	static float camAutoRotate = 1.0f;
@@ -112,7 +122,7 @@ void Draw()
 		sinf(camAutoRotate) * 5.0f,
 		0.0f);
 
-	// ƒWƒIƒƒgƒŠ—pƒJƒƒ‰‰Šú‰»
+	// ã‚¸ã‚ªãƒ¡ãƒˆãƒªç”¨ã‚«ãƒ¡ãƒ©åˆæœŸåŒ–
 	DirectX::XMFLOAT4X4 mat[2];
 	DirectX::XMStoreFloat4x4(&mat[0], DirectX::XMMatrixTranspose(
 		DirectX::XMMatrixLookAtLH(

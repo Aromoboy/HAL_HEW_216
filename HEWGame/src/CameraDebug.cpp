@@ -8,7 +8,7 @@ void CameraDebug::Update()
         if(bIsMove) m_pos.y += 0.1f;
 }
 
-void CameraDebug::OnUpdate(const Core::UpdateContext& ctx)
+void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
         (void)ctx;
         Update();
