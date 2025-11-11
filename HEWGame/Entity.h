@@ -16,7 +16,7 @@ public:
 
 	void Update(float);
 	void Draw();
-	Transform GetTransform() { return  Components_Transform; }
+	Transform GetTransform() { return  m_Transform; }
 	
 private:
 	

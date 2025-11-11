@@ -7,12 +7,12 @@ using namespace std;
 
 struct Transform
 {
-	float3 Position;
-	float3 Rotation;
-	float3 Scale;
+	float3 position;
+	float3 rotation;
+	float3 scale;
 };
 
-Transform Components_Transform;
+Transform m_Transform;
 std::string tag;
 
 #endif
