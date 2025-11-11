@@ -5,7 +5,7 @@
 #include "ModelRender.h"
 #include <string>
 #include <Vector.h>
-using namespace std;
+
 
 class CEntity
 {
@@ -17,7 +17,7 @@ public:
 
 	void OnUpdate();
 	void Draw(ModelRender);
-	Transform GetTransform() { return m_transform; }
+	Transform& GetTransform();
 	
 private:
 	Transform m_transform;
