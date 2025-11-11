@@ -12,6 +12,4 @@ struct Transform
 	float3 scale;
 };
 
-Transform m_transform;
-
 #endif
