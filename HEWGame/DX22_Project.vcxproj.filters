@@ -105,6 +105,8 @@
     <ClCompile Include="src\SoundManagerEX.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Entity.cpp">
+      <Filter>ソース ファイル</Filter>
     <ClCompile Include="src\AssimpModelLorder.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -194,6 +196,11 @@
     <ClInclude Include="include\SoundManagerEX.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Entity.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>ヘッダー ファイル</Filter>
     <ClInclude Include="include\ModelDX.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>

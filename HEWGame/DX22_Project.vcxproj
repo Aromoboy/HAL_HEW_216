@@ -160,6 +160,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Entity.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Debug.cpp" />
@@ -191,6 +192,7 @@
     <ClCompile Include="src\_model.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Entity.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
     <ClInclude Include="include\Debug.h" />
@@ -220,6 +222,7 @@
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
+    <ClInclude Include="Transform.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
