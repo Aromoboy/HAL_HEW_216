@@ -7,7 +7,6 @@
 #include "SceneGame.h"
 #include "Defines.h"
 #include "ShaderList.h"
-
 #include "DebugConsole.h"
 
 
