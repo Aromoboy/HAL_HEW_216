@@ -170,7 +170,6 @@
     <ClCompile Include="src\ICamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
-    <ClCompile Include="src\Core\UpdateScheduler.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -203,7 +202,6 @@
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
-    <ClInclude Include="include\Core\UpdateScheduler.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
