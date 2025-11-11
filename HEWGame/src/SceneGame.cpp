@@ -49,9 +49,9 @@ SceneGame::SceneGame()
 
 SceneGame::~SceneGame() {}
 
-void SceneGame::Update()
+void SceneGame::Update(const Core::UpdateContext& context)
 {
-	fRads.z += 0.001f * RAD;
+	fRads.z += context.deltaSeconds * RAD;
 
 	m_pCamera->Update();
 }
@@ -65,6 +65,73 @@ void SceneGame::Draw()
 	Geometory::SetProjection(m_pCamera->GetProjectionMatrix());
 	
 	m_render->Draw(*m_model, *m_pCamera);
+	
+	// アニメーションの更新
+	m_pModel->Step(context.deltaSeconds);
+
+	// 変換行列の転置
+	DrawMatrix::CreateWorldMatrix(wvp[0], float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 170.0f * RAD, 0.0f }, m_pModel->GetBone(1));
+	
+	
+	// シェーダーの登録
+	ShaderList::SetWVP(wvp);
+	m_pModel->SetVertexShader(ShaderList::GetVS(ShaderList::VS_WORLD));
+	m_pModel->SetPixelShader(ShaderList::GetPS(ShaderList::PS_LAMBERT));
+
+
+	DebugConsole::SetDrawPos(1, 5);
+	std::cout << "メッシュ数" << m_pModel->GetMeshNum();
+
+	DebugConsole::SetDrawPos(1, 6);
+	std::cout << "マテリアル数" << m_pModel->GetMaterialNum();
+
+	// 描画処理
+	for (int i = 0; i < m_pModel->GetMeshNum(); i++)
+	{
+		
+		Model::Mesh mesh = *m_pModel->GetMesh(i);
+		
+		if (i < m_pModel->GetMaterialNum())
+		{
+			Model::Material material = *m_pModel->GetMaterial(i);
+
+			ShaderList::SetMaterial(material);
+		}
+
+
+		if (m_pModel) m_pModel->Draw();
+	}
+
+
+	for (auto it : m_pObjects)
+	{
+		DrawMatrix::CreateWorldMatrix(wvp[0], it->GetPosition(), it->GetScale(), it->GetfRads());
+
+		// シェーダーの登録
+		ShaderList::SetWVP(wvp);
+
+		Model &model = it->GetModel();
+
+		model.SetVertexShader(ShaderList::GetVS(ShaderList::VS_WORLD));
+		model.SetPixelShader(ShaderList::GetPS(ShaderList::PS_FOG));
+
+
+		// 描画処理
+		for (int i = 0; i < model.GetMeshNum(); i++)
+		{
+
+			Model::Mesh mesh = *model.GetMesh(i);
+			Model::Material material = *model.GetMaterial(i);
+
+			ShaderList::SetMaterial(material);
+
+			//model.Draw();
+		}
+	}
+
+
+	
+
 	
 	
  }

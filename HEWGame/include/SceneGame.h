@@ -18,7 +18,7 @@ class SceneGame : public Scene
 public:
 	SceneGame();
 	~SceneGame();
-	void Update() final;
+	void Update(const Core::UpdateContext& context) final;
 	void Draw() final;
 
 
