@@ -1,37 +1,50 @@
 #include "ModelCache.h"
 #include <iostream>
 
-ModelCache& ModelCache::Instance()
+namespace Render
 {
-	static ModelCache instance;
-	return instance;
-}
+    ModelCache& ModelCache::Instance()
+    {
+        static ModelCache instance;
+        return instance;
+    }
 
-std::shared_ptr<ModelDX> ModelCache::Get(const std::string& name)
-{
-	auto it = m_models.find(name);
-	if (it != m_models.end())
-	{
-		std::cout << "[Cache} Found: " << name << std::endl;
-		return it->second;
-	}
+    void ModelCache::SetLoader(std::shared_ptr<IModelLoader> loader)
+    {
+        m_loader = loader;
+    }
 
-	std::cout << "[Cache] Not found, creating new model: " << name << std::endl;
+    std::shared_ptr<ModelDX> ModelCache::Get(const std::string& path)
+    {
+        auto it = m_models.find(path);
+        if (it != m_models.end())
+        {
+            std::cout << "[ModelCache] Found cached model: " << path << std::endl;
+            return it->second;
+        }
 
-	std::vector<std::shared_ptr<MeshDX>> meshes;
-	std::vector<std::shared_ptr<MaterialDX>> materials;
-	auto model = std::make_shared<ModelDX>(meshes, materials);
+        if (!m_loader)
+        {
+            std::cerr << "[ModelCache] Error: No loader set!" << std::endl;
+            return nullptr;
+        }
 
-	m_models[name] = model;
-	return model;
-}
+        std::cout << "[ModelCache] Loading model: " << path << std::endl;
+        std::shared_ptr<ModelDX> model = m_loader->Load(path);
+        if (model)
+        {
+            m_models[path] = model;
+        }
+        else
+        {
+            std::cerr << "[ModelCache] Failed to load: " << path << std::endl;
+        }
 
-void ModelCache::add(const std::string& name, std::shared_ptr<ModelDX> model)
-{
-	m_models[name] = model;
-}
+        return model;
+    }
 
-void ModelCache::Clear()
-{
-	m_models.clear();
+    void ModelCache::Clear()
+    {
+        m_models.clear();
+    }
 }
