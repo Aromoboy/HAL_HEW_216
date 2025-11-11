@@ -13,7 +13,7 @@ CEntity::~CEntity()
 
 }
 
-void CEntity::Update()
+void CEntity::Update(float dt)
 {
 
 }

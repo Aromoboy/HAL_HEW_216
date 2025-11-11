@@ -14,7 +14,7 @@ public:
 	//デストラクタ
 	~CEntity();
 
-	void Update();
+	void Update(float);
 	void Draw();
 	Transform GetTransform() { return  Components_Transform; }
 	
