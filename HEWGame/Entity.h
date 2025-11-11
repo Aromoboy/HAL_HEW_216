@@ -19,7 +19,7 @@ public:
 	Transform GetTransform() { return  m_transform; }
 	
 private:
-	
+	std::string tag;
 	
 };
 
