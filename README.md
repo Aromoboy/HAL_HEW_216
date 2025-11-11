@@ -19,24 +19,66 @@ config:
     hideEmptyMembersBox: false
   look: neo
   layout: elk
-  theme: neo
 ---
 classDiagram
 direction TB
 namespace Core {
-  class DXContext {
+  class UpdatePhase["Core::UpdatePhase"] { <<enumeration>>
+    Input
+    PrePhysics
+    Physics
+    PostPhysics
+    Gameplay
+    Camera
+    UI
+    Late
+  }
+  class UpdateContext["Core::UpdateContext"] { <<struct>>
+    dt : float
+    time : StepTimer&
+    input : Input&
+    scene : SceneSpace_Scene*
+  }
+  class IUpdatable["Core::IUpdatable"] { <<interface>>
+    +OnUpdate(ctx:UpdateContext)
+    +GetPhase() UpdatePhase
+    +GetPriority() int
+    +IsEnabled() bool
+  }
+  class UpdateNode["Core::UpdateNode"] { <<abstract>>
+    - phase : UpdatePhase
+    - priority : int
+    - enabled : bool
+    +UpdateNode(phase:UpdatePhase, priority:int=0)
+    +OnUpdate(ctx:UpdateContext)
+    +GetPhase() UpdatePhase
+    +GetPriority() int
+    +SetPriority(p:int)
+    +SetPhase(ph:UpdatePhase)
+    +Enable(v:bool)
+  }
+  class UpdateScheduler["Core::UpdateScheduler"] {
+    - nodes : list<IUpdatable*>
+    - deps  : list<pair<IUpdatable*,IUpdatable*>>
+    +Register(node:IUpdatable*)
+    +Unregister(node:IUpdatable*)
+    +SetOrder(node:IUpdatable*, phase:UpdatePhase, priority:int)
+    +AddDependency(before:IUpdatable*, after:IUpdatable*)
+    +Tick(ctx:UpdateContext)
+  }
+  class DXContext["Core::DXContext"] {
     +Init(window)
     +BeginDraw()
     +EndDraw()
     +Resize(width, height)
     +Shutdown()
   }
-  class StepTimer {
+  class StepTimer["Core::StepTimer"] {
     +Tick()
     +DeltaTime() float
     +SetFixedStep(dt:float)
   }
-  class ActionId { <<enumeration>>
+  class ActionId["Core::ActionId"] { <<enumeration>>
     MoveX
     RotateYaw
     Drop
@@ -44,48 +86,51 @@ namespace Core {
     Cancel
     Pause
   }
-  class Binding { <<struct>>
+  class Binding["Core::Binding"] { <<struct>>
     key:int
     btn:int
     axis:int
     sign:float
   }
-  class Gamepad {
+  class Gamepad["Core::Gamepad"] {
     +IsConnected() bool
     +AxisLX() float
     +AxisRX() float
     +IsButtonDown(code:int) bool
   }
-  class InputMap {
+  class Input["Core::Input"] {
+    - pad : Gamepad
+    - map : InputMap
+    +OnUpdate(ctx:Core_UpdateContext)
+    +GetAxis(a:ActionId) float
+    +IsAction(a:ActionId) bool
+    +IsPress(vk:int) bool
+    +IsTrigger(vk:int) bool
+    +IsRelease(vk:int) bool
+  }
+  class InputMap["Core::InputMap"] {
     - bindings : map<ActionId, Binding>
     +GetAxis(a:ActionId) float
     +Is(a:ActionId) bool
     +Rebind(a:ActionId, b:Binding)
   }
-  class Input {
-    - pad : Gamepad
-    - map : InputMap
-    +Update()
-    +GetAxis(a:ActionId) float
-    +IsAction(a:ActionId) bool
-    +IsPress(vk:int) bool     %% キーボードの簡易チェック（保険）
-    +IsTrigger(vk:int) bool
-    +IsRelease(vk:int) bool
-  }
-  class ShaderProgram { +Bind() }
-  class ShaderCache {
+  class ShaderProgram["Core::ShaderProgram"] { +Bind() }
+  class ShaderCache["Core::ShaderCache"] {
     - programs : map<string, ShaderProgram>
     +Get(name) ShaderProgram&
     +Load(name, vsPath, psPath)
   }
-  class Texture2D { +LoadFromFile(path) +BindPS(slot) }
-  class TextureCache {
+  class Texture2D["Core::Texture2D"] { +LoadFromFile(path) +BindPS(slot) }
+  class TextureCache["Core::TextureCache"] {
     - textures : map<string, shared_ptr<Texture2D>>
     +Get(path) shared_ptr<Texture2D>
   }
-  class VertexBuffer { +Init(data,stride,count) +Bind(slot) +Shutdown() }
-  class IndexBuffer  { +Init(indices,count)     +Bind()     +Shutdown() }
+  class VertexBuffer["Core::VertexBuffer"] { +Init(data,stride,count) +Bind(slot) +Shutdown() }
+  class IndexBuffer["Core::IndexBuffer"]  { +Init(indices,count) +Bind() +Shutdown() }
 }
+UpdateNode ..|> IUpdatable
+UpdateNode <|-- Input
+UpdateScheduler o-- IUpdatable
 Input o-- Gamepad
 Input o-- InputMap
 InputMap *-- Binding
@@ -93,89 +138,90 @@ InputMap *-- ActionId
 ShaderCache *-- ShaderProgram
 TextureCache *-- Texture2D
 namespace Components {
-  class Transform { <<struct>>
+  class Transform["Components::Transform"] { <<struct>>
     position : float3
     rotation : float3
     scale    : float3
   }
-  class Physical { <<struct>>
+  class Physical["Components::Physical"] { <<struct>>
     velocity : float3
     force    : float3
     weight   : float
     damping  : float
   }
-  class ICollider { <<interface>>
+  class ICollider["Components::ICollider"] { <<interface>>
     +CheckCollision(other:ICollider) bool
     +UpdateBounds(t:Transform)
   }
-  class AABBCollider {
+  class AABBCollider["Components::AABBCollider"] {
     +CheckCollision(other:ICollider) bool
     +UpdateBounds(t:Transform)
   }
-  class OBBCollider {
+  class OBBCollider["Components::OBBCollider"] {
     +CheckCollision(other:ICollider) bool
     +UpdateBounds(t:Transform)
   }
-  class AABB { <<struct>> min:float3 max:float3 }
+  class AABB["Components::AABB"] { <<struct>> min:float3 max:float3 }
 }
 AABBCollider ..|> ICollider
 OBBCollider  ..|> ICollider
 namespace CameraSpace {
-  class ICamera { <<interface>> +GetView() +GetProjection() }
-  class BaseCamera {
+  class ICamera["CameraSpace::ICamera"] { <<interface>> +GetView() +GetProjection() }
+  class BaseCamera["CameraSpace::BaseCamera"] {
     - transform : Components_Transform
     - priority  : int
     +GetView()
     +GetProjection()
   }
-  class PerspectiveCamera {
+  class PerspectiveCamera["CameraSpace::PerspectiveCamera"] {
     - fov   : float
     - aspect: float
     - nearZ : float
     - farZ  : float
   }
-  class CameraManager {
+  class CameraManager["CameraSpace::CameraManager"] {
     - cameras : list<ICamera>
     +GetActiveCamera() ICamera&
     +Update()
   }
-  class CameraRig {
+  class CameraRig["CameraSpace::CameraRig"] {
     - target : SceneSpace_Entity*
     - offset : float3
     - yaw:float
     - pitch:float
     +Attach(target:SceneSpace_Entity*)
-    +Update(input:Core_Input, dt:float, cam:BaseCamera)
+    +OnUpdate(ctx:Core_UpdateContext)
   }
 }
 BaseCamera ..|> ICamera
 BaseCamera <|-- PerspectiveCamera
 CameraManager *-- ICamera
-CameraRig ..> CameraSpace_BaseCamera
+Core_UpdateNode <|-- CameraRig
+CameraRig ..> BaseCamera
 namespace Render {
-  class Mesh {
+  class Mesh["Render::Mesh"] {
     - vbo      : Core_VertexBuffer
     - ibo      : Core_IndexBuffer
     - localAABB: Components_AABB
   }
-  class Material {
-    - albedo : shared_ptr<Core_Texture2D>  %% 最初はアルベドのみ
-    - params : float4                      %% 将来PBR等を拡張
+  class Material["Render::Material"] {
+    - albedo : shared_ptr<Core_Texture2D>
+    - params : float4
   }
-  class Model {
+  class Model["Render::Model"] {
     - meshes    : vector<Mesh>
     - materials : vector<Material>
     +GetMeshCount() int
   }
-  class IModelLoader { <<interface>> +Load(path:string) shared_ptr<Model> }
-  class AssimpModelLoader { +Load(path:string) shared_ptr<Model> }
-  class ModelCache {
+  class IModelLoader["Render::IModelLoader"] { <<interface>> +Load(path:string) shared_ptr<Model> }
+  class AssimpModelLoader["Render::AssimpModelLoader"] { +Load(path:string) shared_ptr<Model> }
+  class ModelCache["Render::ModelCache"] {
     - loader : IModelLoader
     - models : map<string, shared_ptr<Model>>
     +Get(path:string) shared_ptr<Model>
     +SetLoader(loader:IModelLoader)
   }
-  class ModelRenderer {
+  class ModelRenderer["Render::ModelRenderer"] {
     +Draw(model:Model, world:Components_Transform, cam:CameraSpace_ICamera)
   }
 }
@@ -190,97 +236,102 @@ ModelRenderer ..> Core_ShaderCache
 ModelRenderer ..> CameraSpace_ICamera
 ModelRenderer ..> Render_Model
 namespace Systems {
-  class IPhysicsSystem { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
-  class GravityDampingSystem {
+  class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
+  class GravityDampingSystem["Systems::GravityDampingSystem"] {
     - gravity : float3
     +Apply(obj:SceneSpace_PhysicalEntity, dt:float)
   }
-  class PhysicsMachine {
+  class PhysicsMachine["Systems::PhysicsMachine"] {
     - system : IPhysicsSystem
-    +Process(obj:SceneSpace_PhysicalEntity, dt:float)
+    +OnUpdate(ctx:Core_UpdateContext)
     +SetSystem(sys:IPhysicsSystem)
   }
-  class ContactLiteSystem {
-    +ResolveY(obj:SceneSpace_PhysicalEntity, staticList:list<SceneSpace_CollisionEntity*>)
+  class ContactLiteSystem["Systems::ContactLiteSystem"] {
+    +OnUpdate(ctx:Core_UpdateContext)
   }
 }
 GravityDampingSystem ..|> IPhysicsSystem
+Core_UpdateNode <|-- PhysicsMachine
+Core_UpdateNode <|-- ContactLiteSystem
 PhysicsMachine ..> IPhysicsSystem
 namespace GameFlow {
-  class PhaseManager {
+  class PhaseManager["GameFlow::PhaseManager"] {
     - currentPhase : int
-    - thresholds   : vector<float>   %% 例：高さライン [H1, H2, ...]
+    - thresholds   : vector<float>
     +Reset(phases:int, thresholds:vector<float>)
-    +Update(playerY:float)           %% 閾値を越えたら currentPhase++
+    +OnUpdate(ctx:Core_UpdateContext)
     +GetCurrentPhase() int
-    +IsPhaseCleared() bool           %% 今フェーズを抜けた瞬間か
+    +IsPhaseCleared() bool
   }
-  class UpgradeId { <<enumeration>>
-    Heavier      %% 重さUP（風に流されにくく 等）※例
-    ControlPlus  %% 操作性UP（回転制御 等）※例
-    DropAssist   %% 落下補助（スナップ 等）※例
+  class UpgradeId["GameFlow::UpgradeId"] { <<enumeration>>
+    Heavier
+    ControlPlus
+    DropAssist
   }
-  class UpgradeMenu {
+  class UpgradeMenu["GameFlow::UpgradeMenu"] {
     +Open()
     +SelectUpgrade(option:int)
     +ApplyToPlayer(player:Entities_Player, up:UpgradeId)
   }
 }
+Core_UpdateNode <|-- PhaseManager
 namespace Stage {
-  class StageData {
-    - phaseHeights : vector<float>   %% 各フェーズの高さライン
-    - spawnPoints  : vector<float3>  %% スイーツの出現位置（2.5DならZは固定）
-    - planeZ       : float           %% プレイ面のZ（固定値）
+  class StageData["Stage::StageData"] {
+    - phaseHeights : vector<float>
+    - spawnPoints  : vector<float3>
+    - planeZ       : float
     +LoadFromFile(path)
   }
 }
 namespace SceneSpace {
-  class IUpdatable { <<interface>> +Update(dt:float) }
-  class IDrawable  { <<interface>> +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera) }
-  class Entity {
+  class IDrawable["SceneSpace::IDrawable"]  { <<interface>> +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera) }
+  class Entity["SceneSpace::Entity"] {
     - transform : Components_Transform
     - tag : string
-    +Update(dt:float)
+    +OnUpdate(ctx:Core_UpdateContext)
     +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
     +GetTransform() Components_Transform&
   }
-  class CollisionEntity {
+  class CollisionEntity["SceneSpace::CollisionEntity"] {
     - collider : shared_ptr<Components_ICollider>
     +GetCollider() Components_ICollider&
   }
-  class PhysicalEntity {
+  class PhysicalEntity["SceneSpace::PhysicalEntity"] {
     - physical : Components_Physical
     +GetPhysical() Components_Physical&
   }
-  class IScene { <<interface>> +Load() +Update() +Draw() }
-  class Scene {
+  class IScene["SceneSpace::IScene"] { <<interface>> +Load() +Update() +Draw() }
+  class Scene["SceneSpace::Scene"] {
     - cameras  : CameraSpace_CameraManager
     - physics  : Systems_PhysicsMachine
     - renderer : Render_ModelRenderer
+    - scheduler: Core_UpdateScheduler
     +Load() +Update() +Draw()
+    +Register(node:Core_IUpdatable*)
+    +Unregister(node:Core_IUpdatable*)
   }
-  class SceneManager {
+  class SceneManager["SceneSpace::SceneManager"] {
     - current : shared_ptr<IScene>
     +SetScene(scene:shared_ptr<IScene>)
     +Update()
     +Draw()
   }
-  class TitleScene
-  class SelectScene
-  class PlayScene {
+  class TitleScene["SceneSpace::TitleScene"]
+  class SelectScene["SceneSpace::SelectScene"]
+  class PlayScene["SceneSpace::PlayScene"] {
     - stage       : Stage_StageData
     - phases      : GameFlow_PhaseManager
     - upgrades    : GameFlow_UpgradeMenu
     - player      : Entities_Player
     - sweets      : SweetsSpace_SweetsManager
-    - contactLite : Systems_ContactLiteSystem   %% 任意
-    - rig         : CameraSpace_CameraRig       %% 任意
+    - contactLite : Systems_ContactLiteSystem
+    - rig         : CameraSpace_CameraRig
     +Load()
     +Update()
     +Draw()
   }
 }
-Entity ..|> IUpdatable
+Core_UpdateNode <|-- Entity
 Entity ..|> IDrawable
 Entity *-- Components_Transform
 Entity <|-- CollisionEntity
@@ -295,47 +346,51 @@ IScene <|-- PlayScene
 Scene o-- CameraSpace_CameraManager
 Scene o-- Systems_PhysicsMachine
 Scene o-- Render_ModelRenderer
+Scene o-- Core_UpdateScheduler
 PlayScene o-- Stage_StageData
 PlayScene o-- GameFlow_PhaseManager
 PlayScene o-- GameFlow_UpgradeMenu
 PlayScene o-- Systems_ContactLiteSystem
 PlayScene o-- CameraSpace_CameraRig
 namespace Entities {
-  class Player {
+  class Player["Entities::Player"] {
     - model : shared_ptr<Render_Model>
-    - planeZ : float             %% 2.5D用。Z固定の基準
-    +HandleInput(input:Core_Input)  %% MoveX/RotateYaw/Drop を反映
+    - planeZ : float
+    +HandleInput(input:Core_Input)
+    +OnUpdate(ctx:Core_UpdateContext)
   }
 }
+SceneSpace_PhysicalEntity <|-- Player
 namespace SweetsSpace {
-  class SweetsState { <<enumeration>> Active Stacked Ground }
-  class BaseSweets {
+  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground }
+  class BaseSweets["SweetsSpace::BaseSweets"] {
     - model : shared_ptr<Render_Model>
-    +Update(dt:float)
+    +OnUpdate(ctx:Core_UpdateContext)
     +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
   }
-  class Cake
-  class Pudding
-  class Sherbet
-  class SweetsManager {
+  class Cake["SweetsSpace::Cake"]
+  class Pudding["SweetsSpace::Pudding"]
+  class Sherbet["SweetsSpace::Sherbet"]
+  class SweetsManager["SweetsSpace::SweetsManager"] {
     - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
-    +UpdateAll(dt:float)
+    +OnUpdate(ctx:Core_UpdateContext)
     +DrawAll(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
     +GetByState(state:SweetsState) list<shared_ptr<BaseSweets>>&
     +Spawn(kind:string, world:Components_Transform)
   }
 }
-SceneSpace_PhysicalEntity <|-- Entities_Player
-SceneSpace_PhysicalEntity <|-- SweetsSpace_BaseSweets
-SweetsSpace_BaseSweets <|-- Cake
-SweetsSpace_BaseSweets <|-- Pudding
-SweetsSpace_BaseSweets <|-- Sherbet
+SceneSpace_PhysicalEntity <|-- BaseSweets
+BaseSweets <|-- Cake
+BaseSweets <|-- Pudding
+BaseSweets <|-- Sherbet
 SweetsManager *-- BaseSweets
 SweetsManager *-- SweetsState
-Entities_Player o-- Render_Model
-SweetsSpace_BaseSweets o-- Render_Model
+Player o-- Render_Model
+BaseSweets o-- Render_Model
+Core_UpdateNode <|-- BaseSweets
+Core_UpdateNode <|-- SweetsManager
 namespace App {
-  class Game {
+  class Game["App::Game"] {
     - dx       : Core_DXContext
     - input    : Core_Input
     - timer    : Core_StepTimer
@@ -349,14 +404,14 @@ namespace App {
     +Draw()
   }
 }
-App_Game o-- Core_DXContext
-App_Game o-- Core_Input
-App_Game o-- Core_StepTimer
-App_Game o-- Core_ShaderCache
-App_Game o-- Core_TextureCache
-App_Game o-- Render_ModelCache
-App_Game o-- Render_ModelRenderer
-App_Game o-- SceneSpace_SceneManager
+Game o-- Core_DXContext
+Game o-- Core_Input
+Game o-- Core_StepTimer
+Game o-- Core_ShaderCache
+Game o-- Core_TextureCache
+Game o-- Render_ModelCache
+Game o-- Render_ModelRenderer
+Game o-- SceneSpace_SceneManager
 
 クラス図ざっくりまとめ：
 
@@ -393,3 +448,6 @@ PlaySceneに全部入ってる
 App：
 全部まとめて動かすメイン的なやつ
 Initialize → Update → Draw で完結
+
+UpdateNode:
+毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
