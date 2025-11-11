@@ -168,6 +168,7 @@
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\ICamera.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Core\UpdateScheduler.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -194,6 +195,7 @@
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\Input.h" />
+    <ClInclude Include="include\Core\UpdateScheduler.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
