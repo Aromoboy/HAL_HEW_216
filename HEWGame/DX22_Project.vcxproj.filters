@@ -45,6 +45,9 @@
     <ClCompile Include="src\Input.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\UpdateScheduler.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="src\Geometory.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -114,6 +117,9 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="include\Input.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\UpdateScheduler.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="include\Sprite.h">

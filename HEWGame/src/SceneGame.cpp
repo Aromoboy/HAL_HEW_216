@@ -40,9 +40,9 @@ SceneGame::SceneGame()
 
 SceneGame::~SceneGame() {}
 
-void SceneGame::Update()
+void SceneGame::Update(const Core::UpdateContext& context)
 {
-	fRads.z += 0.001f * RAD;
+	fRads.z += context.deltaSeconds * RAD;
 
 	m_pCamera->Update();
 }
@@ -77,7 +77,7 @@ void SceneGame::Draw()
 	
 	
 	// アニメーションの更新
-	m_pModel->Step(0.015f); // 本来はdeltaTimeなどを入れる
+	m_pModel->Step(context.deltaSeconds);
 
 	// 変換行列の転置
 	DrawMatrix::CreateWorldMatrix(wvp[0], float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 170.0f * RAD, 0.0f }, m_pModel->GetBone(1));
