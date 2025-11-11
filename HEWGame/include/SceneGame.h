@@ -12,26 +12,29 @@
 #include "ModelRender.h"
 
 #include <memory>
+#include <vector>
+
+class CameraDebug;
 
 class SceneGame : public Scene
 {
 public:
-	SceneGame();
-	~SceneGame();
-	void Update() final;
-	void Draw() final;
-
+        SceneGame();
+        ~SceneGame();
+        void ConfigureUpdates() override;
+        void Update(const Core::UpdateContext& ctx) final;
+        void Draw() final;
 
 private:
-	std::unique_ptr<Model> m_pModel;
-	std::unique_ptr<ICamera> m_pCamera;
-	std::unique_ptr<SoundManagerEX> m_pManager;
+        std::unique_ptr<Model> m_pModel;
+        std::unique_ptr<CameraDebug> m_pCamera;
+        std::unique_ptr<SoundManagerEX> m_pManager;
 
-	std::unique_ptr<IModelLoader> m_loader;
-	std::shared_ptr<ModelDX> m_model;
-	std::unique_ptr<ModelRender> m_render;
+        std::unique_ptr<IModelLoader> m_loader;
+        std::shared_ptr<ModelDX> m_model;
+        std::unique_ptr<ModelRender> m_render;
 
-	std::vector<std::shared_ptr<TestObject>> m_pObjects;
+        std::vector<std::shared_ptr<TestObject>> m_pObjects;
 };
 
 #endif // __SCENE_GAME_H__
