@@ -1,6 +1,6 @@
 # HAL_HEW_216
 
-## 必須アセット (Required Assets)
+## 必須アセット
 本リポジトリでは、以下のプリビルド済み DirectXTex ライブラリを常にバージョン管理下に置いています。
 
 - `HEWGame/DirectXTex/Win32/Debug`
