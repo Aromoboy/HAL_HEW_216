@@ -3,9 +3,9 @@
 
 
 
-CEntity::CEntity()
+CEntity::CEntity(std::string a_tag)
 {
-
+	tag = a_tag;
 }
 
 CEntity::~CEntity()
