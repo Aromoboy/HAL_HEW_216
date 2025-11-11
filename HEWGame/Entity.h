@@ -17,7 +17,7 @@ public:
 
 	void OnUpdate();
 	void Draw(ModelRender);
-	Transform GetTransform() { return  m_transform; }
+	Transform GetTransform() { return m_transform; }
 	
 private:
 	std::string tag;
