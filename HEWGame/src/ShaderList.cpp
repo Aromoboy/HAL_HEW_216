@@ -95,6 +95,22 @@ void ShaderList::SetMaterial(const Model::Material& material)
 		m_pPS[i]->WriteBuffer(0, param);
 	}
 }
+
+void ShaderList::SetMaterial(const MaterialDX& material)
+{
+	DirectX::XMFLOAT4 param[3] = {
+		material.GetDiffuse(),
+		material.GetAmbient(),
+		material.GetSpecular()
+	};
+	param[1].w = material.GetTexture() ? 1.0f : 0.0f;
+	for (int i = 0; i < PS_KIND_MAX; ++i)
+	{
+		m_pPS[i]->SetTexture(0, material.GetTexture());
+		m_pPS[i]->WriteBuffer(0, param);
+	}
+}
+
 void ShaderList::SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir)
 {
 	DirectX::XMFLOAT4 param[2] = {
