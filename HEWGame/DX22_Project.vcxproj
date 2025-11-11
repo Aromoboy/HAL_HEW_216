@@ -160,6 +160,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ModelCache.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Debug.cpp" />
@@ -220,6 +221,7 @@
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
+    <ClInclude Include="ModelCache.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
