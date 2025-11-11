@@ -18,7 +18,7 @@ void CEntity::OnUpdate()
 
 }
 
-void CEntity::Draw()
+void CEntity::Draw(ModelRender renderer)
 {
 
 }

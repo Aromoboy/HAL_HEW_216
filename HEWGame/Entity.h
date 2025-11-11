@@ -2,6 +2,7 @@
 #define ___ENTITY_H___
 
 #include "Transform.h"
+#include "ModelRender.h"
 #include <string>
 #include <Vector.h>
 using namespace std;
@@ -15,7 +16,7 @@ public:
 	~CEntity();
 
 	void OnUpdate();
-	void Draw();
+	void Draw(ModelRender);
 	Transform GetTransform() { return  m_transform; }
 	
 private:
