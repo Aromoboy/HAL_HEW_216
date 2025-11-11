@@ -12,7 +12,7 @@ struct Transform
 	float3 Scale;
 };
 
-Transform m_Transform;
-string tag;
+Transform Components_Transform;
+std::string tag;
 
 #endif
