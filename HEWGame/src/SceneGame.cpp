@@ -22,7 +22,7 @@ SceneGame::SceneGame()
 	m_pModel = std::make_unique<Model>();
 	if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
 	{
-	no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
+		no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
 	}
 
 	no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
@@ -35,7 +35,7 @@ SceneGame::SceneGame()
 	{
 		m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
 	}
-	
+
 	m_pManager = std::make_unique<SoundManagerEX>();
 
 
@@ -43,7 +43,7 @@ SceneGame::SceneGame()
 
 	// 描画テスト用
 	m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
-	
+
 	m_render = std::make_unique<ModelRender>();
 }
 
@@ -63,8 +63,8 @@ void SceneGame::Draw()
 	// カメラの設定
 	Geometory::SetView(m_pCamera->GetViewMatrix());
 	Geometory::SetProjection(m_pCamera->GetProjectionMatrix());
-	
+
 	m_render->Draw(*m_model, *m_pCamera);
-	
-	
- }
+
+
+}
