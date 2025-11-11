@@ -11,19 +11,19 @@ namespace Core
 
         void UpdateNode::SetPhase(UpdatePhase phase)
         {
-                // 例えばメニュー中だけフェーズを UI に切り替えるなど、柔軟な制御が可能です。
+                // 例えばメニュー中だけフェーズをUIに切り替えるなど、柔軟な制御が可能だ
                 m_phase = phase;
         }
 
         void UpdateNode::SetPriority(int priority)
         {
-                // 同じフェーズで複数のノードが競合する場合は priority で細かく順序調整します。
+                // 同じフェーズで複数のノードが競合する場合はpriorityで細かく順序調整する
                 m_priority = priority;
         }
 
         void UpdateNode::Enable(bool value)
         {
-                // 一時停止やカットシーンなどで処理を止めたいときに利用します。
+                // 一時停止やカットシーンなどで処理を止めたいときに利用する
                 m_enabled = value;
         }
 
@@ -39,7 +39,7 @@ namespace Core
 
         bool UpdateNode::IsEnabled() const
         {
-                // Scheduler 側ではこのフラグを確認してから OnUpdate を呼びます。
+                // Scheduler側ではこのフラグを確認してからOnUpdateを呼ぶ
                 return m_enabled;
         }
 }

@@ -32,7 +32,7 @@ namespace Core
 
         void UpdateScheduler::Register(IUpdatable& node)
         {
-                // 重複登録を避けるために線形検索を行う。ノード数は大きくない前提なので OK。
+                // 重複登録を避けるために線形検索を行う。ノード数は大きくない前提なのでOK
                 auto it = std::find(m_nodes.begin(), m_nodes.end(), &node);
                 if (it == m_nodes.end())
                 {
@@ -42,7 +42,7 @@ namespace Core
 
         void UpdateScheduler::Unregister(IUpdatable& node)
         {
-                // ノードリストから削除し、同時に依存関係の矢印も破棄する。
+                // ノードリストから削除し、同時に依存関係の矢印も破棄する
                 auto it = std::remove(m_nodes.begin(), m_nodes.end(), &node);
                 if (it != m_nodes.end())
                 {
@@ -64,7 +64,7 @@ namespace Core
         {
                 if (&before == &after)
                 {
-                        // 自己依存は無意味なので無視。
+                        // 自己依存は無意味なので無視
                         return;
                 }
 
@@ -88,7 +88,7 @@ namespace Core
                         return;
                 }
 
-                // 更新リストをコピーしてソート用に使用する。
+                // 更新リストをコピーしてソート用に使用する
                 std::vector<IUpdatable*> sortedNodes = m_nodes;
                 sortedNodes.erase(std::remove(sortedNodes.begin(), sortedNodes.end(), nullptr), sortedNodes.end());
                 std::sort(sortedNodes.begin(), sortedNodes.end(), NodeLess);
@@ -109,7 +109,7 @@ namespace Core
                         auto afterIt = indexLookup.find(dep.second);
                         if (beforeIt == indexLookup.end() || afterIt == indexLookup.end())
                         {
-                                // 未登録ノードの依存は無視。登録順によっては起こり得る。
+                                // 未登録ノードの依存は無視。登録順によっては起こり得る
                                 continue;
                         }
 
@@ -117,7 +117,7 @@ namespace Core
                         ++indegree[afterIt->second];
                 }
 
-                // indegree が 0 のノードは依存を持たないので即時に実行候補とする。
+                // indegree が0のノードは依存を持たないので即時に実行候補とする
                 std::vector<std::size_t> ready;
                 ready.reserve(nodeCount);
                 for (std::size_t i = 0; i < nodeCount; ++i)
@@ -131,7 +131,7 @@ namespace Core
                 std::vector<std::size_t> processed;
                 processed.reserve(nodeCount);
 
-                // ready キューから「フェーズ・優先度が最も早いもの」を選び、安定した順序を維持する。
+                // ready キューから「フェーズ・優先度が最も早いもの」を選び、安定した順序を維持する
                 auto popBestReady = [&ready, &sortedNodes]() -> std::size_t
                 {
                         auto bestIt = ready.begin();
@@ -172,7 +172,7 @@ namespace Core
                         return;
                 }
 
-                // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する。
+                // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する
                 std::vector<bool> isProcessed(nodeCount, false);
                 for (std::size_t index : processed)
                 {
