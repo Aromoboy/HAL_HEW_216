@@ -26,7 +26,7 @@ namespace SceneSpace
                         m_isConfigured = true;
                 }
 
-                const float deltaTime = timer.Tick();
+                const float deltaTime = timer.DeltaSeconds();
                 Core::UpdateContext ctx(deltaTime, timer, input, this);
 
                 Update(ctx);
