@@ -12,7 +12,7 @@ public:
         {}
 
         void Update() override;
-        void OnUpdate(const Core::UpdateContext& ctx) override;
+        void OnUpdate(Core::UpdateContext& ctx) override;
 
 private:
         bool bIsMove;

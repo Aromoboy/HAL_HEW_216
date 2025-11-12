@@ -16,13 +16,13 @@
 
 class CameraDebug;
 
-class SceneGame : public Scene
+class SceneGame : public SceneSpace::Scene
 {
 public:
         SceneGame();
         ~SceneGame();
         void ConfigureUpdates() override;
-        void Update(const Core::UpdateContext& ctx) final;
+        void Update(Core::UpdateContext& ctx) final;
         void Draw() final;
 
 private:

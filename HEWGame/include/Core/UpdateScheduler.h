@@ -29,7 +29,7 @@ namespace Core
 
                 // 毎フレーム呼び出されるメイン処理。内部でトポロジカルソートを行い、
                 // 循環依存があってもできるだけ安全側で実行順を確定させる
-                void Tick(const UpdateContext& ctx);
+                void Tick(UpdateContext& ctx);
 
         private:
                 using Dependency = std::pair<IUpdatable*, IUpdatable*>;
