@@ -58,11 +58,11 @@ namespace Core
                         return lhsOrder.priority < rhsOrder.priority;
                 }
 
-                const std::size_t lhsOrder = GetRegistrationOrder(lhs);
-                const std::size_t rhsOrder = GetRegistrationOrder(rhs);
-                if (lhsOrder != rhsOrder)
+                const std::size_t lhsRegistrationOrder = GetRegistrationOrder(lhs);
+                const std::size_t rhsRegistrationOrder = GetRegistrationOrder(rhs);
+                if (lhsRegistrationOrder != rhsRegistrationOrder)
                 {
-                        return lhsOrder < rhsOrder;
+                        return lhsRegistrationOrder < rhsRegistrationOrder;
                 }
 
                 return false;
