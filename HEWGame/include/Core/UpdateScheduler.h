@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstddef>
+#include <functional>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -31,14 +34,31 @@ namespace Core
                 // 循環依存があってもできるだけ安全側で実行順を確定させる
                 void Tick(UpdateContext& ctx);
 
+                struct ExecutionRecord
+                {
+                        const IUpdatable* node = nullptr;
+                        UpdatePhase phase = UpdatePhase::Input;
+                        int priority = 0;
+                        std::size_t registrationOrder = 0;
+                        bool invoked = false;
+                };
+                using ExecutionLog = std::vector<ExecutionRecord>;
+                using ExecutionLogListener = std::function<void(const ExecutionLog&)>;
+
+                void SetExecutionLogListener(ExecutionLogListener listener);
+
         private:
                 using Dependency = std::pair<IUpdatable*, IUpdatable*>;
 
                 // sortや準備キューの比較で利用する共通関数
-                static bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs);
+                bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const;
+                std::size_t GetRegistrationOrder(const IUpdatable* node) const;
 
                 std::vector<IUpdatable*> m_nodes;          // 登録済みノード
                 std::vector<Dependency> m_dependencies;    // before -> afterの矢印リスト
+                std::unordered_map<const IUpdatable*, std::size_t> m_registrationOrder;
+                std::size_t m_nextRegistrationOrder = 0;
+                ExecutionLogListener m_executionLogListener;
         };
 }
 
