@@ -69,6 +69,37 @@ namespace
                 int m_updateCount = 0;
         };
 
+        class SelfReRegisteringNode final : public Core::UpdateNode
+        {
+        public:
+                explicit SelfReRegisteringNode(Core::UpdateScheduler& scheduler)
+                        : Core::UpdateNode(Core::UpdatePhase::Gameplay, 0)
+                        , m_scheduler(scheduler)
+                {
+                }
+
+                void OnUpdate(Core::UpdateContext&) override
+                {
+                        ++m_updateCount;
+                        if (!m_hasAttemptedReregister)
+                        {
+                                m_hasAttemptedReregister = true;
+                                m_scheduler.Unregister(*this);
+                                m_scheduler.Register(*this);
+                        }
+                }
+
+                int UpdateCount() const
+                {
+                        return m_updateCount;
+                }
+
+        private:
+                Core::UpdateScheduler& m_scheduler;
+                bool m_hasAttemptedReregister = false;
+                int m_updateCount = 0;
+        };
+
         void RunPlainIUpdatableOrderOverrideTest()
         {
                 Core::UpdateScheduler scheduler;
@@ -105,11 +136,31 @@ namespace
 #endif
         }
 
+        void RunPendingUnregistrationCancellationTest()
+        {
+                Core::UpdateScheduler scheduler;
+
+                SelfReRegisteringNode node(scheduler);
+                scheduler.Register(node);
+
+                Core::StepTimer timer;
+                Core::Input dummyInput;
+                Core::UpdateContext ctx(0.0f, timer, dummyInput, nullptr);
+
+                scheduler.Tick(ctx);
+                scheduler.Tick(ctx);
+
+#if defined(_DEBUG)
+                assert(node.UpdateCount() == 2);
+#endif
+        }
+
         struct UpdateSchedulerTestRunner
         {
                 UpdateSchedulerTestRunner()
                 {
                         RunPlainIUpdatableOrderOverrideTest();
+                        RunPendingUnregistrationCancellationTest();
                 }
         };
 
