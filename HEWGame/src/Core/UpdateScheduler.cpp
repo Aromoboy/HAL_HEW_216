@@ -1,7 +1,9 @@
 #include "Core/UpdateScheduler.h"
 
 #include <algorithm>
+#include <functional>
 #include <limits>
+#include <queue>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -549,13 +551,13 @@ namespace Core
                         }
 
                         // indegree が0のノードは依存を持たないので即時に実行候補とする
-                        std::vector<std::size_t> ready;
-                        ready.reserve(nodeCount);
+                        using ReadyQueue = std::priority_queue<std::size_t, std::vector<std::size_t>, std::greater<std::size_t>>;
+                        ReadyQueue ready;
                         for (std::size_t i = 0; i < nodeCount; ++i)
                         {
                                 if (indegree[i] == 0)
                                 {
-                                        ready.push_back(i);
+                                        ready.push(i);
                                 }
                         }
 
@@ -565,9 +567,8 @@ namespace Core
                         // ready キューから「フェーズ・優先度が最も早いもの」を選び、安定した順序を維持する
                         auto popBestReady = [&ready]() -> std::size_t
                         {
-                                auto bestIt = std::min_element(ready.begin(), ready.end());
-                                std::size_t value = *bestIt;
-                                ready.erase(bestIt);
+                                std::size_t value = ready.top();
+                                ready.pop();
                                 return value;
                         };
 
@@ -609,13 +610,17 @@ namespace Core
                                 {
                                         if (--indegree[next] == 0)
                                         {
-                                                ready.push_back(next);
+                                                ready.push(next);
                                         }
                                 }
                         }
 
                         if (processed.size() != nodeCount)
                         {
+                                std::ostringstream oss;
+                                oss << "[UpdateScheduler] cycle detected; executing remaining nodes in registration order. processed="
+                                    << processed.size() << " total=" << nodeCount << '\n';
+                                DebugLog(oss.str());
                                 // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する
                                 std::vector<bool> isProcessed(nodeCount, false);
                                 for (std::size_t index : processed)
