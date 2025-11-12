@@ -60,9 +60,17 @@ namespace Core
                         int priority = 0;
                 };
 
+                struct NodeOrderOverride
+                {
+                        UpdatePhase phase = UpdatePhase::Input;
+                        int priority = 0;
+                };
+
                 // sortや準備キューの比較で利用する共通関数
                 bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const;
                 std::size_t GetRegistrationOrder(const IUpdatable* node) const;
+                NodeOrderOverride GetEffectiveOrder(const IUpdatable* node) const;
+                const NodeOrderOverride* FindOrderOverride(const IUpdatable* node) const;
 
                 void RegisterInternal(IUpdatable& node);
                 void UnregisterInternal(IUpdatable& node);
@@ -86,6 +94,8 @@ namespace Core
                 std::vector<IUpdatable*> m_pendingUnregistrations;   // Tick中に要求された登録解除
                 std::vector<PendingOrderChange> m_pendingOrderChanges; // Tick中に要求された順序変更
                 bool m_isTicking = false; // Tick再入を検知するフラグ
+
+                std::unordered_map<const IUpdatable*, NodeOrderOverride> m_orderOverrides; // UpdateNode以外の順序設定
         };
 }
 

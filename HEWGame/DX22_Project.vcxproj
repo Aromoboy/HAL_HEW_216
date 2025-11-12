@@ -164,6 +164,7 @@
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Core\UpdateNode.cpp" />
     <ClCompile Include="src\Core\UpdateScheduler.cpp" />
+    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp" />
     <ClCompile Include="src\Debug.cpp" />
     <ClCompile Include="src\DebugConsole.cpp" />
     <ClCompile Include="src\DirectX.cpp" />
