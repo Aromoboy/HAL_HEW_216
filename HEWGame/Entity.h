@@ -11,7 +11,7 @@ class CEntity
 {
 public:
 	//コンストラクタ
-	CEntity(std::string a_tag);
+	CEntity(std::string a_tag,float3 pos, float3 rot, float3 scl);
 	//デストラクタ
 	~CEntity();
 

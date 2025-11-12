@@ -3,8 +3,11 @@
 
 
 
-CEntity::CEntity(std::string a_tag)
+CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl)
 {
+	m_transform.position = pos;
+	m_transform.rotation = rot,
+	m_transform.scale    = scl,
 	tag = a_tag;
 }
 
