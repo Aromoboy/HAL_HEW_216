@@ -66,15 +66,15 @@ void Uninit()
 
 void Update()
 {
-#ifdef _DEBUG
-        if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
-#endif
-
         if (g_pScene)
         {
                 g_stepTimer.Tick();
                 g_pScene->RootUpdate(g_stepTimer, g_input);
         }
+
+#ifdef _DEBUG
+        if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+#endif
 }
 
 void Draw()
