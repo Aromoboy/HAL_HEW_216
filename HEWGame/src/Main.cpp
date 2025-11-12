@@ -70,9 +70,9 @@ void Update()
         if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
 #endif
 
-        g_stepTimer.Tick();
         if (g_pScene)
         {
+                g_stepTimer.Tick();
                 g_pScene->RootUpdate(g_stepTimer, g_input);
         }
 }
