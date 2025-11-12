@@ -8,6 +8,7 @@ namespace Core
         class StepTimer;
         class Input;
         struct UpdateContext;
+        class IUpdatable;
 }
 
 namespace SceneSpace
@@ -25,6 +26,9 @@ public:
 protected:
         virtual void ConfigureUpdates();
         virtual void Update(Core::UpdateContext& ctx) = 0;
+
+        void Register(Core::IUpdatable& node);
+        void Unregister(Core::IUpdatable& node);
 
         Core::UpdateScheduler& GetUpdateScheduler();
         Core::Input* GetInput();

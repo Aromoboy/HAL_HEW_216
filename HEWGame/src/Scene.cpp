@@ -42,6 +42,16 @@ namespace SceneSpace
         {
         }
 
+        void Scene::Register(Core::IUpdatable& node)
+        {
+                m_scheduler.Register(node);
+        }
+
+        void Scene::Unregister(Core::IUpdatable& node)
+        {
+                m_scheduler.Unregister(node);
+        }
+
         Core::UpdateScheduler& Scene::GetUpdateScheduler()
         {
                 return m_scheduler;
