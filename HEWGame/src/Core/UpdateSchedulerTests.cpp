@@ -136,6 +136,78 @@ namespace
 #endif
         }
 
+        void RunDependencyOrderingTest()
+        {
+                Core::UpdateScheduler scheduler;
+
+                CountingUpdateNode first(Core::UpdatePhase::Gameplay, 0);
+                CountingUpdateNode second(Core::UpdatePhase::Gameplay, 0);
+                CountingUpdateNode third(Core::UpdatePhase::Gameplay, 0);
+
+                scheduler.Register(first);
+                scheduler.Register(second);
+                scheduler.Register(third);
+
+                scheduler.AddDependency(first, second);
+                scheduler.AddDependency(second, third);
+
+                Core::UpdateScheduler::ExecutionLog capturedLog;
+                scheduler.SetExecutionLogListener(
+                        [&capturedLog](const Core::UpdateScheduler::ExecutionLog& log)
+                        {
+                                capturedLog = log;
+                        });
+
+                Core::StepTimer timer;
+                Core::Input dummyInput;
+                Core::UpdateContext ctx(0.0f, timer, dummyInput, nullptr);
+
+                scheduler.Tick(ctx);
+
+#if defined(_DEBUG)
+                assert(capturedLog.size() == 3);
+                assert(capturedLog[0].node == &first);
+                assert(capturedLog[1].node == &second);
+                assert(capturedLog[2].node == &third);
+#endif
+        }
+
+        void RunReadyQueueOrderingStabilityTest()
+        {
+                Core::UpdateScheduler scheduler;
+
+                CountingUpdateNode late(Core::UpdatePhase::Late, 0);
+                CountingUpdateNode gameplayHighPriority(Core::UpdatePhase::Gameplay, -5);
+                CountingUpdateNode gameplayLowPriority(Core::UpdatePhase::Gameplay, 5);
+                CountingUpdateNode camera(Core::UpdatePhase::Camera, 0);
+
+                scheduler.Register(gameplayLowPriority);
+                scheduler.Register(late);
+                scheduler.Register(camera);
+                scheduler.Register(gameplayHighPriority);
+
+                Core::UpdateScheduler::ExecutionLog capturedLog;
+                scheduler.SetExecutionLogListener(
+                        [&capturedLog](const Core::UpdateScheduler::ExecutionLog& log)
+                        {
+                                capturedLog = log;
+                        });
+
+                Core::StepTimer timer;
+                Core::Input dummyInput;
+                Core::UpdateContext ctx(0.0f, timer, dummyInput, nullptr);
+
+                scheduler.Tick(ctx);
+
+#if defined(_DEBUG)
+                assert(capturedLog.size() == 4);
+                assert(capturedLog[0].node == &gameplayHighPriority);
+                assert(capturedLog[1].node == &gameplayLowPriority);
+                assert(capturedLog[2].node == &camera);
+                assert(capturedLog[3].node == &late);
+#endif
+        }
+
         void RunPendingUnregistrationCancellationTest()
         {
                 Core::UpdateScheduler scheduler;
@@ -160,6 +232,8 @@ namespace
                 UpdateSchedulerTestRunner()
                 {
                         RunPlainIUpdatableOrderOverrideTest();
+                        RunDependencyOrderingTest();
+                        RunReadyQueueOrderingStabilityTest();
                         RunPendingUnregistrationCancellationTest();
                 }
         };
