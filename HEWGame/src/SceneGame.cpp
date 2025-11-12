@@ -51,14 +51,14 @@ SceneGame::~SceneGame()
         {
                 if (auto* input = GetInput())
                 {
-                        GetUpdateScheduler().Unregister(*input);
+                        Unregister(*input);
                 }
                 m_inputRegistered = false;
         }
 
         if (m_pCamera)
         {
-                GetUpdateScheduler().Unregister(*m_pCamera);
+                Unregister(*m_pCamera);
         }
 }
 
@@ -66,13 +66,13 @@ void SceneGame::ConfigureUpdates()
 {
         if (auto* input = GetInput())
         {
-                GetUpdateScheduler().Register(*input);
+                Register(*input);
                 m_inputRegistered = true;
         }
 
         if (m_pCamera)
         {
-                GetUpdateScheduler().Register(*m_pCamera);
+                Register(*m_pCamera);
         }
 }
 
