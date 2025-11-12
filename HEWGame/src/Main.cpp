@@ -25,7 +25,6 @@ SceneSpace::Scene* g_pScene;
 
 	g_input.Shutdown();
 {
-	g_input.Update();
 	if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
 	g_pScene->RootUpdate(g_stepTimer, g_input);
 	if (g_input.IsKeyTrigger(VK_RETURN)) {
@@ -33,7 +32,6 @@ SceneSpace::Scene* g_pScene;
 	// 他機能初期化
 	Geometory::Init();
 	Sprite::Init();
-	InitInput();
 	ShaderList::Init();
 
 	// シーン
@@ -47,7 +45,6 @@ void Uninit()
 	if (g_pScene) delete g_pScene;
 
 	ShaderList::Uninit();
-	UninitInput();
 	Sprite::Uninit();
 	Geometory::Uninit();
 	UninitDirectX();
@@ -55,10 +52,9 @@ void Uninit()
 
 void Update()
 {
-	UpdateInput();
 
 #ifdef _DEBUG
-	if (IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+	if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
 #endif
 
 	g_pScene->RootUpdate();
@@ -103,10 +99,10 @@ void Draw()
 	static bool camAutoSwitch = false;
 	static bool camUpDownSwitch = true;
 	static float camAutoRotate = 1.0f;
-	if (IsKeyTrigger(VK_RETURN)) {
+	if (g_input.IsKeyTrigger(VK_RETURN)) {
 		camAutoSwitch ^= true;
 	}
-	if (IsKeyTrigger(VK_SPACE)) {
+	if (g_input.IsKeyTrigger(VK_SPACE)) {
 		camUpDownSwitch ^= true;
 	}
 

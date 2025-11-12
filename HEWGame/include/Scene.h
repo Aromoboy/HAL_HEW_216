@@ -27,10 +27,13 @@ protected:
         virtual void Update(Core::UpdateContext& ctx) = 0;
 
         Core::UpdateScheduler& GetUpdateScheduler();
+        Core::Input* GetInput();
+        const Core::Input* GetInput() const;
 
 private:
         Core::UpdateScheduler m_scheduler;
         bool m_isConfigured;
+        Core::Input* m_input;
 };
 }
 

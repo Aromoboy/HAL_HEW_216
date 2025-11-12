@@ -8,6 +8,7 @@ namespace SceneSpace
 {
         Scene::Scene()
                 : m_isConfigured(false)
+                , m_input(nullptr)
         {
         }
 
@@ -17,6 +18,8 @@ namespace SceneSpace
 
         void Scene::RootUpdate(Core::StepTimer& timer, Core::Input& input)
         {
+                m_input = &input;
+
                 if (!m_isConfigured)
                 {
                         ConfigureUpdates();
@@ -42,5 +45,15 @@ namespace SceneSpace
         Core::UpdateScheduler& Scene::GetUpdateScheduler()
         {
                 return m_scheduler;
+        }
+
+        Core::Input* Scene::GetInput()
+        {
+                return m_input;
+        }
+
+        const Core::Input* Scene::GetInput() const
+        {
+                return m_input;
         }
 }

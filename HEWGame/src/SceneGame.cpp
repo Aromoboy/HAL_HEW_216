@@ -7,6 +7,7 @@
 #include "CameraDebug.h"
 #include "DebugConsole.h"
 #include "AssimpModelLorder.h"
+#include "Core/Input.h"
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
@@ -46,6 +47,15 @@ SceneGame::SceneGame()
 
 SceneGame::~SceneGame()
 {
+        if (m_inputRegistered)
+        {
+                if (auto* input = GetInput())
+                {
+                        GetUpdateScheduler().Unregister(*input);
+                }
+                m_inputRegistered = false;
+        }
+
         if (m_pCamera)
         {
                 GetUpdateScheduler().Unregister(*m_pCamera);
@@ -54,6 +64,12 @@ SceneGame::~SceneGame()
 
 void SceneGame::ConfigureUpdates()
 {
+        if (auto* input = GetInput())
+        {
+                GetUpdateScheduler().Register(*input);
+                m_inputRegistered = true;
+        }
+
         if (m_pCamera)
         {
                 GetUpdateScheduler().Register(*m_pCamera);
