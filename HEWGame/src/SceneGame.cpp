@@ -8,12 +8,15 @@
 #include "DebugConsole.h"
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
+#include "Systems/PhysicsMachine.h"
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
 {
+        m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+
         RenderTarget* pRTV = GetDefaultRTV();
         DepthStencil* pDSV = GetDefaultDSV();
         SetRenderTargets(1, &pRTV, pDSV);
@@ -56,6 +59,12 @@ SceneGame::~SceneGame()
                 m_inputRegistered = false;
         }
 
+        if (m_physicsRegistered && m_physicsMachine)
+        {
+                GetUpdateScheduler().Unregister(*m_physicsMachine);
+                m_physicsRegistered = false;
+        }
+
         if (m_pCamera)
         {
                 Unregister(*m_pCamera);
@@ -68,6 +77,12 @@ void SceneGame::ConfigureUpdates()
         {
                 Register(*input);
                 m_inputRegistered = true;
+        }
+
+        if (m_physicsMachine && !m_physicsRegistered)
+        {
+                GetUpdateScheduler().Register(*m_physicsMachine);
+                m_physicsRegistered = true;
         }
 
         if (m_pCamera)
