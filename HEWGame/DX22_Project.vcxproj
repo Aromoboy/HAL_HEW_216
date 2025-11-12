@@ -182,6 +182,7 @@
     <ClCompile Include="src\ModelDX.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderList.cpp" />
     <ClCompile Include="src\SoundManagerEX.cpp" />
@@ -217,6 +218,7 @@
     <ClInclude Include="include\ModelDX.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
+    <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\ShaderList.h" />
     <ClInclude Include="include\SoundManagerEX.h" />
