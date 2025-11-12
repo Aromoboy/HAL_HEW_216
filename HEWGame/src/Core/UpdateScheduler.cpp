@@ -46,13 +46,16 @@ namespace Core
                         return false;
                 }
 
-                if (lhs->GetPhase() != rhs->GetPhase())
+                const NodeOrderOverride lhsOrder = GetEffectiveOrder(lhs);
+                const NodeOrderOverride rhsOrder = GetEffectiveOrder(rhs);
+
+                if (lhsOrder.phase != rhsOrder.phase)
                 {
-                        return static_cast<int>(lhs->GetPhase()) < static_cast<int>(rhs->GetPhase());
+                        return static_cast<int>(lhsOrder.phase) < static_cast<int>(rhsOrder.phase);
                 }
-                if (lhs->GetPriority() != rhs->GetPriority())
+                if (lhsOrder.priority != rhsOrder.priority)
                 {
-                        return lhs->GetPriority() < rhs->GetPriority();
+                        return lhsOrder.priority < rhsOrder.priority;
                 }
 
                 const std::size_t lhsOrder = GetRegistrationOrder(lhs);
@@ -84,6 +87,40 @@ namespace Core
                 ::OutputDebugStringA(oss.str().c_str());
 #endif
                 return std::numeric_limits<std::size_t>::max();
+        }
+
+        const UpdateScheduler::NodeOrderOverride* UpdateScheduler::FindOrderOverride(const IUpdatable* node) const
+        {
+                if (!node)
+                {
+                        return nullptr;
+                }
+
+                auto it = m_orderOverrides.find(node);
+                if (it == m_orderOverrides.end())
+                {
+                        return nullptr;
+                }
+
+                return &it->second;
+        }
+
+        UpdateScheduler::NodeOrderOverride UpdateScheduler::GetEffectiveOrder(const IUpdatable* node) const
+        {
+                NodeOrderOverride result;
+                if (!node)
+                {
+                        return result;
+                }
+
+                if (const NodeOrderOverride* overrideOrder = FindOrderOverride(node))
+                {
+                        return *overrideOrder;
+                }
+
+                result.phase = node->GetPhase();
+                result.priority = node->GetPriority();
+                return result;
         }
 
         void UpdateScheduler::SetExecutionLogListener(ExecutionLogListener listener)
@@ -181,6 +218,13 @@ namespace Core
                 {
                         m_dependencies.erase(depIt, m_dependencies.end());
                 }
+
+                if (m_orderOverrides.erase(&node) > 0)
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Removed order override for unregistered node=" << &node << '\n';
+                        DebugLog(oss.str());
+                }
         }
 
         void UpdateScheduler::SetOrderInternal(IUpdatable& node, UpdatePhase phase, int priority)
@@ -188,14 +232,28 @@ namespace Core
                 auto* updateNode = dynamic_cast<UpdateNode*>(&node);
                 if (!updateNode)
                 {
+                        NodeOrderOverride& entry = m_orderOverrides[&node];
+                        entry.phase = phase;
+                        entry.priority = priority;
+
                         std::ostringstream oss;
-                        oss << "[UpdateScheduler] SetOrderInternal failed because node does not derive from UpdateNode node=" << &node << '\n';
+                        oss << "[UpdateScheduler] Applied order override to non-UpdateNode node=" << &node
+                            << " phase=" << static_cast<int>(phase)
+                            << " priority=" << priority << '\n';
                         DebugLog(oss.str());
                         return;
                 }
 
                 updateNode->SetPhase(phase);
                 updateNode->SetPriority(priority);
+                if (m_orderOverrides.erase(&node) > 0)
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Cleared redundant order override for UpdateNode node=" << &node
+                            << " phase=" << static_cast<int>(phase)
+                            << " priority=" << priority << '\n';
+                        DebugLog(oss.str());
+                }
         }
 
         void UpdateScheduler::ApplyPendingRegistration(IUpdatable* node)
@@ -248,7 +306,9 @@ namespace Core
                 if (!IsRegistered(node))
                 {
                         std::ostringstream oss;
-                        oss << "[UpdateScheduler] Pending order change ignored because node is not registered node=" << node << '\n';
+                        oss << "[UpdateScheduler] Pending order change ignored because node is not registered node=" << node
+                            << " phase=" << static_cast<int>(change.phase)
+                            << " priority=" << change.priority << '\n';
                         DebugLog(oss.str());
                         return;
                 }
@@ -372,7 +432,9 @@ namespace Core
                         if (!IsRegistered(&node) && !IsPendingRegistration(&node))
                         {
                                 std::ostringstream oss;
-                                oss << "[UpdateScheduler] SetOrder ignored because node is not registered node=" << &node << '\n';
+                                oss << "[UpdateScheduler] SetOrder ignored because node is not registered node=" << &node
+                                    << " phase=" << static_cast<int>(phase)
+                                    << " priority=" << priority << '\n';
                                 DebugLog(oss.str());
                                 return;
                         }
@@ -383,7 +445,9 @@ namespace Core
                                 pending->phase = phase;
                                 pending->priority = priority;
                                 std::ostringstream oss;
-                                oss << "[UpdateScheduler] Pending order change updated for node=" << &node << '\n';
+                                oss << "[UpdateScheduler] Pending order change updated for node=" << &node
+                                    << " phase=" << static_cast<int>(phase)
+                                    << " priority=" << priority << '\n';
                                 DebugLog(oss.str());
                                 return;
                         }
@@ -395,7 +459,9 @@ namespace Core
                 if (!IsRegistered(&node))
                 {
                         std::ostringstream oss;
-                        oss << "[UpdateScheduler] SetOrder called for node that is not registered node=" << &node << '\n';
+                        oss << "[UpdateScheduler] SetOrder called for node that is not registered node=" << &node
+                            << " phase=" << static_cast<int>(phase)
+                            << " priority=" << priority << '\n';
                         DebugLog(oss.str());
                 }
 
@@ -497,8 +563,9 @@ namespace Core
 
                                 ExecutionRecord record;
                                 record.node = node;
-                                record.phase = node->GetPhase();
-                                record.priority = node->GetPriority();
+                                const NodeOrderOverride order = GetEffectiveOrder(node);
+                                record.phase = order.phase;
+                                record.priority = order.priority;
                                 record.registrationOrder = GetRegistrationOrder(node);
                                 record.invoked = invoked;
                                 executionLog.emplace_back(record);
