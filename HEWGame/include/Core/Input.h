@@ -1,48 +1,33 @@
 #pragma once
 
 #include <Windows.h>
+#include <array>
 
-#include "Input.h"
+#include "Core/UpdateNode.h"
 
 namespace Core
 {
-        class Input
+        class Input : public UpdateNode
         {
         public:
-                void Initialize()
-                {
-                        ::InitInput();
-                }
+                Input();
 
-                void Shutdown()
-                {
-                        ::UninitInput();
-                }
+                HRESULT Initialize();
+                void Shutdown();
 
-                void Update()
-                {
-                        ::UpdateInput();
-                }
+                void OnUpdate(UpdateContext& ctx) override;
 
-                bool IsKeyPress(BYTE key) const
-                {
-                        return ::IsKeyPress(key);
-                }
+                bool IsKeyPress(BYTE key) const;
+                bool IsKeyTrigger(BYTE key) const;
+                bool IsKeyRelease(BYTE key) const;
+                bool IsKeyRepeat(BYTE key) const;
 
-                bool IsKeyTrigger(BYTE key) const
-                {
-                        return ::IsKeyTrigger(key);
-                }
+        private:
+                void PollKeyboardState();
 
-                bool IsKeyRelease(BYTE key) const
-                {
-                        return ::IsKeyRelease(key);
-                }
-
-                bool IsKeyRepeat(BYTE key) const
-                {
-                        return ::IsKeyRepeat(key);
-                }
+                std::array<BYTE, 256> m_currentKeys;
+                std::array<BYTE, 256> m_previousKeys;
+                bool m_initialized;
         };
 }
 

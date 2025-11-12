@@ -35,6 +35,7 @@ private:
         std::unique_ptr<ModelRender> m_render;
 
         std::vector<std::shared_ptr<TestObject>> m_pObjects;
+        bool m_inputRegistered = false;
 };
 
 #endif // __SCENE_GAME_H__
