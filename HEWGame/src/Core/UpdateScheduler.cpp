@@ -7,10 +7,19 @@
 #include <unordered_map>
 
 #if defined(_WIN32)
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <windows.h>
+#endif
+
+#if defined(_WIN32)
 #include <windows.h>
 #endif
 
 #include "Core/UpdateNode.h"
+
+
 
 namespace Core
 {
