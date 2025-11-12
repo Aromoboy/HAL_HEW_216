@@ -359,11 +359,34 @@ namespace Core
         {
                 if (m_isTicking)
                 {
+                        bool cancelledPendingUnregistration = false;
+                        if (IsPendingUnregistration(&node))
+                        {
+                                auto it = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), &node);
+                                if (it != m_pendingUnregistrations.end())
+                                {
+                                        m_pendingUnregistrations.erase(it, m_pendingUnregistrations.end());
+                                        cancelledPendingUnregistration = true;
+                                        std::ostringstream oss;
+                                        oss << "[UpdateScheduler] Pending unregistration cancelled due to re-registration node=" << &node << '\n';
+                                        DebugLog(oss.str());
+                                }
+                        }
+
                         if (IsRegistered(&node))
                         {
-                                std::ostringstream oss;
-                                oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
-                                DebugLog(oss.str());
+                                if (cancelledPendingUnregistration)
+                                {
+                                        std::ostringstream oss;
+                                        oss << "[UpdateScheduler] Re-register preserved node in current frame node=" << &node << '\n';
+                                        DebugLog(oss.str());
+                                }
+                                else
+                                {
+                                        std::ostringstream oss;
+                                        oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
+                                        DebugLog(oss.str());
+                                }
                                 return;
                         }
 
@@ -373,18 +396,6 @@ namespace Core
                                 oss << "[UpdateScheduler] Duplicate pending registration detected for node=" << &node << '\n';
                                 DebugLog(oss.str());
                                 return;
-                        }
-
-                        if (IsPendingUnregistration(&node))
-                        {
-                                auto it = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), &node);
-                                if (it != m_pendingUnregistrations.end())
-                                {
-                                        m_pendingUnregistrations.erase(it, m_pendingUnregistrations.end());
-                                        std::ostringstream oss;
-                                        oss << "[UpdateScheduler] Pending unregistration cancelled due to re-registration node=" << &node << '\n';
-                                        DebugLog(oss.str());
-                                }
                         }
 
                         m_pendingRegistrations.emplace_back(&node);
