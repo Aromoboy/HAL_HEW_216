@@ -1,33 +1,75 @@
 #include "Core/UpdateScheduler.h"
 
 #include <algorithm>
+#include <limits>
+#include <sstream>
 #include <unordered_map>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace Core
 {
-        namespace
+        bool UpdateScheduler::NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const
         {
-                struct SortHelper
+                if (lhs == rhs)
                 {
-                        static bool Less(const IUpdatable* lhs, const IUpdatable* rhs)
-                        {
-                                if (lhs == rhs) { return false; }
-                                if (lhs->GetPhase() != rhs->GetPhase())
-                                {
-                                        return static_cast<int>(lhs->GetPhase()) < static_cast<int>(rhs->GetPhase());
-                                }
-                                if (lhs->GetPriority() != rhs->GetPriority())
-                                {
-                                        return lhs->GetPriority() > rhs->GetPriority();
-                                }
-                                return lhs < rhs;
-                        }
-                };
+                        return false;
+                }
+
+                if (!lhs)
+                {
+                        return rhs != nullptr;
+                }
+                if (!rhs)
+                {
+                        return false;
+                }
+
+                if (lhs->GetPhase() != rhs->GetPhase())
+                {
+                        return static_cast<int>(lhs->GetPhase()) < static_cast<int>(rhs->GetPhase());
+                }
+                if (lhs->GetPriority() != rhs->GetPriority())
+                {
+                        return lhs->GetPriority() < rhs->GetPriority();
+                }
+
+                const std::size_t lhsOrder = GetRegistrationOrder(lhs);
+                const std::size_t rhsOrder = GetRegistrationOrder(rhs);
+                if (lhsOrder != rhsOrder)
+                {
+                        return lhsOrder < rhsOrder;
+                }
+
+                return false;
         }
 
-        bool UpdateScheduler::NodeLess(const IUpdatable* lhs, const IUpdatable* rhs)
+        std::size_t UpdateScheduler::GetRegistrationOrder(const IUpdatable* node) const
         {
-                return SortHelper::Less(lhs, rhs);
+                if (!node)
+                {
+                        return std::numeric_limits<std::size_t>::max();
+                }
+
+                auto it = m_registrationOrder.find(node);
+                if (it != m_registrationOrder.end())
+                {
+                        return it->second;
+                }
+
+#if defined(_DEBUG) && defined(_WIN32)
+                std::ostringstream oss;
+                oss << "[UpdateScheduler] registration order missing for node=" << node << "\n";
+                ::OutputDebugStringA(oss.str().c_str());
+#endif
+                return std::numeric_limits<std::size_t>::max();
+        }
+
+        void UpdateScheduler::SetExecutionLogListener(ExecutionLogListener listener)
+        {
+                m_executionLogListener = std::move(listener);
         }
 
         void UpdateScheduler::Register(IUpdatable& node)
@@ -37,6 +79,7 @@ namespace Core
                 if (it == m_nodes.end())
                 {
                         m_nodes.emplace_back(&node);
+                        m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
                 }
         }
 
@@ -48,6 +91,8 @@ namespace Core
                 {
                         m_nodes.erase(it, m_nodes.end());
                 }
+
+                m_registrationOrder.erase(&node);
 
                 auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
                         [&node](const Dependency& dep)
@@ -91,7 +136,11 @@ namespace Core
                 // 更新リストをコピーしてソート用に使用する
                 std::vector<IUpdatable*> sortedNodes = m_nodes;
                 sortedNodes.erase(std::remove(sortedNodes.begin(), sortedNodes.end(), nullptr), sortedNodes.end());
-                std::sort(sortedNodes.begin(), sortedNodes.end(), NodeLess);
+                std::stable_sort(sortedNodes.begin(), sortedNodes.end(),
+                        [this](const IUpdatable* lhs, const IUpdatable* rhs)
+                        {
+                                return NodeLess(lhs, rhs);
+                        });
 
                 const std::size_t nodeCount = sortedNodes.size();
                 std::unordered_map<IUpdatable*, std::size_t> indexLookup;
@@ -132,19 +181,31 @@ namespace Core
                 processed.reserve(nodeCount);
 
                 // ready キューから「フェーズ・優先度が最も早いもの」を選び、安定した順序を維持する
-                auto popBestReady = [&ready, &sortedNodes]() -> std::size_t
+                auto popBestReady = [&ready]() -> std::size_t
                 {
-                        auto bestIt = ready.begin();
-                        for (auto it = ready.begin(); it != ready.end(); ++it)
-                        {
-                                if (UpdateScheduler::NodeLess(sortedNodes[*it], sortedNodes[*bestIt]))
-                                {
-                                        bestIt = it;
-                                }
-                        }
+                        auto bestIt = std::min_element(ready.begin(), ready.end());
                         std::size_t value = *bestIt;
                         ready.erase(bestIt);
                         return value;
+                };
+
+                ExecutionLog executionLog;
+                executionLog.reserve(nodeCount);
+
+                auto appendExecutionRecord = [this, &executionLog](IUpdatable* node, bool invoked)
+                {
+                        if (!node)
+                        {
+                                return;
+                        }
+
+                        ExecutionRecord record;
+                        record.node = node;
+                        record.phase = node->GetPhase();
+                        record.priority = node->GetPriority();
+                        record.registrationOrder = GetRegistrationOrder(node);
+                        record.invoked = invoked;
+                        executionLog.emplace_back(record);
                 };
 
                 while (!ready.empty())
@@ -153,10 +214,13 @@ namespace Core
                         processed.push_back(current);
 
                         IUpdatable* node = sortedNodes[current];
+                        bool invoked = false;
                         if (node && node->IsEnabled())
                         {
                                 node->OnUpdate(ctx);
+                                invoked = true;
                         }
+                        appendExecutionRecord(node, invoked);
 
                         for (std::size_t next : edges[current])
                         {
@@ -167,31 +231,53 @@ namespace Core
                         }
                 }
 
-                if (processed.size() == nodeCount)
+                if (processed.size() != nodeCount)
                 {
-                        return;
-                }
-
-                // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する
-                std::vector<bool> isProcessed(nodeCount, false);
-                for (std::size_t index : processed)
-                {
-                        isProcessed[index] = true;
-                }
-
-                for (std::size_t i = 0; i < nodeCount; ++i)
-                {
-                        if (isProcessed[i])
+                        // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する
+                        std::vector<bool> isProcessed(nodeCount, false);
+                        for (std::size_t index : processed)
                         {
-                                continue;
+                                isProcessed[index] = true;
                         }
 
-                        IUpdatable* node = sortedNodes[i];
-                        if (node && node->IsEnabled())
+                        for (std::size_t i = 0; i < nodeCount; ++i)
                         {
-                                node->OnUpdate(ctx);
+                                if (isProcessed[i])
+                                {
+                                        continue;
+                                }
+
+                                IUpdatable* node = sortedNodes[i];
+                                bool invoked = false;
+                                if (node && node->IsEnabled())
+                                {
+                                        node->OnUpdate(ctx);
+                                        invoked = true;
+                                }
+                                appendExecutionRecord(node, invoked);
                         }
                 }
+
+                if (m_executionLogListener)
+                {
+                        m_executionLogListener(executionLog);
+                }
+#if defined(_DEBUG) && defined(_WIN32)
+                else if (!executionLog.empty())
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] execution order (phase, priority, order, invoked):\n";
+                        for (const auto& record : executionLog)
+                        {
+                                oss << "  node=" << record.node
+                                    << " phase=" << static_cast<int>(record.phase)
+                                    << " priority=" << record.priority
+                                    << " order=" << record.registrationOrder
+                                    << " invoked=" << (record.invoked ? 1 : 0) << '\n';
+                        }
+                        ::OutputDebugStringA(oss.str().c_str());
+                }
+#endif
         }
 }
 
