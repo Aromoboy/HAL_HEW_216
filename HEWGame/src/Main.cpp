@@ -3,32 +3,40 @@
 #include "DirectX.h"
 #include "Geometory.h"
 #include "Sprite.h"
-#include "Input.h"
 #include "SceneGame.h"
 #include "Defines.h"
 #include "ShaderList.h"
 #include "DebugConsole.h"
+#include "Core/StepTimer.h"
+#include "Core/Input.h"
 
 
 
 
-//--- ƒOƒ[ƒoƒ‹•Ï”
-Scene* g_pScene;
-
-HRESULT Init(HWND hWnd, UINT width, UINT height)
+namespace
 {
-	HRESULT hr;
-	// DirectX‰Šú‰»
-	hr = InitDirectX(hWnd, width, height, false);
-	if (FAILED(hr)) { return hr; }
+        Core::StepTimer g_stepTimer;
+        Core::Input g_input;
+}
 
-	// ‘¼‹@”\‰Šú‰»
+SceneSpace::Scene* g_pScene;
+	g_input.Initialize();
+	g_stepTimer.Reset();
+
+	g_input.Shutdown();
+{
+	g_input.Update();
+	if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+	g_pScene->RootUpdate(g_stepTimer, g_input);
+	if (g_input.IsKeyTrigger(VK_RETURN)) {
+	if (g_input.IsKeyTrigger(VK_SPACE)) {
+	// ä»–æ©Ÿèƒ½åˆæœŸåŒ–
 	Geometory::Init();
 	Sprite::Init();
 	InitInput();
 	ShaderList::Init();
 
-	// ƒV[ƒ“
+	// ã‚·ãƒ¼ãƒ³
 	g_pScene = new SceneGame();
 
 	return hr;
@@ -60,9 +68,9 @@ void Draw()
 {
 	BeginDrawDirectX();
 
-	// ²ü‚Ì•\¦
+	// è»¸ç·šã®è¡¨ç¤º
 #ifdef _DEBUG
-	// ƒOƒŠƒbƒh
+	// ã‚°ãƒªãƒƒãƒ‰
 	DirectX::XMFLOAT4 lineColor(0.5f, 0.5f, 0.5f, 1.0f);
 	float size = DEBUG_GRID_NUM * DEBUG_GRID_MARGIN;
 	for (int i = 1; i <= DEBUG_GRID_NUM; ++i)
@@ -82,7 +90,7 @@ void Draw()
 		pos[0].z = pos[1].z = -grid;
 		Geometory::AddLine(pos[0], pos[1], lineColor);
 	}
-	// ²
+	// è»¸
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(size,0,0), DirectX::XMFLOAT4(1,0,0,1));
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,size,0), DirectX::XMFLOAT4(0,1,0,1));
 	Geometory::AddLine(DirectX::XMFLOAT3(0,0,0), DirectX::XMFLOAT3(0,0,size), DirectX::XMFLOAT4(0,0,1,1));
@@ -91,7 +99,7 @@ void Draw()
 
 	Geometory::DrawLines();
 
-	// ƒJƒƒ‰‚Ì’l
+	// ã‚«ãƒ¡ãƒ©ã®å€¤
 	static bool camAutoSwitch = false;
 	static bool camUpDownSwitch = true;
 	static float camAutoRotate = 1.0f;
@@ -112,7 +120,7 @@ void Draw()
 		sinf(camAutoRotate) * 5.0f,
 		0.0f);
 
-	// ƒWƒIƒƒgƒŠ—pƒJƒƒ‰‰Šú‰»
+	// ã‚¸ã‚ªãƒ¡ãƒˆãƒªç”¨ã‚«ãƒ¡ãƒ©åˆæœŸåŒ–
 	DirectX::XMFLOAT4X4 mat[2];
 	DirectX::XMStoreFloat4x4(&mat[0], DirectX::XMMatrixTranspose(
 		DirectX::XMMatrixLookAtLH(

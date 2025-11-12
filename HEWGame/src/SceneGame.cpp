@@ -6,7 +6,6 @@
 #include "Defines.h"
 #include "CameraDebug.h"
 #include "DebugConsole.h"
-#include "Input.h"
 #include "AssimpModelLorder.h"
 
 Model::AnimeNo no;
@@ -61,7 +60,7 @@ void SceneGame::ConfigureUpdates()
         }
 }
 
-void SceneGame::Update(const Core::UpdateContext& ctx)
+void SceneGame::Update(Core::UpdateContext& ctx)
 {
         (void)ctx;
         fRads.z += 0.001f * RAD;

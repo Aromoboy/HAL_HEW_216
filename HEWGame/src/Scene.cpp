@@ -1,57 +1,46 @@
 #include "Scene.h"
 
 #include "Core/IUpdatable.h"
+#include "Core/StepTimer.h"
+#include "Core/Input.h"
 
-Scene::Scene()
-        : m_isConfigured(false)
-        , m_frameCounter(0)
-        , m_hasLastTick(false)
+namespace SceneSpace
 {
-}
-
-Scene::~Scene()
-{
-}
-
-void Scene::RootUpdate()
-{
-        if (!m_isConfigured)
+        Scene::Scene()
+                : m_isConfigured(false)
         {
-                ConfigureUpdates();
-                m_isConfigured = true;
         }
 
-        auto now = std::chrono::steady_clock::now();
-        float deltaTime = 0.0f;
-        if (m_hasLastTick)
+        Scene::~Scene()
         {
-                deltaTime = std::chrono::duration<float>(now - m_lastTick).count();
         }
-        else
+
+        void Scene::RootUpdate(Core::StepTimer& timer, Core::Input& input)
         {
-                m_hasLastTick = true;
+                if (!m_isConfigured)
+                {
+                        ConfigureUpdates();
+                        m_isConfigured = true;
+                }
+
+                const float deltaTime = timer.Tick();
+                Core::UpdateContext ctx(deltaTime, timer, input, this);
+
+                Update(ctx);
+                m_scheduler.Tick(ctx);
         }
-        m_lastTick = now;
 
-        Core::UpdateContext ctx{};
-        ctx.deltaTime = deltaTime;
-        ctx.frameIndex = m_frameCounter++;
-        ctx.scene = this;
+        void Scene::RootDraw()
+        {
+                Draw();
+        }
 
-        Update(ctx);
-        m_scheduler.Tick(ctx);
-}
+        void Scene::ConfigureUpdates()
+        {
+        }
 
-void Scene::RootDraw()
-{
-        Draw();
-}
-
-void Scene::ConfigureUpdates()
-{
-}
-
-Core::UpdateScheduler& Scene::GetUpdateScheduler()
-{
-        return m_scheduler;
+        Core::UpdateScheduler& Scene::GetUpdateScheduler()
+        {
+                return m_scheduler;
+        }
 }

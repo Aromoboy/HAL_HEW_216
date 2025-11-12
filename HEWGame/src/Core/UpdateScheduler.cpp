@@ -81,7 +81,7 @@ namespace Core
                 m_dependencies.clear();
         }
 
-        void UpdateScheduler::Tick(const UpdateContext& ctx)
+        void UpdateScheduler::Tick(UpdateContext& ctx)
         {
                 if (m_nodes.empty())
                 {
