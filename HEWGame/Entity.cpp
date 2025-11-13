@@ -1,16 +1,11 @@
 #include<iostream>
-#include "Entity.h"
+#include "include/Entity.h"
 
-CEntity::CEntity(std::string a_tag, float3& pos, float3& rot, float3& scl)
+CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl)
 {
 	m_transform.position = pos;  
 	m_transform.rotation = rot;  
 	m_transform.scale    = scl;
-
-	pos = { 0.0f,0.0f,0.0f };
-	rot = { 0.0f,0.0f,0.0f };
-	scl = { 1.0f,1.0f,1.0f };
-
 	tag = a_tag;
 }
 

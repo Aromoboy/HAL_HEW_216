@@ -168,6 +168,7 @@
     <ClCompile Include="src\DebugConsole.cpp" />
     <ClCompile Include="src\DirectX.cpp" />
     <ClCompile Include="src\DrawMatrix.cpp" />
+    <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\ICamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
@@ -203,6 +204,7 @@
     <ClInclude Include="include\Defines.h" />
     <ClInclude Include="include\DirectX.h" />
     <ClInclude Include="include\DrawMatrix.h" />
+    <ClInclude Include="include\Entity.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\IModelLoader.h" />
@@ -223,6 +225,7 @@
     <ClInclude Include="include\Sprite.h" />
     <ClInclude Include="include\TestObject.h" />
     <ClInclude Include="include\Texture.h" />
+    <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
   </ItemGroup>
