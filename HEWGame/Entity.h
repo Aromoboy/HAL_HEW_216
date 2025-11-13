@@ -4,8 +4,6 @@
 #include "Transform.h"
 #include "include/ModelRender.h"
 #include <string>
-//#include "include/Vector.h"
-
 
 class CEntity
 {

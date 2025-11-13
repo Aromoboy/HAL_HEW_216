@@ -10,7 +10,4 @@ struct Transform
 	float3 scale;
 };
 
-
-
-
 #endif
