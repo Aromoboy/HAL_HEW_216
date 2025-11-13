@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="ModelCache.cpp" />
     <ClCompile Include="ShaderCache.cpp" />
+    <ClCompile Include="ShaderProgram.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Debug.cpp" />
@@ -192,6 +193,7 @@
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
     <ClCompile Include="TextureCache.cpp" />
+    <ClCompile Include="TextureDX.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -225,7 +227,9 @@
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="ModelCache.h" />
     <ClInclude Include="ShaderCache.h" />
+    <ClInclude Include="ShaderProgram.h" />
     <ClInclude Include="TextureCache.h" />
+    <ClInclude Include="TextureDX.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

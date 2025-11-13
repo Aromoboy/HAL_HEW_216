@@ -1,41 +1,38 @@
 #ifndef __SHADERCACHE_H__
 #define __SHADERCACHE_H__
 
-#include <string>
+#include <d3d11.h>
 #include <map>
 #include <memory>
-#include <d3d11.h>
-#include <wrl/client.h>
+#include <string>
+#include "ShaderProgram.h"
 
-namespace Core
-{
-    using Microsoft::WRL::ComPtr;
-
-    class ShaderProgram
+//============================================================
+// ShaderCache - シェーダー管理
+//============================================================
+class ShaderCache {
+public:
+    // シングルトンインスタンスを取得
+    static ShaderCache& Instance()
     {
-    public:
-        ShaderProgram() = default;
-        ~ShaderProgram() = default;
+        static ShaderCache instance;
+        return instance;
+    }
 
-        bool LoadFromFiles(ID3D11Device* device, const std::string& vsPath, const std::string& psPath);
-        void Bind(ID3D11DeviceContext* context);
+    // コピー・ムーブを禁止
+    ShaderCache(const ShaderCache&) = delete;
+    ShaderCache& operator=(const ShaderCache&) = delete;
+    ShaderCache(ShaderCache&&) = delete;
+    ShaderCache& operator=(ShaderCache&&) = delete;
 
-    private:
-        ComPtr<ID3D11VertexShader> vertexShader;
-        ComPtr<ID3D11PixelShader> pixelShader;
-        ComPtr<ID3D11InputLayout> inputLayout;
-    };
+    ShaderProgram& Load(const std::string& name, ID3D11Device* device, const std::string& vsPath, const std::string& psPath);
+    ShaderProgram& Get(const std::string& name);
 
-    class ShaderCache
-    {
-    public:
-        ShaderProgram& Load(const std::string& name, ID3D11Device* device,
-            const std::string& vsPath, const std::string& psPath);
+private:
+    // コンストラクタをprivateに
+    ShaderCache() = default;
+    ~ShaderCache() = default;
 
-        ShaderProgram& Get(const std::string& name);
-
-    private:
-        std::map<std::string, std::unique_ptr<ShaderProgram>> programs;
-    };
-}
+    std::map<std::string, std::unique_ptr<ShaderProgram>> programs;
+};
 #endif //__SHADERCACHE_H__

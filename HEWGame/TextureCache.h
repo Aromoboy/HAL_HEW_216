@@ -1,37 +1,36 @@
 #ifndef __TEXTURECACHE_H__
 #define __TEXTURECACHE_H__
 
+#pragma once
 #include <d3d11.h>
 #include <map>
 #include <memory>
 #include <string>
+#include "TextureDX.h"
 
-//============================================================
-// Texture2D - テクスチャリソースをラップ
-//============================================================
-class Texture2D {
-public:
-    ID3D11Texture2D* texture = nullptr;
-    ID3D11ShaderResourceView* srv = nullptr;
-
-    ~Texture2D() {
-        if (srv) srv->Release();
-        if (texture) texture->Release();
-    }
-
-    bool LoadFromFile(ID3D11Device* device, const std::string& path);
-    void BindPS(ID3D11DeviceContext* context, UINT slot);
-};
-
-//============================================================
-// TextureCache - テクスチャ管理
-//============================================================
 class TextureCache {
 public:
+    // シングルトンインスタンスを取得
+    static TextureCache& Instance()
+    {
+        static TextureCache instance;
+        return instance;
+    }
+
+    // コピー・ムーブを禁止
+    TextureCache(const TextureCache&) = delete;
+    TextureCache& operator=(const TextureCache&) = delete;
+    TextureCache(TextureCache&&) = delete;
+    TextureCache& operator=(TextureCache&&) = delete;
+
+    Texture2D& Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
+    Texture2D& Get(const std::string& name);
+
+private:
+    // コンストラクタをprivateに
+    TextureCache() = default;
+    ~TextureCache() = default;
+
     std::map<std::string, std::unique_ptr<Texture2D>> textures;
-
-    Texture2D& Load(const std::string& path, ID3D11Device* device);
-    Texture2D& Get(const std::string& path);
 };
-
 #endif
