@@ -16,23 +16,17 @@ jobs:
       - name: Discord に通知
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           AUTHOR: ${{ github.actor }}
-          REPO: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          # Issue / PR の assignee をそのまま読む
+          ASSIGNEE_LOGIN: ${{ github.event.issue.assignee.login || github.event.pull_request.assignee.login }}
           LINK: ${{ github.event.comment.html_url || github.event.review.html_url || github.event.issue.html_url || github.event.pull_request.html_url }}
         run: |
           if [ -z "$WEBHOOK_URL" ]; then
             echo "DISCORD_WEBHOOK secret が設定されていません"; exit 1;
           fi
 
-          # Issue / PR から Assignee を取得
-          ASSIGNEE_LOGIN=$(curl -sS \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER" \
-            | jq -r '.assignees[0].login // empty')
+          echo "DEBUG: ASSIGNEE_LOGIN = '$ASSIGNEE_LOGIN'"
 
           # GitHub の Aromoboy → Discord の @mikadoro
           MENTION=""
@@ -40,7 +34,6 @@ jobs:
             MENTION="@mikadoro"
           fi
 
-          # Discord に送る JSON を 1 行で作成
           BODY=$(printf '%s' \
             "{\"content\": \"🔔 シビュラ通知: 新しいコメントがあります。\n担当: $ASSIGNEE_LOGIN $MENTION\nイベント: $EVENT_NAME\n投稿者: $AUTHOR\nリンク: $LINK\"}"
           )
