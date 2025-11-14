@@ -1,15 +1,21 @@
 #include "CameraDebug.h"
-#include "Input.h"
+#include "Core/Input.h"
 
 void CameraDebug::Update()
 {
-        if(IsKeyTrigger(VK_RETURN)) bIsMove ^= 1;
-
-        if(bIsMove) m_pos.y += 0.1f;
+        // UpdateNode経由で処理するのでここでは何もしない
 }
 
-void CameraDebug::OnUpdate(const Core::UpdateContext& ctx)
+void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
-        (void)ctx;
-        Update();
+        if (ctx.input.IsKeyTrigger(VK_RETURN))
+        {
+                bIsMove = !bIsMove;
+        }
+
+        if (bIsMove)
+        {
+                constexpr float kMoveSpeed = 6.0f;
+                m_pos.y += kMoveSpeed * ctx.dt;
+        }
 }
