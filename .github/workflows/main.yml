@@ -1,0 +1,23 @@
+name: Discord Notifications
+
+on:
+  push:
+  pull_request:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord notification
+        uses: Ilshidur/action-discord@v2
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            シビュラ通知:
+            Event: ${{ github.event_name }}
+            Repository: ${{ github.repository }}
+            Actor: ${{ github.actor }}
