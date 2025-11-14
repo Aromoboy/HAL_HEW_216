@@ -13,14 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Discord に通知を送信
-        uses: discord-actions/action-send-discord-message@v1
+      - uses: actions/checkout@v4
+      
+      - name: Discord に通知
+        uses: adambirds/github-discord-notifications@v2.2.0
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          content: |
-            🔔 **シビュラ通知**
-            新しいコメントが追加されました。
-            **投稿者:** ${{ github.actor }}
-
-            **リンク:**
-            ${{ github.event.comment.html_url || github.event.review.html_url }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          username: "シビュラ"
+          avatar-url: "https://i.imgur.com/Op5bEU2.png"
