@@ -24,11 +24,12 @@ jobs:
           EVENT_ACTION: ${{ github.event.action }}
           AUTHOR: ${{ github.actor }}
 
-          # issue / PR 関連（assignee / URL / コメント本文）
+          # issue / PR 関連（assignee / URL / コメント本文 / タイトル）
           ASSIGNEE_LOGIN: ${{ github.event.issue.assignee.login || github.event.pull_request.assignee.login }}
           ASSIGNEE_CHANGED_LOGIN: ${{ github.event.assignee.login }}
           COMMENT_BODY: ${{ github.event.comment.body || github.event.review.body }}
           LINK: ${{ github.event.comment.html_url || github.event.review.html_url || github.event.issue.html_url || github.event.pull_request.html_url }}
+          TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
 
           # PR 判定用（issue_comment の場合も PR 上のコメントなら true になる想定）
           IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null || github.event.pull_request != null }}
@@ -39,66 +40,110 @@ jobs:
             echo "DISCORD_WEBHOOK secret が設定されていません"; exit 1;
           fi
 
-          echo "DEBUG: EVENT_NAME      = '$EVENT_NAME'"
-          echo "DEBUG: EVENT_ACTION    = '$EVENT_ACTION'"
-          echo "DEBUG: AUTHOR          = '$AUTHOR'"
-          echo "DEBUG: ASSIGNEE_LOGIN  = '$ASSIGNEE_LOGIN'"
-          echo "DEBUG: COMMENT_BODY    = '$COMMENT_BODY'"
-          echo "DEBUG: IS_PULL_REQUEST = '$IS_PULL_REQUEST'"
-          echo "DEBUG: PR_HEAD_REF     = '$PR_HEAD_REF'"
+          echo "DEBUG: EVENT_NAME          = '$EVENT_NAME'"
+          echo "DEBUG: EVENT_ACTION        = '$EVENT_ACTION'"
+          echo "DEBUG: AUTHOR              = '$AUTHOR'"
+          echo "DEBUG: ASSIGNEE_LOGIN      = '$ASSIGNEE_LOGIN'"
+          echo "DEBUG: ASSIGNEE_CHANGED    = '$ASSIGNEE_CHANGED_LOGIN'"
+          echo "DEBUG: COMMENT_BODY        = '$COMMENT_BODY'"
+          echo "DEBUG: IS_PULL_REQUEST     = '$IS_PULL_REQUEST'"
+          echo "DEBUG: PR_HEAD_REF         = '$PR_HEAD_REF'"
+          echo "DEBUG: TITLE               = '$TITLE'"
 
           # GitHub ログイン → Discord ID の対応表からメンション文字列を組み立てる
           MENTIONS=""
 
-          # 1) assignee に対してメンション
-          if [ "$ASSIGNEE_LOGIN" = "Aromoboy" ]; then
-            MENTIONS="$MENTIONS <@224551705080102913>"
-          elif [ "$ASSIGNEE_LOGIN" = "OnionRingBurger" ]; then
-            MENTIONS="$MENTIONS <@899211761989849139>"
-          elif [ "$ASSIGNEE_LOGIN" = "taiga5588renireno-spec" ]; then
-            MENTIONS="$MENTIONS <@657793265076142093>"
-          elif [ "$ASSIGNEE_LOGIN" = "higuti051122-byte" ]; then
-            MENTIONS="$MENTIONS <@1228167333248503818>"
-          elif [ "$ASSIGNEE_LOGIN" = "Ryuta77" ]; then
-            MENTIONS="$MENTIONS <@1050727145418260480>"
-          elif [ "$ASSIGNEE_LOGIN" = "MrYt-08483" ]; then
-            MENTIONS="$MENTIONS <@1226152792813731842>"
-          elif [ "$ASSIGNEE_LOGIN" = "Porta502" ]; then
-            MENTIONS="$MENTIONS <@816199178790371338>"
+          append_mention_by_login() {
+            case "$1" in
+              "Aromoboy")
+                MENTIONS="$MENTIONS <@224551705080102913>"
+                ;;
+              "OnionRingBurger")
+                MENTIONS="$MENTIONS <@899211761989849139>"
+                ;;
+              "taiga5588renireno-spec")
+                MENTIONS="$MENTIONS <@657793265076142093>"
+                ;;
+              "higuti051122-byte")
+                MENTIONS="$MENTIONS <@1228167333248503818>"
+                ;;
+              "Ryuta77")
+                MENTIONS="$MENTIONS <@1050727145418260480>"
+                ;;
+              "MrYt-08483")
+                MENTIONS="$MENTIONS <@1226152792813731842>"
+                ;;
+              "Porta502")
+                MENTIONS="$MENTIONS <@816199178790371338>"
+                ;;
+            esac
+          }
+
+          # イベント別のベースメンション設定
+          if [ "$EVENT_NAME" = "issues" ] && [ "$EVENT_ACTION" = "opened" ]; then
+            # 新規 issue: Aromoboy + OnionRingBurger + (assignee がいれば assignee も)
+            append_mention_by_login "Aromoboy"
+            append_mention_by_login "OnionRingBurger"
+            if [ -n "$ASSIGNEE_LOGIN" ]; then
+              append_mention_by_login "$ASSIGNEE_LOGIN"
+            fi
+
+          elif [ "$EVENT_NAME" = "issues" ] && [ "$EVENT_ACTION" = "assigned" ]; then
+            # 担当追加: Aromoboy + OnionRingBurger + その issue にアサインされた人
+            append_mention_by_login "Aromoboy"
+            append_mention_by_login "OnionRingBurger"
+            if [ -n "$ASSIGNEE_CHANGED_LOGIN" ]; then
+              append_mention_by_login "$ASSIGNEE_CHANGED_LOGIN"
+            elif [ -n "$ASSIGNEE_LOGIN" ]; then
+              append_mention_by_login "$ASSIGNEE_LOGIN"
+            fi
+
+          elif [ "$EVENT_NAME" = "issues" ] && [ "$EVENT_ACTION" = "unassigned" ]; then
+            # 担当解除: Aromoboy + OnionRingBurger + 外れた人（あれば）
+            append_mention_by_login "Aromoboy"
+            append_mention_by_login "OnionRingBurger"
+            if [ -n "$ASSIGNEE_CHANGED_LOGIN" ]; then
+              append_mention_by_login "$ASSIGNEE_CHANGED_LOGIN"
+            fi
+
+          else
+            # デフォルト: assignee にだけメンション（コメント／レビューなど）
+            if [ -n "$ASSIGNEE_LOGIN" ]; then
+              append_mention_by_login "$ASSIGNEE_LOGIN"
+            fi
           fi
 
-          # 2) コメント本文内の @mention も拾ってメンション対象に追加
+          # コメント本文内の @mention も拾ってメンション対象に追加
           if echo "$COMMENT_BODY" | grep -q "@Aromoboy"; then
-            MENTIONS="$MENTIONS <@224551705080102913>"
+            append_mention_by_login "Aromoboy"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@OnionRingBurger"; then
-            MENTIONS="$MENTIONS <@899211761989849139>"
+            append_mention_by_login "OnionRingBurger"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@taiga5588renireno-spec"; then
-            MENTIONS="$MENTIONS <@657793265076142093>"
+            append_mention_by_login "taiga5588renireno-spec"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@higuti051122-byte"; then
-            MENTIONS="$MENTIONS <@1228167333248503818>"
+            append_mention_by_login "higuti051122-byte"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@Ryuta77"; then
-            MENTIONS="$MENTIONS <@1050727145418260480>"
+            append_mention_by_login "Ryuta77"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@MrYt-08483"; then
-            MENTIONS="$MENTIONS <@1226152792813731842>"
+            append_mention_by_login "MrYt-08483"
           fi
 
           if echo "$COMMENT_BODY" | grep -q "@Porta502"; then
-            MENTIONS="$MENTIONS <@816199178790371338>"
+            append_mention_by_login "Porta502"
           fi
 
           echo "DEBUG: MENTIONS = '$MENTIONS'"
 
-          # Node で本文を組み立てて JSON を出力する
           export MENTIONS
 
           BODY=$(node << 'EOF'
@@ -118,18 +163,10 @@ jobs:
 
           /**
            * 名前用のサニタイズ（未設定の場合は '未設定' に揃える）。
+           * GitHub の login 名などには「くん」を付けない。
            */
           function sanitizeName(value) {
             return sanitizeString(value, NAME_FALLBACK);
-          }
-
-          /**
-           * 表示用に「〜くん」を付ける。
-           * 未設定のときは「未設定くん」にはせず、そのまま '未設定' を返す。
-           */
-          function nameWithKun(name) {
-            if (name === NAME_FALLBACK) return name;
-            return `${name} くん`;
           }
 
           /**
@@ -179,6 +216,7 @@ jobs:
               authorDisplay: env.AUTHOR || '',
               actorDisplay: env.AUTHOR || '',
               url: env.LINK || '',
+              title: env.TITLE || '',
               taskOwner: env.ASSIGNEE_LOGIN || '',
               notifyTargets: env.MENTIONS || '',
               assigneeDisplay: env.ASSIGNEE_CHANGED_LOGIN || '' // issues.assigned / unassigned で使う
@@ -191,7 +229,7 @@ jobs:
            */
           function buildEventLine(ctx) {
             const isPr = !!ctx.isPullRequest;
-            const authorName = nameWithKun(sanitizeName(ctx.authorDisplay));
+            const authorName = sanitizeName(ctx.authorDisplay);
 
             // 1) issue / PR 上のコメント（issue_comment）
             if (ctx.type === 'issue_comment') {
@@ -220,19 +258,18 @@ jobs:
               return `イベント: ${authorName} が新しく issue を作成しました`;
             }
 
-            // 4) 担当変更（issues.assigned / issues.unassigned）
+            // 4) 担当追加（issues.assigned）
             if (ctx.type === 'issues' && ctx.action === 'assigned') {
-              // 今回追加されたユーザー（GitHub のペイロード上では assignee）
-              const assigneeName = nameWithKun(
-                sanitizeName(ctx.assigneeDisplay || ctx.taskOwner)
+              const assigneeName = sanitizeName(
+                ctx.assigneeDisplay || ctx.taskOwner
               );
-              // ※ GitHub のイベントでは「前の担当者」は取れないので、ここでは追加された人だけを表示
               return `イベント: issue のタスク担当に ${assigneeName} が設定されました`;
             }
 
+            // 5) 担当解除（issues.unassigned）
             if (ctx.type === 'issues' && ctx.action === 'unassigned') {
-              const assigneeName = nameWithKun(
-                sanitizeName(ctx.assigneeDisplay || ctx.taskOwner)
+              const assigneeName = sanitizeName(
+                ctx.assigneeDisplay || ctx.taskOwner
               );
               return `イベント: issue のタスク担当から ${assigneeName} が外れました`;
             }
@@ -249,20 +286,23 @@ jobs:
             const eventLine = buildEventLine(ctx);
             if (!eventLine) return null;
 
-            const taskOwner = sanitizeName(ctx.taskOwner);                          // タスク担当
-            const notifyTargets = sanitizeString(ctx.notifyTargets, NAME_FALLBACK); // 通知先
-            const actor = nameWithKun(sanitizeName(ctx.actorDisplay || ctx.authorDisplay)); // 投稿者
-            const url = sanitizeString(ctx.url, NAME_FALLBACK);                     // リンク
+            const taskTitle = sanitizeString(ctx.title, NAME_FALLBACK);            // タスク名（issue / PR のタイトル）
+            const taskOwner = sanitizeName(ctx.taskOwner);                         // タスク担当（GitHub login）
+            const notifyTargets = sanitizeString(ctx.notifyTargets, NAME_FALLBACK);// 通知先（Discord のメンション文字列）
+            const actor = sanitizeName(ctx.actorDisplay || ctx.authorDisplay);     // 投稿者（GitHub login）
+            const url = sanitizeString(ctx.url, NAME_FALLBACK);                    // リンク
 
             const lines = [
               eventLine,
+              `タスク: ${taskTitle}`,
               `タスク担当: ${taskOwner}`,
               `通知先: ${notifyTargets}`,
               `投稿者: ${actor}`,
               `リンク: ${url}`,
               '---',
+              '※ リンクを開いて内容を確認して、必要に応じて反応してください :relaxed:',
               '',
-              '※ リンクを開いて内容を確認して、必要に応じて反応してください :relaxed:'
+              '---'
             ];
 
             return lines.join('\n');
