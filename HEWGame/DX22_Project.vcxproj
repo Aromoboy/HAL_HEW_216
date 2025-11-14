@@ -160,9 +160,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ModelCache.cpp" />
-    <ClCompile Include="ShaderCache.cpp" />
-    <ClCompile Include="ShaderProgram.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\Debug.cpp" />
@@ -176,6 +173,7 @@
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\ModelCache.cpp" />
     <ClCompile Include="src\ModelRender.cpp" />
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
@@ -183,17 +181,19 @@
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Shader.cpp" />
+    <ClCompile Include="src\ShaderCache.cpp" />
     <ClCompile Include="src\ShaderList.cpp" />
+    <ClCompile Include="src\ShaderProgram.cpp" />
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="src\Startup.cpp" />
     <ClCompile Include="src\TestObject.cpp" />
     <ClCompile Include="src\Texture.cpp" />
+    <ClCompile Include="src\TextureCache.cpp" />
+    <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
-    <ClCompile Include="TextureCache.cpp" />
-    <ClCompile Include="TextureDX.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -210,6 +210,7 @@
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
+    <ClInclude Include="include\ModelCache.h" />
     <ClInclude Include="include\ModelRender.h" />
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
@@ -217,19 +218,18 @@
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\Shader.h" />
+    <ClInclude Include="include\ShaderCache.h" />
     <ClInclude Include="include\ShaderList.h" />
+    <ClInclude Include="include\ShaderProgram.h" />
     <ClInclude Include="include\SoundManagerEX.h" />
     <ClInclude Include="include\SoundSystem.h" />
     <ClInclude Include="include\Sprite.h" />
     <ClInclude Include="include\TestObject.h" />
     <ClInclude Include="include\Texture.h" />
+    <ClInclude Include="include\TextureCache.h" />
+    <ClInclude Include="include\TextureDX.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
-    <ClInclude Include="ModelCache.h" />
-    <ClInclude Include="ShaderCache.h" />
-    <ClInclude Include="ShaderProgram.h" />
-    <ClInclude Include="TextureCache.h" />
-    <ClInclude Include="TextureDX.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

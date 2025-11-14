@@ -123,19 +123,19 @@
     <ClCompile Include="src\ModelRender.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="ModelCache.cpp">
+    <ClCompile Include="src\TextureCache.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="ShaderCache.cpp">
+    <ClCompile Include="src\TextureDX.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="TextureCache.cpp">
+    <ClCompile Include="src\ShaderCache.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="ShaderProgram.cpp">
+    <ClCompile Include="src\ShaderProgram.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="TextureDX.cpp">
+    <ClCompile Include="src\ModelCache.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -227,19 +227,19 @@
     <ClInclude Include="include\ModelRender.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="ModelCache.h">
+    <ClInclude Include="include\ModelCache.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ShaderCache.h">
+    <ClInclude Include="include\ShaderCache.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="TextureCache.h">
+    <ClInclude Include="include\ShaderProgram.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ShaderProgram.h">
+    <ClInclude Include="include\TextureCache.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="TextureDX.h">
+    <ClInclude Include="include\TextureDX.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,4 +1,5 @@
 #include "TextureDX.h"
+#include "Debug.h"
 #include <wincodec.h>
 #include <vector>
 #include <iostream>
@@ -14,7 +15,7 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
-        std::cerr << "[Texture2D] WICファクトリーの作成に失敗" << std::endl;
+        DebugMessage("[Texture2D] WICファクトリーの作成に失敗");
         return false;
     }
 
@@ -23,7 +24,7 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     if (FAILED(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder)))
     {
-        std::wcerr << L"[Texture2D] ファイルを開けません: " << path << std::endl;
+        DebugMessage("[Texture2D] ファイルを開けません: ");
         return false;
     }
 
@@ -65,7 +66,7 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
     if (FAILED(hr))
     {
-        std::cerr << "[Texture2D] テクスチャリソースの作成に失敗" << std::endl;
+        DebugMessage("[Texture2D] テクスチャリソースの作成に失敗");
         return false;
     }
 
@@ -73,7 +74,7 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     hr = device->CreateShaderResourceView(texture.Get(), nullptr, textureView.GetAddressOf());
     if (FAILED(hr))
     {
-        std::cerr << "[Texture2D] SRVの作成に失敗" << std::endl;
+        DebugMessage("[Texture2D] SRVの作成に失敗");
         return false;
     }
 

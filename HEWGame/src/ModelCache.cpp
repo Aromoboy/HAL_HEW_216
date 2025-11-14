@@ -1,5 +1,6 @@
 //ModelCache.cpp
 #include "ModelCache.h"
+#include "Debug.h"
 #include <iostream>
 
 namespace Render
@@ -35,19 +36,19 @@ namespace Render
         auto it = m_models.find(path);
         if (it != m_models.end())
         {
-            std::cout << "[ModelCache] キャッシュされたモデルを発見: " << path << std::endl;
+            DebugMessage("[ModelCache] キャッシュされたモデルを発見: ");
             return it->second;  //  キャッシュが見つかったのでそれを返す
         }
 
         // ローダーが設定されているか確認
         if (!m_loader)
         {
-            std::cerr << "[ModelCache] エラー: ローダーが設定されていません！" << std::endl;
+            DebugMessage("[ModelCache] エラー: ローダーが設定されていません！");
             return nullptr;  //  ローダーがないと読み込みできない
         }
 
         // キャッシュにないので新規にロード
-        std::cout << "[ModelCache] モデルをロード中: " << path << std::endl;
+        DebugMessage("[ModelCache] モデルをロード中: ");
         std::shared_ptr<ModelDX> model = m_loader->Load(path);
 
         // ロード結果の確認
@@ -59,7 +60,7 @@ namespace Render
         else
         {
             // 失敗: エラーメッセージを出力
-            std::cerr << "[ModelCache] ロードに失敗しました: " << path << std::endl;
+            DebugMessage("[ModelCache] ロードに失敗しました: ");
         }
 
         return model;  //  ロードしたモデル（またはnullptr）を返す

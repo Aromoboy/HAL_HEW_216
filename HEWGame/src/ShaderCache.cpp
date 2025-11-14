@@ -1,6 +1,7 @@
 //ShaderCache.cpp
 #include "ShaderCache.h"
 #include <iostream>
+#include "Debug.h"
 
 //============================================================
 // シェーダープログラムをロードしてキャッシュに登録
@@ -19,7 +20,7 @@ ShaderProgram& ShaderCache::Load(const std::string& name,
     auto shader = std::make_unique<ShaderProgram>();
     if (!shader->LoadFromFiles(device, vsPath, psPath))
     {
-        std::cerr << "[ShaderCache] シェーダーのロードに失敗: " << name << std::endl;
+        DebugMessage("[ShaderCache] シェーダーのロードに失敗: ");
         throw std::runtime_error("シェーダーのロードに失敗: " + name);
     }
 
