@@ -7,6 +7,8 @@ on:
     types: [submitted]
   pull_request_review_comment:
     types: [created]
+  issues:
+    types: [opened, assigned, unassigned]
 
 jobs:
   notify:
@@ -16,18 +18,34 @@ jobs:
       - name: Discord に通知
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+
+          # GitHub イベント共通情報
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
           AUTHOR: ${{ github.actor }}
+
+          # issue / PR 関連（assignee / URL / コメント本文）
           ASSIGNEE_LOGIN: ${{ github.event.issue.assignee.login || github.event.pull_request.assignee.login }}
+          ASSIGNEE_CHANGED_LOGIN: ${{ github.event.assignee.login }}
           COMMENT_BODY: ${{ github.event.comment.body || github.event.review.body }}
           LINK: ${{ github.event.comment.html_url || github.event.review.html_url || github.event.issue.html_url || github.event.pull_request.html_url }}
+
+          # PR 判定用（issue_comment の場合も PR 上のコメントなら true になる想定）
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null || github.event.pull_request != null }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+
         run: |
           if [ -z "$WEBHOOK_URL" ]; then
             echo "DISCORD_WEBHOOK secret が設定されていません"; exit 1;
           fi
 
-          echo "DEBUG: ASSIGNEE_LOGIN = '$ASSIGNEE_LOGIN'"
-          echo "DEBUG: COMMENT_BODY = '$COMMENT_BODY'"
+          echo "DEBUG: EVENT_NAME      = '$EVENT_NAME'"
+          echo "DEBUG: EVENT_ACTION    = '$EVENT_ACTION'"
+          echo "DEBUG: AUTHOR          = '$AUTHOR'"
+          echo "DEBUG: ASSIGNEE_LOGIN  = '$ASSIGNEE_LOGIN'"
+          echo "DEBUG: COMMENT_BODY    = '$COMMENT_BODY'"
+          echo "DEBUG: IS_PULL_REQUEST = '$IS_PULL_REQUEST'"
+          echo "DEBUG: PR_HEAD_REF     = '$PR_HEAD_REF'"
 
           # GitHub ログイン → Discord ID の対応表からメンション文字列を組み立てる
           MENTIONS=""
@@ -43,7 +61,7 @@ jobs:
             MENTIONS="$MENTIONS <@1228167333248503818>"
           elif [ "$ASSIGNEE_LOGIN" = "Ryuta77" ]; then
             MENTIONS="$MENTIONS <@1050727145418260480>"
-          elif [ "$ASSIGNE_LOGIN" = "MrYt-08483" ]; then
+          elif [ "$ASSIGNEE_LOGIN" = "MrYt-08483" ]; then
             MENTIONS="$MENTIONS <@1226152792813731842>"
           elif [ "$ASSIGNEE_LOGIN" = "Porta502" ]; then
             MENTIONS="$MENTIONS <@816199178790371338>"
@@ -78,10 +96,196 @@ jobs:
             MENTIONS="$MENTIONS <@816199178790371338>"
           fi
 
-          # Discord に送る JSON（1 行）
-          BODY=$(printf '%s' \
-            "{\"content\": \"🔔 シビュラ通知: 新しいコメントがあります。\n担当: $ASSIGNEE_LOGIN\n通知先: $MENTIONS\nイベント: $EVENT_NAME\n投稿者: $AUTHOR\nリンク: $LINK\"}"
+          echo "DEBUG: MENTIONS = '$MENTIONS'"
+
+          # Node で本文を組み立てて JSON を出力する
+          export MENTIONS
+
+          BODY=$(node << 'EOF'
+          // ここから下は Node.js 側のロジック（1ファイル完結）
+
+          // 名前が未設定の場合に使うフォールバック文字列
+          const NAME_FALLBACK = '未設定';
+
+          /**
+           * 任意の文字列が空または未設定の場合にフォールバック文字列を返すユーティリティ。
+           */
+          function sanitizeString(value, fallback) {
+            if (!value) return fallback;
+            const trimmed = String(value).trim();
+            return trimmed.length > 0 ? trimmed : fallback;
+          }
+
+          /**
+           * 名前用のサニタイズ（未設定の場合は '未設定' に揃える）。
+           */
+          function sanitizeName(value) {
+            return sanitizeString(value, NAME_FALLBACK);
+          }
+
+          /**
+           * 表示用に「〜くん」を付ける。
+           * 未設定のときは「未設定くん」にはせず、そのまま '未設定' を返す。
+           */
+          function nameWithKun(name) {
+            if (name === NAME_FALLBACK) return name;
+            return `${name} くん`;
+          }
+
+          /**
+           * PR 通知をスキップすべきかどうか（Mihail/{feature} 系ブランチを無視）
+           */
+          function isIgnoredPr(ctx) {
+            const isPrLike =
+              ctx.isPullRequest || ctx.type === 'pull_request_review_comment';
+            if (!isPrLike) return false;
+
+            const ref = ctx.prHeadRef || '';
+            return ref.startsWith('Mihail/'); // Mihail/{feature} ブランチの PR は通知しない
+          }
+
+          /**
+           * GitHub Actions の環境変数から EventContext 相当のオブジェクトを組み立てる。
+           */
+          function buildEventContextFromEnv() {
+            const env = process.env;
+
+            const rawEventName = env.EVENT_NAME || '';
+
+            // type 判定
+            let type;
+            if (rawEventName === 'issue_comment') {
+              type = 'issue_comment';
+            } else if (
+              rawEventName === 'pull_request_review' ||
+              rawEventName === 'pull_request_review_comment'
+            ) {
+              type = 'pull_request_review_comment';
+            } else if (rawEventName === 'issues') {
+              type = 'issues';
+            } else {
+              // 想定外のイベント名も一応そのまま保持しておく
+              type = rawEventName;
+            }
+
+            const isPullRequest =
+              env.IS_PULL_REQUEST === 'true' || env.IS_PULL_REQUEST === '1';
+
+            return {
+              type,                                 // 'issue_comment' | 'pull_request_review_comment' | 'issues' | その他
+              action: env.EVENT_ACTION || '',       // 'opened' | 'assigned' | 'unassigned' | 'created' など
+              isPullRequest,
+              prHeadRef: env.PR_HEAD_REF || '',
+              authorDisplay: env.AUTHOR || '',
+              actorDisplay: env.AUTHOR || '',
+              url: env.LINK || '',
+              taskOwner: env.ASSIGNEE_LOGIN || '',
+              notifyTargets: env.MENTIONS || '',
+              assigneeDisplay: env.ASSIGNEE_CHANGED_LOGIN || '' // issues.assigned / unassigned で使う
+            };
+          }
+
+          /**
+           * 1行目の「イベント: ...」を組み立てる。
+           * 通知不要の場合は null を返す。
+           */
+          function buildEventLine(ctx) {
+            const isPr = !!ctx.isPullRequest;
+            const authorName = nameWithKun(sanitizeName(ctx.authorDisplay));
+
+            // 1) issue / PR 上のコメント（issue_comment）
+            if (ctx.type === 'issue_comment') {
+              if (isPr) {
+                // PR 上のコメント
+                if (isIgnoredPr(ctx)) {
+                  return null; // Mihail/{feature} 系は通知しない
+                }
+                return `イベント: PRで ${authorName} がコメントしました`;
+              }
+
+              // 通常の issue 上のコメント
+              return `イベント: issueで ${authorName} がコメントしました`;
+            }
+
+            // 2) PR のレビューコメント（pull_request_review / pull_request_review_comment）
+            if (ctx.type === 'pull_request_review_comment') {
+              if (isIgnoredPr(ctx)) {
+                return null;
+              }
+              return `イベント: PRのレビューコメントで ${authorName} がコメントしました`;
+            }
+
+            // 3) issue 作成（issues.opened）
+            if (ctx.type === 'issues' && ctx.action === 'opened') {
+              return `イベント: ${authorName} が新しく issue を作成しました`;
+            }
+
+            // 4) 担当変更（issues.assigned / issues.unassigned）
+            if (ctx.type === 'issues' && ctx.action === 'assigned') {
+              // 今回追加されたユーザー（GitHub のペイロード上では assignee）
+              const assigneeName = nameWithKun(
+                sanitizeName(ctx.assigneeDisplay || ctx.taskOwner)
+              );
+              // ※ GitHub のイベントでは「前の担当者」は取れないので、ここでは追加された人だけを表示
+              return `イベント: issue のタスク担当に ${assigneeName} が設定されました`;
+            }
+
+            if (ctx.type === 'issues' && ctx.action === 'unassigned') {
+              const assigneeName = nameWithKun(
+                sanitizeName(ctx.assigneeDisplay || ctx.taskOwner)
+              );
+              return `イベント: issue のタスク担当から ${assigneeName} が外れました`;
+            }
+
+            // ここまでどのケースにも当てはまらない場合は通知しない
+            return null;
+          }
+
+          /**
+           * Discord に投げる最終メッセージ本文を組み立てる。
+           * 通知不要の場合は null を返す。
+           */
+          function buildNotificationMessage(ctx) {
+            const eventLine = buildEventLine(ctx);
+            if (!eventLine) return null;
+
+            const taskOwner = sanitizeName(ctx.taskOwner);                          // タスク担当
+            const notifyTargets = sanitizeString(ctx.notifyTargets, NAME_FALLBACK); // 通知先
+            const actor = nameWithKun(sanitizeName(ctx.actorDisplay || ctx.authorDisplay)); // 投稿者
+            const url = sanitizeString(ctx.url, NAME_FALLBACK);                     // リンク
+
+            const lines = [
+              eventLine,
+              `タスク担当: ${taskOwner}`,
+              `通知先: ${notifyTargets}`,
+              `投稿者: ${actor}`,
+              `リンク: ${url}`,
+              '---',
+              '',
+              '※ リンクを開いて内容を確認して、必要に応じて反応してください :relaxed:'
+            ];
+
+            return lines.join('\n');
+          }
+
+          const ctx = buildEventContextFromEnv();
+          const message = buildNotificationMessage(ctx);
+
+          if (!message) {
+            // 通知不要（例: Mihail/{feature} ブランチの PR など）の場合は何も出力しない
+            process.exit(0);
+          }
+
+          // Discord に送る JSON を標準出力に出す
+          const payload = { content: message };
+          process.stdout.write(JSON.stringify(payload));
+          EOF
           )
+
+          if [ -z "$BODY" ]; then
+            echo "このイベントは通知対象外のため、Discord 送信をスキップします。"
+            exit 0
+          fi
 
           echo "送信ペイロード:"
           echo "$BODY"
