@@ -1,39 +1,77 @@
-#include "Input.h"
+#include "Core/Input.h"
 
-//--- グローバル変数
-BYTE g_keyTable[256];
-BYTE g_oldTable[256];
+namespace Core
+{
+        namespace
+        {
+                constexpr BYTE kKeyPressedMask = 0x80;
+        }
 
-HRESULT InitInput()
-{
-	// 一番最初の入力
-	GetKeyboardState(g_keyTable);
-	return S_OK;
-}
-void UninitInput()
-{
-}
-void UpdateInput()
-{
-	// 古い入力を更新
-	memcpy_s(g_oldTable, sizeof(g_oldTable), g_keyTable, sizeof(g_keyTable));
-	// 現在の入力を取得
-	GetKeyboardState(g_keyTable);
-}
+        Input::Input()
+                : UpdateNode(UpdatePhase::Input, 0)
+                , m_currentKeys{}
+                , m_previousKeys{}
+                , m_initialized(false)
+        {
+        }
 
-bool IsKeyPress(BYTE key)
-{
-	return g_keyTable[key] & 0x80;
-}
-bool IsKeyTrigger(BYTE key)
-{
-	return (g_keyTable[key] ^ g_oldTable[key]) & g_keyTable[key] & 0x80;
-}
-bool IsKeyRelease(BYTE key)
-{
-	return (g_keyTable[key] ^ g_oldTable[key]) & g_oldTable[key] & 0x80;
-}
-bool IsKeyRepeat(BYTE key)
-{
-	return false;
+        HRESULT Input::Initialize()
+        {
+                PollKeyboardState();
+                m_previousKeys = m_currentKeys;
+                m_initialized = true;
+                return S_OK;
+        }
+
+        void Input::Shutdown()
+        {
+                m_initialized = false;
+                m_currentKeys.fill(0);
+                m_previousKeys.fill(0);
+        }
+
+        void Input::OnUpdate(UpdateContext& ctx)
+        {
+                if (!m_initialized)
+                {
+                        return;
+                }
+
+                if (&ctx.input != this)
+                {
+                        OutputDebugStringA("[Core::Input] UpdateContext input reference mismatch.\n");
+                }
+
+                m_previousKeys = m_currentKeys;
+                PollKeyboardState();
+        }
+
+        bool Input::IsKeyPress(BYTE key) const
+        {
+                return (m_currentKeys[key] & kKeyPressedMask) != 0;
+        }
+
+        bool Input::IsKeyTrigger(BYTE key) const
+        {
+                return ((m_currentKeys[key] ^ m_previousKeys[key]) & m_currentKeys[key] & kKeyPressedMask) != 0;
+        }
+
+        bool Input::IsKeyRelease(BYTE key) const
+        {
+                return ((m_currentKeys[key] ^ m_previousKeys[key]) & m_previousKeys[key] & kKeyPressedMask) != 0;
+        }
+
+        bool Input::IsKeyRepeat(BYTE) const
+        {
+                return false;
+        }
+
+        void Input::PollKeyboardState()
+        {
+                if (!::GetKeyboardState(m_currentKeys.data()))
+                {
+                        m_currentKeys.fill(0);
+                        OutputDebugStringA("[Core::Input] GetKeyboardState failed; clearing keyboard state.\n");
+                }
+        }
 }

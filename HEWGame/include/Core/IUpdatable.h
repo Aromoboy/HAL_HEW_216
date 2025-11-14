@@ -1,8 +1,15 @@
 #pragma once
 
-#include <cstdint>
+namespace Core
+{
+        class StepTimer;
+        class Input;
+}
 
-class Scene;
+namespace SceneSpace
+{
+        class Scene;
+}
 
 namespace Core
 {
@@ -26,15 +33,18 @@ namespace Core
 
         struct UpdateContext
         {
-                // フレーム間の経過時間（秒）。FixedUpdate のような固定間隔でも
-                // 値を保持しておくと、補間やエフェクト調整に利用できる
-                float deltaTime = 0.0f;
+                float dt;
+                StepTimer& timer;
+                Input& input;
+                SceneSpace::Scene* scene;
 
-                // ゲーム開始から何フレーム目か。リプレイ検証や乱数シードに便利
-                std::uint64_t frameIndex = 0;
-
-                // 呼び出し元のシーンポインタ。Scene経由で必要なシステムにアクセスする
-                Scene* scene = nullptr;
+                UpdateContext(float deltaSeconds, StepTimer& timerRef, Input& inputRef, SceneSpace::Scene* owner)
+                        : dt(deltaSeconds)
+                        , timer(timerRef)
+                        , input(inputRef)
+                        , scene(owner)
+                {
+                }
         };
 
         class IUpdatable
@@ -46,7 +56,7 @@ namespace Core
 
                 // OnUpdateは各派生クラスで実際の処理を書く場所だ
                 // Contextを受け取り、必要なシステム情報にアクセスできる
-                virtual void OnUpdate(const UpdateContext& ctx) = 0;
+                virtual void OnUpdate(UpdateContext& ctx) = 0;
 
                 // GetPhaseまたはGetPriorityはスケジューラが実行順を決めるために参照する
                 virtual UpdatePhase GetPhase() const = 0;

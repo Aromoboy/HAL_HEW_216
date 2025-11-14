@@ -28,7 +28,7 @@ namespace Core
 
         private:
                 UpdatePhase m_phase; // 現在の更新フェーズ
-                int m_priority;      // 同フェーズ内での優先度（数値が大きいほど先に実行）
+                int m_priority;      // 同フェーズ内での優先度（数値が小さいほど先に実行）
                 bool m_enabled;      // Updateを呼ぶかどうかのフラグ
         };
 }

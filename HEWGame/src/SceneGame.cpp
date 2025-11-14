@@ -6,14 +6,17 @@
 #include "Defines.h"
 #include "CameraDebug.h"
 #include "DebugConsole.h"
-#include "Input.h"
 #include "AssimpModelLorder.h"
+#include "Core/Input.h"
+#include "Systems/PhysicsMachine.h"
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
 {
+        m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+
         RenderTarget* pRTV = GetDefaultRTV();
         DepthStencil* pDSV = GetDefaultDSV();
         SetRenderTargets(1, &pRTV, pDSV);
@@ -47,21 +50,48 @@ SceneGame::SceneGame()
 
 SceneGame::~SceneGame()
 {
+        if (m_inputRegistered)
+        {
+                if (auto* input = GetInput())
+                {
+                        Unregister(*input);
+                }
+                m_inputRegistered = false;
+        }
+
+        if (m_physicsRegistered && m_physicsMachine)
+        {
+                GetUpdateScheduler().Unregister(*m_physicsMachine);
+                m_physicsRegistered = false;
+        }
+
         if (m_pCamera)
         {
-                GetUpdateScheduler().Unregister(*m_pCamera);
+                Unregister(*m_pCamera);
         }
 }
 
 void SceneGame::ConfigureUpdates()
 {
+        if (auto* input = GetInput())
+        {
+                Register(*input);
+                m_inputRegistered = true;
+        }
+
+        if (m_physicsMachine && !m_physicsRegistered)
+        {
+                GetUpdateScheduler().Register(*m_physicsMachine);
+                m_physicsRegistered = true;
+        }
+
         if (m_pCamera)
         {
-                GetUpdateScheduler().Register(*m_pCamera);
+                Register(*m_pCamera);
         }
 }
 
-void SceneGame::Update(const Core::UpdateContext& ctx)
+void SceneGame::Update(Core::UpdateContext& ctx)
 {
         (void)ctx;
         fRads.z += 0.001f * RAD;
