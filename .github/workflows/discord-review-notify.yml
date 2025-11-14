@@ -1,4 +1,4 @@
-name: シビュラ レビュー通知
+name: シビュラ通知
 
 on:
   issue_comment:
@@ -24,17 +24,10 @@ jobs:
             echo "DISCORD_WEBHOOK secret が設定されていません"; exit 1;
           fi
 
-          BODY=$(cat << 'EOF'
-{
-  "content": "🔔 シビュラ通知: 新しいコメントがあります。\nイベント: EVENT_NAME\n投稿者: AUTHOR\nリンク: LINK"
-}
-EOF
-)
-
-          # 変数を置換
-          BODY="${BODY/EVENT_NAME/$EVENT_NAME}"
-          BODY="${BODY/AUTHOR/$AUTHOR}"
-          BODY="${BODY/LINK/$LINK}"
+          # JSON を 1 行で作成（YAML が壊れない）
+          BODY=$(printf '%s' \
+            "{\"content\": \"🔔 シビュラ通知: 新しいコメントがあります。\nイベント: $EVENT_NAME\n投稿者: $AUTHOR\nリンク: $LINK\"}"
+          )
 
           echo "送信ペイロード:"
           echo "$BODY"
