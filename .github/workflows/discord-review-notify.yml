@@ -1,0 +1,26 @@
+name: シビュラ レビュー通知
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Discord に通知を送信
+        uses: discord-actions/action-send-discord-message@v1
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            🔔 **シビュラ通知**
+            新しいコメントが追加されました。
+            **投稿者:** ${{ github.actor }}
+
+            **リンク:**
+            ${{ github.event.comment.html_url || github.event.review.html_url }}
