@@ -13,12 +13,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      
       - name: Discord に通知
-        uses: adambirds/github-discord-notifications@v2.2.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          username: "シビュラ"
-          avatar-url: "https://i.imgur.com/Op5bEU2.png"
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          EVENT_NAME: ${{ github.event_name }}
+          AUTHOR: ${{ github.actor }}
+          LINK: ${{ github.event.comment.html_url || github.event.review.html_url || github.event.issue.html_url || github.event.pull_request.html_url }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK secret が設定されていません"; exit 1;
+          fi
+
+          BODY=$(cat << 'EOF'
+{
+  "content": "🔔 シビュラ通知: 新しいコメントがあります。\nイベント: EVENT_NAME\n投稿者: AUTHOR\nリンク: LINK"
+}
+EOF
+)
+
+          # 変数を置換
+          BODY="${BODY/EVENT_NAME/$EVENT_NAME}"
+          BODY="${BODY/AUTHOR/$AUTHOR}"
+          BODY="${BODY/LINK/$LINK}"
+
+          echo "送信ペイロード:"
+          echo "$BODY"
+
+          curl -sS -H "Content-Type: application/json" \
+               -X POST \
+               -d "$BODY" \
+               "$WEBHOOK_URL"
