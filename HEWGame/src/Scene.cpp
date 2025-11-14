@@ -1,69 +1,57 @@
 #include "Scene.h"
 
 #include "Core/IUpdatable.h"
-#include "Core/StepTimer.h"
-#include "Core/Input.h"
 
-namespace SceneSpace
+Scene::Scene()
+        : m_isConfigured(false)
+        , m_frameCounter(0)
+        , m_hasLastTick(false)
 {
-        Scene::Scene()
-                : m_isConfigured(false)
-                , m_input(nullptr)
+}
+
+Scene::~Scene()
+{
+}
+
+void Scene::RootUpdate()
+{
+        if (!m_isConfigured)
         {
+                ConfigureUpdates();
+                m_isConfigured = true;
         }
 
-        Scene::~Scene()
+        auto now = std::chrono::steady_clock::now();
+        float deltaTime = 0.0f;
+        if (m_hasLastTick)
         {
+                deltaTime = std::chrono::duration<float>(now - m_lastTick).count();
         }
-
-        void Scene::RootUpdate(Core::StepTimer& timer, Core::Input& input)
+        else
         {
-                m_input = &input;
-
-                if (!m_isConfigured)
-                {
-                        ConfigureUpdates();
-                        m_isConfigured = true;
-                }
-
-                const float deltaTime = timer.DeltaSeconds();
-                Core::UpdateContext ctx(deltaTime, timer, input, this);
-
-                Update(ctx);
-                m_scheduler.Tick(ctx);
+                m_hasLastTick = true;
         }
+        m_lastTick = now;
 
-        void Scene::RootDraw()
-        {
-                Draw();
-        }
+        Core::UpdateContext ctx{};
+        ctx.deltaTime = deltaTime;
+        ctx.frameIndex = m_frameCounter++;
+        ctx.scene = this;
 
-        void Scene::ConfigureUpdates()
-        {
-        }
+        Update(ctx);
+        m_scheduler.Tick(ctx);
+}
 
-        void Scene::Register(Core::IUpdatable& node)
-        {
-                m_scheduler.Register(node);
-        }
+void Scene::RootDraw()
+{
+        Draw();
+}
 
-        void Scene::Unregister(Core::IUpdatable& node)
-        {
-                m_scheduler.Unregister(node);
-        }
+void Scene::ConfigureUpdates()
+{
+}
 
-        Core::UpdateScheduler& Scene::GetUpdateScheduler()
-        {
-                return m_scheduler;
-        }
-
-        Core::Input* Scene::GetInput()
-        {
-                return m_input;
-        }
-
-        const Core::Input* Scene::GetInput() const
-        {
-                return m_input;
-        }
+Core::UpdateScheduler& Scene::GetUpdateScheduler()
+{
+        return m_scheduler;
 }

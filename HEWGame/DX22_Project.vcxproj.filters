@@ -123,15 +123,6 @@
     <ClCompile Include="src\ModelRender.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="src\Core\UpdateNode.cpp">
-      <Filter>ソース ファイル\System</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Core\UpdateScheduler.cpp">
-      <Filter>ソース ファイル\System</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp">
-      <Filter>ソース ファイル\System</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Defines.h">
