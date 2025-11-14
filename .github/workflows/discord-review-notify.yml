@@ -43,8 +43,10 @@ jobs:
             MENTIONS="$MENTIONS <@1228167333248503818>"
           elif [ "$ASSIGNEE_LOGIN" = "Ryuta77" ]; then
             MENTIONS="$MENTIONS <@1050727145418260480>"
-          elif [ "$ASSIGNEE_LOGIN" = "MrYt-08483" ]; then
+          elif [ "$ASSIGNE_LOGIN" = "MrYt-08483" ]; then
             MENTIONS="$MENTIONS <@1226152792813731842>"
+          elif [ "$ASSIGNEE_LOGIN" = "Porta502" ]; then
+            MENTIONS="$MENTIONS <@816199178790371338>"
           fi
 
           # 2) コメント本文内の @mention も拾ってメンション対象に追加
@@ -72,6 +74,10 @@ jobs:
             MENTIONS="$MENTIONS <@1226152792813731842>"
           fi
 
+          if echo "$COMMENT_BODY" | grep -q "@Porta502"; then
+            MENTIONS="$MENTIONS <@816199178790371338>"
+          fi
+
           # Discord に送る JSON（1 行）
           BODY=$(printf '%s' \
             "{\"content\": \"🔔 シビュラ通知: 新しいコメントがあります。\n担当: $ASSIGNEE_LOGIN\n通知先: $MENTIONS\nイベント: $EVENT_NAME\n投稿者: $AUTHOR\nリンク: $LINK\"}"
@@ -83,5 +89,4 @@ jobs:
           curl -sS -H "Content-Type: application/json" \
                -X POST \
                -d "$BODY" \
-               "$WEBHOOK_URL"
                "$WEBHOOK_URL"
