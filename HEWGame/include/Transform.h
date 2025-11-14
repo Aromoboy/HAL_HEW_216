@@ -1,9 +1,7 @@
 #ifndef ___TRANSFORM_H___
 #define ___TRANSFORM_H___
 
-#include <string>
-#include <Vector.h>
-
+#include "Vector.h"
 
 struct Transform
 {
