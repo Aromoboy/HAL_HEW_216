@@ -42,4 +42,3 @@ namespace Systems
                 bool m_loggedMissingSystem;
         };
 }
-

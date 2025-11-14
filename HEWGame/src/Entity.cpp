@@ -1,30 +1,31 @@
-#include<iostream>
+// Entity.cpp
 #include "Entity.h"
 
-CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl)
+using namespace Entity;
+
+CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
+    Core::UpdatePhase phase, int priority)
+    : Core::UpdateNode(phase, priority)
 {
-	m_transform.position = pos;  
-	m_transform.rotation = rot;  
-	m_transform.scale    = scl;
-	tag = a_tag;
+    m_transform.position = pos;
+    m_transform.rotation = rot;
+    m_transform.scale = scl;
+    tag = a_tag;
 }
 
 CEntity::~CEntity()
 {
-
 }
 
-void CEntity::OnUpdate()
+void CEntity::OnUpdate(Core::UpdateContext& ctx)
 {
-
 }
 
-void CEntity::Draw(ModelRender renderer)
+void CEntity::Draw()
 {
-
 }
 
 Transform& CEntity::GetTransform()
 {
-	return m_transform;
+    return m_transform;
 }

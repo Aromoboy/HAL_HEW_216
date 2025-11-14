@@ -1,26 +1,31 @@
-#ifndef ___ENTITY_H___
-#define ___ENTITY_H___
+// Entity.h
+#ifndef __ENTITY_H__
+#define __ENTITY_H__
 
-#include "Transform.h"
-#include "ModelRender.h"
 #include <string>
+#include "Core/UpdateNode.h"
+#include "Transform.h"
 
-class CEntity
+namespace Entity
 {
-public:
-	//コンストラクタ
-	CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl);
-	//デストラクタ
-	~CEntity();
+    class CEntity : public Core::UpdateNode
+    {
+    public:
+        CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
+            Core::UpdatePhase phase = Core::UpdatePhase::Gameplay, int priority = 0);
+        virtual ~CEntity();
 
-	void OnUpdate();
-	void Draw(ModelRender);
-	Transform& GetTransform();
-	
-private:
-	Transform m_transform;
-	std::string tag;
-	
-};
+        // UpdateNodeの関数をオーバーライド
+        virtual void OnUpdate(Core::UpdateContext& ctx) override;
 
-#endif 
+        // 描画処理（UpdateNodeとは別に独自に定義）
+        virtual void Draw();
+
+        Transform& GetTransform();
+
+    protected:
+        Transform m_transform;
+        std::string tag;
+    };
+}
+#endif
