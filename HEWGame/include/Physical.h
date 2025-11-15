@@ -2,20 +2,20 @@
 #ifndef __PHYSICAL_H__
 #define __PHYSICAL_H__
 
-#include <DirectXMath.h>
+#include "Vector.h"
 
 namespace Physics
 {
     struct Physical
     {
-        DirectX::XMFLOAT3 velocity;  // 速度
-        DirectX::XMFLOAT3 force;     // 力
-        float weight;                 // 重さ
-        float damping;                // 減衰
+        float3 velocity;  // 速度
+        float3 force;     // 力
+        float weight;     // 重さ
+        float damping;    // 減衰
 
         Physical()
-            : velocity(0.0f, 0.0f, 0.0f)
-            , force(0.0f, 0.0f, 0.0f)
+            : velocity{ 0.0f, 0.0f, 0.0f }
+            , force{ 0.0f, 0.0f, 0.0f }
             , weight(1.0f)
             , damping(0.98f)
         {

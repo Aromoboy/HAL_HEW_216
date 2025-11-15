@@ -6,11 +6,9 @@ using namespace Entity;
 CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
     Core::UpdatePhase phase, int priority)
     : Core::UpdateNode(phase, priority)
+    , m_transform{ pos, rot, scl }  // Transformをコンストラクタで初期化
+    , tag(a_tag)
 {
-    m_transform.position = pos;
-    m_transform.rotation = rot;
-    m_transform.scale = scl;
-    tag = a_tag;
 }
 
 CEntity::~CEntity()
