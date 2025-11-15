@@ -18,3 +18,8 @@ Collision::ICollider* CollisionEntity::GetCollider()
 {
     return m_collider.get();
 }
+
+void CollisionEntity::SetCollider(std::shared_ptr<Collision::ICollider> collider)
+{
+    m_collider = collider;
+}

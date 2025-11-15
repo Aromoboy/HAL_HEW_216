@@ -18,6 +18,9 @@ namespace Entity
         // Collider‚ÌQÆ‚ğ•Ô‚·
         Collision::ICollider* GetCollider();
 
+        // Collider‚ğİ’è
+        void SetCollider(std::shared_ptr<Collision::ICollider> collider);
+
     protected:
         std::shared_ptr<Collision::ICollider> m_collider;
     };

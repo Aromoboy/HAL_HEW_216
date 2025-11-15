@@ -18,6 +18,9 @@ namespace Entity
         // Physical‚ÌQÆ‚ğ•Ô‚·
         Physics::Physical& GetPhysical();
 
+        // Physical‚ğİ’è
+        void SetPhysical(const Physics::Physical& physical);
+
     protected:
         Physics::Physical m_physical;
     };
