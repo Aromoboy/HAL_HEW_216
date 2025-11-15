@@ -53,6 +53,8 @@
     <ClCompile Include="src\DebugConsole.cpp">
       <Filter>Debug</Filter>
     </ClCompile>
+    <ClCompile Include="src\AABB.cpp" />
+    <ClCompile Include="AABBCollider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -108,6 +110,8 @@
     <ClInclude Include="include\DebugConsole.h">
       <Filter>Debug</Filter>
     </ClInclude>
+    <ClInclude Include="include\AABB.h" />
+    <ClInclude Include="AABBCollider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
