@@ -12,7 +12,7 @@ namespace Entity
     {
     public:
         PhysicalEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            std::shared_ptr<Collision::ICollider> collider,
             float weight = 1.0f, float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::Physics,
             int priority = 0);

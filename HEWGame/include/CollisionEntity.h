@@ -12,7 +12,7 @@ namespace Entity
     {
     public:
         CollisionEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            std::shared_ptr<Collision::ICollider> collide,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0);
         virtual ~CollisionEntity();
