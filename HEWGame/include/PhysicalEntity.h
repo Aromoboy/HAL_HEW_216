@@ -12,14 +12,14 @@ namespace Entity
     {
     public:
         PhysicalEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-            Core::UpdatePhase phase = Core::UpdatePhase::Physics, int priority = 0);
+            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            float weight = 1.0f, float damping = 0.98f,
+            Core::UpdatePhase phase = Core::UpdatePhase::Physics,
+            int priority = 0);
         virtual ~PhysicalEntity();
 
         // PhysicalÇÃéQè∆Çï‘Ç∑
         Physics::Physical& GetPhysical();
-
-        // PhysicalÇê›íË
-        void SetPhysical(const Physics::Physical& physical);
 
     protected:
         Physics::Physical m_physical;
