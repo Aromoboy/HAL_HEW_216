@@ -10,24 +10,11 @@ AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float a_expa
 	offset = a_offset;
 }
 
-bool AABBCollider::CheckCollision(AABBCollider other)
+bool AABBCollider::CheckCollision(const Collision::ICollider& other)
 {
 
-	AABB thisAABB = aabb;
-	AABB otherAABB;
-
-	if (true/*ここでIColliderをキャスト*/)
-	{
-		otherAABB = other.GetAABB();
-	}
-	else if (true/*ここでIColliderをキャスト*/)
-	{
-		otherAABB = other.GetAABB();
-	}
-	else // キャストに失敗したら返す
-	{
-		return false;
-	}
+	const AABB thisAABB = aabb;
+	const AABB otherAABB = other.GetAABB();
 
 	
 
@@ -72,7 +59,7 @@ bool AABBCollider::IsTrriger()
 {
 	return isTrigger;
 }
-AABB AABBCollider::GetAABB()
+const AABB AABBCollider::GetAABB()
 {
 	return aabb;
 }

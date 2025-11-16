@@ -160,7 +160,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="PhysicalEntity.cpp" />
+    <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\CameraRig.cpp" />
@@ -185,6 +185,7 @@
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
+    <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -204,8 +205,8 @@
     <ClCompile Include="src\_model.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AABBCollider.h" />
     <ClInclude Include="include\AABB.h" />
+    <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
     <ClInclude Include="include\CameraRig.h" />

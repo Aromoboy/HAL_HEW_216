@@ -5,6 +5,10 @@
 
 struct AABB
 {
+	//ヒットボックスの最大値と最小値
+	float3 max;
+	float3 min;
+
 	AABB(float3 a_max, float3 a_min)
 	{
 		max = a_max;
@@ -12,13 +16,12 @@ struct AABB
 	};
 
 	AABB() 
-		: max(float3{ 0.0f,0.0f,0.0f })
-		, min(float3{ 0.0f,0.0f,0.0f })
-	{};
+	{
+		AABB::max = float3{ 0.0f,0.0f,0.0f };
+		AABB::min = float3{ 0.0f,0.0f,0.0f };
+	};
 
-	//ヒットボックスの最大値と最小値
-	float3 max;
-	float3 min;
+
 };
 
 #endif

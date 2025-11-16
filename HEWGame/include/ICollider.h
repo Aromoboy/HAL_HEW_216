@@ -5,6 +5,7 @@
 
 
 #include "Transform.h"
+#include "AABB.h"
 
 namespace Collision
 {
@@ -12,6 +13,8 @@ namespace Collision
     {
     public:
         virtual ~ICollider() = default;
+
+        virtual  AABB GetAABB() const= 0;
 
         // Õ“Ë”»’è‚ğs‚¤ƒˆ‰¼‘zŠÖ”
         virtual bool CheckCollision(ICollider* other) = 0;

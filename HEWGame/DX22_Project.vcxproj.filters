@@ -40,9 +40,10 @@
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
-    <ClCompile Include="PhysicalEntity.cpp" />
     <ClCompile Include="src\CollisionEntity.cpp" />
     <ClCompile Include="src\Entity.cpp" />
+    <ClCompile Include="src\AABBCollider.cpp" />
+    <ClCompile Include="src\PhysicalEntity.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -90,6 +91,8 @@
     <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
+    <ClInclude Include="include\AABB.h" />
+    <ClInclude Include="include\AABBCollider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -100,9 +103,6 @@
     </Filter>
     <Filter Include="Core\DirectX">
       <UniqueIdentifier>{58586234-8be6-48e3-8263-5f68de2d083e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Debug">
-      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Camera">
       <UniqueIdentifier>{f67f3091-b57f-4b70-a832-a6ad57503882}</UniqueIdentifier>
@@ -115,6 +115,9 @@
     </Filter>
     <Filter Include="Scene">
       <UniqueIdentifier>{ea13b8db-85ce-4a9a-88c9-05c595714d17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Debug">
+      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

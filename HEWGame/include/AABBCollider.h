@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ICollider.h"
 #include "AABB.h"
 #include "Transform.h"
 
@@ -11,11 +12,11 @@ public:
 	~ AABBCollider() = default;
 
 	// ICollider‚ªŽÀ‘•‚³‚ê‚½‚ç‚»‚¿‚ç‚É’u‚«Š·‚¦‚é
-	bool CheckCollision(AABBCollider other);
+	bool CheckCollision(const Collision::ICollider& other);
 	void UpdateBounds(Transform t);
 
 	bool IsTrriger();
-	AABB GetAABB();
+	const AABB GetAABB();
 
 private:
 	AABB aabb;
