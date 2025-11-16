@@ -172,7 +172,7 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
-    <ClCompile Include="src\ICamera.cpp" />
+<ClCompile Include="src\BaseCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -215,6 +215,7 @@
     <ClInclude Include="include\DrawMatrix.h" />
     <ClInclude Include="include\Entity.h" />
     <ClInclude Include="include\Geometory.h" />
+    <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />

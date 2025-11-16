@@ -10,20 +10,20 @@ ModelRender::~ModelRender()
 {
 }
 
-void ModelRender::Draw(ModelDX& a_model, ICamera& a_camera)
+void ModelRender::Draw(ModelDX& a_model, CameraSpace::ICamera& a_camera)
 {
-	DirectX::XMFLOAT4X4 fMat; // s—ñ‚ÌŠi”[æ
+	DirectX::XMFLOAT4X4 fMat; // sÌŠi[
 	DirectX::XMFLOAT4X4 wvp[3];
 
 
-	wvp[1] = a_camera.GetViewMatrix();
-	wvp[2] = a_camera.GetProjectionMatrix();
+	wvp[1] = a_camera.GetView();
+	wvp[2] = a_camera.GetProjection();
 
-	// •ÏŠ·s—ñ‚Ì“]’u
+	// ÏŠsÌ“]u
 	DrawMatrix::CreateWorldMatrix(wvp[0], float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 170.0f * RAD, 0.0f });
 
 
-	// ƒVƒF[ƒ_[‚Ì“o˜^
+	// VF[_[Ì“o^
 	ShaderList::SetWVP(wvp);
 	VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
 	PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
@@ -31,7 +31,7 @@ void ModelRender::Draw(ModelDX& a_model, ICamera& a_camera)
 	pVTX->Bind();
 	pPXS->Bind();
 
-	// •`‰æˆ—
+	// `æˆ
 	for (int i = 0; i < a_model.GetMeshCount(); i++)
 	{
 		std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();

@@ -3,11 +3,16 @@
 
 #include "Vector.h"
 
-struct Transform
+namespace Components
 {
-	float3 position;
-	float3 rotation;
-	float3 scale;
-};
+        struct Transform
+        {
+                float3 position;
+                float3 rotation;
+                float3 scale;
+        };
+}
+
+using Transform = Components::Transform;
 
 #endif

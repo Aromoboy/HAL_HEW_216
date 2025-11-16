@@ -11,7 +11,7 @@ public:
 	~ModelRender();
 
 
-	void Draw(ModelDX&, ICamera&);
+void Draw(ModelDX&, CameraSpace::ICamera&);
 
 
 private:

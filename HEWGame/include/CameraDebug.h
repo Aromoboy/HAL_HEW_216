@@ -1,20 +1,15 @@
 #pragma once
-#include "ICamera.h"
+#include "BaseCamera.h"
 #include "Core/UpdateNode.h"
-class CameraDebug : public ICamera, public Core::UpdateNode
+class CameraDebug : public CameraSpace::BaseCamera, public Core::UpdateNode
 {
 public:
 
-        CameraDebug(float3 a_fPos, float a_fFovy) :
-                ICamera(a_fPos, a_fFovy),
-                Core::UpdateNode(Core::UpdatePhase::Camera),
-                bIsMove(true)
-        {}
+CameraDebug(float3 a_fPos, float a_fFovy);
 
-        void Update() override;
-        void OnUpdate(Core::UpdateContext& ctx) override;
+void OnUpdate(Core::UpdateContext& ctx) override;
 
 private:
-        bool bIsMove;
+bool bIsMove;
 };
 
