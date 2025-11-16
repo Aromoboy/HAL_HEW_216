@@ -9,9 +9,10 @@
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
 
+#include <array>
 #include <sstream>
 #include <string>
-
+#include <DirectXMath.h>
 #if defined(_WIN32)
 #       ifndef NOMINMAX
 #               define NOMINMAX
@@ -34,12 +35,78 @@ namespace
 #endif
 
         constexpr const char* kLogPrefix = "[SceneGame] ";
+        constexpr size_t kDefaultCameraPrototypeIndex = 0;
+        constexpr int kCameraPrototypeConsoleOverride = -1; // Change to >=0 to force a prototype at startup.
+
+        DirectX::XMVECTOR LoadFloat3(const float3& value)
+        {
+            return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
+        }
+
+        float3 StoreFloat3(DirectX::FXMVECTOR value)
+        {
+            DirectX::XMFLOAT3 temp;
+            DirectX::XMStoreFloat3(&temp, value);
+            return float3{ temp.x, temp.y, temp.z };
+        }
+
+        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
+        {
+            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
+            return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
+        }
+
+        const std::array<CameraPrototypeSettings, 2> kCameraPrototypes =
+        { {
+                CameraPrototypeSettings
+                {
+                        false,
+                        6.0f,
+                        float3{ 0.0f, 3.0f, -12.0f },
+                        60.0f,
+                        0.0f,
+                        -0.2f
+                },
+                CameraPrototypeSettings
+                {
+                        true,
+                        4.0f,
+                        float3{ 0.0f, 8.0f, -22.0f },
+                        45.0f,
+                        0.0f,
+                        -0.35f
+                }
+        } };
+
+        size_t NormalizeCameraPrototypeIndex(size_t requestedIndex)
+        {
+            if (requestedIndex >= kCameraPrototypes.size())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Camera prototype index " << requestedIndex
+                    << " is invalid. Falling back to index " << kDefaultCameraPrototypeIndex << "\n";
+                DebugTrace(oss.str());
+                return kDefaultCameraPrototypeIndex;
+            }
+            return requestedIndex;
+        }
+
+        size_t DetermineStartupCameraPrototypeIndex()
+        {
+            size_t requestedIndex = kDefaultCameraPrototypeIndex;
+            if (kCameraPrototypeConsoleOverride >= 0)
+            {
+                requestedIndex = static_cast<size_t>(kCameraPrototypeConsoleOverride);
+            }
+            return NormalizeCameraPrototypeIndex(requestedIndex);
+        }
 }
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
+    : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
         m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
 
@@ -71,10 +138,8 @@ SceneGame::SceneGame()
                 anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(60.0f);
-        m_gameCamera->SetPosition(float3{ 0.0f, 5.0f, -15.0f });
-        m_gameCamera->SetRotation(float3{ 0.0f, 0.0f, 0.0f });
-
+        const auto& cameraSettings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+        m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
         auto registeredCamera = AddCamera(m_gameCamera);
         if (!registeredCamera)
         {
@@ -89,10 +154,7 @@ SceneGame::SceneGame()
         {
                 auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
                 m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-                m_cameraRig->SetOffset(float3{ 0.0f, 3.0f, -12.0f });
-                m_cameraRig->SetYaw(0.0f);
-                m_cameraRig->SetPitch(-0.2f);
-                m_cameraRig->SetFollowSpeed(6.0f);
+                ConfigureCamera(cameraSettings);
                 if (m_cameraAnchor)
                 {
                         m_cameraRig->Attach(m_cameraAnchor);
@@ -187,4 +249,71 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         }
 
         m_render->Draw(*m_model, activeCamera.get());
+}
+
+void SceneGame::ApplyCameraPrototype(size_t index)
+{
+    const size_t normalizedIndex = NormalizeCameraPrototypeIndex(index);
+    m_activeCameraPrototypeIndex = normalizedIndex;
+    ConfigureCamera(kCameraPrototypes[m_activeCameraPrototypeIndex]);
+
+    const auto& settings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+    std::ostringstream oss;
+    oss << kLogPrefix << "Camera prototype switched to index " << m_activeCameraPrototypeIndex
+        << " (fixed=" << std::boolalpha << settings.fixedPosition
+        << ", fov=" << settings.fovDegrees << ", followSpeed=" << settings.followSpeed << ")\n";
+    DebugTrace(oss.str());
+}
+
+void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+{
+    if (m_gameCamera)
+    {
+        m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
+    }
+
+    if (m_cameraRig)
+    {
+        m_cameraRig->SetOffset(settings.offset);
+        m_cameraRig->SetYaw(settings.yawRadians);
+        m_cameraRig->SetPitch(settings.pitchRadians);
+        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
+        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
+        m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+    }
+
+    if (!m_gameCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ConfigureCamera skipped: gameplay camera missing.\n");
+        return;
+    }
+
+    float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
+    if (m_cameraAnchor)
+    {
+        const auto& anchorTransform = m_cameraAnchor->GetTransform();
+        cameraRotation.x += anchorTransform.rotation.x;
+        cameraRotation.y += anchorTransform.rotation.y;
+        cameraRotation.z += anchorTransform.rotation.z;
+
+        DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
+        DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        m_gameCamera->SetPosition(StoreFloat3(desiredPos));
+    }
+    else
+    {
+        m_gameCamera->SetPosition(settings.offset);
+    }
+
+    m_gameCamera->SetRotation(cameraRotation);
+    m_gameCamera->RecalculateView();
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
+        << ", fov=" << settings.fovDegrees
+        << ", followSpeed=" << settings.followSpeed
+        << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
+        << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
+    DebugTrace(oss.str());
 }
