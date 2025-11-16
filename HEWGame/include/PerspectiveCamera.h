@@ -31,6 +31,8 @@ namespace CameraSpace
 
                 float GetAspectRatio() const;
 
+                void SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane) override;
+
         protected:
                 void UpdateProjection() override;
 

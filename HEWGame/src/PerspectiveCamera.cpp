@@ -187,6 +187,60 @@ namespace CameraSpace
                 return m_aspect;
         }
 
+        void PerspectiveCamera::SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane)
+        {
+                const float normalizedFov = NormalizeFovDegrees(fovYDegrees, "SetPerspective.fovY");
+                const float normalizedAspect = NormalizeAspect(aspect, "SetPerspective.aspect");
+                const float normalizedNear = NormalizeNearPlane(nearPlane, "SetPerspective.near");
+                const float normalizedFar = NormalizeFarPlane(farPlane, normalizedNear, "SetPerspective.far");
+
+                const float epsilon = std::numeric_limits<float>::epsilon();
+                bool changed = false;
+
+                if (std::fabs(normalizedFov - m_fovY) > epsilon)
+                {
+                        m_fovY = normalizedFov;
+                        changed = true;
+                }
+
+                if (std::fabs(normalizedAspect - m_aspect) > epsilon)
+                {
+                        m_aspect = normalizedAspect;
+                        changed = true;
+                }
+
+                if (std::fabs(normalizedNear - m_nearZ) > epsilon)
+                {
+                        m_nearZ = normalizedNear;
+                        changed = true;
+                }
+
+                if (std::fabs(normalizedFar - m_farZ) > epsilon)
+                {
+                        m_farZ = normalizedFar;
+                        changed = true;
+                }
+
+                if (!changed)
+                {
+                        return;
+                }
+
+                BaseCamera::SetPerspective(DirectX::XMConvertToDegrees(m_fovY), m_aspect, m_nearZ, m_farZ);
+
+                MarkProjectionDirty();
+                UpdateProjection();
+
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PerspectiveCamera] SetPerspective applied fov(deg)=" << GetFieldOfViewDegrees()
+                        << " aspect=" << m_aspect
+                        << " nearZ=" << m_nearZ
+                        << " farZ=" << m_farZ << "\n";
+                DebugTrace(oss.str());
+#endif
+        }
+
         void PerspectiveCamera::UpdateProjection()
         {
                 DrawMatrix::CreateProjectionMatrix(m_projection, m_fovY, m_aspect, m_nearZ, m_farZ);
