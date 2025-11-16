@@ -50,11 +50,53 @@ jobs:
           echo "DEBUG: PR_HEAD_REF         = '$PR_HEAD_REF'"
           echo "DEBUG: TITLE               = '$TITLE'"
 
-                    # chatgpt-codex-connector のコメントは通知しない
-          if [ "$AUTHOR" = "chatgpt-codex-connector" ]; then
-            echo "INFO: AUTHOR が chatgpt-codex-connector のため、Discord 通知をスキップします。"
+          # ----------------------------------------
+          # ここで通知を出していい GitHub アカウントをホワイトリストで制限
+          # （この7人以外が起こしたイベントは全部 Discord 通知スキップ）
+          # ----------------------------------------
+          if [ "$AUTHOR" != "Aromoboy" ] &&
+             [ "$AUTHOR" != "OnionRingBurger" ] &&
+             [ "$AUTHOR" != "taiga5588renireno-spec" ] &&
+             [ "$AUTHOR" != "higuti051122-byte" ] &&
+             [ "$AUTHOR" != "Ryuta77" ] &&
+             [ "$AUTHOR" != "MrYt-08483" ] &&
+             [ "$AUTHOR" != "Porta502" ]; then
+            echo "INFO: AUTHOR '$AUTHOR' はホワイトリスト外なので Discord 通知をスキップします。"
             exit 0
           fi
+
+          echo "INFO: AUTHOR '$AUTHOR' はホワイトリストに入っているので通知処理を続行します。"
+
+          # GitHub ログイン → Discord ID の対応表からメンション文字列を組み立てる
+          MENTIONS=""
+
+          append_mention_by_login() {
+            case "$1" in
+              "Aromoboy")
+                MENTIONS="$MENTIONS <@224551705080102913>"
+                ;;
+              "OnionRingBurger")
+                MENTIONS="$MENTIONS <@899211761989849139>"
+                ;;
+              "taiga5588renireno-spec")
+                MENTIONS="$MENTIONS <@657793265076142093>"
+                ;;
+              "higuti051122-byte")
+                MENTIONS="$MENTIONS <@1228167333248503818>"
+                ;;
+              "Ryuta77")
+                MENTIONS="$MENTIONS <@1050727145418260480>"
+                ;;
+              "MrYt-08483")
+                MENTIONS="$MENTIONS <@1226152792813731842>"
+                ;;
+              "Porta502")
+                MENTIONS="$MENTIONS <@816199178790371338>"
+                ;;
+            esac
+          }
+
+
 
           # GitHub ログイン → Discord ID の対応表からメンション文字列を組み立てる
           MENTIONS=""
