@@ -25,14 +25,14 @@ public:
     ShaderCache(ShaderCache&&) = delete;
     ShaderCache& operator=(ShaderCache&&) = delete;
 
-    ShaderProgram& Load(const std::string& name, ID3D11Device* device, const std::string& vsPath, const std::string& psPath);
-    ShaderProgram& Get(const std::string& name);
+    std::shared_ptr<ShaderProgram> Load(const std::string& name, ID3D11Device* device, const std::string& vsPath, const std::string& psPath);
+    std::shared_ptr<ShaderProgram> Get(const std::string& name);
 
 private:
     // コンストラクタをprivateに
     ShaderCache() = default;
     ~ShaderCache() = default;
 
-    std::map<std::string, std::unique_ptr<ShaderProgram>> programs;
+    std::map<std::string, std::shared_ptr<ShaderProgram>> programs;
 };
 #endif //__SHADERCACHE_H__
