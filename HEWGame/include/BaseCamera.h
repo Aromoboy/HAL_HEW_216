@@ -24,7 +24,7 @@ namespace CameraSpace
                 void SetRotation(const float3& rotation);
                 void SetTransform(const Components::Transform& transform);
                 void SetPriority(int priority);
-                void SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane);
+                virtual void SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane);
 
                 const float3& GetPosition() const;
                 const float3& GetRotation() const;

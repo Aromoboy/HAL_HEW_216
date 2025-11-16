@@ -226,19 +226,20 @@ namespace CameraSpace
                         return;
                 }
 
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PerspectiveCamera] SetPerspective normalized fov(deg)=" << GetFieldOfViewDegrees()
+                        << " aspect=" << m_aspect
+                        << " nearZ=" << m_nearZ
+                        << " farZ=" << m_farZ
+                        << " -> dispatching to BaseCamera::SetPerspective" << "\n";
+                DebugTrace(oss.str());
+#endif
+
                 BaseCamera::SetPerspective(DirectX::XMConvertToDegrees(m_fovY), m_aspect, m_nearZ, m_farZ);
 
                 MarkProjectionDirty();
                 UpdateProjection();
-
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PerspectiveCamera] SetPerspective applied fov(deg)=" << GetFieldOfViewDegrees()
-                        << " aspect=" << m_aspect
-                        << " nearZ=" << m_nearZ
-                        << " farZ=" << m_farZ << "\n";
-                DebugTrace(oss.str());
-#endif
         }
 
         void PerspectiveCamera::UpdateProjection()
