@@ -12,6 +12,7 @@
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
+#include "Vector.h"
 
 #include <memory>
 #include <vector>
@@ -20,6 +21,16 @@ namespace Systems
 {
 class PhysicsMachine;
 }
+
+struct CameraPrototypeSettings
+{
+        bool fixedPosition = false;
+        float followSpeed = 6.0f;
+        float3 offset{ 0.0f, 3.0f, -12.0f };
+        float fovDegrees = 60.0f;
+        float yawRadians = 0.0f;
+        float pitchRadians = -0.2f;
+};
 
 class SceneGame : public SceneSpace::Scene
 {
@@ -31,6 +42,7 @@ void Update(Core::UpdateContext& ctx) final;
 void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
 
 private:
+void ConfigureCamera(const CameraPrototypeSettings& settings);
 std::unique_ptr<Model> m_pModel;
 std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
 std::unique_ptr<CameraRig> m_cameraRig;

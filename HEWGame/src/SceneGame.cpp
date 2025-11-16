@@ -33,7 +33,34 @@ namespace
         }
 #endif
 
-        constexpr const char* kLogPrefix = "[SceneGame] ";
+constexpr const char* kLogPrefix = "[SceneGame] ";
+
+// Designers can flip this flag (or expose it via a console binding) to evaluate
+// the fixed-position prototype camera without rewiring the rig itself.
+constexpr bool kForceFixedCameraPrototype = false;
+
+constexpr CameraPrototypeSettings kFollowCameraPrototype{
+false,
+6.0f,
+{ 0.0f, 3.0f, -12.0f },
+60.0f,
+0.0f,
+-0.2f,
+};
+
+constexpr CameraPrototypeSettings kFixedCameraPrototype{
+true,
+4.0f,
+{ 0.0f, 7.0f, -18.0f },
+50.0f,
+0.05f,
+-0.35f,
+};
+
+const CameraPrototypeSettings& GetActiveCameraPrototypeSettings()
+{
+return kForceFixedCameraPrototype ? kFixedCameraPrototype : kFollowCameraPrototype;
+}
 }
 
 Model::AnimeNo no;
@@ -71,33 +98,7 @@ SceneGame::SceneGame()
                 anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(60.0f);
-        m_gameCamera->SetPosition(float3{ 0.0f, 5.0f, -15.0f });
-        m_gameCamera->SetRotation(float3{ 0.0f, 0.0f, 0.0f });
-
-        auto registeredCamera = AddCamera(m_gameCamera);
-        if (!registeredCamera)
-        {
-                DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
-        }
-        else
-        {
-                SetActiveCamera(registeredCamera);
-        }
-
-        if (m_gameCamera)
-        {
-                auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
-                m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-                m_cameraRig->SetOffset(float3{ 0.0f, 3.0f, -12.0f });
-                m_cameraRig->SetYaw(0.0f);
-                m_cameraRig->SetPitch(-0.2f);
-                m_cameraRig->SetFollowSpeed(6.0f);
-                if (m_cameraAnchor)
-                {
-                        m_cameraRig->Attach(m_cameraAnchor);
-                }
-        }
+        ConfigureCamera(GetActiveCameraPrototypeSettings());
 
         m_pManager = std::make_unique<SoundManagerEX>();
 
@@ -107,6 +108,50 @@ SceneGame::SceneGame()
         m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
         m_render = std::make_unique<ModelRender>();
+}
+
+void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+{
+        m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(settings.fovDegrees);
+        if (!m_gameCamera)
+        {
+                DebugTrace(std::string(kLogPrefix) + "ConfigureCamera failed: perspective camera allocation returned null.\n");
+                return;
+        }
+
+        m_gameCamera->SetPosition(float3{ 0.0f, 5.0f, -15.0f });
+        m_gameCamera->SetRotation(float3{ 0.0f, 0.0f, 0.0f });
+
+        auto registeredCamera = AddCamera(m_gameCamera);
+        if (!registeredCamera)
+        {
+                DebugTrace(std::string(kLogPrefix) + "ConfigureCamera failed: registration with SceneManager was rejected.\n");
+        }
+        else
+        {
+                SetActiveCamera(registeredCamera);
+        }
+
+        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
+        m_cameraRig = std::make_unique<CameraRig>(baseCamera);
+        if (!m_cameraRig)
+        {
+                DebugTrace(std::string(kLogPrefix) + "ConfigureCamera failed: CameraRig allocation returned null.\n");
+                return;
+        }
+
+        m_cameraRig->SetOffset(settings.offset);
+        m_cameraRig->SetYaw(settings.yawRadians);
+        m_cameraRig->SetPitch(settings.pitchRadians);
+        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
+        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
+        m_cameraRig->SetYawPitchLocked(false);
+        if (m_cameraAnchor)
+        {
+                m_cameraRig->Attach(m_cameraAnchor);
+        }
+
+        DebugTrace(std::string(kLogPrefix) + "Camera rig configured as " + (settings.fixedPosition ? "fixed" : "follow") + " prototype.\n");
 }
 
 SceneGame::~SceneGame()
