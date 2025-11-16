@@ -46,8 +46,6 @@ void ModelRender::Draw(ModelDX& a_model, ICamera& a_camera)
 		}
 
 		MeshDraw(*mesh);
-		
-
 
 	}
 

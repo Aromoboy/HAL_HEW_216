@@ -9,8 +9,11 @@
 
 #include "AssimpModelLorder.h"
 #include <DirectXMath.h>
+#include "TextureCache.h"
+#include <locale>
+#include <codecvt>
 
-
+#define TEXTURE_PATH "Assets\\Model\\LowPolyNature\\Textures\\"
 
 
 AssimpModelLorder::AssimpModelLorder()
@@ -189,31 +192,28 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 		// テクスチャ読み込み処理
 		HRESULT hr;
 		aiString path;
-		
-		ID3D11ShaderResourceView* texture;
+		std::shared_ptr<Texture2D> texture;
+
+
+	
 
 		// テクスチャのパス情報を読み込み
-		texture = nullptr;
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), path) != AI_SUCCESS) 
 		{
 			continue;
 		}
 
 		// そのまま読み込み
-		hr = CreateTexture(path.C_Str(), &texture);
-		if (SUCCEEDED(hr)) 
+
+		TextureCache& cache = TextureCache::Instance();
+		texture = cache.Get(path.C_Str());
+		if (texture) 
 		{
 			materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 			continue; 
 		}
 
-		// ディレクトリと連結して探索
-		hr = CreateTexture((directory + path.C_Str()).c_str(), &texture);
-		if (SUCCEEDED(hr)) 
-		{
-			materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-			continue; 
-		}
+
 
 		// モデルと同じ階層を探索
 		// パスからファイル名のみ取得
@@ -228,21 +228,19 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 		std::string fileName = fullPath;
 		if (find != std::string::npos)
 			fileName = fileName.substr(find + 1);
+
+		string filePathCmp = TEXTURE_PATH + fileName;
+
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring wFilePath = converter.from_bytes(filePathCmp);
+
 		// テクスチャの読込
-		hr = CreateTexture((directory + fileName).c_str(), &texture);
-		if (SUCCEEDED(hr)) 
+		texture = cache.Load(fileName, GetDevice(), wFilePath );
+		if (texture) 
 		{
 			materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 			continue; 
 		}
-
-		// 念のため開放
-		if (texture) 
-		{
-			texture->Release();
-			texture = nullptr;
-		}
-
 
 		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
 

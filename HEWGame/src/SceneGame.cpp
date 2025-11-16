@@ -45,6 +45,8 @@ SceneGame::SceneGame()
         // 描画テスト用
         m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
+        m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
+
         m_render = std::make_unique<ModelRender>();
 }
 

@@ -1,12 +1,12 @@
 #pragma once
-#include "Texture.h"
+#include "TextureDX.h"
 #include <DirectXMath.h>
 #include <memory>
 
 class MaterialDX
 {
 public:
-	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, ID3D11ShaderResourceView* m_texture );
+	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_tecture);
 	~MaterialDX();
 
 	ID3D11ShaderResourceView* GetTexture() const;
@@ -21,7 +21,7 @@ private:
 	DirectX::XMFLOAT4 m_ambient;
 	DirectX::XMFLOAT4 m_specular;
 
-	ID3D11ShaderResourceView* m_texture;
+	std::shared_ptr<Texture2D> m_texture;
 
 
 
