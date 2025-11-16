@@ -307,7 +307,9 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
     }
 
     m_gameCamera->SetRotation(cameraRotation);
-    m_gameCamera->RecalculateView();
+// BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
+// BaseCamera::RecalculateViewは保護されたメソッドです。GetView はトランスフォームが変更された際に遅延評価で再計算
+    (void)m_gameCamera->GetView();
 
     std::ostringstream oss;
     oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
