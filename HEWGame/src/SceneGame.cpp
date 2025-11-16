@@ -31,7 +31,10 @@ SceneGame::SceneGame()
 
         m_pModel->Play(no, 1, 1.0f);
 
-        m_pCamera = std::make_unique<CameraDebug>(float3{ 20.0f, 0.0f, 0.0f }, 60.0f);
+        m_pCamera = std::make_shared<CameraDebug>(float3{ 20.0f, 0.0f, 0.0f }, 60.0f);
+        auto& cameraManager = GetCameraManager();
+        cameraManager.AddCamera(m_pCamera);
+        cameraManager.SetActive(m_pCamera);
 
         for (int i = 0; i < 9; i++)
         {
@@ -101,9 +104,14 @@ void SceneGame::Draw()
 {
         // 描画確認用の数値
 
-        // カメラの設定
-        Geometory::SetView(m_pCamera->GetView());
-        Geometory::SetProjection(m_pCamera->GetProjection());
+        auto activeCamera = GetCameraManager().GetActiveCamera();
+        if (!activeCamera)
+        {
+                return;
+        }
 
-        m_render->Draw(*m_model, *m_pCamera);
+        Geometory::SetView(activeCamera->GetView());
+        Geometory::SetProjection(activeCamera->GetProjection());
+
+        m_render->Draw(*m_model, *activeCamera);
 }

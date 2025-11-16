@@ -96,6 +96,9 @@
     <ClCompile Include="src\CameraDebug.cpp">
       <Filter>ソース ファイル\Application</Filter>
     </ClCompile>
+    <ClCompile Include="src\CameraManager.cpp">
+      <Filter>ソース ファイル\Application</Filter>
+    </ClCompile>
     <ClCompile Include="src\SoundSystem.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -216,9 +219,12 @@
 <ClInclude Include="include\PerspectiveCamera.h">
   <Filter>ヘッダー ファイル\Application</Filter>
 </ClInclude>
-<ClInclude Include="include\CameraDebug.h">
-  <Filter>ヘッダー ファイル\Application</Filter>
-</ClInclude>
+    <ClInclude Include="include\CameraDebug.h">
+      <Filter>ヘッダー ファイル\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CameraManager.h">
+      <Filter>ヘッダー ファイル\Application</Filter>
+    </ClInclude>
     <ClInclude Include="include\SoundSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
