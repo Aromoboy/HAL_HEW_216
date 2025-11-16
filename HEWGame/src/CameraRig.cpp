@@ -66,6 +66,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_pitch(0.0f)
         , m_followSpeed(5.0f)
         , m_warnedAboutExpiredTarget(false)
+        , m_lockTranslation(false)
+        , m_lockYawPitch(false)
 {
 }
 
@@ -120,7 +122,45 @@ void CameraRig::SetFollowSpeed(float followSpeed)
 
 float CameraRig::GetFollowSpeed() const
 {
-        return m_followSpeed;
+	return m_followSpeed;
+}
+
+void CameraRig::SetTranslationLocked(bool locked)
+{
+	if (m_lockTranslation == locked)
+	{
+		return;
+	}
+	m_lockTranslation = locked;
+	auto target = m_target.lock();
+	std::ostringstream oss;
+	oss << "[CameraRig] Translation lock " << (locked ? "enabled" : "disabled")
+	    << ". target=" << target.get() << " followSpeed=" << m_followSpeed << "\n";
+	DebugTrace(oss.str());
+}
+
+bool CameraRig::IsTranslationLocked() const
+{
+	return m_lockTranslation;
+}
+
+void CameraRig::SetYawPitchLocked(bool locked)
+{
+	if (m_lockYawPitch == locked)
+	{
+		return;
+	}
+	m_lockYawPitch = locked;
+	auto target = m_target.lock();
+	std::ostringstream oss;
+	oss << "[CameraRig] Yaw/Pitch lock " << (locked ? "enabled" : "disabled")
+	    << ". target=" << target.get() << " followSpeed=" << m_followSpeed << "\n";
+	DebugTrace(oss.str());
+}
+
+bool CameraRig::IsYawPitchLocked() const
+{
+        return m_lockYawPitch;
 }
 
 void CameraRig::Attach(const std::shared_ptr<SceneSpace::Entity>& target)
@@ -164,10 +204,13 @@ void CameraRig::OnUpdate(Core::UpdateContext& ctx)
         DirectX::XMVECTOR offsetVec = RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(targetPos, offsetVec);
 
-        DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
-        const float alpha = Clamp01(m_followSpeed * ctx.dt);
-        DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
-        m_camera->SetPosition(StoreFloat3(newPos));
+        if (!m_lockTranslation)
+        {
+                DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
+                const float alpha = Clamp01(m_followSpeed * ctx.dt);
+                DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
+                m_camera->SetPosition(StoreFloat3(newPos));
+        }
 
         float3 newRotation
         {
@@ -175,7 +218,10 @@ void CameraRig::OnUpdate(Core::UpdateContext& ctx)
                 targetRotation.y + m_yaw,
                 targetRotation.z
         };
-        m_camera->SetRotation(newRotation);
+        if (!m_lockYawPitch)
+        {
+                m_camera->SetRotation(newRotation);
+        }
 
         m_camera->RecalculateView();
 }
