@@ -30,6 +30,11 @@ public:
 
         void SetFollowSpeed(float followSpeed);
         float GetFollowSpeed() const;
+        void SetTranslationLocked(bool locked);
+        bool IsTranslationLocked() const;
+
+        void SetYawPitchLocked(bool locked);
+        bool IsYawPitchLocked() const;
 
         void Attach(const std::shared_ptr<SceneSpace::Entity>& target);
 
@@ -43,4 +48,6 @@ private:
         float m_pitch;
         float m_followSpeed;
         bool m_warnedAboutExpiredTarget;
+        bool m_lockTranslation;
+        bool m_lockYawPitch;
 };
