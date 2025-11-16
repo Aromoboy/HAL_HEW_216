@@ -50,6 +50,12 @@ jobs:
           echo "DEBUG: PR_HEAD_REF         = '$PR_HEAD_REF'"
           echo "DEBUG: TITLE               = '$TITLE'"
 
+                    # chatgpt-codex-connector のコメントは通知しない
+          if [ "$AUTHOR" = "chatgpt-codex-connector" ]; then
+            echo "INFO: AUTHOR が chatgpt-codex-connector のため、Discord 通知をスキップします。"
+            exit 0
+          fi
+
           # GitHub ログイン → Discord ID の対応表からメンション文字列を組み立てる
           MENTIONS=""
 
