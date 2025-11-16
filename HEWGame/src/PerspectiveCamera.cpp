@@ -8,13 +8,6 @@
 #include <sstream>
 #include <string>
 
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
-
 namespace
 {
 #if defined(_WIN32) && defined(_DEBUG)
