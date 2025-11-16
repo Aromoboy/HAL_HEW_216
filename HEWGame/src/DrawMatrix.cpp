@@ -1,9 +1,31 @@
 #include "DrawMatrix.h"
 #include "Defines.h"
 
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <windows.h>
+#endif
+
+namespace
+{
+	void DebugTrace(const std::string& message)
+	{
+#if defined(_WIN32) && defined(_DEBUG)
+		::OutputDebugStringA(message.c_str());
+#else
+		(void)message;
+#endif
+	}
+}
+
 void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4 &a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, bool a_bTranspose)
 {
-	// Šeƒgƒ‰ƒ“ƒXƒtƒH[ƒ€‚Ìs—ñ‚ðì¬
+	// å„ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ ã®è¡Œåˆ—ã‚’ä½œæˆ
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(a_fPos.x, a_fPos.y, a_fPos.z); 
 	DirectX::XMMATRIX S = DirectX::XMMatrixScaling(a_fScale.x, a_fScale.y, a_fScale.z); 
 
@@ -11,18 +33,18 @@ void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4 &a_fMat, const float3& a_
 	DirectX::XMMATRIX Ry = DirectX::XMMatrixRotationY(a_fAngle.y);
 	DirectX::XMMATRIX Rz = DirectX::XMMatrixRotationZ(a_fAngle.z);
 
-	// s—ñ‚ð‚©‚¯‡‚í‚¹‚é
+	// è¡Œåˆ—ã‚’ã‹ã‘åˆã‚ã›ã‚‹
 	DirectX::XMMATRIX mat = S * Rx * Ry * Rz * T;
-	// GPU—p‚É”z—ñ‚ð•ÏŠ·
+	// GPUç”¨ã«é…åˆ—ã‚’å¤‰æ›
 	if (a_bTranspose) mat = DirectX::XMMatrixTranspose(mat);
 
-	// •`‰æ—p‚Ì”z—ñ‚ð‘ã“ü
+	// æç”»ç”¨ã®é…åˆ—ã‚’ä»£å…¥
 	DirectX::XMStoreFloat4x4(&a_fMat, mat);
 }
 
 void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, DirectX::XMMATRIX a_fBone, bool a_bTranspose)
 {
-	// Šeƒgƒ‰ƒ“ƒXƒtƒH[ƒ€‚Ìs—ñ‚ðì¬
+	// å„ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ ã®è¡Œåˆ—ã‚’ä½œæˆ
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(a_fPos.x, a_fPos.y, a_fPos.z);
 	DirectX::XMMATRIX S = DirectX::XMMatrixScaling(a_fScale.x, a_fScale.y, a_fScale.z);
 
@@ -30,15 +52,15 @@ void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_
 	DirectX::XMMATRIX Ry = DirectX::XMMatrixRotationY(a_fAngle.y);
 	DirectX::XMMATRIX Rz = DirectX::XMMatrixRotationZ(a_fAngle.z);
 
-	// s—ñ‚ð‚©‚¯‡‚í‚¹‚é
+	// è¡Œåˆ—ã‚’ã‹ã‘åˆã‚ã›ã‚‹
 	DirectX::XMMATRIX mat = S * Rx * Ry * Rz * T;
 
-	// Bone‚Ì“®‚«‚ðŠ|‚¯‡‚í‚¹‚é
+	// Boneã®å‹•ãã‚’æŽ›ã‘åˆã‚ã›ã‚‹
 	mat *= a_fBone;
-	// GPU—p‚É”z—ñ‚ð•ÏŠ·
+	// GPUç”¨ã«é…åˆ—ã‚’å¤‰æ›
 	if (a_bTranspose) mat = DirectX::XMMatrixTranspose(mat);
 
-	// •`‰æ—p‚Ì”z—ñ‚ð‘ã“ü
+	// æç”»ç”¨ã®é…åˆ—ã‚’ä»£å…¥
 	DirectX::XMStoreFloat4x4(&a_fMat, mat);
 }
 
@@ -48,16 +70,54 @@ void DrawMatrix::CreateViewMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_f
 {
 	DirectX::XMMATRIX view;
 
-	// ƒrƒ…[À•W‚Ö‚Ì•ÏŠ·s—ñ
-	view = DirectX::XMMatrixLookAtLH(
-		DirectX::XMVectorSet(a_fEyePosition.x, a_fEyePosition.y, a_fEyePosition.z, 0.0f),  // ƒJƒƒ‰‚ÌˆÊ’u
-		DirectX::XMVectorSet(a_fFocusPosition.x, a_fFocusPosition.y, a_fFocusPosition.z, 0.0f),  // ƒJƒƒ‰‚Ì’Ž‹“_
-		DirectX::XMVectorSet(a_fUpDirection.x, a_fUpDirection.y, a_fUpDirection.z, 0.0f)); // ƒJƒƒ‰‚É‚Æ‚Á‚Ä‚Ìã•ûŒü
+	float aspect = AspectRatio;
+	float nearPlane = NearZ;
+	float farPlane = FarZ;
 
-	if (a_bTranspose) view = DirectX::XMMatrixTranspose(view);
+	if (!(aspect > 0.0f))
+	{
+#if defined(_DEBUG)
+		std::ostringstream oss;
+		oss << "[DrawMatrix] CreateProjectionMatrix invalid aspect ratio value=" << aspect
+		    << " fallback=1.0\n";
+		DebugTrace(oss.str());
+#endif
+		aspect = 1.0f;
+	}
+
+	if (!(nearPlane > 0.0f))
+	{
+#if defined(_DEBUG)
+		std::ostringstream oss;
+		oss << "[DrawMatrix] CreateProjectionMatrix invalid near plane value=" << nearPlane
+		    << " fallback=0.1\n";
+		DebugTrace(oss.str());
+#endif
+		nearPlane = 0.1f;
+	}
+
+	if (!(farPlane > nearPlane))
+	{
+#if defined(_DEBUG)
+		std::ostringstream oss;
+		oss << "[DrawMatrix] CreateProjectionMatrix invalid far plane value=" << farPlane
+		    << " (must be greater than near plane=" << nearPlane << ") fallback=" << (nearPlane + 1.0f) << "\n";
+		DebugTrace(oss.str());
+#endif
+		farPlane = nearPlane + 1.0f;
+	}
+
+	// vWFNVWÖ‚Ì•ÏŠs
+		a_fFovAngleY,
+		aspect,
+		nearPlane,
+		farPlane
+
+	if (a_bTranspose) proj = DirectX::XMMatrixTranspose(proj);
 
 
-	// GPU—p‚Ìs—ñ‚É•ÏŠ·
+
+	// GPUç”¨ã®è¡Œåˆ—ã«å¤‰æ›
 	DirectX::XMStoreFloat4x4(&a_fMat, view);
 }
 
@@ -65,12 +125,12 @@ void DrawMatrix::CreateProjectionMatrix(DirectX::XMFLOAT4X4& a_fMat, const float
 {
 	DirectX::XMMATRIX proj;
 
-	// ƒvƒƒWƒFƒNƒVƒ‡ƒ“À•W‚Ö‚Ì•ÏŠ·s—ñ
+	// ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ã‚·ãƒ§ãƒ³åº§æ¨™ã¸ã®å¤‰æ›è¡Œåˆ—
 	proj = DirectX::XMMatrixPerspectiveFovLH(
-		60.0f * RAD,	// yŽ²‚ÌŽ‹–ìŠp
-		16 / 9,	// yŽ²‚ÌŽ‹–ìŠp‚©‚çxŽ²‚ÌŽ‹–ìŠp‚ðŠ„‚èo‚·‚½‚ß‚ÌŠ„‡
-		0.1f,	// ƒJƒƒ‰‚ÌÅ¬•\Ž¦‹——£
-		100.0f	// ƒJƒƒ‰‚ÌÅ‘å•\Ž¦‹——£
+		60.0f * RAD,	// yè»¸ã®è¦–é‡Žè§’
+		16 / 9,	// yè»¸ã®è¦–é‡Žè§’ã‹ã‚‰xè»¸ã®è¦–é‡Žè§’ã‚’å‰²ã‚Šå‡ºã™ãŸã‚ã®å‰²åˆ
+		0.1f,	// ã‚«ãƒ¡ãƒ©ã®æœ€å°è¡¨ç¤ºè·é›¢
+		100.0f	// ã‚«ãƒ¡ãƒ©ã®æœ€å¤§è¡¨ç¤ºè·é›¢
 	);
 
 	if(a_bTranspose) proj = DirectX::XMMatrixTranspose(proj);
