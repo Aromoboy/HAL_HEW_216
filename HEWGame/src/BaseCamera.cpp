@@ -33,6 +33,18 @@ namespace
         constexpr float kMaxRotationMagnitude = DirectX::XM_PI * 16.0f;
         constexpr int kMaxPriorityMagnitude = 1000;
 
+        bool AreFloat3Equal(const float3& lhs, const float3& rhs)
+        {
+                return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+        }
+
+        bool AreTransformsEqual(const Components::Transform& lhs, const Components::Transform& rhs)
+        {
+                return AreFloat3Equal(lhs.position, rhs.position)
+                        && AreFloat3Equal(lhs.rotation, rhs.rotation)
+                        && AreFloat3Equal(lhs.scale, rhs.scale);
+        }
+
         bool ValidateFloat(const char* label, float value, float maxMagnitude)
         {
                 if (std::isfinite(value) && std::fabs(value) <= maxMagnitude)
@@ -93,10 +105,18 @@ namespace CameraSpace
 
                 DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
                 DirectX::XMStoreFloat4x4(&m_projection, DirectX::XMMatrixIdentity());
+
+#if defined(_DEBUG)
+                m_debugLastTransformSnapshot = m_transform;
+                m_debugHasTransformSnapshot = true;
+#endif
         }
 
         const DirectX::XMFLOAT4X4& BaseCamera::GetView() const
         {
+#if defined(_DEBUG)
+                DebugCheckTransformIntegrity("GetView");
+#endif
                 if (m_viewDirty)
                 {
                         const_cast<BaseCamera*>(this)->RecalculateView();
@@ -106,6 +126,9 @@ namespace CameraSpace
 
         const DirectX::XMFLOAT4X4& BaseCamera::GetProjection() const
         {
+#if defined(_DEBUG)
+                DebugCheckTransformIntegrity("GetProjection");
+#endif
                 if (m_projectionDirty)
                 {
                         const_cast<BaseCamera*>(this)->UpdateProjection();
@@ -122,6 +145,7 @@ namespace CameraSpace
 
                 m_transform.position = position;
                 MarkViewDirty();
+                MarkProjectionDirty();
         }
 
         void BaseCamera::SetRotation(const float3& rotation)
@@ -133,6 +157,37 @@ namespace CameraSpace
 
                 m_transform.rotation = rotation;
                 MarkViewDirty();
+                MarkProjectionDirty();
+        }
+
+        void BaseCamera::SetTransform(const Components::Transform& transform)
+        {
+                if (!ValidatePosition(transform.position) || !ValidateRotation(transform.rotation))
+                {
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << "[Camera] SetTransform rejected invalid input. camera=" << this << "\n";
+                        DebugTrace(oss.str());
+#endif
+                        return;
+                }
+
+                const bool positionChanged = !AreFloat3Equal(transform.position, m_transform.position);
+                const bool rotationChanged = !AreFloat3Equal(transform.rotation, m_transform.rotation);
+                const bool scaleChanged = !AreFloat3Equal(transform.scale, m_transform.scale);
+
+                if (!positionChanged && !rotationChanged && !scaleChanged)
+                {
+                        return;
+                }
+
+                m_transform = transform;
+
+                if (positionChanged || rotationChanged)
+                {
+                        MarkViewDirty();
+                        MarkProjectionDirty();
+                }
         }
 
         void BaseCamera::SetPriority(int priority)
@@ -174,11 +229,6 @@ namespace CameraSpace
                 return m_priority;
         }
 
-        Components::Transform& BaseCamera::GetTransform()
-        {
-                return m_transform;
-        }
-
         const Components::Transform& BaseCamera::GetTransform() const
         {
                 return m_transform;
@@ -214,6 +264,10 @@ namespace CameraSpace
 
                 DrawMatrix::CreateViewMatrix(m_view, eye, focus, up);
                 m_viewDirty = false;
+
+#if defined(_DEBUG)
+                DebugUpdateTransformSnapshot();
+#endif
         }
 
         void BaseCamera::UpdateProjection()
@@ -293,4 +347,36 @@ namespace CameraSpace
 
                 return true;
         }
+
+#if defined(_DEBUG)
+        void BaseCamera::DebugCheckTransformIntegrity(const char* caller) const
+        {
+                if (!m_debugHasTransformSnapshot)
+                {
+                        return;
+                }
+
+                if (!m_viewDirty && !AreTransformsEqual(m_transform, m_debugLastTransformSnapshot))
+                {
+                        std::ostringstream oss;
+                        oss << "[Camera] Transform mutated without marking dirty. caller="
+                                << (caller ? caller : "unknown")
+                                << " camera=" << this
+                                << " viewDirty=" << m_viewDirty
+                                << " projectionDirty=" << m_projectionDirty
+                                << "\n";
+                        DebugTrace(oss.str());
+
+                        auto* self = const_cast<BaseCamera*>(this);
+                        self->MarkViewDirty();
+                        self->MarkProjectionDirty();
+                }
+        }
+
+        void BaseCamera::DebugUpdateTransformSnapshot()
+        {
+                m_debugLastTransformSnapshot = m_transform;
+                m_debugHasTransformSnapshot = true;
+        }
+#endif
 }
