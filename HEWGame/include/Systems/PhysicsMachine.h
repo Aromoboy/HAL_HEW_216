@@ -4,11 +4,7 @@
 
 #include <memory>
 #include <vector>
-
-namespace SceneSpace
-{
-        class PhysicalEntity;
-}
+#include "PhysicalEntity.h"
 
 namespace Systems
 {
@@ -16,7 +12,7 @@ namespace Systems
         {
         public:
                 virtual ~IPhysicsSystem() = default;
-                virtual void Apply(SceneSpace::PhysicalEntity& entity, float dt) = 0;
+                virtual void Apply(Entity::PhysicalEntity& entity, float dt) = 0;
         };
 
         class PhysicsMachine : public Core::UpdateNode
@@ -30,15 +26,15 @@ namespace Systems
                 void SetSystem(SystemPtr system);
                 SystemPtr GetSystem() const;
 
-                void RegisterBody(SceneSpace::PhysicalEntity& body);
-                void UnregisterBody(SceneSpace::PhysicalEntity& body);
+                void RegisterBody(Entity::PhysicalEntity& body);
+                void UnregisterBody(Entity::PhysicalEntity& body);
                 void ClearBodies();
 
                 void OnUpdate(Core::UpdateContext& ctx) override;
 
         private:
                 SystemPtr m_system;
-                std::vector<SceneSpace::PhysicalEntity*> m_bodies;
+                std::vector<Entity::PhysicalEntity*> m_bodies;
                 bool m_loggedMissingSystem;
         };
 }

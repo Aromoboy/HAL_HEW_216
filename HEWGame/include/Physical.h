@@ -20,6 +20,14 @@ namespace Physics
             , damping(0.98f)
         {
         }
+
+        Physical(float3 a_velocity, float3 a_force, float a_weight, float a_damping)
+            : velocity(a_velocity)
+            , force(a_force)
+            , weight(a_weight)
+            , damping(a_damping)
+        {
+        }
     };
 }
 #endif
