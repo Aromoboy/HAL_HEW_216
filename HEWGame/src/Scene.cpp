@@ -4,11 +4,37 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 
+#include <sstream>
+#include <utility>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+void DebugTrace(const std::string& message)
+{
+::OutputDebugStringA(message.c_str());
+}
+#else
+void DebugTrace(const std::string& message)
+{
+(void)message;
+}
+#endif
+}
+
 namespace SceneSpace
 {
-        Scene::Scene()
-                : m_isConfigured(false)
-                , m_input(nullptr)
+Scene::Scene()
+: m_isConfigured(false)
+, m_input(nullptr)
+, m_warnedAboutMissingCameraForDraw(false)
         {
         }
 
@@ -34,10 +60,28 @@ namespace SceneSpace
                 m_scheduler.Tick(ctx);
         }
 
-        void Scene::RootDraw()
-        {
-                Draw();
-        }
+void Scene::RootDraw()
+{
+auto activeCamera = m_cameraManager.GetActiveCamera();
+if (!activeCamera)
+{
+#if defined(_DEBUG)
+if (!m_warnedAboutMissingCameraForDraw)
+{
+std::ostringstream oss;
+oss << "[Scene] RootDraw detected missing active camera in scene ptr=" << this << '\n';
+DebugTrace(oss.str());
+m_warnedAboutMissingCameraForDraw = true;
+}
+#endif
+}
+else
+{
+m_warnedAboutMissingCameraForDraw = false;
+}
+
+Draw(activeCamera);
+}
 
         void Scene::ConfigureUpdates()
         {
@@ -68,13 +112,28 @@ namespace SceneSpace
                 return m_input;
         }
 
-        CameraSpace::CameraManager& Scene::GetCameraManager()
-        {
-                return m_cameraManager;
-        }
+CameraSpace::CameraManager& Scene::GetCameraManager()
+{
+return m_cameraManager;
+}
 
-        const CameraSpace::CameraManager& Scene::GetCameraManager() const
-        {
-                return m_cameraManager;
-        }
+const CameraSpace::CameraManager& Scene::GetCameraManager() const
+{
+return m_cameraManager;
+}
+
+std::shared_ptr<CameraSpace::ICamera> Scene::AddCamera(std::shared_ptr<CameraSpace::ICamera> camera)
+{
+return m_cameraManager.AddCamera(std::move(camera));
+}
+
+void Scene::SetActiveCamera(const std::shared_ptr<CameraSpace::ICamera>& camera)
+{
+m_cameraManager.SetActive(camera);
+}
+
+std::shared_ptr<CameraSpace::ICamera> Scene::GetActiveCamera() const
+{
+return m_cameraManager.GetActiveCamera();
+}
 }
