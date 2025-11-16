@@ -30,6 +30,7 @@ namespace SceneSpace
                 Core::UpdateContext ctx(deltaTime, timer, input, this);
 
                 Update(ctx);
+                m_cameraManager.Update();
                 m_scheduler.Tick(ctx);
         }
 
@@ -65,5 +66,15 @@ namespace SceneSpace
         const Core::Input* Scene::GetInput() const
         {
                 return m_input;
+        }
+
+        CameraSpace::CameraManager& Scene::GetCameraManager()
+        {
+                return m_cameraManager;
+        }
+
+        const CameraSpace::CameraManager& Scene::GetCameraManager() const
+        {
+                return m_cameraManager;
         }
 }

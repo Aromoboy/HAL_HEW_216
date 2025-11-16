@@ -30,7 +30,7 @@ public:
 
 private:
         std::unique_ptr<Model> m_pModel;
-        std::unique_ptr<CameraDebug> m_pCamera;
+        std::shared_ptr<CameraDebug> m_pCamera;
         std::unique_ptr<SoundManagerEX> m_pManager;
 
         std::unique_ptr<IModelLoader> m_loader;

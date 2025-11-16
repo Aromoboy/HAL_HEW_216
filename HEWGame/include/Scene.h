@@ -1,6 +1,7 @@
 #ifndef __SCENE_H__
 #define __SCENE_H__
 
+#include "CameraManager.h"
 #include "Core/UpdateScheduler.h"
 
 namespace Core
@@ -33,11 +34,14 @@ protected:
         Core::UpdateScheduler& GetUpdateScheduler();
         Core::Input* GetInput();
         const Core::Input* GetInput() const;
+        CameraSpace::CameraManager& GetCameraManager();
+        const CameraSpace::CameraManager& GetCameraManager() const;
 
 private:
         Core::UpdateScheduler m_scheduler;
         bool m_isConfigured;
         Core::Input* m_input;
+        CameraSpace::CameraManager m_cameraManager;
 };
 }
 
