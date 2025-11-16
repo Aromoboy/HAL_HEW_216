@@ -1,5 +1,7 @@
 #pragma once
 
+
+
 namespace Core
 {
         class StepTimer;
@@ -10,6 +12,7 @@ namespace SceneSpace
 {
         class Scene;
 }
+
 
 namespace Core
 {

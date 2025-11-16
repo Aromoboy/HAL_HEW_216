@@ -44,6 +44,7 @@
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\PhysicalEntity.cpp" />
+    <ClCompile Include="src\Player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -93,6 +94,7 @@
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\AABBCollider.h" />
+    <ClInclude Include="include\Player.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

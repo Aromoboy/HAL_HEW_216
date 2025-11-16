@@ -46,6 +46,8 @@ SceneGame::SceneGame()
         m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
         m_render = std::make_unique<ModelRender>();
+
+        
 }
 
 SceneGame::~SceneGame()

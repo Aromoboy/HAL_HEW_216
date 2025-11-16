@@ -6,6 +6,8 @@
 #include "Core/UpdateNode.h"
 #include "Transform.h"
 
+#include "ModelRender.h"
+
 namespace Entity
 {
     class CEntity : public Core::UpdateNode
@@ -19,7 +21,7 @@ namespace Entity
         virtual void OnUpdate(Core::UpdateContext& ctx) override;
 
         // •`‰æˆ—iUpdateNode‚Æ‚Í•Ê‚É“Æ©‚É’è‹`j
-        virtual void Draw();
+        virtual void Draw(ModelRender render, ICamera& camera);
 
         Transform& GetTransform();
 

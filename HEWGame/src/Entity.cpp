@@ -22,7 +22,8 @@ void CEntity::OnUpdate(Core::UpdateContext& ctx)
 {
 }
 
-void CEntity::Draw()
+
+void Entity::CEntity::Draw(ModelRender render, ICamera& camera)
 {
 }
 
