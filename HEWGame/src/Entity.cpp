@@ -1,32 +1,46 @@
 // Entity.cpp
 #include "Entity.h"
 
-using namespace Entity;
-
-CEntity::CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-    Core::UpdatePhase phase, int priority)
-    : Core::UpdateNode(phase, priority)
-    , m_transform()
-    , tag(a_tag)
+namespace SceneSpace
 {
-    m_transform.position = pos;
-    m_transform.rotation = rot;
-    m_transform.scale = scl;
-}
+    Entity::Entity(const std::string& tag,
+        const float3& pos,
+        const float3& rot,
+        const float3& scl,
+        Core::UpdatePhase phase,
+        int priority)
+        : Core::UpdateNode(phase, priority)
+        , m_transform{}
+        , m_tag(tag)
+    {
+        m_transform.position = pos;
+        m_transform.rotation = rot;
+        m_transform.scale = scl;
+    }
 
-CEntity::~CEntity()
-{
-}
+    Entity::~Entity() = default;
 
-void CEntity::OnUpdate(Core::UpdateContext& ctx)
-{
-}
+    void Entity::OnUpdate(Core::UpdateContext& ctx)
+    {
+        (void)ctx;
+    }
 
-void CEntity::Draw()
-{
-}
+    void Entity::Draw()
+    {
+    }
 
-Transform& CEntity::GetTransform()
-{
-    return m_transform;
+    Transform& Entity::GetTransform()
+    {
+        return m_transform;
+    }
+
+    const Transform& Entity::GetTransform() const
+    {
+        return m_transform;
+    }
+
+    const std::string& Entity::GetTag() const
+    {
+        return m_tag;
+    }
 }

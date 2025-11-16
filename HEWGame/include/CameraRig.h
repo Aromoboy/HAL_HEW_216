@@ -4,6 +4,7 @@
 
 #include "BaseCamera.h"
 #include "Core/UpdateNode.h"
+#include "Entity.h"
 #include "Vector.h"
 
 namespace SceneSpace
@@ -12,6 +13,9 @@ namespace SceneSpace
 }
 
 class CameraRig : public Core::UpdateNode
+// Entity をフル定義に合わせたので、カメラのターゲットやアンカーを
+// 直接参照できるようになった。Transform を通して位置取得ができる
+
 {
 public:
         explicit CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera = nullptr);

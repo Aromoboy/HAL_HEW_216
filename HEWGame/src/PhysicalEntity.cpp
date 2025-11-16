@@ -1,23 +1,28 @@
 // PhysicalEntity.cpp
 #include "PhysicalEntity.h"
 
-using namespace Entity;
-
-PhysicalEntity::PhysicalEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-    std::shared_ptr<Collision::ICollider> collider,
-    float3 velocity, float3 force,
-    float weight, float damping,
-    Core::UpdatePhase phase, int priority)
-    : CollisionEntity(a_tag, pos, rot, scl, collider, phase, priority)
-    , m_physical(velocity, force, weight, damping)
+namespace SceneSpace
 {
-}
+    PhysicalEntity::PhysicalEntity(const std::string& tag,
+        const float3& pos,
+        const float3& rot,
+        const float3& scl,
+        std::shared_ptr<Collision::ICollider> collider,
+        const float3& velocity,
+        const float3& force,
+        float weight,
+        float damping,
+        Core::UpdatePhase phase,
+        int priority)
+        : CollisionEntity(tag, pos, rot, scl, std::move(collider), phase, priority)
+        , m_physical(velocity, force, weight, damping)
+    {
+    }
 
-PhysicalEntity::~PhysicalEntity()
-{
-}
+    PhysicalEntity::~PhysicalEntity() = default;
 
-Physics::Physical& PhysicalEntity::GetPhysical()
-{
-    return m_physical;
+    Physics::Physical& PhysicalEntity::GetPhysical()
+    {
+        return m_physical;
+    }
 }

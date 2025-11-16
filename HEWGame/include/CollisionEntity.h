@@ -1,27 +1,34 @@
 // CollisionEntity.h
-#ifndef __COLLISIONENTITY_H__
-#define __COLLISIONENTITY_H__
+#pragma once
 
 #include <memory>
 #include "Entity.h"
 #include "ICollider.h"
 
-namespace Entity
+namespace SceneSpace
+// CollisionEntity は Entity を継承するように統一
+// これで Transform や UpdatePhase が共通化され、
+// カメラ・物理・描画など下位システムが一貫した扱いをできる
+
 {
-    class CollisionEntity : public CEntity
+    class CollisionEntity : public Entity
     {
     public:
-        CollisionEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
-            std::shared_ptr<Collision::ICollider> collide,
+ //クラス図に合わせてタグ・Transform・Collider を
+// ひとまとめに扱う設計に変更した
+        CollisionEntity(const std::string& tag,
+            const float3& pos,
+            const float3& rot,
+            const float3& scl,
+            std::shared_ptr<Collision::ICollider> collider,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0);
-        virtual ~CollisionEntity();
-
-        // Colliderの参照を返す
+        ~CollisionEntity() override;
+ // Collider は shared_ptr で管理
+// Physics や CollisionSystem が生ポインタ要求なので get() を返している
         Collision::ICollider* GetCollider();
 
     protected:
         std::shared_ptr<Collision::ICollider> m_collider;
     };
 }
-#endif

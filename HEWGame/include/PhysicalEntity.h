@@ -1,29 +1,41 @@
 // PhysicalEntity.h
 
-#ifndef __PHYSICALENTITY_H__
-#define __PHYSICALENTITY_H__
+#pragma once
+
+#include <memory>
 
 #include "CollisionEntity.h"
 #include "Physical.h"
 
-namespace Entity
+namespace SceneSpace
 {
     class PhysicalEntity : public CollisionEntity
     {
+ // PhysicalEntity は Collision に加えて Physical（速度・力・質量など）を持つ
+// Entity → CollisionEntity → PhysicalEntity の階層に統一
+
     public:
-        PhysicalEntity(std::string a_tag, float3 pos, float3 rot, float3 scl,
+        PhysicalEntity(const std::string& tag,
+            const float3& pos,
+            const float3& rot,
+            const float3& scl,
             std::shared_ptr<Collision::ICollider> collider,
-            float3 velocity, float3 force,
-            float weight = 1.0f, float damping = 0.98f,
+            const float3& velocity,
+            const float3& force,
+            float weight = 1.0f,
+            float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::Physics,
             int priority = 0);
-        virtual ~PhysicalEntity();
+// 物理情報（velocity / force / weight / damping）も
+// Transform と一緒に初期化できるようにした
 
-        // Physicalの参照を返す
+        ~PhysicalEntity() override;
+ // PhysicsMachine がこの Physical を直接操作する
+// そのため参照で返している
+
         Physics::Physical& GetPhysical();
 
     protected:
         Physics::Physical m_physical;
     };
 }
-#endif __PHYSICALENTITY_H__

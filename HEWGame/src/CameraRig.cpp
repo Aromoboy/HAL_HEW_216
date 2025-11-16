@@ -1,4 +1,6 @@
 #include "CameraRig.h"
+// Entity の定義が完全になったので、Transform を直接参照して
+// カメラの追従や回転計算がしやすくなった
 
 #include <sstream>
 #include <utility>
@@ -36,7 +38,8 @@ namespace
                 DirectX::XMStoreFloat3(&temp, value);
                 return float3{ temp.x, temp.y, temp.z };
         }
-
+// オフセットをヤー・ピッチで回転させて、
+// カメラの相対位置を柔軟にコントロールするためのヘルパー
         DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
         {
                 DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
