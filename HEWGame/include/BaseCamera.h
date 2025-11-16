@@ -36,6 +36,10 @@ namespace CameraSpace
                 void MarkViewDirty();
                 void MarkProjectionDirty();
 
+        protected:
+                mutable DirectX::XMFLOAT4X4 m_projection;
+                mutable bool m_projectionDirty;
+
         private:
                 bool ValidatePosition(const float3& position) const;
                 bool ValidateRotation(const float3& rotation) const;
@@ -51,8 +55,6 @@ namespace CameraSpace
                 float m_farPlane;
 
                 mutable DirectX::XMFLOAT4X4 m_view;
-                mutable DirectX::XMFLOAT4X4 m_projection;
                 mutable bool m_viewDirty;
-                mutable bool m_projectionDirty;
         };
 }
