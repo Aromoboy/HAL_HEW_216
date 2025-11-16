@@ -1,31 +1,30 @@
-#ifndef ___ENTITY_H___
-#define ___ENTITY_H___
+#pragma once
 
 #include "Transform.h"
-#include "ModelRender.h"
+
 #include <string>
 
-class CEntity
-{
-public:
+class ModelRender;
+
 namespace SceneSpace
 {
-	using Entity = CEntity;
+        class Entity
+        {
+        public:
+                explicit Entity(std::string tag = {},
+                        const float3& position = { 0.0f, 0.0f, 0.0f },
+                        const float3& rotation = { 0.0f, 0.0f, 0.0f },
+                        const float3& scale = { 1.0f, 1.0f, 1.0f });
+                virtual ~Entity();
+
+                virtual void OnUpdate();
+                virtual void Draw(ModelRender& renderer);
+
+                Transform& GetTransform();
+                const Transform& GetTransform() const;
+
+        private:
+                Transform m_transform;
+                std::string m_tag;
+        };
 }
-
-#endif 
-	CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl);
-	//デストラクタ
-	~CEntity();
-
-	void OnUpdate();
-	void Draw(ModelRender);
-	Transform& GetTransform();
-	
-private:
-	Transform m_transform;
-	std::string tag;
-	
-};
-
-#endif 

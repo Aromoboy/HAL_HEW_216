@@ -4,6 +4,8 @@
 #include "CameraManager.h"
 #include "Core/UpdateScheduler.h"
 
+#include <memory>
+
 namespace Core
 {
         class StepTimer;
@@ -17,31 +19,35 @@ namespace SceneSpace
 class Scene
 {
 public:
-        void RootUpdate(Core::StepTimer& timer, Core::Input& input);
-        void RootDraw();
+void RootUpdate(Core::StepTimer& timer, Core::Input& input);
+void RootDraw();
 
-        Scene();
-        virtual ~Scene();
-        virtual void Draw() = 0;
+Scene();
+virtual ~Scene();
+virtual void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) = 0;
 
 protected:
-        virtual void ConfigureUpdates();
-        virtual void Update(Core::UpdateContext& ctx) = 0;
+virtual void ConfigureUpdates();
+virtual void Update(Core::UpdateContext& ctx) = 0;
 
-        void Register(Core::IUpdatable& node);
-        void Unregister(Core::IUpdatable& node);
+void Register(Core::IUpdatable& node);
+void Unregister(Core::IUpdatable& node);
 
-        Core::UpdateScheduler& GetUpdateScheduler();
-        Core::Input* GetInput();
-        const Core::Input* GetInput() const;
-        CameraSpace::CameraManager& GetCameraManager();
-        const CameraSpace::CameraManager& GetCameraManager() const;
+Core::UpdateScheduler& GetUpdateScheduler();
+Core::Input* GetInput();
+const Core::Input* GetInput() const;
+CameraSpace::CameraManager& GetCameraManager();
+const CameraSpace::CameraManager& GetCameraManager() const;
+std::shared_ptr<CameraSpace::ICamera> AddCamera(std::shared_ptr<CameraSpace::ICamera> camera);
+void SetActiveCamera(const std::shared_ptr<CameraSpace::ICamera>& camera);
+std::shared_ptr<CameraSpace::ICamera> GetActiveCamera() const;
 
 private:
-        Core::UpdateScheduler m_scheduler;
-        bool m_isConfigured;
-        Core::Input* m_input;
-        CameraSpace::CameraManager m_cameraManager;
+Core::UpdateScheduler m_scheduler;
+bool m_isConfigured;
+Core::Input* m_input;
+CameraSpace::CameraManager m_cameraManager;
+bool m_warnedAboutMissingCameraForDraw;
 };
 }
 
