@@ -23,7 +23,7 @@ DirectX::XMFLOAT4X4 ICamera::GetProjectionMatrix(bool transpose)
 {
 	DirectX::XMFLOAT4X4 mat;
 
-	DrawMatrix::CreateProjectionMatrix(mat, m_fovy, m_far, m_near, m_far, transpose);
+        DrawMatrix::CreateProjectionMatrix(mat, m_fovy, m_aspect, m_near, m_far, transpose);
 
-	return mat;
+        return mat;
 }
