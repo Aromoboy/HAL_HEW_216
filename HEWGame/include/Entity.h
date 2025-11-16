@@ -8,9 +8,14 @@
 class CEntity
 {
 public:
-	//コンストラクタ
+namespace SceneSpace
+{
+	using Entity = CEntity;
+}
+
+#endif 
 	CEntity(std::string a_tag, float3 pos, float3 rot, float3 scl);
-	//デストラクタ
+	//繝�繧ｹ繝医Λ繧ｯ繧ｿ
 	~CEntity();
 
 	void OnUpdate();

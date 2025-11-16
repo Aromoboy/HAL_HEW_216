@@ -6,6 +6,8 @@
 
 #include <DirectXMath.h>
 
+class CameraRig;
+
 namespace CameraSpace
 {
         class BaseCamera : public ICamera
@@ -30,6 +32,7 @@ namespace CameraSpace
                 const Components::Transform& GetTransform() const;
 
         protected:
+                friend class ::CameraRig;
                 void RecalculateView() override;
                 virtual void UpdateProjection();
 
