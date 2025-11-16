@@ -7,13 +7,11 @@
 class ModelRender
 {
 public:
-	ModelRender();
-	~ModelRender();
+ModelRender();
+~ModelRender();
 
-
-	void Draw(ModelDX&, ICamera&);
-
+void Draw(ModelDX& model, const CameraSpace::ICamera* camera);
 
 private:
-	void MeshDraw(MeshDX&);
+void MeshDraw(MeshDX&);
 };
