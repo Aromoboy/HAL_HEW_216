@@ -22,13 +22,13 @@ namespace CameraSpace
 
                 void SetPosition(const float3& position);
                 void SetRotation(const float3& rotation);
+                void SetTransform(const Components::Transform& transform);
                 void SetPriority(int priority);
                 void SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane);
 
                 const float3& GetPosition() const;
                 const float3& GetRotation() const;
                 int GetPriority() const;
-                Components::Transform& GetTransform();
                 const Components::Transform& GetTransform() const;
 
         protected:
@@ -38,6 +38,11 @@ namespace CameraSpace
 
                 void MarkViewDirty();
                 void MarkProjectionDirty();
+
+#if defined(_DEBUG)
+                void DebugCheckTransformIntegrity(const char* caller) const;
+                void DebugUpdateTransformSnapshot();
+#endif
 
         protected:
                 mutable DirectX::XMFLOAT4X4 m_projection;
@@ -59,5 +64,10 @@ namespace CameraSpace
 
                 mutable DirectX::XMFLOAT4X4 m_view;
                 mutable bool m_viewDirty;
+
+#if defined(_DEBUG)
+                mutable Components::Transform m_debugLastTransformSnapshot;
+                mutable bool m_debugHasTransformSnapshot;
+#endif
         };
 }
