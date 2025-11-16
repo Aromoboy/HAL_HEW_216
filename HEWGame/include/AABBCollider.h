@@ -4,26 +4,28 @@
 #include "AABB.h"
 #include "Transform.h"
 
-
-class  AABBCollider
+namespace Collision
 {
-public:
-	AABBCollider(Transform a_transform, bool a_isTrigger, float a_expand, float3 a_offset);
-	~ AABBCollider() = default;
 
-	// ICollider‚ªŽÀ‘•‚³‚ê‚½‚ç‚»‚¿‚ç‚É’u‚«Š·‚¦‚é
-	bool CheckCollision(const Collision::ICollider& other);
-	void UpdateBounds(Transform t);
+	class  AABBCollider : public Collision::ICollider
+	{
+	public:
+		AABBCollider(Transform a_transform, bool a_isTrigger = false, float a_expand = 1.0f, float3 a_offset = float3{ 0.0f, 0.0f, 0.0f });
+		~AABBCollider() = default;
 
-	bool IsTrriger();
-	const AABB GetAABB();
+		// ICollider‚ªŽÀ‘•‚³‚ê‚½‚ç‚»‚¿‚ç‚É’u‚«Š·‚¦‚é
+		bool CheckCollision(const Collision::ICollider& other) override;
+		void UpdateBounds(const Transform& transform) override;
 
-private:
-	AABB aabb;
-	bool isTrigger;
-	float expand;
-	float3 offset;
+		bool IsTrriger();
+		AABB GetAABB() const override;
 
-};
+	private:
+		AABB aabb;
+		bool isTrigger;
+		float expand;
+		float3 offset;
 
- 
+	};
+
+}
