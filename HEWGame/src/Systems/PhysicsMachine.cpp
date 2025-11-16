@@ -65,7 +65,7 @@ namespace Systems
                 return m_system;
         }
 
-        void PhysicsMachine::RegisterBody(SceneSpace::PhysicalEntity& body)
+        void PhysicsMachine::RegisterBody(Entity::PhysicalEntity& body)
         {
                 auto* bodyPtr = &body;
                 if (std::find(m_bodies.begin(), m_bodies.end(), bodyPtr) != m_bodies.end())
@@ -81,7 +81,7 @@ namespace Systems
                 m_bodies.push_back(bodyPtr);
         }
 
-        void PhysicsMachine::UnregisterBody(SceneSpace::PhysicalEntity& body)
+        void PhysicsMachine::UnregisterBody(Entity::PhysicalEntity& body)
         {
                 auto* bodyPtr = &body;
                 auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
@@ -118,7 +118,7 @@ namespace Systems
                         return;
                 }
 
-                for (SceneSpace::PhysicalEntity* body : m_bodies)
+                for (Entity::PhysicalEntity* body : m_bodies)
                 {
                         if (!body)
                         {
