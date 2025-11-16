@@ -3,7 +3,6 @@
 
 #include "Scene.h"
 #include "Model.h"
-#include "ICamera.h"
 #include "TestObject.h"
 #include "SoundManagerEX.h"
 

@@ -102,8 +102,8 @@ void SceneGame::Draw()
         // 描画確認用の数値
 
         // カメラの設定
-        Geometory::SetView(m_pCamera->GetViewMatrix());
-        Geometory::SetProjection(m_pCamera->GetProjectionMatrix());
+        Geometory::SetView(m_pCamera->GetView());
+        Geometory::SetProjection(m_pCamera->GetProjection());
 
         m_render->Draw(*m_model, *m_pCamera);
 }
