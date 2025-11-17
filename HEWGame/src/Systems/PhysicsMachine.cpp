@@ -65,6 +65,11 @@ namespace Systems
                 return m_system;
         }
 
+        const std::vector<SceneSpace::PhysicalEntity*>& PhysicsMachine::GetBodies() const
+        {
+                return m_bodies;
+        }
+
         void PhysicsMachine::RegisterBody(SceneSpace::PhysicalEntity& body)
         {
                 auto* bodyPtr = &body;

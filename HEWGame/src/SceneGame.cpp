@@ -8,6 +8,7 @@
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
+#include "Systems/ContactLiteSystem.h"
 #include "GravityDampingSystem.h"
 #include "AABBCollider.h"
 #include "ModelCache.h"
@@ -15,6 +16,7 @@
 
 
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <fstream>
@@ -51,6 +53,8 @@ namespace
         {
             float gravity = 9.8f;
             float damping = 0.98f;
+            float penetrationTolerance = 0.01f;
+            float restitution = 0.15f;
         };
 
         std::string TrimWhitespace(const std::string& input)
@@ -82,7 +86,9 @@ namespace
                 std::ostringstream oss;
                 oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
                     << "'. Using defaults (gravity=" << settings.gravity
-                    << ", damping=" << settings.damping << ").\n";
+                    << ", damping=" << settings.damping
+                    << ", penetrationTolerance=" << settings.penetrationTolerance
+                    << ", restitution=" << settings.restitution << ").\n";
                 DebugTrace(oss.str());
                 return settings;
             }
@@ -130,6 +136,14 @@ namespace
                     {
                         settings.damping = std::stof(value);
                     }
+                    else if (key == "penetrationTolerance")
+                    {
+                        settings.penetrationTolerance = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "restitution")
+                    {
+                        settings.restitution = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
                     else
                     {
                         std::ostringstream oss;
@@ -149,7 +163,10 @@ namespace
 
             std::ostringstream oss;
             oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
-                << "' (gravity=" << settings.gravity << ", damping=" << settings.damping << ").\n";
+                << "' (gravity=" << settings.gravity
+                << ", damping=" << settings.damping
+                << ", penetrationTolerance=" << settings.penetrationTolerance
+                << ", restitution=" << settings.restitution << ").\n";
             DebugTrace(oss.str());
             return settings;
         }
@@ -227,9 +244,21 @@ SceneGame::SceneGame()
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
     m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
+    m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
+        if (m_contactSystem)
+        {
+            const auto& bodies = m_physicsMachine->GetBodies();
+            m_contactSystem->SetBodySource(&bodies);
+        }
+    }
+
+    if (m_contactSystem)
+    {
+        m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
+        m_contactSystem->SetRestitution(tuning.restitution);
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -293,8 +322,6 @@ SceneGame::SceneGame()
     // 描画テスト用
     m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
-    m_physicsMachine->SetSystem(std::make_shared<Systems::GravityDampingSystem>());
-
     m_render = std::make_unique<ModelRender>();
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
@@ -326,6 +353,12 @@ SceneGame::~SceneGame()
                 m_physicsRegistered = false;
         }
 
+        if (m_contactRegistered && m_contactSystem)
+        {
+                GetUpdateScheduler().Unregister(*m_contactSystem);
+                m_contactRegistered = false;
+        }
+
         if (m_cameraRigRegistered && m_cameraRig)
         {
                 Unregister(*m_cameraRig);
@@ -350,6 +383,12 @@ void SceneGame::ConfigureUpdates()
         {
                 GetUpdateScheduler().Register(*m_physicsMachine);
                 m_physicsRegistered = true;
+        }
+
+        if (m_contactSystem && !m_contactRegistered)
+        {
+                GetUpdateScheduler().Register(*m_contactSystem);
+                m_contactRegistered = true;
         }
 
         if (m_cameraRig && !m_cameraRigRegistered)
