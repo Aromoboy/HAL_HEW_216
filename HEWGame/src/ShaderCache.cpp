@@ -6,7 +6,7 @@
 //============================================================
 // シェーダープログラムをロードしてキャッシュに登録
 //============================================================
-ShaderProgram& ShaderCache::Load(const std::string& name,
+std::shared_ptr<ShaderProgram> ShaderCache::Load(const std::string& name,
     ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
@@ -14,7 +14,7 @@ ShaderProgram& ShaderCache::Load(const std::string& name,
     // キャッシュにすでに存在するか確認
     auto it = programs.find(name);
     if (it != programs.end())
-        return *it->second;
+        return it->second;
 
     // 新しいシェーダープログラムを作成
     auto shader = std::make_unique<ShaderProgram>();
@@ -27,19 +27,19 @@ ShaderProgram& ShaderCache::Load(const std::string& name,
     // キャッシュに登録
     ShaderProgram& ref = *shader;
     programs[name] = std::move(shader);
-    return ref;
+    return programs[name];
 }
 
 //============================================================
 // キャッシュからシェーダープログラムを取得
 //============================================================
-ShaderProgram& ShaderCache::Get(const std::string& name)
+std::shared_ptr<ShaderProgram> ShaderCache::Get(const std::string& name)
 {
     auto it = programs.find(name);
     if (it == programs.end())
         throw std::runtime_error("シェーダーが見つかりません: " + name);
 
-    return *it->second;
+    return programs[name];
 }
 
 //============================================================

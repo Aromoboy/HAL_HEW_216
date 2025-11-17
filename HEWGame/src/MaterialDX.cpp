@@ -1,6 +1,6 @@
 #include "MaterialDX.h"
 
-MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, ID3D11ShaderResourceView* a_texture)
+MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
 	: m_diffuse(diffuse)
 	, m_ambient(ambient)
 	, m_specular(specular)
@@ -9,14 +9,13 @@ MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, Dir
 
 MaterialDX::~MaterialDX()
 {
-	if (m_texture)m_texture->Release();
 }
 
 
 //	ŠeŽíƒQƒbƒ^
 ID3D11ShaderResourceView* MaterialDX::GetTexture() const
 {
-	return m_texture;
+	return m_texture->Get();
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
@@ -27,6 +26,7 @@ DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
 DirectX::XMFLOAT4 MaterialDX::GetAmbient() const
 {
 	return m_ambient;
+
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetSpecular() const
