@@ -50,6 +50,10 @@
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
     <ClCompile Include="src\GravityDampingSystem.cpp" />
+    <ClCompile Include="Cake.cpp" />
+    <ClCompile Include="Sherbet.cpp" />
+    <ClCompile Include="Pdding.cpp" />
+    <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
   <!-- ==================== -->
   <!-- All .h with filters  -->
@@ -106,6 +110,10 @@
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\GravityDampingSystem.h" />
+    <ClInclude Include="Cake.h" />
+    <ClInclude Include="Sherbet.h" />
+    <ClInclude Include="Pdding.h" />
+    <ClInclude Include="Sweets.h" />
   </ItemGroup>
   <!-- =================== -->
   <!-- Filter definitions  -->
