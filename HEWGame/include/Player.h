@@ -33,7 +33,7 @@ namespace SceneSpace
 
         virtual void OnUpdate(Core::UpdateContext& ctx) override;
 
-        virtual void Draw(ModelRender render, CameraSpace::ICamera& camera);
+        virtual void Draw(ModelRender& render, CameraSpace::ICamera& camera);
 
         void HandleInput(Core::Input input);
 

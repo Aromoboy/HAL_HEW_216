@@ -59,9 +59,9 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
 }
 
-void SceneSpace::Player::Draw(ModelRender render, CameraSpace::ICamera& camera)
+void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
 {
-	render.Draw(*model,&camera);
+	render.Draw(*model, m_transform, &camera);
 }
 
 void SceneSpace::Player::HandleInput(Core::Input input)
