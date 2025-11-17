@@ -1,12 +1,14 @@
 // GravityDampingSystem.cpp
 #include "GravityDampingSystem.h"
 #include "PhysicalEntity.h"
+#include <algorithm>
+#include <cmath>
 
 using namespace Systems;
 
 GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
     : m_gravity(gravity)
-    , m_damping(damping)
+    , m_damping(std::clamp(damping, 0.0f, 1.0f))
 {
 }
 
@@ -19,7 +21,7 @@ void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
     physical.velocity.y -= m_gravity * dt;
 
     // 速度に減衰を適用（フレームレート独立）
-    float dampingFactor = pow(m_damping, dt);
+    const float dampingFactor = std::pow(m_damping, dt);
     physical.velocity.x *= dampingFactor;
     physical.velocity.y *= dampingFactor;
     physical.velocity.z *= dampingFactor;
