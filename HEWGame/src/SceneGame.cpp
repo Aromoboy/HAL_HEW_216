@@ -66,6 +66,19 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr BYTE kConfirmInputKey = VK_RETURN;
         constexpr BYTE kRetryInputKey = 'R';
+        const HudLayoutConfig kHudLayoutConfig
+        {
+            512u,
+            192u,
+            32.0f,
+            12.0f,
+            28.0f,
+            5.0f,
+            1.5f,
+            2.0f,
+            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
+        };
 
         struct PhysicsTuningSettings
         {
@@ -326,6 +339,22 @@ SceneGame::SceneGame()
         });
     }
 
+    m_hudRenderer = std::make_unique<HudRenderer>();
+    if (m_hudRenderer && !m_hudRenderer->Initialize(kHudLayoutConfig))
+    {
+        DebugTrace(std::string(kLogPrefix) + "HUD renderer failed to initialize; overlay disabled.\n");
+        m_hudRenderer.reset();
+    }
+    else if (m_hudRenderer)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "HUD renderer initialized (texture="
+            << kHudLayoutConfig.textureWidth << 'x' << kHudLayoutConfig.textureHeight
+            << ", margin=" << kHudLayoutConfig.marginPixels
+            << ", warningThreshold=" << kHudLayoutConfig.warningThresholdSeconds << "s).\n";
+        DebugTrace(oss.str());
+    }
+
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
@@ -446,6 +475,11 @@ SceneGame::SceneGame()
 
 SceneGame::~SceneGame()
 {
+    if (m_hudRenderer)
+    {
+        m_hudRenderer->Shutdown();
+        m_hudRenderer.reset();
+    }
     if (m_stagePlatformRegistered && m_stagePlatform)
     {
         Unregister(*m_stagePlatform);
@@ -663,7 +697,21 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         }
 
         m_drawSystem->RenderQueued(activeCamera);
+
+        if (m_hudRenderer)
+        {
+                HudDisplayData hudData{};
+                hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+                hudData.currentHeight = m_currentTowerHeight;
+                hudData.peakHeight = m_peakTowerHeight;
+                hudData.score = ComputeScore();
+                hudData.timeUp = m_timeUp;
+                m_hudRenderer->Draw(hudData);
+        }
+
+#if defined(_DEBUG)
         RenderRunTelemetryOverlay();
+#endif
 }
 
 void SceneGame::ApplyCameraPrototype(size_t index)
@@ -1041,6 +1089,7 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     }
 }
 
+#if defined(_DEBUG)
 void SceneGame::RenderRunTelemetryOverlay() const
 {
 #if defined(_WIN32)
@@ -1079,6 +1128,7 @@ void SceneGame::RenderRunTelemetryOverlay() const
     (void)this;
 #endif
 }
+#endif
 
 int SceneGame::ComputeScore() const
 {
