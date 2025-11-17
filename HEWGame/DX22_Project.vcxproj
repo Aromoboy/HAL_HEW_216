@@ -200,6 +200,7 @@
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
+    <ClCompile Include="src\Systems\DrawSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderCache.cpp" />
@@ -232,6 +233,7 @@
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\Player.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
+    <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />
     <ClInclude Include="include\Defines.h" />
     <ClInclude Include="include\DirectX.h" />

@@ -34,6 +34,7 @@ namespace Systems
     class PhysicsMachine;
     class GravityDampingSystem;
     class ContactLiteSystem;
+    class DrawSystem;
 }
 
 class SceneGame : public SceneSpace::Scene
@@ -67,11 +68,13 @@ private:
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
     std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
+    std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_contactRegistered = false;
     bool m_cameraRigRegistered = false;
+    bool m_drawRegistered = false;
     size_t m_activeCameraPrototypeIndex = 0;
 };
 

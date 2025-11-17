@@ -1,8 +1,31 @@
 // Entity.cpp
 #include "Entity.h"
 
+#include <sstream>
+#include <string>
 
-#include "ModelCache.h"
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+#include "ModelDX.h"
+
+namespace
+{
+        void DebugTrace(const std::string& message)
+        {
+#if defined(_WIN32) && defined(_DEBUG)
+                ::OutputDebugStringA(message.c_str());
+#else
+                (void)message;
+#endif
+        }
+
+        constexpr const char* kLogPrefix = "[Entity] ";
+}
 
 namespace SceneSpace
 {
@@ -30,15 +53,35 @@ namespace SceneSpace
 
     void Entity::Draw(ModelRender render, CameraSpace::ICamera& Camera)
     {
+        ModelDX* model = GetRenderableModel();
+        if (!model)
+        {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Draw skipped: no renderable model assigned. tag='" << m_tag
+                    << "' entity=" << this << "\n";
+                DebugTrace(oss.str());
+#endif
+                return;
+        }
 
-        Render::ModelCache& instance = Render::ModelCache::Instance();
-
-       std::shared_ptr<ModelDX> model = instance.Get("Assets/Model/LowPolyNature/BoxsLam.fbx");
-         
-       render.Draw(*model, m_transform, &Camera);
+        render.Draw(*model, m_transform, &Camera);
     }
 
-    
+    ModelDX* Entity::GetRenderableModel()
+    {
+        return nullptr;
+    }
+
+    const ModelDX* Entity::GetRenderableModel() const
+    {
+        return nullptr;
+    }
+
+    bool Entity::IsRenderable() const
+    {
+        return GetRenderableModel() != nullptr;
+    }
 
     Transform& Entity::GetTransform()
     {

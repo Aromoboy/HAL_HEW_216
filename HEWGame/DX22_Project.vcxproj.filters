@@ -35,6 +35,7 @@
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
+    <ClCompile Include="src\Systems\DrawSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderCache.cpp" />
@@ -98,6 +99,7 @@
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
+    <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\ShaderCache.h" />

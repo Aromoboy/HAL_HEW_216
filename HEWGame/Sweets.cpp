@@ -2,7 +2,7 @@
 
 namespace SweetsSpace
 {
-    // ƒRƒ“ƒXƒgƒ‰ƒNƒ^Fƒ‚ƒfƒ‹‚ğó‚¯æ‚èATransform ‚ğ‰Šú‰»
+    // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ï¼šãƒ¢ãƒ‡ãƒ«ã‚’å—ã‘å–ã‚Šã€Transform ã‚’åˆæœŸåŒ–
     BaseSweets::BaseSweets(const std::string& tag,
                            std::shared_ptr<ModelDX> model,
                            const float3& pos,
@@ -19,19 +19,29 @@ namespace SweetsSpace
         ,m_model(model)
     { }
 
-    // XVˆ—
+
+    ModelDX* BaseSweets::GetRenderableModel()
+    {
+        return m_model.get();
+    }
+
+    const ModelDX* BaseSweets::GetRenderableModel() const
+    {
+        return m_model.get();
+    }
+    // æ›´æ–°å‡¦ç†
     void BaseSweets::OnUpdate(const Core::UpdateContext& ctx)
     {
         (void)ctx;
     }
 
-    // •`‰æˆ—
+    // æç”»å‡¦ç†
     void BaseSweets::Draw(ModelRender& render, const std::shared_ptr<CameraSpace::ICamera>& cam)
     {
         if (!m_model) return;
 
-        // ModelRender ‚É“n‚µ‚Ä•`‰æ
-        // cam.get() ‚Å shared_ptr ‚©‚çƒ|ƒCƒ“ƒ^‚ğæ“¾
+        // ModelRender ã«æ¸¡ã—ã¦æç”»
+        // cam.get() ã§ shared_ptr ã‹ã‚‰ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—
         render.Draw(*m_model, GetTransform(), cam.get());
     }
 }

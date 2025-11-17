@@ -8,13 +8,19 @@
 #include "ModelRender.h"
 #include "ICamera.h"
 
+class ModelDX;
+
 namespace SceneSpace
 {
     class Entity : public Core::UpdateNode
-// Entity ‚ÍƒQ[ƒ€“àƒIƒuƒWƒFƒNƒg‚ÌÅ¬’PˆÊ
-// Transform / UpdatePhase / Tag ‚ğ‚Ü‚Æ‚ß‚ÄŠÇ—‚·‚éŠî’êƒNƒ‰ƒX
-// ŠeƒTƒuƒNƒ‰ƒXiCollisionEntity / PhysicalEntity / Camera anchors “™j‚Í
-// ‚±‚Ì‹¤’ÊƒCƒ“ƒ^[ƒtƒF[ƒX‚ğ‘O’ñ‚É“®‚­
+
+        virtual ModelDX* GetRenderableModel();
+        virtual const ModelDX* GetRenderableModel() const;
+        virtual bool IsRenderable() const;
+// Entity ã¯ã‚²ãƒ¼ãƒ å†…ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®æœ€å°å˜ä½
+// Transform / UpdatePhase / Tag ã‚’ã¾ã¨ã‚ã¦ç®¡ç†ã™ã‚‹åŸºåº•ã‚¯ãƒ©ã‚¹
+// å„ã‚µãƒ–ã‚¯ãƒ©ã‚¹ï¼ˆCollisionEntity / PhysicalEntity / Camera anchors ç­‰ï¼‰ã¯
+// ã“ã®å…±é€šã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹ã‚’å‰æã«å‹•ã
 
     {
     public:
@@ -29,11 +35,11 @@ namespace SceneSpace
         void OnUpdate(Core::UpdateContext& ctx) override;
 
         virtual void Draw(ModelRender render, CameraSpace::ICamera& Camera);
- // Transform ‚ÌƒfƒtƒHƒ‹ƒg’l‚ğ‹–‰Â‚µ‚ÄA
-// ‚Ç‚Ì–|–ó’PˆÊ‚Å‚àŒy‚­g‚¦‚é‚æ‚¤‚É‚µ‚½
-// ipos / rot / scale ‚ğ–ˆ‰ñw’è‚µ‚È‚­‚ÄOKj
- // Transform ‚Ö‚Ì mutable / const ƒAƒNƒZƒX
-// CameraRigEPhysicsMachine ‚È‚Ç‚ª’¼ÚQÆ‚·‚é‘O’ñ
+ // Transform ã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’è¨±å¯ã—ã¦ã€
+// ã©ã®ç¿»è¨³å˜ä½ã§ã‚‚è»½ãä½¿ãˆã‚‹ã‚ˆã†ã«ã—ãŸ
+// ï¼ˆpos / rot / scale ã‚’æ¯å›æŒ‡å®šã—ãªãã¦OKï¼‰
+ // Transform ã¸ã® mutable / const ã‚¢ã‚¯ã‚»ã‚¹
+// CameraRigãƒ»PhysicsMachine ãªã©ãŒç›´æ¥å‚ç…§ã™ã‚‹å‰æ
 
         Transform& GetTransform();
         const Transform& GetTransform() const;

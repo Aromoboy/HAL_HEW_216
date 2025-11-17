@@ -11,7 +11,10 @@ namespace SweetsSpace
     class BaseSweets : public SceneSpace::PhysicalEntity
     {
     public:
-        // ƒRƒ“ƒXƒgƒ‰ƒNƒ^Fƒ‚ƒfƒ‹‚ğó‚¯æ‚è•Û
+        ModelDX* GetRenderableModel() override;
+        const ModelDX* GetRenderableModel() const override;
+
+        // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ï¼šãƒ¢ãƒ‡ãƒ«ã‚’å—ã‘å–ã‚Šä¿æŒ
         BaseSweets(const std::string& tag,
             std::shared_ptr<ModelDX> model,
             const float3& pos,
@@ -27,12 +30,12 @@ namespace SweetsSpace
 
         ~BaseSweets() = default;
 
-        // XVˆ—
+        // æ›´æ–°å‡¦ç†
         void OnUpdate(const Core::UpdateContext& ctx);
-        // •`‰æˆ—
+        // æç”»å‡¦ç†
         void Draw(ModelRender& render, const std::shared_ptr<CameraSpace::ICamera>& cam);
 
     protected:
-        std::shared_ptr<ModelDX> m_model;  // •`‰æ‘ÎÛ‚Ìƒ‚ƒfƒ‹‚ğ•Û
+        std::shared_ptr<ModelDX> m_model;  // æç”»å¯¾è±¡ã®ãƒ¢ãƒ‡ãƒ«ã‚’ä¿æŒ
     };
 }
