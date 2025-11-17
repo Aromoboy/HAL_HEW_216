@@ -36,6 +36,7 @@
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
+    <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -105,6 +106,7 @@
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
+    <ClInclude Include="include\Stage\FoundationPlatform.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />

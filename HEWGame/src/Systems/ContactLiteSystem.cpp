@@ -203,16 +203,35 @@ namespace Systems
                                 const float centerA = GetAxisCenter(boundsA, axis);
                                 const float centerB = GetAxisCenter(boundsB, axis);
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
-                                const float halfPush = pushDistance * 0.5f;
+                                const bool bodyAStatic = !(physA.weight > 0.0f);
+                                const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
                                 float* translationComponentA = SelectAxisComponent(translationA, axis);
                                 float* translationComponentB = SelectAxisComponent(translationB, axis);
 
-                                const float axisPush = axisDir * halfPush;
-                                *translationComponentA += axisPush;
-                                *translationComponentB -= axisPush;
+                                if (!bodyAStatic && !bodyBStatic)
+                                {
+                                        const float halfPush = pushDistance * 0.5f;
+                                        const float axisPush = axisDir * halfPush;
+                                        *translationComponentA += axisPush;
+                                        *translationComponentB -= axisPush;
+                                }
+                                else if (!bodyAStatic && bodyBStatic)
+                                {
+                                        const float axisPush = axisDir * pushDistance;
+                                        *translationComponentA += axisPush;
+                                }
+                                else if (bodyAStatic && !bodyBStatic)
+                                {
+                                        const float axisPush = -axisDir * pushDistance;
+                                        *translationComponentB += axisPush;
+                                }
+                                else
+                                {
+                                        continue;
+                                }
 
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
                                 SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
@@ -226,9 +245,30 @@ namespace Systems
 
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
-                                        const float impulse = -(1.0f + m_restitution) * relativeVelocity * 0.5f;
-                                        *velA += impulse;
-                                        *velB -= impulse;
+                                        float activeBodyCount = 0.0f;
+                                        if (!bodyAStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+                                        if (!bodyBStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+
+                                        if (activeBodyCount <= 0.0f)
+                                        {
+                                                continue;
+                                        }
+
+                                        const float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
+                                        if (!bodyAStatic)
+                                        {
+                                                *velA += impulse;
+                                        }
+                                        if (!bodyBStatic)
+                                        {
+                                                *velB -= impulse;
+                                        }
                                 }
 
                                 ++resolvedPairs;

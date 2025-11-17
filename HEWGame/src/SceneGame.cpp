@@ -387,6 +387,33 @@ if (m_sweetsManager)
     {
         m_drawSystem->SetRenderer(m_render.get());
     }
+    Transform platformTransform{};
+    platformTransform.position = float3{ 0.0f, m_stageData.GetPlatformCenterY(), m_stageData.GetPlaneZ() };
+    platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+    platformTransform.scale = m_stageData.GetPlatformScale();
+    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
+        "StageFoundation",
+        platformTransform,
+        platformCollider,
+        Core::UpdatePhase::PrePhysics,
+        -100);
+    if (m_stagePlatform)
+    {
+        RegisterPhysicsBody(*m_stagePlatform);
+        std::ostringstream oss;
+        const auto& scale = m_stagePlatform->GetTransform().scale;
+        const auto& pos = m_stagePlatform->GetTransform().position;
+        oss << kLogPrefix << "Stage foundation initialized at ("
+            << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+            << scale.x << ',' << scale.y << ',' << scale.z << ").\n";
+        DebugTrace(oss.str());
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to allocate stage foundation platform.\n");
+    }
+
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
     { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
@@ -409,6 +436,12 @@ if (m_sweetsManager)
 
 SceneGame::~SceneGame()
 {
+    if (m_stagePlatformRegistered && m_stagePlatform)
+    {
+        Unregister(*m_stagePlatform);
+        m_stagePlatformRegistered = false;
+    }
+
         UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
         {
@@ -506,6 +539,12 @@ void SceneGame::ConfigureUpdates()
         {
                 GetUpdateScheduler().Register(*m_sweetsManager);
                 m_sweetsRegistered = true;
+        }
+
+        if (m_stagePlatform && !m_stagePlatformRegistered)
+        {
+                Register(*m_stagePlatform);
+                m_stagePlatformRegistered = true;
         }
 
         if (player)
