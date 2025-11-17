@@ -539,7 +539,7 @@ UpdateNode:
 
 ## SweetsPrototype プレースホルダーモデル
 
-`HEWGame/Assets/Model/SweetsPrototype/` には、プロトタイピング用に極めて単純な OBJ メッシュを配置しています。これらは Git で共有されているため、リポジトリをクローンすればそのまま `ModelCache` から参照できます。プレースホルダーモデルと `SweetsType` の対応は `SweetsPrototypeManifest` に集約されています。
+`HEWGame/Assets/Model/SweetsPrototype/` には、プロトタイピング用に極めて単純なOBJメッシュを配置している。これらはGitで共有されているため、リポジトリをクローンすればそのまま`ModelCache`から参照できる。プレースホルダーモデルと`SweetsType`の対応は`SweetsPrototypeManifest`に集約されている。
 
 | SweetsType | ファイル名 | 形状 | 用途 |
 | --- | --- | --- | --- |
