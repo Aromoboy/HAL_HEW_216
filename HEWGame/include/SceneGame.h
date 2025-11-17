@@ -12,6 +12,7 @@
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Player.h"
+#include "Core/StepTimer.h"
 #include "Systems/PhysicsMachine.h"
 #include "Vector.h"
 #include <cstddef>
@@ -37,6 +38,11 @@ namespace Systems
     class DrawSystem;
 }
 
+namespace SweetsSpace
+{
+    class SweetsManager;
+}
+
 class SceneGame : public SceneSpace::Scene
 {
 public:
@@ -55,6 +61,14 @@ private:
     void RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity);
     void UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity);
     void UnregisterAllPhysicsBodies();
+    void ResetPlaySession();
+    void UpdateCountdown(Core::UpdateContext& ctx);
+    void UpdateTowerHeightTelemetry();
+    void ProcessPostGameInput(Core::UpdateContext& ctx);
+    void HandleManualRetryInput(Core::UpdateContext& ctx);
+    void ToggleGameplaySystems(bool enabled);
+    void RenderRunTelemetryOverlay() const;
+    int ComputeScore() const;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
@@ -69,13 +83,23 @@ private:
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
     std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
+    std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_contactRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
+    bool m_sweetsRegistered = false;
     size_t m_activeCameraPrototypeIndex = 0;
+    Core::StepTimer m_countdownTimer;
+    float m_totalPlaySeconds = 0.0f;
+    float m_remainingCountdownSeconds = 0.0f;
+    int m_lastAnnouncedCountdownSeconds = 0;
+    bool m_isPlaying = false;
+    bool m_timeUp = false;
+    float m_currentTowerHeight = 0.0f;
+    float m_peakTowerHeight = 0.0f;
 };
 
 #endif // __SCENE_GAME_H__

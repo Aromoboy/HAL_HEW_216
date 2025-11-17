@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 
@@ -35,6 +36,15 @@ namespace Core
                         }
 
                         m_lastTick = now;
+                        ++m_frameIndex;
+                        return m_deltaSeconds;
+                }
+
+                float Tick(float overrideDeltaSeconds)
+                {
+                        m_deltaSeconds = std::max(0.0f, overrideDeltaSeconds);
+                        m_lastTick = Clock::now();
+                        m_hasLastTick = true;
                         ++m_frameIndex;
                         return m_deltaSeconds;
                 }

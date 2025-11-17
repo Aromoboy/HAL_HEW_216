@@ -1,5 +1,6 @@
 #include "SweetsManager.h"
 
+#include <algorithm>
 #include <sstream>
 #include <utility>
 
@@ -346,6 +347,24 @@ namespace SweetsSpace
             return kEmpty;
         }
         return it->second;
+    }
+
+    float SweetsManager::GetHighestStackedHeight() const
+    {
+        float maxHeight = 0.0f;
+        const auto& stacked = GetByState(SweetsState::Stacked);
+        for (const auto& sweets : stacked)
+        {
+            if (!sweets)
+            {
+                continue;
+            }
+
+            const float height = sweets->GetTransform().position.y;
+            maxHeight = std::max(maxHeight, height);
+        }
+
+        return maxHeight;
     }
 
     void SweetsManager::SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state)
