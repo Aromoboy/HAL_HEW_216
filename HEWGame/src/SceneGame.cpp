@@ -778,6 +778,7 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     {
         m_sweetsManager->NotifyPhaseChanged(newPhase);
     }
+    // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
 void SceneGame::ResetPlaySession()
 {
