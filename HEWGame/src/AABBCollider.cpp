@@ -41,13 +41,13 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 	const AABB otherAABB = other.GetAABB();
 
 
-	// Փ˂Ă邩
-	if (thisAABB.max.x < otherAABB.min.x ||           // xWdȂĂȂΔ
-			thisAABB.min.x > otherAABB.max.x) return false;
+	// X軸方向で重なっているかを確認
+	if (thisAABB.max.x < otherAABB.min.x ||           // X軸方向で分離している
+		thisAABB.min.x > otherAABB.max.x) return false;
 
-	// Փ˂Ă邩
-	if (thisAABB.max.y < otherAABB.min.y ||           // yWdȂĂȂΔ
-			thisAABB.min.y > otherAABB.max.y) return false;
+	// Y軸方向で重なっているかを確認
+	if (thisAABB.max.y < otherAABB.min.y ||           // Y軸方向で分離している
+		thisAABB.min.y > otherAABB.max.y) return false;
 
 	return true;
 
