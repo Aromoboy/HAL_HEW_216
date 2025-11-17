@@ -11,6 +11,7 @@
 #include "GravityDampingSystem.h"
 #include "AABBCollider.h"
 #include "ModelCache.h"
+#include "GravityDampingSystem.h"
 
 
 
@@ -292,7 +293,8 @@ SceneGame::SceneGame()
     // 描画テスト用
     m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
-    
+    m_physicsMachine->SetSystem(std::make_shared<Systems::GravityDampingSystem>());
+
     m_render = std::make_unique<ModelRender>();
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =

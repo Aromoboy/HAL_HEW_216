@@ -24,7 +24,7 @@ namespace SceneSpace
             const float3& force,
             float weight = 1.0f,
             float damping = 0.98f,
-            Core::UpdatePhase phase = Core::UpdatePhase::Physics,
+            Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
 // •¨—î•ñivelocity / force / weight / dampingj‚à
 // Transform ‚Æˆê‚É‰Šú‰»‚Å‚«‚é‚æ‚¤‚É‚µ‚½

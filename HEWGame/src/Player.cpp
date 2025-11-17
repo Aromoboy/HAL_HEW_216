@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "Core/Input.h"
 #include "ModelCache.h"
+#include "Physical.h"
 
 #define PLAYER_KEY_MOVE_UP 0x57		// W
 #define PLAYER_KEY_MOVE_LEFT 0x41	// A
@@ -8,6 +9,7 @@
 #define PLAYER_KEY_MOVE_RIGHT 0x44	// D
 
 #define PlayerSpeed (1.0f)
+#define PlayerSpeed (0.25f)
 
 SceneSpace::Player::Player(std::string a_tag,
 	float3 pos,
@@ -34,19 +36,23 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 	float vectorY = 0.0f;
 
 	if(input.IsKeyTrigger(PLAYER_KEY_MOVE_UP))
+	if(input.IsKeyPress(PLAYER_KEY_MOVE_UP))
 	{
 		vectorY =  PlayerSpeed;
 	}
 	else if (input.IsKeyTrigger(PLAYER_KEY_MOVE_DOWN))
+	else if (input.IsKeyPress(PLAYER_KEY_MOVE_DOWN))
 	{
 		vectorY = -PlayerSpeed;
 	}
 
 	if (input.IsKeyTrigger(PLAYER_KEY_MOVE_LEFT))
+	if (input.IsKeyPress(PLAYER_KEY_MOVE_LEFT))
 	{
 		vectorX = -PlayerSpeed;
 	}
 	else if (input.IsKeyTrigger(PLAYER_KEY_MOVE_RIGHT))
+	else if (input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT))
 	{
 		vectorX =  PlayerSpeed;
 	}
@@ -61,7 +67,11 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
 void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
 {
+<<<<<<< Updated upstream
 	render.Draw(*model, m_transform, &camera);
+=======
+	render.Draw(*model,m_transform,&camera);
+>>>>>>> Stashed changes
 }
 
 void SceneSpace::Player::HandleInput(Core::Input input)
