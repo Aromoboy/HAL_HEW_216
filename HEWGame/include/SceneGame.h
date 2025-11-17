@@ -22,6 +22,7 @@
 #include <memory>
 #include <unordered_set>
 #include <vector>
+#include <limits>
 
 struct CameraPrototypeSettings
 {
@@ -109,6 +110,8 @@ private:
     float m_currentTowerHeight = 0.0f;
     float m_peakTowerHeight = 0.0f;
     float m_maxTowerHeight = 0.0f;
+    mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
+    mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
 };
 
 #endif // __SCENE_GAME_H__

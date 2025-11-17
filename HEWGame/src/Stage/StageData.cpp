@@ -40,6 +40,7 @@ namespace
     };
 
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
+    const float kDefaultRewardMultipliers[] = { 1.0f };
 
     std::string Trim(const std::string& value)
     {
@@ -124,6 +125,7 @@ namespace Stage
 
         std::vector<float> thresholds;
         std::vector<float3> spawnPoints;
+        std::vector<float> rewardMultipliers;
         float planeZ = kDefaultPlaneZ;
         bool planeZSet = false;
         bool parseError = false;
@@ -204,6 +206,19 @@ namespace Stage
                     spawnPoints.push_back(float3{ parsed[0], parsed[1], parsed[2] });
                 }
             }
+            else if (key == "phaseRewardMultipliers")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    rewardMultipliers.insert(rewardMultipliers.end(), parsed.begin(), parsed.end());
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -254,8 +269,12 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
+        const std::size_t requiredMultiplierCount = thresholds.size() + 1;
+        EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount);
+
         m_planeZ = planeZ;
         m_phaseThresholds = thresholds;
+        m_phaseRewardMultipliers = rewardMultipliers;
         m_spawnPoints = spawnPoints;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
@@ -263,6 +282,7 @@ namespace Stage
         std::ostringstream oss;
         oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
             << ", thresholds=" << m_phaseThresholds.size()
+            << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", spawnPoints=" << m_spawnPoints.size()
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
@@ -273,6 +293,11 @@ namespace Stage
     const std::vector<float>& StageData::GetPhaseThresholds() const noexcept
     {
         return m_phaseThresholds;
+    }
+
+    const std::vector<float>& StageData::GetPhaseRewardMultipliers() const noexcept
+    {
+        return m_phaseRewardMultipliers;
     }
 
     const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
@@ -294,6 +319,8 @@ namespace Stage
     {
         m_planeZ = kDefaultPlaneZ;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
+        m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
+        EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
         m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
         m_loadedFromFile = false;
         m_sourcePath.clear();
@@ -305,8 +332,58 @@ namespace Stage
         std::ostringstream oss;
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
+            << " multipliers=" << m_phaseRewardMultipliers.size()
             << " spawnPoints=" << m_spawnPoints.size()
             << " detail=" << detail << "\n";
         DebugTrace(oss.str());
+    }
+
+    void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const
+    {
+        if (requiredCount == 0)
+        {
+            requiredCount = 1;
+        }
+
+        const auto beforeFilter = multipliers.size();
+        multipliers.erase(
+            std::remove_if(multipliers.begin(), multipliers.end(), [](float value)
+                {
+                    return !std::isfinite(value) || value <= 0.0f;
+                }),
+            multipliers.end());
+        if (beforeFilter != multipliers.size())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Filtered " << (beforeFilter - multipliers.size())
+                << " invalid reward multipliers." << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (multipliers.empty())
+        {
+            multipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
+            std::ostringstream oss;
+            oss << kLogPrefix << "No phaseRewardMultipliers provided; using defaults." << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (multipliers.size() < requiredCount)
+        {
+            const float fillValue = multipliers.back();
+            const auto previousSize = multipliers.size();
+            multipliers.resize(requiredCount, fillValue);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Extended reward multipliers from " << previousSize
+                << " to " << multipliers.size() << " entries using fillValue=" << fillValue << ".\n";
+            DebugTrace(oss.str());
+        }
+        else if (multipliers.size() > requiredCount)
+        {
+            multipliers.resize(requiredCount);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Truncated reward multipliers to match phase count (" << requiredCount << ").\n";
+            DebugTrace(oss.str());
+        }
     }
 }
