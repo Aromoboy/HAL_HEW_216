@@ -22,16 +22,21 @@ namespace Systems
         virtual void Apply(SceneSpace::PhysicalEntity& entity, float dt) = 0;
     };
 
+    class IntegrateSystem;
+
     class PhysicsMachine : public Core::UpdateNode
     {
     public:
         using SystemPtr = std::shared_ptr<IPhysicsSystem>;
+        using IntegratorPtr = std::shared_ptr<IntegrateSystem>;
 
         PhysicsMachine();
         ~PhysicsMachine() override = default;
 
         void SetSystem(SystemPtr system);
+        void SetIntegrator(IntegratorPtr integrator);
         SystemPtr GetSystem() const;
+        IntegratorPtr GetIntegrator() const;
         const std::vector<SceneSpace::PhysicalEntity*>& GetBodies() const;
 
 
@@ -46,7 +51,9 @@ namespace Systems
 
     private:
         SystemPtr m_system;
+        IntegratorPtr m_integrator;
         std::vector<SceneSpace::PhysicalEntity*> m_bodies;
         bool m_loggedMissingSystem;
+        bool m_loggedMissingIntegrator;
     };
 }

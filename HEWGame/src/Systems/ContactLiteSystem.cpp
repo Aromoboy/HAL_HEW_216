@@ -203,6 +203,8 @@ namespace Systems
                                 const float centerA = GetAxisCenter(boundsA, axis);
                                 const float centerB = GetAxisCenter(boundsB, axis);
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
+                                Physics::Physical& physA = bodyA->GetPhysical();
+                                Physics::Physical& physB = bodyB->GetPhysical();
                                 const bool bodyAStatic = !(physA.weight > 0.0f);
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
@@ -236,9 +238,6 @@ namespace Systems
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
                                 SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
 
-                                Physics::Physical& physA = bodyA->GetPhysical();
-                                Physics::Physical& physB = bodyB->GetPhysical();
-
                                 float* velA = SelectAxisComponent(physA.velocity, axis);
                                 float* velB = SelectAxisComponent(physB.velocity, axis);
                                 const float relativeVelocity = *velA - *velB;
@@ -268,6 +267,36 @@ namespace Systems
                                         if (!bodyBStatic)
                                         {
                                                 *velB -= impulse;
+                                        }
+                                }
+
+                                if (axis == 1)
+                                {
+                                        if (!bodyAStatic && bodyBStatic && *velA < 0.0f)
+                                        {
+#if defined(_DEBUG)
+                                                const float previousVelocity = *velA;
+#endif
+                                                *velA = 0.0f;
+#if defined(_DEBUG)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
+                                                    << "' from " << previousVelocity << " due to static contact.\n";
+                                                DebugTrace(oss.str());
+#endif
+                                        }
+                                        if (!bodyBStatic && bodyAStatic && *velB < 0.0f)
+                                        {
+#if defined(_DEBUG)
+                                                const float previousVelocity = *velB;
+#endif
+                                                *velB = 0.0f;
+#if defined(_DEBUG)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
+                                                    << "' from " << previousVelocity << " due to static contact.\n";
+                                                DebugTrace(oss.str());
+#endif
                                         }
                                 }
 
