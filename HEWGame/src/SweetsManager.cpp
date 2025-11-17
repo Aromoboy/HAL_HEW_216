@@ -388,6 +388,82 @@ namespace SweetsSpace
         m_lookup.erase(found);
     }
 
+    void SweetsManager::ClearAllSweets()
+    {
+        std::vector<std::shared_ptr<BaseSweets>> sweetsToRemove;
+        sweetsToRemove.reserve(m_lookup.size());
+        size_t totalStatesCleared = 0;
+
+        for (auto& entry : m_byState)
+        {
+            SweetsList& list = entry.second;
+            totalStatesCleared += list.size();
+            for (auto& sweets : list)
+            {
+                if (sweets)
+                {
+                    sweetsToRemove.push_back(sweets);
+                }
+            }
+            list.clear();
+        }
+
+        m_lookup.clear();
+
+        for (const auto& sweets : sweetsToRemove)
+        {
+            if (!sweets)
+            {
+                continue;
+            }
+
+            if (m_scheduler)
+            {
+                m_scheduler->Unregister(*sweets);
+            }
+            else if (!m_warnedMissingScheduler)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "ClearAllSweets could not unregister sweets '" << sweets->GetTag()
+                    << "': scheduler not configured.\n";
+                DebugTrace(oss.str());
+                m_warnedMissingScheduler = true;
+            }
+
+            if (m_physicsMachine)
+            {
+                m_physicsMachine->UnregisterBody(*sweets);
+            }
+            else if (!m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "ClearAllSweets could not unregister physics for sweets '" << sweets->GetTag()
+                    << "': physics machine not configured.\n";
+                DebugTrace(oss.str());
+                m_warnedMissingPhysicsMachine = true;
+            }
+
+            if (m_drawSystem)
+            {
+                m_drawSystem->UnregisterRenderable(*sweets);
+            }
+            else if (!m_warnedMissingDrawSystem)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "ClearAllSweets could not unregister draw entry for sweets '" << sweets->GetTag()
+                    << "': draw system not configured.\n";
+                DebugTrace(oss.str());
+                m_warnedMissingDrawSystem = true;
+            }
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "ClearAllSweets removed " << sweetsToRemove.size()
+            << " sweets across " << m_byState.size() << " states (" << totalStatesCleared
+            << " tracked entries).\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsManager::SetDrawSystem(Systems::DrawSystem* drawSystem)
     {
         if (m_drawSystem == drawSystem)

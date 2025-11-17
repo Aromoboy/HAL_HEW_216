@@ -780,6 +780,32 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
 }
 void SceneGame::ResetPlaySession()
 {
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->ClearAllSweets();
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
+    }
+
+    InitializeStageAnchors();
+    if (m_cameraAnchor && !m_pObjects.empty())
+    {
+        auto& anchorTransform = m_cameraAnchor->GetTransform();
+        anchorTransform.position = m_pObjects.front()->GetPosition();
+        anchorTransform.rotation = m_pObjects.front()->GetfRads();
+        anchorTransform.scale = m_pObjects.front()->GetScale();
+    }
+    else if (!m_cameraAnchor)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped anchor realignment: camera anchor missing.\n");
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
+    }
+
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
