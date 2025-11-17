@@ -218,6 +218,7 @@
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
+    <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -280,6 +281,7 @@
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="Pdding.h" />
     <ClInclude Include="Sherbet.h" />
+    <ClInclude Include="include\SweetsManager.h" />
     <ClInclude Include="Sweets.h" />
   </ItemGroup>
   <ItemGroup>
