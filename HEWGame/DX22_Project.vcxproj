@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -167,7 +167,6 @@
     <ClCompile Include="Cake.cpp" />
     <ClCompile Include="Pdding.cpp" />
     <ClCompile Include="Sherbet.cpp" />
-
     <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
@@ -196,12 +195,9 @@
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
-    <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\PhysicalEntity.cpp" />
-    <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
-    <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderCache.cpp" />
@@ -221,7 +217,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cake.h" />
-
     <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -256,11 +251,8 @@
     <ClInclude Include="include\ModelDX.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
-    <ClInclude Include="include\Player.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
-    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
-    <ClInclude Include="include\SweetsManager.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\ShaderCache.h" />
