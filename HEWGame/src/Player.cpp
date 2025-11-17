@@ -52,13 +52,11 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
                 vectorX = PlayerSpeed;
         }
 
-	if (vectorX != 0.0f || vectorY != 0.0f)
-	{
-		SyncColliderBounds();
-	}
-	m_transform.position.x += vectorX;
-	m_transform.position.y += vectorY;
-	
+        if (vectorX != 0.0f || vectorY != 0.0f)
+        {
+                ApplyTranslation({ vectorX, vectorY, 0.0f });
+        }
+
 
 }
 

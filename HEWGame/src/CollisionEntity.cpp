@@ -62,4 +62,17 @@ namespace SceneSpace
 
         m_collider->UpdateBounds(m_transform);
     }
+
+    void CollisionEntity::ApplyTranslation(const float3& delta)
+    {
+        if (delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f)
+        {
+            return;
+        }
+
+        m_transform.position.x += delta.x;
+        m_transform.position.y += delta.y;
+        m_transform.position.z += delta.z;
+        SyncColliderBounds();
+    }
 }
