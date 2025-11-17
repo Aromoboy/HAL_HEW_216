@@ -58,6 +58,7 @@
     <ClCompile Include="Cake.cpp" />
     <ClCompile Include="Sherbet.cpp" />
     <ClCompile Include="Pdding.cpp" />
+    <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
@@ -97,6 +98,7 @@
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
     <ClInclude Include="include\ModelDX.h" />
+    <ClInclude Include="include\SweetsPrototypeManifest.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Scene.h" />

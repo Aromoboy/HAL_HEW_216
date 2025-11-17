@@ -1,6 +1,7 @@
 #include "SweetsManager.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <fstream>
 #include <iomanip>
@@ -23,6 +24,7 @@
 #include "Pdding.h"
 #include "Sherbet.h"
 #include "Sweets.h"
+#include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
 
@@ -156,17 +158,27 @@ namespace
                 }
             }
 
-            if (kind.empty())
-            {
-                continue;
-            }
-
             if (!(weight > 0.0f))
             {
                 continue;
             }
 
-            weights.push_back({ kind, weight });
+            const auto resolved = SweetsSpace::ParseSweetsType(kind);
+            if (!resolved)
+            {
+                if (outError)
+                {
+                    *outError = true;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "Unknown sweets type '" << kind
+                    << "' in weight definition '" << raw << "'.\n";
+                DebugTrace(oss.str());
+                continue;
+            }
+
+            weights.push_back({ SweetsSpace::ToString(*resolved), weight });
         }
 
         if (weights.empty() && outError)
@@ -205,67 +217,62 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Ground, SweetsList{});
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
+        const auto& manifest = SweetsPrototypeManifest::Instance();
 
         const auto createCollider = [](const Transform& transform, float expand, const float3& offset)
         {
             return std::make_shared<Collision::AABBCollider>(transform, false, expand, offset);
         };
 
+        struct SweetsFactoryConfig
         {
-            const std::string kind = "Cake";
-            const std::string modelPath = "Assets/Model/LowPolyNature/Models/Boxs.fbx";
-            const float colliderExpand = 1.05f;
-            const float3 colliderOffset{ 0.0f, 0.2f, 0.0f };
-            const float weight = 1.35f;
-            const float damping = 0.96f;
+            SweetsType type;
+            float colliderExpand;
+            float3 colliderOffset;
+            float weight;
+            float damping;
+        };
 
-            auto factory = [this, &cache, kind, modelPath, colliderExpand, colliderOffset, weight, damping, createCollider](const Transform& transform)
-                -> std::shared_ptr<BaseSweets>
-            {
-                auto model = cache.Get(modelPath);
-                if (!model)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Model load failed for sweets kind '" << kind
-                        << "' path='" << modelPath << "'.\n";
-                    DebugTrace(oss.str());
-                    return nullptr;
-                }
+        const std::array<SweetsFactoryConfig, 3> kConfigs = { {
+            { SweetsType::Cake, 1.05f, float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f },
+            { SweetsType::Pudding, 0.95f, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f },
+            { SweetsType::Sherbet, 0.9f, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f },
+        } };
 
-                auto collider = createCollider(transform, colliderExpand, colliderOffset);
-                const float3 velocity{ 0.0f, 0.0f, 0.0f };
-                const float3 force{ 0.0f, 0.0f, 0.0f };
-
-                return MakeSweets<Cake>(kind, model, transform, collider, velocity, force, weight, damping, Core::UpdatePhase::Physics, 0);
-            };
-
-            auto [_, inserted] = m_spawner.emplace(kind, std::move(factory));
-            if (!inserted)
+        for (const auto& config : kConfigs)
+        {
+            const auto* descriptor = manifest.Find(config.type);
+            if (!descriptor)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Spawner for kind '" << kind << "' already existed. New factory ignored.\n";
+                oss << kLogPrefix << "Manifest missing prototype for sweets type '"
+                    << SweetsSpace::ToString(config.type) << "'. Skipping spawner registration.\n";
                 DebugTrace(oss.str());
+                continue;
             }
-        }
 
-        {
-            const std::string kind = "Pudding";
-            const std::string modelPath = "Assets/Model/LowPolyNature/Models/pudding.fbx";
-            const float colliderExpand = 0.95f;
-            const float3 colliderOffset{ 0.0f, -0.05f, 0.0f };
-            const float weight = 1.0f;
-            const float damping = 0.98f;
+            const std::string kind = descriptor->key;
+            const std::string modelPath = descriptor->modelPath;
 
-            auto factory = [this, &cache, kind, modelPath, colliderExpand, colliderOffset, weight, damping, createCollider](const Transform& transform)
+            std::ostringstream oss;
+            oss << kLogPrefix << "Registering sweets kind '" << kind
+                << "' with asset '" << modelPath << "'.\n";
+            DebugTrace(oss.str());
+
+            const SweetsType type = config.type;
+
+            auto factory = [this, &cache, kind, modelPath, type, colliderExpand = config.colliderExpand,
+                               colliderOffset = config.colliderOffset, weight = config.weight,
+                               damping = config.damping, createCollider](const Transform& transform)
                 -> std::shared_ptr<BaseSweets>
             {
                 auto model = cache.Get(modelPath);
                 if (!model)
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Model load failed for sweets kind '" << kind
+                    std::ostringstream fail;
+                    fail << kLogPrefix << "Model load failed for sweets kind '" << kind
                         << "' path='" << modelPath << "'.\n";
-                    DebugTrace(oss.str());
+                    DebugTrace(fail.str());
                     return nullptr;
                 }
 
@@ -273,52 +280,31 @@ namespace SweetsSpace
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
 
-                return MakeSweets<Pudding>(kind, model, transform, collider, velocity, force, weight, damping, Core::UpdatePhase::Physics, 0);
-            };
-
-            auto [_, inserted] = m_spawner.emplace(kind, std::move(factory));
-            if (!inserted)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Spawner for kind '" << kind << "' already existed. New factory ignored.\n";
-                DebugTrace(oss.str());
-            }
-        }
-
-        {
-            const std::string kind = "Sherbet";
-            const std::string modelPath = "Assets/Model/LowPolyNature/Models/Ball.fbx";
-            const float colliderExpand = 0.9f;
-            const float3 colliderOffset{ 0.0f, 0.1f, 0.0f };
-            const float weight = 0.85f;
-            const float damping = 0.99f;
-
-            auto factory = [this, &cache, kind, modelPath, colliderExpand, colliderOffset, weight, damping, createCollider](const Transform& transform)
-                -> std::shared_ptr<BaseSweets>
-            {
-                auto model = cache.Get(modelPath);
-                if (!model)
+                switch (type)
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Model load failed for sweets kind '" << kind
-                        << "' path='" << modelPath << "'.\n";
-                    DebugTrace(oss.str());
-                    return nullptr;
+                case SweetsType::Cake:
+                    return MakeSweets<Cake>(kind, model, transform, collider, velocity, force, weight, damping,
+                        Core::UpdatePhase::Physics, 0);
+                case SweetsType::Pudding:
+                    return MakeSweets<Pudding>(kind, model, transform, collider, velocity, force, weight, damping,
+                        Core::UpdatePhase::Physics, 0);
+                case SweetsType::Sherbet:
+                    return MakeSweets<Sherbet>(kind, model, transform, collider, velocity, force, weight, damping,
+                        Core::UpdatePhase::Physics, 0);
+                default:
+                    break;
                 }
 
-                auto collider = createCollider(transform, colliderExpand, colliderOffset);
-                const float3 velocity{ 0.0f, 0.0f, 0.0f };
-                const float3 force{ 0.0f, 0.0f, 0.0f };
-
-                return MakeSweets<Sherbet>(kind, model, transform, collider, velocity, force, weight, damping, Core::UpdatePhase::Physics, 0);
+                return nullptr;
             };
 
             auto [_, inserted] = m_spawner.emplace(kind, std::move(factory));
             if (!inserted)
             {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Spawner for kind '" << kind << "' already existed. New factory ignored.\n";
-                DebugTrace(oss.str());
+                std::ostringstream warn;
+                warn << kLogPrefix << "Spawner for kind '" << kind
+                    << "' already existed. New factory ignored.\n";
+                DebugTrace(warn.str());
             }
         }
 
