@@ -20,8 +20,11 @@ namespace SceneSpace
     class Player : public SceneSpace::PhysicalEntity
     {
     public:
-        // OnUpdate�͊e�h���N���X�Ŏ��ۂ̏����������ꏊ��
-    // Context���󂯎��A�K�v�ȃV�X�e�����ɃA�N�Z�X�ł���
+        ModelDX* GetRenderableModel() override;
+        const ModelDX* GetRenderableModel() const override;
+
+        // OnUpdateは各派生クラスで実際の処理を書く場所だ
+    // Contextを受け取り、必要なシステム情報にアクセスできる
         
 
         Player(std::string a_tag, float3 pos, float3 rot, float3 scl,

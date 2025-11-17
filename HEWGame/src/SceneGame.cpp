@@ -10,6 +10,7 @@
 #include "Systems/PhysicsMachine.h"
 #include "Systems/ContactLiteSystem.h"
 #include "GravityDampingSystem.h"
+#include "Systems/DrawSystem.h"
 #include "AABBCollider.h"
 #include "ModelCache.h"
 #include "GravityDampingSystem.h"
@@ -48,6 +49,7 @@ namespace
         constexpr size_t kDefaultCameraPrototypeIndex = 0;
         constexpr int kCameraPrototypeConsoleOverride = -1; // 起動時に特定のプロトタイプを強制する場合は0以上に変更する
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
+        constexpr bool kEnableDrawSystemVerboseLogging = false;
 
         struct PhysicsTuningSettings
         {
@@ -245,6 +247,7 @@ SceneGame::SceneGame()
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
     m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
+    m_drawSystem = std::make_unique<Systems::DrawSystem>();
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
@@ -259,6 +262,11 @@ SceneGame::SceneGame()
     {
         m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
         m_contactSystem->SetRestitution(tuning.restitution);
+    }
+
+    if (m_drawSystem)
+    {
+        m_drawSystem->SetDebugLoggingEnabled(kEnableDrawSystemVerboseLogging);
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -323,6 +331,10 @@ SceneGame::SceneGame()
     m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
     m_render = std::make_unique<ModelRender>();
+    if (m_drawSystem && m_render)
+    {
+        m_drawSystem->SetRenderer(m_render.get());
+    }
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
     { float3{0.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
@@ -331,6 +343,10 @@ SceneGame::SceneGame()
     if (player)
     {
         RegisterPhysicsBody(*player);
+        if (m_drawSystem)
+        {
+            m_drawSystem->RegisterRenderable(*player);
+        }
     }
 
 }
@@ -365,9 +381,24 @@ SceneGame::~SceneGame()
                 m_cameraRigRegistered = false;
         }
 
+        if (m_drawRegistered && m_drawSystem)
+        {
+                GetUpdateScheduler().Unregister(*m_drawSystem);
+                m_drawRegistered = false;
+        }
+
         if (player)
         {
+                if (m_drawSystem)
+                {
+                        m_drawSystem->UnregisterRenderable(*player);
+                }
                 Unregister(*player);
+        }
+
+        if (m_drawSystem)
+        {
+                m_drawSystem->ClearRenderables();
         }
 }
 
@@ -389,6 +420,12 @@ void SceneGame::ConfigureUpdates()
         {
                 GetUpdateScheduler().Register(*m_contactSystem);
                 m_contactRegistered = true;
+        }
+
+        if (m_drawSystem && !m_drawRegistered)
+        {
+                GetUpdateScheduler().Register(*m_drawSystem);
+                m_drawRegistered = true;
         }
 
         if (m_cameraRig && !m_cameraRigRegistered)
@@ -478,14 +515,13 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         Geometory::SetView(activeCamera->GetView());
         Geometory::SetProjection(activeCamera->GetProjection());
 
-        if (!m_render || !m_model)
+        if (!m_drawSystem)
         {
-                DebugTrace(std::string(kLogPrefix) + "Draw skipped: renderer or model missing.\n");
+                DebugTrace(std::string(kLogPrefix) + "Draw skipped: draw system missing.\n");
                 return;
         }
 
-        player->Draw(*m_render, *activeCamera.get());
-        //m_render->Draw(*m_model, activeCamera.get());
+        m_drawSystem->RenderQueued(activeCamera);
 }
 
 void SceneGame::ApplyCameraPrototype(size_t index)

@@ -65,6 +65,17 @@ void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
         render.Draw(*model, m_transform, &camera);
 }
 
+ModelDX* SceneSpace::Player::GetRenderableModel()
+{
+        return model.get();
+}
+
+const ModelDX* SceneSpace::Player::GetRenderableModel() const
+{
+        return model.get();
+}
+
+
 void SceneSpace::Player::HandleInput(Core::Input input)
 {
 }
