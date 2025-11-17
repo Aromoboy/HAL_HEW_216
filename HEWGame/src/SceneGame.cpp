@@ -8,12 +8,15 @@
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
+#include "GravityDampingSystem.h"
 #include "AABBCollider.h"
 #include "ModelCache.h"
 
 
 
 #include <array>
+#include <cctype>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <DirectXMath.h>
@@ -41,6 +44,114 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr size_t kDefaultCameraPrototypeIndex = 0;
         constexpr int kCameraPrototypeConsoleOverride = -1; // Change to >=0 to force a prototype at startup.
+        constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
+
+        struct PhysicsTuningSettings
+        {
+            float gravity = 9.8f;
+            float damping = 0.98f;
+        };
+
+        std::string TrimWhitespace(const std::string& input)
+        {
+            const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
+            auto begin = input.begin();
+            auto end = input.end();
+            while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
+            {
+                ++begin;
+            }
+            if (begin == end)
+            {
+                return std::string{};
+            }
+            do
+            {
+                --end;
+            } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
+            return std::string(begin, end + 1);
+        }
+
+        PhysicsTuningSettings LoadPhysicsTuningSettings()
+        {
+            PhysicsTuningSettings settings;
+            std::ifstream config(kPhysicsConfigPath);
+            if (!config.is_open())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
+                    << "'. Using defaults (gravity=" << settings.gravity
+                    << ", damping=" << settings.damping << ").\n";
+                DebugTrace(oss.str());
+                return settings;
+            }
+
+            std::string line;
+            size_t lineNumber = 0;
+            while (std::getline(config, line))
+            {
+                ++lineNumber;
+                const auto commentPos = line.find_first_of("#;");
+                if (commentPos != std::string::npos)
+                {
+                    line = line.substr(0, commentPos);
+                }
+                line = TrimWhitespace(line);
+                if (line.empty())
+                {
+                    continue;
+                }
+
+                const auto delimiterPos = line.find('=');
+                if (delimiterPos == std::string::npos)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid physics tuning line " << lineNumber
+                        << " (missing '='): " << line << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                std::string key = TrimWhitespace(line.substr(0, delimiterPos));
+                std::string value = TrimWhitespace(line.substr(delimiterPos + 1));
+                if (key.empty() || value.empty())
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (key == "gravity")
+                    {
+                        settings.gravity = std::stof(value);
+                    }
+                    else if (key == "damping")
+                    {
+                        settings.damping = std::stof(value);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Unknown physics tuning key '" << key << "' on line "
+                            << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse value for key '" << key << "' on line "
+                        << lineNumber << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
+                << "' (gravity=" << settings.gravity << ", damping=" << settings.damping << ").\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
 
         DirectX::XMVECTOR LoadFloat3(const float3& value)
         {
@@ -112,7 +223,13 @@ float3 fRads = { 0.0f, 0.0f, 0.0f };
 SceneGame::SceneGame()
     : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
+    const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+    m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
+    if (m_physicsMachine)
+    {
+        m_physicsMachine->SetSystem(m_gravitySystem);
+    }
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();

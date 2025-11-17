@@ -33,6 +33,7 @@ struct CameraPrototypeSettings
 namespace Systems
 {
     class PhysicsMachine;
+    class GravityDampingSystem;
 }
 
 class SceneGame : public SceneSpace::Scene
@@ -61,6 +62,7 @@ private:
 
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
+    std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
