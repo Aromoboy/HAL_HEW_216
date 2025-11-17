@@ -27,6 +27,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <DirectXMath.h>
@@ -60,7 +61,7 @@ namespace
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
-        constexpr float kScoreMultiplier = 100.0f;
+        constexpr float kBaseScorePerMeter = 100.0f;
         constexpr BYTE kConfirmInputKey = VK_RETURN;
         constexpr BYTE kRetryInputKey = 'R';
 
@@ -257,12 +258,13 @@ SceneGame::SceneGame()
     : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
-    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds());
+    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
     {
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
             << " planeZ=" << m_stageData.GetPlaneZ()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
+            << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size() << "\n";
         DebugTrace(oss.str());
     }
@@ -1031,5 +1033,28 @@ void SceneGame::RenderRunTelemetryOverlay() const
 
 int SceneGame::ComputeScore() const
 {
-    return static_cast<int>(std::lround(m_peakTowerHeight * kScoreMultiplier));
+    const float rawPhaseMultiplier = m_phaseManager.GetRewardMultiplier();
+    const float phaseMultiplier = (std::isfinite(rawPhaseMultiplier) && rawPhaseMultiplier > 0.0f)
+        ? rawPhaseMultiplier
+        : 1.0f;
+    const float totalMultiplier = kBaseScorePerMeter * phaseMultiplier;
+    const int score = static_cast<int>(std::lround(m_peakTowerHeight * totalMultiplier));
+
+    const bool multiplierChanged = !std::isfinite(m_lastScoreLogMultiplier)
+        || std::fabs(m_lastScoreLogMultiplier - phaseMultiplier) > std::numeric_limits<float>::epsilon();
+    if (score != m_lastScoreLogValue || multiplierChanged)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Score] peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight
+            << "m phase=" << m_phaseManager.GetCurrentPhase()
+            << " phaseMultiplier=" << phaseMultiplier
+            << " basePerMeter=" << kBaseScorePerMeter
+            << " totalMultiplier=" << totalMultiplier
+            << " score=" << score << "\n";
+        DebugTrace(oss.str());
+        m_lastScoreLogValue = score;
+        m_lastScoreLogMultiplier = phaseMultiplier;
+    }
+
+    return score;
 }

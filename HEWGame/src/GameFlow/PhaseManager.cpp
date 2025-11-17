@@ -38,7 +38,7 @@ namespace GameFlow
     {
     }
 
-    void PhaseManager::Initialize(const std::vector<float>& thresholds)
+    void PhaseManager::Initialize(const std::vector<float>& thresholds, const std::vector<float>& rewardMultipliers)
     {
         m_thresholds = thresholds;
         std::sort(m_thresholds.begin(), m_thresholds.end());
@@ -50,6 +50,22 @@ namespace GameFlow
             m_thresholds.end());
         m_thresholds.erase(std::unique(m_thresholds.begin(), m_thresholds.end()), m_thresholds.end());
 
+        m_rewardMultipliers = rewardMultipliers;
+        if (m_rewardMultipliers.empty())
+        {
+            m_rewardMultipliers.push_back(1.0f);
+        }
+        const std::size_t requiredMultiplierCount = m_thresholds.size() + 1;
+        if (m_rewardMultipliers.size() < requiredMultiplierCount)
+        {
+            const float fillValue = m_rewardMultipliers.back();
+            m_rewardMultipliers.resize(requiredMultiplierCount, fillValue);
+        }
+        else if (m_rewardMultipliers.size() > requiredMultiplierCount)
+        {
+            m_rewardMultipliers.resize(requiredMultiplierCount);
+        }
+
         m_nextThresholdIndex = 0;
         m_currentPhase = 0;
         m_initialized = true;
@@ -57,11 +73,13 @@ namespace GameFlow
         m_startTime = std::chrono::steady_clock::now();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Initialized with " << m_thresholds.size() << " thresholds.";
+        oss << kLogPrefix << "Initialized with " << m_thresholds.size() << " thresholds"
+            << " and " << m_rewardMultipliers.size() << " multipliers.";
         if (!m_thresholds.empty())
         {
             oss << " nextThreshold=" << m_thresholds.front();
         }
+        oss << " currentMultiplier=" << GetRewardMultiplier();
         oss << "\n";
         DebugTrace(oss.str());
     }
@@ -79,11 +97,13 @@ namespace GameFlow
         m_startTime = std::chrono::steady_clock::now();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Reset. thresholdCount=" << m_thresholds.size();
+        oss << kLogPrefix << "Reset. thresholdCount=" << m_thresholds.size()
+            << " multiplierCount=" << m_rewardMultipliers.size();
         if (!m_thresholds.empty())
         {
             oss << " nextThreshold=" << m_thresholds.front();
         }
+        oss << " currentMultiplier=" << GetRewardMultiplier();
         oss << "\n";
         DebugTrace(oss.str());
     }
@@ -122,6 +142,11 @@ namespace GameFlow
         return m_currentPhase;
     }
 
+    float PhaseManager::GetRewardMultiplier() const noexcept
+    {
+        return GetRewardMultiplierForPhase(m_currentPhase);
+    }
+
     void PhaseManager::LogPhaseAdvance(float threshold, float currentHeight) const
     {
         const auto now = std::chrono::steady_clock::now();
@@ -131,7 +156,34 @@ namespace GameFlow
         oss << kLogPrefix << "{\"phase\":" << m_currentPhase
             << ",\"threshold\":" << threshold
             << ",\"height\":" << currentHeight
+            << ",\"multiplier\":" << GetRewardMultiplier()
             << ",\"timeMs\":" << elapsedMs << "}\n";
         DebugTrace(oss.str());
+    }
+
+    float PhaseManager::GetRewardMultiplierForPhase(int phaseIndex) const noexcept
+    {
+        if (m_rewardMultipliers.empty())
+        {
+            return 1.0f;
+        }
+
+        if (phaseIndex < 0)
+        {
+            return m_rewardMultipliers.front();
+        }
+
+        const std::size_t index = static_cast<std::size_t>(phaseIndex);
+        if (index >= m_rewardMultipliers.size())
+        {
+            return m_rewardMultipliers.back();
+        }
+
+        const float value = m_rewardMultipliers[index];
+        if (!std::isfinite(value) || value <= 0.0f)
+        {
+            return 1.0f;
+        }
+        return value;
     }
 }
