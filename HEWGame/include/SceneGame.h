@@ -98,9 +98,7 @@ private:
 size_t m_activeCameraPrototypeIndex = 0;
 Stage::StageData m_stageData;
 GameFlow::PhaseManager m_phaseManager;
-float m_maxTowerHeight = 0.0f;
 void InitializeStageAnchors();
-float MeasureTowerHeight() const;
 void BroadcastPhaseAdvance(int newPhase);
 Core::StepTimer m_countdownTimer;
 float m_totalPlaySeconds = 0.0f;

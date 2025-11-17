@@ -534,18 +534,10 @@ HandleManualRetryInput(ctx);
                 anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        const float measuredHeight = MeasureTowerHeight();
-        if (measuredHeight > m_maxTowerHeight)
+        const float stackedHeight = m_currentTowerHeight;
+        if (m_phaseManager.UpdateHeight(stackedHeight))
         {
-                m_maxTowerHeight = measuredHeight;
-                std::ostringstream oss;
-                oss << kLogPrefix << "[TowerHeight] new max=" << m_maxTowerHeight << "\n";
-                DebugTrace(oss.str());
-        }
-
-        if (m_phaseManager.UpdateHeight(m_maxTowerHeight))
-        {
-                BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
+            BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
         }
 }
 
@@ -775,42 +767,11 @@ void SceneGame::InitializeStageAnchors()
     DebugTrace(oss.str());
 }
 
-float SceneGame::MeasureTowerHeight() const
-{
-    if (!m_sweetsManager)
-    {
-        return 0.0f;
-    }
-
-    float maxHeight = 0.0f;
-    const SweetsSpace::SweetsManager& manager = *m_sweetsManager;
-    const auto processState = [&manager, &maxHeight](SweetsSpace::SweetsState state)
-    {
-        const auto& sweetsList = manager.GetByState(state);
-        for (const auto& sweets : sweetsList)
-        {
-            if (!sweets)
-            {
-                continue;
-            }
-
-            const auto& transform = sweets->GetTransform();
-            maxHeight = std::max(maxHeight, transform.position.y);
-        }
-    };
-
-    processState(SweetsSpace::SweetsState::Active);
-    processState(SweetsSpace::SweetsState::Stacked);
-    processState(SweetsSpace::SweetsState::Ground);
-
-    return maxHeight;
-}
-
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
     std::ostringstream oss;
     oss << kLogPrefix << "Broadcasting phase " << newPhase
-        << " (maxHeight=" << m_maxTowerHeight << ")\n";
+        << " (stackedPeak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << ")\n";
     DebugTrace(oss.str());
 
     if (m_sweetsManager)
