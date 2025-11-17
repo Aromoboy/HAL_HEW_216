@@ -1,5 +1,29 @@
 #include "AABBCollider.h"
 
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+	void DebugTrace(const std::string& message)
+	{
+		::OutputDebugStringA(message.c_str());
+	}
+#else
+	void DebugTrace(const std::string& message)
+	{
+		(void)message;
+	}
+#endif
+}
 
 Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float a_expand, float3 a_offset)
 {
@@ -10,20 +34,20 @@ Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, f
 	UpdateBounds(a_transform);
 }
 
-bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other) 
+bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 {
 
 	const AABB thisAABB = aabb;
 	const AABB otherAABB = other.GetAABB();
 
 
-	// è’ìÀÇµÇƒÇ¢ÇÈÇ©îªíË
-	if (thisAABB.max.x < otherAABB.min.x || 	  // xç¿ïWÇ™èdÇ»Ç¡ÇƒÇ¢Ç»ÇØÇÍÇŒî≤ÇØÇÈ
-		thisAABB.min.x > otherAABB.max.x) return false;
+	// ’ìÀÇƒÇÈÇ©
+	if (thisAABB.max.x < otherAABB.min.x ||           // xWd»ÇƒÇ»ÇŒî
+			thisAABB.min.x > otherAABB.max.x) return false;
 
-	// è’ìÀÇµÇƒÇ¢ÇÈÇ©îªíË
-	if (thisAABB.max.y < otherAABB.min.y || 	  // yç¿ïWÇ™èdÇ»Ç¡ÇƒÇ¢Ç»ÇØÇÍÇŒî≤ÇØÇÈ
-		thisAABB.min.y > otherAABB.max.y) return false;
+	// ’ìÀÇƒÇÈÇ©
+	if (thisAABB.max.y < otherAABB.min.y ||           // yWd»ÇƒÇ»ÇŒî
+			thisAABB.min.y > otherAABB.max.y) return false;
 
 	return true;
 
@@ -50,6 +74,14 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 	min.z = transform.position.z + offset.z - colliderScale.z;
 
 	aabb = AABB(max, min);
+
+#if defined(_DEBUG)
+	std::ostringstream oss;
+	oss << "[AABBCollider] UpdateBounds this=" << this
+		<< " min=(" << min.x << ',' << min.y << ',' << min.z << ')'
+		<< " max=(" << max.x << ',' << max.y << ',' << max.z << ")\n";
+	DebugTrace(oss.str());
+#endif
 }
 
 bool Collision::AABBCollider::IsTrriger()

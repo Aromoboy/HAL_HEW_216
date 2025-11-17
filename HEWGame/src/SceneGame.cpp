@@ -405,8 +405,10 @@ void SceneGame::ConfigureUpdates()
 
 void SceneGame::Update(Core::UpdateContext& ctx)
 {
-        (void)ctx;
-        fRads.z += 0.001f * RAD;
+#if defined(_DEBUG)
+	HandleColliderDebugCommands(ctx);
+#endif
+	fRads.z += 0.001f * RAD;
 
         if (m_cameraAnchor && !m_pObjects.empty())
         {
@@ -416,6 +418,56 @@ void SceneGame::Update(Core::UpdateContext& ctx)
                 anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 }
+
+#if defined(_DEBUG)
+void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
+{
+        if (!player)
+        {
+                return;
+        }
+
+        Core::Input& input = ctx.input;
+        constexpr float kDebugNudge = 0.25f;
+        float3 delta{ 0.0f, 0.0f, 0.0f };
+
+        if (input.IsKeyTrigger(VK_F2))
+        {
+                delta.y += kDebugNudge;
+        }
+        if (input.IsKeyTrigger(VK_F3))
+        {
+                delta.y -= kDebugNudge;
+        }
+
+        if (delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f)
+        {
+                return;
+        }
+
+        auto& transform = player->GetTransform();
+        transform.position.x += delta.x;
+        transform.position.y += delta.y;
+        transform.position.z += delta.z;
+
+        player->SyncColliderBounds();
+
+        Collision::ICollider* collider = player->GetCollider();
+        if (!collider)
+        {
+                DebugTrace(std::string(kLogPrefix) + "[ColliderDebug] Player collider missing; cannot log extents.\n");
+                return;
+        }
+
+        const AABB bounds = collider->GetAABB();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ColliderDebug] Nudged player by (" << delta.x << ',' << delta.y << ',' << delta.z << ")"
+            << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
+            << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
+            << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")\n";
+        DebugTrace(oss.str());
+}
+#endif
 
 void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 {

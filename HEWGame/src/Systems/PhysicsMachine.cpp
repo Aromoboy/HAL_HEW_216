@@ -134,6 +134,7 @@ namespace Systems
                         }
 
                         m_system->Apply(*body, ctx.dt);
+                        body->SyncColliderBounds();
                 }
         }
 }
