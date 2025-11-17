@@ -110,9 +110,12 @@ namespace SweetsSpace
         : m_drawSystem(nullptr)
         , m_physicsMachine(nullptr)
         , m_scheduler(nullptr)
+        , m_phaseChangeCallback()
+        , m_currentPhase(0)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
+        , m_warnedMissingPhaseCallback(false)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -421,6 +424,46 @@ namespace SweetsSpace
 
         m_scheduler = scheduler;
         m_warnedMissingScheduler = false;
+    }
+
+    void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
+    {
+        m_phaseChangeCallback = std::move(callback);
+        m_warnedMissingPhaseCallback = false;
+    }
+
+    void SweetsManager::NotifyPhaseChanged(int newPhase)
+    {
+        if (newPhase < 0)
+        {
+            newPhase = 0;
+        }
+
+        if (newPhase == m_currentPhase)
+        {
+            return;
+        }
+
+        m_currentPhase = newPhase;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Phase changed to " << m_currentPhase << "\n";
+        DebugTrace(oss.str());
+
+        if (m_phaseChangeCallback)
+        {
+            m_phaseChangeCallback(m_currentPhase);
+        }
+        else if (!m_warnedMissingPhaseCallback)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Phase change callback missing; spawn layout unchanged.\n");
+            m_warnedMissingPhaseCallback = true;
+        }
+    }
+
+    int SweetsManager::GetCurrentPhase() const noexcept
+    {
+        return m_currentPhase;
     }
 
     std::shared_ptr<BaseSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)

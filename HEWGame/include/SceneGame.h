@@ -14,6 +14,9 @@
 #include "Player.h"
 #include "Systems/PhysicsMachine.h"
 #include "Vector.h"
+#include "Stage/StageData.h"
+#include "GameFlow/PhaseManager.h"
+#include "SweetsManager.h"
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
@@ -69,13 +72,22 @@ private:
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
     std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
+    std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_contactRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
+    bool m_sweetsRegistered = false;
     size_t m_activeCameraPrototypeIndex = 0;
+    Stage::StageData m_stageData;
+    GameFlow::PhaseManager m_phaseManager;
+    float m_maxTowerHeight = 0.0f;
+
+    void InitializeStageAnchors();
+    float MeasureTowerHeight() const;
+    void BroadcastPhaseAdvance(int newPhase);
 };
 
 #endif // __SCENE_GAME_H__
