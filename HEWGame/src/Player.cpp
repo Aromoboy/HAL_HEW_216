@@ -7,6 +7,8 @@
 #include "SweetsPrototypeManifest.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <sstream>
 
 #if defined(_WIN32)
@@ -21,7 +23,6 @@
 #define PLAYER_KEY_MOVE_DOWN 0x53	// S
 #define PLAYER_KEY_MOVE_RIGHT 0x44	// D
 
-#define PlayerSpeed (0.25f)
 #define PLAYER_KEY_PICKUP 0x45       // E
 #define PLAYER_KEY_DROP 0x51         // Q
 
@@ -44,6 +45,7 @@ namespace
     constexpr float kDefaultPickupRadius = 2.5f;
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
+    constexpr float kDefaultPlayerMoveSpeed = 15.0f;
 }
 
 SceneSpace::Player::Player(std::string a_tag,
@@ -66,6 +68,7 @@ SceneSpace::Player::Player(std::string a_tag,
         , m_carryOffset(float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
+        , m_moveSpeed(kDefaultPlayerMoveSpeed)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -105,30 +108,23 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 {
         Core::Input& input = ctx.input;
 
-        float vectorX = 0.0f;
-        float vectorY = 0.0f;
+        float horizontal = 0.0f;
+        const bool moveLeft = input.IsKeyPress(PLAYER_KEY_MOVE_LEFT);
+        const bool moveRight = input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT);
 
-        if (input.IsKeyPress(PLAYER_KEY_MOVE_UP))
+        if (moveLeft && !moveRight)
         {
-                vectorY = PlayerSpeed;
+                horizontal = -1.0f;
         }
-        else if (input.IsKeyPress(PLAYER_KEY_MOVE_DOWN))
+        else if (moveRight && !moveLeft)
         {
-                vectorY = -PlayerSpeed;
-        }
-
-        if (input.IsKeyPress(PLAYER_KEY_MOVE_LEFT))
-        {
-                vectorX = -PlayerSpeed;
-        }
-        else if (input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT))
-        {
-                vectorX = PlayerSpeed;
+                horizontal = 1.0f;
         }
 
-        if (vectorX != 0.0f || vectorY != 0.0f)
+        if (horizontal != 0.0f && ctx.dt > 0.0f && m_moveSpeed > 0.0f)
         {
-                ApplyTranslation({ vectorX, vectorY, 0.0f });
+                const float translation = horizontal * m_moveSpeed * ctx.dt;
+                ApplyTranslation({ translation, 0.0f, 0.0f });
         }
 
         HandleCarryInput(ctx);
@@ -153,6 +149,40 @@ const ModelDX* SceneSpace::Player::GetRenderableModel() const
 
 void SceneSpace::Player::HandleInput(Core::Input input)
 {
+}
+
+void SceneSpace::Player::SetMoveSpeed(float speed)
+{
+        if (!std::isfinite(speed))
+        {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite move speed assignment.\n");
+                return;
+        }
+
+        const float sanitized = std::max(0.0f, speed);
+        if (sanitized != speed)
+        {
+                std::ostringstream oss;
+                oss << kPlayerLogPrefix << "Move speed sanitized from " << speed
+                    << " to " << sanitized << " (negative disallowed).\n";
+                PlayerDebugTrace(oss.str());
+        }
+
+        if (std::fabs(m_moveSpeed - sanitized) < std::numeric_limits<float>::epsilon())
+        {
+                return;
+        }
+
+        m_moveSpeed = sanitized;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Move speed set to " << m_moveSpeed << " units/sec.\n";
+        PlayerDebugTrace(oss.str());
+}
+
+float SceneSpace::Player::GetMoveSpeed() const
+{
+        return m_moveSpeed;
 }
 
 void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)

@@ -281,7 +281,8 @@ SceneGame::SceneGame()
             << " planeZ=" << m_stageData.GetPlaneZ()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
-            << " spawnPoints=" << m_stageData.GetSpawnPoints().size() << "\n";
+            << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
+            << " playerSpeed=" << m_stageData.GetPlayerMoveSpeed() << "\n";
         DebugTrace(oss.str());
     }
 
@@ -473,6 +474,7 @@ SceneGame::SceneGame()
         true);
     if (player)
     {
+        player->SetMoveSpeed(m_stageData.GetPlayerMoveSpeed());
         if (m_sweetsManager)
         {
             player->SetSweetsManager(m_sweetsManager.get());
