@@ -160,7 +160,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="PhysicalEntity.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\CameraRig.cpp" />
@@ -174,6 +173,7 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
+    <ClCompile Include="src\GravityDampingSystem.cpp" />
     <ClCompile Include="src\ICamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
@@ -185,6 +185,7 @@
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
+    <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -218,6 +219,7 @@
     <ClInclude Include="include\DrawMatrix.h" />
     <ClInclude Include="include\Entity.h" />
     <ClInclude Include="include\Geometory.h" />
+    <ClInclude Include="include\GravityDampingSystem.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\IModelLoader.h" />

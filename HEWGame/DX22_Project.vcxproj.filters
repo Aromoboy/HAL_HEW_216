@@ -40,9 +40,10 @@
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
-    <ClCompile Include="PhysicalEntity.cpp" />
     <ClCompile Include="src\CollisionEntity.cpp" />
     <ClCompile Include="src\Entity.cpp" />
+    <ClCompile Include="src\GravityDampingSystem.cpp" />
+    <ClCompile Include="src\PhysicalEntity.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -90,6 +91,7 @@
     <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
+    <ClInclude Include="include\GravityDampingSystem.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
