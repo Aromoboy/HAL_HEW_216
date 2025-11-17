@@ -34,7 +34,7 @@
     <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
-	<ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
+    <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderCache.cpp" />
@@ -57,6 +57,7 @@
     <ClCompile Include="Pdding.cpp" />
     <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
+
   <!-- ==================== -->
   <!-- All .h with filters  -->
   <!-- ==================== -->
@@ -96,7 +97,7 @@
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
-	<ClInclude Include="include\Systems\ContactLiteSystem.h" />
+    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\ShaderCache.h" />
@@ -119,6 +120,7 @@
     <ClInclude Include="Pdding.h" />
     <ClInclude Include="Sweets.h" />
   </ItemGroup>
+
   <!-- =================== -->
   <!-- Filter definitions  -->
   <!-- =================== -->
@@ -145,6 +147,7 @@
       <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+
   <ItemGroup>
     <None Include="cpp.hint" />
   </ItemGroup>

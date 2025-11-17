@@ -167,6 +167,7 @@
     <ClCompile Include="Cake.cpp" />
     <ClCompile Include="Pdding.cpp" />
     <ClCompile Include="Sherbet.cpp" />
+
     <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
@@ -219,6 +220,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cake.h" />
+
     <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
