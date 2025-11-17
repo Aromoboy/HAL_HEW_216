@@ -11,9 +11,6 @@ namespace SceneSpace
 {
     class PhysicalEntity : public CollisionEntity
     {
- // PhysicalEntity は Collision に加えて Physical（速度・力・質量など）を持つ
-// Entity → CollisionEntity → PhysicalEntity の階層に統一
-
     public:
         PhysicalEntity(const std::string& tag,
             const float3& pos,
@@ -27,20 +24,22 @@ namespace SceneSpace
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
 
-    inline void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
-    {
-        entity.ApplyTranslation(delta);
-    }
-}
-// Transform と一緒に初期化できるようにした
-
         ~PhysicalEntity() override;
- // PhysicsMachine がこの Physical を直接操作する
-// そのため参照で返している
 
         Physics::Physical& GetPhysical();
 
     protected:
         Physics::Physical m_physical;
     };
-}
+
+    // PhysicalEntity は Collision に加えて Physical（速度・力・質量など）を持つ
+    // Entity → CollisionEntity → PhysicalEntity の階層に統一
+    // Transform と一緒に初期化できるようにした
+    // PhysicsMachine がこの Physical を直接操作する
+    // そのため参照で返している
+
+    inline void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
+    {
+        entity.ApplyTranslation(delta);
+    }
+} // namespace SceneSpace
