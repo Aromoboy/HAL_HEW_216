@@ -307,8 +307,6 @@ if (m_sweetsManager)
     });
 }
 
-    }
-
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
