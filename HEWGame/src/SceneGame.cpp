@@ -4,52 +4,340 @@
 #include "Vector.h"
 #include "ShaderList.h"
 #include "Defines.h"
-#include "CameraDebug.h"
 #include "DebugConsole.h"
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
+#include "Systems/ContactLiteSystem.h"
+#include "GravityDampingSystem.h"
+#include "AABBCollider.h"
+#include "ModelCache.h"
+#include "GravityDampingSystem.h"
+
+
+
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <DirectXMath.h>
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kLogPrefix = "[SceneGame] ";
+        constexpr size_t kDefaultCameraPrototypeIndex = 0;
+        constexpr int kCameraPrototypeConsoleOverride = -1; // 起動時に特定のプロトタイプを強制する場合は0以上に変更する
+        constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
+
+        struct PhysicsTuningSettings
+        {
+            float gravity = 9.8f;
+            float damping = 0.98f;
+            float penetrationTolerance = 0.01f;
+            float restitution = 0.15f;
+        };
+
+        std::string TrimWhitespace(const std::string& input)
+        {
+            const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
+            auto begin = input.begin();
+            auto end = input.end();
+            while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
+            {
+                ++begin;
+            }
+            if (begin == end)
+            {
+                return std::string{};
+            }
+            do
+            {
+                --end;
+            } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
+            return std::string(begin, end + 1);
+        }
+
+        PhysicsTuningSettings LoadPhysicsTuningSettings()
+        {
+            PhysicsTuningSettings settings;
+            std::ifstream config(kPhysicsConfigPath);
+            if (!config.is_open())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
+                    << "'. Using defaults (gravity=" << settings.gravity
+                    << ", damping=" << settings.damping
+                    << ", penetrationTolerance=" << settings.penetrationTolerance
+                    << ", restitution=" << settings.restitution << ").\n";
+                DebugTrace(oss.str());
+                return settings;
+            }
+
+            std::string line;
+            size_t lineNumber = 0;
+            while (std::getline(config, line))
+            {
+                ++lineNumber;
+                const auto commentPos = line.find_first_of("#;");
+                if (commentPos != std::string::npos)
+                {
+                    line = line.substr(0, commentPos);
+                }
+                line = TrimWhitespace(line);
+                if (line.empty())
+                {
+                    continue;
+                }
+
+                const auto delimiterPos = line.find('=');
+                if (delimiterPos == std::string::npos)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid physics tuning line " << lineNumber
+                        << " (missing '='): " << line << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                std::string key = TrimWhitespace(line.substr(0, delimiterPos));
+                std::string value = TrimWhitespace(line.substr(delimiterPos + 1));
+                if (key.empty() || value.empty())
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (key == "gravity")
+                    {
+                        settings.gravity = std::stof(value);
+                    }
+                    else if (key == "damping")
+                    {
+                        settings.damping = std::stof(value);
+                    }
+                    else if (key == "penetrationTolerance")
+                    {
+                        settings.penetrationTolerance = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "restitution")
+                    {
+                        settings.restitution = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Unknown physics tuning key '" << key << "' on line "
+                            << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse value for key '" << key << "' on line "
+                        << lineNumber << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
+                << "' (gravity=" << settings.gravity
+                << ", damping=" << settings.damping
+                << ", penetrationTolerance=" << settings.penetrationTolerance
+                << ", restitution=" << settings.restitution << ").\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        DirectX::XMVECTOR LoadFloat3(const float3& value)
+        {
+            return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
+        }
+
+        float3 StoreFloat3(DirectX::FXMVECTOR value)
+        {
+            DirectX::XMFLOAT3 temp;
+            DirectX::XMStoreFloat3(&temp, value);
+            return float3{ temp.x, temp.y, temp.z };
+        }
+
+        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
+        {
+            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
+            return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
+        }
+
+        const std::array<CameraPrototypeSettings, 2> kCameraPrototypes =
+        { {
+                CameraPrototypeSettings
+                {
+                        false,
+                        6.0f,
+                        float3{ 0.0f, 3.0f, -12.0f },
+                        60.0f,
+                        0.0f,
+                        -0.2f
+                },
+                CameraPrototypeSettings
+                {
+                        true,
+                        4.0f,
+                        float3{ 0.0f, 8.0f, -22.0f },
+                        45.0f,
+                        0.0f,
+                        -0.35f
+                }
+        } };
+
+        size_t NormalizeCameraPrototypeIndex(size_t requestedIndex)
+        {
+            if (requestedIndex >= kCameraPrototypes.size())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Camera prototype index " << requestedIndex
+                    << " is invalid. Falling back to index " << kDefaultCameraPrototypeIndex << "\n";
+                DebugTrace(oss.str());
+                return kDefaultCameraPrototypeIndex;
+            }
+            return requestedIndex;
+        }
+
+        size_t DetermineStartupCameraPrototypeIndex()
+        {
+            size_t requestedIndex = kDefaultCameraPrototypeIndex;
+            if (kCameraPrototypeConsoleOverride >= 0)
+            {
+                requestedIndex = static_cast<size_t>(kCameraPrototypeConsoleOverride);
+            }
+            return NormalizeCameraPrototypeIndex(requestedIndex);
+        }
+}
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
+    : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
-        m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
-
-        RenderTarget* pRTV = GetDefaultRTV();
-        DepthStencil* pDSV = GetDefaultDSV();
-        SetRenderTargets(1, &pRTV, pDSV);
-        SetDepthTest(true);
-        m_pModel = std::make_unique<Model>();
-        if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
+    const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
+    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+    m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
+    m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
+    if (m_physicsMachine)
+    {
+        m_physicsMachine->SetSystem(m_gravitySystem);
+        if (m_contactSystem)
         {
-                no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
+            const auto& bodies = m_physicsMachine->GetBodies();
+            m_contactSystem->SetBodySource(&bodies);
         }
+    }
 
-        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
+    if (m_contactSystem)
+    {
+        m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
+        m_contactSystem->SetRestitution(tuning.restitution);
+    }
 
-        m_pModel->Play(no, 1, 1.0f);
+    RenderTarget* pRTV = GetDefaultRTV();
+    DepthStencil* pDSV = GetDefaultDSV();
+    SetRenderTargets(1, &pRTV, pDSV);
+    SetDepthTest(true);
+    m_pModel = std::make_unique<Model>();
+    if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
+    {
+        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
+    }
 
-        m_pCamera = std::make_unique<CameraDebug>(float3{ 20.0f, 0.0f, 0.0f }, 60.0f);
+    no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
 
-        for (int i = 0; i < 9; i++)
+    m_pModel->Play(no, 1, 1.0f);
+
+    for (int i = 0; i < 9; i++)
+    {
+        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f ,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
+    }
+
+    m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
+    if (!m_pObjects.empty())
+    {
+        auto& anchorTransform = m_cameraAnchor->GetTransform();
+        anchorTransform.position = m_pObjects.front()->GetPosition();
+        anchorTransform.rotation = m_pObjects.front()->GetfRads();
+        anchorTransform.scale = m_pObjects.front()->GetScale();
+    }
+
+    const auto& cameraSettings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+    m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
+    auto registeredCamera = AddCamera(m_gameCamera);
+    if (!registeredCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
+    }
+    else
+    {
+        SetActiveCamera(registeredCamera);
+    }
+
+    if (m_gameCamera)
+    {
+        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
+        m_cameraRig = std::make_unique<CameraRig>(baseCamera);
+        ConfigureCamera(cameraSettings);
+        if (m_cameraAnchor)
         {
-                m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
+            m_cameraRig->Attach(m_cameraAnchor);
         }
+    }
 
-        m_pManager = std::make_unique<SoundManagerEX>();
+    m_pManager = std::make_unique<SoundManagerEX>();
 
-        m_loader = std::make_unique<AssimpModelLorder>();
+    m_loader = std::make_shared<AssimpModelLorder>();
 
-        // 描画テスト用
-        m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    cache.SetLoader(m_loader);
 
-        m_render = std::make_unique<ModelRender>();
+    // 描画テスト用
+    m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
+
+    m_render = std::make_unique<ModelRender>();
+    std::shared_ptr<Collision::ICollider> collider;
+    Transform trans =
+    { float3{0.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
+    if (player)
+    {
+        RegisterPhysicsBody(*player);
+    }
+
 }
 
 SceneGame::~SceneGame()
 {
+        UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
         {
                 if (auto* input = GetInput())
@@ -65,9 +353,21 @@ SceneGame::~SceneGame()
                 m_physicsRegistered = false;
         }
 
-        if (m_pCamera)
+        if (m_contactRegistered && m_contactSystem)
         {
-                Unregister(*m_pCamera);
+                GetUpdateScheduler().Unregister(*m_contactSystem);
+                m_contactRegistered = false;
+        }
+
+        if (m_cameraRigRegistered && m_cameraRig)
+        {
+                Unregister(*m_cameraRig);
+                m_cameraRigRegistered = false;
+        }
+
+        if (player)
+        {
+                Unregister(*player);
         }
 }
 
@@ -85,25 +385,238 @@ void SceneGame::ConfigureUpdates()
                 m_physicsRegistered = true;
         }
 
-        if (m_pCamera)
+        if (m_contactSystem && !m_contactRegistered)
         {
-                Register(*m_pCamera);
+                GetUpdateScheduler().Register(*m_contactSystem);
+                m_contactRegistered = true;
+        }
+
+        if (m_cameraRig && !m_cameraRigRegistered)
+        {
+                Register(*m_cameraRig);
+                m_cameraRigRegistered = true;
+        }
+
+        if (player)
+        {
+            Register(*player);
         }
 }
 
 void SceneGame::Update(Core::UpdateContext& ctx)
 {
-        (void)ctx;
-        fRads.z += 0.001f * RAD;
+#if defined(_DEBUG)
+	HandleColliderDebugCommands(ctx);
+#endif
+	fRads.z += 0.001f * RAD;
+
+        if (m_cameraAnchor && !m_pObjects.empty())
+        {
+                auto& anchorTransform = m_cameraAnchor->GetTransform();
+                anchorTransform.position = m_pObjects.front()->GetPosition();
+                anchorTransform.rotation = m_pObjects.front()->GetfRads();
+                anchorTransform.scale = m_pObjects.front()->GetScale();
+        }
 }
 
-void SceneGame::Draw()
+#if defined(_DEBUG)
+void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
+{
+        if (!player)
+        {
+                return;
+        }
+
+        Core::Input& input = ctx.input;
+        constexpr float kDebugNudge = 0.25f;
+        float3 delta{ 0.0f, 0.0f, 0.0f };
+
+        if (input.IsKeyTrigger(VK_F2))
+        {
+                delta.y += kDebugNudge;
+        }
+        if (input.IsKeyTrigger(VK_F3))
+        {
+                delta.y -= kDebugNudge;
+        }
+
+        if (delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f)
+        {
+                return;
+        }
+
+        SceneSpace::TranslatePhysicalEntity(*player, delta);
+
+        const auto& transform = player->GetTransform();
+
+        Collision::ICollider* collider = player->GetCollider();
+        if (!collider)
+        {
+                DebugTrace(std::string(kLogPrefix) + "[ColliderDebug] Player collider missing; cannot log extents.\n");
+                return;
+        }
+
+        const AABB bounds = collider->GetAABB();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ColliderDebug] Nudged player by (" << delta.x << ',' << delta.y << ',' << delta.z << ")"
+            << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
+            << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
+            << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")\n";
+        DebugTrace(oss.str());
+}
+#endif
+
+void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 {
         // 描画確認用の数値
+        if (!activeCamera)
+        {
+                DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
+                return;
+        }
 
-        // カメラの設定
-        Geometory::SetView(m_pCamera->GetViewMatrix());
-        Geometory::SetProjection(m_pCamera->GetProjectionMatrix());
+        Geometory::SetView(activeCamera->GetView());
+        Geometory::SetProjection(activeCamera->GetProjection());
 
-        m_render->Draw(*m_model, *m_pCamera);
+        if (!m_render || !m_model)
+        {
+                DebugTrace(std::string(kLogPrefix) + "Draw skipped: renderer or model missing.\n");
+                return;
+        }
+
+        player->Draw(*m_render, *activeCamera.get());
+        //m_render->Draw(*m_model, activeCamera.get());
+}
+
+void SceneGame::ApplyCameraPrototype(size_t index)
+{
+    const size_t normalizedIndex = NormalizeCameraPrototypeIndex(index);
+    m_activeCameraPrototypeIndex = normalizedIndex;
+    ConfigureCamera(kCameraPrototypes[m_activeCameraPrototypeIndex]);
+
+    const auto& settings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+    std::ostringstream oss;
+    oss << kLogPrefix << "Camera prototype switched to index " << m_activeCameraPrototypeIndex
+        << " (fixed=" << std::boolalpha << settings.fixedPosition
+        << ", fov=" << settings.fovDegrees << ", followSpeed=" << settings.followSpeed << ")\n";
+    DebugTrace(oss.str());
+}
+
+void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+{
+    if (m_gameCamera)
+    {
+        m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
+    }
+
+    if (m_cameraRig)
+    {
+        m_cameraRig->SetOffset(settings.offset);
+        m_cameraRig->SetYaw(settings.yawRadians);
+        m_cameraRig->SetPitch(settings.pitchRadians);
+        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
+        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
+        m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+    }
+
+    if (!m_gameCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ConfigureCamera skipped: gameplay camera missing.\n");
+        return;
+    }
+
+    float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
+    if (m_cameraAnchor)
+    {
+        const auto& anchorTransform = m_cameraAnchor->GetTransform();
+        cameraRotation.x += anchorTransform.rotation.x;
+        cameraRotation.y += anchorTransform.rotation.y;
+        cameraRotation.z += anchorTransform.rotation.z;
+
+        DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
+        DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        m_gameCamera->SetPosition(StoreFloat3(desiredPos));
+    }
+    else
+    {
+        m_gameCamera->SetPosition(settings.offset);
+    }
+
+    m_gameCamera->SetRotation(cameraRotation);
+// BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
+// BaseCamera::RecalculateViewは保護されたメソッドです。GetView はトランスフォームが変更された際に遅延評価で再計算
+    (void)m_gameCamera->GetView();
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
+        << ", fov=" << settings.fovDegrees
+        << ", followSpeed=" << settings.followSpeed
+        << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
+        << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
+    DebugTrace(oss.str());
+}
+
+void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
+{
+    if (!m_physicsMachine)
+    {
+        DebugTrace(std::string(kLogPrefix) + "RegisterPhysicsBody skipped: physics machine missing.\n");
+        return;
+    }
+
+    const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
+    if (!insertResult.second)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "RegisterPhysicsBody ignored duplicate entity=" << &entity << "\n";
+        DebugTrace(oss.str());
+        return;
+    }
+
+    m_physicsMachine->RegisterBody(entity);
+}
+
+void SceneGame::UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity)
+{
+    if (!entity)
+    {
+        DebugTrace(std::string(kLogPrefix) + "UnregisterPhysicsBody received null entity pointer.\n");
+        return;
+    }
+
+    const auto tracked = m_registeredPhysicsBodies.find(entity);
+    if (tracked == m_registeredPhysicsBodies.end())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
+        DebugTrace(oss.str());
+    }
+    else
+    {
+        m_registeredPhysicsBodies.erase(tracked);
+    }
+
+    if (m_physicsMachine)
+    {
+        m_physicsMachine->UnregisterBody(*entity);
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
+    }
+}
+
+void SceneGame::UnregisterAllPhysicsBodies()
+{
+    if (m_registeredPhysicsBodies.empty())
+    {
+        return;
+    }
+
+    std::vector<SceneSpace::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
+    for (SceneSpace::PhysicalEntity* body : bodies)
+    {
+        UnregisterPhysicsBody(body);
+    }
 }
