@@ -4,6 +4,18 @@
 #include "TextureCache.h"
 #include <iostream>
 
+//============================================================
+// MODELCACHE_VERBOSE_LOG を定義すると、キャッシュヒットなどの
+// 頻出ログが DebugMessage へ出力される。通常ビルドでは未定義のままにし、
+// デバッグで詳細を追跡したいときだけプロジェクト設定やプリプロセッサ
+// 定義で MODELCACHE_VERBOSE_LOG を追加して有効化する。
+//============================================================
+#if defined(MODELCACHE_VERBOSE_LOG)
+#define MODELCACHE_VERBOSE(message) DebugMessage(std::string("[モデルキャッシュ] ") + message)
+#else
+#define MODELCACHE_VERBOSE(message) ((void)0)
+#endif
+
 namespace Render
 {
     //============================================================
@@ -28,17 +40,17 @@ namespace Render
 
         if (!m_loader)
         {
-            DebugMessage("[ModelCache] SetLoader called with null loader.");
+            DebugMessage("[モデルキャッシュ] ローダーが設定されていません。SetLoader に有効なローダーを渡してください。");
         }
 
         if (!m_device)
         {
-            DebugMessage("[ModelCache] SetLoader missing device pointer.");
+            DebugMessage("[モデルキャッシュ] デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください。");
         }
 
         if (!m_textureCache)
         {
-            DebugMessage("[ModelCache] SetLoader missing texture cache.");
+            DebugMessage("[モデルキャッシュ] テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください。");
         }
     }
 
@@ -52,31 +64,31 @@ namespace Render
         auto it = m_models.find(path);
         if (it != m_models.end())
         {
-            DebugMessage(std::string("[ModelCache] Cache hit: ") + path);
+            MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path);
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
         // ローダーが有効かどうか確認
         if (!m_loader)
         {
-            DebugMessage(std::string("[ModelCache] Get aborted: loader not configured for ") + path);
+            DebugMessage(std::string("[モデルキャッシュ] ローダーが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;  // ローダーが無ければロードできない
         }
 
         if (!m_device)
         {
-            DebugMessage(std::string("[ModelCache] Device pointer not configured; aborting load for ") + path);
+            DebugMessage(std::string("[モデルキャッシュ] デバイスが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;
         }
 
         if (!m_textureCache)
         {
-            DebugMessage(std::string("[ModelCache] Texture cache not configured; aborting load for ") + path);
+            DebugMessage(std::string("[モデルキャッシュ] テクスチャキャッシュが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;
         }
 
         // キャッシュに無かったのでロードを実行
-        DebugMessage(std::string("[ModelCache] Loading model: ") + path);
+        MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path);
         std::shared_ptr<ModelDX> model = m_loader->Load(path, m_device, *m_textureCache);
 
         // ロード結果の判定
@@ -88,7 +100,7 @@ namespace Render
         else
         {
             // 失敗した場合はエラーログ
-            DebugMessage(std::string("[ModelCache] Load failed: ") + path);
+            DebugMessage(std::string("[モデルキャッシュ] モデルのロードに失敗しました [パス] ") + path);
         }
 
         return model;  // ロード結果（失敗時は nullptr）
