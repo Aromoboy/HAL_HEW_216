@@ -12,17 +12,11 @@ class ModelDX;
 
 namespace SceneSpace
 {
-    class Entity : public Core::UpdateNode
-
-        virtual ModelDX* GetRenderableModel();
-        virtual const ModelDX* GetRenderableModel() const;
-        virtual bool IsRenderable() const;
-// Entity はゲーム内オブジェクトの最小単位
-// Transform / UpdatePhase / Tag をまとめて管理する基底クラス
-// 各サブクラス（CollisionEntity / PhysicalEntity / Camera anchors 等）は
-// この共通インターフェースを前提に動く
-
-    {
+    class Entity : public Core::UpdateNode {
+        // Entity はゲーム内オブジェクトの最小単位
+        // Transform / UpdatePhase / Tag をまとめて管理する基底クラス
+        // 各サブクラス（CollisionEntity / PhysicalEntity / Camera anchors 等）は
+        // この共通インターフェースを前提に動く
     public:
         Entity(const std::string& tag,
             const float3& pos = float3{ 0.0f, 0.0f, 0.0f },
@@ -35,11 +29,15 @@ namespace SceneSpace
         void OnUpdate(Core::UpdateContext& ctx) override;
 
         virtual void Draw(ModelRender render, CameraSpace::ICamera& Camera);
- // Transform のデフォルト値を許可して、
-// どの翻訳単位でも軽く使えるようにした
-// （pos / rot / scale を毎回指定しなくてOK）
- // Transform への mutable / const アクセス
-// CameraRig・PhysicsMachine などが直接参照する前提
+        virtual ModelDX* GetRenderableModel();
+        virtual const ModelDX* GetRenderableModel() const;
+        virtual bool IsRenderable() const;
+
+        // Transform のデフォルト値を許可して、
+        // どの翻訳単位でも軽く使えるようにした
+        // （pos / rot / scale を毎回指定しなくてOK）
+        // Transform への mutable / const アクセス
+        // CameraRig・PhysicsMachine などが直接参照する前提
 
         Transform& GetTransform();
         const Transform& GetTransform() const;

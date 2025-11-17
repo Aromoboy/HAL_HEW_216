@@ -12,7 +12,7 @@
 #       include <windows.h>
 #endif
 
-#include "Core/UpdateContext.h"
+#include "Core/IUpdatable.h"
 #include "Entity.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
