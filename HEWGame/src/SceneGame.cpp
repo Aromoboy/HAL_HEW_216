@@ -16,14 +16,17 @@
 #include "GravityDampingSystem.h"
 #include "TextureCache.h"
 #include "DirectX.h"
-#include "Sweets.h"
+#include "SweetsManager.h"
 
 
 
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <DirectXMath.h>
@@ -54,6 +57,11 @@ namespace
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
+        constexpr float kDefaultPlaySeconds = 30.0f;
+        constexpr float kCountdownLogIntervalSeconds = 5.0f;
+        constexpr float kScoreMultiplier = 100.0f;
+        constexpr BYTE kConfirmInputKey = VK_RETURN;
+        constexpr BYTE kRetryInputKey = 'R';
 
         struct PhysicsTuningSettings
         {
@@ -285,17 +293,20 @@ SceneGame::SceneGame()
         m_drawSystem->SetDebugLoggingEnabled(kEnableDrawSystemVerboseLogging);
     }
 
-    if (m_sweetsManager)
+m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
+if (m_sweetsManager)
+{
+    m_sweetsManager->SetDrawSystem(m_drawSystem.get());
+    m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
+    m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
+    m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
     {
-        m_sweetsManager->SetDrawSystem(m_drawSystem.get());
-        m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
-        m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
-        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[SweetsPhase] Scene callback invoked for phase " << newPhase << "\n";
-                DebugTrace(oss.str());
-            });
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SweetsPhase] Scene callback invoked for phase " << newPhase << "\n";
+        DebugTrace(oss.str());
+    });
+}
+
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -383,6 +394,10 @@ SceneGame::SceneGame()
         }
     }
 
+    m_countdownTimer.Reset();
+    m_totalPlaySeconds = kDefaultPlaySeconds;
+    m_remainingCountdownSeconds = m_totalPlaySeconds;
+    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
 }
 
 SceneGame::~SceneGame()
@@ -419,6 +434,12 @@ SceneGame::~SceneGame()
         {
                 GetUpdateScheduler().Unregister(*m_drawSystem);
                 m_drawRegistered = false;
+        }
+
+        if (m_sweetsRegistered && m_sweetsManager)
+        {
+                GetUpdateScheduler().Unregister(*m_sweetsManager);
+                m_sweetsRegistered = false;
         }
 
         if (player)
@@ -484,6 +505,8 @@ void SceneGame::ConfigureUpdates()
         {
             Register(*player);
         }
+
+        ResetPlaySession();
 }
 
 void SceneGame::Update(Core::UpdateContext& ctx)
@@ -491,6 +514,16 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
         HandleColliderDebugCommands(ctx);
 #endif
+UpdateCountdown(ctx);
+UpdateTowerHeightTelemetry();
+
+if (m_timeUp)
+{
+    ProcessPostGameInput(ctx);
+    return;
+}
+
+HandleManualRetryInput(ctx);
         fRads.z += 0.001f * RAD;
 
         if (m_cameraAnchor && !m_pObjects.empty())
@@ -582,6 +615,7 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         }
 
         m_drawSystem->RenderQueued(activeCamera);
+        RenderRunTelemetryOverlay();
 }
 
 void SceneGame::ApplyCameraPrototype(size_t index)
@@ -783,4 +817,195 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     {
         m_sweetsManager->NotifyPhaseChanged(newPhase);
     }
+void SceneGame::ResetPlaySession()
+{
+    m_countdownTimer.Reset();
+    m_totalPlaySeconds = kDefaultPlaySeconds;
+    m_remainingCountdownSeconds = m_totalPlaySeconds;
+    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
+    m_isPlaying = true;
+    m_timeUp = false;
+    m_currentTowerHeight = 0.0f;
+    m_peakTowerHeight = 0.0f;
+    ToggleGameplaySystems(true);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
+    DebugTrace(oss.str());
+}
+
+void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
+{
+    if (!m_isPlaying)
+    {
+        return;
+    }
+
+    const float delta = m_countdownTimer.Tick(ctx.dt);
+    if (!(delta > 0.0f))
+    {
+        return;
+    }
+
+    const float previousRemaining = m_remainingCountdownSeconds;
+    m_remainingCountdownSeconds = std::max(0.0f, m_remainingCountdownSeconds - delta);
+
+    const int previousSeconds = static_cast<int>(std::ceil(previousRemaining));
+    const int currentSeconds = static_cast<int>(std::ceil(m_remainingCountdownSeconds));
+    if (currentSeconds < previousSeconds)
+    {
+        const int intervalSeconds = std::max(1, static_cast<int>(kCountdownLogIntervalSeconds));
+        const bool shouldLogInterval = (currentSeconds % intervalSeconds == 0);
+        const bool shouldLogWarning = currentSeconds <= 3;
+        if ((shouldLogInterval || shouldLogWarning) && currentSeconds != m_lastAnnouncedCountdownSeconds)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Countdown] remaining=" << std::fixed << std::setprecision(2)
+                << m_remainingCountdownSeconds << "s\n";
+            DebugTrace(oss.str());
+            m_lastAnnouncedCountdownSeconds = currentSeconds;
+        }
+    }
+
+    if (m_remainingCountdownSeconds <= 0.0f && !m_timeUp)
+    {
+        m_timeUp = true;
+        m_isPlaying = false;
+        ToggleGameplaySystems(false);
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Countdown] timeUp peakHeight=" << std::fixed << std::setprecision(2)
+            << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
+        DebugTrace(oss.str());
+    }
+}
+
+void SceneGame::UpdateTowerHeightTelemetry()
+{
+    float instantHeight = 0.0f;
+    if (m_sweetsManager)
+    {
+        instantHeight = m_sweetsManager->GetHighestStackedHeight();
+    }
+
+    m_currentTowerHeight = instantHeight;
+    if (instantHeight > m_peakTowerHeight)
+    {
+        m_peakTowerHeight = instantHeight;
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Tower] newPeak=" << std::fixed << std::setprecision(2)
+            << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
+            << m_remainingCountdownSeconds << "s\n";
+        DebugTrace(oss.str());
+    }
+}
+
+void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
+{
+    if (!m_timeUp)
+    {
+        return;
+    }
+
+    Core::Input& input = ctx.input;
+    if (input.IsKeyTrigger(kConfirmInputKey))
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Result] Confirm accepted peak=" << std::fixed << std::setprecision(2)
+            << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
+        DebugTrace(oss.str());
+        ResetPlaySession();
+        return;
+    }
+
+    if (input.IsKeyTrigger(kRetryInputKey))
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Result] Retry input ignored until confirm. peak="
+            << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
+        DebugTrace(oss.str());
+    }
+}
+
+void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
+{
+    if (!m_isPlaying)
+    {
+        return;
+    }
+
+    if (!ctx.input.IsKeyTrigger(kRetryInputKey))
+    {
+        return;
+    }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] Retry requested elapsed="
+        << std::fixed << std::setprecision(2) << (m_totalPlaySeconds - m_remainingCountdownSeconds)
+        << "s peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
+    DebugTrace(oss.str());
+    ResetPlaySession();
+}
+
+void SceneGame::ToggleGameplaySystems(bool enabled)
+{
+    if (m_physicsMachine)
+    {
+        m_physicsMachine->Enable(enabled);
+    }
+    if (m_contactSystem)
+    {
+        m_contactSystem->Enable(enabled);
+    }
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->Enable(enabled);
+    }
+    if (player)
+    {
+        player->Enable(enabled);
+    }
+}
+
+void SceneGame::RenderRunTelemetryOverlay() const
+{
+#if defined(_WIN32)
+    constexpr int kOverlayBaseRow = 4;
+    const auto writeLine = [](int row, const std::string& text)
+    {
+        DebugConsole::SetDrawPos(1, row);
+        std::string padded = text;
+        if (padded.size() < 80)
+        {
+            padded.append(80 - padded.size(), ' ');
+        }
+        std::cout << padded;
+    };
+
+    std::ostringstream timerLine;
+    timerLine << "[SceneGame] Timer: " << std::fixed << std::setprecision(1)
+        << m_remainingCountdownSeconds << "s (state=" << (m_timeUp ? "Result" : "Playing") << ')';
+    writeLine(kOverlayBaseRow, timerLine.str());
+
+    std::ostringstream heightLine;
+    heightLine << "[SceneGame] Tower height: live=" << std::fixed << std::setprecision(2)
+        << m_currentTowerHeight << "m peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m";
+    writeLine(kOverlayBaseRow + 1, heightLine.str());
+
+    std::ostringstream scoreLine;
+    scoreLine << "[SceneGame] Score: " << ComputeScore() << " | Confirm=Enter Retry=R";
+    if (m_timeUp)
+    {
+        scoreLine << " (waiting for confirm)";
+    }
+    writeLine(kOverlayBaseRow + 2, scoreLine.str());
+
+    std::cout.flush();
+#else
+    (void)this;
+#endif
+}
+
+int SceneGame::ComputeScore() const
+{
+    return static_cast<int>(std::lround(m_peakTowerHeight * kScoreMultiplier));
 }

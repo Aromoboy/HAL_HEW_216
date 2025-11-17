@@ -58,6 +58,8 @@ namespace SweetsSpace
         SweetsList& GetByState(SweetsState state);
         const SweetsList& GetByState(SweetsState state) const;
 
+        float GetHighestStackedHeight() const;
+
         void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
         void Erase(const std::shared_ptr<BaseSweets>& sweets);
 
