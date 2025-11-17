@@ -17,6 +17,7 @@
 #include "GravityDampingSystem.h"
 #include "TextureCache.h"
 #include "DirectX.h"
+#include "Sweets.h"
 #include "SweetsManager.h"
 
 
@@ -431,6 +432,10 @@ SceneGame::SceneGame()
     player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
     if (player)
     {
+        if (m_sweetsManager)
+        {
+            player->SetSweetsManager(m_sweetsManager.get());
+        }
         RegisterPhysicsBody(*player);
         if (m_drawSystem)
         {
@@ -864,6 +869,11 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
     }
 
+    if (player)
+    {
+        player->ClearCarriedSweets();
+    }
+
     InitializeStageAnchors();
     if (m_cameraAnchor && !m_pObjects.empty())
     {
@@ -1073,6 +1083,19 @@ void SceneGame::RenderRunTelemetryOverlay() const
         scoreLine << " (waiting for confirm)";
     }
     writeLine(kOverlayBaseRow + 2, scoreLine.str());
+
+    std::ostringstream carryLine;
+    carryLine << "[SceneGame] Player carry: ";
+    if (player && player->IsCarryingSweets())
+    {
+        const auto carried = player->GetCarriedSweets();
+        carryLine << (carried ? carried->GetTag() : "<unknown>");
+    }
+    else
+    {
+        carryLine << "empty";
+    }
+    writeLine(kOverlayBaseRow + 3, carryLine.str());
 
     std::cout.flush();
 #else

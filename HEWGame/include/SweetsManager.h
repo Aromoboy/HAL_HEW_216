@@ -54,7 +54,8 @@ namespace SweetsSpace
     {
         Active,  // 現在制御中または落下中の生成されたお菓子
         Stacked, // タワーの一部であるお菓子を積み重ねることに成功した
-        Ground   // 地面に置かれたお菓子が、拾われるのを待っている
+        Ground,  // 地面に置かれたお菓子が、拾われるのを待っている
+        Carried  // プレイヤーが保持しているため物理・状態遷移を停止
     };
 
     class SweetsManager : public Core::UpdateNode
@@ -91,6 +92,9 @@ namespace SweetsSpace
         int GetCurrentPhase() const noexcept;
 
         std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
+        std::shared_ptr<BaseSweets> FindNearestCarryable(const float3& position, float radius) const;
+        bool TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets);
+        bool ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets);
 
     private:
         struct SweetsStateHash

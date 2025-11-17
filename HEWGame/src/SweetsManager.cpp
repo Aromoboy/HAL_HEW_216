@@ -59,7 +59,10 @@ namespace
 
     SweetsSpace::SweetsState EvaluateState(SweetsSpace::BaseSweets& sweets, SweetsSpace::SweetsState currentState)
     {
-        (void)currentState;
+        if (currentState == SweetsSpace::SweetsState::Carried)
+        {
+            return SweetsSpace::SweetsState::Carried;
+        }
 
         const float speedSq = ComputeSpeedSq(sweets.GetPhysical());
         const float height = sweets.GetTransform().position.y;
@@ -187,6 +190,8 @@ namespace SweetsSpace
             return "Stacked";
         case SweetsState::Ground:
             return "Ground";
+        case SweetsState::Carried:
+            return "Carried";
         default:
             return "Unknown";
         }
@@ -215,6 +220,7 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
         m_byState.emplace(SweetsState::Ground, SweetsList{});
+        m_byState.emplace(SweetsState::Carried, SweetsList{});
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
@@ -361,12 +367,17 @@ namespace SweetsSpace
                     continue;
                 }
 
-                sweets->OnUpdate(ctx);
+                const bool isCarried = (bucketState == SweetsState::Carried);
 
-                const SweetsState desiredState = EvaluateState(*sweets, bucketState);
-                if (desiredState != bucketState)
+                if (!isCarried)
                 {
-                    stateChanges.push_back({ sweets, desiredState });
+                    sweets->OnUpdate(ctx);
+
+                    const SweetsState desiredState = EvaluateState(*sweets, bucketState);
+                    if (desiredState != bucketState)
+                    {
+                        stateChanges.push_back({ sweets, desiredState });
+                    }
                 }
 
                 ++it;
@@ -675,6 +686,117 @@ namespace SweetsSpace
         RegisterWithSystems(sweets);
 
         return sweets;
+    }
+
+    std::shared_ptr<BaseSweets> SweetsManager::FindNearestCarryable(const float3& position, float radius) const
+    {
+        const float radiusSq = radius * radius;
+        std::shared_ptr<BaseSweets> best;
+        float bestDistanceSq = radiusSq;
+
+        const auto scanState = [&](SweetsState state)
+        {
+            auto it = m_byState.find(state);
+            if (it == m_byState.end())
+            {
+                return;
+            }
+
+            for (const auto& sweets : it->second)
+            {
+                if (!sweets)
+                {
+                    continue;
+                }
+
+                const auto& sweetsPos = sweets->GetTransform().position;
+                const float dx = sweetsPos.x - position.x;
+                const float dy = sweetsPos.y - position.y;
+                const float dz = sweetsPos.z - position.z;
+                const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+                if (distanceSq <= bestDistanceSq)
+                {
+                    bestDistanceSq = distanceSq;
+                    best = sweets;
+                }
+            }
+        };
+
+        scanState(SweetsState::Ground);
+        scanState(SweetsState::Active);
+
+        return best;
+    }
+
+    bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return false;
+        }
+
+        auto it = m_lookup.find(sweets);
+        const SweetsState current = (it != m_lookup.end()) ? it->second : SweetsState::Active;
+        if (current != SweetsState::Active && current != SweetsState::Ground)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "TryMarkAsCarried rejected tag='" << sweets->GetTag()
+                << "' currentState=" << StateToString(current) << "\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->UnregisterBody(*sweets);
+        }
+        else if (!m_warnedMissingPhysicsMachine)
+        {
+            DebugTrace(std::string(kLogPrefix) + "TryMarkAsCarried missing physics machine; body may keep simulating.\n");
+            m_warnedMissingPhysicsMachine = true;
+        }
+
+        SetState(sweets, SweetsState::Carried);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "TryMarkAsCarried success tag='" << sweets->GetTag() << "'\n";
+        DebugTrace(oss.str());
+        return true;
+    }
+
+    bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return false;
+        }
+
+        auto it = m_lookup.find(sweets);
+        if (it == m_lookup.end() || it->second != SweetsState::Carried)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "ReleaseCarriedSweets rejected tag='" << sweets->GetTag() << "' state="
+                << (it == m_lookup.end() ? "<unknown>" : StateToString(it->second)) << "\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        SetState(sweets, SweetsState::Active);
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->RegisterBody(*sweets);
+        }
+        else if (!m_warnedMissingPhysicsMachine)
+        {
+            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets missing physics machine; body will not simulate.\n");
+            m_warnedMissingPhysicsMachine = true;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "ReleaseCarriedSweets success tag='" << sweets->GetTag() << "'\n";
+        DebugTrace(oss.str());
+        return true;
     }
 
     void SweetsManager::RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets)
