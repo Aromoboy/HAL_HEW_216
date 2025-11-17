@@ -13,6 +13,8 @@
 #include "AABBCollider.h"
 #include "ModelCache.h"
 #include "GravityDampingSystem.h"
+#include "TextureCache.h"
+#include "DirectX.h"
 
 
 
@@ -317,10 +319,18 @@ SceneGame::SceneGame()
     m_loader = std::make_shared<AssimpModelLorder>();
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
-    cache.SetLoader(m_loader);
+    ID3D11Device* device = GetDevice();
+    if (!device)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
+    }
+    else
+    {
+        cache.SetLoader(m_loader, device, TextureCache::Instance());
+    }
 
     // 描画テスト用
-    m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
+    m_model = cache.Get("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
     m_render = std::make_unique<ModelRender>();
     std::shared_ptr<Collision::ICollider> collider;

@@ -4,13 +4,15 @@
 
 #include "ModelDX.h"
 
-// ローダーのインターフェース
+struct ID3D11Device;
+class TextureCache;
+
+// [_[ﾌイ^[tF[X
 class IModelLoader
 {
 public:
-	IModelLoader() {};
-	~IModelLoader() = default;
+        IModelLoader() {};
+        ~IModelLoader() = default;
 
-	virtual std::shared_ptr<ModelDX> Load(std::string path) = 0;
+        virtual std::shared_ptr<ModelDX> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) = 0;
 };
-
