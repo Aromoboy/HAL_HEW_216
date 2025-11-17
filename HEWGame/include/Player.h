@@ -43,6 +43,8 @@ namespace SceneSpace
         std::shared_ptr<SweetsSpace::BaseSweets> GetCarriedSweets() const;
         void ClearCarriedSweets();
         bool IsKinematic() const;
+        void SetMoveSpeed(float speed);
+        float GetMoveSpeed() const;
 
     private:
         std::shared_ptr<ModelDX> model;
@@ -52,6 +54,7 @@ namespace SceneSpace
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
+        float m_moveSpeed;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);

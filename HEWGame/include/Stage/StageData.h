@@ -23,6 +23,7 @@ namespace Stage
         float GetPlatformCenterY() const noexcept;
         const float3& GetPlatformScale() const noexcept;
         const std::string& GetSourcePath() const noexcept;
+        float GetPlayerMoveSpeed() const noexcept;
 
     private:
         void ApplyDefaults();
@@ -37,5 +38,6 @@ namespace Stage
         std::vector<float3> m_spawnPoints;
         std::string m_sourcePath;
         bool m_loadedFromFile;
+        float m_playerMoveSpeed;
     };
 }
