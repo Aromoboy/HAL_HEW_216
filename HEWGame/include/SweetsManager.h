@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <memory>
@@ -11,100 +12,55 @@
 #include "ModelRender.h"
 #include "Transform.h"
 
-namespace Systems
-{
-        class DrawSystem;
-}
-
-namespace SceneSpace
-{
-        class PhysicalEntity;
-}
-
 namespace SweetsSpace
 {
-        class BaseSweets;
-}
+    class BaseSweets;
 
-using BaseSweets = SweetsSpace::BaseSweets;
+    enum class SweetsState : std::uint8_t
+    {
+        Active,  // 現在制御中または落下中の生成されたお菓子
+        Stacked, // タワーの一部であるお菓子を積み重ねることに成功した
+        Ground   // 地面に置かれたお菓子が、拾われるのを待っている
+    };
 
-enum class SweetsState
-{
-        Active,
-        Staked,
-        Ground
-};
-
-class SweetsManager : public Core::UpdateNode
-{
-public:
-        using RegisterNodeCallback = std::function<void(Core::IUpdatable&)>;
-        using PhysicsRegisterCallback = std::function<void(SceneSpace::PhysicalEntity&)>;
-        using PhysicsUnregisterCallback = std::function<void(SceneSpace::PhysicalEntity*)>;
+    class SweetsManager : public Core::UpdateNode
+    {
+    public:
+        using SweetsList = std::list<std::shared_ptr<BaseSweets>>;
 
         SweetsManager();
-        ~SweetsManager() override;
+        ~SweetsManager();
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
-        void DrawAll(ModelRender& render, const std::shared_ptr<CameraSpace::ICamera>& camera);
+        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera);
 
-        std::list<std::shared_ptr<BaseSweets>> GetByState(SweetsState state);
+        SweetsList& GetByState(SweetsState state);
+        const SweetsList& GetByState(SweetsState state) const;
 
-        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
+        void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
+        void Erase(const std::shared_ptr<BaseSweets>& sweets);
 
-        void SetDrawSystem(Systems::DrawSystem* drawSystem);
-        void SetNodeRegistrationCallbacks(RegisterNodeCallback registerFn, RegisterNodeCallback unregisterFn);
-        void SetPhysicsCallbacks(PhysicsRegisterCallback registerFn, PhysicsUnregisterCallback unregisterFn);
+        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, Transform transform);
 
-private:
-        struct SweetsRecipe
+    private:
+        struct SweetsStateHash
         {
-                std::string type;
-                std::string modelPath;
-                float colliderExpand = 1.0f;
-                float3 colliderOffset{ 0.0f, 0.0f, 0.0f };
-                float weight = 1.0f;
-                float damping = 0.98f;
-                float3 initialVelocity{ 0.0f, 0.0f, 0.0f };
-                float3 initialForce{ 0.0f, 0.0f, 0.0f };
+            std::size_t operator()(SweetsState state) const noexcept
+            {
+                return static_cast<std::size_t>(state);
+            }
         };
 
-        using Bucket = std::list<std::shared_ptr<BaseSweets>>;
-        using Spawner = std::function<std::shared_ptr<BaseSweets>(const Transform&)>;
+        std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
+        std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> m_lookup;
 
-        void InitializeBuckets();
-        void ConfigureRecipes();
-        void RegisterDefaultSpawners();
-        std::string BuildTag(const std::string& baseKind);
-        void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweet);
-        void UnregisterFromSystems(const std::shared_ptr<BaseSweets>& sweet);
-        SweetsState EvaluateState(BaseSweets& sweet) const;
-        void MoveSweetToState(const std::shared_ptr<BaseSweets>& sweet, SweetsState from, SweetsState to);
-        bool EraseUnregistered(Bucket& bucket, SweetsState state);
-        const char* StateToString(SweetsState state) const;
-        void DebugLogSpawn(const std::string& kind, const std::shared_ptr<BaseSweets>& sweet) const;
-        void DebugLogDespawn(const BaseSweets* sweet, SweetsState state, const std::string& reason) const;
+        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(Transform)>> m_spawner;
 
-        template<typename TSweets>
-        void RegisterSpawnerForKind(const std::string& kind);
-
-        template<typename TSweets>
-        std::shared_ptr<BaseSweets> InstantiateFromRecipe(const SweetsRecipe& recipe, const Transform& transform);
-
-        std::unordered_map<SweetsState, Bucket> m_byState;
-        std::unordered_map<std::string, Spawner> m_spawners;
-        std::unordered_map<std::string, SweetsRecipe> m_recipes;
-        std::unordered_map<std::string, size_t> m_spawnCounts;
-
-        Systems::DrawSystem* m_drawSystem;
-        RegisterNodeCallback m_registerNode;
-        RegisterNodeCallback m_unregisterNode;
-        PhysicsRegisterCallback m_registerPhysicsBody;
-        PhysicsUnregisterCallback m_unregisterPhysicsBody;
-
-        bool m_warnedMissingScheduler;
-        bool m_warnedMissingDrawSystem;
-        bool m_warnedMissingPhysicsRegister;
-        bool m_warnedMissingPhysicsUnregister;
-};
+        template<typename T>
+        std::shared_ptr<BaseSweets> MakeSweets(Transform transform)
+        {
+            return std::make_shared<T>(transform.position, transform.rotation, transform.scale /*etx...*/);
+        }
+    };
+}
