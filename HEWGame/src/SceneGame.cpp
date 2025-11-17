@@ -57,6 +57,7 @@ namespace
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
+        constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kScoreMultiplier = 100.0f;
@@ -299,11 +300,17 @@ if (m_sweetsManager)
     m_sweetsManager->SetDrawSystem(m_drawSystem.get());
     m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
     m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
-    m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
+    m_sweetsManager->SetSpawnOrigins(m_stageData.GetSpawnPoints());
+    const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "[SweetsPhase] Scene callback invoked for phase " << newPhase << "\n";
+        oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
+            << " from '" << kSweetsSpawnConfigPath << "'.\n";
         DebugTrace(oss.str());
+    }
+    m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
+    {
+        ForwardSweetsPhaseChange(newPhase);
     });
 }
 
@@ -777,6 +784,23 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
         m_sweetsManager->NotifyPhaseChanged(newPhase);
     }
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
+}
+
+void SceneGame::ForwardSweetsPhaseChange(int newPhase)
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
+        << " to spawn pacing system.\n";
+    DebugTrace(oss.str());
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->ForceSpawnRefresh();
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
+    }
 }
 void SceneGame::ResetPlaySession()
 {

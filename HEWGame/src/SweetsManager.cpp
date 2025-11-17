@@ -1,6 +1,11 @@
 #include "SweetsManager.h"
 
 #include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <iomanip>
+#include <map>
+#include <random>
 #include <sstream>
 #include <utility>
 
@@ -38,6 +43,11 @@ namespace
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kRestVelocityThresholdSq = 0.05f * 0.05f;
     constexpr float kGroundHeightThreshold = 0.05f;
+    constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
+    constexpr int kDefaultSimultaneousSpawnCount = 1;
+    constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
+    constexpr std::size_t kMaxSpawnQueueEntries = 16;
+    constexpr float kDefaultSpawnHeightOffset = 8.0f;
 
     const char* ToString(SweetsSpace::SweetsState state)
     {
@@ -79,6 +89,93 @@ namespace
 
         return SweetsSpace::SweetsState::Active;
     }
+
+    std::string TrimToken(const std::string& value)
+    {
+        auto begin = value.begin();
+        auto end = value.end();
+        while (begin != end && std::isspace(static_cast<unsigned char>(*begin)))
+        {
+            ++begin;
+        }
+
+        while (end != begin)
+        {
+            auto prev = end;
+            --prev;
+            if (!std::isspace(static_cast<unsigned char>(*prev)))
+            {
+                break;
+            }
+            end = prev;
+        }
+
+        return std::string(begin, end);
+    }
+
+    std::vector<SweetsSpace::WeightedSweetsType> ParseWeights(const std::string& raw, bool* outError)
+    {
+        std::vector<SweetsSpace::WeightedSweetsType> weights;
+        std::string token;
+        std::istringstream stream(raw);
+
+        while (std::getline(stream, token, ','))
+        {
+            token = TrimToken(token);
+            if (token.empty())
+            {
+                continue;
+            }
+
+            float weight = 1.0f;
+            std::string kind = token;
+            const auto colon = token.find(':');
+            if (colon != std::string::npos)
+            {
+                kind = TrimToken(token.substr(0, colon));
+                std::string weightToken = TrimToken(token.substr(colon + 1));
+                if (!weightToken.empty())
+                {
+                    try
+                    {
+                        weight = std::stof(weightToken);
+                    }
+                    catch (const std::exception& ex)
+                    {
+                        if (outError)
+                        {
+                            *outError = true;
+                        }
+
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Failed to parse weight token '" << weightToken
+                            << "' from '" << raw << "': " << ex.what() << "\n";
+                        DebugTrace(oss.str());
+                        return {};
+                    }
+                }
+            }
+
+            if (kind.empty())
+            {
+                continue;
+            }
+
+            if (!(weight > 0.0f))
+            {
+                continue;
+            }
+
+            weights.push_back({ kind, weight });
+        }
+
+        if (weights.empty() && outError)
+        {
+            *outError = true;
+        }
+
+        return weights;
+    }
 }
 
 namespace SweetsSpace
@@ -89,10 +186,19 @@ namespace SweetsSpace
         , m_scheduler(nullptr)
         , m_phaseChangeCallback()
         , m_currentPhase(0)
+        , m_phaseConfigs()
+        , m_activePhaseConfigIndex(-1)
+        , m_spawnTimer(0.0f)
+        , m_spawnQueue()
+        , m_spawnOrigins()
+        , m_nextSpawnOriginIndex(0)
+        , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
+        , m_random(std::random_device{}())
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
         , m_warnedMissingPhaseCallback(false)
+        , m_warnedMissingSpawnOrigins(false)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -215,12 +321,16 @@ namespace SweetsSpace
                 DebugTrace(oss.str());
             }
         }
+
+        ApplyDefaultPhaseConfigs();
     }
 
     SweetsManager::~SweetsManager() = default;
 
     void SweetsManager::OnUpdate(Core::UpdateContext& ctx)
     {
+        RunSpawnScheduler(ctx.dt);
+
         struct PendingStateChange
         {
             std::shared_ptr<BaseSweets> sweets;
@@ -390,6 +500,8 @@ namespace SweetsSpace
 
     void SweetsManager::ClearAllSweets()
     {
+        ForceSpawnRefresh();
+
         std::vector<std::shared_ptr<BaseSweets>> sweetsToRemove;
         sweetsToRemove.reserve(m_lookup.size());
         size_t totalStatesCleared = 0;
@@ -521,6 +633,8 @@ namespace SweetsSpace
         oss << kLogPrefix << "Phase changed to " << m_currentPhase << "\n";
         DebugTrace(oss.str());
 
+        OnPhaseConfigurationChanged(m_currentPhase);
+
         if (m_phaseChangeCallback)
         {
             m_phaseChangeCallback(m_currentPhase);
@@ -622,5 +736,497 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
+    }
+
+    bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
+    {
+        std::ifstream file(path);
+        if (!file.is_open())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Phase spawn config not found at '" << path << "'. Using defaults.\n";
+            DebugTrace(oss.str());
+            ApplyDefaultPhaseConfigs();
+            return false;
+        }
+
+        struct PartialConfig
+        {
+            PhaseSpawnConfig config;
+            bool hasInterval = false;
+            bool hasSimultaneous = false;
+            bool hasWeights = false;
+        };
+
+        std::map<int, PartialConfig> parsed;
+        int currentPhase = -1;
+        bool parseError = false;
+        std::string line;
+        size_t lineNumber = 0;
+
+        while (std::getline(file, line))
+        {
+            ++lineNumber;
+            const auto commentPos = line.find_first_of("#;");
+            if (commentPos != std::string::npos)
+            {
+                line = line.substr(0, commentPos);
+            }
+
+            line = TrimToken(line);
+            if (line.empty())
+            {
+                continue;
+            }
+
+            const auto delimiterPos = line.find('=');
+            if (delimiterPos == std::string::npos)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Spawn config line " << lineNumber << " missing '=' : " << line << "\n";
+                DebugTrace(oss.str());
+                parseError = true;
+                continue;
+            }
+
+            const std::string key = TrimToken(line.substr(0, delimiterPos));
+            const std::string value = TrimToken(line.substr(delimiterPos + 1));
+
+            if (key == "phase")
+            {
+                try
+                {
+                    currentPhase = std::max(0, std::stoi(value));
+                    parsed[currentPhase];
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse phase index on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                    currentPhase = -1;
+                }
+                continue;
+            }
+
+            if (currentPhase < 0)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Encountered key '" << key << "' on line " << lineNumber
+                    << " before declaring a phase index.\n";
+                DebugTrace(oss.str());
+                parseError = true;
+                continue;
+            }
+
+            auto& partial = parsed[currentPhase];
+            if (key == "interval")
+            {
+                try
+                {
+                    partial.config.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, std::stof(value));
+                    partial.hasInterval = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse interval on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "simultaneous")
+            {
+                try
+                {
+                    partial.config.simultaneousSpawnCount = std::max(1, std::stoi(value));
+                    partial.hasSimultaneous = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse simultaneous count on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "weights")
+            {
+                bool weightError = false;
+                auto parsedWeights = ParseWeights(value, &weightError);
+                if (weightError)
+                {
+                    parseError = true;
+                    continue;
+                }
+
+                std::map<std::string, float> collapsed;
+                for (const auto& entry : parsedWeights)
+                {
+                    if (m_spawner.find(entry.kind) == m_spawner.end())
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets kind '"
+                            << entry.kind << "'.\n";
+                        DebugTrace(oss.str());
+                        continue;
+                    }
+                    collapsed[entry.kind] += entry.weight;
+                }
+
+                partial.config.weights.clear();
+                for (const auto& entry : collapsed)
+                {
+                    if (entry.second > 0.0f)
+                    {
+                        partial.config.weights.push_back({ entry.first, entry.second });
+                    }
+                }
+
+                if (partial.config.weights.empty())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Phase " << currentPhase
+                        << " weights resolved to zero valid entries; falling back to defaults.\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    partial.hasWeights = true;
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Unknown spawn config key '" << key << "' on line " << lineNumber << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        m_phaseConfigs.clear();
+        for (const auto& entry : parsed)
+        {
+            PhaseSpawnConfig config = entry.second.config;
+            if (!entry.second.hasInterval)
+            {
+                config.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+            }
+            config.spawnIntervalSeconds = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+
+            if (!entry.second.hasSimultaneous)
+            {
+                config.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+            }
+            config.simultaneousSpawnCount = std::max(1, config.simultaneousSpawnCount);
+
+            if (!entry.second.hasWeights || config.weights.empty())
+            {
+                config.weights = BuildDefaultWeights();
+            }
+
+            if (config.weights.empty())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Skipping phase " << entry.first
+                    << " because no valid weights were available even after defaults.\n";
+                DebugTrace(oss.str());
+                continue;
+            }
+
+            m_phaseConfigs.push_back(std::move(config));
+        }
+
+        if (m_phaseConfigs.empty())
+        {
+            DebugTrace(std::string(kLogPrefix) + "No valid phase configs parsed; applying defaults.\n");
+            ApplyDefaultPhaseConfigs();
+            return false;
+        }
+
+        m_activePhaseConfigIndex = -1;
+        OnPhaseConfigurationChanged(m_currentPhase);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Loaded " << m_phaseConfigs.size()
+            << " spawn phases from '" << path << "' (parseError=" << std::boolalpha << parseError << ").\n";
+        DebugTrace(oss.str());
+        return !parseError;
+    }
+
+    void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
+    {
+        m_spawnOrigins = origins;
+        m_nextSpawnOriginIndex = 0;
+        m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
+            << " spawn origins (heightOffset=" << m_spawnHeightOffset << ").\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::ForceSpawnRefresh()
+    {
+        m_spawnTimer = 0.0f;
+        if (!m_spawnQueue.empty())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Clearing pending spawn queue (" << m_spawnQueue.size() << ").\n";
+            DebugTrace(oss.str());
+        }
+        m_spawnQueue.clear();
+    }
+
+    void SweetsManager::RunSpawnScheduler(float deltaSeconds)
+    {
+        EmitSpawnRequests();
+
+        if (m_phaseConfigs.empty())
+        {
+            return;
+        }
+
+        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+        {
+            OnPhaseConfigurationChanged(m_currentPhase);
+        }
+
+        if (!(deltaSeconds > 0.0f))
+        {
+            return;
+        }
+
+        m_spawnTimer += deltaSeconds;
+        const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
+        const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+
+        while (m_spawnTimer >= interval)
+        {
+            m_spawnTimer -= interval;
+            EnqueueSpawns(std::max(1, config.simultaneousSpawnCount));
+        }
+
+        EmitSpawnRequests();
+    }
+
+    void SweetsManager::EnqueueSpawns(int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < count; ++i)
+        {
+            if (m_spawnQueue.size() >= kMaxSpawnQueueEntries)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Spawn queue is full (" << m_spawnQueue.size()
+                    << "); dropping additional requests.\n";
+                DebugTrace(oss.str());
+                break;
+            }
+
+            const std::string kind = ChooseKindFromActiveConfig();
+            if (kind.empty())
+            {
+                break;
+            }
+
+            m_spawnQueue.push_back(kind);
+        }
+    }
+
+    void SweetsManager::EmitSpawnRequests()
+    {
+        if (m_spawnQueue.empty())
+        {
+            return;
+        }
+
+        std::size_t spawnedCount = 0;
+        while (!m_spawnQueue.empty())
+        {
+            const std::string kind = m_spawnQueue.front();
+            m_spawnQueue.pop_front();
+
+            const float3 origin = NextSpawnOrigin();
+            Transform transform = BuildSpawnTransform(origin);
+            if (Spawn(kind, transform))
+            {
+                ++spawnedCount;
+            }
+        }
+
+        if (spawnedCount > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Emitted " << spawnedCount << " sweets from scheduler.\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+    std::string SweetsManager::ChooseKindFromActiveConfig()
+    {
+        if (m_phaseConfigs.empty())
+        {
+            return {};
+        }
+
+        const int clampedIndex = std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
+        const auto& config = m_phaseConfigs[clampedIndex];
+        if (config.weights.empty())
+        {
+            return {};
+        }
+
+        float totalWeight = 0.0f;
+        for (const auto& entry : config.weights)
+        {
+            totalWeight += entry.weight;
+        }
+
+        if (!(totalWeight > 0.0f))
+        {
+            return {};
+        }
+
+        std::uniform_real_distribution<float> dist(0.0f, totalWeight);
+        float roll = dist(m_random);
+        for (const auto& entry : config.weights)
+        {
+            if (roll <= entry.weight)
+            {
+                return entry.kind;
+            }
+            roll -= entry.weight;
+        }
+
+        return config.weights.back().kind;
+    }
+
+    void SweetsManager::OnPhaseConfigurationChanged(int newPhase)
+    {
+        if (m_phaseConfigs.empty())
+        {
+            return;
+        }
+
+        const int clamped = std::clamp(newPhase, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
+        if (m_activePhaseConfigIndex == clamped)
+        {
+            return;
+        }
+
+        m_activePhaseConfigIndex = clamped;
+        ForceSpawnRefresh();
+        LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
+    }
+
+    void SweetsManager::LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Spawn] phase=" << phaseIndex
+            << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
+            << " simultaneous=" << config.simultaneousSpawnCount
+            << " weights=";
+
+        if (config.weights.empty())
+        {
+            oss << "(none)";
+        }
+        else
+        {
+            bool first = true;
+            for (const auto& entry : config.weights)
+            {
+                oss << (first ? ' ' : ',') << entry.kind
+                    << ':' << std::fixed << std::setprecision(2) << entry.weight;
+                first = false;
+            }
+        }
+
+        oss << "\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::ApplyDefaultPhaseConfigs()
+    {
+        m_phaseConfigs.clear();
+        std::vector<WeightedSweetsType> baseWeights = BuildDefaultWeights();
+        if (baseWeights.empty())
+        {
+            DebugTrace(std::string(kLogPrefix) + "Cannot build default spawn configs: no sweets registered.\n");
+            return;
+        }
+
+        PhaseSpawnConfig phase0;
+        phase0.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+        phase0.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+        phase0.weights = baseWeights;
+
+        PhaseSpawnConfig phase1 = phase0;
+        phase1.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.75f);
+
+        PhaseSpawnConfig phase2 = phase0;
+        phase2.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.5f);
+        phase2.simultaneousSpawnCount = 2;
+
+        m_phaseConfigs.push_back(phase0);
+        m_phaseConfigs.push_back(phase1);
+        m_phaseConfigs.push_back(phase2);
+
+        m_activePhaseConfigIndex = -1;
+        ForceSpawnRefresh();
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Applied default spawn configs (" << m_phaseConfigs.size() << " phases).\n";
+        DebugTrace(oss.str());
+    }
+
+    std::vector<WeightedSweetsType> SweetsManager::BuildDefaultWeights() const
+    {
+        std::vector<WeightedSweetsType> weights;
+        weights.reserve(m_spawner.size());
+        for (const auto& entry : m_spawner)
+        {
+            weights.push_back({ entry.first, 1.0f });
+        }
+        return weights;
+    }
+
+    float3 SweetsManager::NextSpawnOrigin()
+    {
+        if (m_spawnOrigins.empty())
+        {
+            if (!m_warnedMissingSpawnOrigins)
+            {
+                DebugTrace(std::string(kLogPrefix) + "Spawn origin list is empty; using world origin.\n");
+                m_warnedMissingSpawnOrigins = true;
+            }
+            return float3{ 0.0f, 0.0f, 0.0f };
+        }
+
+        if (m_nextSpawnOriginIndex >= m_spawnOrigins.size())
+        {
+            m_nextSpawnOriginIndex = 0;
+        }
+
+        return m_spawnOrigins[m_nextSpawnOriginIndex++];
+    }
+
+    Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
+    {
+        Transform transform{};
+        transform.position = origin;
+        transform.position.y += m_spawnHeightOffset;
+        transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+        transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+        return transform;
     }
 }
