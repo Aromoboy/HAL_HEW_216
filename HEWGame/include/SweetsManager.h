@@ -17,9 +17,9 @@ namespace SweetsSpace
 
     enum class SweetsState : std::uint8_t
     {
-        Active,  // Spawned sweets currently controlled or falling.
-        Stacked, // Successfully stacked sweets that are part of the tower.
-        Ground   // Sweets resting on the ground waiting to be picked up.
+        Active,  // 現在制御中または落下中の生成されたお菓子
+        Stacked, // タワーの一部であるお菓子を積み重ねることに成功した
+        Ground   // 地面に置かれたお菓子が、拾われるのを待っている
     };
 
     class SweetsManager : public Core::UpdateNode
