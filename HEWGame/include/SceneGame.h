@@ -76,6 +76,7 @@ private:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<SceneSpace::Entity> m_cameraAnchor;
+    size_t m_activeCameraPrototypeIndex = 0;
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::shared_ptr<IModelLoader> m_loader;
     std::shared_ptr<ModelDX> m_model;
@@ -94,7 +95,6 @@ private:
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
-    size_t m_activeCameraPrototypeIndex = 0;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();
