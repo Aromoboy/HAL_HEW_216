@@ -8,12 +8,12 @@
 #include "PhysicalEntity.h"
 
 namespace Systems
-// PhysicsMachine ‚Í Entity ‚ÌŠ®‘S’è‹`‚ğQÆ‚·‚é‚æ‚¤‚ÉXV
-// •sŠ®‘SŒ^ƒGƒ‰[‚ğ”ğ‚¯‚é‚½‚ßASceneSpace::PhysicalEntity ‚ğ’¼Úˆµ‚¤
+// PhysicsMachine  Entity ÌŠS`QÆ‚æ‚¤ÉXV
+// sS^G[é‚½ßASceneSpace::PhysicalEntity ğ’¼Úˆ
 {
     class IPhysicsSystem
- // •¨—ƒVƒXƒeƒ€‚Í PhysicalEntity ‚ğ’¼Ú‘€ì
-// ˆÈ‘O‚Ì Entity::PhysicalEntity ‚©‚ç SceneSpace ‚É“ˆê
+ // VXe PhysicalEntity ğ’¼Ú‘
+// È‘O Entity::PhysicalEntity  SceneSpace É“
 
 
     {
@@ -32,9 +32,11 @@ namespace Systems
 
         void SetSystem(SystemPtr system);
         SystemPtr GetSystem() const;
+        const std::vector<SceneSpace::PhysicalEntity*>& GetBodies() const;
 
-// “o˜^‚·‚éƒ{ƒfƒB‚à SceneSpace –¼‘O‹óŠÔ‚É“ˆê
-// Entity ‚ÌÄ\¬‚É‡‚í‚¹‚½•ÏX
+
+// o^{fB SceneSpace OÔ‚É“
+// Entity ÌÄ\Éí‚¹ÏX
 
         void RegisterBody(SceneSpace::PhysicalEntity& body);
         void UnregisterBody(SceneSpace::PhysicalEntity& body);

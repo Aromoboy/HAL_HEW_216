@@ -35,6 +35,7 @@ namespace Systems
 {
     class PhysicsMachine;
     class GravityDampingSystem;
+    class ContactLiteSystem;
 }
 
 class SceneGame : public SceneSpace::Scene
@@ -67,9 +68,11 @@ private:
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
+    std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
+    bool m_contactRegistered = false;
     bool m_cameraRigRegistered = false;
     size_t m_activeCameraPrototypeIndex = 0;
 };
