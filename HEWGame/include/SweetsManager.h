@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "Core/UpdateNode.h"
+#include "ICamera.h"
 #include "ModelRender.h"
 #include "Transform.h"
 
