@@ -38,8 +38,5 @@ namespace SceneSpace
     // PhysicsMachine がこの Physical を直接操作する
     // そのため参照で返している
 
-    inline void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
-    {
-        entity.ApplyTranslation(delta);
-    }
+    void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta);
 } // namespace SceneSpace

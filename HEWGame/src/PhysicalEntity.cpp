@@ -25,4 +25,10 @@ namespace SceneSpace
     {
         return m_physical;
     }
+
+    void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
+    {
+        entity.CollisionEntity::ApplyTranslation(delta);
+    }
+
 }
