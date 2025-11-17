@@ -11,8 +11,8 @@ namespace SceneSpace
 {
     class PhysicalEntity : public CollisionEntity
     {
- // PhysicalEntity ‚Í Collision ‚É‰Á‚¦‚Ä Physicali‘¬“xE—ÍE¿—Ê‚È‚Çj‚ğ‚Â
-// Entity ¨ CollisionEntity ¨ PhysicalEntity ‚ÌŠK‘w‚É“ˆê
+ // PhysicalEntity ã¯ Collision ã«åŠ ãˆã¦ Physicalï¼ˆé€Ÿåº¦ãƒ»åŠ›ãƒ»è³ªé‡ãªã©ï¼‰ã‚’æŒã¤
+// Entity â†’ CollisionEntity â†’ PhysicalEntity ã®éšå±¤ã«çµ±ä¸€
 
     public:
         PhysicalEntity(const std::string& tag,
@@ -26,12 +26,17 @@ namespace SceneSpace
             float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
-// •¨—î•ñivelocity / force / weight / dampingj‚à
-// Transform ‚Æˆê‚É‰Šú‰»‚Å‚«‚é‚æ‚¤‚É‚µ‚½
+
+    inline void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
+    {
+        entity.ApplyTranslation(delta);
+    }
+}
+// Transform ã¨ä¸€ç·’ã«åˆæœŸåŒ–ã§ãã‚‹ã‚ˆã†ã«ã—ãŸ
 
         ~PhysicalEntity() override;
- // PhysicsMachine ‚ª‚±‚Ì Physical ‚ğ’¼Ú‘€ì‚·‚é
-// ‚»‚Ì‚½‚ßQÆ‚Å•Ô‚µ‚Ä‚¢‚é
+ // PhysicsMachine ãŒã“ã® Physical ã‚’ç›´æ¥æ“ä½œã™ã‚‹
+// ãã®ãŸã‚å‚ç…§ã§è¿”ã—ã¦ã„ã‚‹
 
         Physics::Physical& GetPhysical();
 

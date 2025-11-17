@@ -205,32 +205,17 @@ namespace Systems
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
                                 const float halfPush = pushDistance * 0.5f;
 
-                                Transform& transformA = bodyA->GetTransform();
-                                Transform& transformB = bodyB->GetTransform();
+                                float3 translationA{ 0.0f, 0.0f, 0.0f };
+                                float3 translationB{ 0.0f, 0.0f, 0.0f };
+                                float* translationComponentA = SelectAxisComponent(translationA, axis);
+                                float* translationComponentB = SelectAxisComponent(translationB, axis);
 
-                                float* axisComponentA = nullptr;
-                                float* axisComponentB = nullptr;
-                                switch (axis)
-                                {
-                                case 0:
-                                        axisComponentA = &transformA.position.x;
-                                        axisComponentB = &transformB.position.x;
-                                        break;
-                                case 1:
-                                        axisComponentA = &transformA.position.y;
-                                        axisComponentB = &transformB.position.y;
-                                        break;
-                                default:
-                                        axisComponentA = &transformA.position.z;
-                                        axisComponentB = &transformB.position.z;
-                                        break;
-                                }
+                                const float axisPush = axisDir * halfPush;
+                                *translationComponentA += axisPush;
+                                *translationComponentB -= axisPush;
 
-                                *axisComponentA += axisDir * halfPush;
-                                *axisComponentB -= axisDir * halfPush;
-
-                                bodyA->SyncColliderBounds();
-                                bodyB->SyncColliderBounds();
+                                SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
+                                SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
 
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();

@@ -34,8 +34,8 @@ namespace SceneSpace
         // Transform 変更時にコライダーの AABB を同期する
         void SyncColliderBounds();
 
-    protected:
         // Transform の位置を変更し、変更があった場合のみ AABB を同期する
+        // 物理系システムが安全に呼び出せるよう公開している
         void ApplyTranslation(const float3& delta);
 
     protected:
