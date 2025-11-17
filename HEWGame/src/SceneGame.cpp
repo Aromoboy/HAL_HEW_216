@@ -1038,7 +1038,7 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
         m_isPlaying = false;
         ToggleGameplaySystems(false);
         std::ostringstream oss;
-        oss << kLogPrefix << "[Countdown] timeUp peakHeight=" << std::fixed << std::setprecision(2)
+        oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
         DebugTrace(oss.str());
     }
@@ -1059,7 +1059,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
     {
         m_peakTowerHeight = instantHeight;
         std::ostringstream oss;
-        oss << kLogPrefix << "[Tower] newPeak=" << std::fixed << std::setprecision(2)
+        oss << kLogPrefix << "[Tower] newPeakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
             << m_remainingCountdownSeconds << "s\n";
         DebugTrace(oss.str());
@@ -1077,7 +1077,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     if (input.IsKeyTrigger(kConfirmInputKey))
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "[Result] Confirm accepted peak=" << std::fixed << std::setprecision(2)
+        oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
         DebugTrace(oss.str());
         ResetPlaySession();
@@ -1087,7 +1087,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     if (input.IsKeyTrigger(kRetryInputKey))
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "[Result] Retry input ignored until confirm. peak="
+        oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
             << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
         DebugTrace(oss.str());
     }

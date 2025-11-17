@@ -129,6 +129,7 @@ namespace SweetsSpace
         bool m_warnedMissingScheduler;
         bool m_warnedMissingPhaseCallback;
         bool m_warnedMissingSpawnOrigins;
+        mutable bool m_warnedMissingHeightCollider;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
