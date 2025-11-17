@@ -8,7 +8,6 @@
 #define PLAYER_KEY_MOVE_DOWN 0x53	// S
 #define PLAYER_KEY_MOVE_RIGHT 0x44	// D
 
-#define PlayerSpeed (1.0f)
 #define PlayerSpeed (0.25f)
 
 SceneSpace::Player::Player(std::string a_tag,
@@ -30,34 +29,28 @@ SceneSpace::Player::Player(std::string a_tag,
 
 void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 {
-	Core::Input& input = ctx.input;
+        Core::Input& input = ctx.input;
 
-	float vectorX = 0.0f;
-	float vectorY = 0.0f;
+        float vectorX = 0.0f;
+        float vectorY = 0.0f;
 
-	if(input.IsKeyTrigger(PLAYER_KEY_MOVE_UP))
-	if(input.IsKeyPress(PLAYER_KEY_MOVE_UP))
-	{
-		vectorY =  PlayerSpeed;
-	}
-	else if (input.IsKeyTrigger(PLAYER_KEY_MOVE_DOWN))
-	else if (input.IsKeyPress(PLAYER_KEY_MOVE_DOWN))
-	{
-		vectorY = -PlayerSpeed;
-	}
+        if (input.IsKeyPress(PLAYER_KEY_MOVE_UP))
+        {
+                vectorY = PlayerSpeed;
+        }
+        else if (input.IsKeyPress(PLAYER_KEY_MOVE_DOWN))
+        {
+                vectorY = -PlayerSpeed;
+        }
 
-	if (input.IsKeyTrigger(PLAYER_KEY_MOVE_LEFT))
-	if (input.IsKeyPress(PLAYER_KEY_MOVE_LEFT))
-	{
-		vectorX = -PlayerSpeed;
-	}
-	else if (input.IsKeyTrigger(PLAYER_KEY_MOVE_RIGHT))
-	else if (input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT))
-	{
-		vectorX =  PlayerSpeed;
-	}
-	
-
+        if (input.IsKeyPress(PLAYER_KEY_MOVE_LEFT))
+        {
+                vectorX = -PlayerSpeed;
+        }
+        else if (input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT))
+        {
+                vectorX = PlayerSpeed;
+        }
 
 	if (vectorX != 0.0f || vectorY != 0.0f)
 	{
@@ -71,11 +64,7 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
 void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
 {
-<<<<<<< Updated upstream
-	render.Draw(*model, m_transform, &camera);
-=======
-	render.Draw(*model,m_transform,&camera);
->>>>>>> Stashed changes
+        render.Draw(*model, m_transform, &camera);
 }
 
 void SceneSpace::Player::HandleInput(Core::Input input)
