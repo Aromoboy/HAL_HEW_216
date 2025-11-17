@@ -8,6 +8,10 @@
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
+#include "AABBCollider.h"
+#include "ModelCache.h"
+
+
 
 #include <array>
 #include <sstream>
@@ -108,67 +112,77 @@ float3 fRads = { 0.0f, 0.0f, 0.0f };
 SceneGame::SceneGame()
     : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
-        m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
 
-        RenderTarget* pRTV = GetDefaultRTV();
-        DepthStencil* pDSV = GetDefaultDSV();
-        SetRenderTargets(1, &pRTV, pDSV);
-        SetDepthTest(true);
-        m_pModel = std::make_unique<Model>();
-        if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
+    RenderTarget* pRTV = GetDefaultRTV();
+    DepthStencil* pDSV = GetDefaultDSV();
+    SetRenderTargets(1, &pRTV, pDSV);
+    SetDepthTest(true);
+    m_pModel = std::make_unique<Model>();
+    if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
+    {
+        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
+    }
+
+    no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
+
+    m_pModel->Play(no, 1, 1.0f);
+
+    for (int i = 0; i < 9; i++)
+    {
+        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f ,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
+    }
+
+    m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
+    if (!m_pObjects.empty())
+    {
+        auto& anchorTransform = m_cameraAnchor->GetTransform();
+        anchorTransform.position = m_pObjects.front()->GetPosition();
+        anchorTransform.rotation = m_pObjects.front()->GetfRads();
+        anchorTransform.scale = m_pObjects.front()->GetScale();
+    }
+
+    const auto& cameraSettings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+    m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
+    auto registeredCamera = AddCamera(m_gameCamera);
+    if (!registeredCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
+    }
+    else
+    {
+        SetActiveCamera(registeredCamera);
+    }
+
+    if (m_gameCamera)
+    {
+        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
+        m_cameraRig = std::make_unique<CameraRig>(baseCamera);
+        ConfigureCamera(cameraSettings);
+        if (m_cameraAnchor)
         {
-                no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
+            m_cameraRig->Attach(m_cameraAnchor);
         }
+    }
 
-        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
+    m_pManager = std::make_unique<SoundManagerEX>();
 
-        m_pModel->Play(no, 1, 1.0f);
+    m_loader = std::make_shared<AssimpModelLorder>();
 
-        for (int i = 0; i < 9; i++)
-        {
-                m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f ,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
-        }
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    cache.SetLoader(m_loader);
 
-        m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
-        if (!m_pObjects.empty())
-        {
-                auto& anchorTransform = m_cameraAnchor->GetTransform();
-                anchorTransform.position = m_pObjects.front()->GetPosition();
-                anchorTransform.rotation = m_pObjects.front()->GetfRads();
-                anchorTransform.scale = m_pObjects.front()->GetScale();
-        }
+    // 描画テスト用
+    m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
-        const auto& cameraSettings = kCameraPrototypes[m_activeCameraPrototypeIndex];
-        m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
-        auto registeredCamera = AddCamera(m_gameCamera);
-        if (!registeredCamera)
-        {
-                DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
-        }
-        else
-        {
-                SetActiveCamera(registeredCamera);
-        }
+    
+    m_render = std::make_unique<ModelRender>();
+    std::shared_ptr<Collision::ICollider> collider;
+    Transform trans =
+    { float3{0.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
 
-        if (m_gameCamera)
-        {
-                auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
-                m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-                ConfigureCamera(cameraSettings);
-                if (m_cameraAnchor)
-                {
-                        m_cameraRig->Attach(m_cameraAnchor);
-                }
-        }
-
-        m_pManager = std::make_unique<SoundManagerEX>();
-
-        m_loader = std::make_unique<AssimpModelLorder>();
-
-        // 描画テスト用
-        m_model = m_loader->Load("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
-
-        m_render = std::make_unique<ModelRender>();
 }
 
 SceneGame::~SceneGame()
@@ -193,6 +207,11 @@ SceneGame::~SceneGame()
                 Unregister(*m_cameraRig);
                 m_cameraRigRegistered = false;
         }
+
+        if (player)
+        {
+                Unregister(*player);
+        }
 }
 
 void SceneGame::ConfigureUpdates()
@@ -213,6 +232,11 @@ void SceneGame::ConfigureUpdates()
         {
                 Register(*m_cameraRig);
                 m_cameraRigRegistered = true;
+        }
+
+        if (player)
+        {
+            Register(*player);
         }
 }
 
@@ -248,7 +272,8 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                 return;
         }
 
-        m_render->Draw(*m_model, activeCamera.get());
+        player->Draw(*m_render, *activeCamera.get());
+        //m_render->Draw(*m_model, activeCamera.get());
 }
 
 void SceneGame::ApplyCameraPrototype(size_t index)

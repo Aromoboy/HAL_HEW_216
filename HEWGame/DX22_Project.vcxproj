@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -179,7 +179,7 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
-<ClCompile Include="src\BaseCamera.cpp" />
+    <ClCompile Include="src\BaseCamera.cpp" />
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
@@ -192,6 +192,7 @@
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
     <ClCompile Include="src\PhysicalEntity.cpp" />
+    <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -244,6 +245,7 @@
     <ClInclude Include="include\ModelDX.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
+    <ClInclude Include="include\Player.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
