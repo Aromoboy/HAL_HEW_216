@@ -12,10 +12,21 @@ MaterialDX::~MaterialDX()
 }
 
 
-//	ŠeŽíƒQƒbƒ^
+//	eQb^
 ID3D11ShaderResourceView* MaterialDX::GetTexture() const
 {
-	return m_texture->Get();
+	return m_texture ? m_texture->Get() : nullptr;
+}
+
+void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
+{
+	if (!context)
+	{
+		return;
+	}
+
+	ID3D11ShaderResourceView* textureView = GetTexture();
+	context->PSSetShaderResources(slot, 1, &textureView);
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const

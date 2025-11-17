@@ -9,7 +9,8 @@ public:
 	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_tecture);
 	~MaterialDX();
 
-	ID3D11ShaderResourceView* GetTexture() const;
+        ID3D11ShaderResourceView* GetTexture() const;
+        void BindTexture(ID3D11DeviceContext* context, UINT slot = 0) const;
 	
 	DirectX::XMFLOAT4 GetDiffuse() const;
 	DirectX::XMFLOAT4 GetAmbient() const;

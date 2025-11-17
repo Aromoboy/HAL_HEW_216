@@ -1,14 +1,15 @@
 //ModelCache.cpp
 #include "ModelCache.h"
 #include "Debug.h"
+#include "TextureCache.h"
 #include <iostream>
 
 namespace Render
 {
     //============================================================
-    // ƒVƒ“ƒOƒ‹ƒgƒ“ƒCƒ“ƒXƒ^ƒ“ƒX‚Ìæ“¾
-    // ‰‰ñŒÄ‚Ño‚µ‚É—Bˆê‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚ğ¶¬‚µA‚»‚êˆÈ~‚Í
-    // “¯‚¶ƒCƒ“ƒXƒ^ƒ“ƒX‚Ö‚ÌQÆ‚ğ•Ô‚µ‚Ü‚·
+    // VOgCX^XÌæ“¾
+    // Ä‚ÑoÉ—BÌƒCX^Xğ¶AÈ~
+    // CX^XÖ‚ÌQÆ‚Ô‚Ü‚
     //============================================================
     ModelCache& ModelCache::Instance()
     {
@@ -17,99 +18,128 @@ namespace Render
     }
 
     //============================================================
-    // ƒ‚ƒfƒ‹ƒ[ƒ_[‚Ìİ’è
-    // ŠO•”‚©‚çƒ‚ƒfƒ‹“Ç‚İ‚İ—p‚Ìƒ[ƒ_[ƒIƒuƒWƒFƒNƒg‚ğ“o˜^‚µ‚Ü‚·
+    // f[_[Ìİ’
+    // Oçƒ‚fÇ‚İİ—pÌƒ[_[IuWFNgo^Ü‚
     //============================================================
-    void ModelCache::SetLoader(std::shared_ptr<IModelLoader> loader)
+    void ModelCache::SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache)
     {
-        m_loader = loader;  //  ‹¤—Lƒ|ƒCƒ“ƒ^‚Åƒ[ƒ_[‚ğ•Û
+        m_loader = loader;  //  L|C^Åƒ[_[Û
+        m_device = device;
+        m_textureCache = &textureCache;
+
+        if (!m_loader)
+        {
+            DebugMessage("[ModelCache] SetLoader called with null loader.");
+        }
+
+        if (!m_device)
+        {
+            DebugMessage("[ModelCache] SetLoader missing device pointer.");
+        }
+
+        if (!m_textureCache)
+        {
+            DebugMessage("[ModelCache] SetLoader missing texture cache.");
+        }
     }
 
     //============================================================
-    // ƒ‚ƒfƒ‹‚Ìæ“¾iƒLƒƒƒbƒVƒ…‘Î‰j
-    // w’è‚³‚ê‚½ƒpƒX‚Ìƒ‚ƒfƒ‹‚ğƒLƒƒƒbƒVƒ…‚©‚çŒŸõ‚µA‚ ‚ê‚Î‚»‚ê‚ğ•Ô‚µ‚Ü‚·B
-    // ‚È‚¯‚ê‚Îƒ[ƒ_[‚ğg‚Á‚Äƒ‚ƒfƒ‹‚ğ“Ç‚İ‚İAƒLƒƒƒbƒVƒ…‚É•Û‘¶‚µ‚Ä‚©‚ç•Ô‚µ‚Ü‚·
+    // fÌæ“¾iLbVÎ‰j
+    // wè‚³ê‚½pXÌƒfLbVçŒŸAÎ‚Ô‚Ü‚B
+    // È‚Îƒ[_[gÄƒfÇ‚İİALbVÉ•Û‘Ä‚Ô‚Ü‚
     //============================================================
     std::shared_ptr<ModelDX> ModelCache::Get(const std::string& path)
     {
-        // ƒLƒƒƒbƒVƒ…‚É‚ ‚é‚©ŒŸõ
+        // LbVÉ‚é‚©
         auto it = m_models.find(path);
         if (it != m_models.end())
         {
-            DebugMessage("[ModelCache] ƒLƒƒƒbƒVƒ…‚³‚ê‚½ƒ‚ƒfƒ‹‚ğ”­Œ©: ");
-            return it->second;  //  ƒLƒƒƒbƒVƒ…‚ªŒ©‚Â‚©‚Á‚½‚Ì‚Å‚»‚ê‚ğ•Ô‚·
+            DebugMessage("[ModelCache] LbVê‚½fğ”­Œ: ");
+            return it->second;  //  LbVÂ‚Ì‚Å‚Ô‚
         }
 
-        // ƒ[ƒ_[‚ªİ’è‚³‚ê‚Ä‚¢‚é‚©Šm”F
+        // [_[İ’è‚³Ä‚é‚©mF
         if (!m_loader)
         {
-            DebugMessage("[ModelCache] ƒGƒ‰[: ƒ[ƒ_[‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñI");
-            return nullptr;  //  ƒ[ƒ_[‚ª‚È‚¢‚Æ“Ç‚İ‚İ‚Å‚«‚È‚¢
+            DebugMessage("[ModelCache] G[: [_[İ’è‚³Ä‚Ü‚I");
+            return nullptr;  //  [_[È‚Æ“Ç‚İİ‚Å‚È‚
         }
 
-        // ƒLƒƒƒbƒVƒ…‚É‚È‚¢‚Ì‚ÅV‹K‚Éƒ[ƒh
-        DebugMessage("[ModelCache] ƒ‚ƒfƒ‹‚ğƒ[ƒh’†: ");
-        std::shared_ptr<ModelDX> model = m_loader->Load(path);
+        if (!m_device)
+        {
+            DebugMessage("[ModelCache] Device pointer not configured; aborting load.");
+            return nullptr;
+        }
 
-        // ƒ[ƒhŒ‹‰Ê‚ÌŠm”F
+        if (!m_textureCache)
+        {
+            DebugMessage("[ModelCache] Texture cache not configured; aborting load.");
+            return nullptr;
+        }
+
+        // LbVÉ‚È‚Ì‚ÅVKÉƒ[h
+        DebugMessage("[ModelCache] f[h: ");
+        std::shared_ptr<ModelDX> model = m_loader->Load(path, m_device, *m_textureCache);
+
+        // [hÊ‚ÌŠmF
         if (model)
         {
-            // ¬Œ÷: ƒLƒƒƒbƒVƒ…‚É•Û‘¶‚µ‚Ä‚¨‚­
+            // : LbVÉ•Û‘Ä‚
             m_models[path] = model;
         }
         else
         {
-            // ¸”s: ƒGƒ‰[ƒƒbƒZ[ƒW‚ğo—Í
-            DebugMessage("[ModelCache] ƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½: ");
+            // s: G[bZ[Wo
+            DebugMessage("[ModelCache] [hÉsÜ‚: ");
         }
 
-        return model;  //  ƒ[ƒh‚µ‚½ƒ‚ƒfƒ‹i‚Ü‚½‚Ínullptrj‚ğ•Ô‚·
+        return model;  //  [hfiÜ‚nullptrjÔ‚
     }
 
     //============================================================
-    // ƒLƒƒƒbƒVƒ…‚Ì‘SƒNƒŠƒA
-    // Œ»İ•Û‚µ‚Ä‚¢‚é‚·‚×‚Ä‚Ìƒ‚ƒfƒ‹‚ğƒLƒƒƒbƒVƒ…‚©‚çíœ‚µ‚Ü‚·
+    // LbVÌ‘SNA
+    // İ•ÛÄ‚é‚·×‚Ä‚ÌƒfLbVíœÜ‚
     //============================================================
     void ModelCache::Clear()
     {
-        m_models.clear();  //  ƒ}ƒbƒv‚Ì“à—e‚ğ‘S‚ÄÁ‹
+        m_models.clear();  //  }bvÌ“eSÄ
     }
 }
 
 //============================================================
-// ModelCache g—p—á
+// ModelCache gp
 //============================================================
 /*
-// ‘O’ñ: Render::IModelLoader ‚ÌÀ‘•ƒNƒ‰ƒXi—á: FBXLoaderj‚ª‘¶İ
-//       ID3D11Device* device ‚ªì¬Ï‚İ
+// O: Render::IModelLoader ÌNXi: FBXLoaderj
+//       ID3D11Device* device ì¬Ï‚
 
-// 1. ƒ‚ƒfƒ‹ƒLƒƒƒbƒVƒ…‚Ìæ“¾iƒVƒ“ƒOƒ‹ƒgƒ“j
+// 1. fLbVÌæ“¾iVOgj
 Render::ModelCache& modelCache = Render::ModelCache::Instance();
 
-// 2. ƒ[ƒ_[‚Ìİ’èi•K{A‰‰ñ‚Ì‚İj
-modelCache.SetLoader(std::make_shared<FBXLoader>(device));
+// 2. [_[Ìİ’iK{AÌ‚İj
+modelCache.SetLoader(std::make_shared<FBXLoader>(device), device, TextureCache::Instance());
 
-// 3. ƒ‚ƒfƒ‹‚Ìƒ[ƒh
+// 3. fÌƒ[h
 try {
-    // ‰‰ñFƒtƒ@ƒCƒ‹‚©‚çƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚É“o˜^
+    // Ft@Cçƒ[hÄƒLbVÉ“o^
     std::shared_ptr<ModelDX> robotModel = modelCache.Get("models/robot.fbx");
 
-    // 4. ƒ‚ƒfƒ‹‚Ì•`‰æiæ“¾’¼Œã‚â•`‰æƒ‹[ƒv“à‚Åj
+    // 4. fÌ•`iæ“¾`æƒ‹[vÅj
     if (robotModel) {
-        robotModel->Draw(context); // ƒ‚ƒfƒ‹ƒNƒ‰ƒX‚Ì•`‰æƒƒ\ƒbƒh‚ğ‘z’è
+        robotModel->Draw(context); // fNXÌ•`æƒ\bhz
     }
 
-    // 5. ƒLƒƒƒbƒVƒ…‚©‚ç‚ÌÄ—˜—p
-    // “¯‚¶ƒpƒX‚Åæ“¾‚·‚é‚ÆƒLƒƒƒbƒVƒ…‚ª•Ô‚³‚ê‚éiÄƒ[ƒh‚µ‚È‚¢j
-    std::shared_ptr<ModelDX> sameModel = modelCache.Get("models/robot.fbx"); // ƒLƒƒƒbƒVƒ…ƒqƒbƒg
+    // 5. LbVÌÄ—p
+    // pXÅæ“¾ÆƒLbVÔ‚iÄƒ[hÈ‚j
+    std::shared_ptr<ModelDX> sameModel = modelCache.Get("models/robot.fbx"); // LbVqbg
 
-    // 6. •Ê‚Ìƒ‚ƒfƒ‹‚Ìƒ[ƒh
+    // 6. Ê‚ÌƒfÌƒ[h
     std::shared_ptr<ModelDX> mapModel = modelCache.Get("models/map.obj");
 
 } catch (...) {
-    std::cerr << "ƒ‚ƒfƒ‹ƒ[ƒhƒGƒ‰[" << std::endl;
+    std::cerr << "f[hG[" << std::endl;
 }
 
-// 7. ƒLƒƒƒbƒVƒ…‚ÌƒNƒŠƒAi•s—v‚Èƒ‚ƒfƒ‹‰ğ•új
+// 7. LbVÌƒNAisvÈƒfj
 modelCache.Clear();
 */

@@ -4,6 +4,7 @@
 #include "ShaderList.h"
 #include "Defines.h"
 #include "Vector.h"
+#include "DirectX.h"
 
 #include <sstream>
 #include <string>
@@ -58,6 +59,8 @@ void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace:
     pVTX->Bind();
     pPXS->Bind();
 
+    ID3D11DeviceContext* context = GetContext();
+
     for (int i = 0; i < a_model.GetMeshCount(); i++)
     {
         std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
@@ -73,10 +76,19 @@ void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace:
             if (material)
             {
                 ShaderList::SetMaterial(*material);
+                if (context)
+                {
+                    material->BindTexture(context);
+                }
             }
             else
             {
                 DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
+                if (context)
+                {
+                    ID3D11ShaderResourceView* nullView = nullptr;
+                    context->PSSetShaderResources(0, 1, &nullView);
+                }
             }
         }
 
