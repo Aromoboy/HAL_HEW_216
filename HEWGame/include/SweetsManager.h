@@ -1,47 +1,65 @@
 #pragma once
 
-
-#include <unordered_map>
+#include <cstdint>
+#include <functional>
+#include <list>
 #include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "Core/UpdateNode.h"
 #include "ModelRender.h"
-#include <list>
-#include <string>
 #include "Transform.h"
-#include "functional"
 
-class BaseSweets;
-
-enum SweetsState
+namespace SweetsSpace
 {
-	Active,
-	Staked,
-	Ground
+    class BaseSweets;
 
-};
+    enum class SweetsState : std::uint8_t
+    {
+        Active,  // Spawned sweets currently controlled or falling.
+        Stacked, // Successfully stacked sweets that are part of the tower.
+        Ground   // Sweets resting on the ground waiting to be picked up.
+    };
 
-class SweetsManager : Core::UpdateNode
-{
-public:
-	SweetsManager();
-	~SweetsManager();
+    class SweetsManager : public Core::UpdateNode
+    {
+    public:
+        using SweetsList = std::list<std::shared_ptr<BaseSweets>>;
 
-	virtual void OnUpdate(Core::UpdateContext& ctx) override;
+        SweetsManager();
+        ~SweetsManager();
 
-	void DrawAll(ModelRender render);
+        void OnUpdate(Core::UpdateContext& ctx) override;
 
-	std::list<std::shared_ptr<BaseSweets>> GetByState(SweetsState state);
+        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera);
 
-	std::shared_ptr<BaseSweets> Spawn(std::string kind,  Transform transform);
+        SweetsList& GetByState(SweetsState state);
+        const SweetsList& GetByState(SweetsState state) const;
 
-private:
-	std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> byState;
+        void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
+        void Erase(const std::shared_ptr<BaseSweets>& sweets);
 
-	std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(Transform)>> spawner;
-	// spawnerÇ…éùÇΩÇπÇÈçÏê¨ä÷êî
-	template<typename T> 
-	std::shared_ptr<BaseSweets> Make_Sweets(Transform transform)
-	{
-		return std::make_shared<T>(transform.position, transform.rotation, transform.scale /*etx...*/);
-	}
-};
+        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, Transform transform);
+
+    private:
+        struct SweetsStateHash
+        {
+            std::size_t operator()(SweetsState state) const noexcept
+            {
+                return static_cast<std::size_t>(state);
+            }
+        };
+
+        std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
+        std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> m_lookup;
+
+        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(Transform)>> m_spawner;
+
+        template<typename T>
+        std::shared_ptr<BaseSweets> MakeSweets(Transform transform)
+        {
+            return std::make_shared<T>(transform.position, transform.rotation, transform.scale /*etx...*/);
+        }
+    };
+}
