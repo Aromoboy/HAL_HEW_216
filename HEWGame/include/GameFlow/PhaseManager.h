@@ -12,7 +12,7 @@ namespace GameFlow
 
         void Initialize(const std::vector<float>& thresholds, const std::vector<float>& rewardMultipliers);
         void Reset();
-        // Returns true when the current phase increased.
+        // 現在のフェーズが増加した場合に true を返す
         bool UpdateHeight(float currentMaxHeight);
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
