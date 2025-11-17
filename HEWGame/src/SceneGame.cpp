@@ -445,12 +445,9 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 return;
         }
 
-        auto& transform = player->GetTransform();
-        transform.position.x += delta.x;
-        transform.position.y += delta.y;
-        transform.position.z += delta.z;
+        SceneSpace::TranslatePhysicalEntity(*player, delta);
 
-        player->SyncColliderBounds();
+        const auto& transform = player->GetTransform();
 
         Collision::ICollider* collider = player->GetCollider();
         if (!collider)
