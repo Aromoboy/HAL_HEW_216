@@ -99,6 +99,7 @@ private:
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();
     void BroadcastPhaseAdvance(int newPhase);
+    void ForwardSweetsPhaseChange(int newPhase);
     Core::StepTimer m_countdownTimer;
     float m_totalPlaySeconds = 0.0f;
     float m_remainingCountdownSeconds = 0.0f;

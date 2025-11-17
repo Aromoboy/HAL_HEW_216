@@ -1,11 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <list>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "Core/UpdateNode.h"
 #include "ICamera.h"
@@ -33,6 +36,19 @@ class ModelDX;
 namespace SweetsSpace
 {
     class BaseSweets;
+
+    struct WeightedSweetsType
+    {
+        std::string kind;
+        float weight = 1.0f;
+    };
+
+    struct PhaseSpawnConfig
+    {
+        float spawnIntervalSeconds = 2.5f;
+        int simultaneousSpawnCount = 1;
+        std::vector<WeightedSweetsType> weights;
+    };
 
     enum class SweetsState : std::uint8_t
     {
@@ -68,6 +84,9 @@ namespace SweetsSpace
         void SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
         void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
+        bool LoadPhaseSpawnConfig(const std::string& path);
+        void SetSpawnOrigins(const std::vector<float3>& origins);
+        void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
 
@@ -92,13 +111,32 @@ namespace SweetsSpace
         Core::UpdateScheduler* m_scheduler;
         PhaseChangeCallback m_phaseChangeCallback;
         int m_currentPhase;
+        std::vector<PhaseSpawnConfig> m_phaseConfigs;
+        int m_activePhaseConfigIndex;
+        float m_spawnTimer;
+        std::deque<std::string> m_spawnQueue;
+        std::vector<float3> m_spawnOrigins;
+        std::size_t m_nextSpawnOriginIndex;
+        float m_spawnHeightOffset;
+        std::mt19937 m_random;
 
         bool m_warnedMissingDrawSystem;
         bool m_warnedMissingPhysicsMachine;
         bool m_warnedMissingScheduler;
         bool m_warnedMissingPhaseCallback;
+        bool m_warnedMissingSpawnOrigins;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
+        void RunSpawnScheduler(float deltaSeconds);
+        void EnqueueSpawns(int count);
+        void EmitSpawnRequests();
+        std::string ChooseKindFromActiveConfig();
+        void OnPhaseConfigurationChanged(int newPhase);
+        void LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const;
+        void ApplyDefaultPhaseConfigs();
+        std::vector<WeightedSweetsType> BuildDefaultWeights() const;
+        float3 NextSpawnOrigin();
+        Transform BuildSpawnTransform(const float3& origin) const;
 
         template<typename T>
         std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
