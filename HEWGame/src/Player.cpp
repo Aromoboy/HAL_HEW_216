@@ -58,7 +58,11 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 	}
 	
 
-	// ‹ƒ‚«‚È‚ª‚ç˜l‚Ñ‚Ü‚·B(‰z’q)
+
+	if (vectorX != 0.0f || vectorY != 0.0f)
+	{
+		SyncColliderBounds();
+	}
 	m_transform.position.x += vectorX;
 	m_transform.position.y += vectorY;
 	

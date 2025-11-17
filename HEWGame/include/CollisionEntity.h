@@ -6,16 +6,20 @@
 #include "ICollider.h"
 
 namespace SceneSpace
-// CollisionEntity ‚Í Entity ‚ğŒp³‚·‚é‚æ‚¤‚É“ˆê
-// ‚±‚ê‚Å Transform ‚â UpdatePhase ‚ª‹¤’Ê‰»‚³‚êA
-// ƒJƒƒ‰E•¨—E•`‰æ‚È‚Ç‰ºˆÊƒVƒXƒeƒ€‚ªˆêŠÑ‚µ‚½ˆµ‚¢‚ğ‚Å‚«‚é
+        // åŒæœŸç”¨ã®ãƒ˜ãƒ«ãƒ‘ãƒ¼ã€‚Transform ã‚’å¤‰æ›´ã—ãŸã‚‰å¿…ãšå‘¼ã³å‡ºã—ã€
+        // ã‚³ãƒ©ã‚¤ãƒ€ãƒ¼ã® AABB ã‚’æœ€æ–°çŠ¶æ…‹ã«æ›´æ–°ã™ã‚‹
+        void SyncColliderBounds();
+
+// CollisionEntity ã¯ Entity ã‚’ç¶™æ‰¿ã™ã‚‹ã‚ˆã†ã«çµ±ä¸€
+// ã“ã‚Œã§ Transform ã‚„ UpdatePhase ãŒå…±é€šåŒ–ã•ã‚Œã€
+// ã‚«ãƒ¡ãƒ©ãƒ»ç‰©ç†ãƒ»æç”»ãªã©ä¸‹ä½ã‚·ã‚¹ãƒ†ãƒ ãŒä¸€è²«ã—ãŸæ‰±ã„ã‚’ã§ãã‚‹
 
 {
     class CollisionEntity : public Entity
     {
     public:
- //ƒNƒ‰ƒX}‚É‡‚í‚¹‚Äƒ^ƒOETransformECollider ‚ğ
-// ‚Ğ‚Æ‚Ü‚Æ‚ß‚Éˆµ‚¤İŒv‚É•ÏX‚µ‚½
+ //ã‚¯ãƒ©ã‚¹å›³ã«åˆã‚ã›ã¦ã‚¿ã‚°ãƒ»Transformãƒ»Collider ã‚’
+// ã²ã¨ã¾ã¨ã‚ã«æ‰±ã†è¨­è¨ˆã«å¤‰æ›´ã—ãŸ
         CollisionEntity(const std::string& tag,
             const float3& pos,
             const float3& rot,
@@ -24,8 +28,8 @@ namespace SceneSpace
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0);
         ~CollisionEntity() override;
- // Collider ‚Í shared_ptr ‚ÅŠÇ—
-// Physics ‚â CollisionSystem ‚ª¶ƒ|ƒCƒ“ƒ^—v‹‚È‚Ì‚Å get() ‚ğ•Ô‚µ‚Ä‚¢‚é
+ // Collider ã¯ shared_ptr ã§ç®¡ç†
+// Physics ã‚„ CollisionSystem ãŒç”Ÿãƒã‚¤ãƒ³ã‚¿è¦æ±‚ãªã®ã§ get() ã‚’è¿”ã—ã¦ã„ã‚‹
         Collision::ICollider* GetCollider();
 
     protected:

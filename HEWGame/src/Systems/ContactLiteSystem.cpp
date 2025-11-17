@@ -146,7 +146,7 @@ namespace Systems
                                 continue;
                         }
 
-                        colliderA->UpdateBounds(bodyA->GetTransform());
+                        bodyA->SyncColliderBounds();
 
                         for (size_t j = i + 1; j < bodyCount; ++j)
                         {
@@ -162,7 +162,7 @@ namespace Systems
                                         continue;
                                 }
 
-                                colliderB->UpdateBounds(bodyB->GetTransform());
+                                bodyB->SyncColliderBounds();
 
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
@@ -229,8 +229,8 @@ namespace Systems
                                 *axisComponentA += axisDir * halfPush;
                                 *axisComponentB -= axisDir * halfPush;
 
-                                colliderA->UpdateBounds(transformA);
-                                colliderB->UpdateBounds(transformB);
+                                bodyA->SyncColliderBounds();
+                                bodyB->SyncColliderBounds();
 
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();

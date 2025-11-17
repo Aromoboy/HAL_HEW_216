@@ -50,6 +50,9 @@ public:
 
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
+#if defined(_DEBUG)
+    void HandleColliderDebugCommands(Core::UpdateContext& ctx);
+#endif
     void RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity);
     void UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity);
     void UnregisterAllPhysicsBodies();
