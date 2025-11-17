@@ -47,23 +47,25 @@ namespace
 }
 
 SceneSpace::Player::Player(std::string a_tag,
-	float3 pos,
-	float3 rot,
-	float3 scl,
-	std::shared_ptr<Collision::ICollider> collide,
-	float3 velocity,
-	float3 force,
-	float weight,
-	float damping,
-	Core::UpdatePhase phase,
-        int priority)
-        : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, weight, damping, phase, priority)
+        float3 pos,
+        float3 rot,
+        float3 scl,
+        std::shared_ptr<Collision::ICollider> collide,
+        float3 velocity,
+        float3 force,
+        float weight,
+        float damping,
+        Core::UpdatePhase phase,
+        int priority,
+        bool kinematic)
+        : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
         , model(nullptr)
         , m_sweetsManager(nullptr)
         , m_carried()
         , m_pickupRadius(kDefaultPickupRadius)
         , m_carryOffset(float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
+        , m_isKinematic(kinematic)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -90,8 +92,13 @@ SceneSpace::Player::Player(std::string a_tag,
         }
         else
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy model loaded successfully.\n");
+        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy model loaded successfully.\n");
         }
+}
+
+bool SceneSpace::Player::IsKinematic() const
+{
+        return m_isKinematic;
 }
 
 void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
