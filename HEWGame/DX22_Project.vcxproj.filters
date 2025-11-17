@@ -49,6 +49,7 @@
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
+    <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\GravityDampingSystem.cpp" />
   </ItemGroup>
   <!-- ==================== -->
@@ -105,6 +106,7 @@
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
+    <ClInclude Include="include\Player.h" />
     <ClInclude Include="include\GravityDampingSystem.h" />
   </ItemGroup>
   <!-- =================== -->
