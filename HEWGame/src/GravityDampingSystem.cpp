@@ -14,15 +14,15 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 
 void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
 {
+    // Physicalコンポーネントを取得
+    auto& physical = entity.GetPhysical();
+
     if (!(physical.weight > 0.0f))
     {
         physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
         physical.force = float3{ 0.0f, 0.0f, 0.0f };
         return;
     }
-
-    // Physicalコンポーネントを取得
-    auto& physical = entity.GetPhysical();
 
     // 重力加速度を速度に加算（-y方向）
     physical.velocity.y -= m_gravity * dt;

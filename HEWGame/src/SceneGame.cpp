@@ -8,6 +8,7 @@
 #include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
+#include "Systems/IntegrateSystem.h"
 #include "Systems/ContactLiteSystem.h"
 #include "GravityDampingSystem.h"
 #include "Systems/DrawSystem.h"
@@ -57,6 +58,7 @@ namespace
         constexpr int kCameraPrototypeConsoleOverride = -1; // 起動時に特定のプロトタイプを強制する場合は0以上に変更する
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
+        constexpr bool kEnablePhysicsIntegrationLogging = true;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
@@ -271,13 +273,22 @@ SceneGame::SceneGame()
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
+    m_integrateSystem = std::make_shared<Systems::IntegrateSystem>();
     m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
+    if (m_integrateSystem)
+    {
+        m_integrateSystem->SetVerboseLoggingEnabled(kEnablePhysicsIntegrationLogging);
+    }
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
+        if (m_integrateSystem)
+        {
+            m_physicsMachine->SetIntegrator(m_integrateSystem);
+        }
         if (m_contactSystem)
         {
             const auto& bodies = m_physicsMachine->GetBodies();
@@ -296,25 +307,24 @@ SceneGame::SceneGame()
         m_drawSystem->SetDebugLoggingEnabled(kEnableDrawSystemVerboseLogging);
     }
 
-m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-if (m_sweetsManager)
-{
-    m_sweetsManager->SetDrawSystem(m_drawSystem.get());
-    m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
-    m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
-    m_sweetsManager->SetSpawnOrigins(m_stageData.GetSpawnPoints());
-    const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
+    if (m_sweetsManager)
     {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
-            << " from '" << kSweetsSpawnConfigPath << "'.\n";
-        DebugTrace(oss.str());
+        m_sweetsManager->SetDrawSystem(m_drawSystem.get());
+        m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
+        m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
+        m_sweetsManager->SetSpawnOrigins(m_stageData.GetSpawnPoints());
+        const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
+                << " from '" << kSweetsSpawnConfigPath << "'.\n";
+            DebugTrace(oss.str());
+        }
+        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
+        {
+            ForwardSweetsPhaseChange(newPhase);
+        });
     }
-    m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
-    {
-        ForwardSweetsPhaseChange(newPhase);
-    });
-}
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
