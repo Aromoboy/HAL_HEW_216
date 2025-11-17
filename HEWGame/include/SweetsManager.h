@@ -62,6 +62,7 @@ namespace SweetsSpace
 
         void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
         void Erase(const std::shared_ptr<BaseSweets>& sweets);
+        void ClearAllSweets();
 
         void SetDrawSystem(Systems::DrawSystem* drawSystem);
         void SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
