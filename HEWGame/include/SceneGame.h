@@ -19,6 +19,7 @@
 #include "Stage/FoundationPlatform.h"
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
+#include "HudRenderer.h"
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
@@ -73,7 +74,9 @@ private:
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
+#if defined(_DEBUG)
     void RenderRunTelemetryOverlay() const;
+#endif
     int ComputeScore() const;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
@@ -117,6 +120,7 @@ private:
     float m_maxTowerHeight = 0.0f;
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
+    std::unique_ptr<HudRenderer> m_hudRenderer;
 };
 
 #endif // __SCENE_GAME_H__
