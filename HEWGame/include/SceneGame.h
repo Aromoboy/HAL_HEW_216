@@ -5,7 +5,6 @@
 #include "Model.h"
 #include "TestObject.h"
 #include "SoundManagerEX.h"
-
 #include "CameraRig.h"
 #include "Entity.h"
 #include "IModelLoader.h"
@@ -13,9 +12,8 @@
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Player.h"
-
+#include "Systems/PhysicsMachine.h"
 #include "Vector.h"
-
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
@@ -61,13 +59,11 @@ private:
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<SceneSpace::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
-
     std::shared_ptr<IModelLoader> m_loader;
+    std::unique_ptr<IModelLoader> m_loader;
     std::shared_ptr<ModelDX> m_model;
     std::unique_ptr<ModelRender> m_render;
-
     std::unique_ptr<SceneSpace::Player> player;
-
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
