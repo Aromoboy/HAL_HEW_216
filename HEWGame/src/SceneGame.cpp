@@ -248,7 +248,10 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                 return;
         }
 
-        m_render->Draw(*m_model, activeCamera.get());
+        Transform t = {};
+        t.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        m_render->Draw(*m_model, t,activeCamera.get());
 }
 
 void SceneGame::ApplyCameraPrototype(size_t index)

@@ -36,52 +36,58 @@ ModelRender::ModelRender() = default;
 
 ModelRender::~ModelRender() = default;
 
-void ModelRender::Draw(ModelDX& a_model, const CameraSpace::ICamera* camera)
+void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace::ICamera* camera)
 {
-        if (!camera)
+    if (!camera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Draw aborted: camera pointer was null.\n");
+        return;
+    }
+
+    DirectX::XMFLOAT4X4 wvp[3];
+    wvp[1] = camera->GetView();
+    wvp[2] = camera->GetProjection();
+
+    float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
+    DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, radRotation);
+
+    ShaderList::SetWVP(wvp);
+    VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
+    PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
+
+    pVTX->Bind();
+    pPXS->Bind();
+
+    for (int i = 0; i < a_model.GetMeshCount(); i++)
+    {
+        std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
+        if (!mesh)
         {
-                DebugTrace(std::string(kLogPrefix) + "Draw aborted: camera pointer was null.\n");
-                return;
+            DebugTrace(std::string(kLogPrefix) + "Skipped mesh draw: mesh resource expired.\n");
+            continue;
         }
 
-        DirectX::XMFLOAT4X4 wvp[3];
-        wvp[1] = camera->GetView();
-        wvp[2] = camera->GetProjection();
-
-        DrawMatrix::CreateWorldMatrix(wvp[0], float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 170.0f * RAD, 0.0f });
-
-        ShaderList::SetWVP(wvp);
-        VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
-        PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
-
-        pVTX->Bind();
-        pPXS->Bind();
-
-        for (int i = 0; i < a_model.GetMeshCount(); i++)
+        if (i < a_model.GetMeshCount())
         {
-                std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
-                if (!mesh)
-                {
-                        DebugTrace(std::string(kLogPrefix) + "Skipped mesh draw: mesh resource expired.\n");
-                        continue;
-                }
-
-                if (i < a_model.GetMeshCount())
-                {
-                        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
-                        if (material)
-                        {
-                                ShaderList::SetMaterial(*material);
-                        }
-                        else
-                        {
-                                DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
-                        }
-                }
-
-                MeshDraw(*mesh);
+            std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
+            if (material)
+            {
+                ShaderList::SetMaterial(*material);
+            }
+            else
+            {
+                DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
+            }
         }
+
+        MeshDraw(*mesh);
+    }
 }
+
+//void ModelRender::Draw(ModelDX& a_model, const CameraSpace::ICamera* camera)
+//{
+//
+//}
 
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {
