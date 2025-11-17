@@ -56,6 +56,7 @@ namespace
         constexpr int kCameraPrototypeConsoleOverride = -1; // 起動時に特定のプロトタイプを強制する場合は0以上に変更する
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
+        constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kScoreMultiplier = 100.0f;
@@ -254,11 +255,23 @@ float3 fRads = { 0.0f, 0.0f, 0.0f };
 SceneGame::SceneGame()
     : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
+    const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
+    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds());
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
+            << " planeZ=" << m_stageData.GetPlaneZ()
+            << " thresholds=" << m_stageData.GetPhaseThresholds().size()
+            << " spawnPoints=" << m_stageData.GetSpawnPoints().size() << "\n";
+        DebugTrace(oss.str());
+    }
+
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
     m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
+    m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
@@ -280,15 +293,20 @@ SceneGame::SceneGame()
         m_drawSystem->SetDebugLoggingEnabled(kEnableDrawSystemVerboseLogging);
     }
 
-    m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-    if (m_sweetsManager)
+m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
+if (m_sweetsManager)
+{
+    m_sweetsManager->SetDrawSystem(m_drawSystem.get());
+    m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
+    m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
+    m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
     {
-        m_sweetsManager->SetDrawSystem(m_drawSystem.get());
-        if (m_physicsMachine)
-        {
-            m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
-        }
-        m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SweetsPhase] Scene callback invoked for phase " << newPhase << "\n";
+        DebugTrace(oss.str());
+    });
+}
+
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -305,10 +323,7 @@ SceneGame::SceneGame()
 
     m_pModel->Play(no, 1, 1.0f);
 
-    for (int i = 0; i < 9; i++)
-    {
-        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", float3{ -2.0f ,0.0f ,-5.0f }, float3{ 1.0f ,1.0f,1.0f }, float3{ 0.02f * i, 0.0f, 0.0f }));
-    }
+    InitializeStageAnchors();
 
     m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
     if (!m_pObjects.empty())
@@ -367,9 +382,9 @@ SceneGame::SceneGame()
     }
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
-    { float3{0.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
-    player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
+    player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
     if (player)
     {
         RegisterPhysicsBody(*player);
@@ -440,6 +455,12 @@ SceneGame::~SceneGame()
         {
                 m_drawSystem->ClearRenderables();
         }
+
+        if (m_sweetsRegistered && m_sweetsManager)
+        {
+                GetUpdateScheduler().Unregister(*m_sweetsManager);
+                m_sweetsRegistered = false;
+        }
 }
 
 void SceneGame::ConfigureUpdates()
@@ -476,7 +497,7 @@ void SceneGame::ConfigureUpdates()
 
         if (m_sweetsManager && !m_sweetsRegistered)
         {
-                Register(*m_sweetsManager);
+                GetUpdateScheduler().Register(*m_sweetsManager);
                 m_sweetsRegistered = true;
         }
 
@@ -493,17 +514,16 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
         HandleColliderDebugCommands(ctx);
 #endif
-        UpdateCountdown(ctx);
-        UpdateTowerHeightTelemetry();
+UpdateCountdown(ctx);
+UpdateTowerHeightTelemetry();
 
-        if (m_timeUp)
-        {
-                ProcessPostGameInput(ctx);
-                return;
-        }
+if (m_timeUp)
+{
+    ProcessPostGameInput(ctx);
+    return;
+}
 
-        HandleManualRetryInput(ctx);
-
+HandleManualRetryInput(ctx);
         fRads.z += 0.001f * RAD;
 
         if (m_cameraAnchor && !m_pObjects.empty())
@@ -512,6 +532,20 @@ void SceneGame::Update(Core::UpdateContext& ctx)
                 anchorTransform.position = m_pObjects.front()->GetPosition();
                 anchorTransform.rotation = m_pObjects.front()->GetfRads();
                 anchorTransform.scale = m_pObjects.front()->GetScale();
+        }
+
+        const float measuredHeight = MeasureTowerHeight();
+        if (measuredHeight > m_maxTowerHeight)
+        {
+                m_maxTowerHeight = measuredHeight;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[TowerHeight] new max=" << m_maxTowerHeight << "\n";
+                DebugTrace(oss.str());
+        }
+
+        if (m_phaseManager.UpdateHeight(m_maxTowerHeight))
+        {
+                BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
         }
 }
 
@@ -717,6 +751,72 @@ void SceneGame::UnregisterAllPhysicsBodies()
     }
 }
 
+void SceneGame::InitializeStageAnchors()
+{
+    m_pObjects.clear();
+    const auto& spawnPoints = m_stageData.GetSpawnPoints();
+    if (spawnPoints.empty())
+    {
+        const float3 fallback{ 0.0f, 0.0f, m_stageData.GetPlaneZ() };
+        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", fallback, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
+        std::ostringstream oss;
+        oss << kLogPrefix << "InitializeStageAnchors fallback anchor at z=" << fallback.z << "\n";
+        DebugTrace(oss.str());
+        return;
+    }
+
+    for (const auto& spawn : spawnPoints)
+    {
+        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", spawn, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
+    }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "InitializeStageAnchors loaded " << m_pObjects.size() << " stage anchors.\n";
+    DebugTrace(oss.str());
+}
+
+float SceneGame::MeasureTowerHeight() const
+{
+    if (!m_sweetsManager)
+    {
+        return 0.0f;
+    }
+
+    float maxHeight = 0.0f;
+    const SweetsSpace::SweetsManager& manager = *m_sweetsManager;
+    const auto processState = [&manager, &maxHeight](SweetsSpace::SweetsState state)
+    {
+        const auto& sweetsList = manager.GetByState(state);
+        for (const auto& sweets : sweetsList)
+        {
+            if (!sweets)
+            {
+                continue;
+            }
+
+            const auto& transform = sweets->GetTransform();
+            maxHeight = std::max(maxHeight, transform.position.y);
+        }
+    };
+
+    processState(SweetsSpace::SweetsState::Active);
+    processState(SweetsSpace::SweetsState::Stacked);
+    processState(SweetsSpace::SweetsState::Ground);
+
+    return maxHeight;
+}
+
+void SceneGame::BroadcastPhaseAdvance(int newPhase)
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Broadcasting phase " << newPhase
+        << " (maxHeight=" << m_maxTowerHeight << ")\n";
+    DebugTrace(oss.str());
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->NotifyPhaseChanged(newPhase);
+    }
 void SceneGame::ResetPlaySession()
 {
     m_countdownTimer.Reset();

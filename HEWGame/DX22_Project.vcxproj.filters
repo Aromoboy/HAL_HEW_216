@@ -34,6 +34,8 @@
     <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
+    <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -98,6 +100,8 @@
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
+    <ClInclude Include="include\GameFlow\PhaseManager.h" />
+    <ClInclude Include="include\Stage\StageData.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />

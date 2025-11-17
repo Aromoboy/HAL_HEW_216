@@ -46,6 +46,8 @@ namespace SweetsSpace
     public:
         using SweetsList = std::list<std::shared_ptr<BaseSweets>>;
 
+        using PhaseChangeCallback = std::function<void(int)>;
+
         SweetsManager();
         ~SweetsManager();
 
@@ -64,6 +66,9 @@ namespace SweetsSpace
         void SetDrawSystem(Systems::DrawSystem* drawSystem);
         void SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
         void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
+        void SetPhaseChangeCallback(PhaseChangeCallback callback);
+        void NotifyPhaseChanged(int newPhase);
+        int GetCurrentPhase() const noexcept;
 
         std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
 
@@ -84,10 +89,13 @@ namespace SweetsSpace
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
         Core::UpdateScheduler* m_scheduler;
+        PhaseChangeCallback m_phaseChangeCallback;
+        int m_currentPhase;
 
         bool m_warnedMissingDrawSystem;
         bool m_warnedMissingPhysicsMachine;
         bool m_warnedMissingScheduler;
+        bool m_warnedMissingPhaseCallback;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
 

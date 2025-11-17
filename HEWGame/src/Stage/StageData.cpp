@@ -1,0 +1,312 @@
+#include "Stage/StageData.h"
+
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <fstream>
+#include <iterator>
+#include <sstream>
+#include <stdexcept>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    constexpr const char* kLogPrefix = "[StageData] ";
+    constexpr float kDefaultPlaneZ = -5.0f;
+
+    const float3 kDefaultSpawnPoints[] =
+    {
+        { -2.5f, 0.0f, kDefaultPlaneZ },
+        { 0.0f, 0.0f, kDefaultPlaneZ },
+        { 2.5f, 0.0f, kDefaultPlaneZ },
+    };
+
+    const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
+
+    std::string Trim(const std::string& value)
+    {
+        auto begin = value.begin();
+        auto end = value.end();
+        while (begin != end && std::isspace(static_cast<unsigned char>(*begin)))
+        {
+            ++begin;
+        }
+        while (end != begin)
+        {
+            auto last = end;
+            --last;
+            if (!std::isspace(static_cast<unsigned char>(*last)))
+            {
+                break;
+            }
+            end = last;
+        }
+        return std::string(begin, end);
+    }
+
+    std::vector<float> ParseFloatList(const std::string& source, bool* outError)
+    {
+        std::vector<float> values;
+        std::string token;
+        std::istringstream stream(source);
+        while (std::getline(stream, token, ','))
+        {
+            token = Trim(token);
+            if (token.empty())
+            {
+                continue;
+            }
+            try
+            {
+                values.push_back(std::stof(token));
+            }
+            catch (const std::exception& ex)
+            {
+                if (outError)
+                {
+                    *outError = true;
+                }
+                std::ostringstream oss;
+                oss << kLogPrefix << "Failed to parse float token '" << token
+                    << "' in list '" << source << "': " << ex.what() << "\n";
+                DebugTrace(oss.str());
+                return {};
+            }
+        }
+        if (values.empty() && outError)
+        {
+            *outError = true;
+        }
+        return values;
+    }
+}
+
+namespace Stage
+{
+    StageData::StageData()
+        : m_planeZ(kDefaultPlaneZ)
+        , m_loadedFromFile(false)
+    {
+        ApplyDefaults();
+    }
+
+    bool StageData::LoadFromFile(const std::string& path)
+    {
+        std::ifstream file(path);
+        if (!file.is_open())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Config not found at '" << path << "'. Using defaults.\n";
+            DebugTrace(oss.str());
+            ApplyDefaults();
+            m_sourcePath.clear();
+            m_loadedFromFile = false;
+            return false;
+        }
+
+        std::vector<float> thresholds;
+        std::vector<float3> spawnPoints;
+        float planeZ = kDefaultPlaneZ;
+        bool planeZSet = false;
+        bool parseError = false;
+
+        std::string line;
+        size_t lineNumber = 0;
+        while (std::getline(file, line))
+        {
+            ++lineNumber;
+            const auto commentPos = line.find_first_of("#;");
+            if (commentPos != std::string::npos)
+            {
+                line = line.substr(0, commentPos);
+            }
+
+            line = Trim(line);
+            if (line.empty())
+            {
+                continue;
+            }
+
+            const auto delimiterPos = line.find('=');
+            if (delimiterPos == std::string::npos)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Line " << lineNumber << " missing '=' : " << line << "\n";
+                DebugTrace(oss.str());
+                parseError = true;
+                continue;
+            }
+
+            const std::string key = Trim(line.substr(0, delimiterPos));
+            const std::string rawValue = Trim(line.substr(delimiterPos + 1));
+
+            if (key == "planeZ")
+            {
+                try
+                {
+                    planeZ = std::stof(rawValue);
+                    planeZSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse planeZ on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "phaseThresholds")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    thresholds.insert(thresholds.end(), parsed.begin(), parsed.end());
+                }
+            }
+            else if (key == "spawnPoint")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "spawnPoint on line " << lineNumber
+                        << " must contain three floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    spawnPoints.push_back(float3{ parsed[0], parsed[1], parsed[2] });
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Unknown key '" << key << "' on line " << lineNumber << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        if (!planeZSet)
+        {
+            planeZ = kDefaultPlaneZ;
+            std::ostringstream oss;
+            oss << kLogPrefix << "planeZ not specified; defaulting to " << planeZ << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (thresholds.empty())
+        {
+            thresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
+            std::ostringstream oss;
+            oss << kLogPrefix << "No phaseThresholds provided; using defaults.\n";
+            DebugTrace(oss.str());
+        }
+
+        std::sort(thresholds.begin(), thresholds.end());
+        thresholds.erase(
+            std::remove_if(thresholds.begin(), thresholds.end(), [](float value)
+                {
+                    return !std::isfinite(value) || value <= 0.0f;
+                }),
+            thresholds.end());
+
+        thresholds.erase(std::unique(thresholds.begin(), thresholds.end()), thresholds.end());
+
+        if (thresholds.empty())
+        {
+            thresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
+            std::ostringstream oss;
+            oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (spawnPoints.empty())
+        {
+            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+            std::ostringstream oss;
+            oss << kLogPrefix << "No spawnPoint entries found; using defaults.\n";
+            DebugTrace(oss.str());
+        }
+
+        m_planeZ = planeZ;
+        m_phaseThresholds = thresholds;
+        m_spawnPoints = spawnPoints;
+        m_sourcePath = path;
+        m_loadedFromFile = !parseError;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
+            << ", thresholds=" << m_phaseThresholds.size()
+            << ", spawnPoints=" << m_spawnPoints.size()
+            << ", parseError=" << std::boolalpha << parseError << ").\n";
+        DebugTrace(oss.str());
+
+        return m_loadedFromFile;
+    }
+
+    const std::vector<float>& StageData::GetPhaseThresholds() const noexcept
+    {
+        return m_phaseThresholds;
+    }
+
+    const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
+    {
+        return m_spawnPoints;
+    }
+
+    float StageData::GetPlaneZ() const noexcept
+    {
+        return m_planeZ;
+    }
+
+    const std::string& StageData::GetSourcePath() const noexcept
+    {
+        return m_sourcePath;
+    }
+
+    void StageData::ApplyDefaults()
+    {
+        m_planeZ = kDefaultPlaneZ;
+        m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
+        m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+        m_loadedFromFile = false;
+        m_sourcePath.clear();
+        LogSummary("Defaults", "applied");
+    }
+
+    void StageData::LogSummary(const char* prefix, const std::string& detail) const
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
+            << " thresholds=" << m_phaseThresholds.size()
+            << " spawnPoints=" << m_spawnPoints.size()
+            << " detail=" << detail << "\n";
+        DebugTrace(oss.str());
+    }
+}
