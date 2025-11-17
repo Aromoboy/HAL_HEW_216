@@ -299,11 +299,16 @@ SceneGame::SceneGame()
     { float3{0.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
     player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
+    if (player)
+    {
+        RegisterPhysicsBody(*player);
+    }
 
 }
 
 SceneGame::~SceneGame()
 {
+        UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
         {
                 if (auto* input = GetInput())
@@ -460,4 +465,68 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
         << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
     DebugTrace(oss.str());
+}
+
+void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
+{
+    if (!m_physicsMachine)
+    {
+        DebugTrace(std::string(kLogPrefix) + "RegisterPhysicsBody skipped: physics machine missing.\n");
+        return;
+    }
+
+    const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
+    if (!insertResult.second)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "RegisterPhysicsBody ignored duplicate entity=" << &entity << "\n";
+        DebugTrace(oss.str());
+        return;
+    }
+
+    m_physicsMachine->RegisterBody(entity);
+}
+
+void SceneGame::UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity)
+{
+    if (!entity)
+    {
+        DebugTrace(std::string(kLogPrefix) + "UnregisterPhysicsBody received null entity pointer.\n");
+        return;
+    }
+
+    const auto tracked = m_registeredPhysicsBodies.find(entity);
+    if (tracked == m_registeredPhysicsBodies.end())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
+        DebugTrace(oss.str());
+    }
+    else
+    {
+        m_registeredPhysicsBodies.erase(tracked);
+    }
+
+    if (m_physicsMachine)
+    {
+        m_physicsMachine->UnregisterBody(*entity);
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
+    }
+}
+
+void SceneGame::UnregisterAllPhysicsBodies()
+{
+    if (m_registeredPhysicsBodies.empty())
+    {
+        return;
+    }
+
+    std::vector<SceneSpace::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
+    for (SceneSpace::PhysicalEntity* body : bodies)
+    {
+        UnregisterPhysicsBody(body);
+    }
 }

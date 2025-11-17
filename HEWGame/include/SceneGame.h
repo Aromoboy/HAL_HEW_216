@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 struct CameraPrototypeSettings
@@ -48,6 +49,9 @@ public:
 
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
+    void RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity);
+    void UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity);
+    void UnregisterAllPhysicsBodies();
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
@@ -63,6 +67,7 @@ private:
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
+    std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
