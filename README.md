@@ -536,3 +536,22 @@ UpdateNode:
 - 将来のアップグレード候補（移動速度／時間／出現パターンなど）の中で、どれが一番ゲーム性に効いていそうか
 
 
+
+## SweetsPrototype プレースホルダーモデル
+
+`HEWGame/Assets/Model/SweetsPrototype/` には、プロトタイピング用に極めて単純なOBJメッシュを配置している。これらはGitで共有されているため、リポジトリをクローンすればそのまま`ModelCache`から参照できる。プレースホルダーモデルと`SweetsType`の対応は`SweetsPrototypeManifest`に集約されている。
+
+| SweetsType | ファイル名 | 形状 | 用途 |
+| --- | --- | --- | --- |
+| `Cake` | `CakeCube.obj` | 1m 立方体 | キューブ状のスポンジケーキ |
+| `Pudding` | `PuddingPrism.obj` | 三角柱 | 断面が三角形のプリン |
+| `Sherbet` | `SherbetSphere.obj` | 八面体 | 丸いシャーベット |
+| `Fairy` | `FairyPlaceholder.obj` | 板ポリゴン | プレイヤーフェアリー |
+
+### プレースホルダーの使い方
+
+1. `#include "SweetsPrototypeManifest.h"` を追加する。
+2. `SweetsPrototypeManifest::Instance().Find(SweetsType::XXX)` で目的のプロトタイプを取得する。
+3. `descriptor->modelPath` を `ModelCache::Get` に渡すと OBJ がロードされる。
+
+`SweetsManager` や `Entities::Player` など、`BaseSweets` の派生クラスはすべてこのマニフェストを参照するよう統一されています。新しいスイーツを追加する場合はマニフェストに定義を 1 行追加し、上記の表と README を更新してください。

@@ -2,6 +2,16 @@
 #include "Core/Input.h"
 #include "ModelCache.h"
 #include "Physical.h"
+#include "SweetsPrototypeManifest.h"
+
+#include <sstream>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
 
 #define PLAYER_KEY_MOVE_UP 0x57		// W
 #define PLAYER_KEY_MOVE_LEFT 0x41	// A
@@ -9,6 +19,24 @@
 #define PLAYER_KEY_MOVE_RIGHT 0x44	// D
 
 #define PlayerSpeed (0.25f)
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+    void PlayerDebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void PlayerDebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    constexpr const char* kPlayerLogPrefix = "[Player] ";
+    constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+}
 
 SceneSpace::Player::Player(std::string a_tag,
 	float3 pos,
@@ -23,8 +51,33 @@ SceneSpace::Player::Player(std::string a_tag,
 	int priority)
 	: PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, weight, damping, phase, priority), model(nullptr)
 {
-	Render::ModelCache& cache = Render::ModelCache::Instance();
-	model = cache.Get("Assets/Model/LowPolyNature/Models/Flowers_01.fbx");
+        Render::ModelCache& cache = Render::ModelCache::Instance();
+        const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+        const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+        std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
+
+        std::ostringstream oss;
+        if (descriptor)
+        {
+            oss << kPlayerLogPrefix << "Using fairy prototype '" << descriptor->key
+                << "' asset='" << modelPath << "'.\n";
+        }
+        else
+        {
+            oss << kPlayerLogPrefix << "Fairy prototype missing from manifest. Falling back to '"
+                << modelPath << "'.\n";
+        }
+        PlayerDebugTrace(oss.str());
+
+        model = cache.Get(modelPath);
+        if (!model)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Failed to load fairy model at '" + modelPath + "'.\n");
+        }
+        else
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy model loaded successfully.\n");
+        }
 }
 
 void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
