@@ -58,6 +58,7 @@
     <ClCompile Include="Cake.cpp" />
     <ClCompile Include="Sherbet.cpp" />
     <ClCompile Include="Pdding.cpp" />
+    <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
 
@@ -124,6 +125,7 @@
     <ClInclude Include="Cake.h" />
     <ClInclude Include="Sherbet.h" />
     <ClInclude Include="Pdding.h" />
+    <ClInclude Include="include\SweetsManager.h" />
     <ClInclude Include="Sweets.h" />
   </ItemGroup>
 
