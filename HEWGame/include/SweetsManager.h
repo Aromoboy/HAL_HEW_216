@@ -12,6 +12,24 @@
 #include "ModelRender.h"
 #include "Transform.h"
 
+namespace Core
+{
+    class UpdateScheduler;
+}
+
+namespace Systems
+{
+    class DrawSystem;
+    class PhysicsMachine;
+}
+
+namespace Collision
+{
+    class ICollider;
+}
+
+class ModelDX;
+
 namespace SweetsSpace
 {
     class BaseSweets;
@@ -41,7 +59,11 @@ namespace SweetsSpace
         void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
         void Erase(const std::shared_ptr<BaseSweets>& sweets);
 
-        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, Transform transform);
+        void SetDrawSystem(Systems::DrawSystem* drawSystem);
+        void SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
+        void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
+
+        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
 
     private:
         struct SweetsStateHash
@@ -55,12 +77,47 @@ namespace SweetsSpace
         std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
         std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> m_lookup;
 
-        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(Transform)>> m_spawner;
+        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(const Transform&)>> m_spawner;
+
+        Systems::DrawSystem* m_drawSystem;
+        Systems::PhysicsMachine* m_physicsMachine;
+        Core::UpdateScheduler* m_scheduler;
+
+        bool m_warnedMissingDrawSystem;
+        bool m_warnedMissingPhysicsMachine;
+        bool m_warnedMissingScheduler;
+
+        void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
 
         template<typename T>
-        std::shared_ptr<BaseSweets> MakeSweets(Transform transform)
+        std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
+            const std::shared_ptr<ModelDX>& model,
+            const Transform& transform,
+            const std::shared_ptr<Collision::ICollider>& collider,
+            const float3& velocity,
+            const float3& force,
+            float weight,
+            float damping,
+            Core::UpdatePhase phase,
+            int priority)
         {
-            return std::make_shared<T>(transform.position, transform.rotation, transform.scale /*etx...*/);
+            if (!model || !collider)
+            {
+                return nullptr;
+            }
+
+            return std::make_shared<T>(tag,
+                model,
+                transform.position,
+                transform.rotation,
+                transform.scale,
+                collider,
+                velocity,
+                force,
+                weight,
+                damping,
+                phase,
+                priority);
         }
     };
 }
