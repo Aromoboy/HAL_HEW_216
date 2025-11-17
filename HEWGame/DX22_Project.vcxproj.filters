@@ -50,6 +50,7 @@
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
     <ClCompile Include="src\Player.cpp" />
+    <ClCompile Include="src\GravityDampingSystem.cpp" />
   </ItemGroup>
   <!-- ==================== -->
   <!-- All .h with filters  -->
@@ -106,6 +107,7 @@
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Player.h" />
+    <ClInclude Include="include\GravityDampingSystem.h" />
   </ItemGroup>
   <!-- =================== -->
   <!-- Filter definitions  -->

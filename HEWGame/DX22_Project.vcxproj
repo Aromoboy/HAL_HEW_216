@@ -180,6 +180,7 @@
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\BaseCamera.cpp" />
+    <ClCompile Include="src\GravityDampingSystem.cpp" />
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
@@ -230,6 +231,7 @@
     <ClInclude Include="include\Entity.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
+    <ClInclude Include="include\GravityDampingSystem.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\ICollider.h" />
