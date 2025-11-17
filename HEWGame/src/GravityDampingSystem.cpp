@@ -14,13 +14,20 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 
 void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
 {
-    // PhysicalƒRƒ“ƒ|[ƒlƒ“ƒg‚ğæ“¾
+    if (!(physical.weight > 0.0f))
+    {
+        physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
+        physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        return;
+    }
+
+    // Physicalã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’å–å¾—
     auto& physical = entity.GetPhysical();
 
-    // d—Í‰Á‘¬“x‚ğ‘¬“x‚É‰ÁZi-y•ûŒüj
+    // é‡åŠ›åŠ é€Ÿåº¦ã‚’é€Ÿåº¦ã«åŠ ç®—ï¼ˆ-yæ–¹å‘ï¼‰
     physical.velocity.y -= m_gravity * dt;
 
-    // ‘¬“x‚ÉŒ¸Š‚ğ“K—piƒtƒŒ[ƒ€ƒŒ[ƒg“Æ—§j
+    // é€Ÿåº¦ã«æ¸›è¡°ã‚’é©ç”¨ï¼ˆãƒ•ãƒ¬ãƒ¼ãƒ ãƒ¬ãƒ¼ãƒˆç‹¬ç«‹ï¼‰
     const float dampingFactor = std::pow(m_damping, dt);
     physical.velocity.x *= dampingFactor;
     physical.velocity.y *= dampingFactor;

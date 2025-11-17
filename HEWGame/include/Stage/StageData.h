@@ -20,6 +20,8 @@ namespace Stage
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
+        float GetPlatformCenterY() const noexcept;
+        const float3& GetPlatformScale() const noexcept;
         const std::string& GetSourcePath() const noexcept;
 
     private:
@@ -28,6 +30,8 @@ namespace Stage
         void EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const;
 
         float m_planeZ;
+        float m_platformCenterY;
+        float3 m_platformScale;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
         std::vector<float3> m_spawnPoints;

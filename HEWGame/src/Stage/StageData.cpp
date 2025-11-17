@@ -31,6 +31,8 @@ namespace
 
     constexpr const char* kLogPrefix = "[StageData] ";
     constexpr float kDefaultPlaneZ = -5.0f;
+    constexpr float kDefaultPlatformCenterY = -1.0f;
+    const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
 
     const float3 kDefaultSpawnPoints[] =
     {
@@ -104,6 +106,8 @@ namespace Stage
 {
     StageData::StageData()
         : m_planeZ(kDefaultPlaneZ)
+        , m_platformCenterY(kDefaultPlatformCenterY)
+        , m_platformScale(kDefaultPlatformScale)
         , m_loadedFromFile(false)
     {
         ApplyDefaults();
@@ -128,6 +132,10 @@ namespace Stage
         std::vector<float> rewardMultipliers;
         float planeZ = kDefaultPlaneZ;
         bool planeZSet = false;
+        float platformCenterY = kDefaultPlatformCenterY;
+        bool platformCenterSet = false;
+        float3 platformScale = kDefaultPlatformScale;
+        bool platformScaleSet = false;
         bool parseError = false;
 
         std::string line;
@@ -219,6 +227,40 @@ namespace Stage
                     rewardMultipliers.insert(rewardMultipliers.end(), parsed.begin(), parsed.end());
                 }
             }
+            else if (key == "platformCenterY")
+            {
+                try
+                {
+                    platformCenterY = std::stof(rawValue);
+                    platformCenterSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platformCenterY on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "platformScale")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "platformScale on line " << lineNumber
+                        << " must contain three floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    platformScale = float3{ parsed[0], parsed[1], parsed[2] };
+                    platformScaleSet = true;
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -232,6 +274,40 @@ namespace Stage
             planeZ = kDefaultPlaneZ;
             std::ostringstream oss;
             oss << kLogPrefix << "planeZ not specified; defaulting to " << planeZ << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!platformCenterSet)
+        {
+            platformCenterY = kDefaultPlatformCenterY;
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformCenterY not specified; defaulting to " << platformCenterY << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!platformScaleSet)
+        {
+            platformScale = kDefaultPlatformScale;
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformScale not specified; using default ("
+                << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        auto sanitizeScale = [](float value)
+        {
+            return std::max(0.01f, std::fabs(value));
+        };
+        const float3 rawScale = platformScale;
+        platformScale.x = sanitizeScale(platformScale.x);
+        platformScale.y = sanitizeScale(platformScale.y);
+        platformScale.z = sanitizeScale(platformScale.z);
+        if (platformScale.x != rawScale.x || platformScale.y != rawScale.y || platformScale.z != rawScale.z)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformScale values sanitized from ("
+                << rawScale.x << ',' << rawScale.y << ',' << rawScale.z << ") to ("
+                << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
             DebugTrace(oss.str());
         }
 
@@ -276,6 +352,8 @@ namespace Stage
         m_phaseThresholds = thresholds;
         m_phaseRewardMultipliers = rewardMultipliers;
         m_spawnPoints = spawnPoints;
+        m_platformCenterY = platformCenterY;
+        m_platformScale = platformScale;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
 
@@ -284,6 +362,8 @@ namespace Stage
             << ", thresholds=" << m_phaseThresholds.size()
             << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", spawnPoints=" << m_spawnPoints.size()
+            << ", platformCenterY=" << m_platformCenterY
+            << ", platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
 
@@ -310,6 +390,16 @@ namespace Stage
         return m_planeZ;
     }
 
+    float StageData::GetPlatformCenterY() const noexcept
+    {
+        return m_platformCenterY;
+    }
+
+    const float3& StageData::GetPlatformScale() const noexcept
+    {
+        return m_platformScale;
+    }
+
     const std::string& StageData::GetSourcePath() const noexcept
     {
         return m_sourcePath;
@@ -318,6 +408,8 @@ namespace Stage
     void StageData::ApplyDefaults()
     {
         m_planeZ = kDefaultPlaneZ;
+        m_platformCenterY = kDefaultPlatformCenterY;
+        m_platformScale = kDefaultPlatformScale;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
         EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
@@ -334,6 +426,8 @@ namespace Stage
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
             << " spawnPoints=" << m_spawnPoints.size()
+            << " platformCenterY=" << m_platformCenterY
+            << " platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << " detail=" << detail << "\n";
         DebugTrace(oss.str());
     }
