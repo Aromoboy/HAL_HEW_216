@@ -35,6 +35,10 @@ namespace SceneSpace
         void SyncColliderBounds();
 
     protected:
+        // Transform の位置を変更し、変更があった場合のみ AABB を同期する
+        void ApplyTranslation(const float3& delta);
+
+    protected:
         std::shared_ptr<Collision::ICollider> m_collider;
     };
 }
