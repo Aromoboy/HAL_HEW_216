@@ -95,19 +95,19 @@ private:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     size_t m_activeCameraPrototypeIndex = 0;
-size_t m_activeCameraPrototypeIndex = 0;
-Stage::StageData m_stageData;
-GameFlow::PhaseManager m_phaseManager;
-void InitializeStageAnchors();
-void BroadcastPhaseAdvance(int newPhase);
-Core::StepTimer m_countdownTimer;
-float m_totalPlaySeconds = 0.0f;
-float m_remainingCountdownSeconds = 0.0f;
-int m_lastAnnouncedCountdownSeconds = 0;
-bool m_isPlaying = false;
-bool m_timeUp = false;
-float m_currentTowerHeight = 0.0f;
-float m_peakTowerHeight = 0.0f;
+    Stage::StageData m_stageData;
+    GameFlow::PhaseManager m_phaseManager;
+    void InitializeStageAnchors();
+    void BroadcastPhaseAdvance(int newPhase);
+    Core::StepTimer m_countdownTimer;
+    float m_totalPlaySeconds = 0.0f;
+    float m_remainingCountdownSeconds = 0.0f;
+    int m_lastAnnouncedCountdownSeconds = 0;
+    bool m_isPlaying = false;
+    bool m_timeUp = false;
+    float m_currentTowerHeight = 0.0f;
+    float m_peakTowerHeight = 0.0f;
+    float m_maxTowerHeight = 0.0f;
 };
 
 #endif // __SCENE_GAME_H__

@@ -11,6 +11,7 @@ namespace GameFlow
         PhaseManager();
 
         void Initialize(const std::vector<float>& thresholds);
+        void Reset();
         // Returns true when the current phase increased.
         bool UpdateHeight(float currentMaxHeight);
         int GetCurrentPhase() const noexcept;

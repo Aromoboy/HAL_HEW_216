@@ -66,6 +66,29 @@ namespace GameFlow
         DebugTrace(oss.str());
     }
 
+    void PhaseManager::Reset()
+    {
+        if (!m_initialized)
+        {
+            return;
+        }
+
+        m_nextThresholdIndex = 0;
+        m_currentPhase = 0;
+        m_lastReportedHeight = 0.0f;
+        m_startTime = std::chrono::steady_clock::now();
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Reset. thresholdCount=" << m_thresholds.size();
+        if (!m_thresholds.empty())
+        {
+            oss << " nextThreshold=" << m_thresholds.front();
+        }
+        oss << "\n";
+        DebugTrace(oss.str());
+    }
+
+
     bool PhaseManager::UpdateHeight(float currentMaxHeight)
     {
         if (!m_initialized)

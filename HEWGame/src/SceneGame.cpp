@@ -534,7 +534,7 @@ HandleManualRetryInput(ctx);
                 anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        const float stackedHeight = m_currentTowerHeight;
+        const float stackedHeight = m_maxTowerHeight;
         if (m_phaseManager.UpdateHeight(stackedHeight))
         {
             BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
@@ -778,6 +778,7 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     {
         m_sweetsManager->NotifyPhaseChanged(newPhase);
     }
+}
 void SceneGame::ResetPlaySession()
 {
     m_countdownTimer.Reset();
@@ -788,7 +789,18 @@ void SceneGame::ResetPlaySession()
     m_timeUp = false;
     m_currentTowerHeight = 0.0f;
     m_peakTowerHeight = 0.0f;
+    m_maxTowerHeight = 0.0f;
     ToggleGameplaySystems(true);
+    m_phaseManager.Reset();
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
+    }
 
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
@@ -849,6 +861,8 @@ void SceneGame::UpdateTowerHeightTelemetry()
     }
 
     m_currentTowerHeight = instantHeight;
+    m_maxTowerHeight = std::max(m_maxTowerHeight, instantHeight);
+
     if (instantHeight > m_peakTowerHeight)
     {
         m_peakTowerHeight = instantHeight;
