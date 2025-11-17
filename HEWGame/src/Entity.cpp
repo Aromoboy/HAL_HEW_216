@@ -1,6 +1,9 @@
 // Entity.cpp
 #include "Entity.h"
 
+
+#include "ModelCache.h"
+
 namespace SceneSpace
 {
     Entity::Entity(const std::string& tag,
@@ -27,6 +30,12 @@ namespace SceneSpace
 
     void Entity::Draw(ModelRender render, CameraSpace::ICamera& Camera)
     {
+
+        Render::ModelCache& instance = Render::ModelCache::Instance();
+
+       std::shared_ptr<ModelDX> model = instance.Get("Assets/Model/LowPolyNature/BoxsLam.fbx");
+         
+       render.Draw(*model, m_transform, &Camera);
     }
 
     
