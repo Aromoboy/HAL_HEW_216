@@ -195,6 +195,7 @@
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
+    <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\Scene.cpp" />
@@ -255,6 +256,7 @@
     <ClInclude Include="include\Player.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
+    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\ShaderCache.h" />
