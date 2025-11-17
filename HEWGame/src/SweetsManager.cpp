@@ -216,6 +216,7 @@ namespace SweetsSpace
         , m_warnedMissingScheduler(false)
         , m_warnedMissingPhaseCallback(false)
         , m_warnedMissingSpawnOrigins(false)
+        , m_warnedMissingHeightCollider(false)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -446,8 +447,31 @@ namespace SweetsSpace
                 continue;
             }
 
-            const float height = sweets->GetTransform().position.y;
-            maxHeight = std::max(maxHeight, height);
+            float sweetsTop = sweets->GetTransform().position.y;
+            const Collision::ICollider* collider = sweets->GetCollider();
+            if (collider)
+            {
+                const AABB bounds = collider->GetAABB();
+                sweetsTop = bounds.max.y;
+            }
+            else
+            {
+                const Transform& transform = sweets->GetTransform();
+                const float halfHeight = std::max(0.0f, transform.scale.y * 0.5f);
+                sweetsTop = transform.position.y + halfHeight;
+#if defined(_DEBUG)
+                if (!m_warnedMissingHeightCollider)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "GetHighestStackedHeight fallback to transform scale"
+                        << " for sweets ptr=" << sweets.get() << " (missing collider).\n";
+                    DebugTrace(oss.str());
+                    m_warnedMissingHeightCollider = true;
+                }
+#endif
+            }
+
+            maxHeight = std::max(maxHeight, sweetsTop);
         }
 
         return maxHeight;

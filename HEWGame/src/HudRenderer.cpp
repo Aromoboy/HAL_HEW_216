@@ -287,7 +287,7 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
     stream << "  [" << (data.timeUp ? "Result" : "Play") << "]\n";
 
     stream << std::fixed << std::setprecision(2);
-    stream << "Height live " << data.currentHeight << "m";
+    stream << "Top height live " << data.currentHeight << "m";
     stream << " | peak " << data.peakHeight << "m\n";
 
     stream << std::fixed << std::setprecision(0);
