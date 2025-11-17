@@ -25,9 +25,11 @@ namespace SceneSpace
         (void)ctx;
     }
 
-    void Entity::Draw()
+    void Entity::Draw(ModelRender render, CameraSpace::ICamera& Camera)
     {
     }
+
+    
 
     Transform& Entity::GetTransform()
     {

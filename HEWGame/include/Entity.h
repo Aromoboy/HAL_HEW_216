@@ -5,6 +5,9 @@
 #include "Core/UpdateNode.h"
 #include "Transform.h"
 
+#include "ModelRender.h"
+#include "ICamera.h"
+
 namespace SceneSpace
 {
     class Entity : public Core::UpdateNode
@@ -25,7 +28,7 @@ namespace SceneSpace
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
-        virtual void Draw();
+        virtual void Draw(ModelRender render, CameraSpace::ICamera& Camera);
  // Transform のデフォルト値を許可して、
 // どの翻訳単位でも軽く使えるようにした
 // （pos / rot / scale を毎回指定しなくてOK）
