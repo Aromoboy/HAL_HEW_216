@@ -458,14 +458,33 @@ SceneGame::SceneGame()
     Transform trans =
     { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
-    player = std::make_unique<SceneSpace::Player>("player", float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, collider);
+    player = std::make_unique<SceneSpace::Player>(
+        "player",
+        float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() },
+        float3{ 0.0f, 0.0f, 0.0f },
+        float3{ 1.0f, 1.0f, 1.0f },
+        collider,
+        float3{ 0.0f, 0.0f, 0.0f },
+        float3{ 0.0f, 0.0f, 0.0f },
+        1.0f,
+        0.98f,
+        Core::UpdatePhase::Gameplay,
+        0,
+        true);
     if (player)
     {
         if (m_sweetsManager)
         {
             player->SetSweetsManager(m_sweetsManager.get());
         }
-        RegisterPhysicsBody(*player);
+        if (!player->IsKinematic())
+        {
+            RegisterPhysicsBody(*player);
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "Player initialized in kinematic mode; skipping physics body registration.\n");
+        }
         if (m_drawSystem)
         {
             m_drawSystem->RegisterRenderable(*player);
@@ -598,7 +617,20 @@ void SceneGame::ConfigureUpdates()
 
         if (player)
         {
-            Register(*player);
+                Register(*player);
+
+                const bool isKinematic = player->IsKinematic();
+                const bool tracked = m_registeredPhysicsBodies.find(player.get()) != m_registeredPhysicsBodies.end();
+                if (isKinematic && tracked)
+                {
+                        UnregisterPhysicsBody(player.get());
+                        DebugTrace(std::string(kLogPrefix) + "ConfigureUpdates removed kinematic player from physics simulation.\n");
+                }
+                else if (!isKinematic && !tracked)
+                {
+                        RegisterPhysicsBody(*player);
+                        DebugTrace(std::string(kLogPrefix) + "ConfigureUpdates registered player with physics simulation.\n");
+                }
         }
 
         ResetPlaySession();

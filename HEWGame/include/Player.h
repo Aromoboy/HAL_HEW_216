@@ -29,7 +29,8 @@ namespace SceneSpace
             std::shared_ptr<Collision::ICollider> collide,
             float3 velocity = { 0.0f, 0.0f, 0.0f }, float3 force = { 0.0f, 0.0f, 0.0f }, float weight = 1.0f, float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
-            int priority = 0);
+            int priority = 0,
+            bool kinematic = false);
 
         virtual void OnUpdate(Core::UpdateContext& ctx) override;
 
@@ -41,6 +42,7 @@ namespace SceneSpace
         bool IsCarryingSweets() const;
         std::shared_ptr<SweetsSpace::BaseSweets> GetCarriedSweets() const;
         void ClearCarriedSweets();
+        bool IsKinematic() const;
 
     private:
         std::shared_ptr<ModelDX> model;
@@ -49,6 +51,7 @@ namespace SceneSpace
         float m_pickupRadius;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
+        bool m_isKinematic;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
