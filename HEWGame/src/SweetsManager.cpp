@@ -51,21 +51,6 @@ namespace
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
 
-    const char* ToString(SweetsSpace::SweetsState state)
-    {
-        switch (state)
-        {
-        case SweetsSpace::SweetsState::Active:
-            return "Active";
-        case SweetsSpace::SweetsState::Stacked:
-            return "Stacked";
-        case SweetsSpace::SweetsState::Ground:
-            return "Ground";
-        default:
-            return "Unknown";
-        }
-    }
-
     float ComputeSpeedSq(const Physics::Physical& physical)
     {
         const auto& v = physical.velocity;
@@ -192,6 +177,21 @@ namespace
 
 namespace SweetsSpace
 {
+    const char* StateToString(SweetsState state)
+    {
+        switch (state)
+        {
+        case SweetsState::Active:
+            return "Active";
+        case SweetsState::Stacked:
+            return "Stacked";
+        case SweetsState::Ground:
+            return "Ground";
+        default:
+            return "Unknown";
+        }
+    }
+
     SweetsManager::SweetsManager()
         : m_drawSystem(nullptr)
         , m_physicsMachine(nullptr)
@@ -340,7 +340,7 @@ namespace SweetsSpace
 #if defined(_DEBUG)
                     std::ostringstream oss;
                     oss << kLogPrefix << "Purging null sweets entry from state "
-                        << ToString(bucketState) << "\n";
+                        << StateToString(bucketState) << "\n";
                     DebugTrace(oss.str());
 #endif
                     it = sweetsList.erase(it);
@@ -352,7 +352,7 @@ namespace SweetsSpace
 #if defined(_DEBUG)
                     std::ostringstream oss;
                     oss << kLogPrefix << "Purging sweets ptr=" << sweets.get()
-                        << " from state " << ToString(bucketState)
+                        << " from state " << StateToString(bucketState)
                         << " because update node was disabled.\n";
                     DebugTrace(oss.str());
 #endif
@@ -381,8 +381,8 @@ namespace SweetsSpace
 #if defined(_DEBUG)
             std::ostringstream oss;
             oss << kLogPrefix << "State change ptr=" << change.sweets.get()
-                << " " << ToString(previousState) << " -> "
-                << ToString(change.state) << "\n";
+                << " " << StateToString(previousState) << " -> "
+                << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
 #endif
         }
