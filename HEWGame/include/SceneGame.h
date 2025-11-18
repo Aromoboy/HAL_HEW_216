@@ -58,8 +58,6 @@ public:
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
-    void ApplyCameraPrototype(size_t index);
-
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
 #if defined(_DEBUG)
@@ -82,7 +80,6 @@ private:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<SceneSpace::Entity> m_cameraAnchor;
-    size_t m_activeCameraPrototypeIndex = 0;
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::shared_ptr<IModelLoader> m_loader;
     std::shared_ptr<ModelDX> m_model;
