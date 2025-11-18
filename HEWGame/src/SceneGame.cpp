@@ -447,8 +447,17 @@ SceneGame::SceneGame()
         const auto& pos = m_stagePlatform->GetTransform().position;
         oss << kLogPrefix << "Stage foundation initialized at ("
             << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-            << scale.x << ',' << scale.y << ',' << scale.z << ").\n";
+            << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
+            << m_stagePlatform->GetDebugColor().x << ','
+            << m_stagePlatform->GetDebugColor().y << ','
+            << m_stagePlatform->GetDebugColor().z << ").\n";
         DebugTrace(oss.str());
+        if (m_drawSystem)
+        {
+            m_drawSystem->RegisterRenderable(*m_stagePlatform);
+            m_stagePlatformDrawRegistered = true;
+            DebugTrace(std::string(kLogPrefix) + "Stage foundation registered with DrawSystem.\n");
+        }
     }
     else
     {
@@ -513,6 +522,11 @@ SceneGame::~SceneGame()
         Unregister(*m_stagePlatform);
         m_stagePlatformRegistered = false;
     }
+    if (m_stagePlatformDrawRegistered && m_stagePlatform && m_drawSystem)
+    {
+        m_drawSystem->UnregisterRenderable(*m_stagePlatform);
+        m_stagePlatformDrawRegistered = false;
+    }
 
         UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
@@ -566,6 +580,7 @@ SceneGame::~SceneGame()
         if (m_drawSystem)
         {
                 m_drawSystem->ClearRenderables();
+                m_stagePlatformDrawRegistered = false;
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -617,6 +632,11 @@ void SceneGame::ConfigureUpdates()
         {
                 Register(*m_stagePlatform);
                 m_stagePlatformRegistered = true;
+        }
+        if (m_stagePlatform && m_drawSystem && !m_stagePlatformDrawRegistered)
+        {
+                m_drawSystem->RegisterRenderable(*m_stagePlatform);
+                m_stagePlatformDrawRegistered = true;
         }
 
         if (player)
