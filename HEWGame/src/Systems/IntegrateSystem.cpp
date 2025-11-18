@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <sstream>
 #include <string>
 
@@ -71,29 +70,11 @@ namespace Systems
 #endif
             physical.velocity.z = 0.0f;
         }
-        if (!(physical.weight > 0.0f))
-        {
-            return translation;
-        }
-
         const float safeDt = std::max(dt, 0.0f);
-        translation.x = physical.velocity.x * safeDt;
-        translation.y = physical.velocity.y * safeDt;
-        translation.z = 0.0f;
-
         const float damping = std::clamp(physical.damping, 0.0f, 1.0f);
-        translation.x *= damping;
-        translation.y *= damping;
-        translation.z = 0.0f;
-
-        const float invWeight = (physical.weight > std::numeric_limits<float>::epsilon()) ? 1.0f / physical.weight : 0.0f;
-        if (invWeight <= 0.0f)
-        {
-            return float3{ 0.0f, 0.0f, 0.0f };
-        }
-
-        translation.x *= invWeight;
-        translation.y *= invWeight;
+        const float translationScale = safeDt * damping;
+        translation.x = physical.velocity.x * translationScale;
+        translation.y = physical.velocity.y * translationScale;
         translation.z = 0.0f;
 
         const bool hasTranslation = (std::fabs(translation.x) > m_translationEpsilon)
@@ -113,6 +94,8 @@ namespace Systems
             oss << kLogPrefix << "Entity '" << entity.GetTag()
                 << "' velocity=(" << physical.velocity.x << ',' << physical.velocity.y << ',' << physical.velocity.z << ')'
                 << " dt=" << safeDt
+                << " damping=" << damping
+                << " weight=" << physical.weight
                 << " translation=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
             DebugTrace(oss.str());
         }
