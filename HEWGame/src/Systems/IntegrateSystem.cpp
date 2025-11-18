@@ -57,6 +57,20 @@ namespace Systems
         }
 
         Physics::Physical& physical = entity.GetPhysical();
+        if (physical.velocity.z != 0.0f)
+        {
+#if defined(_DEBUG)
+            if (m_verboseLogging)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Entity '" << entity.GetTag()
+                    << "' velocity.z=" << physical.velocity.z
+                    << " reset before integration to enforce planar motion.\n";
+                DebugTrace(oss.str());
+            }
+#endif
+            physical.velocity.z = 0.0f;
+        }
         if (!(physical.weight > 0.0f))
         {
             return translation;
@@ -65,12 +79,12 @@ namespace Systems
         const float safeDt = std::max(dt, 0.0f);
         translation.x = physical.velocity.x * safeDt;
         translation.y = physical.velocity.y * safeDt;
-        translation.z = physical.velocity.z * safeDt;
+        translation.z = 0.0f;
 
         const float damping = std::clamp(physical.damping, 0.0f, 1.0f);
         translation.x *= damping;
         translation.y *= damping;
-        translation.z *= damping;
+        translation.z = 0.0f;
 
         const float invWeight = (physical.weight > std::numeric_limits<float>::epsilon()) ? 1.0f / physical.weight : 0.0f;
         if (invWeight <= 0.0f)
@@ -80,7 +94,7 @@ namespace Systems
 
         translation.x *= invWeight;
         translation.y *= invWeight;
-        translation.z *= invWeight;
+        translation.z = 0.0f;
 
         const bool hasTranslation = (std::fabs(translation.x) > m_translationEpsilon)
             || (std::fabs(translation.y) > m_translationEpsilon)

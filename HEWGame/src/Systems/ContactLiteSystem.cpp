@@ -252,16 +252,23 @@ namespace Systems
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
                                 overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
-                                int axis = 0;
-                                float minOverlap = overlaps[0];
-                                for (int k = 1; k < 3; ++k)
+                                const float planarOverlapX = overlaps[0];
+                                const float planarOverlapY = overlaps[1];
+                                const bool suppressedZAxis = overlaps[2] < std::min(planarOverlapX, planarOverlapY);
+                                const bool chooseX = planarOverlapX <= planarOverlapY;
+                                const int axis = chooseX ? 0 : 1;
+                                const float minOverlap = chooseX ? planarOverlapX : planarOverlapY;
+
+#if defined(_DEBUG)
+                                if (suppressedZAxis && minOverlap > 0.0f)
                                 {
-                                        if (overlaps[k] < minOverlap)
-                                        {
-                                                minOverlap = overlaps[k];
-                                                axis = k;
-                                        }
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Suppressed Z-axis overlap (" << overlaps[2]
+                                            << ") to maintain planar constraint. Using axis " << axis
+                                            << " overlap=" << minOverlap << "\n";
+                                        DebugTrace(oss.str());
                                 }
+#endif
 
                                 if (minOverlap <= 0.0f)
                                 {
@@ -307,6 +314,29 @@ namespace Systems
                                 else
                                 {
                                         continue;
+                                }
+
+                                if (translationA.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' requested Z translation " << translationA.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationA.z = 0.0f;
+                                }
+                                if (translationB.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' requested Z translation " << translationB.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationB.z = 0.0f;
                                 }
 
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
@@ -372,6 +402,29 @@ namespace Systems
                                                 DebugTrace(oss.str());
 #endif
                                         }
+                                }
+
+                                if (physA.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' velocity.z=" << physA.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physA.velocity.z = 0.0f;
+                                }
+                                if (physB.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' velocity.z=" << physB.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physB.velocity.z = 0.0f;
                                 }
 
                                 ++resolvedPairs;
