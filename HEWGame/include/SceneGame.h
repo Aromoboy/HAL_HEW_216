@@ -60,6 +60,7 @@ public:
     void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
+    void RefreshPlatformAnchor(bool forceRecompute);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
 #endif
@@ -119,6 +120,14 @@ private:
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
     std::unique_ptr<HudRenderer> m_hudRenderer;
+    float m_cachedViewportWidth = std::numeric_limits<float>::quiet_NaN();
+    float m_cachedViewportHeight = std::numeric_limits<float>::quiet_NaN();
+    float3 m_cachedCameraPosition{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
+    float3 m_cachedCameraRotation{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
+    float m_cachedCameraFovDegrees = std::numeric_limits<float>::quiet_NaN();
+    float m_cachedCameraAspect = std::numeric_limits<float>::quiet_NaN();
+    float3 m_cachedCameraRigOffset{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
+    bool m_platformAnchorInitialized = false;
 };
 
 #endif // __SCENE_GAME_H__
