@@ -584,7 +584,7 @@ SceneGame::SceneGame()
     platformTransform.position = float3{ 0.0f, m_stageData.GetPlatformCenterY(), m_stageData.GetPlaneZ() };
     platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
     platformTransform.scale = m_stageData.GetPlatformScale();
-    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
     m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
         "StageFoundation",
         platformTransform,
@@ -620,7 +620,7 @@ SceneGame::SceneGame()
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
     { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
-    collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
     player = std::make_unique<SceneSpace::Player>(
         "player",
         float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() },
