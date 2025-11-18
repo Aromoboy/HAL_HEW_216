@@ -222,8 +222,8 @@ namespace
         {
             true,
             0.0f,
-            // Concept art callouts place the camera 12.5 m to the player's left, 7.25 m above,
-            // and 1.5 m behind the play plane with a 90 deg side yaw and -15 deg pitch.
+            // コンセプトアートのコールアウトでは、カメラをプレイヤーの左12.5m、上方7.25m、
+            // プレイプレーン後方1.5mに配置し、横方向のヨー角90度、ピッチ角-15度とする（一時的な値）
             float3{ -12.5f, 7.25f, -1.5f },
             45.0f,
             DirectX::XMConvertToRadians(90.0f),
