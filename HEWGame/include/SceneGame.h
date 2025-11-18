@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <vector>
 #include <limits>
+#include <deque>
 
 struct CameraPrototypeSettings
 {
@@ -124,6 +125,15 @@ private:
     std::unique_ptr<HudRenderer> m_hudRenderer;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
+    float m_heightBonusThresholdMeters = 0.0f;
+    float m_heightBonusSeconds = 0.0f;
+    bool m_heightBonusArmed = false;
+    struct PendingTimeBonus
+    {
+        float seconds = 0.0f;
+        float triggerHeight = 0.0f;
+    };
+    std::deque<PendingTimeBonus> m_pendingTimeBonuses;
     float m_cachedViewportWidth = std::numeric_limits<float>::quiet_NaN();
     float m_cachedViewportHeight = std::numeric_limits<float>::quiet_NaN();
     float3 m_cachedCameraPosition{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };

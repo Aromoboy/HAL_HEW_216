@@ -26,6 +26,8 @@ namespace Stage
         float GetPlayerMoveSpeed() const noexcept;
         float GetGuidelineHeight() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
+        float GetHeightBonusThreshold() const noexcept;
+        float GetHeightBonusSeconds() const noexcept;
 
     private:
         void ApplyDefaults();
@@ -43,5 +45,7 @@ namespace Stage
         float m_playerMoveSpeed;
         float m_guidelineHeight;
         std::string m_backgroundTexturePath;
+        float m_heightBonusThreshold;
+        float m_heightBonusSeconds;
     };
 }

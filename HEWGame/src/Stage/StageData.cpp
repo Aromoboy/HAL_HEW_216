@@ -35,6 +35,8 @@ namespace
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
     constexpr float kDefaultGuidelineHeight = 20.0f;
+    constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
+    constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
 
     const float3 kDefaultSpawnPoints[] =
@@ -115,6 +117,8 @@ namespace Stage
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
+        , m_heightBonusThreshold(kDefaultHeightBonusThreshold)
+        , m_heightBonusSeconds(kDefaultHeightBonusSeconds)
     {
         ApplyDefaults();
     }
@@ -146,6 +150,10 @@ namespace Stage
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
         bool guidelineHeightSet = false;
+        float heightBonusThreshold = kDefaultHeightBonusThreshold;
+        bool heightBonusThresholdSet = false;
+        float heightBonusSeconds = kDefaultHeightBonusSeconds;
+        bool heightBonusSecondsSet = false;
         std::string backgroundTexturePath = kDefaultBackgroundTexturePath;
         bool backgroundTextureSet = false;
         bool parseError = false;
@@ -305,6 +313,38 @@ namespace Stage
                     parseError = true;
                 }
             }
+            else if (key == "heightBonusThreshold")
+            {
+                try
+                {
+                    heightBonusThreshold = std::stof(rawValue);
+                    heightBonusThresholdSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse heightBonusThreshold on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "heightBonusSeconds")
+            {
+                try
+                {
+                    heightBonusSeconds = std::stof(rawValue);
+                    heightBonusSecondsSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse heightBonusSeconds on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "backgroundTexture")
             {
                 if (rawValue.empty())
@@ -368,6 +408,22 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!heightBonusThresholdSet)
+        {
+            heightBonusThreshold = kDefaultHeightBonusThreshold;
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusThreshold not specified; defaulting to " << heightBonusThreshold << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!heightBonusSecondsSet)
+        {
+            heightBonusSeconds = kDefaultHeightBonusSeconds;
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds not specified; defaulting to " << heightBonusSeconds << "\n";
             DebugTrace(oss.str());
         }
 
@@ -449,6 +505,31 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
         }
 
+        if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusThreshold value " << heightBonusThreshold
+                << " invalid; using default " << kDefaultHeightBonusThreshold << "\n";
+            DebugTrace(oss.str());
+            heightBonusThreshold = kDefaultHeightBonusThreshold;
+        }
+
+        if (!std::isfinite(heightBonusSeconds))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds value " << heightBonusSeconds
+                << " invalid; using default " << kDefaultHeightBonusSeconds << "\n";
+            DebugTrace(oss.str());
+            heightBonusSeconds = kDefaultHeightBonusSeconds;
+        }
+        else if (heightBonusSeconds <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds <= 0. Bonus events disabled.\n";
+            DebugTrace(oss.str());
+            heightBonusSeconds = 0.0f;
+        }
+
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount);
 
@@ -460,6 +541,8 @@ namespace Stage
         m_platformScale = platformScale;
         m_playerMoveSpeed = playerMoveSpeed;
         m_guidelineHeight = guidelineHeight;
+        m_heightBonusThreshold = heightBonusThreshold;
+        m_heightBonusSeconds = heightBonusSeconds;
         m_backgroundTexturePath = backgroundTexturePath;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
@@ -473,6 +556,8 @@ namespace Stage
             << ", platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << ", playerMoveSpeed=" << m_playerMoveSpeed
             << ", guidelineHeight=" << m_guidelineHeight
+            << ", heightBonusThreshold=" << m_heightBonusThreshold
+            << ", heightBonusSeconds=" << m_heightBonusSeconds
             << ", backgroundTexture='" << m_backgroundTexturePath << "'"
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
@@ -530,6 +615,16 @@ namespace Stage
         return m_backgroundTexturePath;
     }
 
+    float StageData::GetHeightBonusThreshold() const noexcept
+    {
+        return m_heightBonusThreshold;
+    }
+
+    float StageData::GetHeightBonusSeconds() const noexcept
+    {
+        return m_heightBonusSeconds;
+    }
+
     void StageData::ApplyDefaults()
     {
         m_planeZ = kDefaultPlaneZ;
@@ -542,6 +637,8 @@ namespace Stage
         m_playerMoveSpeed = kDefaultPlayerMoveSpeed;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
+        m_heightBonusThreshold = kDefaultHeightBonusThreshold;
+        m_heightBonusSeconds = kDefaultHeightBonusSeconds;
         m_loadedFromFile = false;
         m_sourcePath.clear();
         LogSummary("Defaults", "applied");
@@ -558,6 +655,8 @@ namespace Stage
             << " platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << " playerMoveSpeed=" << m_playerMoveSpeed
             << " guidelineHeight=" << m_guidelineHeight
+            << " heightBonusThreshold=" << m_heightBonusThreshold
+            << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
         DebugTrace(oss.str());
