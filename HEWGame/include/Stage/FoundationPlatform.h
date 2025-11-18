@@ -3,8 +3,12 @@
 #include <memory>
 #include <string>
 
+#include <DirectXMath.h>
+
 #include "PhysicalEntity.h"
 #include "Transform.h"
+
+class ModelDX;
 
 namespace Core
 {
@@ -27,7 +31,18 @@ namespace Stage
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
+        ModelDX* GetRenderableModel() override;
+        const ModelDX* GetRenderableModel() const override;
+
+        void SetDebugColor(const DirectX::XMFLOAT4& color);
+        const DirectX::XMFLOAT4& GetDebugColor() const noexcept;
+
     private:
+        void LoadPlatformModel();
+        void ApplyColorToModelMaterials();
+
         Transform m_anchorTransform;
+        std::shared_ptr<ModelDX> m_model;
+        DirectX::XMFLOAT4 m_debugColor;
     };
 }

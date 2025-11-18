@@ -104,6 +104,7 @@ private:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_stagePlatformRegistered = false;
+    bool m_stagePlatformDrawRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();

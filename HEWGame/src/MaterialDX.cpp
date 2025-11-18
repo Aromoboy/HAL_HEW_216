@@ -36,11 +36,26 @@ DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
 
 DirectX::XMFLOAT4 MaterialDX::GetAmbient() const
 {
-	return m_ambient;
+        return m_ambient;
 
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetSpecular() const
 {
-	return m_specular;
+        return m_specular;
+}
+
+void MaterialDX::SetDiffuse(const DirectX::XMFLOAT4& diffuse)
+{
+        m_diffuse = diffuse;
+}
+
+void MaterialDX::SetAmbient(const DirectX::XMFLOAT4& ambient)
+{
+        m_ambient = ambient;
+}
+
+void MaterialDX::SetSpecular(const DirectX::XMFLOAT4& specular)
+{
+        m_specular = specular;
 }

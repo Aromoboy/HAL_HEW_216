@@ -11,10 +11,14 @@ public:
 
         ID3D11ShaderResourceView* GetTexture() const;
         void BindTexture(ID3D11DeviceContext* context, UINT slot = 0) const;
-	
-	DirectX::XMFLOAT4 GetDiffuse() const;
-	DirectX::XMFLOAT4 GetAmbient() const;
-	DirectX::XMFLOAT4 GetSpecular() const;
+
+        DirectX::XMFLOAT4 GetDiffuse() const;
+        DirectX::XMFLOAT4 GetAmbient() const;
+        DirectX::XMFLOAT4 GetSpecular() const;
+
+        void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
+        void SetAmbient(const DirectX::XMFLOAT4& ambient);
+        void SetSpecular(const DirectX::XMFLOAT4& specular);
 
 private:
 
