@@ -3,6 +3,7 @@
 #define __GRAVITYDAMPINGSYSTEM_H__
 
 #include "Systems/PhysicsMachine.h"
+#include <unordered_set>
 
 namespace Systems
 {
@@ -12,7 +13,8 @@ namespace Systems
         GravityDampingSystem(float gravity = 9.8f, float damping = 0.98f);
         virtual ~GravityDampingSystem() = default;
 
-        // IPhysicsSystem‚ÌApplyŠÖ”‚ğƒI[ƒo[ƒ‰ƒCƒh
+        std::unordered_set<const SceneSpace::PhysicalEntity*> m_loggedKinematicSkips;
+        // IPhysicsSystemã®Applyé–¢æ•°ã‚’ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰
         void Apply(SceneSpace::PhysicalEntity& entity, float dt) override;
 
         void SetGravity(float gravity) { m_gravity = gravity; }
@@ -22,8 +24,8 @@ namespace Systems
         float GetDamping() const { return m_damping; }
 
     private:
-        float m_gravity;  // d—Í‰Á‘¬“x
-        float m_damping;  // Œ¸Š—¦
+        float m_gravity;  // é‡åŠ›åŠ é€Ÿåº¦
+        float m_damping;  // æ¸›è¡°ç‡
     };
 }
 

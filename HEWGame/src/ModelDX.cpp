@@ -1,21 +1,19 @@
-
+#include <utility>
 #include "ModelDX.h"
 
 
 ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials)
-	: m_meshes(a_meshes)
-	, m_materials(a_materials)
 {
-	// ‚Å‚©‚·‚¬‚é‚Ì‚Åunsigned int‚ÉØ‚è‹l‚ß‚Ä•Û
-	size_t meshCount = m_meshes.size();
-	m_meshCount = static_cast<unsigned int>(meshCount);
+	m_meshes = std::move(a_meshes);
+	m_materials = std::move(a_materials);
+	m_meshCount = static_cast<unsigned int>(m_meshes.size());
 }
 
 ModelDX::~ModelDX()
 {	
 }
 
-//	ŠeíƒQƒbƒ^
+//	å„ç¨®ã‚²ãƒƒã‚¿
 unsigned int ModelDX::GetMeshCount()
 {
 	return m_meshCount;

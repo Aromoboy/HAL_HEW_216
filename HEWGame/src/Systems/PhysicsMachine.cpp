@@ -1,4 +1,5 @@
 #include "Systems/PhysicsMachine.h"
+#include "Systems/IntegrateSystem.h"
 
 #include <algorithm>
 #include <sstream>
@@ -35,8 +36,10 @@ namespace Systems
         PhysicsMachine::PhysicsMachine()
                 : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
                 , m_system(nullptr)
+                , m_integrator(std::make_shared<IntegrateSystem>())
                 , m_bodies()
                 , m_loggedMissingSystem(false)
+                , m_loggedMissingIntegrator(false)
         {
         }
 
@@ -60,9 +63,34 @@ namespace Systems
                 m_loggedMissingSystem = false;
         }
 
+        void PhysicsMachine::SetIntegrator(IntegratorPtr integrator)
+        {
+                if (m_integrator == integrator)
+                {
+                        return;
+                }
+
+#if defined(_DEBUG)
+                {
+                        std::ostringstream oss;
+                        oss << "[PhysicsMachine] SetIntegrator called. previous=" << m_integrator.get()
+                            << " new=" << (integrator ? integrator.get() : nullptr) << "\n";
+                        DebugTrace(oss.str());
+                }
+#endif
+
+                m_integrator = std::move(integrator);
+                m_loggedMissingIntegrator = false;
+        }
+
         PhysicsMachine::SystemPtr PhysicsMachine::GetSystem() const
         {
                 return m_system;
+        }
+
+        PhysicsMachine::IntegratorPtr PhysicsMachine::GetIntegrator() const
+        {
+                return m_integrator;
         }
 
         const std::vector<SceneSpace::PhysicalEntity*>& PhysicsMachine::GetBodies() const
@@ -123,6 +151,12 @@ namespace Systems
                         return;
                 }
 
+                if (!m_integrator && !m_loggedMissingIntegrator)
+                {
+                        DebugTrace("[PhysicsMachine] No integrator configured; skipping translation step.\n");
+                        m_loggedMissingIntegrator = true;
+                }
+
                 for (SceneSpace::PhysicalEntity* body : m_bodies)
                 {
                         if (!body)
@@ -134,6 +168,12 @@ namespace Systems
                         }
 
                         m_system->Apply(*body, ctx.dt);
+
+                        if (m_integrator)
+                        {
+                                m_integrator->Integrate(*body, ctx.dt);
+                        }
+
                         body->SyncColliderBounds();
                 }
         }

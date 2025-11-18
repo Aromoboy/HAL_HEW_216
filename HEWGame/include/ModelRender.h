@@ -15,3 +15,8 @@ void Draw(ModelDX& model, Transform transform, const CameraSpace::ICamera* camer
 private:
 void MeshDraw(MeshDX&);
 };
+
+namespace Render
+{
+    using ModelRenderer = ::ModelRender;
+}

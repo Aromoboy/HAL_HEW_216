@@ -28,5 +28,9 @@ namespace Systems
         float m_penetrationTolerance;
         float m_restitution;
         bool m_loggedMissingBodyList;
+        bool m_loggedPlayerPresence;
+        bool m_loggedPlayerAbsence;
+        bool m_loggedPlayerPlatformContact;
+        bool m_loggedPlayerSweetsContact;
     };
 }

@@ -3,6 +3,27 @@
 #include "PhysicalEntity.h"
 #include <algorithm>
 #include <cmath>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
+namespace
+{
+    void DebugTrace(const std::string& message)
+    {
+#if defined(_WIN32) && defined(_DEBUG)
+        ::OutputDebugStringA(message.c_str());
+#else
+        (void)message;
+#endif
+    }
+}
 
 using namespace Systems;
 
@@ -14,13 +35,31 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 
 void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
 {
-    // PhysicalƒRƒ“ƒ|[ƒlƒ“ƒg‚ðŽæ“¾
+    // Physicalã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’å–å¾—
     auto& physical = entity.GetPhysical();
 
-    // d—Í‰Á‘¬“x‚ð‘¬“x‚É‰ÁŽZi-y•ûŒüj
+    if (!(physical.weight > 0.0f))
+    {
+#if defined(_DEBUG)
+        if (m_loggedKinematicSkips.insert(&entity).second)
+        {
+            std::ostringstream oss;
+            oss << "[GravityDampingSystem] Skipping kinematic entity tag='" << entity.GetTag()
+                << "' weight=" << physical.weight << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
+        physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
+        physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        return;
+    }
+
+    m_loggedKinematicSkips.erase(&entity);
+
+    // é‡åŠ›åŠ é€Ÿåº¦ã‚’é€Ÿåº¦ã«åŠ ç®—ï¼ˆ-yæ–¹å‘ï¼‰
     physical.velocity.y -= m_gravity * dt;
 
-    // ‘¬“x‚ÉŒ¸Š‚ð“K—piƒtƒŒ[ƒ€ƒŒ[ƒg“Æ—§j
+    // é€Ÿåº¦ã«æ¸›è¡°ã‚’é©ç”¨ï¼ˆãƒ•ãƒ¬ãƒ¼ãƒ ãƒ¬ãƒ¼ãƒˆç‹¬ç«‹ï¼‰
     const float dampingFactor = std::pow(m_damping, dt);
     physical.velocity.x *= dampingFactor;
     physical.velocity.y *= dampingFactor;

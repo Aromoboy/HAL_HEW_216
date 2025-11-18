@@ -1,6 +1,7 @@
 #include "Systems/ContactLiteSystem.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -70,6 +71,24 @@ namespace
                         return &v.z;
                 }
         }
+
+        bool IsPlayerBody(const SceneSpace::PhysicalEntity* body)
+        {
+                return body && body->GetTag() == "player";
+        }
+
+        bool IsSweetsTag(const std::string& tag)
+        {
+                static const std::array<const char*, 3> kSweetsTags{ { "Cake", "Pudding", "Sherbet" } };
+                for (const char* sweetsTag : kSweetsTags)
+                {
+                        if (tag == sweetsTag)
+                        {
+                                return true;
+                        }
+                }
+                return false;
+        }
 }
 
 namespace Systems
@@ -80,6 +99,10 @@ namespace Systems
                 , m_penetrationTolerance(0.01f)
                 , m_restitution(0.15f)
                 , m_loggedMissingBodyList(false)
+                , m_loggedPlayerPresence(false)
+                , m_loggedPlayerAbsence(false)
+                , m_loggedPlayerPlatformContact(false)
+                , m_loggedPlayerSweetsContact(false)
         {
         }
 
@@ -87,6 +110,10 @@ namespace Systems
         {
                 m_bodies = bodies;
                 m_loggedMissingBodyList = false;
+                m_loggedPlayerPresence = false;
+                m_loggedPlayerAbsence = false;
+                m_loggedPlayerPlatformContact = false;
+                m_loggedPlayerSweetsContact = false;
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
@@ -124,6 +151,29 @@ namespace Systems
                 }
 
                 const size_t bodyCount = m_bodies->size();
+                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](SceneSpace::PhysicalEntity* body)
+                {
+                        return IsPlayerBody(body);
+                });
+                if (playerPresent)
+                {
+                        if (!m_loggedPlayerPresence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body detected in contact solver input. Collisions with avatar will be evaluated.\n");
+                                m_loggedPlayerPresence = true;
+                        }
+                        m_loggedPlayerAbsence = false;
+                }
+                else
+                {
+                        if (!m_loggedPlayerAbsence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body missing from contact solver input; avatar collisions disabled.\n");
+                                m_loggedPlayerAbsence = true;
+                        }
+                        m_loggedPlayerPresence = false;
+                }
+
                 if (bodyCount < 2)
                 {
                         return;
@@ -170,6 +220,30 @@ namespace Systems
                                         continue;
                                 }
 
+                                const bool playerPair = IsPlayerBody(bodyA) || IsPlayerBody(bodyB);
+                                if (playerPair)
+                                {
+                                        SceneSpace::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
+                                        if (other)
+                                        {
+                                                const std::string& otherTag = other->GetTag();
+                                                if (otherTag == "StageFoundation" && !m_loggedPlayerPlatformContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with stage platform via body tag='" << otherTag << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerPlatformContact = true;
+                                                }
+                                                else if (IsSweetsTag(otherTag) && !m_loggedPlayerSweetsContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerSweetsContact = true;
+                                                }
+                                        }
+                                }
+
                                 const AABB boundsA = colliderA->GetAABB();
                                 const AABB boundsB = colliderB->GetAABB();
 
@@ -178,16 +252,23 @@ namespace Systems
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
                                 overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
-                                int axis = 0;
-                                float minOverlap = overlaps[0];
-                                for (int k = 1; k < 3; ++k)
+                                const float planarOverlapX = overlaps[0];
+                                const float planarOverlapY = overlaps[1];
+                                const bool suppressedZAxis = overlaps[2] < std::min(planarOverlapX, planarOverlapY);
+                                const bool chooseX = planarOverlapX <= planarOverlapY;
+                                const int axis = chooseX ? 0 : 1;
+                                const float minOverlap = chooseX ? planarOverlapX : planarOverlapY;
+
+#if defined(_DEBUG)
+                                if (suppressedZAxis && minOverlap > 0.0f)
                                 {
-                                        if (overlaps[k] < minOverlap)
-                                        {
-                                                minOverlap = overlaps[k];
-                                                axis = k;
-                                        }
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Suppressed Z-axis overlap (" << overlaps[2]
+                                            << ") to maintain planar constraint. Using axis " << axis
+                                            << " overlap=" << minOverlap << "\n";
+                                        DebugTrace(oss.str());
                                 }
+#endif
 
                                 if (minOverlap <= 0.0f)
                                 {
@@ -203,22 +284,63 @@ namespace Systems
                                 const float centerA = GetAxisCenter(boundsA, axis);
                                 const float centerB = GetAxisCenter(boundsB, axis);
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
-                                const float halfPush = pushDistance * 0.5f;
+                                Physics::Physical& physA = bodyA->GetPhysical();
+                                Physics::Physical& physB = bodyB->GetPhysical();
+                                const bool bodyAStatic = !(physA.weight > 0.0f);
+                                const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
                                 float* translationComponentA = SelectAxisComponent(translationA, axis);
                                 float* translationComponentB = SelectAxisComponent(translationB, axis);
 
-                                const float axisPush = axisDir * halfPush;
-                                *translationComponentA += axisPush;
-                                *translationComponentB -= axisPush;
+                                if (!bodyAStatic && !bodyBStatic)
+                                {
+                                        const float halfPush = pushDistance * 0.5f;
+                                        const float axisPush = axisDir * halfPush;
+                                        *translationComponentA += axisPush;
+                                        *translationComponentB -= axisPush;
+                                }
+                                else if (!bodyAStatic && bodyBStatic)
+                                {
+                                        const float axisPush = axisDir * pushDistance;
+                                        *translationComponentA += axisPush;
+                                }
+                                else if (bodyAStatic && !bodyBStatic)
+                                {
+                                        const float axisPush = -axisDir * pushDistance;
+                                        *translationComponentB += axisPush;
+                                }
+                                else
+                                {
+                                        continue;
+                                }
+
+                                if (translationA.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' requested Z translation " << translationA.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationA.z = 0.0f;
+                                }
+                                if (translationB.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' requested Z translation " << translationB.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationB.z = 0.0f;
+                                }
 
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
                                 SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
-
-                                Physics::Physical& physA = bodyA->GetPhysical();
-                                Physics::Physical& physB = bodyB->GetPhysical();
 
                                 float* velA = SelectAxisComponent(physA.velocity, axis);
                                 float* velB = SelectAxisComponent(physB.velocity, axis);
@@ -226,9 +348,83 @@ namespace Systems
 
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
-                                        const float impulse = -(1.0f + m_restitution) * relativeVelocity * 0.5f;
-                                        *velA += impulse;
-                                        *velB -= impulse;
+                                        float activeBodyCount = 0.0f;
+                                        if (!bodyAStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+                                        if (!bodyBStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+
+                                        if (activeBodyCount <= 0.0f)
+                                        {
+                                                continue;
+                                        }
+
+                                        const float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
+                                        if (!bodyAStatic)
+                                        {
+                                                *velA += impulse;
+                                        }
+                                        if (!bodyBStatic)
+                                        {
+                                                *velB -= impulse;
+                                        }
+                                }
+
+                                if (axis == 1)
+                                {
+                                        if (!bodyAStatic && bodyBStatic && *velA < 0.0f)
+                                        {
+#if defined(_DEBUG)
+                                                const float previousVelocity = *velA;
+#endif
+                                                *velA = 0.0f;
+#if defined(_DEBUG)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
+                                                    << "' from " << previousVelocity << " due to static contact.\n";
+                                                DebugTrace(oss.str());
+#endif
+                                        }
+                                        if (!bodyBStatic && bodyAStatic && *velB < 0.0f)
+                                        {
+#if defined(_DEBUG)
+                                                const float previousVelocity = *velB;
+#endif
+                                                *velB = 0.0f;
+#if defined(_DEBUG)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
+                                                    << "' from " << previousVelocity << " due to static contact.\n";
+                                                DebugTrace(oss.str());
+#endif
+                                        }
+                                }
+
+                                if (physA.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' velocity.z=" << physA.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physA.velocity.z = 0.0f;
+                                }
+                                if (physB.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' velocity.z=" << physB.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physB.velocity.z = 0.0f;
                                 }
 
                                 ++resolvedPairs;
