@@ -222,12 +222,11 @@ namespace
         {
             true,
             0.0f,
-            // コンセプトアートのコールアウトでは、カメラをプレイヤーの左12.5m、上方7.25m、
-            // プレイプレーン後方1.5mに配置し、横方向のヨー角90度、ピッチ角-15度とする（一時的な値）
-            float3{ -12.5f, 7.25f, -1.5f },
+            //カメラ設定
+            float3{ 0.0f, 3.5f, -25.0f },
             45.0f,
-            DirectX::XMConvertToRadians(90.0f),
-            DirectX::XMConvertToRadians(-15.0f)
+            DirectX::XMConvertToRadians(0.0f),
+            DirectX::XMConvertToRadians(-10.0f)
         };
 }
 
