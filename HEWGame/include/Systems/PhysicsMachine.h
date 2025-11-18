@@ -43,10 +43,6 @@ namespace Systems
         IntegratorPtr GetIntegrator() const;
         const std::vector<SceneSpace::PhysicalEntity*>& GetBodies() const;
 
-
-// 備考: o^{fB SceneSpace OԂɓ に関する説明を日本語で補足している。
-// 備考: Entity ̍č\ɍ킹ύX に関する説明を日本語で補足している。
-
         void RegisterBody(SceneSpace::PhysicalEntity& body);
         void UnregisterBody(SceneSpace::PhysicalEntity& body);
         void ClearBodies();
