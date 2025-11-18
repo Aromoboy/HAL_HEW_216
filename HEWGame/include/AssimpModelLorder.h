@@ -58,9 +58,9 @@ private:
 	
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
-	// 備考: bV쐬 に関する説明を日本語で補足している。
+
 	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*);
-	// 備考: }eA̍쐬 に関する説明を日本語で補足している。
+
 	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, ID3D11Device* device, TextureCache& textureCache);
 
 
