@@ -20,6 +20,7 @@
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
 #include "HudRenderer.h"
+#include "BackgroundRenderer.h"
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
@@ -73,6 +74,7 @@ private:
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
+    bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
 #if defined(_DEBUG)
     void RenderRunTelemetryOverlay() const;
 #endif
@@ -120,6 +122,8 @@ private:
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
     std::unique_ptr<HudRenderer> m_hudRenderer;
+    std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
+    float m_guidelineHeightMeters = 0.0f;
     float m_cachedViewportWidth = std::numeric_limits<float>::quiet_NaN();
     float m_cachedViewportHeight = std::numeric_limits<float>::quiet_NaN();
     float3 m_cachedCameraPosition{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
@@ -128,6 +132,8 @@ private:
     float m_cachedCameraAspect = std::numeric_limits<float>::quiet_NaN();
     float3 m_cachedCameraRigOffset{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
     bool m_platformAnchorInitialized = false;
+    mutable bool m_guidelineInvalidLogged = false;
+    mutable bool m_guidelineClampLogged = false;
 };
 
 #endif // __SCENE_GAME_H__

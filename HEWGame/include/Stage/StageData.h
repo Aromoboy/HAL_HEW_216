@@ -24,6 +24,8 @@ namespace Stage
         const float3& GetPlatformScale() const noexcept;
         const std::string& GetSourcePath() const noexcept;
         float GetPlayerMoveSpeed() const noexcept;
+        float GetGuidelineHeight() const noexcept;
+        const std::string& GetBackgroundTexturePath() const noexcept;
 
     private:
         void ApplyDefaults();
@@ -39,5 +41,7 @@ namespace Stage
         std::string m_sourcePath;
         bool m_loadedFromFile;
         float m_playerMoveSpeed;
+        float m_guidelineHeight;
+        std::string m_backgroundTexturePath;
     };
 }
