@@ -14,12 +14,10 @@
 #include "PhysicalEntity.h"
 
 namespace Systems
-// PhysicsMachine  Entity ̊S`QƂ悤ɍXV
-// sS^G[邽߁ASceneSpace::PhysicalEntity 𒼐ڈ
+
 {
     class IPhysicsSystem
- // 備考: VXe PhysicalEntity 𒼐ڑ に関する説明を日本語で補足している。
-// 備考: ȑO Entity::PhysicalEntity  SceneSpace ɓ に関する説明を日本語で補足している。
+
 
 
     {
