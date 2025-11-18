@@ -13,7 +13,6 @@
 struct ID3D11Device;
 class TextureCache;
 
-// 備考: [_[̃C^[tF[X に関する説明を日本語で補足している。
 class IModelLoader
 {
 public:
