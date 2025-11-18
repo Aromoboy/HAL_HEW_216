@@ -1,6 +1,7 @@
 #include "Systems/ContactLiteSystem.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -70,6 +71,24 @@ namespace
                         return &v.z;
                 }
         }
+
+        bool IsPlayerBody(const SceneSpace::PhysicalEntity* body)
+        {
+                return body && body->GetTag() == "player";
+        }
+
+        bool IsSweetsTag(const std::string& tag)
+        {
+                static const std::array<const char*, 3> kSweetsTags{ { "Cake", "Pudding", "Sherbet" } };
+                for (const char* sweetsTag : kSweetsTags)
+                {
+                        if (tag == sweetsTag)
+                        {
+                                return true;
+                        }
+                }
+                return false;
+        }
 }
 
 namespace Systems
@@ -80,6 +99,10 @@ namespace Systems
                 , m_penetrationTolerance(0.01f)
                 , m_restitution(0.15f)
                 , m_loggedMissingBodyList(false)
+                , m_loggedPlayerPresence(false)
+                , m_loggedPlayerAbsence(false)
+                , m_loggedPlayerPlatformContact(false)
+                , m_loggedPlayerSweetsContact(false)
         {
         }
 
@@ -87,6 +110,10 @@ namespace Systems
         {
                 m_bodies = bodies;
                 m_loggedMissingBodyList = false;
+                m_loggedPlayerPresence = false;
+                m_loggedPlayerAbsence = false;
+                m_loggedPlayerPlatformContact = false;
+                m_loggedPlayerSweetsContact = false;
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
@@ -124,6 +151,29 @@ namespace Systems
                 }
 
                 const size_t bodyCount = m_bodies->size();
+                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](SceneSpace::PhysicalEntity* body)
+                {
+                        return IsPlayerBody(body);
+                });
+                if (playerPresent)
+                {
+                        if (!m_loggedPlayerPresence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body detected in contact solver input. Collisions with avatar will be evaluated.\n");
+                                m_loggedPlayerPresence = true;
+                        }
+                        m_loggedPlayerAbsence = false;
+                }
+                else
+                {
+                        if (!m_loggedPlayerAbsence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body missing from contact solver input; avatar collisions disabled.\n");
+                                m_loggedPlayerAbsence = true;
+                        }
+                        m_loggedPlayerPresence = false;
+                }
+
                 if (bodyCount < 2)
                 {
                         return;
@@ -168,6 +218,30 @@ namespace Systems
                                 if (!colliderA->CheckCollision(*colliderB))
                                 {
                                         continue;
+                                }
+
+                                const bool playerPair = IsPlayerBody(bodyA) || IsPlayerBody(bodyB);
+                                if (playerPair)
+                                {
+                                        SceneSpace::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
+                                        if (other)
+                                        {
+                                                const std::string& otherTag = other->GetTag();
+                                                if (otherTag == "StageFoundation" && !m_loggedPlayerPlatformContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with stage platform via body tag='" << otherTag << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerPlatformContact = true;
+                                                }
+                                                else if (IsSweetsTag(otherTag) && !m_loggedPlayerSweetsContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerSweetsContact = true;
+                                                }
+                                        }
                                 }
 
                                 const AABB boundsA = colliderA->GetAABB();

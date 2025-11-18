@@ -479,13 +479,13 @@ SceneGame::SceneGame()
         {
             player->SetSweetsManager(m_sweetsManager.get());
         }
-        if (!player->IsKinematic())
+        RegisterPhysicsBody(*player);
         {
-            RegisterPhysicsBody(*player);
-        }
-        else
-        {
-            DebugTrace(std::string(kLogPrefix) + "Player initialized in kinematic mode; skipping physics body registration.\n");
+            std::ostringstream oss;
+            oss << kLogPrefix << "Player physics body registered (kinematic="
+                << std::boolalpha << player->IsKinematic()
+                << ", weight=" << player->GetPhysical().weight << ").\n";
+            DebugTrace(oss.str());
         }
         if (m_drawSystem)
         {
@@ -621,17 +621,14 @@ void SceneGame::ConfigureUpdates()
         {
                 Register(*player);
 
-                const bool isKinematic = player->IsKinematic();
                 const bool tracked = m_registeredPhysicsBodies.find(player.get()) != m_registeredPhysicsBodies.end();
-                if (isKinematic && tracked)
-                {
-                        UnregisterPhysicsBody(player.get());
-                        DebugTrace(std::string(kLogPrefix) + "ConfigureUpdates removed kinematic player from physics simulation.\n");
-                }
-                else if (!isKinematic && !tracked)
+                if (!tracked)
                 {
                         RegisterPhysicsBody(*player);
-                        DebugTrace(std::string(kLogPrefix) + "ConfigureUpdates registered player with physics simulation.\n");
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
+                            << std::boolalpha << player->IsKinematic() << ").\n";
+                        DebugTrace(oss.str());
                 }
         }
 
