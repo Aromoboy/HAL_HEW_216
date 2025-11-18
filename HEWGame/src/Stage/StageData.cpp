@@ -34,6 +34,8 @@ namespace
     constexpr float kDefaultPlatformCenterY = -1.0f;
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+    constexpr float kDefaultGuidelineHeight = 20.0f;
+    constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
 
     const float3 kDefaultSpawnPoints[] =
     {
@@ -111,6 +113,8 @@ namespace Stage
         , m_platformScale(kDefaultPlatformScale)
         , m_loadedFromFile(false)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
+        , m_guidelineHeight(kDefaultGuidelineHeight)
+        , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
     {
         ApplyDefaults();
     }
@@ -140,6 +144,10 @@ namespace Stage
         bool platformScaleSet = false;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
+        float guidelineHeight = kDefaultGuidelineHeight;
+        bool guidelineHeightSet = false;
+        std::string backgroundTexturePath = kDefaultBackgroundTexturePath;
+        bool backgroundTextureSet = false;
         bool parseError = false;
 
         std::string line;
@@ -281,6 +289,39 @@ namespace Stage
                     parseError = true;
                 }
             }
+            else if (key == "guidelineHeight")
+            {
+                try
+                {
+                    guidelineHeight = std::stof(rawValue);
+                    guidelineHeightSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineHeight on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "backgroundTexture")
+            {
+                if (rawValue.empty())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "backgroundTexture on line " << lineNumber
+                        << " was empty; background rendering disabled.\n";
+                    DebugTrace(oss.str());
+                    backgroundTexturePath.clear();
+                    backgroundTextureSet = true;
+                }
+                else
+                {
+                    backgroundTexturePath = rawValue;
+                    backgroundTextureSet = true;
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -319,6 +360,23 @@ namespace Stage
             playerMoveSpeed = kDefaultPlayerMoveSpeed;
             std::ostringstream oss;
             oss << kLogPrefix << "playerMoveSpeed not specified; defaulting to " << playerMoveSpeed << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!guidelineHeightSet)
+        {
+            guidelineHeight = kDefaultGuidelineHeight;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!backgroundTextureSet)
+        {
+            backgroundTexturePath = kDefaultBackgroundTexturePath;
+            std::ostringstream oss;
+            oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
+                << backgroundTexturePath << "'.\n";
             DebugTrace(oss.str());
         }
 
@@ -382,6 +440,15 @@ namespace Stage
             playerMoveSpeed = kDefaultPlayerMoveSpeed;
         }
 
+        if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineHeight value " << guidelineHeight
+                << " invalid; using default " << kDefaultGuidelineHeight << "\n";
+            DebugTrace(oss.str());
+            guidelineHeight = kDefaultGuidelineHeight;
+        }
+
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount);
 
@@ -392,6 +459,8 @@ namespace Stage
         m_platformCenterY = platformCenterY;
         m_platformScale = platformScale;
         m_playerMoveSpeed = playerMoveSpeed;
+        m_guidelineHeight = guidelineHeight;
+        m_backgroundTexturePath = backgroundTexturePath;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
 
@@ -403,6 +472,8 @@ namespace Stage
             << ", platformCenterY=" << m_platformCenterY
             << ", platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << ", playerMoveSpeed=" << m_playerMoveSpeed
+            << ", guidelineHeight=" << m_guidelineHeight
+            << ", backgroundTexture='" << m_backgroundTexturePath << "'"
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
 
@@ -449,6 +520,16 @@ namespace Stage
         return m_playerMoveSpeed;
     }
 
+    float StageData::GetGuidelineHeight() const noexcept
+    {
+        return m_guidelineHeight;
+    }
+
+    const std::string& StageData::GetBackgroundTexturePath() const noexcept
+    {
+        return m_backgroundTexturePath;
+    }
+
     void StageData::ApplyDefaults()
     {
         m_planeZ = kDefaultPlaneZ;
@@ -459,6 +540,8 @@ namespace Stage
         EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
         m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
         m_playerMoveSpeed = kDefaultPlayerMoveSpeed;
+        m_guidelineHeight = kDefaultGuidelineHeight;
+        m_backgroundTexturePath = kDefaultBackgroundTexturePath;
         m_loadedFromFile = false;
         m_sourcePath.clear();
         LogSummary("Defaults", "applied");
@@ -474,6 +557,8 @@ namespace Stage
             << " platformCenterY=" << m_platformCenterY
             << " platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << " playerMoveSpeed=" << m_playerMoveSpeed
+            << " guidelineHeight=" << m_guidelineHeight
+            << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
         DebugTrace(oss.str());
     }

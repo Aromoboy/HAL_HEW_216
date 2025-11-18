@@ -19,6 +19,7 @@
 #include "DirectX.h"
 #include "Sweets.h"
 #include "SweetsManager.h"
+#include "BackgroundRenderer.h"
 
 
 
@@ -75,7 +76,10 @@ namespace
             1.5f,
             2.0f,
             DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
+            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f),
+            3.0f,
+            32.0f,
+            DirectX::XMFLOAT4(0.95f, 0.95f, 1.0f, 0.8f)
         };
 
         struct PhysicsTuningSettings
@@ -353,8 +357,39 @@ SceneGame::SceneGame()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
-            << " playerSpeed=" << m_stageData.GetPlayerMoveSpeed() << "\n";
+            << " playerSpeed=" << m_stageData.GetPlayerMoveSpeed()
+            << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
+            << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
         DebugTrace(oss.str());
+    }
+
+    m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
+    if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Guideline height " << m_guidelineHeightMeters
+            << " invalid; overlay guideline disabled.\n";
+        DebugTrace(oss.str());
+        m_guidelineHeightMeters = 0.0f;
+    }
+
+    const std::string backgroundTexture = m_stageData.GetBackgroundTexturePath();
+    if (!backgroundTexture.empty())
+    {
+        BackgroundRendererConfig backgroundConfig{};
+        backgroundConfig.texturePath = backgroundTexture;
+        m_backgroundRenderer = std::make_unique<BackgroundRenderer>();
+        if (!m_backgroundRenderer->Initialize(backgroundConfig))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
+            DebugTrace(oss.str());
+            m_backgroundRenderer.reset();
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "Background texture path empty; background renderer skipped.\n");
     }
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
@@ -816,6 +851,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 
 void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 {
+        if (m_backgroundRenderer)
+        {
+                m_backgroundRenderer->Draw();
+        }
+
         // 描画確認用の数値
         if (!activeCamera)
         {
@@ -842,6 +882,14 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                 hudData.peakHeight = m_peakTowerHeight;
                 hudData.score = ComputeScore();
                 hudData.timeUp = m_timeUp;
+
+                float guidelineClip = 0.0f;
+                if (TryGetGuidelineClipY(*activeCamera, guidelineClip))
+                {
+                        hudData.guidelineVisible = true;
+                        hudData.guidelineClipY = guidelineClip;
+                }
+
                 m_hudRenderer->Draw(hudData);
         }
 
@@ -1260,6 +1308,78 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
         << "s peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
     DebugTrace(oss.str());
     ResetPlaySession();
+}
+
+bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const
+{
+    if (m_guidelineHeightMeters <= 0.0f)
+    {
+        if (!m_guidelineInvalidLogged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Disabled because height=" << m_guidelineHeightMeters << "\n";
+            DebugTrace(oss.str());
+            m_guidelineInvalidLogged = true;
+        }
+        return false;
+    }
+
+    DirectX::XMFLOAT4X4 viewMatrix = camera.GetView();
+    DirectX::XMFLOAT4X4 projMatrix = camera.GetProjection();
+    const DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
+    const DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMatrix);
+    const DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj);
+    const DirectX::XMVECTOR worldPos = DirectX::XMVectorSet(0.0f, m_guidelineHeightMeters, m_stageData.GetPlaneZ(), 1.0f);
+    const DirectX::XMVECTOR clipPos = DirectX::XMVector4Transform(worldPos, viewProj);
+    const float clipW = DirectX::XMVectorGetW(clipPos);
+    if (!std::isfinite(clipW) || std::fabs(clipW) <= std::numeric_limits<float>::epsilon())
+    {
+        if (!m_guidelineInvalidLogged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Invalid clip W=" << clipW
+                << " threshold=" << m_guidelineHeightMeters
+                << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
+            DebugTrace(oss.str());
+            m_guidelineInvalidLogged = true;
+        }
+        return false;
+    }
+
+    const float clipY = DirectX::XMVectorGetY(clipPos) / clipW;
+    if (!std::isfinite(clipY))
+    {
+        if (!m_guidelineInvalidLogged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Non-finite clipY derived from threshold="
+                << m_guidelineHeightMeters << " clipW=" << clipW << "\n";
+            DebugTrace(oss.str());
+            m_guidelineInvalidLogged = true;
+        }
+        return false;
+    }
+
+    outClipY = std::clamp(clipY, -1.0f, 1.0f);
+    if ((clipY < -1.0f || clipY > 1.0f))
+    {
+        if (!m_guidelineClampLogged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Clamped clipY from " << clipY
+                << " to " << outClipY << " threshold=" << m_guidelineHeightMeters
+                << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
+            DebugTrace(oss.str());
+            m_guidelineClampLogged = true;
+        }
+    }
+    else
+    {
+        m_guidelineClampLogged = false;
+    }
+
+    m_guidelineInvalidLogged = false;
+    return true;
 }
 
 void SceneGame::ToggleGameplaySystems(bool enabled)

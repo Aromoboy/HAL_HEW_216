@@ -185,6 +185,7 @@
     <ClCompile Include="src\BaseCamera.cpp" />
     <ClCompile Include="src\GravityDampingSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
+    <ClCompile Include="src\BackgroundRenderer.cpp" />
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
@@ -251,6 +252,7 @@
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\GravityDampingSystem.h" />
     <ClInclude Include="include\HudRenderer.h" />
+    <ClInclude Include="include\BackgroundRenderer.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\ICollider.h" />
