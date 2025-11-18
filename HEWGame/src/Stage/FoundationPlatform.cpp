@@ -177,11 +177,21 @@ namespace Stage
 
         const unsigned int meshCount = m_model->GetMeshCount();
         unsigned int appliedCount = 0;
+        unsigned int skippedMeshes = 0;
         for (unsigned int meshIndex = 0; meshIndex < meshCount; ++meshIndex)
         {
-            auto material = m_model->GetMaterial(static_cast<int>(meshIndex)).lock();
+            auto mesh = m_model->GetMesh(static_cast<int>(meshIndex)).lock();
+            if (!mesh)
+            {
+                ++skippedMeshes;
+                continue;
+            }
+
+            const int materialIndex = static_cast<int>(mesh->GetMaterialID());
+            auto material = m_model->GetMaterial(materialIndex).lock();
             if (!material)
             {
+                ++skippedMeshes;
                 continue;
             }
 
@@ -193,7 +203,8 @@ namespace Stage
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Applied debug color to " << appliedCount << '/' << meshCount << " materials.\n";
+        oss << kLogPrefix << "Applied debug color to " << appliedCount << '/' << meshCount
+            << " materials (" << skippedMeshes << " skipped).\n";
         DebugTrace(oss.str());
     }
 }
