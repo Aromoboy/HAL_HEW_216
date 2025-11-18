@@ -359,6 +359,8 @@ SceneGame::SceneGame()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
             << " playerSpeed=" << m_stageData.GetPlayerMoveSpeed()
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
+            << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
+            << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
             << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
         DebugTrace(oss.str());
     }
@@ -372,6 +374,35 @@ SceneGame::SceneGame()
         DebugTrace(oss.str());
         m_guidelineHeightMeters = 0.0f;
     }
+
+    m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
+    if (!std::isfinite(m_heightBonusThresholdMeters) || m_heightBonusThresholdMeters <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Height bonus threshold " << m_heightBonusThresholdMeters
+            << " invalid; timer bonus disabled.\n";
+        DebugTrace(oss.str());
+        m_heightBonusThresholdMeters = 0.0f;
+    }
+
+    m_heightBonusSeconds = m_stageData.GetHeightBonusSeconds();
+    if (!std::isfinite(m_heightBonusSeconds))
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Height bonus seconds " << m_heightBonusSeconds
+            << " invalid; timer bonus disabled.\n";
+        DebugTrace(oss.str());
+        m_heightBonusSeconds = 0.0f;
+    }
+    else if (m_heightBonusSeconds <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
+        DebugTrace(oss.str());
+        m_heightBonusSeconds = 0.0f;
+    }
+
+    m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
 
     const std::string backgroundTexture = m_stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
@@ -1179,6 +1210,8 @@ void SceneGame::ResetPlaySession()
     m_currentTowerHeight = 0.0f;
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
+    m_pendingTimeBonuses.clear();
+    m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
@@ -1201,6 +1234,34 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
     if (!m_isPlaying)
     {
         return;
+    }
+
+    if (!m_pendingTimeBonuses.empty())
+    {
+        while (!m_pendingTimeBonuses.empty())
+        {
+            const PendingTimeBonus bonus = m_pendingTimeBonuses.front();
+            m_pendingTimeBonuses.pop_front();
+            if (!(bonus.seconds > 0.0f))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[Countdown] Ignored non-positive bonus event seconds="
+                    << bonus.seconds << " queue=" << m_pendingTimeBonuses.size() << "\n";
+                DebugTrace(oss.str());
+                continue;
+            }
+
+            m_remainingCountdownSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+            m_remainingCountdownSeconds += bonus.seconds;
+            m_totalPlaySeconds += bonus.seconds;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Countdown] bonusApplied +=" << std::fixed << std::setprecision(2)
+                << bonus.seconds << "s height=" << std::fixed << std::setprecision(2)
+                << bonus.triggerHeight << "m remaining=" << std::fixed << std::setprecision(2)
+                << m_remainingCountdownSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
+            DebugTrace(oss.str());
+        }
     }
 
     const float delta = m_countdownTimer.Tick(ctx.dt);
@@ -1260,6 +1321,33 @@ void SceneGame::UpdateTowerHeightTelemetry()
             << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
             << m_remainingCountdownSeconds << "s\n";
         DebugTrace(oss.str());
+    }
+
+    if (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f)
+    {
+        if (instantHeight >= m_heightBonusThresholdMeters)
+        {
+            if (m_heightBonusArmed)
+            {
+                m_heightBonusArmed = false;
+                m_pendingTimeBonuses.push_back(PendingTimeBonus{ m_heightBonusSeconds, instantHeight });
+                std::ostringstream oss;
+                oss << kLogPrefix << "[TowerBonus] thresholdCrossed height=" << std::fixed << std::setprecision(2)
+                    << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
+                    << m_heightBonusThresholdMeters << "m bonus=" << std::fixed << std::setprecision(2)
+                    << m_heightBonusSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+        else if (!m_heightBonusArmed)
+        {
+            m_heightBonusArmed = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "[TowerBonus] rearmed height=" << std::fixed << std::setprecision(2)
+                << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
+                << m_heightBonusThresholdMeters << "m\n";
+            DebugTrace(oss.str());
+        }
     }
 }
 
