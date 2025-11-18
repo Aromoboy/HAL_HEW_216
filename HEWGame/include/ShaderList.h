@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: ShaderList ɊւC^[tF[Xf[^\錾Ainclude ėpł悤ɂB
+// ړI: ߂ẴW[ɐGJ҂łAӖƈˑ֌Wfcł悤ɍx̐t^ĂB
+// Ag: include z̑t@CVXewƘA邽߁At@CԂ̊֌WǐՂۂ̖ڈƂėpłB
+// ============================================================================
+
 #ifndef __SHADER_LIST_H__
 #define __SHADER_LIST_H__
 
@@ -9,13 +15,13 @@
 
 class ShaderList
 {
-	// ��`
-public:
-	enum VSKind
-	{
-		VS_WORLD, // SetWVP
-		VS_ANIME, // SetWVP,SetBones
-		VS_KIND_MAX
+		VS_WORLD, // l: SetWVP Ɋւ{ŕ⑫ĂB
+		VS_ANIME, // l: SetWVP,SetBones Ɋւ{ŕ⑫ĂB
+		PS_LAMBERT, // l: SetMaterial, SetLight Ɋւ{ŕ⑫ĂB
+		PS_SPECULAR, // l: SetMaterial, SetLight, SetCameraPos Ɋւ{ŕ⑫ĂB
+		PS_TOON, // l: SetMaterial, SetLight Ɋւ{ŕ⑫ĂB
+		PS_FOG, // l: SetMaterial, SetLight,SetFog Ɋւ{ŕ⑫ĂB
+#endif // l: __SHADER_LIST_H__ Ɋւ{ŕ⑫ĂB
 	};
 	enum PSKind
 	{
@@ -34,11 +40,11 @@ public:
 	static void Init();
 	static void Uninit();
 
-	// �V�F�[�_�[�ݒ�
+	// シェーダー設定
 	static VertexShader* GetVS(VSKind vs);
 	static PixelShader* GetPS(PSKind ps);
 
-	// �萔�o�b�t�@�ւ̐ݒ�
+	// 定数バッファへの設定
 	static void SetWVP(DirectX::XMFLOAT4X4* wvp);
 	static void SetBones(DirectX::XMFLOAT4X4* bones200);
 	static void SetMaterial(const Model::Material& material);

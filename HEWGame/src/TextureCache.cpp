@@ -1,31 +1,37 @@
-// DirectXTK (DirectX Tool Kit) ‚ğg—po—ˆ‚È‚©‚Á‚½‚Ì‚ÅA
-// •W€‚Ì Windows Imaging Component (WIC) ‚ğ’¼Úg—p‚µ‚Ä
-// ƒeƒNƒXƒ`ƒƒ‚ğƒ[ƒh‚µ‚Ä‚¢‚Ü‚·B
-// ‚»‚Ì‚½‚ßAwincodec.h ‚ÌƒCƒ“ƒNƒ‹[ƒh‚Æ
-// windowscodecs.lib ‚ÌƒŠƒ“ƒJ[İ’è‚ª•K—v‚Å‚·B
+// ============================================================================
+// Tv: TextureCache Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
+// DirectXTK (DirectX Tool Kit) ã‚’ä½¿ç”¨å‡ºæ¥ãªã‹ã£ãŸã®ã§ã€
+// æ¨™æº–ã® Windows Imaging Component (WIC) ã‚’ç›´æ¥ä½¿ç”¨ã—ã¦
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¦ã„ã¾ã™ã€‚
+// ãã®ãŸã‚ã€wincodec.h ã®ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰ã¨
+// windowscodecs.lib ã®ãƒªãƒ³ã‚«ãƒ¼è¨­å®šãŒå¿…è¦ã§ã™ã€‚
 #include "TextureCache.h"
 #include "Debug.h"
 #include <iostream>
 
 //============================================================
-// ƒeƒNƒXƒ`ƒƒ‚ğƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚É“o˜^
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¦ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç™»éŒ²
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
-    // ƒLƒƒƒbƒVƒ…‚É‚·‚Å‚É‘¶İ‚·‚é‚©Šm”F
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ã™ã§ã«å­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
     auto it = textures.find(name);
     if (it != textures.end()) return it->second;
 
-    // V‚µ‚¢ƒeƒNƒXƒ`ƒƒ‚ğì¬
+    // æ–°ã—ã„ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ä½œæˆ
     auto texture = std::make_shared<Texture2D>();
     if (!texture->LoadFromFile(device, path)) return nullptr;
     
-    // ƒLƒƒƒbƒVƒ…‚É“o˜^
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç™»éŒ²
     textures[name] = std::move(texture);
     return textures[name];
 }
 //============================================================
-// ƒLƒƒƒbƒVƒ…‚©‚çƒeƒNƒXƒ`ƒƒ‚ğæ“¾
+// ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’å–å¾—
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
 {
@@ -36,18 +42,18 @@ std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
     return it->second;
 }
 //============================================================
-// g—p—á
+// ä½¿ç”¨ä¾‹
 //============================================================
 /*
-// ƒVƒ“ƒOƒ‹ƒgƒ“‚È‚Ì‚Å‚Ç‚±‚©‚ç‚Å‚àƒAƒNƒZƒX‰Â”\
-// ‰Šú‰»FƒeƒNƒXƒ`ƒƒ‚ğƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚É“o˜^
+// ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ãªã®ã§ã©ã“ã‹ã‚‰ã§ã‚‚ã‚¢ã‚¯ã‚»ã‚¹å¯èƒ½
+// åˆæœŸåŒ–æ™‚ï¼šãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¦ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç™»éŒ²
 auto& playerTex = TextureCache::Instance().Load("player", device, L"textures/player.png");
 auto& enemyTex = TextureCache::Instance().Load("enemy", device, L"textures/enemy.png");
-// •`‰æFƒLƒƒƒbƒVƒ…‚©‚çƒeƒNƒXƒ`ƒƒ‚ğæ“¾‚µ‚Äg—p
-auto& tex = TextureCache::Instance().Get("player");  // ‚‘¬iƒLƒƒƒbƒVƒ…‚©‚çæ“¾j
+// æç”»æ™‚ï¼šã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’å–å¾—ã—ã¦ä½¿ç”¨
+auto& tex = TextureCache::Instance().Get("player");  // é«˜é€Ÿï¼ˆã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰å–å¾—ï¼‰
 context->PSSetShaderResources(0, 1, tex.textureView.GetAddressOf());
-// ‚Ü‚½‚Í’Z‚­‘‚­
+// ã¾ãŸã¯çŸ­ãæ›¸ã
 TextureCache::Instance().Get("enemy");
-// ’ˆÓF“¯‚¶–¼‘O‚Å‰½“xLoad()‚ğŒÄ‚ñ‚Å‚àAÅ‰‚Ì1‰ñ‚¾‚¯ƒ[ƒh‚³‚ê‚Ü‚·
-// 2‰ñ–ÚˆÈ~‚ÍƒLƒƒƒbƒVƒ…‚³‚ê‚½ƒeƒNƒXƒ`ƒƒ‚ª•Ô‚³‚ê‚Ü‚·
+// æ³¨æ„ï¼šåŒã˜åå‰ã§ä½•åº¦Load()ã‚’å‘¼ã‚“ã§ã‚‚ã€æœ€åˆã®1å›ã ã‘ãƒ­ãƒ¼ãƒ‰ã•ã‚Œã¾ã™
+// 2å›ç›®ä»¥é™ã¯ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã•ã‚ŒãŸãƒ†ã‚¯ã‚¹ãƒãƒ£ãŒè¿”ã•ã‚Œã¾ã™
 */

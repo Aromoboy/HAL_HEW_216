@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: _model Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #include "Model.h"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -6,7 +12,7 @@
 
 void Model::MakeMesh(const void* ptr, float scale, Flip flip)
 {
-	// –‘O€”õ
+	// äº‹å‰æº–å‚™
 	aiVector3D zero3(0.0f, 0.0f, 0.0f);
 	aiColor4D one4(1.0f, 1.0f, 1.0f, 1.0f);
 	const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
@@ -15,25 +21,25 @@ void Model::MakeMesh(const void* ptr, float scale, Flip flip)
 	int idx1 = (flip == Flip::XFlip || flip == Flip::ZFlip) ? 2 : 1;
 	int idx2 = (flip == Flip::XFlip || flip == Flip::ZFlip) ? 1 : 2;
 
-	// ƒƒbƒVƒ…‚Ìì¬
+	// ãƒ¡ãƒƒã‚·ãƒ¥ã®ä½œæˆ
 	m_meshes.resize(pScene->mNumMeshes);
 	for (unsigned int i = 0; i < m_meshes.size(); ++i)
 	{
-		// ’¸“_‘‚«‚İæ‚Ì—Ìˆæ‚ğ—pˆÓ
+		// é ‚ç‚¹æ›¸ãè¾¼ã¿å…ˆã®é ˜åŸŸã‚’ç”¨æ„
 		m_meshes[i].vertices.resize(pScene->mMeshes[i]->mNumVertices);
 
-		// ’¸“_ƒf[ƒ^‚Ì‘‚«‚İ
+		// é ‚ç‚¹ãƒ‡ãƒ¼ã‚¿ã®æ›¸ãè¾¼ã¿
 		for (unsigned int j = 0; j < m_meshes[i].vertices.size(); ++j) {
-			// ™ƒ‚ƒfƒ‹ƒf[ƒ^‚©‚ç’l‚Ìæ“¾
-			aiVector3D pos = pScene->mMeshes[i]->mVertices[j]; // Position‚Ìƒf[ƒ^‚Í•K‚¸‘¶İ‚·‚é
-			aiVector3D normal = pScene->mMeshes[i]->HasNormals() ? // •K‚¸‘¶İ‚·‚é‚í‚¯‚Å‚Í‚È‚¢‚Ì‚Å‘¶İ‚·‚é‚©Šm”F
+			// â˜†ãƒ¢ãƒ‡ãƒ«ãƒ‡ãƒ¼ã‚¿ã‹ã‚‰å€¤ã®å–å¾—
+			aiVector3D pos = pScene->mMeshes[i]->mVertices[j]; // Positionã®ãƒ‡ãƒ¼ã‚¿ã¯å¿…ãšå­˜åœ¨ã™ã‚‹
+			aiVector3D normal = pScene->mMeshes[i]->HasNormals() ? // å¿…ãšå­˜åœ¨ã™ã‚‹ã‚ã‘ã§ã¯ãªã„ã®ã§å­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
 				pScene->mMeshes[i]->mNormals[j] : zero3;
 			aiVector3D uv = pScene->mMeshes[i]->HasTextureCoords(0) ?
 				pScene->mMeshes[i]->mTextureCoords[0][j] : zero3;
 			aiColor4D color = pScene->mMeshes[i]->HasVertexColors(0) ?
 				pScene->mMeshes[i]->mColors[0][j] : one4;
 
-			// ™’l‚ğİ’è
+			// â˜†å€¤ã‚’è¨­å®š
 			m_meshes[i].vertices[j] = {
 				DirectX::XMFLOAT3(pos.x * scale * xFlip, pos.y * scale, pos.z * scale * zFlip),
 				DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
@@ -42,28 +48,28 @@ void Model::MakeMesh(const void* ptr, float scale, Flip flip)
 			};
 		}
 
-		// ƒ{[ƒ“¶¬
+		// ãƒœãƒ¼ãƒ³ç”Ÿæˆ
 		MakeWeight(pScene, i);
 
-		// ƒCƒ“ƒfƒbƒNƒX‚Ì‘‚«‚İæ‚Ì—pˆÓ
-		// mNumFaces‚Íƒ|ƒŠƒSƒ“‚Ì”‚ğ•\‚·(‚Pƒ|ƒŠƒSƒ“‚Å3ƒCƒ“ƒfƒbƒNƒX
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã®æ›¸ãè¾¼ã¿å…ˆã®ç”¨æ„
+		// mNumFacesã¯ãƒãƒªã‚´ãƒ³ã®æ•°ã‚’è¡¨ã™(ï¼‘ãƒãƒªã‚´ãƒ³ã§3ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
 		m_meshes[i].indices.resize(pScene->mMeshes[i]->mNumFaces * 3);
 
-		// ƒCƒ“ƒfƒbƒNƒX‚Ì‘‚«‚İ
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã®æ›¸ãè¾¼ã¿
 		for (unsigned int j = 0; j < pScene->mMeshes[i]->mNumFaces; ++j) {
-			// ™ƒ‚ƒfƒ‹ƒf[ƒ^‚©‚ç’l‚Ìæ“¾
+			// â˜†ãƒ¢ãƒ‡ãƒ«ãƒ‡ãƒ¼ã‚¿ã‹ã‚‰å€¤ã®å–å¾—
 			aiFace face = pScene->mMeshes[i]->mFaces[j];
-			// ™’l‚Ìİ’è
+			// â˜†å€¤ã®è¨­å®š
 			int idx = j * 3;
 			m_meshes[i].indices[idx + 0] = face.mIndices[0];
 			m_meshes[i].indices[idx + 1] = face.mIndices[idx1];
 			m_meshes[i].indices[idx + 2] = face.mIndices[idx2];
 		}
 
-		// ƒ}ƒeƒŠƒAƒ‹‚ÌŠ„‚è“–‚Ä
+		// ãƒãƒ†ãƒªã‚¢ãƒ«ã®å‰²ã‚Šå½“ã¦
 		m_meshes[i].materialID = pScene->mMeshes[i]->mMaterialIndex;
 
-		// ™’¸“_ƒoƒbƒtƒ@‚É•K—v‚Èƒf[ƒ^‚ğİ’è
+		// â˜†é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã«å¿…è¦ãªãƒ‡ãƒ¼ã‚¿ã‚’è¨­å®š
 		MeshBuffer::Description desc = {};
 		desc.pVtx = m_meshes[i].vertices.data();
 		desc.vtxSize = sizeof(Vertex);
@@ -73,65 +79,65 @@ void Model::MakeMesh(const void* ptr, float scale, Flip flip)
 		desc.idxCount = m_meshes[i].indices.size();
 		desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 				
-		// ™’¸“_ƒoƒbƒtƒ@ì¬
+		// â˜†é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
 		m_meshes[i].pMesh = new MeshBuffer();
 		m_meshes[i].pMesh->Create(desc);
 	}
 }
 void Model::MakeMaterial(const void* ptr, std::string directory)
 {
-	// –‘O€”õ
+	// äº‹å‰æº–å‚™
 	aiColor3D color(0.0f, 0.0f, 0.0f);
 	float shininess = 0.0f;
 	const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
 
-	// ƒ}ƒeƒŠƒAƒ‹‚Ìì¬
+	// ãƒãƒ†ãƒªã‚¢ãƒ«ã®ä½œæˆ
 	m_materials.resize(pScene->mNumMaterials);
 	for (unsigned int i = 0; i < m_materials.size(); ++i)
 	{
-		//--- Šeíƒ}ƒeƒŠƒAƒ‹ƒpƒ‰ƒ[ƒ^[‚Ì“Ç‚İæ‚è
-		// ™ŠgUŒõ‚Ì“Ç‚İæ‚è
+		//--- å„ç¨®ãƒãƒ†ãƒªã‚¢ãƒ«ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼ã®èª­ã¿å–ã‚Š
+		// â˜†æ‹¡æ•£å…‰ã®èª­ã¿å–ã‚Š
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
 			m_materials[i].diffuse = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
 		else
 			m_materials[i].diffuse = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		// ™ŠÂ‹«Œõ‚Ì“Ç‚İæ‚è
+		// â˜†ç’°å¢ƒå…‰ã®èª­ã¿å–ã‚Š
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, color) == AI_SUCCESS)
 			m_materials[i].ambient = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
 		else
 			m_materials[i].ambient = DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-		// ™”½ËŒõ‚Ì“Ç‚İæ‚è
+		// â˜†åå°„å…‰ã®èª­ã¿å–ã‚Š
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS)
 			m_materials[i].specular = DirectX::XMFLOAT4(color.r, color.g, color.b, 0.0f);
 		else
 			m_materials[i].specular = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-		// ™”½ËŒõ‚Ì‹­‚³‚ğ“Ç‚İæ‚è
+		// â˜†åå°„å…‰ã®å¼·ã•ã‚’èª­ã¿å–ã‚Š
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
 			m_materials[i].specular.w = shininess;
 
-		// ƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İˆ—
+		// ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿å‡¦ç†
 		HRESULT hr;
 		aiString path;
 
-		// ƒeƒNƒXƒ`ƒƒ‚ÌƒpƒXî•ñ‚ğ“Ç‚İ‚İ
+		// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã®ãƒ‘ã‚¹æƒ…å ±ã‚’èª­ã¿è¾¼ã¿
 		m_materials[i].pTexture = nullptr;
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), path) != AI_SUCCESS) {
 			continue;
 		}
 
-		// ƒeƒNƒXƒ`ƒƒ—ÌˆæŠm•Û
+		// ãƒ†ã‚¯ã‚¹ãƒãƒ£é ˜åŸŸç¢ºä¿
 		m_materials[i].pTexture = new Texture;
 
-		// ‚»‚Ì‚Ü‚Ü“Ç‚İ‚İ
+		// ãã®ã¾ã¾èª­ã¿è¾¼ã¿
 		hr = m_materials[i].pTexture->Create(path.C_Str());
 		if (SUCCEEDED(hr)) { continue; }
 
-		// ƒfƒBƒŒƒNƒgƒŠ‚Æ˜AŒ‹‚µ‚Ä’Tõ
+		// ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã¨é€£çµã—ã¦æ¢ç´¢
 		hr = m_materials[i].pTexture->Create((directory + path.C_Str()).c_str());
 		if (SUCCEEDED(hr)) { continue; }
 
-		// ƒ‚ƒfƒ‹‚Æ“¯‚¶ŠK‘w‚ğ’Tõ
-		// ƒpƒX‚©‚çƒtƒ@ƒCƒ‹–¼‚Ì‚İæ“¾
+		// ãƒ¢ãƒ‡ãƒ«ã¨åŒã˜éšå±¤ã‚’æ¢ç´¢
+		// ãƒ‘ã‚¹ã‹ã‚‰ãƒ•ã‚¡ã‚¤ãƒ«åã®ã¿å–å¾—
 		std::string fullPath = path.C_Str();
 		std::string::iterator strIt = fullPath.begin();
 		while (strIt != fullPath.end()) {
@@ -143,11 +149,11 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
 		std::string fileName = fullPath;
 		if (find != std::string::npos)
 			fileName = fileName.substr(find + 1);
-		// ƒeƒNƒXƒ`ƒƒ‚Ì“Ç
+		// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã®èª­è¾¼
 		hr = m_materials[i].pTexture->Create((directory + fileName).c_str());
 		if (SUCCEEDED(hr)) { continue; }
 
-		// ƒeƒNƒXƒ`ƒƒ‚ªŒ©‚Â‚©‚ç‚È‚©‚Á‚½
+		// ãƒ†ã‚¯ã‚¹ãƒãƒ£ãŒè¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸ
 		delete m_materials[i].pTexture;
 		m_materials[i].pTexture = nullptr;
 #ifdef _DEBUG

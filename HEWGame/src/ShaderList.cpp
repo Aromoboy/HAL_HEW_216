@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: ShaderList Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #include "ShaderList.h"
 
 
@@ -259,15 +265,15 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	// –{—ˆ‚ÌLambertŠgU”½Ëiv‚Á‚½•\Œ»‚ªo—ˆ‚È‚©‚Á‚½‚Ì‚ÅÌ—p‚¹‚¸
+	// l: color.rgb *= saturate(diffuse * dotNL + ambient); ÉŠÖ‚{Å•â‘«Ä‚B
 	// color.rgb *= saturate(diffuse * dotNL + ambient);
-	// ŠÂ‹«Œõ‚ÅŠgU”½Ë•”•ª‚ÌF‚ª•Ï‚í‚ç‚È‚¢‚æ‚¤‚Élerp(ŠÂ‹«Œõ,diffuse,dotNL)‚ÅŒvZ
-	// ŠÂ‹«Œõ‚ªã‚¯‚ê‚Î•(æZ)A‹­‚¯‚ê‚Î”’(‰ÁZ)‚Æ‚È‚é‚æ‚¤‚ÉAŠeŒvZ‚ğüŒ`‚Å•âŠÔ
+	// ç’°å¢ƒå…‰ã§æ‹¡æ•£åå°„éƒ¨åˆ†ã®è‰²ãŒå¤‰ã‚ã‚‰ãªã„ã‚ˆã†ã«lerp(ç’°å¢ƒå…‰,diffuse,dotNL)ã§è¨ˆç®—
+	// ç’°å¢ƒå…‰ãŒå¼±ã‘ã‚Œã°é»’(ä¹—ç®—)ã€å¼·ã‘ã‚Œã°ç™½(åŠ ç®—)ã¨ãªã‚‹ã‚ˆã†ã«ã€å„è¨ˆç®—ã‚’ç·šå½¢ã§è£œé–“
 	diffuse *= color.rgb;
 	color.rgb = saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, dotNL));
-	// –{—ˆ‚È‚ç•K—v‚È‚¢‹¾–Ê”½ËALambertŒü‚¯‚ÉáŠ±‚¾‚¯“K—p
+	// æœ¬æ¥ãªã‚‰å¿…è¦ãªã„é¡é¢åå°„ã€Lambertå‘ã‘ã«è‹¥å¹²ã ã‘é©ç”¨
 	color.rgb += specular * pow(saturate(dotNL), max(0.01f, objSpecular.a) * 0.5f) * 0.5f;
 	return color;
 })EOT";
@@ -315,7 +321,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	// Lambert‚ÌŒvZ‚ğQl
+	// Lambertã®è¨ˆç®—ã‚’å‚è€ƒ
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, dotNL));
@@ -354,12 +360,12 @@ float4 main(PS_IN pin) : SV_TARGET
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
-	float dotNL = dot(N, L); // ƒ}ƒCƒiƒX‚ÅŒvZ
+	float dotNL = dot(N, L); // ãƒã‚¤ãƒŠã‚¹è¾¼ã§è¨ˆç®—
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // ‰A‚Ì‹«–Ú‚ğ_‚ç‚©‚­
-	// Lambert‚ÌŒvZ‚ğQl
+	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // é™°ã®å¢ƒç›®ã‚’æŸ”ã‚‰ã‹ã
+	// Lambertã®è¨ˆç®—ã‚’å‚è€ƒ
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, toonNL));

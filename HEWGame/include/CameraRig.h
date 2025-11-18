@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: CameraRig ɊւC^[tF[Xf[^\錾Ainclude ėpł悤ɂB
+// ړI: ߂ẴW[ɐGJ҂łAӖƈˑ֌Wfcł悤ɍx̐t^ĂB
+// Ag: include z̑t@CVXewƘA邽߁At@CԂ̊֌WǐՂۂ̖ڈƂėpłB
+// ============================================================================
+
 #pragma once
 
 #include <memory>
@@ -13,8 +19,8 @@ namespace SceneSpace
 }
 
 class CameraRig : public Core::UpdateNode
-// Entity ���t����`�ɍ��킹���̂ŁA�J�����̃^�[�Q�b�g��A���J�[��
-// ���ڎQ�Ƃł���悤�ɂȂ����BTransform ��ʂ��Ĉʒu�擾���ł���
+// Entity をフル定義に合わせたので、カメラのターゲットやアンカーを
+// 直接参照できるようになった。Transform を通して位置取得ができる
 
 {
 public:

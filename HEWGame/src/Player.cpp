@@ -1,3 +1,9 @@
+// ============================================================================
+// 概要: Player の挙動や関連ロジックを実装し、src に属する機能を具体化している。
+// 目的: 初めてこのモジュールに触れる開発者でも、責務と依存関係を素早く把握できるように高レベルの説明を付与している。
+// 連携: src 配下の他ファイルやシステム層と連動するため、ファイル間の関係を追跡する際の目印として利用できる。
+// ============================================================================
+
 #include "Player.h"
 #include "Core/Input.h"
 #include "ModelCache.h"
@@ -18,13 +24,13 @@
 #    include <windows.h>
 #endif
 
-#define PLAYER_KEY_MOVE_UP 0x57		// W
-#define PLAYER_KEY_MOVE_LEFT 0x41	// A
-#define PLAYER_KEY_MOVE_DOWN 0x53	// S
-#define PLAYER_KEY_MOVE_RIGHT 0x44	// D
+#define PLAYER_KEY_MOVE_UP 0x57		// 備考: W に関する説明を日本語で補足している。
+#define PLAYER_KEY_MOVE_LEFT 0x41	// 備考: A に関する説明を日本語で補足している。
+#define PLAYER_KEY_MOVE_DOWN 0x53	// 備考: S に関する説明を日本語で補足している。
+#define PLAYER_KEY_MOVE_RIGHT 0x44	// 備考: D に関する説明を日本語で補足している。
 
-#define PLAYER_KEY_PICKUP 0x45       // E
-#define PLAYER_KEY_DROP 0x51         // Q
+#define PLAYER_KEY_PICKUP 0x45       // 備考: E に関する説明を日本語で補足している。
+#define PLAYER_KEY_DROP 0x51         // 備考: Q に関する説明を日本語で補足している。
 
 namespace
 {

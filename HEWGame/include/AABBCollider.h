@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: AABBCollider ɊւC^[tF[Xf[^\錾Ainclude ėpł悤ɂB
+// ړI: ߂ẴW[ɐGJ҂łAӖƈˑ֌Wfcł悤ɍx̐t^ĂB
+// Ag: include z̑t@CVXewƘA邽߁At@CԂ̊֌WǐՂۂ̖ڈƂėpłB
+// ============================================================================
+
 #pragma once
 
 #include "ICollider.h"
@@ -13,7 +19,7 @@ namespace Collision
 		AABBCollider(Transform a_transform, bool a_isTrigger = false, float a_expand = 1.0f, float3 a_offset = float3{ 0.0f, 0.0f, 0.0f });
 		~AABBCollider() = default;
 
-		// ICollider���������ꂽ�炻����ɒu��������
+		// IColliderが実装されたらそちらに置き換える
 		bool CheckCollision(const Collision::ICollider& other) override;
 		void UpdateBounds(const Transform& transform) override;
 

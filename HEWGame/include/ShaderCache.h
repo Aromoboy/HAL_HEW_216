@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: ShaderCache ÉŠÖ‚C^[tF[Xf[^\éŒ¾Ainclude Ä—pÅ‚æ‚¤É‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: include zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #ifndef __SHADERCACHE_H__
 #define __SHADERCACHE_H__
 
@@ -8,18 +14,18 @@
 #include "ShaderProgram.h"
 
 //============================================================
-// ShaderCache - ƒVƒF[ƒ_[ŠÇ—
+#endif // l: __SHADERCACHE_H__ ÉŠÖ‚{Å•â‘«Ä‚B
 //============================================================
 class ShaderCache {
 public:
-    // ƒVƒ“ƒOƒ‹ƒgƒ“ƒCƒ“ƒXƒ^ƒ“ƒX‚ğæ“¾
+    // ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’å–å¾—
     static ShaderCache& Instance()
     {
         static ShaderCache instance;
         return instance;
     }
 
-    // ƒRƒs[Eƒ€[ƒu‚ğ‹Ö~
+    // ã‚³ãƒ”ãƒ¼ãƒ»ãƒ ãƒ¼ãƒ–ã‚’ç¦æ­¢
     ShaderCache(const ShaderCache&) = delete;
     ShaderCache& operator=(const ShaderCache&) = delete;
     ShaderCache(ShaderCache&&) = delete;
@@ -29,7 +35,7 @@ public:
     std::shared_ptr<ShaderProgram> Get(const std::string& name);
 
 private:
-    // ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ğprivate‚É
+    // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã‚’privateã«
     ShaderCache() = default;
     ~ShaderCache() = default;
 

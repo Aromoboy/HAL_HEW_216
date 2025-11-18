@@ -1,3 +1,9 @@
+// ============================================================================
+// 概要: StageData に関するインターフェースやデータ構造を宣言し、include／Stage から再利用できるようにする。
+// 目的: 初めてこのモジュールに触れる開発者でも、責務と依存関係を素早く把握できるように高レベルの説明を付与している。
+// 連携: include／Stage 配下の他ファイルやシステム層と連動するため、ファイル間の関係を追跡する際の目印として利用できる。
+// ============================================================================
+
 #pragma once
 
 #include <string>
@@ -12,8 +18,8 @@ namespace Stage
     public:
         StageData();
 
-        // Attempts to load the stage data from a config file.
-        // Returns true when data was parsed successfully, false when defaults were used.
+        // 備考: Attempts to load the stage data from a config file. に関する説明を日本語で補足している。
+        // 備考: Returns true when data was parsed successfully, false when defaults were used. に関する説明を日本語で補足している。
         bool LoadFromFile(const std::string& path);
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;

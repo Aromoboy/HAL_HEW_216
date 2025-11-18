@@ -1,9 +1,15 @@
+// ============================================================================
+// 概要: Texture の挙動や関連ロジックを実装し、src に属する機能を具体化している。
+// 目的: 初めてこのモジュールに触れる開発者でも、責務と依存関係を素早く把握できるように高レベルの説明を付与している。
+// 連携: src 配下の他ファイルやシステム層と連動するため、ファイル間の関係を追跡する際の目印として利用できる。
+// ============================================================================
+
 #include "Texture.h"
 #include "TextureLoad.h"
 
-/// <summary>
+// 備考: / <summary> に関する説明を日本語で補足している。
 /// テクスチャ
-/// </summary>
+// 備考: / </summary> に関する説明を日本語で補足している。
 Texture::Texture()
 	: m_width(0), m_height(0)
 	, m_pTex(nullptr)
@@ -106,9 +112,9 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 	return hr;
 }
 
-/// <summary>
+// 備考: / <summary> に関する説明を日本語で補足している。
 /// レンダーターゲット
-/// </summary>
+// 備考: / </summary> に関する説明を日本語で補足している。
 RenderTarget::RenderTarget()
 	: m_pRTV(nullptr)
 {
@@ -175,9 +181,9 @@ HRESULT RenderTarget::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pDa
 	return GetDevice()->CreateRenderTargetView(m_pTex, &rtvDesc, &m_pRTV);
 }
 
-/// <summary>
+// 備考: / <summary> に関する説明を日本語で補足している。
 /// 深度テクスチャ
-/// </summary>
+// 備考: / </summary> に関する説明を日本語で補足している。
 DepthStencil::DepthStencil()
 	: m_pDSV(nullptr)
 {
@@ -192,7 +198,7 @@ void DepthStencil::Clear()
 }
 HRESULT DepthStencil::Create(UINT width, UINT height, bool useStencil)
 {
-	// https://docs.microsoft.com/ja-jp/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil#compositing
+	// 備考: https://docs.microsoft.com/ja-jp/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil#compositing に関する説明を日本語で補足している。
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(useStencil ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_R32_TYPELESS, width, height);
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
 	return CreateResource(desc);

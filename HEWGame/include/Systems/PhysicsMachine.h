@@ -1,3 +1,9 @@
+// ============================================================================
+// 概要: PhysicsMachine に関するインターフェースやデータ構造を宣言し、include／Systems から再利用できるようにする。
+// 目的: 初めてこのモジュールに触れる開発者でも、責務と依存関係を素早く把握できるように高レベルの説明を付与している。
+// 連携: include／Systems 配下の他ファイルやシステム層と連動するため、ファイル間の関係を追跡する際の目印として利用できる。
+// ============================================================================
+
 #pragma once
 
 #include "Core/UpdateNode.h"
@@ -12,8 +18,8 @@ namespace Systems
 // sS^G[邽߁ASceneSpace::PhysicalEntity 𒼐ڈ
 {
     class IPhysicsSystem
- // VXe PhysicalEntity 𒼐ڑ
-// ȑO Entity::PhysicalEntity  SceneSpace ɓ
+ // 備考: VXe PhysicalEntity 𒼐ڑ に関する説明を日本語で補足している。
+// 備考: ȑO Entity::PhysicalEntity  SceneSpace ɓ に関する説明を日本語で補足している。
 
 
     {
@@ -40,8 +46,8 @@ namespace Systems
         const std::vector<SceneSpace::PhysicalEntity*>& GetBodies() const;
 
 
-// o^{fB SceneSpace OԂɓ
-// Entity ̍č\ɍ킹ύX
+// 備考: o^{fB SceneSpace OԂɓ に関する説明を日本語で補足している。
+// 備考: Entity ̍č\ɍ킹ύX に関する説明を日本語で補足している。
 
         void RegisterBody(SceneSpace::PhysicalEntity& body);
         void UnregisterBody(SceneSpace::PhysicalEntity& body);

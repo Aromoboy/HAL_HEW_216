@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: TextureCache ÉŠÖ‚C^[tF[Xf[^\éŒ¾Ainclude Ä—pÅ‚æ‚¤É‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: include zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #ifndef __TEXTURECACHE_H__
 #define __TEXTURECACHE_H__
 
@@ -10,14 +16,14 @@
 
 class TextureCache {
 public:
-    // ƒVƒ“ƒOƒ‹ƒgƒ“ƒCƒ“ƒXƒ^ƒ“ƒX‚ğæ“¾
+    // ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’å–å¾—
     static TextureCache& Instance()
     {
         static TextureCache instance;
         return instance;
     }
 
-    // ƒRƒs[Eƒ€[ƒu‚ğ‹Ö~
+    // ã‚³ãƒ”ãƒ¼ãƒ»ãƒ ãƒ¼ãƒ–ã‚’ç¦æ­¢
     TextureCache(const TextureCache&) = delete;
     TextureCache& operator=(const TextureCache&) = delete;
     TextureCache(TextureCache&&) = delete;
@@ -27,7 +33,7 @@ public:
     std::shared_ptr<Texture2D> Get(const std::string& name);
 
 private:
-    // ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ğprivate‚É
+    // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã‚’privateã«
     TextureCache() = default;
     ~TextureCache() = default;
 

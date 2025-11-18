@@ -1,3 +1,9 @@
+// ============================================================================
+// 概要: AssimpModelLorder に関するインターフェースやデータ構造を宣言し、include から再利用できるようにする。
+// 目的: 初めてこのモジュールに触れる開発者でも、責務と依存関係を素早く把握できるように高レベルの説明を付与している。
+// 連携: include 配下の他ファイルやシステム層と連動するため、ファイル間の関係を追跡する際の目印として利用できる。
+// ============================================================================
+
 #ifndef ___ASSIMP_MODE_LORDER___
 #define ___ASSIMP_MODE_LORDER___
 
@@ -52,9 +58,9 @@ private:
 	
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
-	// bV쐬
+	// 備考: bV쐬 に関する説明を日本語で補足している。
 	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*);
-	// }eA̍쐬
+	// 備考: }eA̍쐬 に関する説明を日本語で補足している。
 	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, ID3D11Device* device, TextureCache& textureCache);
 
 

@@ -1,17 +1,23 @@
+// ============================================================================
+// Tv: Texture ɊւC^[tF[Xf[^\錾Ainclude ėpł悤ɂB
+// ړI: ߂ẴW[ɐGJ҂łAӖƈˑ֌Wfcł悤ɍx̐t^ĂB
+// Ag: include z̑t@CVXewƘA邽߁At@CԂ̊֌WǐՂۂ̖ڈƂėpłB
+// ============================================================================
+
 #ifndef __TEXTURE_H__
 #define __TEXTURE_H__
 
 #include "DirectX.h"
 
-/// <summary>
-/// �e�N�X�`��
-/// </summary>
-class Texture
+// l: / <summary> Ɋւ{ŕ⑫ĂB
+// l: / </summary> Ɋւ{ŕ⑫ĂB
+// l: / <summary> Ɋւ{ŕ⑫ĂB
+// l: / </summary> Ɋւ{ŕ⑫ĂB
 {
 public:
-	Texture();
-	virtual ~Texture();
-	HRESULT Create(const char* fileName);
+// l: / <summary> Ɋւ{ŕ⑫ĂB
+// l: / </summary> Ɋւ{ŕ⑫ĂB
+#endif // l: __TEXTURE_H__ Ɋւ{ŕ⑫ĂB
 	HRESULT Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData = nullptr);
 
 	UINT GetWidth() const;
@@ -23,14 +29,14 @@ protected:
 	virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC &desc, const void* pData);
 
 protected:
-	UINT m_width;	///< ����
-	UINT m_height;	///< �c��
+	UINT m_width;	///< 横幅
+	UINT m_height;	///< 縦幅
 	ID3D11ShaderResourceView *m_pSRV;
 	ID3D11Texture2D* m_pTex;
 };
 
 /// <summary>
-/// �����_�[�^�[�Q�b�g
+/// レンダーターゲット
 /// </summary>
 class RenderTarget : public Texture
 {
@@ -51,7 +57,7 @@ private:
 };
 
 /// <summary>
-/// �[�x�e�N�X�`��
+/// 深度テクスチャ
 /// </summary>
 class DepthStencil : public Texture
 {

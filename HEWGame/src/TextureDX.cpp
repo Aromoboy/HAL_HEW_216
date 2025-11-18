@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: TextureDX Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #include "TextureDX.h"
 #include "Debug.h"
 #include <wincodec.h>
@@ -6,48 +12,48 @@
 #pragma comment(lib, "windowscodecs.lib")
 
 //============================================================
-// WIC‚ğg—p‚µ‚ÄƒeƒNƒXƒ`ƒƒƒtƒ@ƒCƒ‹‚ğƒ[ƒh
+// WICã‚’ä½¿ç”¨ã—ã¦ãƒ†ã‚¯ã‚¹ãƒãƒ£ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰
 //============================================================
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
-    // WICƒtƒ@ƒNƒgƒŠ[‚ğì¬
+    // WICãƒ•ã‚¡ã‚¯ãƒˆãƒªãƒ¼ã‚’ä½œæˆ
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
-        DebugMessage("[Texture2D] WICƒtƒ@ƒNƒgƒŠ[‚Ìì¬‚É¸”s");
+        DebugMessage("[Texture2D] WICãƒ•ã‚¡ã‚¯ãƒˆãƒªãƒ¼ã®ä½œæˆã«å¤±æ•—");
         return false;
     }
 
-    // ƒtƒ@ƒCƒ‹‚©‚çƒfƒR[ƒ_[‚ğì¬
+    // ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ãƒ‡ã‚³ãƒ¼ãƒ€ãƒ¼ã‚’ä½œæˆ
     Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
     if (FAILED(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder)))
     {
-        DebugMessage("[Texture2D] ƒtƒ@ƒCƒ‹‚ğŠJ‚¯‚Ü‚¹‚ñ: ");
+        DebugMessage("[Texture2D] ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: ");
         return false;
     }
 
-    // Å‰‚ÌƒtƒŒ[ƒ€‚ğæ“¾
+    // æœ€åˆã®ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’å–å¾—
     Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
     decoder->GetFrame(0, &frame);
 
-    // RGBA32‚É•ÏŠ·
+    // RGBA32ã«å¤‰æ›
     Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
     factory->CreateFormatConverter(&converter);
     converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
         WICBitmapDitherTypeNone, nullptr, 0.0f,
         WICBitmapPaletteTypeCustom);
 
-    // ƒTƒCƒY‚ğæ“¾
+    // ã‚µã‚¤ã‚ºã‚’å–å¾—
     UINT width, height;
     converter->GetSize(&width, &height);
 
-    // ƒsƒNƒZƒ‹ƒf[ƒ^‚ğ“Ç‚İ‚İ
+    // ãƒ”ã‚¯ã‚»ãƒ«ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã¿
     std::vector<BYTE> pixels(width * height * 4);
     converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
 
-    // ƒeƒNƒXƒ`ƒƒ‚ğì¬
+    // ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ä½œæˆ
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = width;
     desc.Height = height;
@@ -66,15 +72,15 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
     if (FAILED(hr))
     {
-        DebugMessage("[Texture2D] ƒeƒNƒXƒ`ƒƒƒŠƒ\[ƒX‚Ìì¬‚É¸”s");
+        DebugMessage("[Texture2D] ãƒ†ã‚¯ã‚¹ãƒãƒ£ãƒªã‚½ãƒ¼ã‚¹ã®ä½œæˆã«å¤±æ•—");
         return false;
     }
 
-    // ƒVƒF[ƒ_[ƒŠƒ\[ƒXƒrƒ…[‚ğì¬
+    // ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒªã‚½ãƒ¼ã‚¹ãƒ“ãƒ¥ãƒ¼ã‚’ä½œæˆ
     hr = device->CreateShaderResourceView(texture.Get(), nullptr, textureView.GetAddressOf());
     if (FAILED(hr))
     {
-        DebugMessage("[Texture2D] SRV‚Ìì¬‚É¸”s");
+        DebugMessage("[Texture2D] SRVã®ä½œæˆã«å¤±æ•—");
         return false;
     }
 
@@ -82,22 +88,22 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 }
 
 //============================================================
-// g—p—á
+// ä½¿ç”¨ä¾‹
 //============================================================
 /*
-// ƒeƒNƒXƒ`ƒƒ‚ğì¬
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ä½œæˆ
 Texture2D texture;
 
-// ƒeƒNƒXƒ`ƒƒƒtƒ@ƒCƒ‹‚ğƒ[ƒh
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰
 if (texture.LoadFromFile(device, L"textures/player.png"))
 {
-    // •`‰æ‚ÉƒeƒNƒXƒ`ƒƒ‚ğƒoƒCƒ“ƒh
+    // æç”»æ™‚ã«ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ãƒã‚¤ãƒ³ãƒ‰
     context->PSSetShaderResources(0, 1, texture.textureView.GetAddressOf());
 
-    // •`‰æˆ—...
+    // æç”»å‡¦ç†...
     context->Draw(...);
 }
 
-// ’ˆÓF’Êí‚ÍTextureCache‚ğg—p‚µ‚ÄƒeƒNƒXƒ`ƒƒ‚ğŠÇ—‚µ‚Ü‚·
-// Texture2D‚ğ’¼Úg‚¤‚Ì‚Í“Á•Ê‚Èê‡‚Ì‚İ‚Å‚·
+// æ³¨æ„ï¼šé€šå¸¸ã¯TextureCacheã‚’ä½¿ç”¨ã—ã¦ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ç®¡ç†ã—ã¾ã™
+// Texture2Dã‚’ç›´æ¥ä½¿ã†ã®ã¯ç‰¹åˆ¥ãªå ´åˆã®ã¿ã§ã™
 */

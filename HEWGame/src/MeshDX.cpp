@@ -1,3 +1,9 @@
+// ============================================================================
+// Tv: MeshDX Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
 #include "MeshDX.h"
 
 #include "Debug.h"
@@ -8,27 +14,27 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
 {
 	HRESULT hr;
 
-	// ŠeŽíƒXƒe[ƒ^ƒX‚ðÝ’è
+	// å„ç¨®ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	m_indexCount = desc.idxCount;
 
 	m_materialID = materialID;
 
-	// ’¸“_ƒoƒbƒtƒ@ì¬
+	// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
 	hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
 	if (FAILED(hr))
 	{
 #ifdef _DEBUG
-		DebugMessage("’¸“_ƒoƒbƒtƒ@‚Ìì¬‚ÉŽ¸”s‚µ‚Ü‚µ‚½B");
+		DebugMessage("é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
 #endif
 		return;
 	}
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ì¬
+	// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
 	if (desc.pIdx) {
 		hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
 		if (FAILED(hr))
 		{
 #ifdef _DEBUG
-			DebugMessage("ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚Ìì¬‚ÉŽ¸”s‚µ‚Ü‚µ‚½B");
+			DebugMessage("ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
 #endif
 
 
@@ -47,7 +53,7 @@ MeshDX::~MeshDX()
 }
 
 
-// ŠeŽíƒQƒbƒ^
+// å„ç¨®ã‚²ãƒƒã‚¿
 unsigned int MeshDX::GetMaterialID()
 {
 	return m_materialID;
@@ -69,20 +75,20 @@ unsigned int MeshDX::GetIndexCount()
 }
 
 
-// ’¸“_ƒoƒbƒtƒ@‚Ìì¬
+// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 HRESULT MeshDX::CreateVertexBuffer(const void* pVtx, UINT size, UINT count)
 {
-	//--- ì¬‚·‚éƒoƒbƒtƒ@‚Ìî•ñ
+	//--- ä½œæˆã™ã‚‹ãƒãƒƒãƒ•ã‚¡ã®æƒ…å ±
 	D3D11_BUFFER_DESC bufDesc = {};
 	bufDesc.ByteWidth = size * count;
 	bufDesc.Usage = D3D11_USAGE_DEFAULT;
 	bufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-	//--- ƒoƒbƒtƒ@‚Ì‰Šú’l‚ðÝ’è
+	//--- ãƒãƒƒãƒ•ã‚¡ã®åˆæœŸå€¤ã‚’è¨­å®š
 	D3D11_SUBRESOURCE_DATA subResource = {};
 	subResource.pSysMem = pVtx;
 
-	//--- ’¸“_ƒoƒbƒtƒ@‚Ìì¬
+	//--- é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 	HRESULT hr;
 	ID3D11Device* pDevice = GetDevice();
 	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pVtxBuffer);
@@ -90,10 +96,10 @@ HRESULT MeshDX::CreateVertexBuffer(const void* pVtx, UINT size, UINT count)
 	return hr;
 }
 
-// ’¸“_ƒoƒbƒtƒ@‚Ìì¬
+// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 HRESULT MeshDX::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
 {
-	// ƒCƒ“ƒfƒbƒNƒXƒTƒCƒY‚ÌŠm”F
+	// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚µã‚¤ã‚ºã®ç¢ºèª
 	switch (size)
 	{
 	default:
@@ -103,16 +109,16 @@ HRESULT MeshDX::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
 		break;
 	}
 
-	// ƒoƒbƒtƒ@‚Ìî•ñ‚ðÝ’è
+	// ãƒãƒƒãƒ•ã‚¡ã®æƒ…å ±ã‚’è¨­å®š
 	D3D11_BUFFER_DESC bufDesc = {};
 	bufDesc.ByteWidth = size * count;
 	bufDesc.Usage = D3D11_USAGE_DEFAULT;
 	bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	// ƒoƒbƒtƒ@‚Ì‰Šúƒf[ƒ^
+	// ãƒãƒƒãƒ•ã‚¡ã®åˆæœŸãƒ‡ãƒ¼ã‚¿
 	D3D11_SUBRESOURCE_DATA subResource = {};
 	subResource.pSysMem = pIdx;
 
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@¶¬
+	// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ç”Ÿæˆ
 	ID3D11Device* pDevice = GetDevice();
 	HRESULT hr;
 	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pIdxBuffer);

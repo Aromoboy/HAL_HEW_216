@@ -1,36 +1,42 @@
-// ShaderProgram.cpp
+// ============================================================================
+// Tv: ShaderProgram Ì‹Ö˜AWbNAsrc É‘@\Ì‰Ä‚B
+// Ú“I: ß‚Ä‚ÌƒW[ÉGJÒ‚Å‚AÓ–ÆˆË‘ÖŒWfcÅ‚æ‚¤ÉxÌt^Ä‚B
+// Ag: src zÌ‘t@CVXewÆ˜Aé‚½ßAt@CÔ‚ÌŠÖŒWÇÕ‚Û‚Ì–ÚˆÆ‚Ä—pÅ‚B
+// ============================================================================
+
+// l: ShaderProgram.cpp ÉŠÖ‚{Å•â‘«Ä‚B
 #include "ShaderProgram.h"
 #include "Debug.h"
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
 
 //============================================================
-// ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ğƒtƒ@ƒCƒ‹‚©‚çƒ[ƒh
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ãƒ­ãƒ¼ãƒ‰
 //============================================================
 bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
-    // ’¸“_ƒVƒF[ƒ_[‚ğƒtƒ@ƒCƒ‹‚©‚ç“Ç‚İ‚İ
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰èª­ã¿è¾¼ã¿
     ID3DBlob* vsBlob = nullptr;
     std::wstring wVsPath(vsPath.begin(), vsPath.end());
     if (FAILED(D3DReadFileToBlob(wVsPath.c_str(), &vsBlob)))
     {
-        DebugMessage("[Shader] ’¸“_ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ğŠJ‚¯‚Ü‚¹‚ñ: " + vsPath);
+        DebugMessage("[Shader] é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: " + vsPath);
         return false;
     }
 
-    // ƒsƒNƒZƒ‹ƒVƒF[ƒ_[‚ğƒtƒ@ƒCƒ‹‚©‚ç“Ç‚İ‚İ
+    // ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰èª­ã¿è¾¼ã¿
     ID3DBlob* psBlob = nullptr;
     std::wstring wPsPath(psPath.begin(), psPath.end());
     if (FAILED(D3DReadFileToBlob(wPsPath.c_str(), &psBlob)))
     {
         vsBlob->Release();
-        DebugMessage("[Shader] ƒsƒNƒZƒ‹ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ğŠJ‚¯‚Ü‚¹‚ñ: " + psPath);
+        DebugMessage("[Shader] ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: " + psPath);
         return false;
     }
 
-    // ’¸“_ƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒg‚ğì¬
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆ
     if (FAILED(device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -38,7 +44,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // ƒsƒNƒZƒ‹ƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒg‚ğì¬
+    // ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆ
     if (FAILED(device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -46,7 +52,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // Blob‚ğ‰ğ•ú
+    // Blobã‚’è§£æ”¾
     vsBlob->Release();
     psBlob->Release();
 
@@ -54,29 +60,29 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
 }
 
 //============================================================
-// ƒVƒF[ƒ_[‚ğƒŒƒ“ƒ_ƒŠƒ“ƒOƒpƒCƒvƒ‰ƒCƒ“‚Éİ’è
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã«è¨­å®š
 //============================================================
 void ShaderProgram::Bind(ID3D11DeviceContext* context)
 {
-    // ’¸“_ƒVƒF[ƒ_[‚ÆƒsƒNƒZƒ‹ƒVƒF[ƒ_[‚ğƒRƒ“ƒeƒLƒXƒg‚Éİ’è
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã¨ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã«è¨­å®š
     context->VSSetShader(vertexShader.Get(), nullptr, 0);
     context->PSSetShader(pixelShader.Get(), nullptr, 0);
 }
 
 //============================================================
-// g—p—á
+// ä½¿ç”¨ä¾‹
 //============================================================
 /*
-// ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ğì¬
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ä½œæˆ
 ShaderProgram shader;
-// ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ğƒ[ƒhi.cso = ƒRƒ“ƒpƒCƒ‹Ï‚İƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒgj
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ï¼ˆ.cso = ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«æ¸ˆã¿ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆï¼‰
 if (shader.LoadFromFiles(device, "shaders/basic_vs.cso", "shaders/basic_ps.cso"))
 {
-    // •`‰æ‚ÉƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+    // æç”»æ™‚ã«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
     shader.Bind(context);
-    // •`‰æˆ—...
+    // æç”»å‡¦ç†...
     context->Draw(...);
 }
-// ’ˆÓF’Êí‚ÍShaderCache‚ğg—p‚µ‚ÄƒVƒF[ƒ_[‚ğŠÇ—‚µ‚Ü‚·
-// ShaderProgram‚ğ’¼Úg‚¤‚Ì‚Í“Á•Ê‚Èê‡‚Ì‚İ‚Å‚·
+// æ³¨æ„ï¼šé€šå¸¸ã¯ShaderCacheã‚’ä½¿ç”¨ã—ã¦ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ç®¡ç†ã—ã¾ã™
+// ShaderProgramã‚’ç›´æ¥ä½¿ã†ã®ã¯ç‰¹åˆ¥ãªå ´åˆã®ã¿ã§ã™
 */
