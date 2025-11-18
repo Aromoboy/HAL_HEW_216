@@ -45,6 +45,9 @@ namespace SceneSpace
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
         float GetMoveSpeed() const;
+        void SetMinimumY(float minY);
+        float GetMinimumY() const;
+        bool HasMinimumY() const;
 
     private:
         std::shared_ptr<ModelDX> model;
@@ -55,12 +58,15 @@ namespace SceneSpace
         float m_dropUpwardBoost;
         bool m_isKinematic;
         float m_moveSpeed;
+        bool m_hasMinimumY;
+        float m_minimumY;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
         void TryPickupNearest();
         void DropCarriedSweets();
         float3 ComputeCarryAnchor() const;
+        void ClampVerticalPosition();
     };
 }
 

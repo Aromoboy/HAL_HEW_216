@@ -69,6 +69,8 @@ SceneSpace::Player::Player(std::string a_tag,
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
         , m_moveSpeed(kDefaultPlayerMoveSpeed)
+        , m_hasMinimumY(false)
+        , m_minimumY(0.0f)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -121,11 +123,29 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
                 horizontal = 1.0f;
         }
 
-        if (horizontal != 0.0f && ctx.dt > 0.0f && m_moveSpeed > 0.0f)
+        float vertical = 0.0f;
+        const bool moveUp = input.IsKeyPress(PLAYER_KEY_MOVE_UP);
+        const bool moveDown = input.IsKeyPress(PLAYER_KEY_MOVE_DOWN);
+
+        if (moveUp && !moveDown)
         {
-                const float translation = horizontal * m_moveSpeed * ctx.dt;
-                ApplyTranslation({ translation, 0.0f, 0.0f });
+                vertical = 1.0f;
         }
+        else if (moveDown && !moveUp)
+        {
+                vertical = -1.0f;
+        }
+
+        const bool canMove = (ctx.dt > 0.0f && m_moveSpeed > 0.0f);
+        if (canMove && (horizontal != 0.0f || vertical != 0.0f))
+        {
+                float3 translation{ 0.0f, 0.0f, 0.0f };
+                translation.x = horizontal * m_moveSpeed * ctx.dt;
+                translation.y = vertical * m_moveSpeed * ctx.dt;
+                ApplyTranslation(translation);
+        }
+
+        ClampVerticalPosition();
 
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
@@ -185,6 +205,39 @@ float SceneSpace::Player::GetMoveSpeed() const
         return m_moveSpeed;
 }
 
+void SceneSpace::Player::SetMinimumY(float minY)
+{
+        if (!std::isfinite(minY))
+        {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite minimum Y assignment.\n");
+                return;
+        }
+
+        if (m_hasMinimumY && std::fabs(m_minimumY - minY) < std::numeric_limits<float>::epsilon())
+        {
+                return;
+        }
+
+        m_hasMinimumY = true;
+        m_minimumY = minY;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Minimum Y set to " << m_minimumY << " units.\n";
+        PlayerDebugTrace(oss.str());
+
+        ClampVerticalPosition();
+}
+
+float SceneSpace::Player::GetMinimumY() const
+{
+        return m_minimumY;
+}
+
+bool SceneSpace::Player::HasMinimumY() const
+{
+        return m_hasMinimumY;
+}
+
 void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
 {
         if (m_sweetsManager == manager)
@@ -231,6 +284,8 @@ void SceneSpace::Player::UpdateCarriedSweets()
         sweetsTransform.position = ComputeCarryAnchor();
         sweetsTransform.rotation = m_transform.rotation;
 
+        m_carried->SyncColliderBounds();
+
         Physics::Physical& physical = m_carried->GetPhysical();
         physical.velocity = { 0.0f, 0.0f, 0.0f };
         physical.force = { 0.0f, 0.0f, 0.0f };
@@ -276,6 +331,7 @@ void SceneSpace::Player::TryPickupNearest()
         auto& sweetsTransform = candidate->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
         sweetsTransform.rotation = m_transform.rotation;
+        candidate->SyncColliderBounds();
 
         auto& physical = candidate->GetPhysical();
         physical.velocity = { 0.0f, 0.0f, 0.0f };
@@ -299,6 +355,7 @@ void SceneSpace::Player::DropCarriedSweets()
         auto sweets = m_carried;
         auto& sweetsTransform = sweets->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
+        sweets->SyncColliderBounds();
 
         auto& sweetsPhysical = sweets->GetPhysical();
         sweetsPhysical.force = { 0.0f, 0.0f, 0.0f };
@@ -331,4 +388,27 @@ float3 SceneSpace::Player::ComputeCarryAnchor() const
             m_transform.position.x + m_carryOffset.x,
             m_transform.position.y + m_carryOffset.y,
             m_transform.position.z + m_carryOffset.z };
+}
+
+void SceneSpace::Player::ClampVerticalPosition()
+{
+        if (!m_hasMinimumY)
+        {
+                return;
+        }
+
+        auto& position = m_transform.position;
+        if (position.y >= m_minimumY)
+        {
+                return;
+        }
+
+        const float previousY = position.y;
+        position.y = m_minimumY;
+        SyncColliderBounds();
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
+            << m_minimumY << " (platform boundary).\n";
+        PlayerDebugTrace(oss.str());
 }

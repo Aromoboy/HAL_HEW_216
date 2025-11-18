@@ -474,6 +474,8 @@ SceneGame::SceneGame()
         true);
     if (player)
     {
+        const float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
+        player->SetMinimumY(platformTopY);
         player->SetMoveSpeed(m_stageData.GetPlayerMoveSpeed());
         if (m_sweetsManager)
         {
