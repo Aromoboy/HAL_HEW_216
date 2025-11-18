@@ -228,6 +228,115 @@ namespace
             DirectX::XMConvertToRadians(0.0f),
             DirectX::XMConvertToRadians(-10.0f)
         };
+
+        constexpr float kPlatformScreenBottomFraction = 0.08f;
+        constexpr float kStageCenterX = 0.0f;
+        constexpr float kCameraStateEpsilon = 1e-4f;
+
+        bool HasMeaningfulDifference(float previous, float current, float epsilon = kCameraStateEpsilon)
+        {
+            if (!std::isfinite(previous) || !std::isfinite(current))
+            {
+                return true;
+            }
+            return std::fabs(previous - current) > epsilon;
+        }
+
+        bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kCameraStateEpsilon)
+        {
+            return HasMeaningfulDifference(a.x, b.x, epsilon)
+                || HasMeaningfulDifference(a.y, b.y, epsilon)
+                || HasMeaningfulDifference(a.z, b.z, epsilon);
+        }
+
+        Transform ComputePlatformTransformForCamera(
+            const CameraSpace::PerspectiveCamera& camera,
+            float viewportWidth,
+            float viewportHeight,
+            const Stage::StageData& stageData,
+            float screenFraction,
+            float stageCenterX)
+        {
+            Transform result{};
+            result.position = float3{ stageCenterX, stageData.GetPlatformCenterY(), stageData.GetPlaneZ() };
+            result.rotation = float3{ 0.0f, 0.0f, 0.0f };
+            result.scale = stageData.GetPlatformScale();
+
+            const float sanitizedFraction = std::clamp(screenFraction, 0.0f, 1.0f);
+            const float configuredTopY = result.position.y + (result.scale.y * 0.5f);
+            float derivedTopY = configuredTopY;
+            float derivedPlaneZ = result.position.z;
+            bool derivedValid = false;
+
+            if (std::isfinite(viewportWidth) && viewportWidth > 0.0f
+                && std::isfinite(viewportHeight) && viewportHeight > 0.0f)
+            {
+                const DirectX::XMFLOAT4X4& viewMatrix = camera.GetView();
+                const DirectX::XMFLOAT4X4& projMatrix = camera.GetProjection();
+                const DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
+                const DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMatrix);
+                const float pixelX = viewportWidth * 0.5f;
+                const float pixelY = viewportHeight * (1.0f - sanitizedFraction);
+                const float clampedPixelY = std::clamp(pixelY, 0.0f, viewportHeight);
+                const DirectX::XMVECTOR nearPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(pixelX, clampedPixelY, 0.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+                const DirectX::XMVECTOR farPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(pixelX, clampedPixelY, 1.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+                DirectX::XMVECTOR directionVec = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(farPoint, nearPoint));
+                DirectX::XMFLOAT3 direction{};
+                DirectX::XMStoreFloat3(&direction, directionVec);
+                const float3 cameraPosition = camera.GetPosition();
+                constexpr float kDirectionEpsilon = 1e-4f;
+                if (std::fabs(direction.x) > kDirectionEpsilon)
+                {
+                    const float t = (stageCenterX - cameraPosition.x) / direction.x;
+                    if (t > 0.0f)
+                    {
+                        derivedValid = true;
+                        derivedTopY = cameraPosition.y + direction.y * t;
+                        derivedPlaneZ = cameraPosition.z + direction.z * t;
+                    }
+                }
+            }
+
+            if (derivedValid)
+            {
+                const float deltaY = derivedTopY - configuredTopY;
+                const float deltaZ = derivedPlaneZ - result.position.z;
+                result.position.y += deltaY;
+                result.position.z += deltaZ;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlatformAlign] fraction=" << sanitizedFraction
+                << " viewport=" << viewportWidth << 'x' << viewportHeight
+                << " topY=" << derivedTopY
+                << " worldZ=" << derivedPlaneZ
+                << " applied=" << std::boolalpha << derivedValid
+                << " centerY=" << result.position.y
+                << " planeZ=" << result.position.z << "\n";
+            DebugTrace(oss.str());
+
+            return result;
+        }
 }
 
 Model::AnimeNo no;
@@ -403,6 +512,7 @@ SceneGame::SceneGame()
         -100);
     if (m_stagePlatform)
     {
+        RefreshPlatformAnchor(true);
         RegisterPhysicsBody(*m_stagePlatform);
         std::ostringstream oss;
         const auto& scale = m_stagePlatform->GetTransform().scale;
@@ -445,7 +555,12 @@ SceneGame::SceneGame()
         true);
     if (player)
     {
-        const float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
+        float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
+        if (m_stagePlatform)
+        {
+            const auto& platformXform = m_stagePlatform->GetTransform();
+            platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
+        }
         player->SetMinimumY(platformTopY);
         player->SetMoveSpeed(m_stageData.GetPlayerMoveSpeed());
         if (m_sweetsManager)
@@ -624,6 +739,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
         HandleColliderDebugCommands(ctx);
 #endif
+    RefreshPlatformAnchor(false);
 UpdateCountdown(ctx);
 UpdateTowerHeightTelemetry();
 
@@ -792,6 +908,67 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
             << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
     }
     DebugTrace(oss.str());
+
+    RefreshPlatformAnchor(true);
+}
+
+void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
+{
+    if (!m_stagePlatform || !m_gameCamera)
+    {
+        return;
+    }
+
+    float viewportWidth = static_cast<float>(SCREEN_WIDTH);
+    float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
+    if (RenderTarget* rtv = GetDefaultRTV())
+    {
+        viewportWidth = static_cast<float>(rtv->GetWidth());
+        viewportHeight = static_cast<float>(rtv->GetHeight());
+    }
+    else if (forceRecompute && !m_platformAnchorInitialized)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlatformAlign] DefaultRTV missing; falling back to constant screen size.\n");
+    }
+
+    const float3 cameraPos = m_gameCamera->GetPosition();
+    const float3 cameraRot = m_gameCamera->GetRotation();
+    const float cameraFov = m_gameCamera->GetFieldOfViewDegrees();
+    const float cameraAspect = m_gameCamera->GetAspectRatio();
+    const float3 rigOffset = m_cameraRig ? m_cameraRig->GetOffset() : float3{ 0.0f, 0.0f, 0.0f };
+
+    const bool cameraChanged = forceRecompute
+        || !m_platformAnchorInitialized
+        || HasMeaningfulDifference(m_cachedViewportWidth, viewportWidth)
+        || HasMeaningfulDifference(m_cachedViewportHeight, viewportHeight)
+        || HasMeaningfulDifference(m_cachedCameraPosition, cameraPos)
+        || HasMeaningfulDifference(m_cachedCameraRotation, cameraRot)
+        || HasMeaningfulDifference(m_cachedCameraRigOffset, rigOffset)
+        || HasMeaningfulDifference(m_cachedCameraFovDegrees, cameraFov)
+        || HasMeaningfulDifference(m_cachedCameraAspect, cameraAspect);
+
+    if (!cameraChanged)
+    {
+        return;
+    }
+
+    Transform updated = ComputePlatformTransformForCamera(
+        *m_gameCamera,
+        viewportWidth,
+        viewportHeight,
+        m_stageData,
+        kPlatformScreenBottomFraction,
+        kStageCenterX);
+    m_stagePlatform->SetAnchorTransform(updated);
+    m_platformAnchorInitialized = true;
+
+    m_cachedViewportWidth = viewportWidth;
+    m_cachedViewportHeight = viewportHeight;
+    m_cachedCameraPosition = cameraPos;
+    m_cachedCameraRotation = cameraRot;
+    m_cachedCameraRigOffset = rigOffset;
+    m_cachedCameraFovDegrees = cameraFov;
+    m_cachedCameraAspect = cameraAspect;
 }
 
 void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
