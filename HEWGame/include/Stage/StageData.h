@@ -18,8 +18,8 @@ namespace Stage
     public:
         StageData();
 
-        // 備考: Attempts to load the stage data from a config file. に関する説明を日本語で補足している。
-        // 備考: Returns true when data was parsed successfully, false when defaults were used. に関する説明を日本語で補足している。
+        // 設定ファイルからステージデータをロードしようと試む
+        // データが正常に解析された場合は true を返し、デフォルト値が使用された場合は false を返す
         bool LoadFromFile(const std::string& path);
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
