@@ -23,7 +23,6 @@
 
 
 #include <algorithm>
-#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -55,8 +54,6 @@ namespace
 #endif
 
         constexpr const char* kLogPrefix = "[SceneGame] ";
-        constexpr size_t kDefaultCameraPrototypeIndex = 0;
-        constexpr int kCameraPrototypeConsoleOverride = -1; // 起動時に特定のプロトタイプを強制する場合は0以上に変更する
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnablePhysicsIntegrationLogging = true;
@@ -221,57 +218,23 @@ namespace
             return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
         }
 
-        const std::array<CameraPrototypeSettings, 2> kCameraPrototypes =
-        { {
-                CameraPrototypeSettings
-                {
-                        false,
-                        6.0f,
-                        float3{ 0.0f, 3.0f, -12.0f },
-                        60.0f,
-                        0.0f,
-                        -0.2f
-                },
-                CameraPrototypeSettings
-                {
-                        true,
-                        4.0f,
-                        float3{ 0.0f, 8.0f, -22.0f },
-                        45.0f,
-                        0.0f,
-                        -0.35f
-                }
-        } };
-
-        size_t NormalizeCameraPrototypeIndex(size_t requestedIndex)
+        constexpr CameraPrototypeSettings kFixedSideViewCameraPreset
         {
-            if (requestedIndex >= kCameraPrototypes.size())
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Camera prototype index " << requestedIndex
-                    << " is invalid. Falling back to index " << kDefaultCameraPrototypeIndex << "\n";
-                DebugTrace(oss.str());
-                return kDefaultCameraPrototypeIndex;
-            }
-            return requestedIndex;
-        }
-
-        size_t DetermineStartupCameraPrototypeIndex()
-        {
-            size_t requestedIndex = kDefaultCameraPrototypeIndex;
-            if (kCameraPrototypeConsoleOverride >= 0)
-            {
-                requestedIndex = static_cast<size_t>(kCameraPrototypeConsoleOverride);
-            }
-            return NormalizeCameraPrototypeIndex(requestedIndex);
-        }
+            true,
+            0.0f,
+            // コンセプトアートのコールアウトでは、カメラをプレイヤーの左12.5m、上方7.25m、
+            // プレイプレーン後方1.5mに配置し、横方向のヨー角90度、ピッチ角-15度とする（一時的な値）
+            float3{ -12.5f, 7.25f, -1.5f },
+            45.0f,
+            DirectX::XMConvertToRadians(90.0f),
+            DirectX::XMConvertToRadians(-15.0f)
+        };
 }
 
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
-    : m_activeCameraPrototypeIndex(DetermineStartupCameraPrototypeIndex())
 {
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
     m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
@@ -382,7 +345,7 @@ SceneGame::SceneGame()
         anchorTransform.scale = m_pObjects.front()->GetScale();
     }
 
-    const auto& cameraSettings = kCameraPrototypes[m_activeCameraPrototypeIndex];
+    const auto& cameraSettings = kFixedSideViewCameraPreset;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -772,20 +735,6 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 #endif
 }
 
-void SceneGame::ApplyCameraPrototype(size_t index)
-{
-    const size_t normalizedIndex = NormalizeCameraPrototypeIndex(index);
-    m_activeCameraPrototypeIndex = normalizedIndex;
-    ConfigureCamera(kCameraPrototypes[m_activeCameraPrototypeIndex]);
-
-    const auto& settings = kCameraPrototypes[m_activeCameraPrototypeIndex];
-    std::ostringstream oss;
-    oss << kLogPrefix << "Camera prototype switched to index " << m_activeCameraPrototypeIndex
-        << " (fixed=" << std::boolalpha << settings.fixedPosition
-        << ", fov=" << settings.fovDegrees << ", followSpeed=" << settings.followSpeed << ")\n";
-    DebugTrace(oss.str());
-}
-
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
 {
     if (m_gameCamera)
@@ -810,7 +759,8 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
     }
 
     float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
-    if (m_cameraAnchor)
+    float3 cameraPosition = settings.offset;
+    if (!settings.fixedPosition && m_cameraAnchor)
     {
         const auto& anchorTransform = m_cameraAnchor->GetTransform();
         cameraRotation.x += anchorTransform.rotation.x;
@@ -820,13 +770,10 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
         DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
-        m_gameCamera->SetPosition(StoreFloat3(desiredPos));
-    }
-    else
-    {
-        m_gameCamera->SetPosition(settings.offset);
+        cameraPosition = StoreFloat3(desiredPos);
     }
 
+    m_gameCamera->SetPosition(cameraPosition);
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです。GetView はトランスフォームが変更された際に遅延評価で再計算
@@ -838,6 +785,13 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         << ", followSpeed=" << settings.followSpeed
         << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
         << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
+    if (settings.fixedPosition)
+    {
+        const float yawDegrees = DirectX::XMConvertToDegrees(settings.yawRadians);
+        const float pitchDegrees = DirectX::XMConvertToDegrees(settings.pitchRadians);
+        oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
+            << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
+    }
     DebugTrace(oss.str());
 }
 
