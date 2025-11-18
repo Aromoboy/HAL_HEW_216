@@ -14,4 +14,4 @@ void Uninit();
 void Update();
 void Draw();
 
-#endif // 備考: __MAIN_H__ に関する説明を日本語で補足している。
+#endif // __MAIN_H__
