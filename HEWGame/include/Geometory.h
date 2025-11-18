@@ -66,4 +66,4 @@ private:
 	static int m_lineCnt;
 };
 
-#endif // 備考: __GEOMETORY_H__ に関する説明を日本語で補足している。
+#endif __GEOMETORY_H__ 
