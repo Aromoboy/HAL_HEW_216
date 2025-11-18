@@ -10,35 +10,30 @@
 //============================================================
 // テクスチャをロードしてキャッシュに登録
 //============================================================
-Texture2D& TextureCache::Load(const std::string& name,
-    ID3D11Device* device,
-    const std::wstring& path)
+std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
     // キャッシュにすでに存在するか確認
     auto it = textures.find(name);
-    if (it != textures.end())
-        return *it->second;
+    if (it != textures.end()) return it->second;
+
     // 新しいテクスチャを作成
-    auto texture = std::make_unique<Texture2D>();
-    if (!texture->LoadFromFile(device, path))
-    {
-        DebugMessage("[TextureCache] テクスチャのロードに失敗: ");
-        throw std::runtime_error("テクスチャのロードに失敗: " + name);
-    }
+    auto texture = std::make_shared<Texture2D>();
+    if (!texture->LoadFromFile(device, path)) return nullptr;
+    
     // キャッシュに登録
-    Texture2D& ref = *texture;
     textures[name] = std::move(texture);
-    return ref;
+    return textures[name];
 }
 //============================================================
 // キャッシュからテクスチャを取得
 //============================================================
-Texture2D& TextureCache::Get(const std::string& name)
+std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
 {
     auto it = textures.find(name);
-    if (it == textures.end())
-        throw std::runtime_error("テクスチャが見つかりません: " + name);
-    return *it->second;
+
+    if (it == textures.end()) return nullptr;    
+
+    return it->second;
 }
 //============================================================
 // 使用例

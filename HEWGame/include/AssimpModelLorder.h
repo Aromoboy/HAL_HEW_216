@@ -7,6 +7,7 @@
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
+#include "TextureCache.h"
 
 #include "IModelLoader.h"
 
@@ -45,21 +46,18 @@ public:
 
 	~AssimpModelLorder();
 
-	virtual std::shared_ptr<ModelDX> Load(std::string path) override;
+	virtual std::shared_ptr<ModelDX> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
 
 private:
 	
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
-	// メッシュ作成
+	// bV�成
 	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*);
-	// マテリアルの作成
-	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, std::string directory);
+	// }eAﾌ作成
+	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, ID3D11Device* device, TextureCache& textureCache);
 
 
-	//	テクスチャの作成
-	HRESULT CreateTexture(const char* fileName, ID3D11ShaderResourceView** a_outTexture);
-	
 
 };
 

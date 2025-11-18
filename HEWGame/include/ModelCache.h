@@ -4,8 +4,11 @@
 #include <map>
 #include <memory>
 #include <string>
-#include "ModelDX.h"      
-#include "IModelLoader.h" 
+#include "ModelDX.h"
+#include "IModelLoader.h"
+
+struct ID3D11Device;
+class TextureCache;
 
 namespace Render
 {
@@ -15,7 +18,7 @@ namespace Render
         static ModelCache& Instance();
 
         std::shared_ptr<ModelDX> Get(const std::string& path);
-        void SetLoader(std::shared_ptr<IModelLoader> loader);
+        void SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache);
         void Clear();
 
     private:
@@ -26,6 +29,8 @@ namespace Render
 
     private:
         std::shared_ptr<IModelLoader> m_loader;
+        ID3D11Device* m_device = nullptr;
+        TextureCache* m_textureCache = nullptr;
         std::map<std::string, std::shared_ptr<ModelDX>> m_models;
     };
 }

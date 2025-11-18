@@ -1,0 +1,165 @@
+#include "CameraManager.h"
+
+#include <algorithm>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kLogPrefix = "[CameraManager] ";
+}
+
+namespace CameraSpace
+{
+        CameraManager::CameraManager()
+                : m_warnedAboutMissingCamera(false)
+        {
+        }
+
+        std::shared_ptr<ICamera> CameraManager::AddCamera(std::shared_ptr<ICamera> camera)
+        {
+                if (!camera)
+                {
+#if defined(_DEBUG)
+                        DebugTrace(std::string(kLogPrefix) + "Attempted to add null camera.\n");
+#endif
+                        return nullptr;
+                }
+
+                auto found = std::find_if(m_cameras.begin(), m_cameras.end(),
+                        [&](const std::shared_ptr<ICamera>& existing)
+                        {
+                                return existing.get() == camera.get();
+                        });
+
+                if (found != m_cameras.end())
+                {
+                        ++m_stats.duplicateAdds;
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Duplicate camera registration detected ptr=" << camera.get()
+                                << " duplicates=" << m_stats.duplicateAdds << '\n';
+                        DebugTrace(oss.str());
+#endif
+                        return *found;
+                }
+
+                m_cameras.push_back(camera);
+                ++m_stats.registeredCameras;
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Registered camera ptr=" << camera.get()
+                        << " total=" << m_cameras.size() << '\n';
+                DebugTrace(oss.str());
+#endif
+                return camera;
+        }
+
+        void CameraManager::SetActive(const std::shared_ptr<ICamera>& camera)
+        {
+                if (!camera)
+                {
+                        if (!m_active.expired())
+                        {
+#if defined(_DEBUG)
+                                DebugTrace(std::string(kLogPrefix) + "Clearing active camera.\n");
+#endif
+                        }
+                        m_active.reset();
+                        return;
+                }
+
+                if (!Contains(camera))
+                {
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "SetActive received unmanaged camera ptr=" << camera.get()
+                                << ", auto-registering.\n";
+                        DebugTrace(oss.str());
+#endif
+                        m_cameras.push_back(camera);
+                        ++m_stats.registeredCameras;
+                }
+
+                m_active = camera;
+                m_warnedAboutMissingCamera = false;
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Active camera set ptr=" << camera.get() << '\n';
+                DebugTrace(oss.str());
+#endif
+        }
+
+        std::shared_ptr<ICamera> CameraManager::GetActiveCamera() const
+        {
+                return m_active.lock();
+        }
+
+        void CameraManager::Update()
+        {
+                ++m_stats.updateCalls;
+                auto active = m_active.lock();
+                if (!active)
+                {
+                        ++m_stats.framesWithoutActive;
+#if defined(_DEBUG)
+                        if (!m_warnedAboutMissingCamera)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "No active camera set. framesWithoutActive="
+                                        << m_stats.framesWithoutActive << '\n';
+                                DebugTrace(oss.str());
+                                m_warnedAboutMissingCamera = true;
+                        }
+#endif
+                        return;
+                }
+
+                (void)active->GetView();
+                (void)active->GetProjection();
+        }
+
+        const CameraManager::ExecutionStats& CameraManager::GetExecutionStats() const
+        {
+                return m_stats;
+        }
+
+        const std::vector<std::shared_ptr<ICamera>>& CameraManager::GetCameras() const
+        {
+                return m_cameras;
+        }
+
+        bool CameraManager::Contains(const std::shared_ptr<ICamera>& camera) const
+        {
+                if (!camera)
+                {
+                        return false;
+                }
+
+                return std::any_of(m_cameras.begin(), m_cameras.end(),
+                        [&](const std::shared_ptr<ICamera>& existing)
+                        {
+                                return existing.get() == camera.get();
+                        });
+        }
+}
+
