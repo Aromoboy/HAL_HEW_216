@@ -342,6 +342,9 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
     stream << "Top height live " << data.currentHeight << "m";
     stream << " | peak " << data.peakHeight << "m\n";
 
+    stream << "Speed x" << data.moveSpeedMultiplier
+        << " (" << data.moveSpeedUnitsPerSecond << " u/s)  [1=Boost 2=Reset]\n";
+
     stream << std::fixed << std::setprecision(0);
     stream << "Score " << data.score;
     stream << "  (Enter=Confirm  R=Retry)";

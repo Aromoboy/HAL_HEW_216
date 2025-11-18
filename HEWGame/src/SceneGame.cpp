@@ -65,6 +65,11 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr BYTE kConfirmInputKey = VK_RETURN;
         constexpr BYTE kRetryInputKey = 'R';
+        constexpr BYTE kPlayerSpeedBoostKey = '1';
+        constexpr BYTE kPlayerSpeedResetKey = '2';
+        constexpr float kPlayerSpeedBoostStep = 1.1f;
+        constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
+        constexpr float kFallbackPlayerMoveSpeed = 15.0f;
         const HudLayoutConfig kHudLayoutConfig
         {
             512u,
@@ -350,6 +355,16 @@ SceneGame::SceneGame()
 {
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
     m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
+    m_playerBaseMoveSpeed = m_stageData.GetPlayerMoveSpeed();
+    if (!std::isfinite(m_playerBaseMoveSpeed) || m_playerBaseMoveSpeed <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Player move speed " << m_playerBaseMoveSpeed
+            << " invalid; using fallback " << kFallbackPlayerMoveSpeed << "\n";
+        DebugTrace(oss.str());
+        m_playerBaseMoveSpeed = kFallbackPlayerMoveSpeed;
+    }
+    m_playerSpeedMultiplier = 1.0f;
     {
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
@@ -357,7 +372,7 @@ SceneGame::SceneGame()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
-            << " playerSpeed=" << m_stageData.GetPlayerMoveSpeed()
+            << " playerSpeed=" << m_playerBaseMoveSpeed
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -628,7 +643,7 @@ SceneGame::SceneGame()
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
-        player->SetMoveSpeed(m_stageData.GetPlayerMoveSpeed());
+        player->SetMoveSpeed(m_playerBaseMoveSpeed);
         if (m_sweetsManager)
         {
             player->SetSweetsManager(m_sweetsManager.get());
@@ -815,6 +830,61 @@ if (m_timeUp)
     return;
 }
 
+    Core::Input& input = ctx.input;
+    if (player)
+    {
+        const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
+        {
+            if (!(m_playerBaseMoveSpeed > 0.0f))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[SpeedBoost] " << reason
+                    << " ignored; base speed invalid (" << m_playerBaseMoveSpeed << ").\n";
+                DebugTrace(oss.str());
+                return;
+            }
+
+            const float currentMultiplier = m_playerSpeedMultiplier;
+            const float clampedMultiplier = std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
+            const bool clamped = std::fabs(clampedMultiplier - requestedMultiplier) > std::numeric_limits<float>::epsilon();
+            if (std::fabs(currentMultiplier - clampedMultiplier) <= std::numeric_limits<float>::epsilon())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[SpeedBoost] " << reason
+                    << " requestedMultiplier=" << requestedMultiplier
+                    << " has no effect (current=" << currentMultiplier << ").\n";
+                DebugTrace(oss.str());
+                return;
+            }
+
+            const float beforeSpeed = player->GetMoveSpeed();
+            const float newMultiplier = clampedMultiplier;
+            const float newSpeed = m_playerBaseMoveSpeed * newMultiplier;
+            m_playerSpeedMultiplier = newMultiplier;
+            player->SetMoveSpeed(newSpeed);
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpeedBoost] " << reason
+                << " base=" << m_playerBaseMoveSpeed
+                << " prevMultiplier=" << currentMultiplier
+                << " newMultiplier=" << newMultiplier
+                << " prevSpeed=" << beforeSpeed
+                << " newSpeed=" << newSpeed
+                << " clamped=" << std::boolalpha << clamped << "\n";
+            DebugTrace(oss.str());
+        };
+
+        if (input.IsKeyTrigger(kPlayerSpeedBoostKey))
+        {
+            adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
+        }
+
+        if (input.IsKeyTrigger(kPlayerSpeedResetKey))
+        {
+            adjustMoveSpeed(1.0f, "Reset key '2'");
+        }
+    }
+
 HandleManualRetryInput(ctx);
         fRads.z += 0.001f * RAD;
 
@@ -908,16 +978,21 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         if (m_hudRenderer)
         {
                 HudDisplayData hudData{};
-                hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
-                hudData.currentHeight = m_currentTowerHeight;
-                hudData.peakHeight = m_peakTowerHeight;
-                hudData.score = ComputeScore();
-                hudData.timeUp = m_timeUp;
+                  hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+                  hudData.currentHeight = m_currentTowerHeight;
+                  hudData.peakHeight = m_peakTowerHeight;
+                  hudData.score = ComputeScore();
+                  hudData.timeUp = m_timeUp;
+                  hudData.moveSpeedMultiplier = m_playerSpeedMultiplier;
+                  if (player)
+                  {
+                          hudData.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+                  }
 
-                float guidelineClip = 0.0f;
-                if (TryGetGuidelineClipY(*activeCamera, guidelineClip))
-                {
-                        hudData.guidelineVisible = true;
+                  float guidelineClip = 0.0f;
+                  if (TryGetGuidelineClipY(*activeCamera, guidelineClip))
+                  {
+                          hudData.guidelineVisible = true;
                         hudData.guidelineClipY = guidelineClip;
                 }
 
@@ -1182,6 +1257,11 @@ void SceneGame::ResetPlaySession()
     if (player)
     {
         player->ClearCarriedSweets();
+        if (m_playerBaseMoveSpeed > 0.0f)
+        {
+            m_playerSpeedMultiplier = 1.0f;
+            player->SetMoveSpeed(m_playerBaseMoveSpeed);
+        }
     }
 
     InitializeStageAnchors();

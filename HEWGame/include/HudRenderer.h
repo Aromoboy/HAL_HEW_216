@@ -21,6 +21,8 @@ struct HudDisplayData
     bool timeUp = false;
     bool guidelineVisible = false;
     float guidelineClipY = 0.0f;
+    float moveSpeedMultiplier = 1.0f;
+    float moveSpeedUnitsPerSecond = 0.0f;
 };
 
 struct HudLayoutConfig
