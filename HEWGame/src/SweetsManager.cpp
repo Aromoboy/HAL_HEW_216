@@ -1096,6 +1096,7 @@ namespace SweetsSpace
         m_nextSpawnOriginIndex = 0;
         m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
 
+
         std::ostringstream oss;
         oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
             << " spawn origins (heightOffset=" << m_spawnHeightOffset << ").\n";
