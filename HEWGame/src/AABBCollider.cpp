@@ -25,7 +25,7 @@ namespace
 #endif
 }
 
-Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float a_expand, float3 a_offset)
+Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float3 a_expand, float3 a_offset)
 {
 	isTrigger = a_isTrigger;
 	expand = a_expand;
@@ -59,9 +59,9 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 	float3 min;
 
 	float3 colliderScale;
-	colliderScale.x = transform.scale.x / 2 * expand;
-	colliderScale.y = transform.scale.y / 2 * expand;
-	colliderScale.z = transform.scale.z / 2 * expand;
+	colliderScale.x = transform.scale.x / 2 * expand.x;
+	colliderScale.y = transform.scale.y / 2 * expand.y;
+	colliderScale.z = transform.scale.z / 2 * expand.z;
 
 
 	max.x = transform.position.x + offset.x + colliderScale.x;

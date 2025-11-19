@@ -584,13 +584,15 @@ SceneGame::SceneGame()
     platformTransform.position = float3{ 0.0f, m_stageData.GetPlatformCenterY(), m_stageData.GetPlaneZ() };
     platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
     platformTransform.scale = m_stageData.GetPlatformScale();
-    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
     m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
         "StageFoundation",
         platformTransform,
         platformCollider,
         Core::UpdatePhase::PrePhysics,
         -100);
+
+
     if (m_stagePlatform)
     {
         RefreshPlatformAnchor(true);
@@ -617,10 +619,52 @@ SceneGame::SceneGame()
         DebugTrace(std::string(kLogPrefix) + "Failed to allocate stage foundation platform.\n");
     }
 
+
+
+    Transform floorTransform{};
+    floorTransform.position = float3{ 0.0f, -1.8f, m_stageData.GetPlaneZ() };
+    floorTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+    floorTransform.scale = float3{ 50.0f, 1.0f, 1.0f};
+    auto floorCollider = std::make_shared<Collision::AABBCollider>(floorTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
+    m_floor = std::make_unique<Stage::FoundationPlatform>(
+        "floor",
+        floorTransform,
+        floorCollider,
+        Core::UpdatePhase::PrePhysics,
+        -100);
+
+
+    if (m_floor)
+    {
+        
+        RegisterPhysicsBody(*m_floor);
+        std::ostringstream oss;
+        const auto& scale = m_floor->GetTransform().scale;
+        const auto& pos = m_floor->GetTransform().position;
+        oss << kLogPrefix << "floor foundation initialized at ("
+            << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+            << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
+            << m_floor->GetDebugColor().x << ','
+            << m_floor->GetDebugColor().y << ','
+            << m_floor->GetDebugColor().z << ").\n";
+        DebugTrace(oss.str());
+        if (m_drawSystem)
+        {
+            m_drawSystem->RegisterRenderable(*m_floor);
+            m_floorDrawRegistered = true;
+            DebugTrace(std::string(kLogPrefix) + "floor foundation registered with DrawSystem.\n");
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to allocate floor.\n");
+    }
+
+
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
     { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
-    collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f });
     player = std::make_unique<SceneSpace::Player>(
         "player",
         float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() },
@@ -685,6 +729,16 @@ SceneGame::~SceneGame()
         m_drawSystem->UnregisterRenderable(*m_stagePlatform);
         m_stagePlatformDrawRegistered = false;
     }
+    if (m_floorRegistered && m_floor)
+    {
+        Unregister(*m_floor);
+        m_floorRegistered = false;
+    }
+    if (m_floorDrawRegistered && m_floor && m_drawSystem)
+    {
+        m_drawSystem->UnregisterRenderable(*m_floor);
+        m_floorDrawRegistered = false;
+    }
 
         UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
@@ -739,6 +793,7 @@ SceneGame::~SceneGame()
         {
                 m_drawSystem->ClearRenderables();
                 m_stagePlatformDrawRegistered = false;
+                m_floorDrawRegistered = false;
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -796,6 +851,18 @@ void SceneGame::ConfigureUpdates()
                 m_drawSystem->RegisterRenderable(*m_stagePlatform);
                 m_stagePlatformDrawRegistered = true;
         }
+
+        if (m_floor && !m_floorRegistered)
+        {
+                Register(*m_floor);
+                m_floorRegistered = true;
+        }
+        if (m_floor && m_drawSystem && !m_floorDrawRegistered)
+        {
+                m_drawSystem->RegisterRenderable(*m_floor);
+                m_floorDrawRegistered = true;
+        }
+        
 
         if (player)
         {

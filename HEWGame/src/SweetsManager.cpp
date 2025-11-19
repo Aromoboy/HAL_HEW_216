@@ -226,7 +226,7 @@ namespace SweetsSpace
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
 
-        const auto createCollider = [](const Transform& transform, float expand, const float3& offset)
+        const auto createCollider = [](const Transform& transform, float3 expand, const float3& offset)
         {
             return std::make_shared<Collision::AABBCollider>(transform, false, expand, offset);
         };
@@ -234,16 +234,16 @@ namespace SweetsSpace
         struct SweetsFactoryConfig
         {
             SweetsType type;
-            float colliderExpand;
+            float3 colliderExpand;
             float3 colliderOffset;
             float weight;
             float damping;
         };
 
         const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, 1.05f, float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f },
-            { SweetsType::Pudding, 0.95f, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f },
-            { SweetsType::Sherbet, 0.9f, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f },
+            { SweetsType::Cake, float3{1.05f,1.05f,1.05f} , float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f },
+            { SweetsType::Pudding, float3{0.95f,0.95f,0.95f}, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f },
+            { SweetsType::Sherbet, float3{0.9f,0.9f,0.9f}, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f },
         } };
 
         for (const auto& config : kConfigs)
@@ -1095,6 +1095,7 @@ namespace SweetsSpace
         m_spawnOrigins = origins;
         m_nextSpawnOriginIndex = 0;
         m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
