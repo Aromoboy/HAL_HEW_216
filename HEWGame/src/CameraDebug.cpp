@@ -1,21 +1,30 @@
 #include "CameraDebug.h"
 #include "Core/Input.h"
+#include "Defines.h"
 
-void CameraDebug::Update()
+CameraDebug::CameraDebug(float3 a_fPos, float a_fFovy)
+: CameraSpace::BaseCamera(a_fPos)
+, Core::UpdateNode(Core::UpdatePhase::Camera)
+, bIsMove(true)
 {
-        // UpdateNode経由で処理するのでここでは何もしない
+SetPerspective(a_fFovy,
+static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT),
+CMETER(30.0f),
+METER(1000.0f));
 }
 
 void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
-        if (ctx.input.IsKeyTrigger(VK_RETURN))
-        {
-                bIsMove = !bIsMove;
-        }
+if (ctx.input.IsKeyTrigger(VK_RETURN))
+{
+bIsMove = !bIsMove;
+}
 
-        if (bIsMove)
-        {
-                constexpr float kMoveSpeed = 6.0f;
-                m_pos.y += kMoveSpeed * ctx.dt;
-        }
+if (bIsMove)
+{
+constexpr float kMoveSpeed = 6.0f;
+float3 position = GetPosition();
+position.y += kMoveSpeed * ctx.dt;
+SetPosition(position);
+}
 }

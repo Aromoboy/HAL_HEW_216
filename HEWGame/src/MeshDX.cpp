@@ -3,9 +3,12 @@
 #include "Debug.h"
 
 MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
+	: m_pVtxBuffer(nullptr)
+	, m_pIdxBuffer(nullptr)
 {
 	HRESULT hr;
 
+	// 各種ステータスを設定
 	m_indexCount = desc.idxCount;
 
 	m_materialID = materialID;

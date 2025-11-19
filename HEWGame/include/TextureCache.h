@@ -23,14 +23,14 @@ public:
     TextureCache(TextureCache&&) = delete;
     TextureCache& operator=(TextureCache&&) = delete;
 
-    Texture2D& Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
-    Texture2D& Get(const std::string& name);
+    std::shared_ptr<Texture2D> Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
+    std::shared_ptr<Texture2D> Get(const std::string& name);
 
 private:
     // コンストラクタをprivateに
     TextureCache() = default;
     ~TextureCache() = default;
 
-    std::map<std::string, std::unique_ptr<Texture2D>> textures;
+    std::map<std::string, std::shared_ptr<Texture2D>> textures;
 };
 #endif

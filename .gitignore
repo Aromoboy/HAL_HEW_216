@@ -28,6 +28,7 @@
 *.ilk
 *.idb
 *.obj
+!HEWGame/Assets/Model/SweetsPrototype/*.obj
 *.pch
 *.tmp
 *.rsp
