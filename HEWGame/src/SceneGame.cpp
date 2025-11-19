@@ -20,9 +20,6 @@
 #include "Sweets.h"
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
-
-
-
 #include <algorithm>
 #include <cctype>
 #include <cmath>
