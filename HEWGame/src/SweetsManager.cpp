@@ -238,12 +238,14 @@ namespace SweetsSpace
             float3 colliderOffset;
             float weight;
             float damping;
+            float minScale;
+            float maxScale;
         };
 
         const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, float3{1.05f,1.05f,1.05f} , float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f },
-            { SweetsType::Pudding, float3{0.95f,0.95f,0.95f}, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f },
-            { SweetsType::Sherbet, float3{0.9f,0.9f,0.9f}, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f },
+            { SweetsType::Cake, float3{1.05f,1.05f,1.05f} , float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f, 0.85f, 1.35f },
+            { SweetsType::Pudding, float3{0.95f,0.95f,0.95f}, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f, 0.9f, 1.2f },
+            { SweetsType::Sherbet, float3{0.9f,0.9f,0.9f}, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f, 0.75f, 1.4f },
         } };
 
         for (const auto& config : kConfigs)
@@ -270,7 +272,8 @@ namespace SweetsSpace
 
             auto factory = [this, &cache, kind, modelPath, type, colliderExpand = config.colliderExpand,
                                colliderOffset = config.colliderOffset, weight = config.weight,
-                               damping = config.damping, createCollider](const Transform& transform)
+                               damping = config.damping, createCollider, minScale = config.minScale,
+                               maxScale = config.maxScale](const Transform& transform)
                 -> std::shared_ptr<BaseSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -283,20 +286,39 @@ namespace SweetsSpace
                     return nullptr;
                 }
 
-                auto collider = createCollider(transform, colliderExpand, colliderOffset);
+                Transform scaledTransform = transform;
+                const float scaleMin = std::min(minScale, maxScale);
+                const float scaleMax = std::max(minScale, maxScale);
+                std::uniform_real_distribution<float> scaleDist(scaleMin, scaleMax);
+                const float sampledScale = scaleDist(m_random);
+                scaledTransform.scale.x *= sampledScale;
+                scaledTransform.scale.y *= sampledScale;
+                scaledTransform.scale.z *= sampledScale;
+
+                auto collider = createCollider(scaledTransform, colliderExpand, colliderOffset);
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
+                const float scaleFactor = sampledScale * sampledScale * sampledScale;
+                const float scaledWeight = weight * scaleFactor;
+                const float scaledDamping = std::min(damping * scaleFactor, 0.999f);
+
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=" << sampledScale
+                        << " weight=" << scaledWeight << " (base=" << weight << ")\n";
+                    DebugTrace(oss.str());
+                }
 
                 switch (type)
                 {
                 case SweetsType::Cake:
-                    return MakeSweets<Cake>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Cake>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Pudding:
-                    return MakeSweets<Pudding>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Pudding>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Sherbet:
-                    return MakeSweets<Sherbet>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Sherbet>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 default:
                     break;
