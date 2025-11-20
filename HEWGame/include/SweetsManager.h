@@ -142,6 +142,8 @@ namespace SweetsSpace
         std::vector<float3> m_spawnOrigins;
         std::size_t m_nextSpawnOriginIndex;
         float m_spawnHeightOffset;
+        int m_batchSize;
+        int m_currentBatchRemaining;
         mutable std::mt19937 m_random;
 
         bool m_enableRandomRotation;

@@ -49,6 +49,7 @@ namespace
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
+    constexpr int kPrototypeBatchSize = 5;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr float kPlatformWidth = 12.0f;
@@ -276,11 +277,13 @@ namespace SweetsSpace
         , m_currentPhase(0)
         , m_phaseConfigs()
         , m_activePhaseConfigIndex(-1)
-        , m_spawnTimer(0.0f)
+        , m_spawnTimer(kDefaultSpawnIntervalSeconds)
         , m_spawnQueue()
         , m_spawnOrigins()
         , m_nextSpawnOriginIndex(0)
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
+        , m_batchSize(kPrototypeBatchSize)
+        , m_currentBatchRemaining(0)
         , m_random(std::random_device{}())
         , m_enableRandomRotation(false)
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
@@ -1346,6 +1349,7 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
         m_spawnQueue.clear();
+        m_currentBatchRemaining = 0;
     }
 
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
@@ -1371,10 +1375,29 @@ namespace SweetsSpace
         const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
 
+        if (m_currentBatchRemaining > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler paused; active batch has "
+                << m_currentBatchRemaining << " remaining.\n";
+            DebugTrace(oss.str());
+            return;
+        }
+
         while (m_spawnTimer >= interval)
         {
             m_spawnTimer -= interval;
-            EnqueueSpawns(std::max(1, config.simultaneousSpawnCount));
+            const int requestedCount = std::max(1, m_batchSize);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Scheduling prototype batch spawn (size=" << requestedCount
+                << "; interval=" << interval << ").\n";
+            DebugTrace(oss.str());
+            EnqueueSpawns(requestedCount);
+
+            if (m_currentBatchRemaining > 0)
+            {
+                break;
+            }
         }
 
         EmitSpawnRequests();
@@ -1387,7 +1410,28 @@ namespace SweetsSpace
             return;
         }
 
-        for (int i = 0; i < count; ++i)
+        int batchTarget = m_currentBatchRemaining;
+        if (m_currentBatchRemaining <= 0)
+        {
+            batchTarget = std::max(1, m_batchSize);
+            m_currentBatchRemaining = batchTarget;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Initializing spawn batch (target=" << m_currentBatchRemaining
+                << ", requested=" << count << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        const int allowedCount = std::min(count, batchTarget);
+        if (allowedCount < count)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Batch capacity limited enqueues to " << allowedCount
+                << " of " << count << " requests.\n";
+            DebugTrace(oss.str());
+        }
+
+        int enqueued = 0;
+        for (int i = 0; i < allowedCount; ++i)
         {
             if (m_spawnQueue.size() >= kMaxSpawnQueueEntries)
             {
@@ -1405,7 +1449,18 @@ namespace SweetsSpace
             }
 
             m_spawnQueue.push_back(kind);
+            ++enqueued;
         }
+
+        if (enqueued != allowedCount)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn enqueue shortfall: enqueued=" << enqueued
+                << " expected=" << allowedCount << "; queueSize=" << m_spawnQueue.size() << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        m_currentBatchRemaining = enqueued;
     }
 
     void SweetsManager::EmitSpawnRequests()
@@ -1416,6 +1471,7 @@ namespace SweetsSpace
         }
 
         std::size_t spawnedCount = 0;
+        const int queuedBefore = static_cast<int>(m_spawnQueue.size());
         while (!m_spawnQueue.empty())
         {
             const std::string kind = m_spawnQueue.front();
@@ -1423,10 +1479,21 @@ namespace SweetsSpace
 
             const float3 origin = NextSpawnOrigin();
             Transform transform = BuildSpawnTransform(origin);
-            if (Spawn(kind, transform))
+            const bool spawned = static_cast<bool>(Spawn(kind, transform));
+            if (spawned)
             {
                 ++spawnedCount;
             }
+
+            if (m_currentBatchRemaining > 0)
+            {
+                --m_currentBatchRemaining;
+            }
+        }
+
+        if (m_currentBatchRemaining < 0)
+        {
+            m_currentBatchRemaining = 0;
         }
 
         if (spawnedCount > 0)
@@ -1434,6 +1501,19 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "Emitted " << spawnedCount << " sweets from scheduler.\n";
             DebugTrace(oss.str());
+        }
+
+        if (queuedBefore > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Batch progress: queued=" << queuedBefore
+                << " remaining=" << m_currentBatchRemaining << ".\n";
+            DebugTrace(oss.str());
+
+            if (m_currentBatchRemaining <= 0)
+            {
+                DebugTrace(std::string(kLogPrefix) + "Batch completed; scheduler may start a new batch after cooldown.\n");
+            }
         }
     }
 
@@ -1491,6 +1571,13 @@ namespace SweetsSpace
 
         m_activePhaseConfigIndex = clamped;
         ForceSpawnRefresh();
+        const float interval = std::max(m_phaseConfigs[clamped].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        m_spawnTimer = std::max(m_spawnTimer, interval);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Phase change primed next batch with interval="
+            << std::fixed << std::setprecision(2) << interval << " (batchSize=" << m_batchSize << ").\n";
+        DebugTrace(oss.str());
         LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
     }
 
