@@ -138,6 +138,7 @@ namespace SweetsSpace
         bool m_warnedMissingPhaseCallback;
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
+        mutable bool m_warnedMissingBoundsCollider;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
@@ -150,6 +151,8 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
         Transform BuildSpawnTransform(const float3& origin) const;
+        void UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings = true);
+        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets, const char* reason, bool logWarnings, bool isMiss);
 
         template<typename T>
         std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,

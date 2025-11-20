@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -50,6 +51,9 @@ namespace
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
+    constexpr float kPlatformWidth = 12.0f;
+    constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
+    constexpr float kHorizontalPlayAreaLimit = (kPlatformWidth * 0.5f) + kHorizontalOutOfBoundsMargin;
 
     float ComputeSpeedSq(const Physics::Physical& physical)
     {
@@ -78,6 +82,29 @@ namespace
         }
 
         return SweetsSpace::SweetsState::Active;
+    }
+
+    bool IsHorizontallyOutOfBounds(const SweetsSpace::BaseSweets& sweets)
+    {
+        float minX = 0.0f;
+        float maxX = 0.0f;
+        const Collision::ICollider* collider = sweets.GetCollider();
+        if (collider)
+        {
+            const AABB bounds = collider->GetAABB();
+            minX = bounds.min.x;
+            maxX = bounds.max.x;
+        }
+        else
+        {
+            const Transform& transform = sweets.GetTransform();
+            const float halfWidth = std::max(0.0f, transform.scale.x * 0.5f);
+            minX = transform.position.x - halfWidth;
+            maxX = transform.position.x + halfWidth;
+        }
+
+        const float furthest = std::max(std::abs(minX), std::abs(maxX));
+        return furthest > kHorizontalPlayAreaLimit;
     }
 
     std::string TrimToken(const std::string& value)
@@ -221,6 +248,7 @@ namespace SweetsSpace
         , m_warnedMissingPhaseCallback(false)
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
+        , m_warnedMissingBoundsCollider(false)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -382,6 +410,7 @@ namespace SweetsSpace
         };
 
         std::vector<PendingStateChange> stateChanges;
+        std::vector<std::shared_ptr<BaseSweets>> missedSweets;
 
         for (auto& entry : m_byState)
         {
@@ -423,6 +452,23 @@ namespace SweetsSpace
 
                 if (!isCarried)
                 {
+                    const bool outOfBounds = IsHorizontallyOutOfBounds(*sweets);
+                    if (!sweets->GetCollider() && !m_warnedMissingBoundsCollider)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Horizontal bounds check using transform scale for sweets ptr="
+                            << sweets.get() << " (missing collider).\n";
+                        DebugTrace(oss.str());
+                        m_warnedMissingBoundsCollider = true;
+                    }
+
+                    if (outOfBounds)
+                    {
+                        missedSweets.push_back(sweets);
+                        ++it;
+                        continue;
+                    }
+
                     sweets->OnUpdate(ctx);
 
                     const SweetsState desiredState = EvaluateState(*sweets, bucketState);
@@ -448,6 +494,11 @@ namespace SweetsSpace
                 << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
 #endif
+        }
+
+        for (const auto& sweets : missedSweets)
+        {
+            RemoveSweetsEntry(sweets, "MissDespawn", true, true);
         }
     }
 
@@ -601,44 +652,7 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (m_scheduler)
-            {
-                m_scheduler->Unregister(*sweets);
-            }
-            else if (!m_warnedMissingScheduler)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister sweets '" << sweets->GetTag()
-                    << "': scheduler not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingScheduler = true;
-            }
-
-            if (m_physicsMachine)
-            {
-                m_physicsMachine->UnregisterBody(*sweets);
-            }
-            else if (!m_warnedMissingPhysicsMachine)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister physics for sweets '" << sweets->GetTag()
-                    << "': physics machine not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingPhysicsMachine = true;
-            }
-
-            if (m_drawSystem)
-            {
-                m_drawSystem->UnregisterRenderable(*sweets);
-            }
-            else if (!m_warnedMissingDrawSystem)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister draw entry for sweets '" << sweets->GetTag()
-                    << "': draw system not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingDrawSystem = true;
-            }
+            UnregisterSweetsFromSystems(sweets, "ClearAllSweets");
         }
 
         std::ostringstream oss;
@@ -919,6 +933,86 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
+    }
+
+    void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        if (m_scheduler)
+        {
+            m_scheduler->Unregister(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingScheduler)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister sweets '" << sweets->GetTag()
+                << "': scheduler not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingScheduler = true;
+        }
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->UnregisterBody(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingPhysicsMachine)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister physics for sweets '" << sweets->GetTag()
+                << "': physics machine not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingPhysicsMachine = true;
+        }
+
+        if (m_drawSystem)
+        {
+            m_drawSystem->UnregisterRenderable(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingDrawSystem)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister draw entry for sweets '" << sweets->GetTag()
+                << "': draw system not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingDrawSystem = true;
+        }
+    }
+
+    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets, const char* reason, bool logWarnings, bool isMiss)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        auto found = m_lookup.find(sweets);
+        if (found == m_lookup.end())
+        {
+            return;
+        }
+
+        const SweetsState previousState = found->second;
+        auto& currentList = GetByState(previousState);
+        currentList.remove(sweets);
+        m_lookup.erase(found);
+
+        UnregisterSweetsFromSystems(sweets, reason, logWarnings);
+
+#if defined(_DEBUG)
+        const auto& pos = sweets->GetTransform().position;
+        std::ostringstream oss;
+        oss << kLogPrefix << reason << " removed sweets tag='" << sweets->GetTag()
+            << "' state=" << StateToString(previousState)
+            << " miss=" << std::boolalpha << isMiss
+            << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
+        DebugTrace(oss.str());
+#else
+        (void)isMiss;
+#endif
     }
 
     bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
