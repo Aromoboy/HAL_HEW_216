@@ -30,6 +30,7 @@ namespace SceneSpace
         // Collider は shared_ptr で管理
         // Physics や CollisionSystem が生ポインタ要求なので get() を返している
         Collision::ICollider* GetCollider();
+        const Collision::ICollider* GetCollider() const;
 
         // Transform 変更時にコライダーの AABB を同期する
         void SyncColliderBounds();

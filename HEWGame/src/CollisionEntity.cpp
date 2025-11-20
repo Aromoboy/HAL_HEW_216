@@ -47,6 +47,11 @@ namespace SceneSpace
         return m_collider.get();
     }
 
+    const Collision::ICollider* CollisionEntity::GetCollider() const
+    {
+        return m_collider.get();
+    }
+
     void CollisionEntity::SyncColliderBounds()
     {
         if (!m_collider)
