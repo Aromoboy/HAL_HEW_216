@@ -87,6 +87,9 @@ namespace SweetsSpace
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
         void SetSpawnOrigins(const std::vector<float3>& origins);
+        void SetRandomRotationEnabled(bool enabled);
+        void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
+        void SetRandomScaleEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
@@ -122,7 +125,12 @@ namespace SweetsSpace
         std::vector<float3> m_spawnOrigins;
         std::size_t m_nextSpawnOriginIndex;
         float m_spawnHeightOffset;
-        std::mt19937 m_random;
+        mutable std::mt19937 m_random;
+
+        bool m_enableRandomRotation;
+        float3 m_randomRotationMinDegrees;
+        float3 m_randomRotationMaxDegrees;
+        bool m_enableRandomScale;
 
         bool m_warnedMissingDrawSystem;
         bool m_warnedMissingPhysicsMachine;
