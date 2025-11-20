@@ -211,6 +211,10 @@ namespace SweetsSpace
         , m_nextSpawnOriginIndex(0)
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
         , m_random(std::random_device{}())
+        , m_enableRandomRotation(false)
+        , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
+        , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
+        , m_enableRandomScale(true)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
@@ -238,14 +242,17 @@ namespace SweetsSpace
             float3 colliderOffset;
             float weight;
             float damping;
-            float minScale;
-            float maxScale;
+            float3 minScale;
+            float3 maxScale;
         };
 
         const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, float3{1.05f,1.05f,1.05f} , float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f, 0.85f, 1.35f },
-            { SweetsType::Pudding, float3{0.95f,0.95f,0.95f}, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f, 0.9f, 1.2f },
-            { SweetsType::Sherbet, float3{0.9f,0.9f,0.9f}, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f, 0.75f, 1.4f },
+            { SweetsType::Cake, float3{1.05f,1.05f,1.05f} , float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f,
+                float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
+            { SweetsType::Pudding, float3{0.95f,0.95f,0.95f}, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f,
+                float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
+            { SweetsType::Sherbet, float3{0.9f,0.9f,0.9f}, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f,
+                float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
         } };
 
         for (const auto& config : kConfigs)
@@ -287,24 +294,46 @@ namespace SweetsSpace
                 }
 
                 Transform scaledTransform = transform;
-                const float scaleMin = std::min(minScale, maxScale);
-                const float scaleMax = std::max(minScale, maxScale);
-                std::uniform_real_distribution<float> scaleDist(scaleMin, scaleMax);
-                const float sampledScale = scaleDist(m_random);
-                scaledTransform.scale.x *= sampledScale;
-                scaledTransform.scale.y *= sampledScale;
-                scaledTransform.scale.z *= sampledScale;
+                const auto sampleScale = [&](float minValue, float maxValue)
+                {
+                    if (!m_enableRandomScale)
+                    {
+                        return 1.0f;
+                    }
+
+                    const float lo = std::min(minValue, maxValue);
+                    const float hi = std::max(minValue, maxValue);
+                    if (lo == hi)
+                    {
+                        return lo;
+                    }
+
+                    std::uniform_real_distribution<float> dist(lo, hi);
+                    return dist(m_random);
+                };
+
+                const float3 sampledScale{
+                    sampleScale(minScale.x, maxScale.x),
+                    sampleScale(minScale.y, maxScale.y),
+                    sampleScale(minScale.z, maxScale.z)
+                };
+
+                scaledTransform.scale.x *= sampledScale.x;
+                scaledTransform.scale.y *= sampledScale.y;
+                scaledTransform.scale.z *= sampledScale.z;
 
                 auto collider = createCollider(scaledTransform, colliderExpand, colliderOffset);
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
-                const float scaleFactor = sampledScale * sampledScale * sampledScale;
+                const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
                 const float scaledWeight = weight * scaleFactor;
                 const float scaledDamping = std::min(damping * scaleFactor, 0.999f);
 
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=" << sampledScale
+                    oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=("
+                        << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ")"
+                        << " enabledRandomScale=" << std::boolalpha << m_enableRandomScale
                         << " weight=" << scaledWeight << " (base=" << weight << ")\n";
                     DebugTrace(oss.str());
                 }
@@ -1125,6 +1154,41 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
+    void SweetsManager::SetRandomRotationEnabled(bool enabled)
+    {
+        m_enableRandomRotation = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random rotation " << (enabled ? "enabled" : "disabled")
+            << " (minYawPitchRollDeg=" << m_randomRotationMinDegrees.x << ',' << m_randomRotationMinDegrees.y
+            << ',' << m_randomRotationMinDegrees.z << " maxYawPitchRollDeg="
+            << m_randomRotationMaxDegrees.x << ',' << m_randomRotationMaxDegrees.y << ','
+            << m_randomRotationMaxDegrees.z << ").\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
+    {
+        m_randomRotationMinDegrees = minDegrees;
+        m_randomRotationMaxDegrees = maxDegrees;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random rotation range updated to minYawPitchRollDeg="
+            << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
+            << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
+            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ").\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetRandomScaleEnabled(bool enabled)
+    {
+        m_enableRandomScale = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random scale " << (enabled ? "enabled" : "disabled") << ".\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsManager::ForceSpawnRefresh()
     {
         m_spawnTimer = 0.0f;
@@ -1382,6 +1446,34 @@ namespace SweetsSpace
         transform.position.y += m_spawnHeightOffset;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        if (m_enableRandomRotation)
+        {
+            const auto sampleRotation = [&](float minDeg, float maxDeg)
+            {
+                const float lo = std::min(minDeg, maxDeg);
+                const float hi = std::max(minDeg, maxDeg);
+                if (lo == hi)
+                {
+                    return lo;
+                }
+
+                std::uniform_real_distribution<float> dist(lo, hi);
+                return dist(m_random);
+            };
+
+            const float sampledPitch = sampleRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
+            const float sampledYaw = sampleRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
+            const float sampledRoll = sampleRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
+            transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn rotation sampled pitch/yaw/roll(deg)="
+                << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+                << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
+            DebugTrace(oss.str());
+        }
+
         return transform;
     }
 }
