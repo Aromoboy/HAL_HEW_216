@@ -46,31 +46,33 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+    constexpr int kDefaultMaxCarry = 3;
 }
 
 SceneSpace::Player::Player(std::string a_tag,
-        float3 pos,
-        float3 rot,
-        float3 scl,
-        std::shared_ptr<Collision::ICollider> collide,
-        float3 velocity,
-        float3 force,
-        float weight,
-        float damping,
-        Core::UpdatePhase phase,
-        int priority,
-        bool kinematic)
-        : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
-        , model(nullptr)
-        , m_sweetsManager(nullptr)
-        , m_carried()
-        , m_pickupRadius(kDefaultPickupRadius)
-        , m_carryOffset(float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset })
-        , m_dropUpwardBoost(4.0f)
-        , m_isKinematic(kinematic)
-        , m_moveSpeed(kDefaultPlayerMoveSpeed)
-        , m_hasMinimumY(false)
-        , m_minimumY(0.0f)
+    float3 pos,
+    float3 rot,
+    float3 scl,
+    std::shared_ptr<Collision::ICollider> collide,
+    float3 velocity,
+    float3 force,
+    float weight,
+    float damping,
+    Core::UpdatePhase phase,
+    int priority,
+    bool kinematic)
+    : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
+    , model(nullptr)
+    , m_sweetsManager(nullptr)
+    , m_pickupRadius(kDefaultPickupRadius)
+    , m_carryOffset(float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset })
+    , m_dropUpwardBoost(4.0f)
+    , m_isKinematic(kinematic)
+    , m_moveSpeed(kDefaultPlayerMoveSpeed)
+    , m_hasMinimumY(false)
+    , m_minimumY(0.0f)
+    , m_maxCarry(kDefaultMaxCarry)
+
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -245,10 +247,10 @@ void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
                 return;
         }
 
-        if (!manager && m_carried)
+        if (!manager && !m_carrieds.empty())
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "SweetsManager cleared while carrying; forcing release.\n");
-                m_carried.reset();
+                m_carrieds.clear();
         }
 
         m_sweetsManager = manager;
@@ -256,52 +258,56 @@ void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
 
 bool SceneSpace::Player::IsCarryingSweets() const
 {
-        return static_cast<bool>(m_carried);
+        return !m_carrieds.empty();
 }
 
-std::shared_ptr<SweetsSpace::BaseSweets> SceneSpace::Player::GetCarriedSweets() const
+const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& SceneSpace::Player::GetCarriedSweets() const
 {
-        return m_carried;
+        return m_carrieds;
 }
 
 void SceneSpace::Player::ClearCarriedSweets()
 {
-        if (m_carried)
+        if (m_carrieds.empty())
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Clearing carried sweets handle.\n");
         }
-        m_carried.reset();
+        m_carrieds.clear();
 }
 
 void SceneSpace::Player::UpdateCarriedSweets()
 {
-        if (!m_carried)
+        if (m_carrieds.empty())
         {
                 return;
         }
 
-        auto& sweetsTransform = m_carried->GetTransform();
-        sweetsTransform.position = ComputeCarryAnchor();
-        sweetsTransform.rotation = m_transform.rotation;
+        for (auto& it : m_carrieds)
+        {
+            auto& sweetsTransform = it->GetTransform();
+            sweetsTransform.position = ComputeCarryAnchor();
+            sweetsTransform.rotation = m_transform.rotation;
 
-        m_carried->SyncColliderBounds();
+            it->SyncColliderBounds();
 
-        Physics::Physical& physical = m_carried->GetPhysical();
-        physical.velocity = { 0.0f, 0.0f, 0.0f };
-        physical.force = { 0.0f, 0.0f, 0.0f };
+            Physics::Physical& physical = it->GetPhysical();
+            physical.velocity = { 0.0f, 0.0f, 0.0f };
+            physical.force = { 0.0f, 0.0f, 0.0f };
+        }
+
 }
 
 void SceneSpace::Player::HandleCarryInput(Core::UpdateContext& ctx)
 {
         Core::Input& input = ctx.input;
 
-        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && m_carried)
+        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && !m_carrieds.empty())
         {
                 DropCarriedSweets();
                 return;
         }
 
-        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && !m_carried)
+        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && m_carrieds.size() < m_maxCarry)
         {
                 TryPickupNearest();
         }
@@ -322,11 +328,20 @@ void SceneSpace::Player::TryPickupNearest()
                 return;
         }
 
+
+        if (std::find(m_carrieds.begin(), m_carrieds.end(), candidate) != m_carrieds.end())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets already carried.\n");
+            return;
+        }
+
+
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: manager rejected transition.\n");
                 return;
         }
+
 
         auto& sweetsTransform = candidate->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
@@ -337,7 +352,7 @@ void SceneSpace::Player::TryPickupNearest()
         physical.velocity = { 0.0f, 0.0f, 0.0f };
         physical.force = { 0.0f, 0.0f, 0.0f };
 
-        m_carried = candidate;
+        m_carrieds.push_back(candidate);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Pickup success tag='" << candidate->GetTag()
@@ -347,12 +362,12 @@ void SceneSpace::Player::TryPickupNearest()
 
 void SceneSpace::Player::DropCarriedSweets()
 {
-        if (!m_carried)
+        if (m_carrieds.empty())
         {
                 return;
-        }
+        };
 
-        auto sweets = m_carried;
+        auto sweets = m_carrieds.back();
         auto& sweetsTransform = sweets->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
         sweets->SyncColliderBounds();
@@ -379,7 +394,7 @@ void SceneSpace::Player::DropCarriedSweets()
             << "' velocityY=" << sweetsPhysical.velocity.y << "\n";
         PlayerDebugTrace(oss.str());
 
-        m_carried.reset();
+        m_carrieds.pop_back();
 }
 
 float3 SceneSpace::Player::ComputeCarryAnchor() const
