@@ -55,6 +55,50 @@ namespace
     constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
     constexpr float kHorizontalPlayAreaLimit = (kPlatformWidth * 0.5f) + kHorizontalOutOfBoundsMargin;
 
+    const char* ToString(SweetsSpace::DeleteReason reason)
+    {
+        switch (reason)
+        {
+        case SweetsSpace::DeleteReason::Hit:
+            return "Hit";
+        case SweetsSpace::DeleteReason::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
+    const char* ToString(SweetsSpace::UseOutcome outcome)
+    {
+        switch (outcome)
+        {
+        case SweetsSpace::UseOutcome::Hit:
+            return "Hit";
+        case SweetsSpace::UseOutcome::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
+    void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
+    {
+        if (!batch)
+        {
+            return;
+        }
+
+        if (batch->usesRemaining > 0)
+        {
+            --batch->usesRemaining;
+        }
+
+        if (outcome == SweetsSpace::UseOutcome::Hit)
+        {
+            ++batch->usesRemaining;
+        }
+    }
+
     float ComputeSpeedSq(const Physics::Physical& physical)
     {
         const auto& v = physical.velocity;
@@ -496,9 +540,11 @@ namespace SweetsSpace
 #endif
         }
 
+        DeleteBatchContext missBatch{};
+        missBatch.usesRemaining = static_cast<int>(missedSweets.size());
         for (const auto& sweets : missedSweets)
         {
-            RemoveSweetsEntry(sweets, "MissDespawn", true, true);
+            RemoveSweetsEntry(sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch);
         }
     }
 
@@ -982,7 +1028,11 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets, const char* reason, bool logWarnings, bool isMiss)
+    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+        DeleteReason reason,
+        const char* context,
+        bool logWarnings,
+        DeleteBatchContext* batchContext)
     {
         if (!sweets)
         {
@@ -1000,18 +1050,21 @@ namespace SweetsSpace
         currentList.remove(sweets);
         m_lookup.erase(found);
 
-        UnregisterSweetsFromSystems(sweets, reason, logWarnings);
+        const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
+        UpdateBatchUsage(batchContext, outcome);
+
+        UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
 #if defined(_DEBUG)
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << reason << " removed sweets tag='" << sweets->GetTag()
+        oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
             << "' state=" << StateToString(previousState)
-            << " miss=" << std::boolalpha << isMiss
+            << " deleteReason=" << ToString(reason)
+            << " outcome=" << ToString(outcome)
+            << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
-#else
-        (void)isMiss;
 #endif
     }
 

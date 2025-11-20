@@ -50,6 +50,23 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> weights;
     };
 
+    enum class DeleteReason : std::uint8_t
+    {
+        Hit,
+        Miss,
+    };
+
+    enum class UseOutcome : std::uint8_t
+    {
+        Hit,
+        Miss,
+    };
+
+    struct DeleteBatchContext
+    {
+        int usesRemaining = 0;
+    };
+
     enum class SweetsState : std::uint8_t
     {
         Active,  // 現在制御中または落下中の生成されたお菓子
@@ -152,7 +169,11 @@ namespace SweetsSpace
         float3 NextSpawnOrigin();
         Transform BuildSpawnTransform(const float3& origin) const;
         void UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings = true);
-        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets, const char* reason, bool logWarnings, bool isMiss);
+        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+            DeleteReason reason,
+            const char* context,
+            bool logWarnings,
+            DeleteBatchContext* batchContext);
 
         template<typename T>
         std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
