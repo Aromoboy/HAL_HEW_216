@@ -45,6 +45,11 @@ DirectX::XMFLOAT4 MaterialDX::GetSpecular() const
         return m_specular;
 }
 
+std::shared_ptr<Texture2D> MaterialDX::GetTextureResource() const
+{
+        return m_texture;
+}
+
 void MaterialDX::SetDiffuse(const DirectX::XMFLOAT4& diffuse)
 {
         m_diffuse = diffuse;
