@@ -334,23 +334,6 @@ namespace
         return weights;
     }
 
-    const char* ToString(Collision::ColliderShape shape)
-    {
-        switch (shape)
-        {
-        case Collision::ColliderShape::Box:
-            return "Box";
-        case Collision::ColliderShape::Prism2D:
-            return "Prism2D";
-        case Collision::ColliderShape::Sphere:
-            return "Sphere";
-        case Collision::ColliderShape::Capsule:
-            return "Capsule";
-        default:
-            return "Unknown";
-        }
-    }
-
     float3 ScaleVector(const float3& value, const float3& scale)
     {
         return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
@@ -510,6 +493,23 @@ namespace SweetsSpace
         }
     }
 
+    const char* ToString(Collision::ColliderShape shape)
+    {
+        switch (shape)
+        {
+        case Collision::ColliderShape::Box:
+            return "Box";
+        case Collision::ColliderShape::Prism2D:
+            return "Prism2D";
+        case Collision::ColliderShape::Sphere:
+            return "Sphere";
+        case Collision::ColliderShape::Capsule:
+            return "Capsule";
+        default:
+            return "Unknown";
+        }
+    }
+
     const char* ToString(UseOutcome outcome)
     {
         switch (outcome)
@@ -632,7 +632,7 @@ namespace SweetsSpace
                 const float3 baseCenter = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
                 std::ostringstream boundsLog;
                 boundsLog << kLogPrefix << "Resolved collider template for kind '" << kind
-                    << "' shape=" << ToString(colliderTemplate.shape)
+                    << "' shape=" << SweetsSpace::ToString(colliderTemplate.shape)
                     << " halfExtents=(" << baseHalfExtents.x << ',' << baseHalfExtents.y << ',' << baseHalfExtents.z << ")"
                     << " center=(" << baseCenter.x << ',' << baseCenter.y << ',' << baseCenter.z << ")\n";
                 DebugTrace(boundsLog.str());
@@ -728,7 +728,7 @@ namespace SweetsSpace
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Collider applied kind='" << kind
-                        << "' shape=" << ToString(colliderTemplate.shape)
+                        << "' shape=" << SweetsSpace::ToString(colliderTemplate.shape)
                         << " scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
                         << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
                         << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
