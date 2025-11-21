@@ -2001,8 +2001,9 @@ namespace SweetsSpace
             return;
         }
 
+        const bool forceSeedNewBatch = (!m_batchInitialSpawnDone && m_stackedInBatch == 0);
         const bool liveAtTarget = liveSweets >= desiredLiveTarget;
-        if (liveAtTarget)
+        if (liveAtTarget && !forceSeedNewBatch)
         {
             if (!m_batchInitialSpawnDone)
             {
@@ -2029,7 +2030,25 @@ namespace SweetsSpace
             return;
         }
 
-        if (projectedLive >= desiredLiveTarget)
+        if (liveAtTarget && forceSeedNewBatch)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Forcing initial burst for new batch despite live target met (live=" << liveSweets
+                << " target=" << desiredLiveTarget << " queued=" << m_spawnQueue.size()
+                << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget << ").\n";
+            DebugTrace(oss.str());
+
+            if (m_pendingTopUpAfterDrop)
+            {
+                std::ostringstream pendingOss;
+                pendingOss << kLogPrefix
+                    << "Clearing pending top-up while forcing new batch seed (live target already satisfied).\n";
+                DebugTrace(pendingOss.str());
+                m_pendingTopUpAfterDrop = false;
+            }
+        }
+
+        if (projectedLive >= desiredLiveTarget && !forceSeedNewBatch)
         {
             if (!m_batchInitialSpawnDone)
             {
@@ -2049,14 +2068,15 @@ namespace SweetsSpace
 
         const bool delayBurst = m_pendingTopUpAfterDrop;
         const int deficit = desiredLiveTarget - projectedLive;
-        const int requestedCount = delayBurst ? 1 : deficit;
+        const int requestedCount = forceSeedNewBatch ? desiredLiveTarget : (delayBurst ? 1 : deficit);
         m_activeBurstPlanned = std::max(desiredLiveTarget, requestedCount);
 
         std::ostringstream oss;
         oss << kLogPrefix << "Scheduling burst to restore live target. live=" << liveSweets
             << " pending=" << pendingRequests << " target=" << desiredLiveTarget
             << " requested=" << requestedCount << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
-            << " delayedByDrop=" << std::boolalpha << delayBurst << ".\n";
+            << " delayedByDrop=" << std::boolalpha << delayBurst
+            << " forceSeed=" << forceSeedNewBatch << ".\n";
         DebugTrace(oss.str());
 
         EnqueueSpawns(requestedCount);
