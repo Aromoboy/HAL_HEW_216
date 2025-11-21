@@ -5,6 +5,8 @@ namespace Core
         namespace
         {
                 constexpr BYTE kKeyPressedMask = 0x80;
+                constexpr float kStickNorm = 32767.0f;
+                constexpr float kTriggerNorm = 255.0f;
         }
 
         Input::Input()
@@ -19,6 +21,12 @@ namespace Core
         {
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
+
+                // èâä˙ pad èÛë‘
+                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
+                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
+                PollPadState();
+
                 m_initialized = true;
                 return S_OK;
         }
@@ -28,6 +36,10 @@ namespace Core
                 m_initialized = false;
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
+
+                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
+                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
+                m_padConnected = false;
         }
 
         void Input::OnUpdate(UpdateContext& ctx)
@@ -44,6 +56,9 @@ namespace Core
 
                 m_previousKeys = m_currentKeys;
                 PollKeyboardState();
+
+                m_prevPadState = m_padState;
+                PollPadState();
         }
 
         bool Input::IsKeyPress(BYTE key) const
@@ -74,4 +89,89 @@ namespace Core
                         OutputDebugStringA("[Core::Input] GetKeyboardState failed; clearing keyboard state.\n");
                 }
         }
+
+        // Gamepad
+
+        void Input::PollPadState(int index)
+        {
+            XINPUT_STATE state{};
+            DWORD result = XInputGetState(index, &state);
+
+            if (result == ERROR_SUCCESS)
+            {
+                m_padConnected = true;
+                m_padState = state;
+            }
+            else
+            {
+                m_padConnected = false;
+                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
+            }
+        }
+
+        bool Input::IsPadConnected(int) const
+        {
+            return m_padConnected;
+        }
+
+        bool Input::IsPadPress(WORD button, int) const
+        {
+            return m_padConnected &&
+                (m_padState.Gamepad.wButtons & button) != 0;
+        }
+
+        bool Input::IsPadTrigger(WORD button, int) const
+        {
+            return m_padConnected &&
+                !(m_prevPadState.Gamepad.wButtons & button) &&
+                (m_padState.Gamepad.wButtons & button);
+        }
+
+        bool Input::IsPadRelease(WORD button, int) const
+        {
+            return m_padConnected &&
+                (m_prevPadState.Gamepad.wButtons & button) &&
+                !(m_padState.Gamepad.wButtons & button);
+        }
+
+        // Stick
+
+        float Input::GetPadLX(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.sThumbLX / kStickNorm;
+        }
+
+        float Input::GetPadLY(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.sThumbLY / kStickNorm;
+        }
+
+        float Input::GetPadRX(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.sThumbRX / kStickNorm;
+        }
+
+        float Input::GetPadRY(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.sThumbRY / kStickNorm;
+        }
+
+        // Trigger (0.0 - 1.0)
+
+        float Input::GetPadLeftTrigger(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.bLeftTrigger / kTriggerNorm;
+        }
+
+        float Input::GetPadRightTrigger(int) const
+        {
+            if (!m_padConnected) return 0.0f;
+            return m_padState.Gamepad.bRightTrigger / kTriggerNorm;
+        }
 }
+
