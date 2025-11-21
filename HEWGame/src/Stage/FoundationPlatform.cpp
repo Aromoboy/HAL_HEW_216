@@ -51,6 +51,7 @@ namespace Stage
     FoundationPlatform::FoundationPlatform(const std::string& tag,
         const Transform& transform,
         std::shared_ptr<Collision::ICollider> collider,
+        const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
         int priority)
         : SceneSpace::PhysicalEntity(tag,
