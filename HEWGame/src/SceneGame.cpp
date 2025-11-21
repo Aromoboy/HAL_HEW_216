@@ -1038,6 +1038,11 @@ void SceneGame::Update(Core::UpdateContext& ctx)
                         << " viewportFromDefaultRTV=" << std::boolalpha << viewportFromDefault << "\n";
                     DebugTrace(oss.str());
                 }
+
+                if (m_sweetsManager)
+                {
+                    m_sweetsManager->SetHorizontalBounds(minX, maxX);
+                }
             }
             else
             {
