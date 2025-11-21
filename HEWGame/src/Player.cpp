@@ -53,6 +53,7 @@ SceneSpace::Player::Player(std::string a_tag,
         float3 rot,
         float3 scl,
         std::shared_ptr<Collision::ICollider> collide,
+        Collision::CollisionLayer layer,
         float3 velocity,
         float3 force,
         float weight,
@@ -60,7 +61,7 @@ SceneSpace::Player::Player(std::string a_tag,
         Core::UpdatePhase phase,
         int priority,
         bool kinematic)
-        : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
+        : PhysicalEntity(a_tag, pos, rot, scl, collide, layer, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
         , model(nullptr)
         , m_sweetsManager(nullptr)
         , m_carried()

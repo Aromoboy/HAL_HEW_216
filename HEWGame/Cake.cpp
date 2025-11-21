@@ -8,13 +8,14 @@ namespace SweetsSpace
         const float3& rot,
         const float3& scl,
         std::shared_ptr<Collision::ICollider> collider,
+        Collision::CollisionLayer layer,
         const float3& velocity,
         const float3& force,
         float weight,
         float damping,
         Core::UpdatePhase phase,
         int priority)
-        : BaseSweets(tag, model, pos, rot, scl, collider, velocity, force,
+        : BaseSweets(tag, model, pos, rot, scl, collider, layer, velocity, force,
           weight, damping, phase, priority)
     { }
 }

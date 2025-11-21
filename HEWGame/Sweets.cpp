@@ -9,13 +9,14 @@ namespace SweetsSpace
                            const float3& rot,
                            const float3& scl,
                            std::shared_ptr<Collision::ICollider> collider,
+                           Collision::CollisionLayer layer,
                            const float3& velocity,
                            const float3& force,
                            float weight,
                            float damping,
                            Core::UpdatePhase phase,
                            int priority)
-        :PhysicalEntity(tag, pos, rot, scl, collider, velocity, force, weight, damping, phase, priority)
+        :PhysicalEntity(tag, pos, rot, scl, collider, layer, velocity, force, weight, damping, phase, priority)
         ,m_model(model)
     { }
 

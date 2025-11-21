@@ -27,6 +27,7 @@ namespace SceneSpace
 
         Player(std::string a_tag, float3 pos, float3 rot, float3 scl,
             std::shared_ptr<Collision::ICollider> collide,
+            Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             float3 velocity = { 0.0f, 0.0f, 0.0f }, float3 force = { 0.0f, 0.0f, 0.0f }, float weight = 1.0f, float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0,

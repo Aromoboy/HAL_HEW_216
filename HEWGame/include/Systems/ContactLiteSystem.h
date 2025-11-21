@@ -32,5 +32,6 @@ namespace Systems
         bool m_loggedPlayerAbsence;
         bool m_loggedPlayerPlatformContact;
         bool m_loggedPlayerSweetsContact;
+        bool m_loggedSuppressedSweetsFloor;
     };
 }

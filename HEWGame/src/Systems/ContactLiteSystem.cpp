@@ -15,6 +15,7 @@
 
 #include "AABB.h"
 #include "ICollider.h"
+#include "CollisionLayer.h"
 
 namespace
 {
@@ -77,6 +78,34 @@ namespace
                 return body && body->GetTag() == "player";
         }
 
+        const char* ToString(Collision::CollisionLayer layer)
+        {
+                switch (layer)
+                {
+                case Collision::CollisionLayer::Player:
+                        return "Player";
+                case Collision::CollisionLayer::Floor:
+                        return "Floor";
+                case Collision::CollisionLayer::Sweets:
+                        return "Sweets";
+                default:
+                        return "Default";
+                }
+        }
+
+        bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
+        {
+                const bool sweetsFloorPair =
+                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
+                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
+                if (sweetsFloorPair)
+                {
+                        return false;
+                }
+
+                return true;
+        }
+
         bool IsSweetsTag(const std::string& tag)
         {
                 static const std::array<const char*, 3> kSweetsTags{ { "Cake", "Pudding", "Sherbet" } };
@@ -103,6 +132,7 @@ namespace Systems
                 , m_loggedPlayerAbsence(false)
                 , m_loggedPlayerPlatformContact(false)
                 , m_loggedPlayerSweetsContact(false)
+                , m_loggedSuppressedSweetsFloor(false)
         {
         }
 
@@ -114,6 +144,7 @@ namespace Systems
                 m_loggedPlayerAbsence = false;
                 m_loggedPlayerPlatformContact = false;
                 m_loggedPlayerSweetsContact = false;
+                m_loggedSuppressedSweetsFloor = false;
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
@@ -196,6 +227,8 @@ namespace Systems
                                 continue;
                         }
 
+                        const Collision::CollisionLayer layerA = bodyA->GetCollisionLayer();
+
                         bodyA->SyncColliderBounds();
 
                         for (size_t j = i + 1; j < bodyCount; ++j)
@@ -212,7 +245,27 @@ namespace Systems
                                         continue;
                                 }
 
+                                const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
+
                                 bodyB->SyncColliderBounds();
+
+                                if (!CanCollide(layerA, layerB))
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedSuppressedSweetsFloor &&
+                                                ((layerA == Collision::CollisionLayer::Sweets && layerB == Collision::CollisionLayer::Floor)
+                                                        || (layerA == Collision::CollisionLayer::Floor && layerB == Collision::CollisionLayer::Sweets)))
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Collision suppressed for layers "
+                                                        << ToString(layerA) << " vs " << ToString(layerB)
+                                                        << " (bodies '" << bodyA->GetTag() << "' and '" << bodyB->GetTag() << "').\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedSuppressedSweetsFloor = true;
+                                        }
+#endif
+                                        continue;
+                                }
 
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))

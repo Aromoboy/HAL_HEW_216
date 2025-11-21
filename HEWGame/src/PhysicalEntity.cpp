@@ -1,6 +1,8 @@
 // PhysicalEntity.cpp
 #include "PhysicalEntity.h"
 
+#include <utility>
+
 namespace SceneSpace
 {
     PhysicalEntity::PhysicalEntity(const std::string& tag,
@@ -8,13 +10,14 @@ namespace SceneSpace
         const float3& rot,
         const float3& scl,
         std::shared_ptr<Collision::ICollider> collider,
+        Collision::CollisionLayer layer,
         const float3& velocity,
         const float3& force,
         float weight,
         float damping,
         Core::UpdatePhase phase,
         int priority)
-        : CollisionEntity(tag, pos, rot, scl, std::move(collider), phase, priority)
+        : CollisionEntity(tag, pos, rot, scl, std::move(collider), layer, phase, priority)
         , m_physical(velocity, force, weight, damping)
     {
     }
