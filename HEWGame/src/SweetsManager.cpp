@@ -56,32 +56,6 @@ namespace
     constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
     constexpr float kHorizontalPlayAreaLimit = (kPlatformWidth * 0.5f) + kHorizontalOutOfBoundsMargin;
 
-    const char* ToString(SweetsSpace::DeleteReason reason)
-    {
-        switch (reason)
-        {
-        case SweetsSpace::DeleteReason::Hit:
-            return "Hit";
-        case SweetsSpace::DeleteReason::Miss:
-            return "Miss";
-        default:
-            return "<unknown>";
-        }
-    }
-
-    const char* ToString(SweetsSpace::UseOutcome outcome)
-    {
-        switch (outcome)
-        {
-        case SweetsSpace::UseOutcome::Hit:
-            return "Hit";
-        case SweetsSpace::UseOutcome::Miss:
-            return "Miss";
-        default:
-            return "<unknown>";
-        }
-    }
-
     void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
     {
         if (!batch)
@@ -252,6 +226,32 @@ namespace
 
 namespace SweetsSpace
 {
+    const char* ToString(DeleteReason reason)
+    {
+        switch (reason)
+        {
+        case DeleteReason::Hit:
+            return "Hit";
+        case DeleteReason::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
+    const char* ToString(UseOutcome outcome)
+    {
+        switch (outcome)
+        {
+        case UseOutcome::Hit:
+            return "Hit";
+        case UseOutcome::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
     const char* StateToString(SweetsState state)
     {
         switch (state)
@@ -1063,8 +1063,8 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
             << "' state=" << StateToString(previousState)
-            << " deleteReason=" << ToString(reason)
-            << " outcome=" << ToString(outcome)
+            << " deleteReason=" << SweetsSpace::ToString(reason)
+            << " outcome=" << SweetsSpace::ToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
