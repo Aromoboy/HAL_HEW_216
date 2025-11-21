@@ -14,17 +14,17 @@ ModelDX::~ModelDX()
 }
 
 //	各種ゲッタ
-unsigned int ModelDX::GetMeshCount()
+unsigned int ModelDX::GetMeshCount() const
 {
 	return m_meshCount;
 }
 
-std::weak_ptr<MeshDX> ModelDX::GetMesh(int a_meshIndex)
+std::weak_ptr<MeshDX> ModelDX::GetMesh(int a_meshIndex) const
 {
 	return m_meshes[a_meshIndex];
 }
 
-std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex)
+std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex) const
 {
 	return m_materials[a_materialIndex];
 }
