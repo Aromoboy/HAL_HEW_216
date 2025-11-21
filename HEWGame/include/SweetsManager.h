@@ -151,6 +151,10 @@ namespace SweetsSpace
         float m_activeBurstInterval;
         int m_activeBurstPlanned;
         int m_currentBurstRemaining;
+        int m_stackedInBatch;
+        bool m_batchInitialSpawnDone;
+        int m_batchStackTarget;
+        bool m_batchCoolingDown;
         mutable std::mt19937 m_random;
 
         bool m_enableRandomRotation;
