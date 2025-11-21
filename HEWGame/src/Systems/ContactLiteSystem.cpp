@@ -529,13 +529,15 @@ namespace Systems
                                         float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
                                         if (axis == 1 && sweetsSupportPair && unstableSupport)
                                         {
-                                                impulse *= verticalResolutionScale;
+                                                const float previousImpulse = impulse;
+                                                impulse = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
-                                                oss << kLogPrefix << "Restitution impulse scaled for unstable support: pair '"
+                                                oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support: pair '"
                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                        << "' scale=" << verticalResolutionScale
-                                                        << " impulse=" << impulse << "\n";
+                                                        << "' previousImpulse=" << previousImpulse
+                                                        << " overlapFraction=" << supportOverlapFraction
+                                                        << " threshold=" << m_stableSupportThreshold << "\n";
                                                 DebugTrace(oss.str());
 #endif
                                         }
