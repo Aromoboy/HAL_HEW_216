@@ -326,8 +326,9 @@ namespace Systems
                                         continue;
                                 }
 
-                                Collision::ContactManifold manifold = colliderA->ComputeContact(*colliderB);
-                                if (!manifold.intersects)
+                                Collision::ContactManifold manifold{};
+                                colliderA->ComputeContact(manifold, *colliderB);
+                                if (!(manifold.hasContact || manifold.intersects))
                                 {
                                         continue;
                                 }
@@ -363,7 +364,7 @@ namespace Systems
                                 }
 
                                 const float planarOverlapX = overlaps[0];
-                                const bool verticalContact = std::fabs(normal.y) >= std::fabs(normal.x);
+                                const bool verticalContact = std::fabs(normal.y) >= std::max(std::fabs(normal.x), std::fabs(normal.z));
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
                                 const bool bodyAStatic = !(physA.weight > 0.0f);
@@ -376,7 +377,7 @@ namespace Systems
                                 float slideDir = 0.0f;
                                 float verticalResolutionScale = 1.0f;
 
-                                if (verticalContact)
+                                if (manifold.hasContact && verticalContact)
                                 {
                                         const bool sweetsTagA = IsSweetsTag(bodyA->GetTag());
                                         const bool sweetsTagB = IsSweetsTag(bodyB->GetTag());
@@ -441,7 +442,7 @@ namespace Systems
                                         }
                                 }
 
-                                const float rawPushDistance = manifold.penetration - m_penetrationTolerance;
+                                const float rawPushDistance = std::max(0.0f, manifold.penetration - m_penetrationTolerance);
                                 if (rawPushDistance <= 0.0f)
                                 {
                                         continue;
@@ -564,68 +565,70 @@ namespace Systems
 
                                 if (verticalContact)
                                 {
-                                        float* velA = SelectAxisComponent(physA.velocity, 1);
-                                        float* velB = SelectAxisComponent(physB.velocity, 1);
+                                        const float velAlongNormalA = Dot(physA.velocity, normal);
+                                        const float velAlongNormalB = Dot(physB.velocity, normal);
 
-                                        if (!bodyAStatic && bodyBStatic && *velA < 0.0f)
+                                        if (!bodyAStatic && bodyBStatic && velAlongNormalA < 0.0f)
                                         {
+                                                float targetVelocity = 0.0f;
 #if defined(_DEBUG)
-                                                const float previousVelocity = *velA;
+                                                const float previousVelocity = velAlongNormalA;
 #endif
                                                 if (unstableSupport && topIsA)
                                                 {
                                                         const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
-                                                        *velA = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+                                                        targetVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
 #if defined(_DEBUG)
                                                         std::ostringstream oss;
                                                         oss << kLogPrefix << "Unstable support damping applied to body '"
                                                                 << bodyA->GetTag() << "' (supported by '" << bodyB->GetTag()
-                                                                << "') velocityY " << previousVelocity
-                                                                << " -> " << *velA << " (fraction=" << supportOverlapFraction
+                                                                << "') velocityN " << previousVelocity
+                                                                << " -> " << targetVelocity << " (fraction=" << supportOverlapFraction
                                                                 << " scale=" << verticalResolutionScale << ")\n";
                                                         DebugTrace(oss.str());
 #endif
                                                 }
+#if defined(_DEBUG)
                                                 else
                                                 {
-                                                        *velA = 0.0f;
-#if defined(_DEBUG)
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
-                                                    << "' from " << previousVelocity << " due to static contact.\n";
-                                                DebugTrace(oss.str());
-#endif
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Normal velocity clamped for body '" << bodyA->GetTag()
+                                                                << "' from " << previousVelocity << " due to static contact.\n";
+                                                        DebugTrace(oss.str());
                                                 }
+#endif
+                                                physA.velocity = Add(physA.velocity, Scale(normal, targetVelocity - velAlongNormalA));
                                         }
-                                        if (!bodyBStatic && bodyAStatic && *velB < 0.0f)
+                                        if (!bodyBStatic && bodyAStatic && velAlongNormalB < 0.0f)
                                         {
+                                                float targetVelocity = 0.0f;
 #if defined(_DEBUG)
-                                                const float previousVelocity = *velB;
+                                                const float previousVelocity = velAlongNormalB;
 #endif
                                                 if (unstableSupport && !topIsA)
                                                 {
                                                         const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
-                                                        *velB = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+                                                        targetVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
 #if defined(_DEBUG)
                                                         std::ostringstream oss;
                                                         oss << kLogPrefix << "Unstable support damping applied to body '"
                                                                 << bodyB->GetTag() << "' (supported by '" << bodyA->GetTag()
-                                                                << "') velocityY " << previousVelocity
-                                                                << " -> " << *velB << " (fraction=" << supportOverlapFraction
+                                                                << "') velocityN " << previousVelocity
+                                                                << " -> " << targetVelocity << " (fraction=" << supportOverlapFraction
                                                                 << " scale=" << verticalResolutionScale << ")\n";
                                                         DebugTrace(oss.str());
 #endif
                                                 }
+#if defined(_DEBUG)
                                                 else
                                                 {
-                                                        *velB = 0.0f;
-#if defined(_DEBUG)
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
-                                                    << "' from " << previousVelocity << " due to static contact.\n";
-                                                DebugTrace(oss.str());
-#endif
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Normal velocity clamped for body '" << bodyB->GetTag()
+                                                                << "' from " << previousVelocity << " due to static contact.\n";
+                                                        DebugTrace(oss.str());
                                                 }
+#endif
+                                                physB.velocity = Add(physB.velocity, Scale(normal, targetVelocity - velAlongNormalB));
                                         }
                                 }
                                 if (physA.velocity.z != 0.0f)
