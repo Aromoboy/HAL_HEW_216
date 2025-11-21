@@ -1,5 +1,5 @@
-#ifndef ___ModelDX_H___
-#define ___ModelDX_H___
+#ifndef MODELDX_H
+#define MODELDX_H
 
 #include <vector>
 #include <memory>
@@ -28,4 +28,4 @@ private:
 
 
 
-#endif // !__ModelDX_H___
+#endif // MODELDX_H
