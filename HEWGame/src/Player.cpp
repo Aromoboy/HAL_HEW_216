@@ -199,6 +199,11 @@ SceneSpace::Player::Player(std::string a_tag,
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
         , m_missingModelWarned(false)
+        , m_hasScreenBounds(false)
+        , m_minScreenX(0.0f)
+        , m_maxScreenX(0.0f)
+        , m_hasMaximumY(false)
+        , m_maximumY(0.0f)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -329,6 +334,7 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
         }
 
         ClampVerticalPosition();
+        ClampScreenBounds();
 
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
@@ -429,6 +435,48 @@ float SceneSpace::Player::GetMinimumY() const
 bool SceneSpace::Player::HasMinimumY() const
 {
         return m_hasMinimumY;
+}
+
+void SceneSpace::Player::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
+{
+        if (!std::isfinite(minX) || !std::isfinite(maxX))
+        {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite screen bounds.\n");
+                return;
+        }
+
+        const float sanitizedMinX = std::min(minX, maxX);
+        const float sanitizedMaxX = std::max(minX, maxX);
+        const bool hadBounds = m_hasScreenBounds;
+        const bool boundsChanged = !hadBounds
+            || std::fabs(m_minScreenX - sanitizedMinX) > std::numeric_limits<float>::epsilon()
+            || std::fabs(m_maxScreenX - sanitizedMaxX) > std::numeric_limits<float>::epsilon()
+            || (m_hasMaximumY != maxY.has_value())
+            || (maxY.has_value() && std::fabs(m_maximumY - *maxY) > std::numeric_limits<float>::epsilon());
+
+        m_hasScreenBounds = true;
+        m_minScreenX = sanitizedMinX;
+        m_maxScreenX = sanitizedMaxX;
+        m_hasMaximumY = maxY.has_value() && std::isfinite(*maxY);
+        if (m_hasMaximumY)
+        {
+                m_maximumY = *maxY;
+        }
+
+        if (!boundsChanged)
+        {
+                return;
+        }
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Screen bounds set minX=" << m_minScreenX
+            << " maxX=" << m_maxScreenX;
+        if (m_hasMaximumY)
+        {
+                oss << " maxY=" << m_maximumY;
+        }
+        oss << "\n";
+        PlayerDebugTrace(oss.str());
 }
 
 void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
@@ -603,5 +651,46 @@ void SceneSpace::Player::ClampVerticalPosition()
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
             << m_minimumY << " (platform boundary).\n";
+        PlayerDebugTrace(oss.str());
+}
+
+void SceneSpace::Player::ClampScreenBounds()
+{
+        if (!m_hasScreenBounds)
+        {
+                return;
+        }
+
+        auto& position = m_transform.position;
+        const float originalX = position.x;
+        const float originalY = position.y;
+
+        const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
+        float clampedY = position.y;
+        if (m_hasMaximumY)
+        {
+                clampedY = std::min(clampedY, m_maximumY);
+        }
+
+        if (clampedX == originalX && clampedY == originalY)
+        {
+                return;
+        }
+
+        position.x = clampedX;
+        position.y = clampedY;
+        SyncColliderBounds();
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
+            << " prevY=" << originalY
+            << " newX=" << position.x
+            << " newY=" << position.y
+            << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
+        if (m_hasMaximumY)
+        {
+                oss << " maxY=" << m_maximumY;
+        }
+        oss << "\n";
         PlayerDebugTrace(oss.str());
 }

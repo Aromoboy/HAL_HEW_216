@@ -149,6 +149,11 @@ private:
     bool m_platformAnchorInitialized = false;
     mutable bool m_guidelineInvalidLogged = false;
     mutable bool m_guidelineClampLogged = false;
+    float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
+    float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
+    float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
+    bool m_cachedPlayerBoundsValid = false;
+    bool m_playerBoundsFailureLogged = false;
 };
 
 #endif // __SCENE_GAME_H__

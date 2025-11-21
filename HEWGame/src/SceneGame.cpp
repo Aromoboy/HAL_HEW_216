@@ -21,6 +21,7 @@
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -253,6 +254,110 @@ namespace
             return HasMeaningfulDifference(a.x, b.x, epsilon)
                 || HasMeaningfulDifference(a.y, b.y, epsilon)
                 || HasMeaningfulDifference(a.z, b.z, epsilon);
+        }
+
+        bool TryComputeViewportBoundsOnPlane(
+            const CameraSpace::PerspectiveCamera& camera,
+            float viewportWidth,
+            float viewportHeight,
+            float planeZ,
+            float& outMinX,
+            float& outMaxX,
+            float& outMinY,
+            float& outMaxY)
+        {
+            if (!(std::isfinite(viewportWidth) && viewportWidth > 0.0f
+                && std::isfinite(viewportHeight) && viewportHeight > 0.0f))
+            {
+                return false;
+            }
+
+            const DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&camera.GetView());
+            const DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&camera.GetProjection());
+
+            const std::array<std::pair<float, float>, 4> corners
+            {
+                std::pair<float, float>{0.0f, 0.0f},
+                std::pair<float, float>{viewportWidth, 0.0f},
+                std::pair<float, float>{viewportWidth, viewportHeight},
+                std::pair<float, float>{0.0f, viewportHeight}
+            };
+
+            bool hasBounds = false;
+            float minX = 0.0f;
+            float maxX = 0.0f;
+            float minY = 0.0f;
+            float maxY = 0.0f;
+            constexpr float kDirectionEpsilon = 1e-5f;
+
+            for (const auto& corner : corners)
+            {
+                const DirectX::XMVECTOR nearPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(corner.first, corner.second, 0.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+                const DirectX::XMVECTOR farPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(corner.first, corner.second, 1.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+
+                const DirectX::XMVECTOR direction = DirectX::XMVectorSubtract(farPoint, nearPoint);
+                const float dirZ = DirectX::XMVectorGetZ(direction);
+                if (std::fabs(dirZ) < kDirectionEpsilon)
+                {
+                    continue;
+                }
+
+                const float nearZ = DirectX::XMVectorGetZ(nearPoint);
+                const float t = (planeZ - nearZ) / dirZ;
+                if (t < 0.0f || t > 1.0f)
+                {
+                    continue;
+                }
+
+                const DirectX::XMVECTOR hitPoint = DirectX::XMVectorAdd(nearPoint, DirectX::XMVectorScale(direction, t));
+                const float hitX = DirectX::XMVectorGetX(hitPoint);
+                const float hitY = DirectX::XMVectorGetY(hitPoint);
+
+                if (!hasBounds)
+                {
+                    minX = maxX = hitX;
+                    minY = maxY = hitY;
+                    hasBounds = true;
+                }
+                else
+                {
+                    minX = std::min(minX, hitX);
+                    maxX = std::max(maxX, hitX);
+                    minY = std::min(minY, hitY);
+                    maxY = std::max(maxY, hitY);
+                }
+            }
+
+            if (!hasBounds)
+            {
+                return false;
+            }
+
+            outMinX = minX;
+            outMaxX = maxX;
+            outMinY = minY;
+            outMaxY = maxY;
+            return true;
         }
 
         Transform ComputePlatformTransformForCamera(
@@ -886,8 +991,102 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleColliderDebugCommands(ctx);
 #endif
     RefreshPlatformAnchor(false);
-UpdateCountdown(ctx);
-UpdateTowerHeightTelemetry();
+    UpdateCountdown(ctx);
+    UpdateTowerHeightTelemetry();
+
+    float viewportWidth = static_cast<float>(SCREEN_WIDTH);
+    float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
+    bool viewportFromDefault = true;
+    bool boundsIssueThisFrame = false;
+    if (RenderTarget* rtv = GetDefaultRTV())
+    {
+        viewportWidth = static_cast<float>(rtv->GetWidth());
+        viewportHeight = static_cast<float>(rtv->GetHeight());
+    }
+    else
+    {
+        viewportFromDefault = false;
+        if (!m_playerBoundsFailureLogged)
+        {
+            DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] DefaultRTV missing; using fallback screen size.\n");
+        }
+        boundsIssueThisFrame = true;
+    }
+
+    if (player)
+    {
+        std::shared_ptr<CameraSpace::PerspectiveCamera> activeCamera = m_gameCamera;
+        if (!activeCamera)
+        {
+            if (auto dynamicActive = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(GetActiveCamera()))
+            {
+                activeCamera = std::move(dynamicActive);
+            }
+        }
+
+        if (activeCamera)
+        {
+            float minX = 0.0f;
+            float maxX = 0.0f;
+            float minY = 0.0f;
+            float maxY = 0.0f;
+            const float playerPlaneZ = player->GetTransform().position.z;
+
+            if (TryComputeViewportBoundsOnPlane(*activeCamera, viewportWidth, viewportHeight, playerPlaneZ, minX, maxX, minY, maxY))
+            {
+                const bool boundsChanged = !m_cachedPlayerBoundsValid
+                    || HasMeaningfulDifference(m_cachedPlayerMinX, minX)
+                    || HasMeaningfulDifference(m_cachedPlayerMaxX, maxX)
+                    || HasMeaningfulDifference(m_cachedPlayerMaxY, maxY);
+
+                player->SetScreenBounds(minX, maxX, maxY);
+                m_cachedPlayerMinX = minX;
+                m_cachedPlayerMaxX = maxX;
+                m_cachedPlayerMaxY = maxY;
+                m_cachedPlayerBoundsValid = true;
+
+                if (boundsChanged)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerBounds] Updated from viewport=" << viewportWidth << 'x' << viewportHeight
+                        << " planeZ=" << playerPlaneZ
+                        << " minX=" << minX << " maxX=" << maxX
+                        << " minY=" << minY << " maxY=" << maxY
+                        << " viewportFromDefaultRTV=" << std::boolalpha << viewportFromDefault << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else
+            {
+                if (!m_playerBoundsFailureLogged)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerBounds] Failed to derive bounds for planeZ=" << playerPlaneZ
+                        << " viewport=" << viewportWidth << 'x' << viewportHeight << "\n";
+                    DebugTrace(oss.str());
+                }
+                boundsIssueThisFrame = true;
+            }
+        }
+        else
+        {
+            if (!m_playerBoundsFailureLogged)
+            {
+                DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] Missing PerspectiveCamera; cannot clamp player.\n");
+            }
+            boundsIssueThisFrame = true;
+        }
+    }
+
+    if (boundsIssueThisFrame)
+    {
+        m_playerBoundsFailureLogged = true;
+    }
+    else if (m_playerBoundsFailureLogged)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] Bounds computation recovered.\n");
+        m_playerBoundsFailureLogged = false;
+    }
 
 if (m_timeUp)
 {
