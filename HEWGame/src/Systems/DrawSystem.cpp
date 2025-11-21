@@ -320,6 +320,23 @@ namespace Systems
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
                 // •`‰æ
+
+                DirectX::XMFLOAT3;
+
+                //command.aabb.max.x;
+                //command.aabb.max.y;
+                //
+                //command.aabb.max.x;
+                //command.aabb.min.y;
+
+                //command.aabb.min.x;
+                //command.aabb.max.y;
+
+                //command.aabb.min.x;
+                //command.aabb.min.y;
+
+
+                //Geometory::AddLine()
             }
 
             if (m_debugLoggingEnabled)
