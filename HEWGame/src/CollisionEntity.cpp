@@ -86,7 +86,7 @@ namespace SceneSpace
             return;
         }
 
-        m_collider->UpdateBounds(m_transform);
+        m_collider->UpdateFromTransform(m_transform);
     }
 
     void CollisionEntity::ApplyTranslation(const float3& delta)

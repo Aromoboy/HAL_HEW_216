@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -32,29 +33,10 @@ Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, f
         offset = a_offset;
         SetLayer(layer);
 
-        UpdateBounds(a_transform);
+        UpdateFromTransform(a_transform);
 }
 
-bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
-{
-
-        const AABB thisAABB = aabb;
-        const AABB otherAABB = other.GetAABB();
-
-
-        // X軸方向で重なっているかを確認
-        if (thisAABB.max.x < otherAABB.min.x ||           // X軸方向で分離している
-                thisAABB.min.x > otherAABB.max.x) return false;
-
-        // Y軸方向で重なっているかを確認
-        if (thisAABB.max.y < otherAABB.min.y ||           // Y軸方向で分離している
-                thisAABB.min.y > otherAABB.max.y) return false;
-
-        return true;
-
-}
-
-void Collision::AABBCollider::UpdateBounds(const Transform& transform)
+void Collision::AABBCollider::UpdateFromTransform(const Transform& transform)
 {
         float3 max;
         float3 min;
@@ -78,7 +60,7 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 
 #if defined(_DEBUG)
         std::ostringstream oss;
-        oss << "[AABBCollider] UpdateBounds this=" << this
+        oss << "[AABBCollider] UpdateFromTransform this=" << this
                 << " min=(" << min.x << ',' << min.y << ',' << min.z << ')'
                 << " max=(" << max.x << ',' << max.y << ',' << max.z << ")\n";
         DebugTrace(oss.str());
@@ -93,4 +75,39 @@ bool Collision::AABBCollider::IsTrriger()
 AABB Collision::AABBCollider::GetAABB() const
 {
         return aabb;
+}
+
+Collision::ContactManifold Collision::AABBCollider::ComputeContact(const Collision::ICollider& other) const
+{
+        ContactManifold manifold{};
+
+        const AABB thisAABB = aabb;
+        const AABB otherAABB = other.GetAABB();
+
+        const float overlapX = std::min(thisAABB.max.x, otherAABB.max.x) - std::max(thisAABB.min.x, otherAABB.min.x);
+        const float overlapY = std::min(thisAABB.max.y, otherAABB.max.y) - std::max(thisAABB.min.y, otherAABB.min.y);
+        const float overlapZ = std::min(thisAABB.max.z, otherAABB.max.z) - std::max(thisAABB.min.z, otherAABB.min.z);
+
+        if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f)
+        {
+                return manifold;
+        }
+
+        manifold.intersects = true;
+        manifold.penetration = overlapX;
+        manifold.normal = float3{ (thisAABB.min.x + thisAABB.max.x) < (otherAABB.min.x + otherAABB.max.x) ? -1.0f : 1.0f, 0.0f, 0.0f };
+
+        if (overlapY < manifold.penetration)
+        {
+                manifold.penetration = overlapY;
+                manifold.normal = float3{ 0.0f, (thisAABB.min.y + thisAABB.max.y) < (otherAABB.min.y + otherAABB.max.y) ? -1.0f : 1.0f, 0.0f };
+        }
+
+        if (overlapZ < manifold.penetration)
+        {
+                manifold.penetration = overlapZ;
+                manifold.normal = float3{ 0.0f, 0.0f, (thisAABB.min.z + thisAABB.max.z) < (otherAABB.min.z + otherAABB.max.z) ? -1.0f : 1.0f };
+        }
+
+        return manifold;
 }
