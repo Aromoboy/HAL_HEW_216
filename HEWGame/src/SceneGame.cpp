@@ -767,6 +767,7 @@ SceneGame::SceneGame()
                 tagStream.str(),
                 platformTransform,
                 platformCollider,
+                descriptor.color,
                 Core::UpdatePhase::PrePhysics,
                 -100 - static_cast<int>(i));
 
