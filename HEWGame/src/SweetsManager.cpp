@@ -60,7 +60,7 @@ namespace
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr float kPlatformWidth = 12.0f;
-    constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
+    constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
 
     struct FallbackMaterialColors
@@ -199,7 +199,7 @@ namespace
 
         if (height <= kGroundHeightThreshold && speedSq <= kRestVelocityThresholdSq)
         {
-            return SweetsSpace::SweetsState::Ground;
+            return SweetsSpace::SweetsState::Stacked;
         }
 
         if (speedSq <= kRestVelocityThresholdSq)
@@ -1658,7 +1658,7 @@ namespace SweetsSpace
 
             if (!entry.second.hasSimultaneousTarget)
             {
-                config.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
+                config.simultaneousLiveTarget = config.simultaneousSpawnCount;
             }
             config.simultaneousLiveTarget = std::max(1, config.simultaneousLiveTarget);
 
