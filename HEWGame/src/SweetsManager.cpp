@@ -10,6 +10,7 @@
 #include <map>
 #include <random>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 #if defined(_WIN32)
@@ -29,6 +30,7 @@
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
+#include <DirectXMath.h>
 
 namespace
 {
@@ -56,6 +58,71 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
     constexpr float kHorizontalPlayAreaLimit = (kPlatformWidth * 0.5f) + kHorizontalOutOfBoundsMargin;
+
+    struct FallbackMaterialColors
+    {
+        DirectX::XMFLOAT4 diffuse{};
+        DirectX::XMFLOAT4 ambient{};
+    };
+
+    FallbackMaterialColors GetFallbackColorsFor(SweetsSpace::SweetsType type)
+    {
+        // Ambient alpha is kept at 1.0 to disable texture sampling for texture-less meshes.
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Pudding:
+            return { DirectX::XMFLOAT4{ 0.89f, 0.72f, 0.38f, 1.0f }, DirectX::XMFLOAT4{ 0.65f, 0.52f, 0.28f, 1.0f } };
+        case SweetsSpace::SweetsType::Sherbet:
+            return { DirectX::XMFLOAT4{ 0.96f, 0.78f, 0.86f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.62f, 0.69f, 1.0f } };
+        case SweetsSpace::SweetsType::Cake:
+        default:
+            return { DirectX::XMFLOAT4{ 1.0f, 0.94f, 0.85f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.72f, 0.62f, 1.0f } };
+        }
+    }
+
+    void ApplyFallbackMaterials(ModelDX& model, SweetsSpace::SweetsType type)
+    {
+        const FallbackMaterialColors colors = GetFallbackColorsFor(type);
+        std::unordered_set<unsigned int> visitedMaterials;
+
+        for (int i = 0; i < static_cast<int>(model.GetMeshCount()); ++i)
+        {
+            auto mesh = model.GetMesh(i).lock();
+            if (!mesh)
+            {
+                continue;
+            }
+
+            const unsigned int materialId = mesh->GetMaterialID();
+            if (!visitedMaterials.insert(materialId).second)
+            {
+                continue;
+            }
+
+            auto material = model.GetMaterial(static_cast<int>(materialId)).lock();
+            if (!material)
+            {
+                continue;
+            }
+
+            if (material->GetTexture())
+            {
+                continue;
+            }
+
+            material->SetDiffuse(colors.diffuse);
+            material->SetAmbient(colors.ambient);
+
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << kLogPrefix << "Applied fallback material for materialId=" << materialId
+                << " diffuse=(" << colors.diffuse.x << ',' << colors.diffuse.y << ',' << colors.diffuse.z
+                << ") ambient=(" << colors.ambient.x << ',' << colors.ambient.y << ',' << colors.ambient.z
+                << ") sweetsType=" << SweetsSpace::ToString(type) << "\n";
+            DebugTrace(oss.str());
+#endif
+        }
+    }
 
     enum class ColliderShape : std::uint8_t
     {
@@ -534,6 +601,8 @@ namespace SweetsSpace
                     DebugTrace(fail.str());
                     return nullptr;
                 }
+
+                ApplyFallbackMaterials(*model, type);
 
                 Transform scaledTransform = transform;
                 const auto sampleScale = [&](float minValue, float maxValue)
