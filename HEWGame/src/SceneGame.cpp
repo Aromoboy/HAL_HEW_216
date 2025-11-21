@@ -371,7 +371,38 @@ namespace
             Transform result{};
             result.position = float3{ stageCenterX, stageData.GetPlatformCenterY(), stageData.GetPlaneZ() };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
-            result.scale = stageData.GetPlatformScale();
+            float targetWidth = stageData.GetPlatformScale().x;
+            float targetHeight = stageData.GetPlatformScale().y;
+            const float targetDepth = std::max(0.01f, stageData.GetPlatformDepth());
+
+            float viewportMinX = 0.0f;
+            float viewportMaxX = 0.0f;
+            float viewportMinY = 0.0f;
+            float viewportMaxY = 0.0f;
+            const bool boundsValid = TryComputeViewportBoundsOnPlane(
+                camera,
+                viewportWidth,
+                viewportHeight,
+                stageData.GetPlaneZ(),
+                viewportMinX,
+                viewportMaxX,
+                viewportMinY,
+                viewportMaxY);
+            if (boundsValid)
+            {
+                const float worldWidth = viewportMaxX - viewportMinX;
+                const float worldHeight = viewportMaxY - viewportMinY;
+                const float widthFraction = std::clamp(stageData.GetPlatformWidthFraction(), 0.01f, 1.0f);
+                const float heightFraction = std::clamp(stageData.GetPlatformHeightFraction(), 0.01f, 1.0f);
+                targetWidth = std::max(worldWidth * widthFraction, 0.01f);
+                targetHeight = std::max(worldHeight * heightFraction, 0.01f);
+            }
+            else
+            {
+                DebugTrace(std::string(kLogPrefix) + "[PlatformAlign] Failed to derive viewport bounds; falling back to config platformScale.\n");
+            }
+
+            result.scale = float3{ targetWidth, targetHeight, targetDepth };
 
             const float sanitizedFraction = std::clamp(screenFraction, 0.0f, 1.0f);
             const float configuredTopY = result.position.y + (result.scale.y * 0.5f);
@@ -439,6 +470,8 @@ namespace
             std::ostringstream oss;
             oss << kLogPrefix << "[PlatformAlign] fraction=" << sanitizedFraction
                 << " viewport=" << viewportWidth << 'x' << viewportHeight
+                << " boundsValid=" << std::boolalpha << boundsValid
+                << " scale=(" << result.scale.x << ',' << result.scale.y << ',' << result.scale.z << ')'
                 << " topY=" << derivedTopY
                 << " worldZ=" << derivedPlaneZ
                 << " applied=" << std::boolalpha << derivedValid
@@ -474,6 +507,9 @@ SceneGame::SceneGame()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
+            << " platformWidthFraction=" << m_stageData.GetPlatformWidthFraction()
+            << " platformHeightFraction=" << m_stageData.GetPlatformHeightFraction()
+            << " platformDepth=" << m_stageData.GetPlatformDepth()
             << " playerSpeed=" << m_playerBaseMoveSpeed
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
@@ -682,10 +718,21 @@ SceneGame::SceneGame()
     {
         m_drawSystem->SetRenderer(m_render.get());
     }
-    Transform platformTransform{};
-    platformTransform.position = float3{ 0.0f, m_stageData.GetPlatformCenterY(), m_stageData.GetPlaneZ() };
-    platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    platformTransform.scale = m_stageData.GetPlatformScale();
+    float platformViewportWidth = static_cast<float>(SCREEN_WIDTH);
+    float platformViewportHeight = static_cast<float>(SCREEN_HEIGHT);
+    if (RenderTarget* rtv = GetDefaultRTV())
+    {
+        platformViewportWidth = static_cast<float>(rtv->GetWidth());
+        platformViewportHeight = static_cast<float>(rtv->GetHeight());
+    }
+
+    Transform platformTransform = ComputePlatformTransformForCamera(
+        *m_gameCamera,
+        platformViewportWidth,
+        platformViewportHeight,
+        m_stageData,
+        kPlatformScreenBottomFraction,
+        kStageCenterX);
     auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
     m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
         "StageFoundation",
@@ -720,48 +767,6 @@ SceneGame::SceneGame()
     {
         DebugTrace(std::string(kLogPrefix) + "Failed to allocate stage foundation platform.\n");
     }
-
-
-
-    Transform floorTransform{};
-    floorTransform.position = float3{ 0.0f, -1.8f, m_stageData.GetPlaneZ() };
-    floorTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    floorTransform.scale = float3{ 50.0f, 1.0f, 1.0f};
-    auto floorCollider = std::make_shared<Collision::AABBCollider>(floorTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
-    m_floor = std::make_unique<Stage::FoundationPlatform>(
-        "floor",
-        floorTransform,
-        floorCollider,
-        Core::UpdatePhase::PrePhysics,
-        -100);
-
-
-    if (m_floor)
-    {
-        
-        RegisterPhysicsBody(*m_floor);
-        std::ostringstream oss;
-        const auto& scale = m_floor->GetTransform().scale;
-        const auto& pos = m_floor->GetTransform().position;
-        oss << kLogPrefix << "floor foundation initialized at ("
-            << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-            << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
-            << m_floor->GetDebugColor().x << ','
-            << m_floor->GetDebugColor().y << ','
-            << m_floor->GetDebugColor().z << ").\n";
-        DebugTrace(oss.str());
-        if (m_drawSystem)
-        {
-            m_drawSystem->RegisterRenderable(*m_floor);
-            m_floorDrawRegistered = true;
-            DebugTrace(std::string(kLogPrefix) + "floor foundation registered with DrawSystem.\n");
-        }
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "Failed to allocate floor.\n");
-    }
-
 
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
@@ -832,16 +837,6 @@ SceneGame::~SceneGame()
         m_drawSystem->UnregisterRenderable(*m_stagePlatform);
         m_stagePlatformDrawRegistered = false;
     }
-    if (m_floorRegistered && m_floor)
-    {
-        Unregister(*m_floor);
-        m_floorRegistered = false;
-    }
-    if (m_floorDrawRegistered && m_floor && m_drawSystem)
-    {
-        m_drawSystem->UnregisterRenderable(*m_floor);
-        m_floorDrawRegistered = false;
-    }
 
         UnregisterAllPhysicsBodies();
         if (m_inputRegistered)
@@ -896,7 +891,6 @@ SceneGame::~SceneGame()
         {
                 m_drawSystem->ClearRenderables();
                 m_stagePlatformDrawRegistered = false;
-                m_floorDrawRegistered = false;
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -955,17 +949,6 @@ void SceneGame::ConfigureUpdates()
                 m_stagePlatformDrawRegistered = true;
         }
 
-        if (m_floor && !m_floorRegistered)
-        {
-                Register(*m_floor);
-                m_floorRegistered = true;
-        }
-        if (m_floor && m_drawSystem && !m_floorDrawRegistered)
-        {
-                m_drawSystem->RegisterRenderable(*m_floor);
-                m_floorDrawRegistered = true;
-        }
-        
 
         if (player)
         {

@@ -32,6 +32,9 @@ namespace
     constexpr const char* kLogPrefix = "[StageData] ";
     constexpr float kDefaultPlaneZ = -5.0f;
     constexpr float kDefaultPlatformCenterY = -1.0f;
+    constexpr float kDefaultPlatformWidthFraction = 0.20f;
+    constexpr float kDefaultPlatformHeightFraction = 0.05f;
+    constexpr float kDefaultPlatformDepth = 4.0f;
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
     constexpr float kDefaultGuidelineHeight = 20.0f;
@@ -112,6 +115,9 @@ namespace Stage
     StageData::StageData()
         : m_planeZ(kDefaultPlaneZ)
         , m_platformCenterY(kDefaultPlatformCenterY)
+        , m_platformWidthFraction(kDefaultPlatformWidthFraction)
+        , m_platformHeightFraction(kDefaultPlatformHeightFraction)
+        , m_platformDepth(kDefaultPlatformDepth)
         , m_platformScale(kDefaultPlatformScale)
         , m_loadedFromFile(false)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
@@ -144,6 +150,12 @@ namespace Stage
         bool planeZSet = false;
         float platformCenterY = kDefaultPlatformCenterY;
         bool platformCenterSet = false;
+        float platformWidthFraction = kDefaultPlatformWidthFraction;
+        bool platformWidthFractionSet = false;
+        float platformHeightFraction = kDefaultPlatformHeightFraction;
+        bool platformHeightFractionSet = false;
+        float platformDepth = kDefaultPlatformDepth;
+        bool platformDepthSet = false;
         float3 platformScale = kDefaultPlatformScale;
         bool platformScaleSet = false;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
@@ -258,6 +270,54 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platformCenterY on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "platformWidthFraction")
+            {
+                try
+                {
+                    platformWidthFraction = std::stof(rawValue);
+                    platformWidthFractionSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platformWidthFraction on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "platformHeightFraction")
+            {
+                try
+                {
+                    platformHeightFraction = std::stof(rawValue);
+                    platformHeightFractionSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platformHeightFraction on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "platformDepth")
+            {
+                try
+                {
+                    platformDepth = std::stof(rawValue);
+                    platformDepthSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platformDepth on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -436,6 +496,82 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
+        if (!platformWidthFractionSet)
+        {
+            platformWidthFraction = kDefaultPlatformWidthFraction;
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformWidthFraction not specified; defaulting to "
+                << platformWidthFraction << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!platformHeightFractionSet)
+        {
+            platformHeightFraction = kDefaultPlatformHeightFraction;
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformHeightFraction not specified; defaulting to "
+                << platformHeightFraction << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!platformDepthSet)
+        {
+            platformDepth = kDefaultPlatformDepth;
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformDepth not specified; defaulting to " << platformDepth << "\n";
+            DebugTrace(oss.str());
+        }
+
+        auto sanitizeFraction = [](float value, float defaultValue, const char* name)
+        {
+            float sanitized = value;
+            if (!std::isfinite(sanitized) || sanitized <= 0.0f)
+            {
+                sanitized = defaultValue;
+            }
+            bool treatedAsPercent = false;
+            if (sanitized > 1.0f)
+            {
+                sanitized *= 0.01f;
+                treatedAsPercent = true;
+            }
+            sanitized = std::clamp(sanitized, 0.01f, 1.0f);
+
+            if (!std::isfinite(value) || value <= 0.0f)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << name << " invalid; using default " << defaultValue << "\n";
+                DebugTrace(oss.str());
+            }
+            else if (treatedAsPercent)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << name << " treated as percent; normalized to " << sanitized << "\n";
+                DebugTrace(oss.str());
+            }
+            else if (sanitized != value)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << name << " clamped to " << sanitized << " (from " << value << ")\n";
+                DebugTrace(oss.str());
+            }
+
+            return sanitized;
+        };
+
+        platformWidthFraction = sanitizeFraction(platformWidthFraction, kDefaultPlatformWidthFraction, "platformWidthFraction");
+        platformHeightFraction = sanitizeFraction(platformHeightFraction, kDefaultPlatformHeightFraction, "platformHeightFraction");
+
+        if (!std::isfinite(platformDepth) || platformDepth == 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "platformDepth value " << platformDepth
+                << " invalid; using default " << kDefaultPlatformDepth << "\n";
+            DebugTrace(oss.str());
+            platformDepth = kDefaultPlatformDepth;
+        }
+        platformDepth = std::max(0.01f, std::fabs(platformDepth));
+
         auto sanitizeScale = [](float value)
         {
             return std::max(0.01f, std::fabs(value));
@@ -538,6 +674,9 @@ namespace Stage
         m_phaseRewardMultipliers = rewardMultipliers;
         m_spawnPoints = spawnPoints;
         m_platformCenterY = platformCenterY;
+        m_platformWidthFraction = platformWidthFraction;
+        m_platformHeightFraction = platformHeightFraction;
+        m_platformDepth = platformDepth;
         m_platformScale = platformScale;
         m_playerMoveSpeed = playerMoveSpeed;
         m_guidelineHeight = guidelineHeight;
@@ -553,6 +692,9 @@ namespace Stage
             << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", spawnPoints=" << m_spawnPoints.size()
             << ", platformCenterY=" << m_platformCenterY
+            << ", platformWidthFraction=" << m_platformWidthFraction
+            << ", platformHeightFraction=" << m_platformHeightFraction
+            << ", platformDepth=" << m_platformDepth
             << ", platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << ", playerMoveSpeed=" << m_playerMoveSpeed
             << ", guidelineHeight=" << m_guidelineHeight
@@ -588,6 +730,21 @@ namespace Stage
     float StageData::GetPlatformCenterY() const noexcept
     {
         return m_platformCenterY;
+    }
+
+    float StageData::GetPlatformWidthFraction() const noexcept
+    {
+        return m_platformWidthFraction;
+    }
+
+    float StageData::GetPlatformHeightFraction() const noexcept
+    {
+        return m_platformHeightFraction;
+    }
+
+    float StageData::GetPlatformDepth() const noexcept
+    {
+        return m_platformDepth;
     }
 
     const float3& StageData::GetPlatformScale() const noexcept
@@ -629,6 +786,9 @@ namespace Stage
     {
         m_planeZ = kDefaultPlaneZ;
         m_platformCenterY = kDefaultPlatformCenterY;
+        m_platformWidthFraction = kDefaultPlatformWidthFraction;
+        m_platformHeightFraction = kDefaultPlatformHeightFraction;
+        m_platformDepth = kDefaultPlatformDepth;
         m_platformScale = kDefaultPlatformScale;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
@@ -652,6 +812,9 @@ namespace Stage
             << " multipliers=" << m_phaseRewardMultipliers.size()
             << " spawnPoints=" << m_spawnPoints.size()
             << " platformCenterY=" << m_platformCenterY
+            << " platformWidthFraction=" << m_platformWidthFraction
+            << " platformHeightFraction=" << m_platformHeightFraction
+            << " platformDepth=" << m_platformDepth
             << " platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
             << " playerMoveSpeed=" << m_playerMoveSpeed
             << " guidelineHeight=" << m_guidelineHeight
