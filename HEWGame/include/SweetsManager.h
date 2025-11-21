@@ -184,6 +184,7 @@ namespace SweetsSpace
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         int CountLiveSweets() const;
+        int ComputeDesiredLiveTarget(int remainingToStack) const;
         void EnqueueSpawns(int count);
         void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
