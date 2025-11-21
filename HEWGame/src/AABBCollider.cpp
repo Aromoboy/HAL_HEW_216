@@ -94,6 +94,7 @@ Collision::ContactManifold Collision::AABBCollider::ComputeContact(const Collisi
         }
 
         manifold.intersects = true;
+        manifold.hasContact = true;
         manifold.penetration = overlapX;
         manifold.normal = float3{ (thisAABB.min.x + thisAABB.max.x) < (otherAABB.min.x + otherAABB.max.x) ? -1.0f : 1.0f, 0.0f, 0.0f };
 
