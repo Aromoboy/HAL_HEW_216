@@ -367,16 +367,17 @@ namespace
             const CameraSpace::PerspectiveCamera& camera,
             float viewportWidth,
             float viewportHeight,
-            const Stage::StageData& stageData,
+            const Stage::PlatformDescriptor& descriptor,
             float screenFraction,
-            float stageCenterX)
+            float stageCenterX,
+            std::size_t platformIndex)
         {
             Transform result{};
-            result.position = float3{ stageCenterX, stageData.GetPlatformCenterY(), stageData.GetPlaneZ() };
+            result.position = float3{ stageCenterX + descriptor.center.x, descriptor.center.y, descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
-            float targetWidth = stageData.GetPlatformScale().x;
-            float targetHeight = stageData.GetPlatformScale().y;
-            const float targetDepth = std::max(0.01f, stageData.GetPlatformDepth());
+            float targetWidth = descriptor.scale.x;
+            float targetHeight = descriptor.scale.y;
+            const float targetDepth = std::max(0.01f, descriptor.depth);
 
             float viewportMinX = 0.0f;
             float viewportMaxX = 0.0f;
@@ -386,7 +387,7 @@ namespace
                 camera,
                 viewportWidth,
                 viewportHeight,
-                stageData.GetPlaneZ(),
+                descriptor.center.z,
                 viewportMinX,
                 viewportMaxX,
                 viewportMinY,
@@ -395,8 +396,8 @@ namespace
             {
                 const float worldWidth = viewportMaxX - viewportMinX;
                 const float worldHeight = viewportMaxY - viewportMinY;
-                const float widthFraction = std::clamp(stageData.GetPlatformWidthFraction(), 0.01f, 1.0f);
-                const float heightFraction = std::clamp(stageData.GetPlatformHeightFraction(), 0.01f, 1.0f);
+                const float widthFraction = std::clamp(descriptor.widthFraction, 0.01f, 1.0f);
+                const float heightFraction = std::clamp(descriptor.heightFraction, 0.01f, 1.0f);
                 targetWidth = std::max(worldWidth * widthFraction, 0.01f);
                 targetHeight = std::max(worldHeight * heightFraction, 0.01f);
             }
@@ -473,6 +474,7 @@ namespace
             std::ostringstream oss;
             oss << kLogPrefix << "[PlatformAlign] fraction=" << sanitizedFraction
                 << " viewport=" << viewportWidth << 'x' << viewportHeight
+                << " platformIndex=" << platformIndex
                 << " boundsValid=" << std::boolalpha << boundsValid
                 << " scale=(" << result.scale.x << ',' << result.scale.y << ',' << result.scale.z << ')'
                 << " topY=" << derivedTopY
@@ -510,14 +512,21 @@ SceneGame::SceneGame()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
-            << " platformWidthFraction=" << m_stageData.GetPlatformWidthFraction()
-            << " platformHeightFraction=" << m_stageData.GetPlatformHeightFraction()
-            << " platformDepth=" << m_stageData.GetPlatformDepth()
+            << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeed=" << m_playerBaseMoveSpeed
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
             << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
+        for (std::size_t i = 0; i < m_stageData.GetPlatformCount(); ++i)
+        {
+            const auto& descriptor = m_stageData.GetPlatform(i);
+            oss << kLogPrefix << " PlatformDesc[" << i << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
+                << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
+                << descriptor.scale.z << ") depth=" << descriptor.depth
+                << " widthFraction=" << descriptor.widthFraction
+                << " heightFraction=" << descriptor.heightFraction << "\n";
+        }
         ::DebugTrace(oss.str());
     }
 
@@ -620,7 +629,6 @@ SceneGame::SceneGame()
         m_sweetsManager->SetDrawSystem(m_drawSystem.get());
         m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
         m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
-        m_sweetsManager->SetSpawnOrigins(m_stageData.GetSpawnPoints());
         const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
         {
             std::ostringstream oss;
@@ -729,55 +737,147 @@ SceneGame::SceneGame()
         platformViewportHeight = static_cast<float>(rtv->GetHeight());
     }
 
-    Transform platformTransform = ComputePlatformTransformForCamera(
-        *m_gameCamera,
-        platformViewportWidth,
-        platformViewportHeight,
-        m_stageData,
-        kPlatformScreenBottomFraction,
-        kStageCenterX);
-    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
-    m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
-        "StageFoundation",
-        platformTransform,
-        platformCollider,
-        Core::UpdatePhase::PrePhysics,
-        -100);
-
-
-    if (m_stagePlatform)
+    const auto& platformDescriptors = m_stageData.GetPlatforms();
+    if (platformDescriptors.empty())
     {
-        RefreshPlatformAnchor(true);
-        RegisterPhysicsBody(*m_stagePlatform);
-        std::ostringstream oss;
-        const auto& scale = m_stagePlatform->GetTransform().scale;
-        const auto& pos = m_stagePlatform->GetTransform().position;
-        oss << kLogPrefix << "Stage foundation initialized at ("
-            << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-            << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
-            << m_stagePlatform->GetDebugColor().x << ','
-            << m_stagePlatform->GetDebugColor().y << ','
-            << m_stagePlatform->GetDebugColor().z << ").\n";
-        ::DebugTrace(oss.str());
-        if (m_drawSystem)
-        {
-            m_drawSystem->RegisterRenderable(*m_stagePlatform);
-            m_stagePlatformDrawRegistered = true;
-            DebugTrace(std::string(kLogPrefix) + "Stage foundation registered with DrawSystem.\n");
-        }
+        DebugTrace(std::string(kLogPrefix) + "No platform descriptors available; skipping foundation creation.\n");
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "Failed to allocate stage foundation platform.\n");
+        m_foundationPlatforms.resize(platformDescriptors.size());
+        m_platformUpdateRegistered.assign(platformDescriptors.size(), false);
+        m_platformDrawRegistered.assign(platformDescriptors.size(), false);
+
+        for (std::size_t i = 0; i < platformDescriptors.size(); ++i)
+        {
+            const auto& descriptor = platformDescriptors[i];
+            Transform platformTransform = ComputePlatformTransformForCamera(
+                *m_gameCamera,
+                platformViewportWidth,
+                platformViewportHeight,
+                descriptor,
+                kPlatformScreenBottomFraction,
+                kStageCenterX,
+                i);
+            auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
+
+            std::ostringstream tagStream;
+            tagStream << "StageFoundation" << i;
+            auto platform = std::make_unique<Stage::FoundationPlatform>(
+                tagStream.str(),
+                platformTransform,
+                platformCollider,
+                Core::UpdatePhase::PrePhysics,
+                -100 - static_cast<int>(i));
+
+            if (!platform)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Failed to allocate foundation platform at index " << i << " (tag='"
+                    << tagStream.str() << "').\n";
+                ::DebugTrace(oss.str());
+                continue;
+            }
+
+            m_foundationPlatforms[i] = std::move(platform);
+        }
+
+        RefreshPlatformAnchor(true);
+
+        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
+        {
+            auto& platform = m_foundationPlatforms[i];
+            if (!platform)
+            {
+                continue;
+            }
+
+            RegisterPhysicsBody(*platform);
+
+            const auto& scale = platform->GetTransform().scale;
+            const auto& pos = platform->GetTransform().position;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Stage foundation[" << i << "] initialized at ("
+                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+                << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
+                << platform->GetDebugColor().x << ','
+                << platform->GetDebugColor().y << ','
+                << platform->GetDebugColor().z << ") tag='" << platform->GetTag() << "'.\n";
+            ::DebugTrace(oss.str());
+
+            if (m_drawSystem)
+            {
+                m_drawSystem->RegisterRenderable(*platform);
+                m_platformDrawRegistered[i] = true;
+                std::ostringstream drawOss;
+                drawOss << kLogPrefix << "Stage foundation[" << i << "] registered with DrawSystem.\n";
+                DebugTrace(drawOss.str());
+            }
+        }
+
+        auto selectPlatform = [&](std::size_t preferredIndex) -> Stage::FoundationPlatform*
+        {
+            if (preferredIndex < m_foundationPlatforms.size() && m_foundationPlatforms[preferredIndex])
+            {
+                return m_foundationPlatforms[preferredIndex].get();
+            }
+            for (auto& platform : m_foundationPlatforms)
+            {
+                if (platform)
+                {
+                    return platform.get();
+                }
+            }
+            return nullptr;
+        };
+
+        m_platePlatform = selectPlatform(platformDescriptors.size() > 1 ? 1 : 0);
+        if (m_platePlatform)
+        {
+            const auto& pos = m_platePlatform->GetTransform().position;
+            const auto& scale = m_platePlatform->GetTransform().scale;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Plate platform selected tag='" << m_platePlatform->GetTag() << "' pos=("
+                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+                << scale.x << ',' << scale.y << ',' << scale.z << ").\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "No plate platform available; player and sweets will use default spawn heights.\n");
+        }
     }
 
+    if (m_sweetsManager)
+    {
+        std::vector<float3> spawnOrigins = m_stageData.GetSpawnPoints();
+        if (m_platePlatform)
+        {
+            const auto& plateTransform = m_platePlatform->GetTransform();
+            const float plateTopY = plateTransform.position.y + (plateTransform.scale.y * 0.5f);
+            for (auto& origin : spawnOrigins)
+            {
+                origin.y = plateTopY;
+                origin.z = plateTransform.position.z;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
+                << m_platePlatform->GetTag() << "' topY=" << plateTopY
+                << " planeZ=" << plateTransform.position.z << "\n";
+            DebugTrace(oss.str());
+        }
+        m_sweetsManager->SetSpawnOrigins(spawnOrigins);
+    }
+
+    const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
-    { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
     player = std::make_unique<SceneSpace::Player>(
         "player",
-        float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() },
+        float3{ 0.0f, 0.0f, platePlaneZ },
         float3{ 0.0f, 0.0f, 0.0f },
         float3{ 1.0f, 1.0f, 1.0f },
         collider,
@@ -791,10 +891,11 @@ SceneGame::SceneGame()
         true);
     if (player)
     {
-        float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
-        if (m_stagePlatform)
+        const auto& fallbackPlatform = m_stageData.GetPlatform(0);
+        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
+        if (m_platePlatform)
         {
-            const auto& platformXform = m_stagePlatform->GetTransform();
+            const auto& platformXform = m_platePlatform->GetTransform();
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
@@ -830,15 +931,20 @@ SceneGame::~SceneGame()
         m_hudRenderer->Shutdown();
         m_hudRenderer.reset();
     }
-    if (m_stagePlatformRegistered && m_stagePlatform)
+
+    for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
     {
-        Unregister(*m_stagePlatform);
-        m_stagePlatformRegistered = false;
-    }
-    if (m_stagePlatformDrawRegistered && m_stagePlatform && m_drawSystem)
-    {
-        m_drawSystem->UnregisterRenderable(*m_stagePlatform);
-        m_stagePlatformDrawRegistered = false;
+        if (i < m_platformUpdateRegistered.size() && m_platformUpdateRegistered[i] && m_foundationPlatforms[i])
+        {
+            Unregister(*m_foundationPlatforms[i]);
+            m_platformUpdateRegistered[i] = false;
+        }
+
+        if (i < m_platformDrawRegistered.size() && m_platformDrawRegistered[i] && m_drawSystem && m_foundationPlatforms[i])
+        {
+            m_drawSystem->UnregisterRenderable(*m_foundationPlatforms[i]);
+            m_platformDrawRegistered[i] = false;
+        }
     }
 
         UnregisterAllPhysicsBodies();
@@ -893,7 +999,7 @@ SceneGame::~SceneGame()
         if (m_drawSystem)
         {
                 m_drawSystem->ClearRenderables();
-                m_stagePlatformDrawRegistered = false;
+                std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -941,15 +1047,36 @@ void SceneGame::ConfigureUpdates()
                 m_sweetsRegistered = true;
         }
 
-        if (m_stagePlatform && !m_stagePlatformRegistered)
+        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
         {
-                Register(*m_stagePlatform);
-                m_stagePlatformRegistered = true;
-        }
-        if (m_stagePlatform && m_drawSystem && !m_stagePlatformDrawRegistered)
-        {
-                m_drawSystem->RegisterRenderable(*m_stagePlatform);
-                m_stagePlatformDrawRegistered = true;
+                auto* platform = m_foundationPlatforms[i].get();
+                if (!platform)
+                {
+                        continue;
+                }
+
+                if (i >= m_platformUpdateRegistered.size())
+                {
+                        m_platformUpdateRegistered.resize(m_foundationPlatforms.size(), false);
+                }
+                if (!m_platformUpdateRegistered[i])
+                {
+                        Register(*platform);
+                        m_platformUpdateRegistered[i] = true;
+                }
+
+                if (m_drawSystem)
+                {
+                        if (i >= m_platformDrawRegistered.size())
+                        {
+                                m_platformDrawRegistered.resize(m_foundationPlatforms.size(), false);
+                        }
+                        if (!m_platformDrawRegistered[i])
+                        {
+                                m_drawSystem->RegisterRenderable(*platform);
+                                m_platformDrawRegistered[i] = true;
+                        }
+                }
         }
 
 
@@ -1291,7 +1418,7 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
 
 void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
 {
-    if (!m_stagePlatform || !m_gameCamera)
+    if (m_foundationPlatforms.empty() || !m_gameCamera)
     {
         return;
     }
@@ -1329,14 +1456,33 @@ void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
         return;
     }
 
-    Transform updated = ComputePlatformTransformForCamera(
-        *m_gameCamera,
-        viewportWidth,
-        viewportHeight,
-        m_stageData,
-        kPlatformScreenBottomFraction,
-        kStageCenterX);
-    m_stagePlatform->SetAnchorTransform(updated);
+    const auto& platformDescriptors = m_stageData.GetPlatforms();
+    const std::size_t platformCount = std::min(m_foundationPlatforms.size(), platformDescriptors.size());
+    if (platformCount == 0)
+    {
+        return;
+    }
+
+    for (std::size_t i = 0; i < platformCount; ++i)
+    {
+        auto& platform = m_foundationPlatforms[i];
+        if (!platform)
+        {
+            continue;
+        }
+
+        const auto& descriptor = platformDescriptors[i];
+        Transform updated = ComputePlatformTransformForCamera(
+            *m_gameCamera,
+            viewportWidth,
+            viewportHeight,
+            descriptor,
+            kPlatformScreenBottomFraction,
+            kStageCenterX,
+            i);
+        platform->SetAnchorTransform(updated);
+    }
+
     m_platformAnchorInitialized = true;
 
     m_cachedViewportWidth = viewportWidth;

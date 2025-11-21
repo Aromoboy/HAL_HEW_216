@@ -96,7 +96,10 @@ private:
     std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
-    std::unique_ptr<Stage::FoundationPlatform> m_stagePlatform;
+    std::vector<std::unique_ptr<Stage::FoundationPlatform>> m_foundationPlatforms;
+    std::vector<bool> m_platformUpdateRegistered;
+    std::vector<bool> m_platformDrawRegistered;
+    Stage::FoundationPlatform* m_platePlatform = nullptr;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
@@ -104,8 +107,6 @@ private:
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
-    bool m_stagePlatformRegistered = false;
-    bool m_stagePlatformDrawRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();
