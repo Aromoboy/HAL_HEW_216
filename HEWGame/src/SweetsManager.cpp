@@ -21,7 +21,7 @@
 #    include <windows.h>
 #endif
 #include <vector>
-#include "PrismCollider.h"
+#include "AABBCollider.h"
 #include "Cake.h"
 #include "Core/UpdateScheduler.h"
 #include "ModelCache.h"
@@ -125,6 +125,18 @@ namespace
 #endif
         }
     }
+
+    enum class ColliderShape : std::uint8_t
+    {
+        Box,
+        Capsule,
+    };
+
+    struct ColliderPreset
+    {
+        ColliderShape shape{ ColliderShape::Box };
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+    };
 
     struct ModelBounds
     {
@@ -334,17 +346,13 @@ namespace
         return weights;
     }
 
-    const char* ToString(Collision::ColliderShape shape)
+    const char* ToString(ColliderShape shape)
     {
         switch (shape)
         {
-        case Collision::ColliderShape::Box:
+        case ColliderShape::Box:
             return "Box";
-        case Collision::ColliderShape::Prism2D:
-            return "Prism2D";
-        case Collision::ColliderShape::Sphere:
-            return "Sphere";
-        case Collision::ColliderShape::Capsule:
+        case ColliderShape::Capsule:
             return "Capsule";
         default:
             return "Unknown";
@@ -405,7 +413,7 @@ namespace
         return bounds;
     }
 
-    float3 ComputeHalfExtents(const ModelBounds& bounds, const float3& scale, const SweetsSpace::ColliderTemplate& preset)
+    float3 ComputeHalfExtents(const ModelBounds& bounds, const float3& scale, const ColliderPreset& preset)
     {
         float3 scaledMin = ScaleVector(bounds.min, scale);
         float3 scaledMax = ScaleVector(bounds.max, scale);
@@ -413,7 +421,7 @@ namespace
 
         switch (preset.shape)
         {
-        case Collision::ColliderShape::Capsule:
+        case ColliderShape::Capsule:
         {
             const float radiusX = (scaledMax.x - scaledMin.x) * 0.5f;
             const float radiusZ = (scaledMax.z - scaledMin.z) * 0.5f;
@@ -422,17 +430,7 @@ namespace
             halfExtents = float3{ radius, height * 0.5f, radius };
             break;
         }
-        case Collision::ColliderShape::Sphere:
-        {
-            const float radiusX = (scaledMax.x - scaledMin.x) * 0.5f;
-            const float radiusY = (scaledMax.y - scaledMin.y) * 0.5f;
-            const float radiusZ = (scaledMax.z - scaledMin.z) * 0.5f;
-            const float radius = std::max({ radiusX, radiusY, radiusZ });
-            halfExtents = float3{ radius, radius, radius };
-            break;
-        }
-        case Collision::ColliderShape::Box:
-        case Collision::ColliderShape::Prism2D:
+        case ColliderShape::Box:
         default:
             halfExtents = float3{
                 (scaledMax.x - scaledMin.x) * 0.5f,
@@ -459,39 +457,24 @@ namespace
         };
     }
 
-    float ComputeDepth(const ModelBounds& bounds, const float3& scale, const SweetsSpace::ColliderTemplate& preset)
+    float3 ComputeExpandFromHalfExtents(const float3& halfExtents, const float3& transformScale)
     {
-        if (preset.depthOverride > 0.0f)
+        float3 expand{ 1.0f, 1.0f, 1.0f };
+
+        if (transformScale.x != 0.0f)
         {
-            return preset.depthOverride;
+            expand.x = (halfExtents.x * 2.0f) / transformScale.x;
+        }
+        if (transformScale.y != 0.0f)
+        {
+            expand.y = (halfExtents.y * 2.0f) / transformScale.y;
+        }
+        if (transformScale.z != 0.0f)
+        {
+            expand.z = (halfExtents.z * 2.0f) / transformScale.z;
         }
 
-        const float scaledMin = bounds.min.z * scale.z;
-        const float scaledMax = bounds.max.z * scale.z;
-        return std::max(0.001f, (scaledMax - scaledMin) + (preset.padding.z * 2.0f));
-    }
-
-    std::vector<float3> BuildPrismVertices(const SweetsSpace::ColliderTemplate& preset, const float3& halfExtents)
-    {
-        std::vector<float3> vertices;
-
-        if (!preset.prismVertices.empty())
-        {
-            vertices.reserve(preset.prismVertices.size());
-            for (const auto& v : preset.prismVertices)
-            {
-                vertices.push_back(float3{ v.x * halfExtents.x, v.y * halfExtents.y, 0.0f });
-            }
-            return vertices;
-        }
-
-        vertices = {
-            float3{ -halfExtents.x, -halfExtents.y, 0.0f },
-            float3{ halfExtents.x, -halfExtents.y, 0.0f },
-            float3{ halfExtents.x, halfExtents.y, 0.0f },
-            float3{ -halfExtents.x, halfExtents.y, 0.0f },
-        };
-        return vertices;
+        return expand;
     }
 }
 
@@ -587,6 +570,7 @@ namespace SweetsSpace
         struct SweetsFactoryConfig
         {
             SweetsType type;
+            ColliderPreset colliderPreset;
             float weight;
             float damping;
             float3 minScale;
@@ -594,9 +578,12 @@ namespace SweetsSpace
         };
 
         const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, 1.35f, 0.96f, float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
-            { SweetsType::Pudding, 1.0f, 0.98f, float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
-            { SweetsType::Sherbet, 0.85f, 0.99f, float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
+            { SweetsType::Cake, ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } }, 1.35f, 0.96f,
+                float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
+            { SweetsType::Pudding, ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } }, 1.0f, 0.98f,
+                float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
+            { SweetsType::Sherbet, ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } }, 0.85f, 0.99f,
+                float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
         } };
 
         const ModelBounds fallbackBounds{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f }, true };
@@ -615,7 +602,6 @@ namespace SweetsSpace
 
             const std::string kind = descriptor->key;
             const std::string modelPath = descriptor->modelPath;
-            const auto& colliderTemplate = descriptor->collider;
 
             ModelBounds bounds = LoadModelBounds(modelPath);
             if (!bounds.valid)
@@ -628,11 +614,11 @@ namespace SweetsSpace
             }
 
             {
-                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, colliderTemplate);
+                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, config.colliderPreset);
                 const float3 baseCenter = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
                 std::ostringstream boundsLog;
                 boundsLog << kLogPrefix << "Resolved collider template for kind '" << kind
-                    << "' shape=" << ToString(colliderTemplate.shape)
+                    << "' shape=" << ToString(config.colliderPreset.shape)
                     << " halfExtents=(" << baseHalfExtents.x << ',' << baseHalfExtents.y << ',' << baseHalfExtents.z << ")"
                     << " center=(" << baseCenter.x << ',' << baseCenter.y << ',' << baseCenter.z << ")\n";
                 DebugTrace(boundsLog.str());
@@ -647,7 +633,7 @@ namespace SweetsSpace
 
             auto factory = [this, &cache, kind, modelPath, type, weight = config.weight,
                                damping = config.damping, minScale = config.minScale,
-                               maxScale = config.maxScale, bounds, colliderTemplate](const Transform& transform)
+                               maxScale = config.maxScale, bounds, preset = config.colliderPreset](const Transform& transform)
                 -> std::shared_ptr<BaseSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -691,25 +677,11 @@ namespace SweetsSpace
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
 
-                const float3 halfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, colliderTemplate);
-                const float colliderDepth = ComputeDepth(bounds, float3{ 1.0f, 1.0f, 1.0f }, colliderTemplate);
-                const float3 colliderOffset = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
-                const std::vector<float3> prismVertices = BuildPrismVertices(colliderTemplate, halfExtents);
+                const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset);
+                const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
+                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
 
-                std::shared_ptr<Collision::ICollider> collider;
-                if (colliderTemplate.shape == Collision::ColliderShape::Box)
-                {
-                    collider = std::make_shared<Collision::BoxCollider>(halfExtents, colliderOffset, Collision::CollisionLayer::Sweets);
-                }
-                else
-                {
-                    collider = std::make_shared<Collision::Prism2DCollider>(prismVertices, colliderDepth, colliderOffset, colliderTemplate.shape, Collision::CollisionLayer::Sweets);
-                }
-
-                if (collider)
-                {
-                    collider->UpdateFromTransform(scaledTransform);
-                }
+                auto collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
                 const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
@@ -728,12 +700,11 @@ namespace SweetsSpace
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Collider applied kind='" << kind
-                        << "' shape=" << ToString(colliderTemplate.shape)
+                        << "' shape=" << ToString(preset.shape)
                         << " scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
                         << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
                         << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
-                        << " depth=" << colliderDepth
-                        << " vertices=" << prismVertices.size() << "\n";
+                        << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")\n";
                     DebugTrace(oss.str());
                 }
 

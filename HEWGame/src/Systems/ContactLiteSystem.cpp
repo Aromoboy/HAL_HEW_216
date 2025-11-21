@@ -73,33 +73,6 @@ namespace
                 }
         }
 
-        float3 Add(const float3& a, const float3& b)
-        {
-                return float3{ a.x + b.x, a.y + b.y, a.z + b.z };
-        }
-
-        float3 Scale(const float3& v, float s)
-        {
-                return float3{ v.x * s, v.y * s, v.z * s };
-        }
-
-        float Dot(const float3& a, const float3& b)
-        {
-                return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
-        }
-
-        float3 NormalizeSafe(const float3& v)
-        {
-            const float lenSq = (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
-            if (lenSq <= 1.0e-12f)
-            {
-                return float3{ 0.0f, 0.0f, 0.0f };
-            }
-
-            const float invLen = 1.0f / std::sqrt(lenSq);
-            return Scale(v, invLen);
-        }
-
         bool IsPlayerBody(const SceneSpace::PhysicalEntity* body)
         {
                 return body && body->GetTag() == "player";
@@ -313,21 +286,7 @@ namespace Systems
                                 }
 
                                 ++testedPairs;
-                                const AABB boundsA = colliderA->GetAABB();
-                                const AABB boundsB = colliderB->GetAABB();
-
-                                float overlaps[3];
-                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
-                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
-                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
-
-                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f || overlaps[2] <= 0.0f)
-                                {
-                                        continue;
-                                }
-
-                                Collision::ContactManifold manifold = colliderA->ComputeContact(*colliderB);
-                                if (!manifold.intersects)
+                                if (!colliderA->CheckCollision(*colliderB))
                                 {
                                         continue;
                                 }
@@ -356,27 +315,62 @@ namespace Systems
                                         }
                                 }
 
-                                float3 normal = NormalizeSafe(manifold.normal);
-                                if (normal.x == 0.0f && normal.y == 0.0f && normal.z == 0.0f)
+                                const AABB boundsA = colliderA->GetAABB();
+                                const AABB boundsB = colliderB->GetAABB();
+
+                                float overlaps[3];
+                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
+                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
+
+                                const float planarOverlapX = overlaps[0];
+                                const float planarOverlapY = overlaps[1];
+                                const bool suppressedZAxis = overlaps[2] < std::min(planarOverlapX, planarOverlapY);
+                                const bool chooseX = planarOverlapX <= planarOverlapY;
+                                const int axis = chooseX ? 0 : 1;
+                                const float minOverlap = chooseX ? planarOverlapX : planarOverlapY;
+
+#if defined(_DEBUG)
+                                if (suppressedZAxis && minOverlap > 0.0f)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Suppressed Z-axis overlap (" << overlaps[2]
+                                            << ") to maintain planar constraint. Using axis " << axis
+                                            << " overlap=" << minOverlap << "\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
+
+                                if (minOverlap <= 0.0f)
                                 {
                                         continue;
                                 }
 
-                                const float planarOverlapX = overlaps[0];
-                                const bool verticalContact = std::fabs(normal.y) >= std::fabs(normal.x);
+                                const float centerA = GetAxisCenter(boundsA, axis);
+                                const float centerB = GetAxisCenter(boundsB, axis);
+                                const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
                                 const bool bodyAStatic = !(physA.weight > 0.0f);
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
+                                float3 translationA{ 0.0f, 0.0f, 0.0f };
+                                float3 translationB{ 0.0f, 0.0f, 0.0f };
+                                float* translationComponentA = SelectAxisComponent(translationA, axis);
+                                float* translationComponentB = SelectAxisComponent(translationB, axis);
+
+                                float* velA = SelectAxisComponent(physA.velocity, axis);
+                                float* velB = SelectAxisComponent(physB.velocity, axis);
+                                const float relativeVelocity = *velA - *velB;
+
                                 bool sweetsSupportPair = false;
                                 bool unstableSupport = false;
-                                const bool topIsA = GetAxisCenter(boundsA, 1) > GetAxisCenter(boundsB, 1);
+                                bool topIsA = centerA > centerB;
                                 float supportOverlapFraction = 1.0f;
                                 float slideDir = 0.0f;
                                 float verticalResolutionScale = 1.0f;
 
-                                if (verticalContact)
+                                if (axis == 1)
                                 {
                                         const bool sweetsTagA = IsSweetsTag(bodyA->GetTag());
                                         const bool sweetsTagB = IsSweetsTag(bodyB->GetTag());
@@ -413,7 +407,7 @@ namespace Systems
                                                                 << baseTag << "' overlapFraction=" << supportOverlapFraction
                                                                 << " threshold=" << m_stableSupportThreshold
                                                                 << " status=" << (unstableSupport ? "UNSTABLE" : "stable")
-                                                                << " slideDir=" << slideDir
+                                                                << " slideDir=" << slideDir << " axis=" << axis
                                                                 << " resolutionScale=" << verticalResolutionScale << "\n";
                                                         DebugTrace(oss.str());
                                                 }
@@ -441,22 +435,23 @@ namespace Systems
                                         }
                                 }
 
-                                const float rawPushDistance = manifold.penetration - m_penetrationTolerance;
+                                const float rawPushDistance = minOverlap - m_penetrationTolerance;
                                 if (rawPushDistance <= 0.0f)
                                 {
                                         continue;
                                 }
 
-                                const float pushDistance = verticalContact ? rawPushDistance * verticalResolutionScale : rawPushDistance;
+                                const float pushDistance = (axis == 1) ? rawPushDistance * verticalResolutionScale : rawPushDistance;
 
 #if defined(_DEBUG)
                                 {
                                         std::ostringstream oss;
-                                        oss << kLogPrefix << "Contact manifold for '" << bodyA->GetTag() << "' vs '"
-                                            << bodyB->GetTag() << "': normal=(" << normal.x << "," << normal.y << "," << normal.z
-                                            << ") penetration=" << manifold.penetration
-                                            << " adjustedPush=" << pushDistance
-                                            << " overlaps(x,y,z)=(" << overlaps[0] << "," << overlaps[1] << "," << overlaps[2] << ")\n";
+                                        oss << kLogPrefix << "Contact axes for '" << bodyA->GetTag() << "' vs '"
+                                            << bodyB->GetTag() << "': chosenAxis=" << axis
+                                            << " overlaps(x,y,z)=(" << overlaps[0] << "," << overlaps[1] << ","
+                                            << overlaps[2] << ") pushDistance=" << pushDistance
+                                            << " (raw=" << rawPushDistance
+                                            << " tolerance=" << m_penetrationTolerance << ")\n";
                                         DebugTrace(oss.str());
                                 }
 #endif
@@ -466,22 +461,22 @@ namespace Systems
                                         continue;
                                 }
 
-                                float3 translationA{ 0.0f, 0.0f, 0.0f };
-                                float3 translationB{ 0.0f, 0.0f, 0.0f };
-
                                 if (!bodyAStatic && !bodyBStatic)
                                 {
                                         const float halfPush = pushDistance * 0.5f;
-                                        translationA = Scale(normal, -halfPush);
-                                        translationB = Scale(normal, halfPush);
+                                        const float axisPush = axisDir * halfPush;
+                                        *translationComponentA += axisPush;
+                                        *translationComponentB -= axisPush;
                                 }
                                 else if (!bodyAStatic && bodyBStatic)
                                 {
-                                        translationA = Scale(normal, -pushDistance);
+                                        const float axisPush = axisDir * pushDistance;
+                                        *translationComponentA += axisPush;
                                 }
                                 else if (bodyAStatic && !bodyBStatic)
                                 {
-                                        translationB = Scale(normal, pushDistance);
+                                        const float axisPush = -axisDir * pushDistance;
+                                        *translationComponentB += axisPush;
                                 }
                                 else
                                 {
@@ -514,12 +509,6 @@ namespace Systems
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
                                 SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
 
-                                const float3 relativeVelocityVec{
-                                        physA.velocity.x - physB.velocity.x,
-                                        physA.velocity.y - physB.velocity.y,
-                                        physA.velocity.z - physB.velocity.z };
-                                const float relativeVelocity = Dot(relativeVelocityVec, normal);
-
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
                                         float activeBodyCount = 0.0f;
@@ -538,13 +527,13 @@ namespace Systems
                                         }
 
                                         float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
-                                        if (verticalContact && sweetsSupportPair && unstableSupport)
+                                        if (axis == 1 && sweetsSupportPair && unstableSupport)
                                         {
                                                 const float previousImpulse = impulse;
                                                 impulse = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
-                                                oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support pair '"
+                                                oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support: pair '"
                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
                                                         << "' previousImpulse=" << previousImpulse
                                                         << " overlapFraction=" << supportOverlapFraction
@@ -554,19 +543,16 @@ namespace Systems
                                         }
                                         if (!bodyAStatic)
                                         {
-                                                physA.velocity = Add(physA.velocity, Scale(normal, impulse));
+                                                *velA += impulse;
                                         }
                                         if (!bodyBStatic)
                                         {
-                                                physB.velocity = Add(physB.velocity, Scale(normal, -impulse));
+                                                *velB -= impulse;
                                         }
                                 }
 
-                                if (verticalContact)
+                                if (axis == 1)
                                 {
-                                        float* velA = SelectAxisComponent(physA.velocity, 1);
-                                        float* velB = SelectAxisComponent(physB.velocity, 1);
-
                                         if (!bodyAStatic && bodyBStatic && *velA < 0.0f)
                                         {
 #if defined(_DEBUG)
@@ -628,6 +614,7 @@ namespace Systems
                                                 }
                                         }
                                 }
+
                                 if (physA.velocity.z != 0.0f)
                                 {
 #if defined(_DEBUG)

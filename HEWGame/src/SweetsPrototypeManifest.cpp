@@ -7,25 +7,6 @@ namespace
 {
     constexpr const char* kPrototypeRoot = "Assets/Model/SweetsPrototype/";
 
-    std::vector<float3> MakeTriangleTemplate()
-    {
-        return {
-            float3{ -1.0f, -1.0f, 0.0f },
-            float3{ 1.0f, -1.0f, 0.0f },
-            float3{ 0.0f, 1.0f, 0.0f },
-        };
-    }
-
-    std::vector<float3> MakeLozengeTemplate()
-    {
-        return {
-            float3{ 0.0f, 1.0f, 0.0f },
-            float3{ 1.0f, 0.0f, 0.0f },
-            float3{ 0.0f, -1.0f, 0.0f },
-            float3{ -1.0f, 0.0f, 0.0f },
-        };
-    }
-
     std::string NormalizeKey(const std::string& key)
     {
         std::string normalized;
@@ -48,39 +29,18 @@ namespace SweetsSpace
 
     SweetsPrototypeManifest::SweetsPrototypeManifest()
     {
-        Register(
-            SweetsType::Cake,
-            "Cake",
-            "Cake.obj",
-            "Textured sponge cake cube with frosting layers",
-            ColliderTemplate{ Collision::ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f }, {}, 0.0f });
-        Register(
-            SweetsType::Pudding,
-            "Pudding",
-            "Pudding.obj",
-            "UV-mapped triangular pudding slice",
-            ColliderTemplate{ Collision::ColliderShape::Prism2D, float3{ 0.01f, 0.04f, 0.01f }, MakeTriangleTemplate(), 0.0f });
-        Register(
-            SweetsType::Sherbet,
-            "Sherbet",
-            "Sherbet.obj",
-            "Shaded sherbet scoop with smooth normals",
-            ColliderTemplate{ Collision::ColliderShape::Prism2D, float3{ 0.01f, 0.01f, 0.01f }, MakeLozengeTemplate(), 0.0f });
-        Register(
-            SweetsType::Fairy,
-            "Fairy",
-            "Fairy.obj",
-            "Procedural cross-plane fairy (Fairy.obj kept as fallback)",
-            ColliderTemplate{});
+        Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
+        Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
+        Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
+        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
     }
 
-    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description, ColliderTemplate collider)
+    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = std::string(kPrototypeRoot) + relativePath;
         descriptor.description = std::move(description);
-        descriptor.collider = std::move(collider);
 
         const std::string normalized = NormalizeKey(descriptor.key);
         m_lookup[normalized] = type;
