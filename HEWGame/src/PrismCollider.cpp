@@ -206,7 +206,6 @@ namespace Collision
                 }
 
                 manifold.intersects = true;
-                manifold.hasContact = true;
                 manifold.normal = bestAxis;
                 manifold.penetration = minOverlap;
                 return manifold;
@@ -252,7 +251,6 @@ namespace Collision
                 }
 
                 manifold.intersects = true;
-                manifold.hasContact = true;
                 manifold.normal = normal;
                 manifold.penetration = penetration;
                 return manifold;

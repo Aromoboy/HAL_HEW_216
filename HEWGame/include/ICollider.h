@@ -24,7 +24,6 @@ namespace Collision
     struct ContactManifold
     {
         bool intersects{ false };
-        bool hasContact{ false };
         float3 normal{ 0.0f, 1.0f, 0.0f };
         float penetration{ 0.0f };
     };
@@ -41,11 +40,6 @@ namespace Collision
         virtual AABB GetAABB() const = 0;
         virtual void UpdateFromTransform(const Transform& transform) = 0;
         virtual ContactManifold ComputeContact(const Collision::ICollider& other) const = 0;
-
-        virtual void ComputeContact(ContactManifold& manifold, const Collision::ICollider& other) const
-        {
-            manifold = ComputeContact(other);
-        }
 
         bool CheckCollision(const Collision::ICollider& other) const
         {
