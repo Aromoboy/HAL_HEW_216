@@ -21,23 +21,26 @@
 #    include <windows.h>
 #endif
 
-#define PLAYER_KEY_MOVE_UP 0x57		// W
-#define PLAYER_KEY_MOVE_LEFT 0x41	// A
-#define PLAYER_KEY_MOVE_DOWN 0x53	// S
-#define PLAYER_KEY_MOVE_RIGHT 0x44	// D
+#define PLAYER_KEY_MOVE_UP    0x57 // W
+#define PLAYER_KEY_MOVE_LEFT  0x41 // A
+#define PLAYER_KEY_MOVE_DOWN  0x53 // S
+#define PLAYER_KEY_MOVE_RIGHT 0x44 // D
 
-#define PLAYER_KEY_PICKUP 0x45       // E
-#define PLAYER_KEY_DROP 0x51         // Q
+#define PLAYER_KEY_PICKUP 0x45 // E
+#define PLAYER_KEY_DROP   0x51 // Q
 
+// ===============================================================
+// =============== CLEAN ANONYMOUS NAMESPACE =====================
+// ===============================================================
 namespace
 {
 #if defined(_WIN32) && defined(_DEBUG)
-    void PlayerDebugTrace(const std::string& message)
+    inline void PlayerDebugTrace(const std::string& message)
     {
         ::OutputDebugStringA(message.c_str());
     }
 #else
-    void PlayerDebugTrace(const std::string& message)
+    inline void PlayerDebugTrace(const std::string& message)
     {
         (void)message;
     }
@@ -45,26 +48,7 @@ namespace
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
     constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
-    constexpr float kDefaultPickupRadius = 2.5f;
-    constexpr float kCarryVerticalOffset = 1.0f;
-    constexpr float kCarryForwardOffset = 0.5f;
-    constexpr float kDefaultPlayerMoveSpeed = 15.0f;
-namespace
-{
-#if defined(_WIN32) && defined(_DEBUG)
-    void PlayerDebugTrace(const std::string& message)
-    {
-        ::OutputDebugStringA(message.c_str());
-    }
-#else
-    void PlayerDebugTrace(const std::string& message)
-    {
-        (void)message;
-    }
-#endif
 
-    constexpr const char* kPlayerLogPrefix = "[Player] ";
-    constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kDefaultPickupRadius = 2.5f;
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
@@ -72,19 +56,22 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
 
+    // ===============================================================
+    // =============== PROCEDURAL FAIRY MODEL ========================
+    // ===============================================================
     std::shared_ptr<ModelDX> CreateProceduralFairyModel()
     {
         static std::weak_ptr<ModelDX> cached;
         if (auto reused = cached.lock())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy mesh.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy.\n");
             return reused;
         }
 
         ID3D11Device* device = GetDevice();
         if (!device)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Cannot create procedural fairy: device not initialized.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Cannot create procedural fairy: device missing.\n");
             return nullptr;
         }
 
@@ -93,111 +80,101 @@ namespace
         constexpr float halfHeight = 0.7f;
 
         const DirectX::XMFLOAT4 baseColor{ 0.45f, 0.65f, 1.0f, 1.0f };
-        const DirectX::XMFLOAT4 wingHighlight{ 0.6f, 0.8f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 wingColor{ 0.6f, 0.8f, 1.0f, 1.0f };
 
         std::vector<MeshDX::Vertex> vertices;
         vertices.reserve(24);
 
-        auto appendQuad = [&](const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& normal,
-                              const DirectX::XMFLOAT4& colorFront, const DirectX::XMFLOAT4& colorBack)
-        {
-            const std::array<DirectX::XMFLOAT2, 4> uvs{
-                DirectX::XMFLOAT2(0.0f, 1.0f),
-                DirectX::XMFLOAT2(1.0f, 1.0f),
-                DirectX::XMFLOAT2(1.0f, 0.0f),
-                DirectX::XMFLOAT2(0.0f, 0.0f)
-            };
-
-            const auto addVertex = [&](const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& nrm,
-                                       const DirectX::XMFLOAT2& uv, const DirectX::XMFLOAT4& col)
+        auto appendQuad = [&](auto positions, DirectX::XMFLOAT3 normal,
+            const DirectX::XMFLOAT4& colFront,
+            const DirectX::XMFLOAT4& colBack)
             {
-                MeshDX::Vertex vertex{};
-                vertex.pos = pos;
-                vertex.normal = nrm;
-                vertex.uv = uv;
-                vertex.color = col;
+                const std::array<DirectX::XMFLOAT2, 4> uvs{
+                    DirectX::XMFLOAT2(0,1), DirectX::XMFLOAT2(1,1),
+                    DirectX::XMFLOAT2(1,0), DirectX::XMFLOAT2(0,0)
+                };
 
-                for (float& weight : vertex.weight) weight = 0.0f;
-                for (unsigned& idx : vertex.index) idx = 0;
+                auto addV = [&](auto pos, auto nrm, auto uv, auto col)
+                    {
+                        MeshDX::Vertex v{};
+                        v.pos = pos;
+                        v.normal = nrm;
+                        v.uv = uv;
+                        v.color = col;
+                        for (float& w : v.weight) w = 0;
+                        for (unsigned& i : v.index) i = 0;
+                        vertices.push_back(v);
+                    };
 
-                vertices.push_back(vertex);
+                DirectX::XMFLOAT3 n1 = normal;
+                DirectX::XMFLOAT3 n2{ -normal.x, -normal.y, -normal.z };
+
+                for (int i = 0; i < 4; i++) addV(positions[i], n1, uvs[i], colFront);
+                for (int i = 0; i < 4; i++) addV(positions[i], n2, uvs[i], colBack);
             };
 
-            const DirectX::XMFLOAT3 frontNormal = normal;
-            const DirectX::XMFLOAT3 backNormal{ -normal.x, -normal.y, -normal.z };
-
-            for (size_t i = 0; i < positions.size(); ++i)
-                addVertex(positions[i], frontNormal, uvs[i], colorFront);
-            for (size_t i = 0; i < positions.size(); ++i)
-                addVertex(positions[i], backNormal, uvs[i], colorBack);
+        const std::array<DirectX::XMFLOAT3, 4> quadZ{
+            DirectX::XMFLOAT3(-halfWidth,-halfHeight,0),
+            DirectX::XMFLOAT3(halfWidth,-halfHeight,0),
+            DirectX::XMFLOAT3(halfWidth, halfHeight,0),
+            DirectX::XMFLOAT3(-halfWidth, halfHeight,0)
         };
+        appendQuad(quadZ, DirectX::XMFLOAT3(0, 0, 1), wingColor, baseColor);
 
-        const std::array<DirectX::XMFLOAT3, 4> facingZ{
-            DirectX::XMFLOAT3(-halfWidth, -halfHeight, 0.0f),
-            DirectX::XMFLOAT3(halfWidth, -halfHeight, 0.0f),
-            DirectX::XMFLOAT3(halfWidth, halfHeight, 0.0f),
-            DirectX::XMFLOAT3(-halfWidth, halfHeight, 0.0f)
+        const std::array<DirectX::XMFLOAT3, 4> quadX{
+            DirectX::XMFLOAT3(0,-halfHeight,-halfDepth),
+            DirectX::XMFLOAT3(0,-halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0, halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0, halfHeight,-halfDepth)
         };
-        appendQuad(facingZ, DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f), wingHighlight, baseColor);
-
-        const std::array<DirectX::XMFLOAT3, 4> facingX{
-            DirectX::XMFLOAT3(0.0f, -halfHeight, -halfDepth),
-            DirectX::XMFLOAT3(0.0f, -halfHeight, halfDepth),
-            DirectX::XMFLOAT3(0.0f, halfHeight, halfDepth),
-            DirectX::XMFLOAT3(0.0f, halfHeight, -halfDepth)
-        };
-        appendQuad(facingX, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), baseColor, wingHighlight);
+        appendQuad(quadX, DirectX::XMFLOAT3(1, 0, 0), baseColor, wingColor);
 
         std::vector<unsigned long> indices;
         indices.reserve(36);
-        for (size_t quad = 0; quad < 2; ++quad)
+
+        for (int q = 0; q < 2; q++)
         {
-            const unsigned long base = static_cast<unsigned long>(quad * 8);
-            const std::array<unsigned long, 6> front{ base, base + 1, base + 2, base, base + 2, base + 3 };
-            const std::array<unsigned long, 6> back{ base + 4, base + 6, base + 5, base + 4, base + 7, base + 6 };
-            indices.insert(indices.end(), front.begin(), front.end());
-            indices.insert(indices.end(), back.begin(), back.end());
+            unsigned long base = q * 8;
+            unsigned long f[6] = { base, base + 1, base + 2, base, base + 2, base + 3 };
+            unsigned long b[6] = { base + 4, base + 6, base + 5, base + 4, base + 7, base + 6 };
+            indices.insert(indices.end(), f, f + 6);
+            indices.insert(indices.end(), b, b + 6);
         }
 
-        MeshDX::Description desc{};
-        desc.pVtx = vertices.data();
-        desc.vtxSize = sizeof(MeshDX::Vertex);
-        desc.vtxCount = static_cast<UINT>(vertices.size());
-        desc.pIdx = indices.data();
-        desc.idxSize = sizeof(unsigned long);
-        desc.idxCount = static_cast<UINT>(indices.size());
-        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        MeshDX::Description d{};
+        d.pVtx = vertices.data();
+        d.vtxSize = sizeof(MeshDX::Vertex);
+        d.vtxCount = (UINT)vertices.size();
+        d.pIdx = indices.data();
+        d.idxSize = sizeof(unsigned long);
+        d.idxCount = (UINT)indices.size();
+        d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        auto mesh = std::make_shared<MeshDX>(desc, 0);
-        if (!mesh || !mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy mesh buffers failed.\n");
+        auto mesh = std::make_shared<MeshDX>(d, 0);
+        if (!mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
             return nullptr;
-        }
 
-        const DirectX::XMFLOAT4 diffuse{ 0.5f, 0.75f, 1.0f, 1.0f };
-        const DirectX::XMFLOAT4 ambient{ 0.2f, 0.35f, 0.55f, 1.0f };
-        const DirectX::XMFLOAT4 specular{ 0.1f, 0.1f, 0.2f, 8.0f };
-        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
+        auto mat = std::make_shared<MaterialDX>(
+            DirectX::XMFLOAT4(0.5f, 0.75f, 1, 1),
+            DirectX::XMFLOAT4(0.2f, 0.35f, 0.55f, 1),
+            DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
+            nullptr);
 
-        std::vector<std::shared_ptr<MeshDX>> meshes{ mesh };
-        std::vector<std::shared_ptr<MaterialDX>> materials{ material };
+        auto model = std::make_shared<ModelDX>(
+            std::vector<std::shared_ptr<MeshDX>>{mesh},
+            std::vector<std::shared_ptr<MaterialDX>>{mat});
 
-        auto model = std::make_shared<ModelDX>(meshes, materials);
         cached = model;
-
-        std::ostringstream oss;
-        oss << kPlayerLogPrefix << "Procedural fairy mesh created (verts=" << vertices.size()
-            << ", indices=" << indices.size() << ").\n";
-        PlayerDebugTrace(oss.str());
-
         return model;
     }
-}
+} // END namespace
 
 
-
-SceneSpace::Player::Player(std::string a_tag,
+// ===============================================================
+// ===================== PLAYER CONSTRUCTOR =======================
+// ===============================================================
+SceneSpace::Player::Player(
+    std::string a_tag,
     float3 pos,
     float3 rot,
     float3 scl,
@@ -211,14 +188,14 @@ SceneSpace::Player::Player(std::string a_tag,
     int priority,
     bool kinematic)
     : PhysicalEntity(a_tag, pos, rot, scl, collide, layer,
-                     velocity, force,
-                     kinematic ? 0.0f : weight,
-                     damping, phase, priority)
+        velocity, force,
+        kinematic ? 0.0f : weight,
+        damping, phase, priority)
     , model(nullptr)
     , m_sweetsManager(nullptr)
     , m_carrieds()
     , m_pickupRadius(kDefaultPickupRadius)
-    , m_carryOffset(float3{0.0f, kCarryVerticalOffset, kCarryForwardOffset})
+    , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
     , m_dropUpwardBoost(4.0f)
     , m_isKinematic(kinematic)
     , m_moveSpeed(kDefaultPlayerMoveSpeed)
@@ -234,166 +211,22 @@ SceneSpace::Player::Player(std::string a_tag,
 {
     Render::ModelCache& cache = Render::ModelCache::Instance();
     const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-    const auto* descriptor =
-        manifest.Find(SweetsSpace::SweetsType::Fairy);
 
-    const std::string modelPath =
-        descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
+    const auto* d = manifest.Find(SweetsSpace::SweetsType::Fairy);
+    const std::string modelPath = d ? d->modelPath : std::string(kFairyFallbackPath);
 
-    std::ostringstream oss;
-    if (descriptor)
-    {
-        oss << kPlayerLogPrefix << "Using fairy prototype '" << descriptor->key
-            << "' asset='" << modelPath << "'.\n";
-    }
-    else
-    {
-        oss << kPlayerLogPrefix
-            << "Fairy prototype missing; falling back to '" << modelPath << "'.\n";
-    }
-    PlayerDebugTrace(oss.str());
+    PlayerDebugTrace(std::string(kPlayerLogPrefix)
+        + "Using fairy prototype or fallback.\n");
 
-    bool usingProcedural = false;
     model = CreateProceduralFairyModel();
-
-    if (model)
-    {
-        usingProcedural = true;
-        std::ostringstream msg;
-        msg << kPlayerLogPrefix
-            << "Using procedural fairy model (fallback asset='" << modelPath << "').\n";
-        PlayerDebugTrace(msg.str());
-    }
-    else
-    {
-        PlayerDebugTrace(std::string(kPlayerLogPrefix)
-                         + "Procedural failed; loading asset.\n");
+    if (!model)
         model = cache.Get(modelPath);
-    }
 
-    if (model)
-    {
-        std::ostringstream ok;
-        ok << kPlayerLogPrefix
-           << "Fairy model ready from "
-           << (usingProcedural ? "procedural mesh" :
-                                 (modelPath == kFairyFallbackPath ? "fallback" : "asset"))
-           << " path='" << modelPath << "'.\n";
-        PlayerDebugTrace(ok.str());
-    }
-    else
-    {
-        std::ostringstream fail;
-        const bool fallbackAlready = (modelPath == kFairyFallbackPath);
+    if (!model && modelPath != kFairyFallbackPath)
+        model = cache.Get(kFairyFallbackPath);
 
-        fail << kPlayerLogPrefix << "Model load failed: '" << modelPath << "'.";
-        if (!fallbackAlready)
-            fail << " Trying fallback '" << kFairyFallbackPath << "'.\n";
-        else
-            fail << " Fallback already used.\n";
-
-        PlayerDebugTrace(fail.str());
-
-        if (!fallbackAlready)
-        {
-            model = cache.Get(kFairyFallbackPath);
-            if (model)
-                PlayerDebugTrace(std::string(kPlayerLogPrefix)
-                                 + "Fallback loaded successfully.\n");
-        }
-
-        if (!model)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix)
-                             + "Player model unavailable; rendering skipped.\n");
-            m_missingModelWarned = true;
-        }
-    }
-}
-
-{
-        Render::ModelCache& cache = Render::ModelCache::Instance();
-        const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-        const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
-        const std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
-
-        std::ostringstream oss;
-        if (descriptor)
-        {
-            oss << kPlayerLogPrefix << "Using fairy prototype '" << descriptor->key
-                << "' asset='" << modelPath << "'.\n";
-        }
-        else
-        {
-            oss << kPlayerLogPrefix << "Fairy prototype missing from manifest. Falling back to '"
-                << modelPath << "'.\n";
-        }
-        PlayerDebugTrace(oss.str());
-
-        bool usingProcedural = false;
-        model = CreateProceduralFairyModel();
-        if (model)
-        {
-                usingProcedural = true;
-                std::ostringstream success;
-                success << kPlayerLogPrefix << "Using procedural fairy model; manifest asset reserved for fallback='" << modelPath
-                        << "'.\n";
-                PlayerDebugTrace(success.str());
-        }
-
-        if (!model)
-        {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy model unavailable; attempting to load asset file.\n");
-                model = cache.Get(modelPath);
-        }
-
-        if (model)
-        {
-                std::ostringstream success;
-                if (usingProcedural)
-                {
-                        success << kPlayerLogPrefix << "Fairy model ready from procedural mesh with fallback asset='" << modelPath
-                                << "'.\n";
-                }
-                else
-                {
-                        success << kPlayerLogPrefix << "Fairy model ready from "
-                                << (modelPath == kFairyFallbackPath ? "fallback" : "asset")
-                                << " path '" << modelPath << "'.\n";
-                }
-                PlayerDebugTrace(success.str());
-        }
-        else
-        {
-                std::ostringstream failure;
-                const bool isAlreadyFallback = (modelPath == kFairyFallbackPath);
-
-                failure << kPlayerLogPrefix << "Failed to load fairy model at '" << modelPath << "'.";
-                if (!isAlreadyFallback)
-                {
-                        failure << " Attempting fallback '" << kFairyFallbackPath << "'.\n";
-                }
-                else
-                {
-                        failure << " Fallback path already in use.\n";
-                }
-                PlayerDebugTrace(failure.str());
-
-                if (!isAlreadyFallback)
-                {
-                        model = cache.Get(kFairyFallbackPath);
-                        if (model)
-                        {
-                                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fallback fairy model loaded successfully.\n");
-                        }
-                }
-
-                if (!model)
-                {
-                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Player model unavailable; rendering will be skipped.\n");
-                        m_missingModelWarned = true;
-                }
-        }
+    if (!model)
+        m_missingModelWarned = true;
 }
 
 bool SceneSpace::Player::IsKinematic() const
