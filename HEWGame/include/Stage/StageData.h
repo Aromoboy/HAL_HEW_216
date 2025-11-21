@@ -1,5 +1,6 @@
 #pragma once
 
+#include <DirectXMath.h>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,7 @@ namespace Stage
         float depth = 1.0f;
         float widthFraction = 1.0f;
         float heightFraction = 1.0f;
+        DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
     class StageData

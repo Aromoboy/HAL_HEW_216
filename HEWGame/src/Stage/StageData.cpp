@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <DirectXMath.h>
 #include <fstream>
 #include <cstring>
 #include <iterator>
@@ -37,6 +38,8 @@ namespace
     constexpr float kDefaultPlatformHeightFraction = 0.05f;
     constexpr float kDefaultPlatformDepth = 4.0f;
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
+    const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
+    const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
     constexpr float kDefaultGuidelineHeight = 20.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
@@ -107,6 +110,32 @@ namespace
             *outError = true;
         }
         return values;
+    }
+
+    DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color, const DirectX::XMFLOAT4& fallback, const std::string& label)
+    {
+        auto clampComponent = [](float value)
+        {
+            return std::clamp(value, 0.0f, 1.0f);
+        };
+
+        if (!std::isfinite(color.x) || !std::isfinite(color.y) || !std::isfinite(color.z) || !std::isfinite(color.w))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " invalid; using fallback color.\n";
+            DebugTrace(oss.str());
+            return fallback;
+        }
+
+        DirectX::XMFLOAT4 sanitized{ clampComponent(color.x), clampComponent(color.y), clampComponent(color.z), clampComponent(color.w) };
+        if (sanitized.x != color.x || sanitized.y != color.y || sanitized.z != color.z || sanitized.w != color.w)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " clamped to (" << sanitized.x << ',' << sanitized.y << ',' << sanitized.z << ',' << sanitized.w << ")\n";
+            DebugTrace(oss.str());
+        }
+
+        return sanitized;
     }
 
     bool TryParseSpawnPoint(const std::string& rawValue, size_t lineNumber, std::vector<float3>& outPoints)
@@ -185,6 +214,7 @@ namespace
         bool depthProvided = false;
         bool widthProvided = false;
         bool heightProvided = false;
+        bool colorProvided = false;
     };
 }
 
@@ -404,6 +434,39 @@ namespace Stage
                         << ".heightFraction on line " << lineNumber << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
+                }
+            }
+            else if (TryParsePlatformKey(key, "color", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "platform" << platformIndex
+                        << ".color on line " << lineNumber
+                        << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    DirectX::XMFLOAT4 color{ parsed[0], parsed[1], parsed[2], 1.0f };
+                    if (parsed.size() >= 4)
+                    {
+                        color.w = parsed[3];
+                    }
+                    platformOverrides[platformIndex].descriptor.color = color;
+                    platformOverrides[platformIndex].colorProvided = true;
                 }
             }
             else if (key == "planeZ")
@@ -828,7 +891,12 @@ namespace Stage
         platformDepth = sanitizeDepth(platformDepth, kDefaultPlatformDepth, "platformDepth");
         platformScale = sanitizeScaleVector(platformScale, "platformScale");
 
-        auto buildDefaultPlatform = [&]()
+        auto defaultColorForIndex = [](std::size_t index)
+        {
+            return (index % 2 == 0) ? kDefaultPlatformPrimaryColor : kDefaultPlatformSecondaryColor;
+        };
+
+        auto buildDefaultPlatform = [&](std::size_t index)
         {
             PlatformDescriptor descriptor{};
             descriptor.center = float3{ 0.0f, platformCenterY, planeZ };
@@ -836,6 +904,7 @@ namespace Stage
             descriptor.depth = platformDepth;
             descriptor.widthFraction = platformWidthFraction;
             descriptor.heightFraction = platformHeightFraction;
+            descriptor.color = defaultColorForIndex(index);
             return descriptor;
         };
 
@@ -853,19 +922,20 @@ namespace Stage
             descriptor.widthFraction = sanitizeFraction(descriptor.widthFraction, platformWidthFraction, widthLabel.c_str());
             const std::string heightLabel = labelPrefix + ".heightFraction";
             descriptor.heightFraction = sanitizeFraction(descriptor.heightFraction, platformHeightFraction, heightLabel.c_str());
+            descriptor.color = SanitizeColor(descriptor.color, defaultColorForIndex(index), labelPrefix + ".color");
             return descriptor;
         };
 
         std::vector<PlatformDescriptor> platformDescriptors;
         if (platformOverrides.empty())
         {
-            platformDescriptors.push_back(sanitizePlatformDescriptor(buildDefaultPlatform(), 0));
+            platformDescriptors.push_back(sanitizePlatformDescriptor(buildDefaultPlatform(0), 0));
         }
         else
         {
             for (std::size_t i = 0; i < platformOverrides.size(); ++i)
             {
-                PlatformDescriptor descriptor = buildDefaultPlatform();
+                PlatformDescriptor descriptor = buildDefaultPlatform(i);
                 const PlatformOverride& override = platformOverrides[i];
                 if (override.centerProvided)
                 {
@@ -886,6 +956,10 @@ namespace Stage
                 if (override.heightProvided)
                 {
                     descriptor.heightFraction = override.descriptor.heightFraction;
+                }
+                if (override.colorProvided)
+                {
+                    descriptor.color = override.descriptor.color;
                 }
 
                 platformDescriptors.push_back(sanitizePlatformDescriptor(descriptor, i));
@@ -1041,7 +1115,7 @@ namespace Stage
 
         if (m_platforms.empty())
         {
-            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction };
+            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction, kDefaultPlatformPrimaryColor };
             return s_fallback;
         }
 
@@ -1097,6 +1171,7 @@ namespace Stage
         descriptor.depth = kDefaultPlatformDepth;
         descriptor.widthFraction = kDefaultPlatformWidthFraction;
         descriptor.heightFraction = kDefaultPlatformHeightFraction;
+        descriptor.color = kDefaultPlatformPrimaryColor;
         m_platforms.push_back(descriptor);
         m_playerMoveSpeed = kDefaultPlayerMoveSpeed;
         m_guidelineHeight = kDefaultGuidelineHeight;
@@ -1137,7 +1212,9 @@ namespace Stage
             << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
             << descriptor.scale.z << ") depth=" << descriptor.depth
             << " widthFraction=" << descriptor.widthFraction
-            << " heightFraction=" << descriptor.heightFraction << "\n";
+            << " heightFraction=" << descriptor.heightFraction
+            << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','
+            << descriptor.color.z << ',' << descriptor.color.w << ")\n";
         DebugTrace(oss.str());
     }
 

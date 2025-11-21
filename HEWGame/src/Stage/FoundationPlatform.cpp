@@ -32,8 +32,6 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/SweetsPrototype/CakeCube.obj";
-    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 0.305f, 0.173f, 0.125f, 1.0f };
-
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
@@ -69,11 +67,11 @@ namespace Stage
             priority)
         , m_anchorTransform(transform)
         , m_model(nullptr)
-        , m_debugColor(kDefaultPlatformColor)
+        , m_debugColor(SanitizeColor(color))
     {
         SyncColliderBounds();
         LoadPlatformModel();
-        SetDebugColor(kDefaultPlatformColor);
+        SetDebugColor(m_debugColor);
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
