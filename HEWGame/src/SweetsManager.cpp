@@ -1402,9 +1402,7 @@ namespace SweetsSpace
 
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
         const int liveAfterRemoval = CountLiveSweets();
-        const int desiredLiveTarget = (remainingToStack > 0)
-            ? std::min(m_simultaneousLiveTarget, remainingToStack)
-            : 0;
+        const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
         if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
         {
             m_pendingTopUpAfterDrop = true;
@@ -1413,7 +1411,8 @@ namespace SweetsSpace
             oss << kLogPrefix << context << " detected live sweets drop below target; scheduling delayed top-up. live="
                 << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
                 << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
-                << " queue=" << m_spawnQueue.size() << ".\n";
+                << " queue=" << m_spawnQueue.size()
+                << " burstInterval=" << std::fixed << std::setprecision(2) << m_activeBurstInterval << "\n";
             DebugTrace(oss.str());
         }
 
@@ -1845,6 +1844,16 @@ namespace SweetsSpace
         return total;
     }
 
+    int SweetsManager::ComputeDesiredLiveTarget(int remainingToStack) const
+    {
+        if (remainingToStack <= 0)
+        {
+            return 0;
+        }
+
+        return std::max(1, std::min(m_simultaneousLiveTarget, remainingToStack));
+    }
+
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
     {
         const int previousLiveCount = m_lastLiveSweetsCount;
@@ -1982,12 +1991,38 @@ namespace SweetsSpace
         const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
         const int projectedLive = liveSweets + pendingRequests;
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
-        const int desiredLiveTarget = (remainingToStack > 0)
-            ? std::min(m_simultaneousLiveTarget, remainingToStack)
-            : 0;
+        const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
 
         if (desiredLiveTarget <= 0)
         {
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
+            return;
+        }
+
+        const bool liveAtTarget = liveSweets >= desiredLiveTarget;
+        if (liveAtTarget)
+        {
+            if (!m_batchInitialSpawnDone)
+            {
+                m_batchInitialSpawnDone = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << "Live sweets already meet simultaneous target; skipping burst scheduling (live="
+                    << liveSweets << " target=" << desiredLiveTarget
+                    << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+                    << " queued=" << m_spawnQueue.size() << ").\n";
+                DebugTrace(oss.str());
+            }
+
+            if (m_pendingTopUpAfterDrop)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Clearing pending top-up because live sweets recovered to target (live=" << liveSweets
+                    << " target=" << desiredLiveTarget << ").\n";
+                DebugTrace(oss.str());
+                m_pendingTopUpAfterDrop = false;
+            }
+
             EmitSpawnRequests(deltaSeconds);
             m_lastLiveSweetsCount = CountLiveSweets();
             return;
@@ -1999,7 +2034,7 @@ namespace SweetsSpace
             {
                 m_batchInitialSpawnDone = true;
                 std::ostringstream oss;
-                oss << kLogPrefix << "Live sweets already meet target; deferring new burst (projected="
+                oss << kLogPrefix << "Projected sweets will meet target; deferring new burst (projected="
                     << projectedLive << " target=" << desiredLiveTarget
                     << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget << ").\n";
                 DebugTrace(oss.str());
