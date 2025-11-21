@@ -1960,6 +1960,11 @@ namespace SweetsSpace
             const std::string kind = m_spawnQueue.front();
             m_spawnQueue.pop_front();
 
+            if (m_currentBurstRemaining > 0)
+            {
+                --m_currentBurstRemaining;
+            }
+
             const std::vector<float3> emitOrigins = m_spawnOrigins.empty()
                 ? std::vector<float3>{ NextSpawnOrigin() }
                 : m_spawnOrigins;
@@ -1976,16 +1981,12 @@ namespace SweetsSpace
                 }
             }
 
-            if (m_currentBurstRemaining > 0)
-            {
-                --m_currentBurstRemaining;
-            }
-
-            const int remainingInBurst = m_currentBurstRemaining + static_cast<int>(m_spawnQueue.size());
+            const int remainingInBurst = std::max(0, m_currentBurstRemaining);
             std::ostringstream oss;
             oss << kLogPrefix << "Burst emit kind='" << kind << "' remaining=" << remainingInBurst
-                << '/' << m_activeBurstPlanned << " origins=" << emitOrigins.size()
-                << " successful=" << successfulEmits << " nextEmitIn=" << std::fixed << std::setprecision(2)
+                << '/' << m_activeBurstPlanned << " queue=" << m_spawnQueue.size()
+                << " origins=" << emitOrigins.size() << " successful=" << successfulEmits
+                << " nextEmitIn=" << std::fixed << std::setprecision(2)
                 << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
             DebugTrace(oss.str());
         }
