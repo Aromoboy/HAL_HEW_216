@@ -8,6 +8,7 @@
 #include "ModelRender.h"
 #include "PhysicalEntity.h"
 #include <memory>
+#include <optional>
 
 namespace SweetsSpace
 {
@@ -49,6 +50,7 @@ namespace SceneSpace
         void SetMinimumY(float minY);
         float GetMinimumY() const;
         bool HasMinimumY() const;
+        void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
 
     private:
         std::shared_ptr<ModelDX> model;
@@ -62,6 +64,11 @@ namespace SceneSpace
         bool m_hasMinimumY;
         float m_minimumY;
         bool m_missingModelWarned;
+        bool m_hasScreenBounds;
+        float m_minScreenX;
+        float m_maxScreenX;
+        bool m_hasMaximumY;
+        float m_maximumY;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
@@ -69,6 +76,7 @@ namespace SceneSpace
         void DropCarriedSweets();
         float3 ComputeCarryAnchor() const;
         void ClampVerticalPosition();
+        void ClampScreenBounds();
     };
 }
 
