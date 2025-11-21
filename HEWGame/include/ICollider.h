@@ -6,6 +6,7 @@
 
 #include "Transform.h"
 #include "AABB.h"
+#include "CollisionLayer.h"
 
 namespace Collision
 {
@@ -14,13 +15,19 @@ namespace Collision
     public:
         virtual ~ICollider() = default;
 
+        void SetLayer(CollisionLayer layer) { m_layer = layer; }
+        CollisionLayer GetLayer() const { return m_layer; }
+
         virtual AABB GetAABB() const = 0;
 
-        // Õ“Ë”»’è‚ğs‚¤ƒˆ‰¼‘zŠÖ”
+        // Õ“Ë”szÖ
         virtual bool CheckCollision(const Collision::ICollider& other) = 0;
 
-        // ƒoƒEƒ“ƒfƒBƒ“ƒOƒ{ƒbƒNƒX‚ğXV‚·‚éƒˆ‰¼‘zŠÖ”
+        // oEfBO{bNXXVéƒzÖ
         virtual void UpdateBounds(const Transform& transform) = 0;
+
+    protected:
+        CollisionLayer m_layer{ CollisionLayer::Default };
     };
 }
 #endif __ICOLLIDER_H__

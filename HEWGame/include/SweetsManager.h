@@ -14,6 +14,7 @@
 #include "ICamera.h"
 #include "ModelRender.h"
 #include "Transform.h"
+#include "CollisionLayer.h"
 
 namespace Core
 {
@@ -182,6 +183,7 @@ namespace SweetsSpace
             const std::shared_ptr<ModelDX>& model,
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
+            Collision::CollisionLayer layer,
             const float3& velocity,
             const float3& force,
             float weight,
@@ -200,6 +202,7 @@ namespace SweetsSpace
                 transform.rotation,
                 transform.scale,
                 collider,
+                layer,
                 velocity,
                 force,
                 weight,

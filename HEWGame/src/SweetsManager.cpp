@@ -305,9 +305,9 @@ namespace SweetsSpace
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
 
-        const auto createCollider = [](const Transform& transform, float3 expand, const float3& offset)
+        const auto createCollider = [](const Transform& transform, float3 expand, const float3& offset, Collision::CollisionLayer layer)
         {
-            return std::make_shared<Collision::AABBCollider>(transform, false, expand, offset);
+            return std::make_shared<Collision::AABBCollider>(transform, false, expand, offset, layer);
         };
 
         struct SweetsFactoryConfig
@@ -397,7 +397,7 @@ namespace SweetsSpace
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
 
-                auto collider = createCollider(scaledTransform, colliderExpand, colliderOffset);
+                auto collider = createCollider(scaledTransform, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
                 const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
@@ -416,13 +416,13 @@ namespace SweetsSpace
                 switch (type)
                 {
                 case SweetsType::Cake:
-                    return MakeSweets<Cake>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
+                    return MakeSweets<Cake>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Pudding:
-                    return MakeSweets<Pudding>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
+                    return MakeSweets<Pudding>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Sherbet:
-                    return MakeSweets<Sherbet>(kind, model, scaledTransform, collider, velocity, force, scaledWeight, scaledDamping,
+                    return MakeSweets<Sherbet>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 default:
                     break;
