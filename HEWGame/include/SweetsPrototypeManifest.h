@@ -4,6 +4,9 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+#include "ICollider.h"
 
 namespace SweetsSpace
 {
@@ -15,11 +18,20 @@ namespace SweetsSpace
         Fairy,
     };
 
+    struct ColliderTemplate
+    {
+        Collision::ColliderShape shape{ Collision::ColliderShape::Box };
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+        std::vector<float3> prismVertices; // Normalized XY layout, scaled by bounds half extents.
+        float depthOverride{ 0.0f }; // 0 means derive from bounds.
+    };
+
     struct SweetsPrototypeDescriptor
     {
         std::string key;
         std::string modelPath;
         std::string description;
+        ColliderTemplate collider;
     };
 
     struct SweetsTypeHash
@@ -42,7 +54,7 @@ namespace SweetsSpace
     private:
         SweetsPrototypeManifest();
 
-        void Register(SweetsType type, std::string key, std::string relativePath, std::string description);
+        void Register(SweetsType type, std::string key, std::string relativePath, std::string description, ColliderTemplate collider);
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;
         std::unordered_map<std::string, SweetsType> m_lookup;
