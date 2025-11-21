@@ -746,6 +746,7 @@ namespace SweetsSpace
         }
 
         ApplyDefaultPhaseConfigs();
+
     }
 
     SweetsManager::~SweetsManager() = default;

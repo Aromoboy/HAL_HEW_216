@@ -72,16 +72,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);include;$(ProjectDir);$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);include;$(ProjectDir);$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);include;$(ProjectDir);$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);include;$(ProjectDir);$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
