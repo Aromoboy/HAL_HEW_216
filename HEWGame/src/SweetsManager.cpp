@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <limits>
 #include <map>
+#include <optional>
 #include <random>
 #include <sstream>
 #include <unordered_set>
@@ -57,7 +58,7 @@ namespace
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 2.0f;
-    constexpr float kHorizontalPlayAreaLimit = (kPlatformWidth * 0.5f) + kHorizontalOutOfBoundsMargin;
+    constexpr float kHorizontalBoundsEpsilon = 1e-4f;
 
     struct FallbackMaterialColors
     {
@@ -167,6 +168,22 @@ namespace
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
+    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon)
+    {
+        if (!std::isfinite(previous) || !std::isfinite(current))
+        {
+            return true;
+        }
+
+        return std::fabs(previous - current) > epsilon;
+    }
+
+    float ComputeFallbackHorizontalLimit(float margin)
+    {
+        const float sanitizedMargin = std::max(0.0f, margin);
+        return (kPlatformWidth * 0.5f) + sanitizedMargin;
+    }
+
     SweetsSpace::SweetsState EvaluateState(SweetsSpace::BaseSweets& sweets, SweetsSpace::SweetsState currentState)
     {
         if (currentState == SweetsSpace::SweetsState::Carried)
@@ -190,7 +207,12 @@ namespace
         return SweetsSpace::SweetsState::Active;
     }
 
-    bool IsHorizontallyOutOfBounds(const SweetsSpace::BaseSweets& sweets)
+    bool IsHorizontallyOutOfBounds(
+        const SweetsSpace::BaseSweets& sweets,
+        const std::optional<std::pair<float, float>>& worldBounds,
+        float margin,
+        float fallbackLimit,
+        bool* usedFallback)
     {
         float minX = 0.0f;
         float maxX = 0.0f;
@@ -209,8 +231,21 @@ namespace
             maxX = transform.position.x + halfWidth;
         }
 
-        const float furthest = std::max(std::abs(minX), std::abs(maxX));
-        return furthest > kHorizontalPlayAreaLimit;
+        const float sanitizedMargin = std::max(0.0f, margin);
+        float allowedMin = -fallbackLimit;
+        float allowedMax = fallbackLimit;
+        if (usedFallback)
+        {
+            *usedFallback = !worldBounds.has_value();
+        }
+
+        if (worldBounds)
+        {
+            allowedMin = worldBounds->first - sanitizedMargin;
+            allowedMax = worldBounds->second + sanitizedMargin;
+        }
+
+        return minX < allowedMin || maxX > allowedMax;
     }
 
     std::string TrimToken(const std::string& value)
@@ -514,6 +549,11 @@ namespace SweetsSpace
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
+        , m_hasHorizontalBounds(false)
+        , m_minHorizontalBound(0.0f)
+        , m_maxHorizontalBound(0.0f)
+        , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
+        , m_warnedMissingHorizontalBounds(false)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -709,6 +749,8 @@ namespace SweetsSpace
 
         std::vector<PendingStateChange> stateChanges;
         std::vector<std::shared_ptr<BaseSweets>> missedSweets;
+        const auto horizontalBounds = GetHorizontalBounds();
+        const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
         for (auto& entry : m_byState)
         {
@@ -750,7 +792,13 @@ namespace SweetsSpace
 
                 if (!isCarried)
                 {
-                    const bool outOfBounds = IsHorizontallyOutOfBounds(*sweets);
+                    bool usedFallbackBounds = false;
+                    const bool outOfBounds = IsHorizontallyOutOfBounds(
+                        *sweets,
+                        horizontalBounds,
+                        m_horizontalBoundsMargin,
+                        fallbackHorizontalLimit,
+                        &usedFallbackBounds);
                     if (!sweets->GetCollider() && !m_warnedMissingBoundsCollider)
                     {
                         std::ostringstream oss;
@@ -758,6 +806,15 @@ namespace SweetsSpace
                             << sweets.get() << " (missing collider).\n";
                         DebugTrace(oss.str());
                         m_warnedMissingBoundsCollider = true;
+                    }
+
+                    if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Horizontal bounds fallback active; using platform width limit="
+                            << fallbackHorizontalLimit << " (half-width + margin).\n";
+                        DebugTrace(oss.str());
+                        m_warnedMissingHorizontalBounds = true;
                     }
 
                     if (outOfBounds)
@@ -1188,6 +1245,16 @@ namespace SweetsSpace
         return true;
     }
 
+    std::optional<std::pair<float, float>> SweetsManager::GetHorizontalBounds() const
+    {
+        if (!m_hasHorizontalBounds)
+        {
+            return std::nullopt;
+        }
+
+        return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
+    }
+
     void SweetsManager::RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets)
     {
         if (!sweets)
@@ -1540,6 +1607,43 @@ namespace SweetsSpace
             << " spawn phases from '" << path << "' (parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
         return !parseError;
+    }
+
+    void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
+    {
+        if (!(std::isfinite(minX) && std::isfinite(maxX)))
+        {
+            DebugTrace(std::string(kLogPrefix) + "Ignored horizontal bounds update with non-finite values.\n");
+            return;
+        }
+
+        const float sanitizedMin = std::min(minX, maxX);
+        const float sanitizedMax = std::max(minX, maxX);
+        const float sanitizedMargin = margin.has_value()
+            ? std::max(0.0f, *margin)
+            : m_horizontalBoundsMargin;
+
+        const bool changed = !m_hasHorizontalBounds
+            || HasMeaningfulDifference(m_minHorizontalBound, sanitizedMin)
+            || HasMeaningfulDifference(m_maxHorizontalBound, sanitizedMax)
+            || HasMeaningfulDifference(m_horizontalBoundsMargin, sanitizedMargin);
+
+        m_hasHorizontalBounds = true;
+        m_minHorizontalBound = sanitizedMin;
+        m_maxHorizontalBound = sanitizedMax;
+        m_horizontalBoundsMargin = sanitizedMargin;
+        m_warnedMissingHorizontalBounds = false;
+
+        if (!changed)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Horizontal bounds updated to min=" << m_minHorizontalBound
+            << " max=" << m_maxHorizontalBound
+            << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
+        DebugTrace(oss.str());
     }
 
     void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)

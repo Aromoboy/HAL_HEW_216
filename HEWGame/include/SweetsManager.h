@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -117,6 +118,8 @@ namespace SweetsSpace
         bool TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets);
         bool ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets);
 
+        void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+
     private:
         struct SweetsStateHash
         {
@@ -159,6 +162,13 @@ namespace SweetsSpace
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
+        bool m_hasHorizontalBounds;
+        float m_minHorizontalBound;
+        float m_maxHorizontalBound;
+        float m_horizontalBoundsMargin;
+        bool m_warnedMissingHorizontalBounds;
+
+        std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
