@@ -110,6 +110,7 @@ namespace SweetsSpace
         void SetRandomRotationEnabled(bool enabled);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetRandomScaleEnabled(bool enabled);
+        void SetLiveSweetsCap(int cap);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
@@ -156,6 +157,7 @@ namespace SweetsSpace
         float3 m_randomRotationMinDegrees;
         float3 m_randomRotationMaxDegrees;
         bool m_enableRandomScale;
+        int m_liveSweetsCap;
 
         bool m_warnedMissingDrawSystem;
         bool m_warnedMissingPhysicsMachine;
