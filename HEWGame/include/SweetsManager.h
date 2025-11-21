@@ -48,6 +48,7 @@ namespace SweetsSpace
     struct PhaseSpawnConfig
     {
         float spawnIntervalSeconds = 2.5f;
+        float burstIntervalSeconds = 0.5f;
         int simultaneousSpawnCount = 1;
         std::vector<WeightedSweetsType> weights;
     };
@@ -142,11 +143,13 @@ namespace SweetsSpace
         std::vector<PhaseSpawnConfig> m_phaseConfigs;
         int m_activePhaseConfigIndex;
         float m_spawnTimer;
+        float m_burstTimer;
         std::deque<std::string> m_spawnQueue;
         std::vector<float3> m_spawnOrigins;
         float m_spawnHeightOffset;
-        int m_batchSize;
-        int m_currentBatchRemaining;
+        float m_activeBurstInterval;
+        int m_activeBurstPlanned;
+        int m_currentBurstRemaining;
         mutable std::mt19937 m_random;
 
         bool m_enableRandomRotation;
@@ -172,7 +175,7 @@ namespace SweetsSpace
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         void EnqueueSpawns(int count);
-        void EmitSpawnRequests();
+        void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
         void OnPhaseConfigurationChanged(int newPhase);
         void LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const;

@@ -51,9 +51,10 @@ namespace
     constexpr float kRestVelocityThresholdSq = 0.05f * 0.05f;
     constexpr float kGroundHeightThreshold = 0.05f;
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
+    constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
+    constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
-    constexpr int kPrototypeBatchSize = 5;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr float kPlatformWidth = 12.0f;
@@ -531,11 +532,13 @@ namespace SweetsSpace
         , m_phaseConfigs()
         , m_activePhaseConfigIndex(-1)
         , m_spawnTimer(kDefaultSpawnIntervalSeconds)
+        , m_burstTimer(0.0f)
         , m_spawnQueue()
         , m_spawnOrigins()
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
-        , m_batchSize(kPrototypeBatchSize)
-        , m_currentBatchRemaining(0)
+        , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
+        , m_activeBurstPlanned(0)
+        , m_currentBurstRemaining(0)
         , m_random(std::random_device{}())
         , m_enableRandomRotation(false)
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
@@ -1404,6 +1407,7 @@ namespace SweetsSpace
         {
             PhaseSpawnConfig config;
             bool hasInterval = false;
+            bool hasBurstInterval = false;
             bool hasSimultaneous = false;
             bool hasWeights = false;
         };
@@ -1488,6 +1492,22 @@ namespace SweetsSpace
                     parseError = true;
                 }
             }
+            else if (key == "burstInterval")
+            {
+                try
+                {
+                    partial.config.burstIntervalSeconds = std::max(kMinimumBurstIntervalSeconds, std::stof(value));
+                    partial.hasBurstInterval = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse burst interval on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "simultaneous")
             {
                 try
@@ -1567,6 +1587,12 @@ namespace SweetsSpace
                 config.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
             }
             config.spawnIntervalSeconds = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+
+            if (!entry.second.hasBurstInterval)
+            {
+                config.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
+            }
+            config.burstIntervalSeconds = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
             if (!entry.second.hasSimultaneous)
             {
@@ -1698,6 +1724,9 @@ namespace SweetsSpace
     void SweetsManager::ForceSpawnRefresh()
     {
         m_spawnTimer = 0.0f;
+        m_burstTimer = 0.0f;
+        m_activeBurstPlanned = 0;
+        m_activeBurstInterval = kDefaultBurstIntervalSeconds;
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
@@ -1705,12 +1734,12 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
         m_spawnQueue.clear();
-        m_currentBatchRemaining = 0;
+        m_currentBurstRemaining = 0;
     }
 
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
     {
-        EmitSpawnRequests();
+        EmitSpawnRequests(deltaSeconds);
 
         if (m_phaseConfigs.empty())
         {
@@ -1730,12 +1759,14 @@ namespace SweetsSpace
         m_spawnTimer += deltaSeconds;
         const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
-        if (m_currentBatchRemaining > 0)
+        if (m_currentBurstRemaining > 0 || !m_spawnQueue.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn scheduler paused; active batch has "
-                << m_currentBatchRemaining << " remaining.\n";
+            oss << kLogPrefix << "Spawn scheduler waiting for active burst to finish. remainingInBurst="
+                << m_currentBurstRemaining << "/" << m_activeBurstPlanned << " queue=" << m_spawnQueue.size()
+                << " emitInterval=" << std::fixed << std::setprecision(2) << m_activeBurstInterval << "s.\n";
             DebugTrace(oss.str());
             return;
         }
@@ -1743,20 +1774,24 @@ namespace SweetsSpace
         while (m_spawnTimer >= interval)
         {
             m_spawnTimer -= interval;
-            const int requestedCount = std::max(1, m_batchSize);
+            m_activeBurstPlanned = std::max(1, config.simultaneousSpawnCount);
+            m_currentBurstRemaining = 0;
             std::ostringstream oss;
-            oss << kLogPrefix << "Scheduling prototype batch spawn (size=" << requestedCount
-                << "; interval=" << interval << ").\n";
+            oss << kLogPrefix << "Scheduling burst spawn size=" << m_activeBurstPlanned
+                << " interval=" << interval << " emitInterval=" << std::fixed << std::setprecision(2)
+                << m_activeBurstInterval << "; phase=" << m_activePhaseConfigIndex << ".\n";
             DebugTrace(oss.str());
-            EnqueueSpawns(requestedCount);
-
-            if (m_currentBatchRemaining > 0)
+            EnqueueSpawns(m_activeBurstPlanned);
+            if (m_currentBurstRemaining > 0)
             {
+                // Prime the burst so the first item can emit immediately.
+                m_burstTimer = m_activeBurstInterval;
+                EmitSpawnRequests(0.0f);
                 break;
             }
         }
 
-        EmitSpawnRequests();
+        EmitSpawnRequests(deltaSeconds);
     }
 
     void SweetsManager::EnqueueSpawns(int count)
@@ -1766,25 +1801,13 @@ namespace SweetsSpace
             return;
         }
 
-        int batchTarget = m_currentBatchRemaining;
-        if (m_currentBatchRemaining <= 0)
-        {
-            batchTarget = std::max(1, m_batchSize);
-            m_currentBatchRemaining = batchTarget;
-            std::ostringstream oss;
-            oss << kLogPrefix << "Initializing spawn batch (target=" << m_currentBatchRemaining
-                << ", requested=" << count << ").\n";
-            DebugTrace(oss.str());
-        }
-
-        const int allowedCount = std::min(count, batchTarget);
-        if (allowedCount < count)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Batch capacity limited enqueues to " << allowedCount
-                << " of " << count << " requests.\n";
-            DebugTrace(oss.str());
-        }
+        const int burstTarget = (m_activeBurstPlanned > 0) ? m_activeBurstPlanned : count;
+        const int availableQueueSlots = static_cast<int>(kMaxSpawnQueueEntries - m_spawnQueue.size());
+        const int allowedCount = std::max(0, std::min({ count, burstTarget, availableQueueSlots }));
+        std::ostringstream oss;
+        oss << kLogPrefix << "Initializing burst (planned=" << burstTarget << ", requested=" << count
+            << ", allowed=" << allowedCount << ", queueSlots=" << availableQueueSlots << ").\n";
+        DebugTrace(oss.str());
 
         int enqueued = 0;
         for (int i = 0; i < allowedCount; ++i)
@@ -1816,20 +1839,22 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
 
-        m_currentBatchRemaining = enqueued;
+        m_currentBurstRemaining = enqueued;
     }
 
-    void SweetsManager::EmitSpawnRequests()
+    void SweetsManager::EmitSpawnRequests(float deltaSeconds)
     {
         if (m_spawnQueue.empty())
         {
             return;
         }
 
+        m_burstTimer += deltaSeconds;
         std::size_t spawnedCount = 0;
         const int queuedBefore = static_cast<int>(m_spawnQueue.size());
-        while (!m_spawnQueue.empty())
+        while (!m_spawnQueue.empty() && m_burstTimer >= m_activeBurstInterval)
         {
+            m_burstTimer -= m_activeBurstInterval;
             const std::string kind = m_spawnQueue.front();
             m_spawnQueue.pop_front();
 
@@ -1841,15 +1866,22 @@ namespace SweetsSpace
                 ++spawnedCount;
             }
 
-            if (m_currentBatchRemaining > 0)
+            if (m_currentBurstRemaining > 0)
             {
-                --m_currentBatchRemaining;
+                --m_currentBurstRemaining;
             }
+
+            const int remainingInBurst = m_currentBurstRemaining + static_cast<int>(m_spawnQueue.size());
+            std::ostringstream oss;
+            oss << kLogPrefix << "Burst emit kind='" << kind << "' remaining=" << remainingInBurst
+                << '/' << m_activeBurstPlanned << " nextEmitIn=" << std::fixed << std::setprecision(2)
+                << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
+            DebugTrace(oss.str());
         }
 
-        if (m_currentBatchRemaining < 0)
+        if (m_currentBurstRemaining < 0)
         {
-            m_currentBatchRemaining = 0;
+            m_currentBurstRemaining = 0;
         }
 
         if (spawnedCount > 0)
@@ -1863,10 +1895,10 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Batch progress: queued=" << queuedBefore
-                << " remaining=" << m_currentBatchRemaining << ".\n";
+                << " remaining=" << m_currentBurstRemaining << ".\n";
             DebugTrace(oss.str());
 
-            if (m_currentBatchRemaining <= 0)
+            if (m_currentBurstRemaining <= 0 && m_spawnQueue.empty())
             {
                 DebugTrace(std::string(kLogPrefix) + "Batch completed; scheduler may start a new batch after cooldown.\n");
             }
@@ -1929,10 +1961,12 @@ namespace SweetsSpace
         ForceSpawnRefresh();
         const float interval = std::max(m_phaseConfigs[clamped].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_spawnTimer = std::max(m_spawnTimer, interval);
+        m_activeBurstInterval = std::max(m_phaseConfigs[clamped].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
         std::ostringstream oss;
         oss << kLogPrefix << "Phase change primed next batch with interval="
-            << std::fixed << std::setprecision(2) << interval << " (batchSize=" << m_batchSize << ").\n";
+            << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
+            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount << ".\n";
         DebugTrace(oss.str());
         LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
     }
@@ -1942,6 +1976,7 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "[Spawn] phase=" << phaseIndex
             << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
+            << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
             << " weights=";
 
@@ -1976,6 +2011,7 @@ namespace SweetsSpace
 
         PhaseSpawnConfig phase0;
         phase0.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+        phase0.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
         phase0.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
         phase0.weights = baseWeights;
 
