@@ -49,6 +49,28 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+    void PlayerDebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void PlayerDebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    constexpr const char* kPlayerLogPrefix = "[Player] ";
+    constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+    constexpr float kDefaultPickupRadius = 2.5f;
+    constexpr float kCarryVerticalOffset = 1.0f;
+    constexpr float kCarryForwardOffset = 0.5f;
+    constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+
+    constexpr int kDefaultMaxCarry = 3;
 
     std::shared_ptr<ModelDX> CreateProceduralFairyModel()
     {
@@ -77,27 +99,27 @@ namespace
         vertices.reserve(24);
 
         auto appendQuad = [&](const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& normal,
-            const DirectX::XMFLOAT4& colorFront, const DirectX::XMFLOAT4& colorBack)
+                              const DirectX::XMFLOAT4& colorFront, const DirectX::XMFLOAT4& colorBack)
         {
-            const std::array<DirectX::XMFLOAT2, 4> uvs{ DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT2(1.0f, 1.0f),
-                DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f) };
+            const std::array<DirectX::XMFLOAT2, 4> uvs{
+                DirectX::XMFLOAT2(0.0f, 1.0f),
+                DirectX::XMFLOAT2(1.0f, 1.0f),
+                DirectX::XMFLOAT2(1.0f, 0.0f),
+                DirectX::XMFLOAT2(0.0f, 0.0f)
+            };
 
-            const auto addVertex = [&](const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& nrm, const DirectX::XMFLOAT2& uv,
-                const DirectX::XMFLOAT4& col)
+            const auto addVertex = [&](const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& nrm,
+                                       const DirectX::XMFLOAT2& uv, const DirectX::XMFLOAT4& col)
             {
                 MeshDX::Vertex vertex{};
                 vertex.pos = pos;
                 vertex.normal = nrm;
                 vertex.uv = uv;
                 vertex.color = col;
-                for (float& weight : vertex.weight)
-                {
-                    weight = 0.0f;
-                }
-                for (unsigned int& idx : vertex.index)
-                {
-                    idx = 0;
-                }
+
+                for (float& weight : vertex.weight) weight = 0.0f;
+                for (unsigned& idx : vertex.index) idx = 0;
+
                 vertices.push_back(vertex);
             };
 
@@ -105,23 +127,25 @@ namespace
             const DirectX::XMFLOAT3 backNormal{ -normal.x, -normal.y, -normal.z };
 
             for (size_t i = 0; i < positions.size(); ++i)
-            {
                 addVertex(positions[i], frontNormal, uvs[i], colorFront);
-            }
             for (size_t i = 0; i < positions.size(); ++i)
-            {
                 addVertex(positions[i], backNormal, uvs[i], colorBack);
-            }
         };
 
-        const std::array<DirectX::XMFLOAT3, 4> facingZ{ DirectX::XMFLOAT3(-halfWidth, -halfHeight, 0.0f),
-            DirectX::XMFLOAT3(halfWidth, -halfHeight, 0.0f), DirectX::XMFLOAT3(halfWidth, halfHeight, 0.0f),
-            DirectX::XMFLOAT3(-halfWidth, halfHeight, 0.0f) };
+        const std::array<DirectX::XMFLOAT3, 4> facingZ{
+            DirectX::XMFLOAT3(-halfWidth, -halfHeight, 0.0f),
+            DirectX::XMFLOAT3(halfWidth, -halfHeight, 0.0f),
+            DirectX::XMFLOAT3(halfWidth, halfHeight, 0.0f),
+            DirectX::XMFLOAT3(-halfWidth, halfHeight, 0.0f)
+        };
         appendQuad(facingZ, DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f), wingHighlight, baseColor);
 
-        const std::array<DirectX::XMFLOAT3, 4> facingX{ DirectX::XMFLOAT3(0.0f, -halfHeight, -halfDepth),
-            DirectX::XMFLOAT3(0.0f, -halfHeight, halfDepth), DirectX::XMFLOAT3(0.0f, halfHeight, halfDepth),
-            DirectX::XMFLOAT3(0.0f, halfHeight, -halfDepth) };
+        const std::array<DirectX::XMFLOAT3, 4> facingX{
+            DirectX::XMFLOAT3(0.0f, -halfHeight, -halfDepth),
+            DirectX::XMFLOAT3(0.0f, -halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0.0f, halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0.0f, halfHeight, -halfDepth)
+        };
         appendQuad(facingX, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), baseColor, wingHighlight);
 
         std::vector<unsigned long> indices;
@@ -147,7 +171,7 @@ namespace
         auto mesh = std::make_shared<MeshDX>(desc, 0);
         if (!mesh || !mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy mesh buffers failed to initialize.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy mesh buffers failed.\n");
             return nullptr;
         }
 
@@ -156,13 +180,10 @@ namespace
         const DirectX::XMFLOAT4 specular{ 0.1f, 0.1f, 0.2f, 8.0f };
         auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
 
-        std::vector<std::shared_ptr<MeshDX>> meshes;
-        meshes.push_back(std::move(mesh));
+        std::vector<std::shared_ptr<MeshDX>> meshes{ mesh };
+        std::vector<std::shared_ptr<MaterialDX>> materials{ material };
 
-        std::vector<std::shared_ptr<MaterialDX>> materials;
-        materials.push_back(std::move(material));
-
-        auto model = std::make_shared<ModelDX>(std::move(meshes), std::move(materials));
+        auto model = std::make_shared<ModelDX>(meshes, materials);
         cached = model;
 
         std::ostringstream oss;
@@ -174,36 +195,122 @@ namespace
     }
 }
 
+
+
 SceneSpace::Player::Player(std::string a_tag,
-        float3 pos,
-        float3 rot,
-        float3 scl,
-        std::shared_ptr<Collision::ICollider> collide,
-        Collision::CollisionLayer layer,
-        float3 velocity,
-        float3 force,
-        float weight,
-        float damping,
-        Core::UpdatePhase phase,
-        int priority,
-        bool kinematic)
-        : PhysicalEntity(a_tag, pos, rot, scl, collide, layer, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
-        , model(nullptr)
-        , m_sweetsManager(nullptr)
-        , m_carried()
-        , m_pickupRadius(kDefaultPickupRadius)
-        , m_carryOffset(float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset })
-        , m_dropUpwardBoost(4.0f)
-        , m_isKinematic(kinematic)
-        , m_moveSpeed(kDefaultPlayerMoveSpeed)
-        , m_hasMinimumY(false)
-        , m_minimumY(0.0f)
-        , m_missingModelWarned(false)
-        , m_hasScreenBounds(false)
-        , m_minScreenX(0.0f)
-        , m_maxScreenX(0.0f)
-        , m_hasMaximumY(false)
-        , m_maximumY(0.0f)
+    float3 pos,
+    float3 rot,
+    float3 scl,
+    std::shared_ptr<Collision::ICollider> collide,
+    Collision::CollisionLayer layer,
+    float3 velocity,
+    float3 force,
+    float weight,
+    float damping,
+    Core::UpdatePhase phase,
+    int priority,
+    bool kinematic)
+    : PhysicalEntity(a_tag, pos, rot, scl, collide, layer,
+                     velocity, force,
+                     kinematic ? 0.0f : weight,
+                     damping, phase, priority)
+    , model(nullptr)
+    , m_sweetsManager(nullptr)
+    , m_carrieds()
+    , m_pickupRadius(kDefaultPickupRadius)
+    , m_carryOffset(float3{0.0f, kCarryVerticalOffset, kCarryForwardOffset})
+    , m_dropUpwardBoost(4.0f)
+    , m_isKinematic(kinematic)
+    , m_moveSpeed(kDefaultPlayerMoveSpeed)
+    , m_hasMinimumY(false)
+    , m_minimumY(0.0f)
+    , m_missingModelWarned(false)
+    , m_hasScreenBounds(false)
+    , m_minScreenX(0.0f)
+    , m_maxScreenX(0.0f)
+    , m_hasMaximumY(false)
+    , m_maximumY(0.0f)
+    , m_maxCarry(kDefaultMaxCarry)
+{
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const auto* descriptor =
+        manifest.Find(SweetsSpace::SweetsType::Fairy);
+
+    const std::string modelPath =
+        descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
+
+    std::ostringstream oss;
+    if (descriptor)
+    {
+        oss << kPlayerLogPrefix << "Using fairy prototype '" << descriptor->key
+            << "' asset='" << modelPath << "'.\n";
+    }
+    else
+    {
+        oss << kPlayerLogPrefix
+            << "Fairy prototype missing; falling back to '" << modelPath << "'.\n";
+    }
+    PlayerDebugTrace(oss.str());
+
+    bool usingProcedural = false;
+    model = CreateProceduralFairyModel();
+
+    if (model)
+    {
+        usingProcedural = true;
+        std::ostringstream msg;
+        msg << kPlayerLogPrefix
+            << "Using procedural fairy model (fallback asset='" << modelPath << "').\n";
+        PlayerDebugTrace(msg.str());
+    }
+    else
+    {
+        PlayerDebugTrace(std::string(kPlayerLogPrefix)
+                         + "Procedural failed; loading asset.\n");
+        model = cache.Get(modelPath);
+    }
+
+    if (model)
+    {
+        std::ostringstream ok;
+        ok << kPlayerLogPrefix
+           << "Fairy model ready from "
+           << (usingProcedural ? "procedural mesh" :
+                                 (modelPath == kFairyFallbackPath ? "fallback" : "asset"))
+           << " path='" << modelPath << "'.\n";
+        PlayerDebugTrace(ok.str());
+    }
+    else
+    {
+        std::ostringstream fail;
+        const bool fallbackAlready = (modelPath == kFairyFallbackPath);
+
+        fail << kPlayerLogPrefix << "Model load failed: '" << modelPath << "'.";
+        if (!fallbackAlready)
+            fail << " Trying fallback '" << kFairyFallbackPath << "'.\n";
+        else
+            fail << " Fallback already used.\n";
+
+        PlayerDebugTrace(fail.str());
+
+        if (!fallbackAlready)
+        {
+            model = cache.Get(kFairyFallbackPath);
+            if (model)
+                PlayerDebugTrace(std::string(kPlayerLogPrefix)
+                                 + "Fallback loaded successfully.\n");
+        }
+
+        if (!model)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix)
+                             + "Player model unavailable; rendering skipped.\n");
+            m_missingModelWarned = true;
+        }
+    }
+}
+
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -486,10 +593,10 @@ void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
                 return;
         }
 
-        if (!manager && m_carried)
+        if (!manager && !m_carrieds.empty())
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "SweetsManager cleared while carrying; forcing release.\n");
-                m_carried.reset();
+                m_carrieds.clear();
         }
 
         m_sweetsManager = manager;
@@ -497,52 +604,56 @@ void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
 
 bool SceneSpace::Player::IsCarryingSweets() const
 {
-        return static_cast<bool>(m_carried);
+        return !m_carrieds.empty();
 }
 
-std::shared_ptr<SweetsSpace::BaseSweets> SceneSpace::Player::GetCarriedSweets() const
+const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& SceneSpace::Player::GetCarriedSweets() const
 {
-        return m_carried;
+        return m_carrieds;
 }
 
 void SceneSpace::Player::ClearCarriedSweets()
 {
-        if (m_carried)
+        if (m_carrieds.empty())
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Clearing carried sweets handle.\n");
         }
-        m_carried.reset();
+        m_carrieds.clear();
 }
 
 void SceneSpace::Player::UpdateCarriedSweets()
 {
-        if (!m_carried)
+        if (m_carrieds.empty())
         {
                 return;
         }
 
-        auto& sweetsTransform = m_carried->GetTransform();
-        sweetsTransform.position = ComputeCarryAnchor();
-        sweetsTransform.rotation = m_transform.rotation;
+        for (auto& it : m_carrieds)
+        {
+            auto& sweetsTransform = it->GetTransform();
+            sweetsTransform.position = ComputeCarryAnchor();
+            sweetsTransform.rotation = m_transform.rotation;
 
-        m_carried->SyncColliderBounds();
+            it->SyncColliderBounds();
 
-        Physics::Physical& physical = m_carried->GetPhysical();
-        physical.velocity = { 0.0f, 0.0f, 0.0f };
-        physical.force = { 0.0f, 0.0f, 0.0f };
+            Physics::Physical& physical = it->GetPhysical();
+            physical.velocity = { 0.0f, 0.0f, 0.0f };
+            physical.force = { 0.0f, 0.0f, 0.0f };
+        }
+
 }
 
 void SceneSpace::Player::HandleCarryInput(Core::UpdateContext& ctx)
 {
         Core::Input& input = ctx.input;
 
-        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && m_carried)
+        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && !m_carrieds.empty())
         {
                 DropCarriedSweets();
                 return;
         }
 
-        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && !m_carried)
+        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && m_carrieds.size() < m_maxCarry)
         {
                 TryPickupNearest();
         }
@@ -563,11 +674,20 @@ void SceneSpace::Player::TryPickupNearest()
                 return;
         }
 
+
+        if (std::find(m_carrieds.begin(), m_carrieds.end(), candidate) != m_carrieds.end())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets already carried.\n");
+            return;
+        }
+
+
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
                 PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: manager rejected transition.\n");
                 return;
         }
+
 
         auto& sweetsTransform = candidate->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
@@ -578,7 +698,7 @@ void SceneSpace::Player::TryPickupNearest()
         physical.velocity = { 0.0f, 0.0f, 0.0f };
         physical.force = { 0.0f, 0.0f, 0.0f };
 
-        m_carried = candidate;
+        m_carrieds.push_back(candidate);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Pickup success tag='" << candidate->GetTag()
@@ -588,12 +708,12 @@ void SceneSpace::Player::TryPickupNearest()
 
 void SceneSpace::Player::DropCarriedSweets()
 {
-        if (!m_carried)
+        if (m_carrieds.empty())
         {
                 return;
-        }
+        };
 
-        auto sweets = m_carried;
+        auto sweets = m_carrieds.back();
         auto& sweetsTransform = sweets->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
         sweets->SyncColliderBounds();
@@ -620,7 +740,7 @@ void SceneSpace::Player::DropCarriedSweets()
             << "' velocityY=" << sweetsPhysical.velocity.y << "\n";
         PlayerDebugTrace(oss.str());
 
-        m_carried.reset();
+        m_carrieds.pop_back();
 }
 
 float3 SceneSpace::Player::ComputeCarryAnchor() const

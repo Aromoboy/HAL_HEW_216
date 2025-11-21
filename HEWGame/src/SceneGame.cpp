@@ -1831,8 +1831,12 @@ void SceneGame::RenderRunTelemetryOverlay() const
     carryLine << "[SceneGame] Player carry: ";
     if (player && player->IsCarryingSweets())
     {
-        const auto carried = player->GetCarriedSweets();
-        carryLine << (carried ? carried->GetTag() : "<unknown>");
+        for (auto it : player->GetCarriedSweets())
+        {
+            const auto carried = it;
+            carryLine << (carried ? carried->GetTag() : "<unknown>");
+        }
+
     }
     else
     {

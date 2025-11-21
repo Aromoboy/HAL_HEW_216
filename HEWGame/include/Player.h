@@ -9,6 +9,7 @@
 #include "PhysicalEntity.h"
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace SweetsSpace
 {
@@ -42,7 +43,7 @@ namespace SceneSpace
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
-        std::shared_ptr<SweetsSpace::BaseSweets> GetCarriedSweets() const;
+        const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;
         void ClearCarriedSweets();
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
@@ -55,7 +56,8 @@ namespace SceneSpace
     private:
         std::shared_ptr<ModelDX> model;
         SweetsSpace::SweetsManager* m_sweetsManager;
-        std::shared_ptr<SweetsSpace::BaseSweets> m_carried;
+        std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+        int m_maxCarry;
         float m_pickupRadius;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
