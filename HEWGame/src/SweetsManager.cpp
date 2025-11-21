@@ -573,6 +573,8 @@ namespace SweetsSpace
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
         , m_warnedMissingHorizontalBounds(false)
+        , m_spawnPausedDueToLiveSweets(false)
+        , m_lastLiveSweetsCount(0)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -1766,8 +1768,58 @@ namespace SweetsSpace
         m_currentBurstRemaining = 0;
     }
 
+    int SweetsManager::CountLiveSweets() const
+    {
+        const std::array<SweetsState, 3> liveStates = {
+            SweetsState::Active,
+            SweetsState::Ground,
+            SweetsState::Carried,
+        };
+
+        int total = 0;
+        for (const auto state : liveStates)
+        {
+            const auto it = m_byState.find(state);
+            if (it != m_byState.end())
+            {
+                total += static_cast<int>(it->second.size());
+            }
+        }
+
+        return total;
+    }
+
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
     {
+        const int liveSweets = CountLiveSweets();
+        const bool hasLiveSweets = (liveSweets > 0);
+
+        if (hasLiveSweets)
+        {
+            if (!m_spawnPausedDueToLiveSweets || liveSweets != m_lastLiveSweetsCount)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Spawn scheduler paused; live sweets=" << liveSweets
+                    << " (Active/Ground/Carried).\n";
+                DebugTrace(oss.str());
+            }
+
+            m_spawnPausedDueToLiveSweets = true;
+            m_lastLiveSweetsCount = liveSweets;
+            return;
+        }
+
+        if (m_spawnPausedDueToLiveSweets)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler resumed; live sweets count reduced from "
+                << m_lastLiveSweetsCount << " to 0.\n";
+            DebugTrace(oss.str());
+        }
+
+        m_spawnPausedDueToLiveSweets = false;
+        m_lastLiveSweetsCount = liveSweets;
+
         EmitSpawnRequests(deltaSeconds);
 
         if (m_phaseConfigs.empty())
