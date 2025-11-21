@@ -53,6 +53,7 @@ namespace
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
     constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
+    constexpr int kDefaultSimultaneousLiveTarget = kDefaultSimultaneousSpawnCount;
     constexpr int kDefaultLiveSweetsCap = 24;
     constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
@@ -540,11 +541,13 @@ namespace SweetsSpace
         , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
         , m_activeBurstPlanned(0)
         , m_currentBurstRemaining(0)
+        , m_simultaneousLiveTarget(kDefaultSimultaneousLiveTarget)
         , m_stackedInBatch(0)
         , m_batchInitialSpawnDone(false)
         , m_batchStackTarget(kDefaultSimultaneousSpawnCount)
         , m_batchCoolingDown(false)
         , m_random(std::random_device{}())
+        , m_pendingTopUpAfterDrop(false)
         , m_enableRandomRotation(false)
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
         , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
@@ -1397,6 +1400,23 @@ namespace SweetsSpace
 
         UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
+        const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
+        const int liveAfterRemoval = CountLiveSweets();
+        const int desiredLiveTarget = (remainingToStack > 0)
+            ? std::min(m_simultaneousLiveTarget, remainingToStack)
+            : 0;
+        if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
+        {
+            m_pendingTopUpAfterDrop = true;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " detected live sweets drop below target; scheduling delayed top-up. live="
+                << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
+                << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+                << " queue=" << m_spawnQueue.size() << ".\n";
+            DebugTrace(oss.str());
+        }
+
 #if defined(_DEBUG)
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
@@ -1428,6 +1448,7 @@ namespace SweetsSpace
             bool hasInterval = false;
             bool hasBurstInterval = false;
             bool hasSimultaneous = false;
+            bool hasSimultaneousTarget = false;
             bool hasWeights = false;
         };
 
@@ -1543,6 +1564,22 @@ namespace SweetsSpace
                     parseError = true;
                 }
             }
+            else if (key == "simultaneousTarget")
+            {
+                try
+                {
+                    partial.config.simultaneousLiveTarget = std::max(1, std::stoi(value));
+                    partial.hasSimultaneousTarget = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse simultaneous target on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "weights")
             {
                 bool weightError = false;
@@ -1618,6 +1655,12 @@ namespace SweetsSpace
                 config.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
             }
             config.simultaneousSpawnCount = std::max(1, config.simultaneousSpawnCount);
+
+            if (!entry.second.hasSimultaneousTarget)
+            {
+                config.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
+            }
+            config.simultaneousLiveTarget = std::max(1, config.simultaneousLiveTarget);
 
             if (!entry.second.hasWeights || config.weights.empty())
             {
@@ -1769,6 +1812,8 @@ namespace SweetsSpace
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_batchStackTarget = std::max(1, m_batchStackTarget);
+        m_simultaneousLiveTarget = std::max(1, m_simultaneousLiveTarget);
+        m_pendingTopUpAfterDrop = false;
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
@@ -1860,6 +1905,16 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
 
+        const int simultaneousTarget = std::max(1, config.simultaneousLiveTarget);
+        if (simultaneousTarget != m_simultaneousLiveTarget)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Updated simultaneous live target to " << simultaneousTarget
+                << " (was " << m_simultaneousLiveTarget << ") for phase " << m_activePhaseConfigIndex << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        m_simultaneousLiveTarget = simultaneousTarget;
         m_batchStackTarget = batchTarget;
 
         if (!m_batchCoolingDown && m_stackedInBatch >= m_batchStackTarget)
@@ -1869,6 +1924,7 @@ namespace SweetsSpace
             m_batchInitialSpawnDone = false;
             m_activeBurstPlanned = 0;
             m_currentBurstRemaining = 0;
+            m_pendingTopUpAfterDrop = false;
             if (!m_spawnQueue.empty())
             {
                 std::ostringstream oss;
@@ -1923,57 +1979,57 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
 
-        EmitSpawnRequests(deltaSeconds);
-
-        const int currentLive = CountLiveSweets();
-        m_lastLiveSweetsCount = currentLive;
-
         const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
-        const int projectedLive = currentLive + pendingRequests;
+        const int projectedLive = liveSweets + pendingRequests;
+        const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
+        const int desiredLiveTarget = (remainingToStack > 0)
+            ? std::min(m_simultaneousLiveTarget, remainingToStack)
+            : 0;
 
-        if (!m_batchInitialSpawnDone)
+        if (desiredLiveTarget <= 0)
         {
-            const int initialDeficit = std::max(0, m_batchStackTarget - projectedLive);
-            if (initialDeficit > 0)
-            {
-                m_activeBurstPlanned = std::max(m_batchStackTarget, initialDeficit);
-                std::ostringstream oss;
-                oss << kLogPrefix << "Priming batch to target live sweets. live=" << currentLive
-                    << " pending=" << pendingRequests << " target=" << m_batchStackTarget
-                    << " requesting=" << initialDeficit << ".\n";
-                DebugTrace(oss.str());
-                EnqueueSpawns(initialDeficit);
-                m_burstTimer = m_activeBurstInterval;
-                EmitSpawnRequests(0.0f);
-            }
-
-            const int updatedProjected = currentLive + static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
-            if (updatedProjected >= m_batchStackTarget)
-            {
-                m_batchInitialSpawnDone = true;
-                std::ostringstream oss;
-                oss << kLogPrefix << "Initial batch emits primed. projectedLive=" << updatedProjected
-                    << " target=" << m_batchStackTarget << " stacked=" << m_stackedInBatch << ".\n";
-                DebugTrace(oss.str());
-            }
-
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
             return;
         }
 
-        const int liveDeficit = m_batchStackTarget - currentLive;
-        const int topUpDeficit = std::max(0, liveDeficit - pendingRequests);
-        if (topUpDeficit > 0)
+        if (projectedLive >= desiredLiveTarget)
         {
-            m_activeBurstPlanned = std::max(m_batchStackTarget, topUpDeficit);
-            std::ostringstream oss;
-            oss << kLogPrefix << "Scheduling top-up emits. live=" << currentLive
-                << " pending=" << pendingRequests << " target=" << m_batchStackTarget
-                << " requesting=" << topUpDeficit << " stacked=" << m_stackedInBatch << ".\n";
-            DebugTrace(oss.str());
-            EnqueueSpawns(topUpDeficit);
-            m_burstTimer = m_activeBurstInterval;
-            EmitSpawnRequests(0.0f);
+            if (!m_batchInitialSpawnDone)
+            {
+                m_batchInitialSpawnDone = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << "Live sweets already meet target; deferring new burst (projected="
+                    << projectedLive << " target=" << desiredLiveTarget
+                    << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget << ").\n";
+                DebugTrace(oss.str());
+            }
+
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
+            m_pendingTopUpAfterDrop = false;
+            return;
         }
+
+        const bool delayBurst = m_pendingTopUpAfterDrop;
+        const int deficit = desiredLiveTarget - projectedLive;
+        const int requestedCount = delayBurst ? 1 : deficit;
+        m_activeBurstPlanned = std::max(desiredLiveTarget, requestedCount);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Scheduling burst to restore live target. live=" << liveSweets
+            << " pending=" << pendingRequests << " target=" << desiredLiveTarget
+            << " requested=" << requestedCount << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+            << " delayedByDrop=" << std::boolalpha << delayBurst << ".\n";
+        DebugTrace(oss.str());
+
+        EnqueueSpawns(requestedCount);
+        m_burstTimer = delayBurst ? 0.0f : m_activeBurstInterval;
+        m_pendingTopUpAfterDrop = false;
+        m_batchInitialSpawnDone = true;
+
+        EmitSpawnRequests(deltaSeconds);
+        m_lastLiveSweetsCount = CountLiveSweets();
     }
 
     void SweetsManager::EnqueueSpawns(int count)
@@ -2155,6 +2211,7 @@ namespace SweetsSpace
         m_spawnTimer = std::max(m_spawnTimer, interval);
         m_activeBurstInterval = std::max(m_phaseConfigs[clamped].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
         m_batchStackTarget = std::max(1, m_phaseConfigs[clamped].simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[clamped].simultaneousLiveTarget);
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
@@ -2162,7 +2219,8 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "Phase change primed next batch with interval="
             << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
-            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount << ".\n";
+            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount
+            << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
         DebugTrace(oss.str());
         LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
     }
@@ -2174,6 +2232,7 @@ namespace SweetsSpace
             << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
             << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
+            << " liveTarget=" << config.simultaneousLiveTarget
             << " weights=";
 
         if (config.weights.empty())
@@ -2209,6 +2268,7 @@ namespace SweetsSpace
         phase0.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
         phase0.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
         phase0.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+        phase0.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
         phase0.weights = baseWeights;
 
         PhaseSpawnConfig phase1 = phase0;
@@ -2217,6 +2277,7 @@ namespace SweetsSpace
         PhaseSpawnConfig phase2 = phase0;
         phase2.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.5f);
         phase2.simultaneousSpawnCount = 2;
+        phase2.simultaneousLiveTarget = 2;
 
         m_phaseConfigs.push_back(phase0);
         m_phaseConfigs.push_back(phase1);
