@@ -72,11 +72,12 @@ SceneSpace::Player::Player(std::string a_tag,
         , m_moveSpeed(kDefaultPlayerMoveSpeed)
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
+        , m_missingModelWarned(false)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
         const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
-        std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
+        const std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
 
         std::ostringstream oss;
         if (descriptor)
@@ -92,13 +93,42 @@ SceneSpace::Player::Player(std::string a_tag,
         PlayerDebugTrace(oss.str());
 
         model = cache.Get(modelPath);
-        if (!model)
+        if (model)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Failed to load fairy model at '" + modelPath + "'.\n");
+                std::ostringstream success;
+                success << kPlayerLogPrefix << "Fairy model loaded successfully from '" << modelPath << "'.\n";
+                PlayerDebugTrace(success.str());
         }
         else
         {
-        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy model loaded successfully.\n");
+                std::ostringstream failure;
+                const bool isAlreadyFallback = (modelPath == kFairyFallbackPath);
+
+                failure << kPlayerLogPrefix << "Failed to load fairy model at '" << modelPath << "'.";
+                if (!isAlreadyFallback)
+                {
+                        failure << " Attempting fallback '" << kFairyFallbackPath << "'.\n";
+                }
+                else
+                {
+                        failure << " Fallback path already in use.\n";
+                }
+                PlayerDebugTrace(failure.str());
+
+                if (!isAlreadyFallback)
+                {
+                        model = cache.Get(kFairyFallbackPath);
+                        if (model)
+                        {
+                                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fallback fairy model loaded successfully.\n");
+                        }
+                }
+
+                if (!model)
+                {
+                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Player model unavailable; rendering will be skipped.\n");
+                        m_missingModelWarned = true;
+                }
         }
 }
 
@@ -154,6 +184,16 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
 void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
 {
+        if (!model)
+        {
+                if (!m_missingModelWarned)
+                {
+                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Draw skipped: player model missing.\n");
+                        m_missingModelWarned = true;
+                }
+                return;
+        }
+
         render.Draw(*model, m_transform, &camera);
 }
 

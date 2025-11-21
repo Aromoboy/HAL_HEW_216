@@ -61,6 +61,7 @@ namespace SceneSpace
         float m_moveSpeed;
         bool m_hasMinimumY;
         float m_minimumY;
+        bool m_missingModelWarned;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
