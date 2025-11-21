@@ -352,6 +352,18 @@ namespace Systems
                                         continue;
                                 }
 
+#if defined(_DEBUG)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Contact axes for '" << bodyA->GetTag() << "' vs '"
+                                            << bodyB->GetTag() << "': chosenAxis=" << axis
+                                            << " overlaps(x,y,z)=(" << overlaps[0] << "," << overlaps[1] << ","
+                                            << overlaps[2] << ") pushDistance=" << pushDistance
+                                            << " (tolerance=" << m_penetrationTolerance << ")\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
+
                                 const float centerA = GetAxisCenter(boundsA, axis);
                                 const float centerB = GetAxisCenter(boundsB, axis);
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
@@ -447,6 +459,20 @@ namespace Systems
                                                 const float topCenterX = GetAxisCenter(topBounds, 0);
                                                 slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
 
+#if defined(_DEBUG)
+                                                {
+                                                        const char* baseTag = topIsA ? bodyB->GetTag().c_str() : bodyA->GetTag().c_str();
+                                                        const char* topTag = topIsA ? bodyA->GetTag().c_str() : bodyB->GetTag().c_str();
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Support analysis: top='" << topTag << "' base='"
+                                                                << baseTag << "' overlapFraction=" << supportOverlapFraction
+                                                                << " threshold=" << m_stableSupportThreshold
+                                                                << " status=" << (unstableSupport ? "UNSTABLE" : "stable")
+                                                                << " slideDir=" << slideDir << " axis=" << axis << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+
                                                 if (unstableSupport)
                                                 {
                                                         Physics::Physical& topPhys = topIsA ? physA : physB;
@@ -455,12 +481,13 @@ namespace Systems
                                                                 topPhys.velocity.x += slideDir * m_edgeSlideBoost;
 #if defined(_DEBUG)
                                                                 std::ostringstream oss;
-                                                                oss << kLogPrefix << "Unstable support: overlapFraction="
-                                                                        << supportOverlapFraction << " (< threshold "
-                                                                        << m_stableSupportThreshold << ") between '"
-                                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
-                                                                        << "'. Slide boost=" << m_edgeSlideBoost
-                                                                        << " dir=" << slideDir << "\n";
+                                                                oss << kLogPrefix << "Unstable support slide boost: top='"
+                                                                        << (topIsA ? bodyA->GetTag() : bodyB->GetTag())
+                                                                        << "' base='" << (topIsA ? bodyB->GetTag() : bodyA->GetTag())
+                                                                        << "' overlapFraction=" << supportOverlapFraction
+                                                                        << " boost=" << m_edgeSlideBoost
+                                                                        << " dir=" << slideDir
+                                                                        << " velocityX=" << topPhys.velocity.x << "\n";
                                                                 DebugTrace(oss.str());
 #endif
                                                         }
@@ -509,7 +536,8 @@ namespace Systems
 #if defined(_DEBUG)
                                                         std::ostringstream oss;
                                                         oss << kLogPrefix << "Unstable support damping applied to body '"
-                                                                << bodyA->GetTag() << "' velocityY " << previousVelocity
+                                                                << bodyA->GetTag() << "' (supported by '" << bodyB->GetTag()
+                                                                << "') velocityY " << previousVelocity
                                                                 << " -> " << *velA << " (fraction=" << supportOverlapFraction
                                                                 << ")\n";
                                                         DebugTrace(oss.str());
@@ -537,7 +565,8 @@ namespace Systems
 #if defined(_DEBUG)
                                                         std::ostringstream oss;
                                                         oss << kLogPrefix << "Unstable support damping applied to body '"
-                                                                << bodyB->GetTag() << "' velocityY " << previousVelocity
+                                                                << bodyB->GetTag() << "' (supported by '" << bodyA->GetTag()
+                                                                << "') velocityY " << previousVelocity
                                                                 << " -> " << *velB << " (fraction=" << supportOverlapFraction
                                                                 << ")\n";
                                                         DebugTrace(oss.str());
