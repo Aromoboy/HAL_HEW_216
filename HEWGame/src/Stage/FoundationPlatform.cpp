@@ -60,7 +60,7 @@ namespace Stage
             transform.rotation,
             transform.scale,
             std::move(collider),
-            Collision::CollisionLayer::Floor,
+            Collision::CollisionLayer::Default,
             float3{ 0.0f, 0.0f, 0.0f },
             float3{ 0.0f, 0.0f, 0.0f },
             0.0f,
