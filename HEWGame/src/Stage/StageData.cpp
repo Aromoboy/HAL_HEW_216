@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <cstring>
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
@@ -141,17 +142,56 @@ namespace
 
         return true;
     }
+
+    bool TryParsePlatformKey(const std::string& key, const std::string& field, size_t& outIndex)
+    {
+        constexpr const char* kPlatformPrefix = "platform";
+        if (key.rfind(kPlatformPrefix, 0) != 0)
+        {
+            return false;
+        }
+
+        size_t cursor = std::strlen(kPlatformPrefix);
+        size_t parsedIndex = 0;
+        bool hasIndex = false;
+        while (cursor < key.size() && std::isdigit(static_cast<unsigned char>(key[cursor])))
+        {
+            parsedIndex = (parsedIndex * 10) + static_cast<size_t>(key[cursor] - '0');
+            hasIndex = true;
+            ++cursor;
+        }
+
+        if (cursor >= key.size() || key[cursor] != '.')
+        {
+            return false;
+        }
+
+        ++cursor;
+        const std::string remainder = key.substr(cursor);
+        if (remainder != field)
+        {
+            return false;
+        }
+
+        outIndex = hasIndex ? parsedIndex : 0;
+        return true;
+    }
+
+    struct PlatformOverride
+    {
+        Stage::PlatformDescriptor descriptor{};
+        bool centerProvided = false;
+        bool scaleProvided = false;
+        bool depthProvided = false;
+        bool widthProvided = false;
+        bool heightProvided = false;
+    };
 }
 
 namespace Stage
 {
     StageData::StageData()
         : m_planeZ(kDefaultPlaneZ)
-        , m_platformCenterY(kDefaultPlatformCenterY)
-        , m_platformWidthFraction(kDefaultPlatformWidthFraction)
-        , m_platformHeightFraction(kDefaultPlatformHeightFraction)
-        , m_platformDepth(kDefaultPlatformDepth)
-        , m_platformScale(kDefaultPlatformScale)
         , m_loadedFromFile(false)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
@@ -179,6 +219,7 @@ namespace Stage
         std::vector<float> thresholds;
         std::vector<float3> spawnPoints;
         std::vector<float> rewardMultipliers;
+        std::vector<PlatformOverride> platformOverrides;
         float planeZ = kDefaultPlaneZ;
         bool planeZSet = false;
         float platformCenterY = kDefaultPlatformCenterY;
@@ -233,7 +274,139 @@ namespace Stage
             const std::string key = Trim(line.substr(0, delimiterPos));
             const std::string rawValue = Trim(line.substr(delimiterPos + 1));
 
-            if (key == "planeZ")
+            size_t platformIndex = 0;
+            if (TryParsePlatformKey(key, "center", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "platform" << platformIndex
+                        << ".center on line " << lineNumber
+                        << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    platformOverrides[platformIndex].descriptor.center = float3{ parsed[0], parsed[1], parsed[2] };
+                    platformOverrides[platformIndex].centerProvided = true;
+                }
+            }
+            else if (TryParsePlatformKey(key, "scale", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "platform" << platformIndex
+                        << ".scale on line " << lineNumber
+                        << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                else
+                {
+                    platformOverrides[platformIndex].descriptor.scale = float3{ parsed[0], parsed[1], parsed[2] };
+                    platformOverrides[platformIndex].scaleProvided = true;
+                }
+            }
+            else if (TryParsePlatformKey(key, "depth", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                try
+                {
+                    platformOverrides[platformIndex].descriptor.depth = std::stof(rawValue);
+                    platformOverrides[platformIndex].depthProvided = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platform" << platformIndex
+                        << ".depth on line " << lineNumber << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (TryParsePlatformKey(key, "widthFraction", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                try
+                {
+                    platformOverrides[platformIndex].descriptor.widthFraction = std::stof(rawValue);
+                    platformOverrides[platformIndex].widthProvided = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platform" << platformIndex
+                        << ".widthFraction on line " << lineNumber << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (TryParsePlatformKey(key, "heightFraction", platformIndex))
+            {
+                auto ensureOverride = [&platformOverrides](size_t index)
+                {
+                    if (index >= platformOverrides.size())
+                    {
+                        platformOverrides.resize(index + 1);
+                    }
+                };
+                ensureOverride(platformIndex);
+
+                try
+                {
+                    platformOverrides[platformIndex].descriptor.heightFraction = std::stof(rawValue);
+                    platformOverrides[platformIndex].heightProvided = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse platform" << platformIndex
+                        << ".heightFraction on line " << lineNumber << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "planeZ")
             {
                 try
                 {
@@ -602,31 +775,121 @@ namespace Stage
         platformWidthFraction = sanitizeFraction(platformWidthFraction, kDefaultPlatformWidthFraction, "platformWidthFraction");
         platformHeightFraction = sanitizeFraction(platformHeightFraction, kDefaultPlatformHeightFraction, "platformHeightFraction");
 
-        if (!std::isfinite(platformDepth) || platformDepth == 0.0f)
+        auto sanitizeDepth = [](float value, float defaultValue, const std::string& name)
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "platformDepth value " << platformDepth
-                << " invalid; using default " << kDefaultPlatformDepth << "\n";
-            DebugTrace(oss.str());
-            platformDepth = kDefaultPlatformDepth;
-        }
-        platformDepth = std::max(0.01f, std::fabs(platformDepth));
-
-        auto sanitizeScale = [](float value)
-        {
-            return std::max(0.01f, std::fabs(value));
+            float sanitized = value;
+            if (!std::isfinite(sanitized) || sanitized == 0.0f)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << name << " value " << sanitized
+                    << " invalid; using default " << defaultValue << "\n";
+                DebugTrace(oss.str());
+                sanitized = defaultValue;
+            }
+            sanitized = std::max(0.01f, std::fabs(sanitized));
+            return sanitized;
         };
-        const float3 rawScale = platformScale;
-        platformScale.x = sanitizeScale(platformScale.x);
-        platformScale.y = sanitizeScale(platformScale.y);
-        platformScale.z = sanitizeScale(platformScale.z);
-        if (platformScale.x != rawScale.x || platformScale.y != rawScale.y || platformScale.z != rawScale.z)
+
+        auto sanitizeScaleVector = [](const float3& value, const std::string& name)
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "platformScale values sanitized from ("
-                << rawScale.x << ',' << rawScale.y << ',' << rawScale.z << ") to ("
-                << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
-            DebugTrace(oss.str());
+            auto sanitizeScale = [](float component)
+            {
+                return std::max(0.01f, std::fabs(component));
+            };
+
+            float3 sanitized = value;
+            const float3 raw = sanitized;
+            sanitized.x = sanitizeScale(sanitized.x);
+            sanitized.y = sanitizeScale(sanitized.y);
+            sanitized.z = sanitizeScale(sanitized.z);
+            if (sanitized.x != raw.x || sanitized.y != raw.y || sanitized.z != raw.z)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << name << " values sanitized from ("
+                    << raw.x << ',' << raw.y << ',' << raw.z << ") to ("
+                    << sanitized.x << ',' << sanitized.y << ',' << sanitized.z << ").\n";
+                DebugTrace(oss.str());
+            }
+            return sanitized;
+        };
+
+        auto sanitizeCenterComponent = [](float value, float defaultValue, const std::string& label)
+        {
+            if (!std::isfinite(value))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " invalid; defaulting to " << defaultValue << "\n";
+                DebugTrace(oss.str());
+                return defaultValue;
+            }
+            return value;
+        };
+
+        platformDepth = sanitizeDepth(platformDepth, kDefaultPlatformDepth, "platformDepth");
+        platformScale = sanitizeScaleVector(platformScale, "platformScale");
+
+        auto buildDefaultPlatform = [&]()
+        {
+            PlatformDescriptor descriptor{};
+            descriptor.center = float3{ 0.0f, platformCenterY, planeZ };
+            descriptor.scale = platformScale;
+            descriptor.depth = platformDepth;
+            descriptor.widthFraction = platformWidthFraction;
+            descriptor.heightFraction = platformHeightFraction;
+            return descriptor;
+        };
+
+        auto sanitizePlatformDescriptor = [&](PlatformDescriptor descriptor, std::size_t index)
+        {
+            const std::string labelPrefix = std::string("platform") + std::to_string(index);
+            descriptor.center.x = sanitizeCenterComponent(descriptor.center.x, 0.0f, labelPrefix + ".centerX");
+            descriptor.center.y = sanitizeCenterComponent(descriptor.center.y, platformCenterY, labelPrefix + ".centerY");
+            descriptor.center.z = sanitizeCenterComponent(descriptor.center.z, planeZ, labelPrefix + ".centerZ");
+
+            descriptor.scale = sanitizeScaleVector(descriptor.scale, labelPrefix + ".scale");
+            descriptor.depth = sanitizeDepth(descriptor.depth, platformDepth, labelPrefix + ".depth");
+
+            const std::string widthLabel = labelPrefix + ".widthFraction";
+            descriptor.widthFraction = sanitizeFraction(descriptor.widthFraction, platformWidthFraction, widthLabel.c_str());
+            const std::string heightLabel = labelPrefix + ".heightFraction";
+            descriptor.heightFraction = sanitizeFraction(descriptor.heightFraction, platformHeightFraction, heightLabel.c_str());
+            return descriptor;
+        };
+
+        std::vector<PlatformDescriptor> platformDescriptors;
+        if (platformOverrides.empty())
+        {
+            platformDescriptors.push_back(sanitizePlatformDescriptor(buildDefaultPlatform(), 0));
+        }
+        else
+        {
+            for (std::size_t i = 0; i < platformOverrides.size(); ++i)
+            {
+                PlatformDescriptor descriptor = buildDefaultPlatform();
+                const PlatformOverride& override = platformOverrides[i];
+                if (override.centerProvided)
+                {
+                    descriptor.center = override.descriptor.center;
+                }
+                if (override.scaleProvided)
+                {
+                    descriptor.scale = override.descriptor.scale;
+                }
+                if (override.depthProvided)
+                {
+                    descriptor.depth = override.descriptor.depth;
+                }
+                if (override.widthProvided)
+                {
+                    descriptor.widthFraction = override.descriptor.widthFraction;
+                }
+                if (override.heightProvided)
+                {
+                    descriptor.heightFraction = override.descriptor.heightFraction;
+                }
+
+                platformDescriptors.push_back(sanitizePlatformDescriptor(descriptor, i));
+            }
         }
 
         if (thresholds.empty())
@@ -713,11 +976,7 @@ namespace Stage
         m_phaseThresholds = thresholds;
         m_phaseRewardMultipliers = rewardMultipliers;
         m_spawnPoints = spawnPoints;
-        m_platformCenterY = platformCenterY;
-        m_platformWidthFraction = platformWidthFraction;
-        m_platformHeightFraction = platformHeightFraction;
-        m_platformDepth = platformDepth;
-        m_platformScale = platformScale;
+        m_platforms = std::move(platformDescriptors);
         m_playerMoveSpeed = playerMoveSpeed;
         m_guidelineHeight = guidelineHeight;
         m_heightBonusThreshold = heightBonusThreshold;
@@ -731,11 +990,7 @@ namespace Stage
             << ", thresholds=" << m_phaseThresholds.size()
             << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", spawnPoints=" << m_spawnPoints.size()
-            << ", platformCenterY=" << m_platformCenterY
-            << ", platformWidthFraction=" << m_platformWidthFraction
-            << ", platformHeightFraction=" << m_platformHeightFraction
-            << ", platformDepth=" << m_platformDepth
-            << ", platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
+            << ", platforms=" << m_platforms.size()
             << ", playerMoveSpeed=" << m_playerMoveSpeed
             << ", guidelineHeight=" << m_guidelineHeight
             << ", heightBonusThreshold=" << m_heightBonusThreshold
@@ -743,6 +998,11 @@ namespace Stage
             << ", backgroundTexture='" << m_backgroundTexturePath << "'"
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
+
+        for (std::size_t i = 0; i < m_platforms.size(); ++i)
+        {
+            LogPlatformSummary(i, m_platforms[i]);
+        }
 
         return m_loadedFromFile;
     }
@@ -767,29 +1027,30 @@ namespace Stage
         return m_planeZ;
     }
 
-    float StageData::GetPlatformCenterY() const noexcept
+    const std::vector<PlatformDescriptor>& StageData::GetPlatforms() const noexcept
     {
-        return m_platformCenterY;
+        return m_platforms;
     }
 
-    float StageData::GetPlatformWidthFraction() const noexcept
+    const PlatformDescriptor& StageData::GetPlatform(std::size_t index) const
     {
-        return m_platformWidthFraction;
+        if (index < m_platforms.size())
+        {
+            return m_platforms[index];
+        }
+
+        if (m_platforms.empty())
+        {
+            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction };
+            return s_fallback;
+        }
+
+        return m_platforms.front();
     }
 
-    float StageData::GetPlatformHeightFraction() const noexcept
+    std::size_t StageData::GetPlatformCount() const noexcept
     {
-        return m_platformHeightFraction;
-    }
-
-    float StageData::GetPlatformDepth() const noexcept
-    {
-        return m_platformDepth;
-    }
-
-    const float3& StageData::GetPlatformScale() const noexcept
-    {
-        return m_platformScale;
+        return m_platforms.size();
     }
 
     const std::string& StageData::GetSourcePath() const noexcept
@@ -825,15 +1086,18 @@ namespace Stage
     void StageData::ApplyDefaults()
     {
         m_planeZ = kDefaultPlaneZ;
-        m_platformCenterY = kDefaultPlatformCenterY;
-        m_platformWidthFraction = kDefaultPlatformWidthFraction;
-        m_platformHeightFraction = kDefaultPlatformHeightFraction;
-        m_platformDepth = kDefaultPlatformDepth;
-        m_platformScale = kDefaultPlatformScale;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
         EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
         m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+        m_platforms.clear();
+        PlatformDescriptor descriptor{};
+        descriptor.center = float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ };
+        descriptor.scale = kDefaultPlatformScale;
+        descriptor.depth = kDefaultPlatformDepth;
+        descriptor.widthFraction = kDefaultPlatformWidthFraction;
+        descriptor.heightFraction = kDefaultPlatformHeightFraction;
+        m_platforms.push_back(descriptor);
         m_playerMoveSpeed = kDefaultPlayerMoveSpeed;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
@@ -851,17 +1115,29 @@ namespace Stage
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
             << " spawnPoints=" << m_spawnPoints.size()
-            << " platformCenterY=" << m_platformCenterY
-            << " platformWidthFraction=" << m_platformWidthFraction
-            << " platformHeightFraction=" << m_platformHeightFraction
-            << " platformDepth=" << m_platformDepth
-            << " platformScale=(" << m_platformScale.x << ',' << m_platformScale.y << ',' << m_platformScale.z << ')'
+            << " platforms=" << m_platforms.size()
             << " playerMoveSpeed=" << m_playerMoveSpeed
             << " guidelineHeight=" << m_guidelineHeight
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
+        DebugTrace(oss.str());
+
+        for (std::size_t i = 0; i < m_platforms.size(); ++i)
+        {
+            LogPlatformSummary(i, m_platforms[i]);
+        }
+    }
+
+    void StageData::LogPlatformSummary(std::size_t index, const PlatformDescriptor& descriptor) const
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << " platform[" << index << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
+            << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
+            << descriptor.scale.z << ") depth=" << descriptor.depth
+            << " widthFraction=" << descriptor.widthFraction
+            << " heightFraction=" << descriptor.heightFraction << "\n";
         DebugTrace(oss.str());
     }
 
