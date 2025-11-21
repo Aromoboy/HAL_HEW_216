@@ -5,7 +5,8 @@
 #include <memory>
 #include <unordered_set>
 #include <vector>
-
+#include <unordered_map>
+#include "AABBCollider.h"
 #include "Transform.h"
 
 namespace CameraSpace
@@ -19,6 +20,7 @@ class ModelRender;
 namespace SceneSpace
 {
         class Entity;
+        class CollisionEntity;
 }
 
 namespace Systems
@@ -31,6 +33,7 @@ namespace Systems
 
                 void SetRenderer(ModelRender* renderer);
                 void RegisterRenderable(SceneSpace::Entity& entity);
+                void RegisterRenderable(SceneSpace::CollisionEntity& entity);
                 void UnregisterRenderable(SceneSpace::Entity& entity);
                 void ClearRenderables();
 
@@ -56,6 +59,7 @@ namespace Systems
 
                 ModelRender* m_renderer;
                 std::vector<SceneSpace::Entity*> m_renderables;
+                std::unordered_map<SceneSpace::Entity*, Collision::ICollider*> m_renderables;
                 std::vector<DrawCommand> m_commands;
                 std::unordered_set<const SceneSpace::Entity*> m_missingModelEntities;
                 bool m_debugLoggingEnabled;

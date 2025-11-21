@@ -14,6 +14,7 @@
 
 #include "Core/IUpdatable.h"
 #include "Entity.h"
+#include "CollisionEntity.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 
@@ -98,6 +99,10 @@ namespace Systems
 
                 m_renderables.erase(it, m_renderables.end());
                 m_missingModelEntities.erase(entityPtr);
+        }
+
+        void DrawSystem::RegisterRenderable(SceneSpace::CollisionEntity& entity)
+        {
         }
 
         void DrawSystem::ClearRenderables()
