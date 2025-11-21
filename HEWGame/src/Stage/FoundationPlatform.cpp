@@ -32,7 +32,7 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/SweetsPrototype/CakeCube.obj";
-    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 0.2f, 0.8f, 0.35f, 1.0f };
+    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
