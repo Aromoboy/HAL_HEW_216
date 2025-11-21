@@ -28,6 +28,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <DirectXMath.h>
@@ -998,6 +999,90 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
     if (player)
     {
+        const auto applyPlayerBounds = [&](float minX, float maxX, std::optional<float> maxY, const std::string& source, bool forceLog)
+        {
+            const bool maxYValid = maxY.has_value() && std::isfinite(*maxY);
+            const bool cachedMaxYValid = std::isfinite(m_cachedPlayerMaxY);
+            const bool boundsChanged = !m_cachedPlayerBoundsValid
+                || HasMeaningfulDifference(m_cachedPlayerMinX, minX)
+                || HasMeaningfulDifference(m_cachedPlayerMaxX, maxX)
+                || (cachedMaxYValid != maxYValid)
+                || (cachedMaxYValid && maxYValid && HasMeaningfulDifference(m_cachedPlayerMaxY, *maxY));
+
+            player->SetScreenBounds(minX, maxX, maxYValid ? maxY : std::optional<float>{});
+            m_cachedPlayerMinX = minX;
+            m_cachedPlayerMaxX = maxX;
+            m_cachedPlayerMaxY = maxYValid ? *maxY : std::numeric_limits<float>::quiet_NaN();
+            m_cachedPlayerBoundsValid = true;
+
+            if (forceLog || boundsChanged)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerBounds] " << source
+                    << " minX=" << minX << " maxX=" << maxX;
+                if (maxYValid)
+                {
+                    oss << " maxY=" << *maxY;
+                }
+                oss << " viewportFromDefaultRTV=" << std::boolalpha << viewportFromDefault << "\n";
+                DebugTrace(oss.str());
+            }
+
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->SetHorizontalBounds(minX, maxX);
+            }
+        };
+
+        const auto useFallbackBounds = [&](const std::string& reason, bool forceLog)
+        {
+            float fallbackMinX = 0.0f;
+            float fallbackMaxX = 0.0f;
+            std::optional<float> fallbackMaxY;
+            bool usedCached = false;
+
+            if (m_cachedPlayerBoundsValid
+                && std::isfinite(m_cachedPlayerMinX) && std::isfinite(m_cachedPlayerMaxX))
+            {
+                fallbackMinX = m_cachedPlayerMinX;
+                fallbackMaxX = m_cachedPlayerMaxX;
+                if (std::isfinite(m_cachedPlayerMaxY))
+                {
+                    fallbackMaxY = m_cachedPlayerMaxY;
+                }
+                usedCached = true;
+            }
+            else
+            {
+                const float platformHalfWidth = std::isfinite(m_stageData.GetPlatformScale().x)
+                    ? std::max(1.0f, m_stageData.GetPlatformScale().x * 0.5f)
+                    : 5.0f;
+                const float fallbackHalfWidth = std::max(5.0f, platformHalfWidth);
+                fallbackMinX = kStageCenterX - fallbackHalfWidth;
+                fallbackMaxX = kStageCenterX + fallbackHalfWidth;
+
+                if (std::isfinite(m_stageData.GetPlatformCenterY()) && std::isfinite(m_stageData.GetPlatformScale().y))
+                {
+                    const float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
+                    fallbackMaxY = platformTopY + m_stageData.GetPlatformScale().y;
+                }
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerBounds] Using "
+                << (usedCached ? "cached bounds" : "conservative defaults")
+                << " after " << reason
+                << " minX=" << fallbackMinX << " maxX=" << fallbackMaxX;
+            if (fallbackMaxY)
+            {
+                oss << " maxY=" << *fallbackMaxY;
+            }
+            oss << " viewportFromDefaultRTV=" << std::boolalpha << viewportFromDefault << "\n";
+            DebugTrace(oss.str());
+
+            applyPlayerBounds(fallbackMinX, fallbackMaxX, fallbackMaxY, "Fallback bounds applied", forceLog);
+        };
+
         std::shared_ptr<CameraSpace::PerspectiveCamera> activeCamera = m_gameCamera;
         if (!activeCamera)
         {
@@ -1017,32 +1102,11 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
             if (TryComputeViewportBoundsOnPlane(*activeCamera, viewportWidth, viewportHeight, playerPlaneZ, minX, maxX, minY, maxY))
             {
-                const bool boundsChanged = !m_cachedPlayerBoundsValid
-                    || HasMeaningfulDifference(m_cachedPlayerMinX, minX)
-                    || HasMeaningfulDifference(m_cachedPlayerMaxX, maxX)
-                    || HasMeaningfulDifference(m_cachedPlayerMaxY, maxY);
-
-                player->SetScreenBounds(minX, maxX, maxY);
-                m_cachedPlayerMinX = minX;
-                m_cachedPlayerMaxX = maxX;
-                m_cachedPlayerMaxY = maxY;
-                m_cachedPlayerBoundsValid = true;
-
-                if (boundsChanged)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerBounds] Updated from viewport=" << viewportWidth << 'x' << viewportHeight
-                        << " planeZ=" << playerPlaneZ
-                        << " minX=" << minX << " maxX=" << maxX
-                        << " minY=" << minY << " maxY=" << maxY
-                        << " viewportFromDefaultRTV=" << std::boolalpha << viewportFromDefault << "\n";
-                    DebugTrace(oss.str());
-                }
-
-                if (m_sweetsManager)
-                {
-                    m_sweetsManager->SetHorizontalBounds(minX, maxX);
-                }
+                std::ostringstream source;
+                source << "Updated from viewport=" << viewportWidth << 'x' << viewportHeight
+                    << " planeZ=" << playerPlaneZ
+                    << " minY=" << minY;
+                applyPlayerBounds(minX, maxX, maxY, source.str(), false);
             }
             else
             {
@@ -1050,19 +1114,21 @@ void SceneGame::Update(Core::UpdateContext& ctx)
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "[PlayerBounds] Failed to derive bounds for planeZ=" << playerPlaneZ
-                        << " viewport=" << viewportWidth << 'x' << viewportHeight << "\n";
+                        << " viewport=" << viewportWidth << 'x' << viewportHeight << "; applying fallback.\n";
                     DebugTrace(oss.str());
                 }
                 boundsIssueThisFrame = true;
+                useFallbackBounds("viewport intersection failure", !m_playerBoundsFailureLogged);
             }
         }
         else
         {
             if (!m_playerBoundsFailureLogged)
             {
-                DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] Missing PerspectiveCamera; cannot clamp player.\n");
+                DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] Missing PerspectiveCamera; applying fallback clamp.\n");
             }
             boundsIssueThisFrame = true;
+            useFallbackBounds("missing PerspectiveCamera", !m_playerBoundsFailureLogged);
         }
     }
 
