@@ -1762,6 +1762,7 @@ namespace SweetsSpace
 
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
     {
+        const int previousLiveCount = m_lastLiveSweetsCount;
         const int liveSweets = CountLiveSweets();
         const bool hasLiveSweets = (liveSweets > 0);
 
@@ -1780,11 +1781,12 @@ namespace SweetsSpace
             return;
         }
 
-        if (m_spawnPausedDueToLiveSweets)
+        const bool resumedFromLivePause = m_spawnPausedDueToLiveSweets;
+        if (resumedFromLivePause)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Spawn scheduler resumed; live sweets count reduced from "
-                << m_lastLiveSweetsCount << " to 0.\n";
+                << previousLiveCount << " to 0.\n";
             DebugTrace(oss.str());
         }
 
@@ -1812,6 +1814,15 @@ namespace SweetsSpace
         const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+
+        if (resumedFromLivePause && m_currentBurstRemaining == 0 && m_spawnQueue.empty())
+        {
+            m_spawnTimer = std::max(m_spawnTimer, interval);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Live sweets reached zero; restarting spawn scheduling immediately. interval="
+                << interval << "s previousLive=" << previousLiveCount << ".\n";
+            DebugTrace(oss.str());
+        }
 
         if (m_currentBurstRemaining > 0 || !m_spawnQueue.empty())
         {
