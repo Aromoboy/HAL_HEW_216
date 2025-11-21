@@ -107,6 +107,40 @@ namespace
         }
         return values;
     }
+
+    bool TryParseSpawnPoint(const std::string& rawValue, size_t lineNumber, std::vector<float3>& outPoints)
+    {
+        std::string normalized = rawValue;
+        std::replace(normalized.begin(), normalized.end(), ';', ',');
+
+        bool error = false;
+        auto parsed = ParseFloatList(normalized, &error);
+        if (error || parsed.size() < 3)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn point on line " << lineNumber
+                << " could not be parsed. Raw='" << rawValue << "'\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        if (parsed.size() % 3 != 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn point on line " << lineNumber
+                << " expected groups of three floats but found " << parsed.size()
+                << " values. Raw='" << rawValue << "'\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        for (size_t i = 0; i + 2 < parsed.size(); i += 3)
+        {
+            outPoints.push_back(float3{ parsed[i], parsed[i + 1], parsed[i + 2] });
+        }
+
+        return true;
+    }
 }
 
 namespace Stage
@@ -230,19 +264,26 @@ namespace Stage
             }
             else if (key == "spawnPoint")
             {
-                bool error = false;
-                auto parsed = ParseFloatList(rawValue, &error);
-                if (error || parsed.size() < 3)
+                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "spawnPoint on line " << lineNumber
-                        << " must contain three floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
-                else
+            }
+            else if (key == "spawnPoints")
+            {
+                size_t beforeCount = spawnPoints.size();
+                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
                 {
-                    spawnPoints.push_back(float3{ parsed[0], parsed[1], parsed[2] });
+                    parseError = true;
+                }
+                else if (spawnPoints.size() - beforeCount != 2)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "spawnPoints on line " << lineNumber
+                        << " expected exactly two spawn anchors but found "
+                        << (spawnPoints.size() - beforeCount) << ". Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
                 }
             }
             else if (key == "phaseRewardMultipliers")
