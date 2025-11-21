@@ -127,6 +127,9 @@ namespace Systems
                 , m_bodies(nullptr)
                 , m_penetrationTolerance(0.01f)
                 , m_restitution(0.15f)
+                , m_stableSupportThreshold(0.35f)
+                , m_edgeSlideBoost(0.25f)
+                , m_unstableVerticalDamping(0.35f)
                 , m_loggedMissingBodyList(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
@@ -165,6 +168,21 @@ namespace Systems
         void ContactLiteSystem::SetRestitution(float restitution)
         {
                 m_restitution = std::clamp(restitution, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetStableSupportThreshold(float threshold)
+        {
+                m_stableSupportThreshold = std::clamp(threshold, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetEdgeSlideBoost(float boost)
+        {
+                m_edgeSlideBoost = std::max(0.0f, boost);
+        }
+
+        void ContactLiteSystem::SetUnstableVerticalDamping(float damping)
+        {
+                m_unstableVerticalDamping = std::clamp(damping, 0.0f, 1.0f);
         }
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -399,6 +417,57 @@ namespace Systems
                                 float* velB = SelectAxisComponent(physB.velocity, axis);
                                 const float relativeVelocity = *velA - *velB;
 
+                                bool sweetsSupportPair = false;
+                                bool unstableSupport = false;
+                                bool topIsA = centerA > centerB;
+                                float supportOverlapFraction = 1.0f;
+                                float slideDir = 0.0f;
+
+                                if (axis == 1)
+                                {
+                                        const bool sweetsTagA = IsSweetsTag(bodyA->GetTag());
+                                        const bool sweetsTagB = IsSweetsTag(bodyB->GetTag());
+                                        const bool foundationA = bodyA->GetTag() == "StageFoundation";
+                                        const bool foundationB = bodyB->GetTag() == "StageFoundation";
+                                        sweetsSupportPair = (sweetsTagA && sweetsTagB)
+                                                || (sweetsTagA && foundationB)
+                                                || (foundationA && sweetsTagB);
+
+                                        if (sweetsSupportPair)
+                                        {
+                                                const float widthA = boundsA.max.x - boundsA.min.x;
+                                                const float widthB = boundsB.max.x - boundsB.min.x;
+                                                const float minWidth = std::max(std::min(widthA, widthB), 1e-3f);
+                                                supportOverlapFraction = std::clamp(planarOverlapX / minWidth, 0.0f, 1.0f);
+                                                unstableSupport = supportOverlapFraction < m_stableSupportThreshold;
+
+                                                const AABB& baseBounds = topIsA ? boundsB : boundsA;
+                                                const AABB& topBounds = topIsA ? boundsA : boundsB;
+                                                const float baseCenterX = GetAxisCenter(baseBounds, 0);
+                                                const float topCenterX = GetAxisCenter(topBounds, 0);
+                                                slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
+
+                                                if (unstableSupport)
+                                                {
+                                                        Physics::Physical& topPhys = topIsA ? physA : physB;
+                                                        if (topPhys.weight > 0.0f)
+                                                        {
+                                                                topPhys.velocity.x += slideDir * m_edgeSlideBoost;
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Unstable support: overlapFraction="
+                                                                        << supportOverlapFraction << " (< threshold "
+                                                                        << m_stableSupportThreshold << ") between '"
+                                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
+                                                                        << "'. Slide boost=" << m_edgeSlideBoost
+                                                                        << " dir=" << slideDir << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                }
+                                        }
+                                }
+
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
                                         float activeBodyCount = 0.0f;
@@ -434,26 +503,56 @@ namespace Systems
 #if defined(_DEBUG)
                                                 const float previousVelocity = *velA;
 #endif
-                                                *velA = 0.0f;
+                                                if (unstableSupport && topIsA)
+                                                {
+                                                        *velA *= m_unstableVerticalDamping;
+#if defined(_DEBUG)
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                << bodyA->GetTag() << "' velocityY " << previousVelocity
+                                                                << " -> " << *velA << " (fraction=" << supportOverlapFraction
+                                                                << ")\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                                else
+                                                {
+                                                        *velA = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
                                                     << "' from " << previousVelocity << " due to static contact.\n";
                                                 DebugTrace(oss.str());
 #endif
+                                                }
                                         }
                                         if (!bodyBStatic && bodyAStatic && *velB < 0.0f)
                                         {
 #if defined(_DEBUG)
                                                 const float previousVelocity = *velB;
 #endif
-                                                *velB = 0.0f;
+                                                if (unstableSupport && !topIsA)
+                                                {
+                                                        *velB *= m_unstableVerticalDamping;
+#if defined(_DEBUG)
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                << bodyB->GetTag() << "' velocityY " << previousVelocity
+                                                                << " -> " << *velB << " (fraction=" << supportOverlapFraction
+                                                                << ")\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                                else
+                                                {
+                                                        *velB = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
                                                     << "' from " << previousVelocity << " due to static contact.\n";
                                                 DebugTrace(oss.str());
 #endif
+                                                }
                                         }
                                 }
 
