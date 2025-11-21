@@ -1960,12 +1960,20 @@ namespace SweetsSpace
             const std::string kind = m_spawnQueue.front();
             m_spawnQueue.pop_front();
 
-            const float3 origin = NextSpawnOrigin();
-            Transform transform = BuildSpawnTransform(origin);
-            const bool spawned = static_cast<bool>(Spawn(kind, transform));
-            if (spawned)
+            const std::vector<float3> emitOrigins = m_spawnOrigins.empty()
+                ? std::vector<float3>{ NextSpawnOrigin() }
+                : m_spawnOrigins;
+            std::size_t successfulEmits = 0;
+            for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
             {
-                ++spawnedCount;
+                const float3& origin = emitOrigins[originIndex];
+                Transform transform = BuildSpawnTransform(origin);
+                const bool spawned = static_cast<bool>(Spawn(kind, transform));
+                if (spawned)
+                {
+                    ++spawnedCount;
+                    ++successfulEmits;
+                }
             }
 
             if (m_currentBurstRemaining > 0)
@@ -1976,7 +1984,8 @@ namespace SweetsSpace
             const int remainingInBurst = m_currentBurstRemaining + static_cast<int>(m_spawnQueue.size());
             std::ostringstream oss;
             oss << kLogPrefix << "Burst emit kind='" << kind << "' remaining=" << remainingInBurst
-                << '/' << m_activeBurstPlanned << " nextEmitIn=" << std::fixed << std::setprecision(2)
+                << '/' << m_activeBurstPlanned << " origins=" << emitOrigins.size()
+                << " successful=" << successfulEmits << " nextEmitIn=" << std::fixed << std::setprecision(2)
                 << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
             DebugTrace(oss.str());
         }
