@@ -53,6 +53,7 @@ namespace
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
     constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
+    constexpr int kDefaultLiveSweetsCap = 24;
     constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
@@ -544,6 +545,7 @@ namespace SweetsSpace
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
         , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
         , m_enableRandomScale(true)
+        , m_liveSweetsCap(kDefaultLiveSweetsCap)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
@@ -1723,6 +1725,25 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
+    void SweetsManager::SetLiveSweetsCap(int cap)
+    {
+        const int sanitizedCap = std::max(0, cap);
+        const bool changed = (sanitizedCap != m_liveSweetsCap);
+        m_liveSweetsCap = sanitizedCap;
+        const bool capActive = (m_liveSweetsCap > 0);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Live sweets cap " << (sanitizedCap > 0 ? "set" : "disabled")
+            << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
+            << ", liveCount=" << m_lastLiveSweetsCount << ").\n";
+        DebugTrace(oss.str());
+
+        if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))
+        {
+            m_spawnPausedDueToLiveSweets = false;
+        }
+    }
+
     void SweetsManager::ForceSpawnRefresh()
     {
         m_spawnTimer = 0.0f;
@@ -1764,36 +1785,33 @@ namespace SweetsSpace
     {
         const int previousLiveCount = m_lastLiveSweetsCount;
         const int liveSweets = CountLiveSweets();
-        const bool hasLiveSweets = (liveSweets > 0);
+        const bool liveCapActive = (m_liveSweetsCap > 0);
+        const bool spawnBlockedByCap = liveCapActive && liveSweets >= m_liveSweetsCap;
+        const bool liveCountChanged = (liveSweets != m_lastLiveSweetsCount);
 
-        if (hasLiveSweets)
+        if (spawnBlockedByCap)
         {
-            if (!m_spawnPausedDueToLiveSweets || liveSweets != m_lastLiveSweetsCount)
+            if (!m_spawnPausedDueToLiveSweets || liveCountChanged)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Spawn scheduler paused; live sweets=" << liveSweets
-                    << " (Active/Ground/Carried).\n";
+                oss << kLogPrefix << "Spawn scheduler throttled by live sweets cap=" << m_liveSweetsCap
+                    << "; live=" << liveSweets << " (Active/Ground/Carried) queued=" << m_spawnQueue.size()
+                    << " burstRemaining=" << m_currentBurstRemaining << ".\n";
                 DebugTrace(oss.str());
             }
-
-            m_spawnPausedDueToLiveSweets = true;
-            m_lastLiveSweetsCount = liveSweets;
-            return;
         }
-
-        const bool resumedFromLivePause = m_spawnPausedDueToLiveSweets;
-        if (resumedFromLivePause)
+        else if (liveCountChanged)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn scheduler resumed; live sweets count reduced from "
-                << previousLiveCount << " to 0.\n";
+            oss << kLogPrefix << "Live sweets count updated to " << liveSweets
+                << " (cap=" << (liveCapActive ? std::to_string(m_liveSweetsCap) : std::string("unlimited"))
+                << ", queued=" << m_spawnQueue.size() << ").\n";
             DebugTrace(oss.str());
         }
 
-        m_spawnPausedDueToLiveSweets = false;
+        const bool resumedFromLivePause = m_spawnPausedDueToLiveSweets && !spawnBlockedByCap;
+        m_spawnPausedDueToLiveSweets = spawnBlockedByCap;
         m_lastLiveSweetsCount = liveSweets;
-
-        EmitSpawnRequests(deltaSeconds);
 
         if (m_phaseConfigs.empty())
         {
@@ -1815,14 +1833,35 @@ namespace SweetsSpace
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
+        if (spawnBlockedByCap)
+        {
+            m_burstTimer = std::min(m_activeBurstInterval, m_burstTimer + deltaSeconds);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler waiting for live sweets to drop below cap="
+                << m_liveSweetsCap << "; live=" << liveSweets << " queued=" << m_spawnQueue.size()
+                << " spawnTimer=" << std::fixed << std::setprecision(2) << m_spawnTimer
+                << "s burstTimerUntilEmit=" << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
+            DebugTrace(oss.str());
+            return;
+        }
+
         if (resumedFromLivePause && m_currentBurstRemaining == 0 && m_spawnQueue.empty())
         {
             m_spawnTimer = std::max(m_spawnTimer, interval);
             std::ostringstream oss;
-            oss << kLogPrefix << "Live sweets reached zero; restarting spawn scheduling immediately. interval="
-                << interval << "s previousLive=" << previousLiveCount << ".\n";
+            oss << kLogPrefix << "Live sweets dropped below cap; restarting spawn scheduling. interval="
+                << interval << "s previousLive=" << previousLiveCount << " liveNow=" << liveSweets << ".\n";
             DebugTrace(oss.str());
         }
+        else if (resumedFromLivePause)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler resumed with pending burst. live=" << liveSweets
+                << " remainingInBurst=" << m_currentBurstRemaining << " queue=" << m_spawnQueue.size() << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        EmitSpawnRequests(deltaSeconds);
 
         if (m_currentBurstRemaining > 0 || !m_spawnQueue.empty())
         {
