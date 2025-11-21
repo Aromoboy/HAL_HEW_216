@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
+#include <array>
+#include <DirectXMath.h>
 #include <sstream>
 
 #if defined(_WIN32)
@@ -46,6 +49,129 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+
+    std::shared_ptr<ModelDX> CreateProceduralFairyModel()
+    {
+        static std::weak_ptr<ModelDX> cached;
+        if (auto reused = cached.lock())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy mesh.\n");
+            return reused;
+        }
+
+        ID3D11Device* device = GetDevice();
+        if (!device)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Cannot create procedural fairy: device not initialized.\n");
+            return nullptr;
+        }
+
+        constexpr float halfWidth = 0.4f;
+        constexpr float halfDepth = 0.12f;
+        constexpr float halfHeight = 0.7f;
+
+        const DirectX::XMFLOAT4 baseColor{ 0.45f, 0.65f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 wingHighlight{ 0.6f, 0.8f, 1.0f, 1.0f };
+
+        std::vector<MeshDX::Vertex> vertices;
+        vertices.reserve(24);
+
+        auto appendQuad = [&](const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& normal,
+            const DirectX::XMFLOAT4& colorFront, const DirectX::XMFLOAT4& colorBack)
+        {
+            const std::array<DirectX::XMFLOAT2, 4> uvs{ DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT2(1.0f, 1.0f),
+                DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f) };
+
+            const auto addVertex = [&](const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& nrm, const DirectX::XMFLOAT2& uv,
+                const DirectX::XMFLOAT4& col)
+            {
+                MeshDX::Vertex vertex{};
+                vertex.pos = pos;
+                vertex.normal = nrm;
+                vertex.uv = uv;
+                vertex.color = col;
+                for (float& weight : vertex.weight)
+                {
+                    weight = 0.0f;
+                }
+                for (unsigned int& idx : vertex.index)
+                {
+                    idx = 0;
+                }
+                vertices.push_back(vertex);
+            };
+
+            const DirectX::XMFLOAT3 frontNormal = normal;
+            const DirectX::XMFLOAT3 backNormal{ -normal.x, -normal.y, -normal.z };
+
+            for (size_t i = 0; i < positions.size(); ++i)
+            {
+                addVertex(positions[i], frontNormal, uvs[i], colorFront);
+            }
+            for (size_t i = 0; i < positions.size(); ++i)
+            {
+                addVertex(positions[i], backNormal, uvs[i], colorBack);
+            }
+        };
+
+        const std::array<DirectX::XMFLOAT3, 4> facingZ{ DirectX::XMFLOAT3(-halfWidth, -halfHeight, 0.0f),
+            DirectX::XMFLOAT3(halfWidth, -halfHeight, 0.0f), DirectX::XMFLOAT3(halfWidth, halfHeight, 0.0f),
+            DirectX::XMFLOAT3(-halfWidth, halfHeight, 0.0f) };
+        appendQuad(facingZ, DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f), wingHighlight, baseColor);
+
+        const std::array<DirectX::XMFLOAT3, 4> facingX{ DirectX::XMFLOAT3(0.0f, -halfHeight, -halfDepth),
+            DirectX::XMFLOAT3(0.0f, -halfHeight, halfDepth), DirectX::XMFLOAT3(0.0f, halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0.0f, halfHeight, -halfDepth) };
+        appendQuad(facingX, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), baseColor, wingHighlight);
+
+        std::vector<unsigned long> indices;
+        indices.reserve(36);
+        for (size_t quad = 0; quad < 2; ++quad)
+        {
+            const unsigned long base = static_cast<unsigned long>(quad * 8);
+            const std::array<unsigned long, 6> front{ base, base + 1, base + 2, base, base + 2, base + 3 };
+            const std::array<unsigned long, 6> back{ base + 4, base + 6, base + 5, base + 4, base + 7, base + 6 };
+            indices.insert(indices.end(), front.begin(), front.end());
+            indices.insert(indices.end(), back.begin(), back.end());
+        }
+
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.pIdx = indices.data();
+        desc.idxSize = sizeof(unsigned long);
+        desc.idxCount = static_cast<UINT>(indices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        auto mesh = std::make_shared<MeshDX>(desc, 0);
+        if (!mesh || !mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy mesh buffers failed to initialize.\n");
+            return nullptr;
+        }
+
+        const DirectX::XMFLOAT4 diffuse{ 0.5f, 0.75f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 ambient{ 0.2f, 0.35f, 0.55f, 1.0f };
+        const DirectX::XMFLOAT4 specular{ 0.1f, 0.1f, 0.2f, 8.0f };
+        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
+
+        std::vector<std::shared_ptr<MeshDX>> meshes;
+        meshes.push_back(std::move(mesh));
+
+        std::vector<std::shared_ptr<MaterialDX>> materials;
+        materials.push_back(std::move(material));
+
+        auto model = std::make_shared<ModelDX>(std::move(meshes), std::move(materials));
+        cached = model;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Procedural fairy mesh created (verts=" << vertices.size()
+            << ", indices=" << indices.size() << ").\n";
+        PlayerDebugTrace(oss.str());
+
+        return model;
+    }
 }
 
 SceneSpace::Player::Player(std::string a_tag,
@@ -92,11 +218,37 @@ SceneSpace::Player::Player(std::string a_tag,
         }
         PlayerDebugTrace(oss.str());
 
-        model = cache.Get(modelPath);
+        bool usingProcedural = false;
+        model = CreateProceduralFairyModel();
+        if (model)
+        {
+                usingProcedural = true;
+                std::ostringstream success;
+                success << kPlayerLogPrefix << "Using procedural fairy model; manifest asset reserved for fallback='" << modelPath
+                        << "'.\n";
+                PlayerDebugTrace(success.str());
+        }
+
+        if (!model)
+        {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy model unavailable; attempting to load asset file.\n");
+                model = cache.Get(modelPath);
+        }
+
         if (model)
         {
                 std::ostringstream success;
-                success << kPlayerLogPrefix << "Fairy model loaded successfully from '" << modelPath << "'.\n";
+                if (usingProcedural)
+                {
+                        success << kPlayerLogPrefix << "Fairy model ready from procedural mesh with fallback asset='" << modelPath
+                                << "'.\n";
+                }
+                else
+                {
+                        success << kPlayerLogPrefix << "Fairy model ready from "
+                                << (modelPath == kFairyFallbackPath ? "fallback" : "asset")
+                                << " path '" << modelPath << "'.\n";
+                }
                 PlayerDebugTrace(success.str());
         }
         else

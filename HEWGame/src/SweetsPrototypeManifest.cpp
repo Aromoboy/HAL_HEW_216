@@ -32,7 +32,7 @@ namespace SweetsSpace
         Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
-        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Billboard fairy companion with painted wings");
+        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description)
