@@ -45,7 +45,6 @@ namespace
     const float3 kDefaultSpawnPoints[] =
     {
         { -2.5f, 0.0f, kDefaultPlaneZ },
-        { 0.0f, 0.0f, kDefaultPlaneZ },
         { 2.5f, 0.0f, kDefaultPlaneZ },
     };
 
