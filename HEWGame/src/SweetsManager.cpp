@@ -533,7 +533,6 @@ namespace SweetsSpace
         , m_spawnTimer(kDefaultSpawnIntervalSeconds)
         , m_spawnQueue()
         , m_spawnOrigins()
-        , m_nextSpawnOriginIndex(0)
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
         , m_batchSize(kPrototypeBatchSize)
         , m_currentBatchRemaining(0)
@@ -1649,13 +1648,15 @@ namespace SweetsSpace
     void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
     {
         m_spawnOrigins = origins;
-        m_nextSpawnOriginIndex = 0;
         m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+        const auto seed = std::random_device{}();
+        m_random.seed(seed);
 
 
         std::ostringstream oss;
         oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
-            << " spawn origins (heightOffset=" << m_spawnHeightOffset << ").\n";
+            << " spawn origins (heightOffset=" << m_spawnHeightOffset
+            << " seed=" << seed << ").\n";
         DebugTrace(oss.str());
     }
 
@@ -2020,12 +2021,17 @@ namespace SweetsSpace
             return float3{ 0.0f, 0.0f, 0.0f };
         }
 
-        if (m_nextSpawnOriginIndex >= m_spawnOrigins.size())
-        {
-            m_nextSpawnOriginIndex = 0;
-        }
+        std::uniform_int_distribution<std::size_t> dist(0, m_spawnOrigins.size() - 1);
+        const std::size_t chosenIndex = dist(m_random);
+        const float3 origin = m_spawnOrigins[chosenIndex];
 
-        return m_spawnOrigins[m_nextSpawnOriginIndex++];
+        std::ostringstream oss;
+        oss << kLogPrefix << "Selected spawn origin index=" << chosenIndex
+            << " position=(" << origin.x << ',' << origin.y << ',' << origin.z
+            << ") of " << m_spawnOrigins.size() << " configured origins.\n";
+        DebugTrace(oss.str());
+
+        return origin;
     }
 
     Transform SweetsManager::BuildSpawnTransform(const float3& origin) const

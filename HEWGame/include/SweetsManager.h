@@ -144,7 +144,6 @@ namespace SweetsSpace
         float m_spawnTimer;
         std::deque<std::string> m_spawnQueue;
         std::vector<float3> m_spawnOrigins;
-        std::size_t m_nextSpawnOriginIndex;
         float m_spawnHeightOffset;
         int m_batchSize;
         int m_currentBatchRemaining;
