@@ -174,6 +174,7 @@ namespace SweetsSpace
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
+        int CountLiveSweets() const;
         void EnqueueSpawns(int count);
         void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
@@ -189,6 +190,9 @@ namespace SweetsSpace
             const char* context,
             bool logWarnings,
             DeleteBatchContext* batchContext);
+
+        bool m_spawnPausedDueToLiveSweets;
+        int m_lastLiveSweetsCount;
 
         template<typename T>
         std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
