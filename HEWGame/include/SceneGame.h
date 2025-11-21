@@ -97,7 +97,6 @@ private:
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unique_ptr<Stage::FoundationPlatform> m_stagePlatform;
-    std::unique_ptr<Stage::FoundationPlatform> m_floor;
     std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
@@ -107,8 +106,6 @@ private:
     bool m_sweetsRegistered = false;
     bool m_stagePlatformRegistered = false;
     bool m_stagePlatformDrawRegistered = false;
-    bool m_floorRegistered = false;
-    bool m_floorDrawRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();

@@ -21,6 +21,9 @@ namespace Stage
         const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
         float GetPlatformCenterY() const noexcept;
+        float GetPlatformWidthFraction() const noexcept;
+        float GetPlatformHeightFraction() const noexcept;
+        float GetPlatformDepth() const noexcept;
         const float3& GetPlatformScale() const noexcept;
         const std::string& GetSourcePath() const noexcept;
         float GetPlayerMoveSpeed() const noexcept;
@@ -36,6 +39,9 @@ namespace Stage
 
         float m_planeZ;
         float m_platformCenterY;
+        float m_platformWidthFraction;
+        float m_platformHeightFraction;
+        float m_platformDepth;
         float3 m_platformScale;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
