@@ -1,6 +1,7 @@
 #include "Shader.h"
 #include <d3dcompiler.h>
 #include <stdio.h>
+#include <string.h>
 
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -48,25 +49,28 @@ HRESULT Shader::Load(const char* pFileName)
 }
 HRESULT Shader::Compile(const char *pCode)
 {
-	static const char *pTargetList[] = 
-	{
-		"vs_5_0",
-		"ps_5_0"
-	};
+        static const char *pTargetList[] =
+        {
+                "vs_5_0",
+                "ps_5_0"
+        };
 
-	HRESULT hr;
-	ID3DBlob *pBlob;
-	ID3DBlob *error;
-	UINT compileFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-	hr = D3DCompile(pCode, strlen(pCode), nullptr, nullptr, nullptr,
-		"main", pTargetList[m_kind], compileFlag, 0, &pBlob, &error);
-	if (FAILED(hr)) { return hr; }
+        HRESULT hr = E_FAIL;
+        ID3DBlob *pBlob = nullptr;
+        ID3DBlob *error = nullptr;
+        UINT compileFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+        hr = D3DCompile(pCode, strlen(pCode), nullptr, nullptr, nullptr,
+                "main", pTargetList[m_kind], compileFlag, 0, &pBlob, &error);
+        SAFE_RELEASE(error);
+        if (FAILED(hr))
+        {
+                SAFE_RELEASE(pBlob);
+                return hr;
+        }
 
-	if (slot >= m_pTextures.size()) { return; }
-	ID3D11ShaderResourceView* pTex = tex ? tex->GetResource() : nullptr;
-	if (slot >= m_pTextures.size()) { return; }
-	SAFE_RELEASE(error);
-	return hr;
+        hr = Make(pBlob->GetBufferPointer(), (UINT)pBlob->GetBufferSize());
+        SAFE_RELEASE(pBlob);
+        return hr;
 }
 
 void Shader::WriteBuffer(UINT slot, void* pData)
