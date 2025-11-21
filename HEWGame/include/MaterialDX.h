@@ -16,6 +16,8 @@ public:
         DirectX::XMFLOAT4 GetAmbient() const;
         DirectX::XMFLOAT4 GetSpecular() const;
 
+        std::shared_ptr<Texture2D> GetTextureResource() const;
+
         void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
         void SetAmbient(const DirectX::XMFLOAT4& ambient);
         void SetSpecular(const DirectX::XMFLOAT4& specular);
