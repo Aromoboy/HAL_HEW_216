@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
+#include <array>
+#include <DirectXMath.h>
 #include <sstream>
 
 #if defined(_WIN32)
@@ -46,6 +49,129 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
     constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+
+    std::shared_ptr<ModelDX> CreateProceduralFairyModel()
+    {
+        static std::weak_ptr<ModelDX> cached;
+        if (auto reused = cached.lock())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy mesh.\n");
+            return reused;
+        }
+
+        ID3D11Device* device = GetDevice();
+        if (!device)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Cannot create procedural fairy: device not initialized.\n");
+            return nullptr;
+        }
+
+        constexpr float halfWidth = 0.4f;
+        constexpr float halfDepth = 0.12f;
+        constexpr float halfHeight = 0.7f;
+
+        const DirectX::XMFLOAT4 baseColor{ 0.45f, 0.65f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 wingHighlight{ 0.6f, 0.8f, 1.0f, 1.0f };
+
+        std::vector<MeshDX::Vertex> vertices;
+        vertices.reserve(24);
+
+        auto appendQuad = [&](const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& normal,
+            const DirectX::XMFLOAT4& colorFront, const DirectX::XMFLOAT4& colorBack)
+        {
+            const std::array<DirectX::XMFLOAT2, 4> uvs{ DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT2(1.0f, 1.0f),
+                DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f) };
+
+            const auto addVertex = [&](const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& nrm, const DirectX::XMFLOAT2& uv,
+                const DirectX::XMFLOAT4& col)
+            {
+                MeshDX::Vertex vertex{};
+                vertex.pos = pos;
+                vertex.normal = nrm;
+                vertex.uv = uv;
+                vertex.color = col;
+                for (float& weight : vertex.weight)
+                {
+                    weight = 0.0f;
+                }
+                for (unsigned int& idx : vertex.index)
+                {
+                    idx = 0;
+                }
+                vertices.push_back(vertex);
+            };
+
+            const DirectX::XMFLOAT3 frontNormal = normal;
+            const DirectX::XMFLOAT3 backNormal{ -normal.x, -normal.y, -normal.z };
+
+            for (size_t i = 0; i < positions.size(); ++i)
+            {
+                addVertex(positions[i], frontNormal, uvs[i], colorFront);
+            }
+            for (size_t i = 0; i < positions.size(); ++i)
+            {
+                addVertex(positions[i], backNormal, uvs[i], colorBack);
+            }
+        };
+
+        const std::array<DirectX::XMFLOAT3, 4> facingZ{ DirectX::XMFLOAT3(-halfWidth, -halfHeight, 0.0f),
+            DirectX::XMFLOAT3(halfWidth, -halfHeight, 0.0f), DirectX::XMFLOAT3(halfWidth, halfHeight, 0.0f),
+            DirectX::XMFLOAT3(-halfWidth, halfHeight, 0.0f) };
+        appendQuad(facingZ, DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f), wingHighlight, baseColor);
+
+        const std::array<DirectX::XMFLOAT3, 4> facingX{ DirectX::XMFLOAT3(0.0f, -halfHeight, -halfDepth),
+            DirectX::XMFLOAT3(0.0f, -halfHeight, halfDepth), DirectX::XMFLOAT3(0.0f, halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0.0f, halfHeight, -halfDepth) };
+        appendQuad(facingX, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), baseColor, wingHighlight);
+
+        std::vector<unsigned long> indices;
+        indices.reserve(36);
+        for (size_t quad = 0; quad < 2; ++quad)
+        {
+            const unsigned long base = static_cast<unsigned long>(quad * 8);
+            const std::array<unsigned long, 6> front{ base, base + 1, base + 2, base, base + 2, base + 3 };
+            const std::array<unsigned long, 6> back{ base + 4, base + 6, base + 5, base + 4, base + 7, base + 6 };
+            indices.insert(indices.end(), front.begin(), front.end());
+            indices.insert(indices.end(), back.begin(), back.end());
+        }
+
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.pIdx = indices.data();
+        desc.idxSize = sizeof(unsigned long);
+        desc.idxCount = static_cast<UINT>(indices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        auto mesh = std::make_shared<MeshDX>(desc, 0);
+        if (!mesh || !mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy mesh buffers failed to initialize.\n");
+            return nullptr;
+        }
+
+        const DirectX::XMFLOAT4 diffuse{ 0.5f, 0.75f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 ambient{ 0.2f, 0.35f, 0.55f, 1.0f };
+        const DirectX::XMFLOAT4 specular{ 0.1f, 0.1f, 0.2f, 8.0f };
+        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
+
+        std::vector<std::shared_ptr<MeshDX>> meshes;
+        meshes.push_back(std::move(mesh));
+
+        std::vector<std::shared_ptr<MaterialDX>> materials;
+        materials.push_back(std::move(material));
+
+        auto model = std::make_shared<ModelDX>(std::move(meshes), std::move(materials));
+        cached = model;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Procedural fairy mesh created (verts=" << vertices.size()
+            << ", indices=" << indices.size() << ").\n";
+        PlayerDebugTrace(oss.str());
+
+        return model;
+    }
 }
 
 SceneSpace::Player::Player(std::string a_tag,
@@ -53,6 +179,7 @@ SceneSpace::Player::Player(std::string a_tag,
         float3 rot,
         float3 scl,
         std::shared_ptr<Collision::ICollider> collide,
+        Collision::CollisionLayer layer,
         float3 velocity,
         float3 force,
         float weight,
@@ -60,7 +187,7 @@ SceneSpace::Player::Player(std::string a_tag,
         Core::UpdatePhase phase,
         int priority,
         bool kinematic)
-        : PhysicalEntity(a_tag, pos, rot, scl, collide, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
+        : PhysicalEntity(a_tag, pos, rot, scl, collide, layer, velocity, force, kinematic ? 0.0f : weight, damping, phase, priority)
         , model(nullptr)
         , m_sweetsManager(nullptr)
         , m_carried()
@@ -71,11 +198,17 @@ SceneSpace::Player::Player(std::string a_tag,
         , m_moveSpeed(kDefaultPlayerMoveSpeed)
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
+        , m_missingModelWarned(false)
+        , m_hasScreenBounds(false)
+        , m_minScreenX(0.0f)
+        , m_maxScreenX(0.0f)
+        , m_hasMaximumY(false)
+        , m_maximumY(0.0f)
 {
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
         const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
-        std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
+        const std::string modelPath = descriptor ? descriptor->modelPath : std::string(kFairyFallbackPath);
 
         std::ostringstream oss;
         if (descriptor)
@@ -90,14 +223,69 @@ SceneSpace::Player::Player(std::string a_tag,
         }
         PlayerDebugTrace(oss.str());
 
-        model = cache.Get(modelPath);
+        bool usingProcedural = false;
+        model = CreateProceduralFairyModel();
+        if (model)
+        {
+                usingProcedural = true;
+                std::ostringstream success;
+                success << kPlayerLogPrefix << "Using procedural fairy model; manifest asset reserved for fallback='" << modelPath
+                        << "'.\n";
+                PlayerDebugTrace(success.str());
+        }
+
         if (!model)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Failed to load fairy model at '" + modelPath + "'.\n");
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Procedural fairy model unavailable; attempting to load asset file.\n");
+                model = cache.Get(modelPath);
+        }
+
+        if (model)
+        {
+                std::ostringstream success;
+                if (usingProcedural)
+                {
+                        success << kPlayerLogPrefix << "Fairy model ready from procedural mesh with fallback asset='" << modelPath
+                                << "'.\n";
+                }
+                else
+                {
+                        success << kPlayerLogPrefix << "Fairy model ready from "
+                                << (modelPath == kFairyFallbackPath ? "fallback" : "asset")
+                                << " path '" << modelPath << "'.\n";
+                }
+                PlayerDebugTrace(success.str());
         }
         else
         {
-        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy model loaded successfully.\n");
+                std::ostringstream failure;
+                const bool isAlreadyFallback = (modelPath == kFairyFallbackPath);
+
+                failure << kPlayerLogPrefix << "Failed to load fairy model at '" << modelPath << "'.";
+                if (!isAlreadyFallback)
+                {
+                        failure << " Attempting fallback '" << kFairyFallbackPath << "'.\n";
+                }
+                else
+                {
+                        failure << " Fallback path already in use.\n";
+                }
+                PlayerDebugTrace(failure.str());
+
+                if (!isAlreadyFallback)
+                {
+                        model = cache.Get(kFairyFallbackPath);
+                        if (model)
+                        {
+                                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fallback fairy model loaded successfully.\n");
+                        }
+                }
+
+                if (!model)
+                {
+                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Player model unavailable; rendering will be skipped.\n");
+                        m_missingModelWarned = true;
+                }
         }
 }
 
@@ -146,6 +334,7 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
         }
 
         ClampVerticalPosition();
+        ClampScreenBounds();
 
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
@@ -153,6 +342,16 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
 void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
 {
+        if (!model)
+        {
+                if (!m_missingModelWarned)
+                {
+                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Draw skipped: player model missing.\n");
+                        m_missingModelWarned = true;
+                }
+                return;
+        }
+
         render.Draw(*model, m_transform, &camera);
 }
 
@@ -236,6 +435,48 @@ float SceneSpace::Player::GetMinimumY() const
 bool SceneSpace::Player::HasMinimumY() const
 {
         return m_hasMinimumY;
+}
+
+void SceneSpace::Player::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
+{
+        if (!std::isfinite(minX) || !std::isfinite(maxX))
+        {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite screen bounds.\n");
+                return;
+        }
+
+        const float sanitizedMinX = std::min(minX, maxX);
+        const float sanitizedMaxX = std::max(minX, maxX);
+        const bool hadBounds = m_hasScreenBounds;
+        const bool boundsChanged = !hadBounds
+            || std::fabs(m_minScreenX - sanitizedMinX) > std::numeric_limits<float>::epsilon()
+            || std::fabs(m_maxScreenX - sanitizedMaxX) > std::numeric_limits<float>::epsilon()
+            || (m_hasMaximumY != maxY.has_value())
+            || (maxY.has_value() && std::fabs(m_maximumY - *maxY) > std::numeric_limits<float>::epsilon());
+
+        m_hasScreenBounds = true;
+        m_minScreenX = sanitizedMinX;
+        m_maxScreenX = sanitizedMaxX;
+        m_hasMaximumY = maxY.has_value() && std::isfinite(*maxY);
+        if (m_hasMaximumY)
+        {
+                m_maximumY = *maxY;
+        }
+
+        if (!boundsChanged)
+        {
+                return;
+        }
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Screen bounds set minX=" << m_minScreenX
+            << " maxX=" << m_maxScreenX;
+        if (m_hasMaximumY)
+        {
+                oss << " maxY=" << m_maximumY;
+        }
+        oss << "\n";
+        PlayerDebugTrace(oss.str());
 }
 
 void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
@@ -410,5 +651,46 @@ void SceneSpace::Player::ClampVerticalPosition()
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
             << m_minimumY << " (platform boundary).\n";
+        PlayerDebugTrace(oss.str());
+}
+
+void SceneSpace::Player::ClampScreenBounds()
+{
+        if (!m_hasScreenBounds)
+        {
+                return;
+        }
+
+        auto& position = m_transform.position;
+        const float originalX = position.x;
+        const float originalY = position.y;
+
+        const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
+        float clampedY = position.y;
+        if (m_hasMaximumY)
+        {
+                clampedY = std::min(clampedY, m_maximumY);
+        }
+
+        if (clampedX == originalX && clampedY == originalY)
+        {
+                return;
+        }
+
+        position.x = clampedX;
+        position.y = clampedY;
+        SyncColliderBounds();
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
+            << " prevY=" << originalY
+            << " newX=" << position.x
+            << " newY=" << position.y
+            << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
+        if (m_hasMaximumY)
+        {
+                oss << " maxY=" << m_maximumY;
+        }
+        oss << "\n";
         PlayerDebugTrace(oss.str());
 }

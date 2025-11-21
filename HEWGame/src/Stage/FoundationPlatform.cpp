@@ -32,7 +32,7 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/SweetsPrototype/CakeCube.obj";
-    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 0.2f, 0.8f, 0.35f, 1.0f };
+    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 0.305f, 0.173f, 0.125f, 1.0f };
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
@@ -60,6 +60,7 @@ namespace Stage
             transform.rotation,
             transform.scale,
             std::move(collider),
+            Collision::CollisionLayer::Default,
             float3{ 0.0f, 0.0f, 0.0f },
             float3{ 0.0f, 0.0f, 0.0f },
             0.0f,
