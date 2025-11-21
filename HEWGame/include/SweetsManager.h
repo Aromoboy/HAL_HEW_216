@@ -50,6 +50,7 @@ namespace SweetsSpace
         float spawnIntervalSeconds = 2.5f;
         float burstIntervalSeconds = 0.5f;
         int simultaneousSpawnCount = 1;
+        int simultaneousLiveTarget = 1;
         std::vector<WeightedSweetsType> weights;
     };
 
@@ -151,11 +152,13 @@ namespace SweetsSpace
         float m_activeBurstInterval;
         int m_activeBurstPlanned;
         int m_currentBurstRemaining;
+        int m_simultaneousLiveTarget;
         int m_stackedInBatch;
         bool m_batchInitialSpawnDone;
         int m_batchStackTarget;
         bool m_batchCoolingDown;
         mutable std::mt19937 m_random;
+        bool m_pendingTopUpAfterDrop;
 
         bool m_enableRandomRotation;
         float3 m_randomRotationMinDegrees;
