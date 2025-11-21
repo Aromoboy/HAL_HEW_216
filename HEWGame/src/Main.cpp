@@ -88,20 +88,20 @@ void Draw()
         float size = DEBUG_GRID_NUM * DEBUG_GRID_MARGIN;
         for (int i = 1; i <= DEBUG_GRID_NUM; ++i)
         {
-                float grid = i * DEBUG_GRID_MARGIN;
-                DirectX::XMFLOAT3 pos[2] = {
-                        DirectX::XMFLOAT3(grid, 0.0f, size),
-                        DirectX::XMFLOAT3(grid, 0.0f, -size),
-                };
-                Geometory::AddLine(pos[0], pos[1], lineColor);
-                pos[0].x = pos[1].x = -grid;
-                Geometory::AddLine(pos[0], pos[1], lineColor);
-                pos[0].x = size;
-                pos[1].x = -size;
-                pos[0].z = pos[1].z = grid;
-                Geometory::AddLine(pos[0], pos[1], lineColor);
-                pos[0].z = pos[1].z = -grid;
-                Geometory::AddLine(pos[0], pos[1], lineColor);
+                //float grid = i * DEBUG_GRID_MARGIN;
+                //DirectX::XMFLOAT3 pos[2] = {
+                //        DirectX::XMFLOAT3(grid, 0.0f, size),
+                //        DirectX::XMFLOAT3(grid, 0.0f, -size),
+                //};
+                //Geometory::AddLine(pos[0], pos[1], lineColor);
+                //pos[0].x = pos[1].x = -grid;
+                //Geometory::AddLine(pos[0], pos[1], lineColor);
+                //pos[0].x = size;
+                //pos[1].x = -size;
+                //pos[0].z = pos[1].z = grid;
+                //Geometory::AddLine(pos[0], pos[1], lineColor);
+                //pos[0].z = pos[1].z = -grid;
+                //Geometory::AddLine(pos[0], pos[1], lineColor);
         }
         //// 軸
         //Geometory::AddLine(DirectX::XMFLOAT3(0, 0, 0), DirectX::XMFLOAT3(size, 0, 0), DirectX::XMFLOAT4(1, 0, 0, 1));
@@ -110,7 +110,7 @@ void Draw()
         //Geometory::AddLine(DirectX::XMFLOAT3(0, 0, 0), DirectX::XMFLOAT3(-size, 0, 0), DirectX::XMFLOAT4(0, 0, 0, 1));
         //Geometory::AddLine(DirectX::XMFLOAT3(0, 0, 0), DirectX::XMFLOAT3(0, 0, -size), DirectX::XMFLOAT4(0, 0, 0, 1));
 
-        //Geometory::DrawLines();
+        Geometory::DrawLines();
 
         // カメラの値
         static bool camAutoSwitch = false;

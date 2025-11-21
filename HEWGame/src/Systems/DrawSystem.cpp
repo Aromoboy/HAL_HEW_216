@@ -306,6 +306,7 @@ namespace Systems
 
             m_commands.clear();
         }
+
         void DrawSystem::RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
             if (m_colliderCommands.empty())
@@ -320,6 +321,35 @@ namespace Systems
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
                 // •`‰æ
+
+                DirectX::XMFLOAT3 leftup, rightup, leftdown, rightdown;
+
+                Transform trandform = command.source->GetTransform();
+                AABB itAABB = command.aabb;
+
+                leftup.x = itAABB.min.x;
+                leftup.y = itAABB.max.y;
+                leftup.z = trandform.position.z;
+
+                rightup.x = itAABB.max.x;
+                rightup.y = itAABB.max.y;
+                rightup.z = trandform.position.z;
+
+                leftdown.x = itAABB.min.x;
+                leftdown.y = itAABB.min.y;
+                leftdown.z = trandform.position.z;
+
+                rightdown.x = itAABB.max.x;
+                rightdown.y = itAABB.min.y;
+                rightdown.z = trandform.position.z;
+
+                Geometory::AddLine(leftup, leftdown);
+
+                Geometory::AddLine(leftup, rightup);
+
+                Geometory::AddLine(rightdown, leftdown);
+
+                Geometory::AddLine(rightdown, rightup);
             }
 
             if (m_debugLoggingEnabled)
