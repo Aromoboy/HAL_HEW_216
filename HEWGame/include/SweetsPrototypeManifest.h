@@ -22,8 +22,8 @@ namespace SweetsSpace
     {
         Collision::ColliderShape shape{ Collision::ColliderShape::Box };
         float3 padding{ 0.0f, 0.0f, 0.0f };
-        std::vector<float3> prismVertices; // Normalized XY layout, scaled by bounds half extents.
-        float depthOverride{ 0.0f }; // 0 means derive from bounds.
+        std::vector<float3> prismVertices; // 正規化されたXYレイアウト、境界の半分の範囲でスケーリング済み
+        float depthOverride{ 0.0f }; // 0は境界から導出されることを意味する
     };
 
     struct SweetsPrototypeDescriptor
