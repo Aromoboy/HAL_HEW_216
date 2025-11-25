@@ -3,11 +3,11 @@
 
 namespace SweetsSpace
 {
-    class Sherbet : public BaseSweets
+    class Sherbet : public LegacyBaseSweets
     {
     public:
         Sherbet(const std::string& tag,
-                std::shared_ptr<ModelDX> model,
+            std::shared_ptr<ModelDX> model,
                 const float3& pos,
                 const float3& rot,
                 const float3& scl,

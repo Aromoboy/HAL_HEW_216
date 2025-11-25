@@ -72,6 +72,7 @@
     <ClCompile Include="src\BackgroundRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="Cake.cpp" />
     <ClCompile Include="Sherbet.cpp" />
     <ClCompile Include="Pdding.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="include\BackgroundRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="Cake.h" />
     <ClInclude Include="Sherbet.h" />
     <ClInclude Include="Pdding.h" />

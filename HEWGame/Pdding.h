@@ -3,11 +3,11 @@
 
 namespace SweetsSpace
 {
-    class Pudding : public BaseSweets
+    class Pudding : public LegacyBaseSweets
     {
     public:
         Pudding(const std::string& tag,
-                std::shared_ptr<ModelDX> model,
+            std::shared_ptr<ModelDX> model,
                 const float3& pos,
                 const float3& rot,
                 const float3& scl,

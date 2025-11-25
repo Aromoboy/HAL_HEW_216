@@ -27,7 +27,11 @@
 #include "ModelCache.h"
 #include "Pdding.h"
 #include "Sherbet.h"
-#include "Sweets.h"
+#if defined(SWEETS_USE_ENTITIES_PIPELINE)
+#    include "Sweets/BaseSweets.h"
+#else
+#    include "Sweets.h"
+#endif
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
@@ -187,7 +191,7 @@ namespace
         return (kPlatformWidth * 0.5f) + sanitizedMargin;
     }
 
-    SweetsSpace::SweetsState EvaluateState(SweetsSpace::BaseSweets& sweets, SweetsSpace::SweetsState currentState)
+    SweetsSpace::SweetsState EvaluateState(SweetsSpace::ActiveSweets& sweets, SweetsSpace::SweetsState currentState)
     {
         if (currentState == SweetsSpace::SweetsState::Carried)
         {
@@ -211,7 +215,7 @@ namespace
     }
 
     bool IsHorizontallyOutOfBounds(
-        const SweetsSpace::BaseSweets& sweets,
+        const SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
         float margin,
         float fallbackLimit,
@@ -643,7 +647,7 @@ namespace SweetsSpace
             auto factory = [this, &cache, kind, modelPath, type, weight = config.weight,
                                damping = config.damping, minScale = config.minScale,
                                maxScale = config.maxScale, bounds, preset = config.colliderPreset](const Transform& transform)
-                -> std::shared_ptr<BaseSweets>
+                -> std::shared_ptr<ActiveSweets>
             {
                 auto model = cache.Get(modelPath);
                 if (!model)
@@ -757,12 +761,12 @@ namespace SweetsSpace
 
         struct PendingStateChange
         {
-            std::shared_ptr<BaseSweets> sweets;
+            std::shared_ptr<ActiveSweets> sweets;
             SweetsState state;
         };
 
         std::vector<PendingStateChange> stateChanges;
-        std::vector<std::shared_ptr<BaseSweets>> missedSweets;
+        std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
         const auto horizontalBounds = GetHorizontalBounds();
         const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
@@ -774,7 +778,7 @@ namespace SweetsSpace
             auto it = sweetsList.begin();
             while (it != sweetsList.end())
             {
-                std::shared_ptr<BaseSweets> sweets = *it;
+                std::shared_ptr<ActiveSweets> sweets = *it;
 
                 if (!sweets)
                 {
@@ -950,7 +954,7 @@ namespace SweetsSpace
         return maxHeight;
     }
 
-    void SweetsManager::SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state)
+    void SweetsManager::SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state)
     {
         if (!sweets)
         {
@@ -985,7 +989,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::Erase(const std::shared_ptr<BaseSweets>& sweets)
+    void SweetsManager::Erase(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
@@ -1007,7 +1011,7 @@ namespace SweetsSpace
     {
         ForceSpawnRefresh();
 
-        std::vector<std::shared_ptr<BaseSweets>> sweetsToRemove;
+        std::vector<std::shared_ptr<ActiveSweets>> sweetsToRemove;
         sweetsToRemove.reserve(m_lookup.size());
         size_t totalStatesCleared = 0;
 
@@ -1119,7 +1123,7 @@ namespace SweetsSpace
         return m_currentPhase;
     }
 
-    std::shared_ptr<BaseSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
+    std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
         auto it = m_spawner.find(kind);
         if (it == m_spawner.end())
@@ -1159,10 +1163,10 @@ namespace SweetsSpace
         return sweets;
     }
 
-    std::shared_ptr<BaseSweets> SweetsManager::FindNearestCarryable(const float3& position, float radius) const
+    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(const float3& position, float radius) const
     {
         const float radiusSq = radius * radius;
-        std::shared_ptr<BaseSweets> best;
+        std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = radiusSq;
 
         const auto scanState = [&](SweetsState state)
@@ -1199,7 +1203,7 @@ namespace SweetsSpace
         return best;
     }
 
-    bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets)
+    bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
@@ -1235,7 +1239,7 @@ namespace SweetsSpace
         return true;
     }
 
-    bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets)
+    bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
@@ -1280,7 +1284,7 @@ namespace SweetsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
-    void SweetsManager::RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets)
+    void SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
@@ -1327,7 +1331,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings)
+    void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings)
     {
         if (!sweets)
         {
@@ -1374,7 +1378,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
         DeleteReason reason,
         const char* context,
         bool logWarnings,
