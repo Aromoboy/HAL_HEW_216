@@ -7,6 +7,20 @@
 #include <cmath>
 #include <sstream>
 
+#ifndef VK_A
+#define VK_A 0x41
+#endif
+#ifndef VK_D
+#define VK_D 0x44
+#endif
+#ifndef VK_S
+#define VK_S 0x53
+#endif
+#ifndef VK_W
+#define VK_W 0x57
+#endif
+
+
 namespace
 {
     constexpr float kAxisTriggerThreshold = 0.15f;
