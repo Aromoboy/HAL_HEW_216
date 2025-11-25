@@ -1,118 +1,51 @@
 #include "DirectX.h"
 #include "Texture.h"
+#include "Core/DXContext.h"
 
-//--- ƒOƒ[ƒoƒ‹•Ï”
-ID3D11Device*				g_pDevice;
-ID3D11DeviceContext*		g_pContext;
-IDXGISwapChain*				g_pSwapChain;
-RenderTarget*				g_pRTV;
-DepthStencil*				g_pDSV;
-ID3D11RasterizerState*		g_pRasterizerState[3];
-ID3D11DepthStencilState*	g_pDepthStencilState[2];
-ID3D11BlendState*			g_pBlendState[BLEND_MAX];
-ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
+namespace
+{
+	Core::DXContext g_dxContext;
+	ID3D11RasterizerState*		g_pRasterizerState[3];
+	ID3D11DepthStencilState*	g_pDepthStencilState[2];
+	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
+	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
+}
 
 
 ID3D11Device* GetDevice()
 {
-	return g_pDevice;
+	return g_dxContext.GetDevice();
 }
 ID3D11DeviceContext* GetContext()
 {
-	return g_pContext;
+	return g_dxContext.GetContext();
 }
 IDXGISwapChain* GetSwapChain()
 {
-	return g_pSwapChain;
+	return g_dxContext.GetSwapChain();
 }
 RenderTarget* GetDefaultRTV()
 {
-	return g_pRTV;
+	return g_dxContext.GetDefaultRTV();
 }
 DepthStencil* GetDefaultDSV()
 {
-	return g_pDSV;
+	return g_dxContext.GetDefaultDSV();
 }
+
 
 HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 {
-	HRESULT	hr = E_FAIL;
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));						// ƒ[ƒƒNƒŠƒA
-	sd.BufferDesc.Width = width;						// ƒoƒbƒNƒoƒbƒtƒ@‚Ì•
-	sd.BufferDesc.Height = height;						// ƒoƒbƒNƒoƒbƒtƒ@‚Ì‚‚³
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// ƒoƒbƒNƒoƒbƒtƒ@ƒtƒH[ƒ}ƒbƒg(R,G,B,A)
-	sd.SampleDesc.Count = 1;							// ƒ}ƒ‹ƒ`ƒTƒ“ƒvƒ‹‚Ì”
-	sd.BufferDesc.RefreshRate.Numerator = 1000;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;	// ƒoƒbƒNƒoƒbƒtƒ@‚Ìg—p•û–@
-	sd.BufferCount = 1;									// ƒoƒbƒNƒoƒbƒtƒ@‚Ì”
-	sd.OutputWindow = hWnd;								// ŠÖ˜A•t‚¯‚éƒEƒCƒ“ƒhƒE
-	sd.Windowed = fullscreen ? FALSE : TRUE;
-	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        HRESULT hr = g_dxContext.Init(hWnd, width, height, fullscreen);
+        if (FAILED(hr))
+        {
+                return hr;
+        }
 
-	// ƒhƒ‰ƒCƒo‚Ìí—Ş
-	D3D_DRIVER_TYPE driverTypes[] =
-	{
-		D3D_DRIVER_TYPE_HARDWARE,	// GPU‚Å•`‰æ
-		D3D_DRIVER_TYPE_WARP,		// ‚¸“x(’á‘¬
-		D3D_DRIVER_TYPE_REFERENCE,	// CPU‚Å•`‰æ
-	};
-	UINT numDriverTypes = ARRAYSIZE(driverTypes);
-
-	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-
-	// ‹@”\ƒŒƒxƒ‹
-	D3D_FEATURE_LEVEL featureLevels[] =
-	{
-		D3D_FEATURE_LEVEL_11_1,		// DirectX11.1‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_11_0,		// DirectX11‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_10_1,		// DirectX10.1‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_10_0,		// DirectX10‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_9_3,		// DirectX9.3‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_9_2,		// DirectX9.2‘Î‰GPUƒŒƒxƒ‹
-		D3D_FEATURE_LEVEL_9_1		// Direct9.1‘Î‰GPUƒŒƒxƒ‹
-	};
-	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
-
-	D3D_DRIVER_TYPE driverType;
-	D3D_FEATURE_LEVEL featureLevel;
-
-	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; ++driverTypeIndex)
-	{
-		driverType = driverTypes[driverTypeIndex];
-		hr = D3D11CreateDeviceAndSwapChain(
-			NULL,					// ƒfƒBƒXƒvƒŒƒCƒfƒoƒCƒX‚ÌƒAƒ_ƒvƒ^iNULL‚Ìê‡Å‰‚ÉŒ©‚Â‚©‚Á‚½ƒAƒ_ƒvƒ^j
-			driverType,				// ƒfƒoƒCƒXƒhƒ‰ƒCƒo‚Ìƒ^ƒCƒv
-			NULL,					// ƒ\ƒtƒgƒEƒFƒAƒ‰ƒXƒ^ƒ‰ƒCƒU‚ğg—p‚·‚éê‡‚Éw’è‚·‚é
-			createDeviceFlags,		// ƒfƒoƒCƒXƒtƒ‰ƒO
-			featureLevels,			// ‹@”\ƒŒƒxƒ‹
-			numFeatureLevels,		// ‹@”\ƒŒƒxƒ‹”
-			D3D11_SDK_VERSION,		// 
-			&sd,					// ƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ìİ’è
-			&g_pSwapChain,			// IDXGIDwapChainƒCƒ“ƒ^ƒtƒF[ƒX	
-			&g_pDevice,				// ID3D11DeviceƒCƒ“ƒ^ƒtƒF[ƒX
-			&featureLevel,		// ƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚é‹@”\ƒŒƒxƒ‹
-			&g_pContext);		// ƒfƒoƒCƒXƒRƒ“ƒeƒLƒXƒg
-		if (SUCCEEDED(hr)) {
-			break;
-		}
-	}
-	if (FAILED(hr)) {
-		return hr;
-	}
-
-	//--- ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒgİ’è
-	g_pRTV = new RenderTarget();
-	if (FAILED(hr = g_pRTV->CreateFromScreen()))
-		return hr;
-	g_pDSV = new DepthStencil();
-	if (FAILED(hr = g_pDSV->Create(g_pRTV->GetWidth(), g_pRTV->GetHeight(), false)))
-		return hr;
-	SetRenderTargets(1, &g_pRTV, g_pDSV);
-
-	//--- ƒJƒŠƒ“ƒOİ’è
+        RenderTarget* defaultRTV = g_dxContext.GetDefaultRTV();
+        SetRenderTargets(1, &defaultRTV, g_dxContext.GetDefaultDSV());
+        
+//--- ã‚«ãƒªãƒ³ã‚°è¨­å®š
 	D3D11_RASTERIZER_DESC rasterizer = {};
 	D3D11_CULL_MODE cull[] = {
 		D3D11_CULL_NONE,
@@ -124,12 +57,12 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	for (int i = 0; i < 3; ++i)
 	{
 		rasterizer.CullMode = cull[i];
-		hr = g_pDevice->CreateRasterizerState(&rasterizer, &g_pRasterizerState[i]);
+		hr = GetDevice()->CreateRasterizerState(&rasterizer, &g_pRasterizerState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
 	SetCullingMode(D3D11_CULL_BACK);
 
-	//--- [“xƒeƒXƒg
+	//--- æ·±åº¦ãƒ†ã‚¹ãƒˆ
 	// https://learn.microsoft.com/ja-jp/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil
 	// https://qiita.com/wyt5818956/items/a2a36a1e6c7910512e7a
 	D3D11_DEPTH_STENCIL_DESC dsDesc = {};
@@ -149,12 +82,12 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	dsDesc.BackFace = dsDesc.FrontFace;
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_DECR;
 	// create state
-	g_pDevice->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[0]);
+	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[0]);
 	dsDesc.DepthEnable = false;
-	g_pDevice->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[1]);
+	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[1]);
 	SetDepthTest(false);
 
-	//--- ƒAƒ‹ƒtƒ@ƒuƒŒƒ“ƒfƒBƒ“ƒO
+	//--- ã‚¢ãƒ«ãƒ•ã‚¡ãƒ–ãƒ¬ãƒ³ãƒ‡ã‚£ãƒ³ã‚°
 	// https://pgming-ctrl.com/directx11/blend/
 	D3D11_BLEND_DESC blendDesc = {};
 	blendDesc.AlphaToCoverageEnable = FALSE;
@@ -177,12 +110,12 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	{
 		blendDesc.RenderTarget[0].SrcBlend = blend[i][0];
 		blendDesc.RenderTarget[0].DestBlend = blend[i][1];
-		hr = g_pDevice->CreateBlendState(&blendDesc, &g_pBlendState[i]);
+		hr = GetDevice()->CreateBlendState(&blendDesc, &g_pBlendState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
 	SetBlendMode(BLEND_ALPHA);
 
-	// ƒTƒ“ƒvƒ‰[
+	// ã‚µãƒ³ãƒ—ãƒ©ãƒ¼
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	D3D11_FILTER filter[] = {
 		D3D11_FILTER_MIN_MAG_MIP_LINEAR,
@@ -194,7 +127,7 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	for (int i = 0; i < SAMPLER_MAX; ++i)
 	{
 		samplerDesc.Filter = filter[i];
-		hr = g_pDevice->CreateSamplerState(&samplerDesc, &g_pSamplerState[i]);
+		hr = GetDevice()->CreateSamplerState(&samplerDesc, &g_pSamplerState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
 	SetSamplerState(SAMPLER_LINEAR);
@@ -204,35 +137,25 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 
 void UninitDirectX()
 {
-	SAFE_DELETE(g_pDSV);
-	SAFE_DELETE(g_pRTV);
-
-	for (int i = 0; i < SAMPLER_MAX; ++i)
-		SAFE_RELEASE(g_pSamplerState[i]);
-	for (int i = 0; i < BLEND_MAX; ++i)
-		SAFE_RELEASE(g_pBlendState[i]);
-	for (int i = 0; i < 2; ++i)
-		SAFE_RELEASE(g_pDepthStencilState[i]);
-	for(int i = 0; i < 3; ++ i)
-		SAFE_RELEASE(g_pRasterizerState[i]);
-	if(g_pContext)
-		g_pContext->ClearState();
-	SAFE_RELEASE(g_pContext);
-	if(g_pSwapChain)
-		g_pSwapChain->SetFullscreenState(false, NULL);
-	SAFE_RELEASE(g_pSwapChain);
-	SAFE_RELEASE(g_pDevice);
+        for (int i = 0; i < SAMPLER_MAX; ++i)
+                SAFE_RELEASE(g_pSamplerState[i]);
+        for (int i = 0; i < BLEND_MAX; ++i)
+                SAFE_RELEASE(g_pBlendState[i]);
+        for (int i = 0; i < 2; ++i)
+                SAFE_RELEASE(g_pDepthStencilState[i]);
+        for(int i = 0; i < 3; ++ i)
+                SAFE_RELEASE(g_pRasterizerState[i]);
+        g_dxContext.Shutdown();
 }
 
 void BeginDrawDirectX()
 {
-	float color[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
-	g_pRTV->Clear(color);
-	g_pDSV->Clear();
+        float color[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
+        g_dxContext.BeginDraw(color);
 }
 void EndDrawDirectX()
 {
-	g_pSwapChain->Present(0, 0);
+        g_dxContext.EndDraw();
 }
 
 
@@ -244,9 +167,9 @@ void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView)
 	if (num > 4) num = 4;
 	for (UINT i = 0; i < num; ++i)
 		rtvs[i] = ppViews[i]->GetView();
-	g_pContext->OMSetRenderTargets(num, rtvs, pView ? pView->GetView() : nullptr);
+	GetContext()->OMSetRenderTargets(num, rtvs, pView ? pView->GetView() : nullptr);
 
-	// ƒrƒ…[ƒ|[ƒg‚Ìİ’è
+	// ãƒ“ãƒ¥ãƒ¼ãƒãƒ¼ãƒˆã®è¨­å®š
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
 	vp.TopLeftY = 0.0f;
@@ -254,31 +177,31 @@ void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView)
 	vp.Height = (float)ppViews[0]->GetHeight();
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
-	g_pContext->RSSetViewports(1, &vp);
+	GetContext()->RSSetViewports(1, &vp);
 }
 
 void SetCullingMode(D3D11_CULL_MODE cull)
 {
 	switch (cull)
 	{
-	case D3D11_CULL_NONE: g_pContext->RSSetState(g_pRasterizerState[0]); break;
-	case D3D11_CULL_FRONT: g_pContext->RSSetState(g_pRasterizerState[1]); break;
-	case D3D11_CULL_BACK: g_pContext->RSSetState(g_pRasterizerState[2]); break;
+	case D3D11_CULL_NONE: GetContext()->RSSetState(g_pRasterizerState[0]); break;
+	case D3D11_CULL_FRONT: GetContext()->RSSetState(g_pRasterizerState[1]); break;
+	case D3D11_CULL_BACK: GetContext()->RSSetState(g_pRasterizerState[2]); break;
 	}
 }
 void SetDepthTest(bool enable)
 {
-	g_pContext->OMSetDepthStencilState(
+	GetContext()->OMSetDepthStencilState(
 		g_pDepthStencilState[enable ? 0 : 1], 1);
 }
 void SetBlendMode(BlendMode blend)
 {
 	if (blend < 0 || blend >= BLEND_MAX) return;
 	FLOAT blendFactor[4] = { D3D11_BLEND_ZERO, D3D11_BLEND_ZERO, D3D11_BLEND_ZERO, D3D11_BLEND_ZERO };
-	g_pContext->OMSetBlendState(g_pBlendState[blend], blendFactor, 0xffffffff);
+	GetContext()->OMSetBlendState(g_pBlendState[blend], blendFactor, 0xffffffff);
 }
 void SetSamplerState(SamplerState state)
 {
 	if (state < 0 || state >= SAMPLER_MAX) return;
-	g_pContext->PSSetSamplers(0, 1, &g_pSamplerState[state]);
+	GetContext()->PSSetSamplers(0, 1, &g_pSamplerState[state]);
 }

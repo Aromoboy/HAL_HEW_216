@@ -100,20 +100,24 @@ void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace:
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {
         ID3D11DeviceContext* pContext = GetContext();
-        UINT stride = sizeof(MeshDX::Vertex);
         UINT offset = 0;
 
-        ID3D11Buffer* vertex = a_mesh.GetVertecBuffer();
-        ID3D11Buffer* index = a_mesh.GetIndexBuffer();
+        const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
+        vertexBuffer.Bind(0, offset);
 
         pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        pContext->IASetVertexBuffers(0, 1, &vertex, &stride, &offset);
 
-        DXGI_FORMAT format = DXGI_FORMAT_R32_UINT;
-        if (sizeof(unsigned long) == 2)
+        if (a_mesh.HasIndexBuffer())
         {
-                format = DXGI_FORMAT_R16_UINT;
+                const Core::IndexBuffer* indexBuffer = a_mesh.GetIndexBuffer();
+                if (indexBuffer)
+                {
+                        indexBuffer->Bind();
+                        pContext->DrawIndexed(a_mesh.GetIndexCount(), 0, 0);
+                }
         }
-        pContext->IASetIndexBuffer(index, format, 0);
-        pContext->DrawIndexed(a_mesh.GetIndexCount(), 0, 0);
+        else
+        {
+                pContext->Draw(vertexBuffer.GetCount(), 0);
+        }
 }
