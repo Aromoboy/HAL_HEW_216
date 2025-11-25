@@ -203,6 +203,8 @@
     <ClCompile Include="src\ModelDX.cpp" />
     <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
+    <ClCompile Include="src\Scene\PlayScene.cpp" />
+    <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
@@ -278,6 +280,9 @@
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Scene.h" />
+    <ClInclude Include="include\Scene\IScene.h" />
+    <ClInclude Include="include\Scene\PlayScene.h" />
+    <ClInclude Include="include\Scene\SceneManager.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
