@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -14,6 +15,7 @@
 #include "ICamera.h"
 #include "ModelRender.h"
 #include "Transform.h"
+#include "CollisionLayer.h"
 
 namespace Core
 {
@@ -46,8 +48,27 @@ namespace SweetsSpace
     struct PhaseSpawnConfig
     {
         float spawnIntervalSeconds = 2.5f;
+        float burstIntervalSeconds = 0.5f;
         int simultaneousSpawnCount = 1;
+        int simultaneousLiveTarget = 1;
         std::vector<WeightedSweetsType> weights;
+    };
+
+    enum class DeleteReason : std::uint8_t
+    {
+        Hit,
+        Miss,
+    };
+
+    enum class UseOutcome : std::uint8_t
+    {
+        Hit,
+        Miss,
+    };
+
+    struct DeleteBatchContext
+    {
+        int usesRemaining = 0;
     };
 
     enum class SweetsState : std::uint8_t
@@ -87,6 +108,10 @@ namespace SweetsSpace
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
         void SetSpawnOrigins(const std::vector<float3>& origins);
+        void SetRandomRotationEnabled(bool enabled);
+        void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
+        void SetRandomScaleEnabled(bool enabled);
+        void SetLiveSweetsCap(int cap);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
@@ -95,6 +120,8 @@ namespace SweetsSpace
         std::shared_ptr<BaseSweets> FindNearestCarryable(const float3& position, float radius) const;
         bool TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets);
         bool ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets);
+
+        void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
 
     private:
         struct SweetsStateHash
@@ -118,11 +145,26 @@ namespace SweetsSpace
         std::vector<PhaseSpawnConfig> m_phaseConfigs;
         int m_activePhaseConfigIndex;
         float m_spawnTimer;
+        float m_burstTimer;
         std::deque<std::string> m_spawnQueue;
         std::vector<float3> m_spawnOrigins;
-        std::size_t m_nextSpawnOriginIndex;
         float m_spawnHeightOffset;
-        std::mt19937 m_random;
+        float m_activeBurstInterval;
+        int m_activeBurstPlanned;
+        int m_currentBurstRemaining;
+        int m_simultaneousLiveTarget;
+        int m_stackedInBatch;
+        bool m_batchInitialSpawnDone;
+        int m_batchStackTarget;
+        bool m_batchCoolingDown;
+        mutable std::mt19937 m_random;
+        bool m_pendingTopUpAfterDrop;
+
+        bool m_enableRandomRotation;
+        float3 m_randomRotationMinDegrees;
+        float3 m_randomRotationMaxDegrees;
+        bool m_enableRandomScale;
+        int m_liveSweetsCap;
 
         bool m_warnedMissingDrawSystem;
         bool m_warnedMissingPhysicsMachine;
@@ -130,11 +172,21 @@ namespace SweetsSpace
         bool m_warnedMissingPhaseCallback;
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
+        mutable bool m_warnedMissingBoundsCollider;
+        bool m_hasHorizontalBounds;
+        float m_minHorizontalBound;
+        float m_maxHorizontalBound;
+        float m_horizontalBoundsMargin;
+        bool m_warnedMissingHorizontalBounds;
+
+        std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
         void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
+        int CountLiveSweets() const;
+        int ComputeDesiredLiveTarget(int remainingToStack) const;
         void EnqueueSpawns(int count);
-        void EmitSpawnRequests();
+        void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
         void OnPhaseConfigurationChanged(int newPhase);
         void LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const;
@@ -142,12 +194,22 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
         Transform BuildSpawnTransform(const float3& origin) const;
+        void UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings = true);
+        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+            DeleteReason reason,
+            const char* context,
+            bool logWarnings,
+            DeleteBatchContext* batchContext);
+
+        bool m_spawnPausedDueToLiveSweets;
+        int m_lastLiveSweetsCount;
 
         template<typename T>
         std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
             const std::shared_ptr<ModelDX>& model,
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
+            Collision::CollisionLayer layer,
             const float3& velocity,
             const float3& force,
             float weight,
@@ -166,6 +228,7 @@ namespace SweetsSpace
                 transform.rotation,
                 transform.scale,
                 collider,
+                layer,
                 velocity,
                 force,
                 weight,

@@ -29,10 +29,10 @@ namespace SweetsSpace
 
     SweetsPrototypeManifest::SweetsPrototypeManifest()
     {
-        Register(SweetsType::Cake, "Cake", "CakeCube.obj", "Cube shaped sponge cake placeholder");
-        Register(SweetsType::Pudding, "Pudding", "PuddingPrism.obj", "Triangular pudding placeholder");
-        Register(SweetsType::Sherbet, "Sherbet", "SherbetSphere.obj", "Round sherbet scoop placeholder");
-        Register(SweetsType::Fairy, "Fairy", "FairyPlaceholder.obj", "Fairy companion placeholder model");
+        Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
+        Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
+        Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
+        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description)

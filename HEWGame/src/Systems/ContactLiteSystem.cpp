@@ -15,6 +15,7 @@
 
 #include "AABB.h"
 #include "ICollider.h"
+#include "CollisionLayer.h"
 
 namespace
 {
@@ -77,6 +78,34 @@ namespace
                 return body && body->GetTag() == "player";
         }
 
+        const char* ToString(Collision::CollisionLayer layer)
+        {
+                switch (layer)
+                {
+                case Collision::CollisionLayer::Player:
+                        return "Player";
+                case Collision::CollisionLayer::Floor:
+                        return "Floor";
+                case Collision::CollisionLayer::Sweets:
+                        return "Sweets";
+                default:
+                        return "Default";
+                }
+        }
+
+        bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
+        {
+                const bool sweetsFloorPair =
+                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
+                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
+                if (sweetsFloorPair)
+                {
+                        return false;
+                }
+
+                return true;
+        }
+
         bool IsSweetsTag(const std::string& tag)
         {
                 static const std::array<const char*, 3> kSweetsTags{ { "Cake", "Pudding", "Sherbet" } };
@@ -98,11 +127,15 @@ namespace Systems
                 , m_bodies(nullptr)
                 , m_penetrationTolerance(0.01f)
                 , m_restitution(0.15f)
+                , m_stableSupportThreshold(0.35f)
+                , m_edgeSlideBoost(0.25f)
+                , m_unstableVerticalDamping(0.35f)
                 , m_loggedMissingBodyList(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
                 , m_loggedPlayerPlatformContact(false)
                 , m_loggedPlayerSweetsContact(false)
+                , m_loggedSuppressedSweetsFloor(false)
         {
         }
 
@@ -114,6 +147,7 @@ namespace Systems
                 m_loggedPlayerAbsence = false;
                 m_loggedPlayerPlatformContact = false;
                 m_loggedPlayerSweetsContact = false;
+                m_loggedSuppressedSweetsFloor = false;
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
@@ -134,6 +168,21 @@ namespace Systems
         void ContactLiteSystem::SetRestitution(float restitution)
         {
                 m_restitution = std::clamp(restitution, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetStableSupportThreshold(float threshold)
+        {
+                m_stableSupportThreshold = std::clamp(threshold, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetEdgeSlideBoost(float boost)
+        {
+                m_edgeSlideBoost = std::max(0.0f, boost);
+        }
+
+        void ContactLiteSystem::SetUnstableVerticalDamping(float damping)
+        {
+                m_unstableVerticalDamping = std::clamp(damping, 0.0f, 1.0f);
         }
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -196,6 +245,8 @@ namespace Systems
                                 continue;
                         }
 
+                        const Collision::CollisionLayer layerA = bodyA->GetCollisionLayer();
+
                         bodyA->SyncColliderBounds();
 
                         for (size_t j = i + 1; j < bodyCount; ++j)
@@ -212,7 +263,27 @@ namespace Systems
                                         continue;
                                 }
 
+                                const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
+
                                 bodyB->SyncColliderBounds();
+
+                                if (!CanCollide(layerA, layerB))
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedSuppressedSweetsFloor &&
+                                                ((layerA == Collision::CollisionLayer::Sweets && layerB == Collision::CollisionLayer::Floor)
+                                                        || (layerA == Collision::CollisionLayer::Floor && layerB == Collision::CollisionLayer::Sweets)))
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Collision suppressed for layers "
+                                                        << ToString(layerA) << " vs " << ToString(layerB)
+                                                        << " (bodies '" << bodyA->GetTag() << "' and '" << bodyB->GetTag() << "').\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedSuppressedSweetsFloor = true;
+                                        }
+#endif
+                                        continue;
+                                }
 
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
@@ -275,12 +346,6 @@ namespace Systems
                                         continue;
                                 }
 
-                                const float pushDistance = minOverlap - m_penetrationTolerance;
-                                if (pushDistance <= 0.0f)
-                                {
-                                        continue;
-                                }
-
                                 const float centerA = GetAxisCenter(boundsA, axis);
                                 const float centerB = GetAxisCenter(boundsB, axis);
                                 const float axisDir = (centerA < centerB) ? -1.0f : 1.0f;
@@ -293,6 +358,108 @@ namespace Systems
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
                                 float* translationComponentA = SelectAxisComponent(translationA, axis);
                                 float* translationComponentB = SelectAxisComponent(translationB, axis);
+
+                                float* velA = SelectAxisComponent(physA.velocity, axis);
+                                float* velB = SelectAxisComponent(physB.velocity, axis);
+                                const float relativeVelocity = *velA - *velB;
+
+                                bool sweetsSupportPair = false;
+                                bool unstableSupport = false;
+                                bool topIsA = centerA > centerB;
+                                float supportOverlapFraction = 1.0f;
+                                float slideDir = 0.0f;
+                                float verticalResolutionScale = 1.0f;
+
+                                if (axis == 1)
+                                {
+                                        const bool sweetsTagA = IsSweetsTag(bodyA->GetTag());
+                                        const bool sweetsTagB = IsSweetsTag(bodyB->GetTag());
+                                        const bool foundationA = bodyA->GetTag() == "StageFoundation";
+                                        const bool foundationB = bodyB->GetTag() == "StageFoundation";
+                                        sweetsSupportPair = (sweetsTagA && sweetsTagB)
+                                                || (sweetsTagA && foundationB)
+                                                || (foundationA && sweetsTagB);
+
+                                        if (sweetsSupportPair)
+                                        {
+                                                const float widthA = boundsA.max.x - boundsA.min.x;
+                                                const float widthB = boundsB.max.x - boundsB.min.x;
+                                                const float minWidth = std::max(std::min(widthA, widthB), 1e-3f);
+                                                supportOverlapFraction = std::clamp(planarOverlapX / minWidth, 0.0f, 1.0f);
+                                                unstableSupport = supportOverlapFraction < m_stableSupportThreshold;
+                                                const float stableDenominator = std::max(m_stableSupportThreshold, 1e-3f);
+                                                verticalResolutionScale = unstableSupport
+                                                        ? std::clamp(supportOverlapFraction / stableDenominator, 0.0f, 1.0f)
+                                                        : 1.0f;
+
+                                                const AABB& baseBounds = topIsA ? boundsB : boundsA;
+                                                const AABB& topBounds = topIsA ? boundsA : boundsB;
+                                                const float baseCenterX = GetAxisCenter(baseBounds, 0);
+                                                const float topCenterX = GetAxisCenter(topBounds, 0);
+                                                slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
+
+#if defined(_DEBUG)
+                                                {
+                                                        const char* baseTag = topIsA ? bodyB->GetTag().c_str() : bodyA->GetTag().c_str();
+                                                        const char* topTag = topIsA ? bodyA->GetTag().c_str() : bodyB->GetTag().c_str();
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Support analysis: top='" << topTag << "' base='"
+                                                                << baseTag << "' overlapFraction=" << supportOverlapFraction
+                                                                << " threshold=" << m_stableSupportThreshold
+                                                                << " status=" << (unstableSupport ? "UNSTABLE" : "stable")
+                                                                << " slideDir=" << slideDir << " axis=" << axis
+                                                                << " resolutionScale=" << verticalResolutionScale << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+
+                                                if (unstableSupport)
+                                                {
+                                                        Physics::Physical& topPhys = topIsA ? physA : physB;
+                                                        if (topPhys.weight > 0.0f)
+                                                        {
+                                                                topPhys.velocity.x += slideDir * m_edgeSlideBoost;
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Unstable support slide boost: top='"
+                                                                        << (topIsA ? bodyA->GetTag() : bodyB->GetTag())
+                                                                        << "' base='" << (topIsA ? bodyB->GetTag() : bodyA->GetTag())
+                                                                        << "' overlapFraction=" << supportOverlapFraction
+                                                                        << " boost=" << m_edgeSlideBoost
+                                                                        << " dir=" << slideDir
+                                                                        << " velocityX=" << topPhys.velocity.x << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                }
+                                        }
+                                }
+
+                                const float rawPushDistance = minOverlap - m_penetrationTolerance;
+                                if (rawPushDistance <= 0.0f)
+                                {
+                                        continue;
+                                }
+
+                                const float pushDistance = (axis == 1) ? rawPushDistance * verticalResolutionScale : rawPushDistance;
+
+#if defined(_DEBUG)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Contact axes for '" << bodyA->GetTag() << "' vs '"
+                                            << bodyB->GetTag() << "': chosenAxis=" << axis
+                                            << " overlaps(x,y,z)=(" << overlaps[0] << "," << overlaps[1] << ","
+                                            << overlaps[2] << ") pushDistance=" << pushDistance
+                                            << " (raw=" << rawPushDistance
+                                            << " tolerance=" << m_penetrationTolerance << ")\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
+
+                                if (pushDistance <= 0.0f)
+                                {
+                                        continue;
+                                }
 
                                 if (!bodyAStatic && !bodyBStatic)
                                 {
@@ -342,10 +509,6 @@ namespace Systems
                                 SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
                                 SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
 
-                                float* velA = SelectAxisComponent(physA.velocity, axis);
-                                float* velB = SelectAxisComponent(physB.velocity, axis);
-                                const float relativeVelocity = *velA - *velB;
-
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
                                         float activeBodyCount = 0.0f;
@@ -363,7 +526,21 @@ namespace Systems
                                                 continue;
                                         }
 
-                                        const float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
+                                        float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
+                                        if (axis == 1 && sweetsSupportPair && unstableSupport)
+                                        {
+                                                const float previousImpulse = impulse;
+                                                impulse = 0.0f;
+#if defined(_DEBUG)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support: pair '"
+                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                        << "' previousImpulse=" << previousImpulse
+                                                        << " overlapFraction=" << supportOverlapFraction
+                                                        << " threshold=" << m_stableSupportThreshold << "\n";
+                                                DebugTrace(oss.str());
+#endif
+                                        }
                                         if (!bodyAStatic)
                                         {
                                                 *velA += impulse;
@@ -381,26 +558,60 @@ namespace Systems
 #if defined(_DEBUG)
                                                 const float previousVelocity = *velA;
 #endif
-                                                *velA = 0.0f;
+                                                if (unstableSupport && topIsA)
+                                                {
+                                                        const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
+                                                        *velA = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+#if defined(_DEBUG)
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                << bodyA->GetTag() << "' (supported by '" << bodyB->GetTag()
+                                                                << "') velocityY " << previousVelocity
+                                                                << " -> " << *velA << " (fraction=" << supportOverlapFraction
+                                                                << " scale=" << verticalResolutionScale << ")\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                                else
+                                                {
+                                                        *velA = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
                                                     << "' from " << previousVelocity << " due to static contact.\n";
                                                 DebugTrace(oss.str());
 #endif
+                                                }
                                         }
                                         if (!bodyBStatic && bodyAStatic && *velB < 0.0f)
                                         {
 #if defined(_DEBUG)
                                                 const float previousVelocity = *velB;
 #endif
-                                                *velB = 0.0f;
+                                                if (unstableSupport && !topIsA)
+                                                {
+                                                        const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
+                                                        *velB = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+#if defined(_DEBUG)
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                << bodyB->GetTag() << "' (supported by '" << bodyA->GetTag()
+                                                                << "') velocityY " << previousVelocity
+                                                                << " -> " << *velB << " (fraction=" << supportOverlapFraction
+                                                                << " scale=" << verticalResolutionScale << ")\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                                else
+                                                {
+                                                        *velB = 0.0f;
 #if defined(_DEBUG)
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
                                                     << "' from " << previousVelocity << " due to static contact.\n";
                                                 DebugTrace(oss.str());
 #endif
+                                                }
                                         }
                                 }
 

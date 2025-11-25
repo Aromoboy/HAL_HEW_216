@@ -2,6 +2,7 @@
 #include "CollisionEntity.h"
 
 #include <sstream>
+#include <utility>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -32,11 +33,17 @@ namespace SceneSpace
         const float3& rot,
         const float3& scl,
         std::shared_ptr<Collision::ICollider> collider,
+        Collision::CollisionLayer layer,
         Core::UpdatePhase phase,
         int priority)
         : Entity(tag, pos, rot, scl, phase, priority)
         , m_collider(std::move(collider))
+        , m_collisionLayer(layer)
     {
+        if (m_collider)
+        {
+            m_collider->SetLayer(layer);
+        }
         SyncColliderBounds();
     }
 
@@ -45,6 +52,25 @@ namespace SceneSpace
     Collision::ICollider* CollisionEntity::GetCollider()
     {
         return m_collider.get();
+    }
+
+    const Collision::ICollider* CollisionEntity::GetCollider() const
+    {
+        return m_collider.get();
+    }
+
+    Collision::CollisionLayer CollisionEntity::GetCollisionLayer() const
+    {
+        return m_collisionLayer;
+    }
+
+    void CollisionEntity::SetCollisionLayer(Collision::CollisionLayer layer)
+    {
+        m_collisionLayer = layer;
+        if (m_collider)
+        {
+            m_collider->SetLayer(layer);
+        }
     }
 
     void CollisionEntity::SyncColliderBounds()

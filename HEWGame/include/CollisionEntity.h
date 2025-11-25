@@ -23,6 +23,7 @@ namespace SceneSpace
             const float3& rot,
             const float3& scl,
             std::shared_ptr<Collision::ICollider> collider,
+            Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0);
         ~CollisionEntity() override;
@@ -30,6 +31,7 @@ namespace SceneSpace
         // Collider は shared_ptr で管理
         // Physics や CollisionSystem が生ポインタ要求なので get() を返している
         Collision::ICollider* GetCollider();
+        const Collision::ICollider* GetCollider() const;
 
         // Transform 変更時にコライダーの AABB を同期する
         void SyncColliderBounds();
@@ -38,7 +40,11 @@ namespace SceneSpace
         // 物理系システムが安全に呼び出せるよう公開している
         void ApplyTranslation(const float3& delta);
 
+        Collision::CollisionLayer GetCollisionLayer() const;
+        void SetCollisionLayer(Collision::CollisionLayer layer);
+
     protected:
         std::shared_ptr<Collision::ICollider> m_collider;
+        Collision::CollisionLayer m_collisionLayer;
     };
 }

@@ -76,10 +76,6 @@ void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace:
             if (material)
             {
                 ShaderList::SetMaterial(*material);
-                if (context)
-                {
-                    material->BindTexture(context);
-                }
             }
             else
             {

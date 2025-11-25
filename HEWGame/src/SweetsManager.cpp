@@ -3,11 +3,15 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <map>
+#include <optional>
 #include <random>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 #if defined(_WIN32)
@@ -27,6 +31,7 @@
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
+#include <DirectXMath.h>
 
 namespace
 {
@@ -46,15 +51,140 @@ namespace
     constexpr float kRestVelocityThresholdSq = 0.05f * 0.05f;
     constexpr float kGroundHeightThreshold = 0.05f;
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
+    constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
+    constexpr int kDefaultSimultaneousLiveTarget = kDefaultSimultaneousSpawnCount;
+    constexpr int kDefaultLiveSweetsCap = 24;
+    constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
+    constexpr float kPlatformWidth = 12.0f;
+    constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
+    constexpr float kHorizontalBoundsEpsilon = 1e-4f;
+
+    struct FallbackMaterialColors
+    {
+        DirectX::XMFLOAT4 diffuse{};
+        DirectX::XMFLOAT4 ambient{};
+    };
+
+    FallbackMaterialColors GetFallbackColorsFor(SweetsSpace::SweetsType type)
+    {
+        // Ambient alpha is kept at 1.0 to disable texture sampling for texture-less meshes.
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Pudding:
+            return { DirectX::XMFLOAT4{ 0.89f, 0.72f, 0.38f, 1.0f }, DirectX::XMFLOAT4{ 0.65f, 0.52f, 0.28f, 1.0f } };
+        case SweetsSpace::SweetsType::Sherbet:
+            return { DirectX::XMFLOAT4{ 0.96f, 0.78f, 0.86f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.62f, 0.69f, 1.0f } };
+        case SweetsSpace::SweetsType::Cake:
+        default:
+            return { DirectX::XMFLOAT4{ 1.0f, 0.94f, 0.85f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.72f, 0.62f, 1.0f } };
+        }
+    }
+
+    void ApplyFallbackMaterials(ModelDX& model, SweetsSpace::SweetsType type)
+    {
+        const FallbackMaterialColors colors = GetFallbackColorsFor(type);
+        std::unordered_set<unsigned int> visitedMaterials;
+
+        for (int i = 0; i < static_cast<int>(model.GetMeshCount()); ++i)
+        {
+            auto mesh = model.GetMesh(i).lock();
+            if (!mesh)
+            {
+                continue;
+            }
+
+            const unsigned int materialId = mesh->GetMaterialID();
+            if (!visitedMaterials.insert(materialId).second)
+            {
+                continue;
+            }
+
+            auto material = model.GetMaterial(static_cast<int>(materialId)).lock();
+            if (!material)
+            {
+                continue;
+            }
+
+            if (material->GetTexture())
+            {
+                continue;
+            }
+
+            material->SetDiffuse(colors.diffuse);
+            material->SetAmbient(colors.ambient);
+
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << kLogPrefix << "Applied fallback material for materialId=" << materialId
+                << " diffuse=(" << colors.diffuse.x << ',' << colors.diffuse.y << ',' << colors.diffuse.z
+                << ") ambient=(" << colors.ambient.x << ',' << colors.ambient.y << ',' << colors.ambient.z
+                << ") sweetsType=" << SweetsSpace::ToString(type) << "\n";
+            DebugTrace(oss.str());
+#endif
+        }
+    }
+
+    enum class ColliderShape : std::uint8_t
+    {
+        Box,
+        Capsule,
+    };
+
+    struct ColliderPreset
+    {
+        ColliderShape shape{ ColliderShape::Box };
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+    };
+
+    struct ModelBounds
+    {
+        float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+        float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+        bool valid{ false };
+    };
+
+    void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
+    {
+        if (!batch)
+        {
+            return;
+        }
+
+        if (batch->usesRemaining > 0)
+        {
+            --batch->usesRemaining;
+        }
+
+        if (outcome == SweetsSpace::UseOutcome::Hit)
+        {
+            ++batch->usesRemaining;
+        }
+    }
 
     float ComputeSpeedSq(const Physics::Physical& physical)
     {
         const auto& v = physical.velocity;
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
+    }
+
+    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon)
+    {
+        if (!std::isfinite(previous) || !std::isfinite(current))
+        {
+            return true;
+        }
+
+        return std::fabs(previous - current) > epsilon;
+    }
+
+    float ComputeFallbackHorizontalLimit(float margin)
+    {
+        const float sanitizedMargin = std::max(0.0f, margin);
+        return (kPlatformWidth * 0.5f) + sanitizedMargin;
     }
 
     SweetsSpace::SweetsState EvaluateState(SweetsSpace::BaseSweets& sweets, SweetsSpace::SweetsState currentState)
@@ -69,7 +199,7 @@ namespace
 
         if (height <= kGroundHeightThreshold && speedSq <= kRestVelocityThresholdSq)
         {
-            return SweetsSpace::SweetsState::Ground;
+            return SweetsSpace::SweetsState::Stacked;
         }
 
         if (speedSq <= kRestVelocityThresholdSq)
@@ -78,6 +208,47 @@ namespace
         }
 
         return SweetsSpace::SweetsState::Active;
+    }
+
+    bool IsHorizontallyOutOfBounds(
+        const SweetsSpace::BaseSweets& sweets,
+        const std::optional<std::pair<float, float>>& worldBounds,
+        float margin,
+        float fallbackLimit,
+        bool* usedFallback)
+    {
+        float minX = 0.0f;
+        float maxX = 0.0f;
+        const Collision::ICollider* collider = sweets.GetCollider();
+        if (collider)
+        {
+            const AABB bounds = collider->GetAABB();
+            minX = bounds.min.x;
+            maxX = bounds.max.x;
+        }
+        else
+        {
+            const Transform& transform = sweets.GetTransform();
+            const float halfWidth = std::max(0.0f, transform.scale.x * 0.5f);
+            minX = transform.position.x - halfWidth;
+            maxX = transform.position.x + halfWidth;
+        }
+
+        const float sanitizedMargin = std::max(0.0f, margin);
+        float allowedMin = -fallbackLimit;
+        float allowedMax = fallbackLimit;
+        if (usedFallback)
+        {
+            *usedFallback = !worldBounds.has_value();
+        }
+
+        if (worldBounds)
+        {
+            allowedMin = worldBounds->first - sanitizedMargin;
+            allowedMax = worldBounds->second + sanitizedMargin;
+        }
+
+        return minX < allowedMin || maxX > allowedMax;
     }
 
     std::string TrimToken(const std::string& value)
@@ -176,10 +347,167 @@ namespace
 
         return weights;
     }
+
+    const char* ToString(ColliderShape shape)
+    {
+        switch (shape)
+        {
+        case ColliderShape::Box:
+            return "Box";
+        case ColliderShape::Capsule:
+            return "Capsule";
+        default:
+            return "Unknown";
+        }
+    }
+
+    float3 ScaleVector(const float3& value, const float3& scale)
+    {
+        return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
+    }
+
+    ModelBounds LoadModelBounds(const std::string& path)
+    {
+        ModelBounds bounds;
+        std::ifstream file(path);
+        if (!file)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Failed to open model for bounds path='" << path << "'\n";
+            DebugTrace(oss.str());
+            return bounds;
+        }
+
+        std::string line;
+        while (std::getline(file, line))
+        {
+            if (line.size() < 2 || line[0] != 'v' || line[1] != ' ')
+            {
+                continue;
+            }
+
+            std::istringstream parser(line.substr(2));
+            float x = 0.0f;
+            float y = 0.0f;
+            float z = 0.0f;
+            if (!(parser >> x >> y >> z))
+            {
+                continue;
+            }
+
+            bounds.min.x = std::min(bounds.min.x, x);
+            bounds.min.y = std::min(bounds.min.y, y);
+            bounds.min.z = std::min(bounds.min.z, z);
+
+            bounds.max.x = std::max(bounds.max.x, x);
+            bounds.max.y = std::max(bounds.max.y, y);
+            bounds.max.z = std::max(bounds.max.z, z);
+            bounds.valid = true;
+        }
+
+        if (!bounds.valid)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "No vertex positions parsed from model path='" << path << "'; using fallback bounds.\n";
+            DebugTrace(oss.str());
+        }
+
+        return bounds;
+    }
+
+    float3 ComputeHalfExtents(const ModelBounds& bounds, const float3& scale, const ColliderPreset& preset)
+    {
+        float3 scaledMin = ScaleVector(bounds.min, scale);
+        float3 scaledMax = ScaleVector(bounds.max, scale);
+        float3 halfExtents{};
+
+        switch (preset.shape)
+        {
+        case ColliderShape::Capsule:
+        {
+            const float radiusX = (scaledMax.x - scaledMin.x) * 0.5f;
+            const float radiusZ = (scaledMax.z - scaledMin.z) * 0.5f;
+            const float radius = std::max(radiusX, radiusZ);
+            const float height = scaledMax.y - scaledMin.y;
+            halfExtents = float3{ radius, height * 0.5f, radius };
+            break;
+        }
+        case ColliderShape::Box:
+        default:
+            halfExtents = float3{
+                (scaledMax.x - scaledMin.x) * 0.5f,
+                (scaledMax.y - scaledMin.y) * 0.5f,
+                (scaledMax.z - scaledMin.z) * 0.5f,
+            };
+            break;
+        }
+
+        halfExtents.x += preset.padding.x;
+        halfExtents.y += preset.padding.y;
+        halfExtents.z += preset.padding.z;
+        return halfExtents;
+    }
+
+    float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
+    {
+        const float3 scaledMin = ScaleVector(bounds.min, scale);
+        const float3 scaledMax = ScaleVector(bounds.max, scale);
+        return float3{
+            (scaledMax.x + scaledMin.x) * 0.5f,
+            (scaledMax.y + scaledMin.y) * 0.5f,
+            (scaledMax.z + scaledMin.z) * 0.5f,
+        };
+    }
+
+    float3 ComputeExpandFromHalfExtents(const float3& halfExtents, const float3& transformScale)
+    {
+        float3 expand{ 1.0f, 1.0f, 1.0f };
+
+        if (transformScale.x != 0.0f)
+        {
+            expand.x = (halfExtents.x * 2.0f) / transformScale.x;
+        }
+        if (transformScale.y != 0.0f)
+        {
+            expand.y = (halfExtents.y * 2.0f) / transformScale.y;
+        }
+        if (transformScale.z != 0.0f)
+        {
+            expand.z = (halfExtents.z * 2.0f) / transformScale.z;
+        }
+
+        return expand;
+    }
 }
 
 namespace SweetsSpace
 {
+    const char* ToString(DeleteReason reason)
+    {
+        switch (reason)
+        {
+        case DeleteReason::Hit:
+            return "Hit";
+        case DeleteReason::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
+    const char* ToString(UseOutcome outcome)
+    {
+        switch (outcome)
+        {
+        case UseOutcome::Hit:
+            return "Hit";
+        case UseOutcome::Miss:
+            return "Miss";
+        default:
+            return "<unknown>";
+        }
+    }
+
     const char* StateToString(SweetsState state)
     {
         switch (state)
@@ -205,18 +533,40 @@ namespace SweetsSpace
         , m_currentPhase(0)
         , m_phaseConfigs()
         , m_activePhaseConfigIndex(-1)
-        , m_spawnTimer(0.0f)
+        , m_spawnTimer(kDefaultSpawnIntervalSeconds)
+        , m_burstTimer(0.0f)
         , m_spawnQueue()
         , m_spawnOrigins()
-        , m_nextSpawnOriginIndex(0)
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
+        , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
+        , m_activeBurstPlanned(0)
+        , m_currentBurstRemaining(0)
+        , m_simultaneousLiveTarget(kDefaultSimultaneousLiveTarget)
+        , m_stackedInBatch(0)
+        , m_batchInitialSpawnDone(false)
+        , m_batchStackTarget(kDefaultSimultaneousSpawnCount)
+        , m_batchCoolingDown(false)
         , m_random(std::random_device{}())
+        , m_pendingTopUpAfterDrop(false)
+        , m_enableRandomRotation(false)
+        , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
+        , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
+        , m_enableRandomScale(true)
+        , m_liveSweetsCap(kDefaultLiveSweetsCap)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
         , m_warnedMissingPhaseCallback(false)
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
+        , m_warnedMissingBoundsCollider(false)
+        , m_hasHorizontalBounds(false)
+        , m_minHorizontalBound(0.0f)
+        , m_maxHorizontalBound(0.0f)
+        , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
+        , m_warnedMissingHorizontalBounds(false)
+        , m_spawnPausedDueToLiveSweets(false)
+        , m_lastLiveSweetsCount(0)
     {
         m_byState.emplace(SweetsState::Active, SweetsList{});
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
@@ -226,25 +576,26 @@ namespace SweetsSpace
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
 
-        const auto createCollider = [](const Transform& transform, float expand, const float3& offset)
-        {
-            return std::make_shared<Collision::AABBCollider>(transform, false, expand, offset);
-        };
-
         struct SweetsFactoryConfig
         {
             SweetsType type;
-            float colliderExpand;
-            float3 colliderOffset;
+            ColliderPreset colliderPreset;
             float weight;
             float damping;
+            float3 minScale;
+            float3 maxScale;
         };
 
         const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, 1.05f, float3{ 0.0f, 0.2f, 0.0f }, 1.35f, 0.96f },
-            { SweetsType::Pudding, 0.95f, float3{ 0.0f, -0.05f, 0.0f }, 1.0f, 0.98f },
-            { SweetsType::Sherbet, 0.9f, float3{ 0.0f, 0.1f, 0.0f }, 0.85f, 0.99f },
+            { SweetsType::Cake, ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } }, 1.35f, 0.96f,
+                float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
+            { SweetsType::Pudding, ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } }, 1.0f, 0.98f,
+                float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
+            { SweetsType::Sherbet, ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } }, 0.85f, 0.99f,
+                float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
         } };
+
+        const ModelBounds fallbackBounds{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f }, true };
 
         for (const auto& config : kConfigs)
         {
@@ -261,6 +612,27 @@ namespace SweetsSpace
             const std::string kind = descriptor->key;
             const std::string modelPath = descriptor->modelPath;
 
+            ModelBounds bounds = LoadModelBounds(modelPath);
+            if (!bounds.valid)
+            {
+                bounds = fallbackBounds;
+                std::ostringstream warn;
+                warn << kLogPrefix << "Fallback collider bounds applied for kind '" << kind
+                    << "' because model bounds were unavailable.\n";
+                DebugTrace(warn.str());
+            }
+
+            {
+                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, config.colliderPreset);
+                const float3 baseCenter = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
+                std::ostringstream boundsLog;
+                boundsLog << kLogPrefix << "Resolved collider template for kind '" << kind
+                    << "' shape=" << ToString(config.colliderPreset.shape)
+                    << " halfExtents=(" << baseHalfExtents.x << ',' << baseHalfExtents.y << ',' << baseHalfExtents.z << ")"
+                    << " center=(" << baseCenter.x << ',' << baseCenter.y << ',' << baseCenter.z << ")\n";
+                DebugTrace(boundsLog.str());
+            }
+
             std::ostringstream oss;
             oss << kLogPrefix << "Registering sweets kind '" << kind
                 << "' with asset '" << modelPath << "'.\n";
@@ -268,9 +640,9 @@ namespace SweetsSpace
 
             const SweetsType type = config.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, colliderExpand = config.colliderExpand,
-                               colliderOffset = config.colliderOffset, weight = config.weight,
-                               damping = config.damping, createCollider](const Transform& transform)
+            auto factory = [this, &cache, kind, modelPath, type, weight = config.weight,
+                               damping = config.damping, minScale = config.minScale,
+                               maxScale = config.maxScale, bounds, preset = config.colliderPreset](const Transform& transform)
                 -> std::shared_ptr<BaseSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -283,20 +655,78 @@ namespace SweetsSpace
                     return nullptr;
                 }
 
-                auto collider = createCollider(transform, colliderExpand, colliderOffset);
+                ApplyFallbackMaterials(*model, type);
+
+                Transform scaledTransform = transform;
+                const auto sampleScale = [&](float minValue, float maxValue)
+                {
+                    if (!m_enableRandomScale)
+                    {
+                        return 1.0f;
+                    }
+
+                    const float lo = std::min(minValue, maxValue);
+                    const float hi = std::max(minValue, maxValue);
+                    if (lo == hi)
+                    {
+                        return lo;
+                    }
+
+                    std::uniform_real_distribution<float> dist(lo, hi);
+                    return dist(m_random);
+                };
+
+                const float3 sampledScale{
+                    sampleScale(minScale.x, maxScale.x),
+                    sampleScale(minScale.y, maxScale.y),
+                    sampleScale(minScale.z, maxScale.z)
+                };
+
+                scaledTransform.scale.x *= sampledScale.x;
+                scaledTransform.scale.y *= sampledScale.y;
+                scaledTransform.scale.z *= sampledScale.z;
+
+                const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset);
+                const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
+                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
+
+                auto collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
+                const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
+                const float scaledWeight = weight * scaleFactor;
+                const float scaledDamping = std::min(damping * scaleFactor, 0.999f);
+
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=("
+                        << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ")"
+                        << " enabledRandomScale=" << std::boolalpha << m_enableRandomScale
+                        << " weight=" << scaledWeight << " (base=" << weight << ")\n";
+                    DebugTrace(oss.str());
+                }
+
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Collider applied kind='" << kind
+                        << "' shape=" << ToString(preset.shape)
+                        << " scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
+                        << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
+                        << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
+                        << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")\n";
+                    DebugTrace(oss.str());
+                }
 
                 switch (type)
                 {
                 case SweetsType::Cake:
-                    return MakeSweets<Cake>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Cake>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Pudding:
-                    return MakeSweets<Pudding>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Pudding>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 case SweetsType::Sherbet:
-                    return MakeSweets<Sherbet>(kind, model, transform, collider, velocity, force, weight, damping,
+                    return MakeSweets<Sherbet>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                         Core::UpdatePhase::Physics, 0);
                 default:
                     break;
@@ -316,6 +746,7 @@ namespace SweetsSpace
         }
 
         ApplyDefaultPhaseConfigs();
+
     }
 
     SweetsManager::~SweetsManager() = default;
@@ -331,6 +762,9 @@ namespace SweetsSpace
         };
 
         std::vector<PendingStateChange> stateChanges;
+        std::vector<std::shared_ptr<BaseSweets>> missedSweets;
+        const auto horizontalBounds = GetHorizontalBounds();
+        const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
         for (auto& entry : m_byState)
         {
@@ -372,6 +806,38 @@ namespace SweetsSpace
 
                 if (!isCarried)
                 {
+                    bool usedFallbackBounds = false;
+                    const bool outOfBounds = IsHorizontallyOutOfBounds(
+                        *sweets,
+                        horizontalBounds,
+                        m_horizontalBoundsMargin,
+                        fallbackHorizontalLimit,
+                        &usedFallbackBounds);
+                    if (!sweets->GetCollider() && !m_warnedMissingBoundsCollider)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Horizontal bounds check using transform scale for sweets ptr="
+                            << sweets.get() << " (missing collider).\n";
+                        DebugTrace(oss.str());
+                        m_warnedMissingBoundsCollider = true;
+                    }
+
+                    if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Horizontal bounds fallback active; using platform width limit="
+                            << fallbackHorizontalLimit << " (half-width + margin).\n";
+                        DebugTrace(oss.str());
+                        m_warnedMissingHorizontalBounds = true;
+                    }
+
+                    if (outOfBounds)
+                    {
+                        missedSweets.push_back(sweets);
+                        ++it;
+                        continue;
+                    }
+
                     sweets->OnUpdate(ctx);
 
                     const SweetsState desiredState = EvaluateState(*sweets, bucketState);
@@ -397,6 +863,13 @@ namespace SweetsSpace
                 << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
 #endif
+        }
+
+        DeleteBatchContext missBatch{};
+        missBatch.usesRemaining = static_cast<int>(missedSweets.size());
+        for (const auto& sweets : missedSweets)
+        {
+            RemoveSweetsEntry(sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch);
         }
     }
 
@@ -485,6 +958,7 @@ namespace SweetsSpace
         }
 
         auto found = m_lookup.find(sweets);
+        const SweetsState previousState = (found != m_lookup.end()) ? found->second : SweetsState::Active;
         if (found != m_lookup.end())
         {
             if (found->second == state)
@@ -499,6 +973,16 @@ namespace SweetsSpace
         auto& targetList = GetByState(state);
         targetList.push_back(sweets);
         m_lookup[sweets] = state;
+
+        if (state == SweetsState::Stacked && previousState != SweetsState::Stacked)
+        {
+            ++m_stackedInBatch;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Stacked sweets progress=" << m_stackedInBatch
+                << '/' << m_batchStackTarget << " tag='" << sweets->GetTag() << "'.\n";
+            DebugTrace(oss.str());
+        }
     }
 
     void SweetsManager::Erase(const std::shared_ptr<BaseSweets>& sweets)
@@ -550,44 +1034,7 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (m_scheduler)
-            {
-                m_scheduler->Unregister(*sweets);
-            }
-            else if (!m_warnedMissingScheduler)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister sweets '" << sweets->GetTag()
-                    << "': scheduler not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingScheduler = true;
-            }
-
-            if (m_physicsMachine)
-            {
-                m_physicsMachine->UnregisterBody(*sweets);
-            }
-            else if (!m_warnedMissingPhysicsMachine)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister physics for sweets '" << sweets->GetTag()
-                    << "': physics machine not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingPhysicsMachine = true;
-            }
-
-            if (m_drawSystem)
-            {
-                m_drawSystem->UnregisterRenderable(*sweets);
-            }
-            else if (!m_warnedMissingDrawSystem)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ClearAllSweets could not unregister draw entry for sweets '" << sweets->GetTag()
-                    << "': draw system not configured.\n";
-                DebugTrace(oss.str());
-                m_warnedMissingDrawSystem = true;
-            }
+            UnregisterSweetsFromSystems(sweets, "ClearAllSweets");
         }
 
         std::ostringstream oss;
@@ -823,6 +1270,16 @@ namespace SweetsSpace
         return true;
     }
 
+    std::optional<std::pair<float, float>> SweetsManager::GetHorizontalBounds() const
+    {
+        if (!m_hasHorizontalBounds)
+        {
+            return std::nullopt;
+        }
+
+        return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
+    }
+
     void SweetsManager::RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets)
     {
         if (!sweets)
@@ -870,6 +1327,109 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        if (m_scheduler)
+        {
+            m_scheduler->Unregister(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingScheduler)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister sweets '" << sweets->GetTag()
+                << "': scheduler not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingScheduler = true;
+        }
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->UnregisterBody(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingPhysicsMachine)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister physics for sweets '" << sweets->GetTag()
+                << "': physics machine not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingPhysicsMachine = true;
+        }
+
+        if (m_drawSystem)
+        {
+            m_drawSystem->UnregisterRenderable(*sweets);
+        }
+        else if (logWarnings && !m_warnedMissingDrawSystem)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " could not unregister draw entry for sweets '" << sweets->GetTag()
+                << "': draw system not configured.\n";
+            DebugTrace(oss.str());
+            m_warnedMissingDrawSystem = true;
+        }
+    }
+
+    void SweetsManager::RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+        DeleteReason reason,
+        const char* context,
+        bool logWarnings,
+        DeleteBatchContext* batchContext)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        auto found = m_lookup.find(sweets);
+        if (found == m_lookup.end())
+        {
+            return;
+        }
+
+        const SweetsState previousState = found->second;
+        auto& currentList = GetByState(previousState);
+        currentList.remove(sweets);
+        m_lookup.erase(found);
+
+        const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
+        UpdateBatchUsage(batchContext, outcome);
+
+        UnregisterSweetsFromSystems(sweets, context, logWarnings);
+
+        const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
+        const int liveAfterRemoval = CountLiveSweets();
+        const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
+        if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
+        {
+            m_pendingTopUpAfterDrop = true;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << context << " detected live sweets drop below target; scheduling delayed top-up. live="
+                << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
+                << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+                << " queue=" << m_spawnQueue.size()
+                << " burstInterval=" << std::fixed << std::setprecision(2) << m_activeBurstInterval << "\n";
+            DebugTrace(oss.str());
+        }
+
+#if defined(_DEBUG)
+        const auto& pos = sweets->GetTransform().position;
+        std::ostringstream oss;
+        oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
+            << "' state=" << StateToString(previousState)
+            << " deleteReason=" << SweetsSpace::ToString(reason)
+            << " outcome=" << SweetsSpace::ToString(outcome)
+            << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
+            << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
+        DebugTrace(oss.str());
+#endif
+    }
+
     bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
     {
         std::ifstream file(path);
@@ -886,7 +1446,9 @@ namespace SweetsSpace
         {
             PhaseSpawnConfig config;
             bool hasInterval = false;
+            bool hasBurstInterval = false;
             bool hasSimultaneous = false;
+            bool hasSimultaneousTarget = false;
             bool hasWeights = false;
         };
 
@@ -970,6 +1532,22 @@ namespace SweetsSpace
                     parseError = true;
                 }
             }
+            else if (key == "burstInterval")
+            {
+                try
+                {
+                    partial.config.burstIntervalSeconds = std::max(kMinimumBurstIntervalSeconds, std::stof(value));
+                    partial.hasBurstInterval = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse burst interval on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "simultaneous")
             {
                 try
@@ -981,6 +1559,22 @@ namespace SweetsSpace
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse simultaneous count on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "simultaneousTarget")
+            {
+                try
+                {
+                    partial.config.simultaneousLiveTarget = std::max(1, std::stoi(value));
+                    partial.hasSimultaneousTarget = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse simultaneous target on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -1050,11 +1644,23 @@ namespace SweetsSpace
             }
             config.spawnIntervalSeconds = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
 
+            if (!entry.second.hasBurstInterval)
+            {
+                config.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
+            }
+            config.burstIntervalSeconds = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+
             if (!entry.second.hasSimultaneous)
             {
                 config.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
             }
             config.simultaneousSpawnCount = std::max(1, config.simultaneousSpawnCount);
+
+            if (!entry.second.hasSimultaneousTarget)
+            {
+                config.simultaneousLiveTarget = config.simultaneousSpawnCount;
+            }
+            config.simultaneousLiveTarget = std::max(1, config.simultaneousLiveTarget);
 
             if (!entry.second.hasWeights || config.weights.empty())
             {
@@ -1090,21 +1696,124 @@ namespace SweetsSpace
         return !parseError;
     }
 
+    void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
+    {
+        if (!(std::isfinite(minX) && std::isfinite(maxX)))
+        {
+            DebugTrace(std::string(kLogPrefix) + "Ignored horizontal bounds update with non-finite values.\n");
+            return;
+        }
+
+        const float sanitizedMin = std::min(minX, maxX);
+        const float sanitizedMax = std::max(minX, maxX);
+        const float sanitizedMargin = margin.has_value()
+            ? std::max(0.0f, *margin)
+            : m_horizontalBoundsMargin;
+
+        const bool changed = !m_hasHorizontalBounds
+            || HasMeaningfulDifference(m_minHorizontalBound, sanitizedMin)
+            || HasMeaningfulDifference(m_maxHorizontalBound, sanitizedMax)
+            || HasMeaningfulDifference(m_horizontalBoundsMargin, sanitizedMargin);
+
+        m_hasHorizontalBounds = true;
+        m_minHorizontalBound = sanitizedMin;
+        m_maxHorizontalBound = sanitizedMax;
+        m_horizontalBoundsMargin = sanitizedMargin;
+        m_warnedMissingHorizontalBounds = false;
+
+        if (!changed)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Horizontal bounds updated to min=" << m_minHorizontalBound
+            << " max=" << m_maxHorizontalBound
+            << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
     {
         m_spawnOrigins = origins;
-        m_nextSpawnOriginIndex = 0;
         m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+        const auto seed = std::random_device{}();
+        m_random.seed(seed);
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
-            << " spawn origins (heightOffset=" << m_spawnHeightOffset << ").\n";
+            << " spawn origins (heightOffset=" << m_spawnHeightOffset
+            << " seed=" << seed << ").\n";
         DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetRandomRotationEnabled(bool enabled)
+    {
+        m_enableRandomRotation = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random rotation " << (enabled ? "enabled" : "disabled")
+            << " (minYawPitchRollDeg=" << m_randomRotationMinDegrees.x << ',' << m_randomRotationMinDegrees.y
+            << ',' << m_randomRotationMinDegrees.z << " maxYawPitchRollDeg="
+            << m_randomRotationMaxDegrees.x << ',' << m_randomRotationMaxDegrees.y << ','
+            << m_randomRotationMaxDegrees.z << ").\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
+    {
+        m_randomRotationMinDegrees = minDegrees;
+        m_randomRotationMaxDegrees = maxDegrees;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random rotation range updated to minYawPitchRollDeg="
+            << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
+            << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
+            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ").\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetRandomScaleEnabled(bool enabled)
+    {
+        m_enableRandomScale = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Random scale " << (enabled ? "enabled" : "disabled") << ".\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetLiveSweetsCap(int cap)
+    {
+        const int sanitizedCap = std::max(0, cap);
+        const bool changed = (sanitizedCap != m_liveSweetsCap);
+        m_liveSweetsCap = sanitizedCap;
+        const bool capActive = (m_liveSweetsCap > 0);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Live sweets cap " << (sanitizedCap > 0 ? "set" : "disabled")
+            << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
+            << ", liveCount=" << m_lastLiveSweetsCount << ").\n";
+        DebugTrace(oss.str());
+
+        if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))
+        {
+            m_spawnPausedDueToLiveSweets = false;
+        }
     }
 
     void SweetsManager::ForceSpawnRefresh()
     {
         m_spawnTimer = 0.0f;
+        m_burstTimer = 0.0f;
+        m_activeBurstPlanned = 0;
+        m_activeBurstInterval = kDefaultBurstIntervalSeconds;
+        m_stackedInBatch = 0;
+        m_batchInitialSpawnDone = false;
+        m_batchCoolingDown = false;
+        m_batchStackTarget = std::max(1, m_batchStackTarget);
+        m_simultaneousLiveTarget = std::max(1, m_simultaneousLiveTarget);
+        m_pendingTopUpAfterDrop = false;
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
@@ -1112,11 +1821,71 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
         m_spawnQueue.clear();
+        m_currentBurstRemaining = 0;
+    }
+
+    int SweetsManager::CountLiveSweets() const
+    {
+        const std::array<SweetsState, 3> liveStates = {
+            SweetsState::Active,
+            SweetsState::Ground,
+            SweetsState::Carried,
+        };
+
+        int total = 0;
+        for (const auto state : liveStates)
+        {
+            const auto it = m_byState.find(state);
+            if (it != m_byState.end())
+            {
+                total += static_cast<int>(it->second.size());
+            }
+        }
+
+        return total;
+    }
+
+    int SweetsManager::ComputeDesiredLiveTarget(int remainingToStack) const
+    {
+        if (remainingToStack <= 0)
+        {
+            return 0;
+        }
+
+        return std::max(1, std::min(m_simultaneousLiveTarget, remainingToStack));
     }
 
     void SweetsManager::RunSpawnScheduler(float deltaSeconds)
     {
-        EmitSpawnRequests();
+        const int previousLiveCount = m_lastLiveSweetsCount;
+        const int liveSweets = CountLiveSweets();
+        const bool liveCapActive = (m_liveSweetsCap > 0);
+        const bool spawnBlockedByCap = liveCapActive && liveSweets >= m_liveSweetsCap;
+        const bool liveCountChanged = (liveSweets != previousLiveCount);
+
+        if (spawnBlockedByCap)
+        {
+            if (!m_spawnPausedDueToLiveSweets || liveCountChanged)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Spawn scheduler throttled by live sweets cap=" << m_liveSweetsCap
+                    << "; live=" << liveSweets << " (Active/Ground/Carried) queued=" << m_spawnQueue.size()
+                    << " burstRemaining=" << m_currentBurstRemaining << ".\n";
+                DebugTrace(oss.str());
+            }
+        }
+        else if (liveCountChanged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Live sweets count updated to " << liveSweets
+                << " (cap=" << (liveCapActive ? std::to_string(m_liveSweetsCap) : std::string("unlimited"))
+                << ", queued=" << m_spawnQueue.size() << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        const bool resumedFromLivePause = m_spawnPausedDueToLiveSweets && !spawnBlockedByCap;
+        m_spawnPausedDueToLiveSweets = spawnBlockedByCap;
+        m_lastLiveSweetsCount = liveSweets;
 
         if (m_phaseConfigs.empty())
         {
@@ -1132,18 +1901,191 @@ namespace SweetsSpace
         {
             return;
         }
-
-        m_spawnTimer += deltaSeconds;
         const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
-        while (m_spawnTimer >= interval)
+        const int batchTarget = std::max(1, config.simultaneousSpawnCount);
+        const bool targetChanged = (batchTarget != m_batchStackTarget);
+        if (targetChanged)
         {
-            m_spawnTimer -= interval;
-            EnqueueSpawns(std::max(1, config.simultaneousSpawnCount));
+            std::ostringstream oss;
+            oss << kLogPrefix << "Updated batch target to " << batchTarget
+                << " sweets per batch (was " << m_batchStackTarget << ") for phase " << m_activePhaseConfigIndex << ".\n";
+            DebugTrace(oss.str());
         }
 
-        EmitSpawnRequests();
+        const int simultaneousTarget = std::max(1, config.simultaneousLiveTarget);
+        if (simultaneousTarget != m_simultaneousLiveTarget)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Updated simultaneous live target to " << simultaneousTarget
+                << " (was " << m_simultaneousLiveTarget << ") for phase " << m_activePhaseConfigIndex << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        m_simultaneousLiveTarget = simultaneousTarget;
+        m_batchStackTarget = batchTarget;
+
+        if (!m_batchCoolingDown && m_stackedInBatch >= m_batchStackTarget)
+        {
+            m_batchCoolingDown = true;
+            m_spawnTimer = 0.0f;
+            m_batchInitialSpawnDone = false;
+            m_activeBurstPlanned = 0;
+            m_currentBurstRemaining = 0;
+            m_pendingTopUpAfterDrop = false;
+            if (!m_spawnQueue.empty())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Clearing spawn queue (" << m_spawnQueue.size()
+                    << ") after reaching batch stack target=" << m_batchStackTarget << ".\n";
+                DebugTrace(oss.str());
+            }
+            m_spawnQueue.clear();
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Batch stacked target reached; entering cooldown for "
+                << std::fixed << std::setprecision(2) << interval << "s (stacked=" << m_stackedInBatch
+                << ", live=" << liveSweets << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        if (m_batchCoolingDown)
+        {
+            m_spawnTimer += deltaSeconds;
+            const float remainingCooldown = std::max(0.0f, interval - m_spawnTimer);
+            if (remainingCooldown > 0.0f)
+            {
+                return;
+            }
+
+            m_batchCoolingDown = false;
+            m_stackedInBatch = 0;
+            m_batchInitialSpawnDone = false;
+            m_spawnTimer = 0.0f;
+
+            DebugTrace(std::string(kLogPrefix) + "Cooldown complete; starting next batch window.\n");
+        }
+
+        if (spawnBlockedByCap)
+        {
+            m_burstTimer = std::min(m_activeBurstInterval, m_burstTimer + deltaSeconds);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler waiting for live sweets to drop below cap="
+                << m_liveSweetsCap << "; live=" << liveSweets << " queued=" << m_spawnQueue.size()
+                << " stackedInBatch=" << m_stackedInBatch << '/' << m_batchStackTarget
+                << " burstTimerUntilEmit=" << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
+            DebugTrace(oss.str());
+            return;
+        }
+
+        if (resumedFromLivePause)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn scheduler resumed after cap pause. live=" << liveSweets
+                << " queued=" << m_spawnQueue.size() << " burstRemaining=" << m_currentBurstRemaining
+                << " stackedInBatch=" << m_stackedInBatch << '/' << m_batchStackTarget << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
+        const int projectedLive = liveSweets + pendingRequests;
+        const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
+        const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
+
+        if (desiredLiveTarget <= 0)
+        {
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
+            return;
+        }
+
+        const bool forceSeedNewBatch = (!m_batchInitialSpawnDone && m_stackedInBatch == 0);
+        const bool liveAtTarget = liveSweets >= desiredLiveTarget;
+        if (liveAtTarget && !forceSeedNewBatch)
+        {
+            if (!m_batchInitialSpawnDone)
+            {
+                m_batchInitialSpawnDone = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << "Live sweets already meet simultaneous target; skipping burst scheduling (live="
+                    << liveSweets << " target=" << desiredLiveTarget
+                    << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+                    << " queued=" << m_spawnQueue.size() << ").\n";
+                DebugTrace(oss.str());
+            }
+
+            if (m_pendingTopUpAfterDrop)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Clearing pending top-up because live sweets recovered to target (live=" << liveSweets
+                    << " target=" << desiredLiveTarget << ").\n";
+                DebugTrace(oss.str());
+                m_pendingTopUpAfterDrop = false;
+            }
+
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
+            return;
+        }
+
+        if (liveAtTarget && forceSeedNewBatch)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Forcing initial burst for new batch despite live target met (live=" << liveSweets
+                << " target=" << desiredLiveTarget << " queued=" << m_spawnQueue.size()
+                << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget << ").\n";
+            DebugTrace(oss.str());
+
+            if (m_pendingTopUpAfterDrop)
+            {
+                std::ostringstream pendingOss;
+                pendingOss << kLogPrefix
+                    << "Clearing pending top-up while forcing new batch seed (live target already satisfied).\n";
+                DebugTrace(pendingOss.str());
+                m_pendingTopUpAfterDrop = false;
+            }
+        }
+
+        if (projectedLive >= desiredLiveTarget && !forceSeedNewBatch)
+        {
+            if (!m_batchInitialSpawnDone)
+            {
+                m_batchInitialSpawnDone = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << "Projected sweets will meet target; deferring new burst (projected="
+                    << projectedLive << " target=" << desiredLiveTarget
+                    << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget << ").\n";
+                DebugTrace(oss.str());
+            }
+
+            EmitSpawnRequests(deltaSeconds);
+            m_lastLiveSweetsCount = CountLiveSweets();
+            m_pendingTopUpAfterDrop = false;
+            return;
+        }
+
+        const bool delayBurst = m_pendingTopUpAfterDrop;
+        const int deficit = desiredLiveTarget - projectedLive;
+        const int requestedCount = forceSeedNewBatch ? desiredLiveTarget : (delayBurst ? 1 : deficit);
+        m_activeBurstPlanned = std::max(desiredLiveTarget, requestedCount);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Scheduling burst to restore live target. live=" << liveSweets
+            << " pending=" << pendingRequests << " target=" << desiredLiveTarget
+            << " requested=" << requestedCount << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+            << " delayedByDrop=" << std::boolalpha << delayBurst
+            << " forceSeed=" << forceSeedNewBatch << ".\n";
+        DebugTrace(oss.str());
+
+        EnqueueSpawns(requestedCount);
+        m_burstTimer = delayBurst ? 0.0f : m_activeBurstInterval;
+        m_pendingTopUpAfterDrop = false;
+        m_batchInitialSpawnDone = true;
+
+        EmitSpawnRequests(deltaSeconds);
+        m_lastLiveSweetsCount = CountLiveSweets();
     }
 
     void SweetsManager::EnqueueSpawns(int count)
@@ -1153,7 +2095,16 @@ namespace SweetsSpace
             return;
         }
 
-        for (int i = 0; i < count; ++i)
+        const int burstTarget = (m_activeBurstPlanned > 0) ? m_activeBurstPlanned : count;
+        const int availableQueueSlots = static_cast<int>(kMaxSpawnQueueEntries - m_spawnQueue.size());
+        const int allowedCount = std::max(0, std::min({ count, burstTarget, availableQueueSlots }));
+        std::ostringstream oss;
+        oss << kLogPrefix << "Initializing burst (planned=" << burstTarget << ", requested=" << count
+            << ", allowed=" << allowedCount << ", queueSlots=" << availableQueueSlots << ").\n";
+        DebugTrace(oss.str());
+
+        int enqueued = 0;
+        for (int i = 0; i < allowedCount; ++i)
         {
             if (m_spawnQueue.size() >= kMaxSpawnQueueEntries)
             {
@@ -1171,28 +2122,70 @@ namespace SweetsSpace
             }
 
             m_spawnQueue.push_back(kind);
+            ++enqueued;
         }
+
+        if (enqueued != allowedCount)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn enqueue shortfall: enqueued=" << enqueued
+                << " expected=" << allowedCount << "; queueSize=" << m_spawnQueue.size() << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        m_currentBurstRemaining = enqueued;
     }
 
-    void SweetsManager::EmitSpawnRequests()
+    void SweetsManager::EmitSpawnRequests(float deltaSeconds)
     {
         if (m_spawnQueue.empty())
         {
             return;
         }
 
+        m_burstTimer += deltaSeconds;
         std::size_t spawnedCount = 0;
-        while (!m_spawnQueue.empty())
+        const int queuedBefore = static_cast<int>(m_spawnQueue.size());
+        while (!m_spawnQueue.empty() && m_burstTimer >= m_activeBurstInterval)
         {
+            m_burstTimer -= m_activeBurstInterval;
             const std::string kind = m_spawnQueue.front();
             m_spawnQueue.pop_front();
 
-            const float3 origin = NextSpawnOrigin();
-            Transform transform = BuildSpawnTransform(origin);
-            if (Spawn(kind, transform))
+            if (m_currentBurstRemaining > 0)
             {
-                ++spawnedCount;
+                --m_currentBurstRemaining;
             }
+
+            const std::vector<float3> emitOrigins = m_spawnOrigins.empty()
+                ? std::vector<float3>{ NextSpawnOrigin() }
+                : m_spawnOrigins;
+            std::size_t successfulEmits = 0;
+            for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
+            {
+                const float3& origin = emitOrigins[originIndex];
+                Transform transform = BuildSpawnTransform(origin);
+                const bool spawned = static_cast<bool>(Spawn(kind, transform));
+                if (spawned)
+                {
+                    ++spawnedCount;
+                    ++successfulEmits;
+                }
+            }
+
+            const int remainingInBurst = std::max(0, m_currentBurstRemaining);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Burst emit kind='" << kind << "' remaining=" << remainingInBurst
+                << '/' << m_activeBurstPlanned << " queue=" << m_spawnQueue.size()
+                << " origins=" << emitOrigins.size() << " successful=" << successfulEmits
+                << " nextEmitIn=" << std::fixed << std::setprecision(2)
+                << std::max(0.0f, m_activeBurstInterval - m_burstTimer) << "s.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (m_currentBurstRemaining < 0)
+        {
+            m_currentBurstRemaining = 0;
         }
 
         if (spawnedCount > 0)
@@ -1200,6 +2193,19 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "Emitted " << spawnedCount << " sweets from scheduler.\n";
             DebugTrace(oss.str());
+        }
+
+        if (queuedBefore > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Batch progress: queued=" << queuedBefore
+                << " remaining=" << m_currentBurstRemaining << ".\n";
+            DebugTrace(oss.str());
+
+            if (m_currentBurstRemaining <= 0 && m_spawnQueue.empty())
+            {
+                DebugTrace(std::string(kLogPrefix) + "Batch completed; scheduler may start a new batch after cooldown.\n");
+            }
         }
     }
 
@@ -1257,6 +2263,21 @@ namespace SweetsSpace
 
         m_activePhaseConfigIndex = clamped;
         ForceSpawnRefresh();
+        const float interval = std::max(m_phaseConfigs[clamped].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        m_spawnTimer = std::max(m_spawnTimer, interval);
+        m_activeBurstInterval = std::max(m_phaseConfigs[clamped].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        m_batchStackTarget = std::max(1, m_phaseConfigs[clamped].simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[clamped].simultaneousLiveTarget);
+        m_batchInitialSpawnDone = false;
+        m_batchCoolingDown = false;
+        m_stackedInBatch = 0;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Phase change primed next batch with interval="
+            << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
+            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount
+            << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
+        DebugTrace(oss.str());
         LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
     }
 
@@ -1265,7 +2286,9 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "[Spawn] phase=" << phaseIndex
             << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
+            << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
+            << " liveTarget=" << config.simultaneousLiveTarget
             << " weights=";
 
         if (config.weights.empty())
@@ -1299,7 +2322,9 @@ namespace SweetsSpace
 
         PhaseSpawnConfig phase0;
         phase0.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+        phase0.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
         phase0.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+        phase0.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
         phase0.weights = baseWeights;
 
         PhaseSpawnConfig phase1 = phase0;
@@ -1308,6 +2333,7 @@ namespace SweetsSpace
         PhaseSpawnConfig phase2 = phase0;
         phase2.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.5f);
         phase2.simultaneousSpawnCount = 2;
+        phase2.simultaneousLiveTarget = 2;
 
         m_phaseConfigs.push_back(phase0);
         m_phaseConfigs.push_back(phase1);
@@ -1344,12 +2370,17 @@ namespace SweetsSpace
             return float3{ 0.0f, 0.0f, 0.0f };
         }
 
-        if (m_nextSpawnOriginIndex >= m_spawnOrigins.size())
-        {
-            m_nextSpawnOriginIndex = 0;
-        }
+        std::uniform_int_distribution<std::size_t> dist(0, m_spawnOrigins.size() - 1);
+        const std::size_t chosenIndex = dist(m_random);
+        const float3 origin = m_spawnOrigins[chosenIndex];
 
-        return m_spawnOrigins[m_nextSpawnOriginIndex++];
+        std::ostringstream oss;
+        oss << kLogPrefix << "Selected spawn origin index=" << chosenIndex
+            << " position=(" << origin.x << ',' << origin.y << ',' << origin.z
+            << ") of " << m_spawnOrigins.size() << " configured origins.\n";
+        DebugTrace(oss.str());
+
+        return origin;
     }
 
     Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
@@ -1359,6 +2390,34 @@ namespace SweetsSpace
         transform.position.y += m_spawnHeightOffset;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        if (m_enableRandomRotation)
+        {
+            const auto sampleRotation = [&](float minDeg, float maxDeg)
+            {
+                const float lo = std::min(minDeg, maxDeg);
+                const float hi = std::max(minDeg, maxDeg);
+                if (lo == hi)
+                {
+                    return lo;
+                }
+
+                std::uniform_real_distribution<float> dist(lo, hi);
+                return dist(m_random);
+            };
+
+            const float sampledPitch = sampleRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
+            const float sampledYaw = sampleRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
+            const float sampledRoll = sampleRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
+            transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn rotation sampled pitch/yaw/roll(deg)="
+                << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+                << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
+            DebugTrace(oss.str());
+        }
+
         return transform;
     }
 }

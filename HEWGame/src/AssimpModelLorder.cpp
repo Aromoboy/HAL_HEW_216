@@ -149,6 +149,9 @@ std::vector<std::shared_ptr<MeshDX>> AssimpModelLorder::MakeMesh(const aiScene* 
 // }eA̍쐬
 std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const aiScene* ptr, const std::string& directory, ID3D11Device* device, TextureCache& textureCache)
 {
+	(void)directory;
+	(void)device;
+	(void)textureCache;
 	// O
 	aiColor3D color(0.0f, 0.0f, 0.0f);
 	float shininess = 0.0f;
@@ -159,7 +162,7 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 	DirectX::XMFLOAT4 ambient;
 	DirectX::XMFLOAT4 specular;
 
-	
+
 
 	// }eA̍쐬
 	materials.resize(pScene->mNumMaterials);
@@ -171,7 +174,7 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 			diffuse = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
 		else
 			diffuse = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		// ̓ǂݎ
+		// ̓ǂݎ
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, color) == AI_SUCCESS)
 			ambient = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
 		else
@@ -187,71 +190,10 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 
 
 
-		// eNX`ǂݍݏ
-		aiString path;
-		std::shared_ptr<Texture2D> texture;
-
-
-	
-
-		// eNX`̃pXǂݍ
-		if (pScene->mMaterials[i]->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), path) != AI_SUCCESS) 
-		{
-			continue;
-		}
-
-		// ̂܂ܓǂݍ
-
-		
-		texture = textureCache.Get(path.C_Str());
-		if (texture) 
-		{
-			materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-			continue; 
-		}
-
-
-
-		// fƓKwT
-		// pXt@Ĉݎ擾
-		std::string fullPath = path.C_Str();
-		std::string::iterator strIt = fullPath.begin();
-		while (strIt != fullPath.end()) {
-			if (*strIt == '/')
-				*strIt = '\\';
-			++strIt;
-		}
-		size_t find = fullPath.find_last_of("\\");
-		std::string fileName = fullPath;
-		if (find != std::string::npos)
-			fileName = fileName.substr(find + 1);
-
-		                std::string filePathCmp = directory + fileName;
-
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-		std::wstring wFilePath = converter.from_bytes(filePathCmp);
-
-		// eNX`̓Ǎ
-		texture = textureCache.Load(fileName, device, wFilePath );
-		if (texture) 
-		{
-			materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-			continue; 
-		}
-
-		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-
-#ifdef _DEBUG
-		std::string errorStr = "";
-#endif
-
-
-#ifdef _DEBUG
-		errorStr += path.C_Str();
-#endif
+		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
 	}
 
 
 
 	return materials;
-}
+	}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <DirectXMath.h>
 #include <string>
 #include <vector>
 
@@ -7,6 +8,16 @@
 
 namespace Stage
 {
+    struct PlatformDescriptor
+    {
+        float3 center{ 0.0f, 0.0f, 0.0f };
+        float3 scale{ 1.0f, 1.0f, 1.0f };
+        float depth = 1.0f;
+        float widthFraction = 1.0f;
+        float heightFraction = 1.0f;
+        DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
+    };
+
     class StageData
     {
     public:
@@ -20,8 +31,9 @@ namespace Stage
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
-        float GetPlatformCenterY() const noexcept;
-        const float3& GetPlatformScale() const noexcept;
+        const std::vector<PlatformDescriptor>& GetPlatforms() const noexcept;
+        const PlatformDescriptor& GetPlatform(std::size_t index) const;
+        std::size_t GetPlatformCount() const noexcept;
         const std::string& GetSourcePath() const noexcept;
         float GetPlayerMoveSpeed() const noexcept;
         float GetGuidelineHeight() const noexcept;
@@ -33,10 +45,10 @@ namespace Stage
         void ApplyDefaults();
         void LogSummary(const char* prefix, const std::string& detail) const;
         void EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const;
+        void LogPlatformSummary(std::size_t index, const PlatformDescriptor& descriptor) const;
 
         float m_planeZ;
-        float m_platformCenterY;
-        float3 m_platformScale;
+        std::vector<PlatformDescriptor> m_platforms;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
         std::vector<float3> m_spawnPoints;

@@ -1,3 +1,5 @@
+#include "AABBCollider.h"
+#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -20,16 +22,15 @@
 #include "Sweets.h"
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
-
-
-
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <DirectXMath.h>
@@ -127,7 +128,7 @@ namespace
                     << ", damping=" << settings.damping
                     << ", penetrationTolerance=" << settings.penetrationTolerance
                     << ", restitution=" << settings.restitution << ").\n";
-                DebugTrace(oss.str());
+                ::DebugTrace(oss.str());
                 return settings;
             }
 
@@ -153,7 +154,7 @@ namespace
                     std::ostringstream oss;
                     oss << kLogPrefix << "Invalid physics tuning line " << lineNumber
                         << " (missing '='): " << line << "\n";
-                    DebugTrace(oss.str());
+                    ::DebugTrace(oss.str());
                     continue;
                 }
 
@@ -187,7 +188,7 @@ namespace
                         std::ostringstream oss;
                         oss << kLogPrefix << "Unknown physics tuning key '" << key << "' on line "
                             << lineNumber << "\n";
-                        DebugTrace(oss.str());
+                        ::DebugTrace(oss.str());
                     }
                 }
                 catch (const std::exception& ex)
@@ -195,7 +196,7 @@ namespace
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse value for key '" << key << "' on line "
                         << lineNumber << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
+                    ::DebugTrace(oss.str());
                 }
             }
 
@@ -205,7 +206,7 @@ namespace
                 << ", damping=" << settings.damping
                 << ", penetrationTolerance=" << settings.penetrationTolerance
                 << ", restitution=" << settings.restitution << ").\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             return settings;
         }
 
@@ -258,18 +259,154 @@ namespace
                 || HasMeaningfulDifference(a.z, b.z, epsilon);
         }
 
+        bool TryComputeViewportBoundsOnPlane(
+            const CameraSpace::PerspectiveCamera& camera,
+            float viewportWidth,
+            float viewportHeight,
+            float planeZ,
+            float& outMinX,
+            float& outMaxX,
+            float& outMinY,
+            float& outMaxY)
+        {
+            if (!(std::isfinite(viewportWidth) && viewportWidth > 0.0f
+                && std::isfinite(viewportHeight) && viewportHeight > 0.0f))
+            {
+                return false;
+            }
+
+            const DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&camera.GetView());
+            const DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&camera.GetProjection());
+
+            const std::array<std::pair<float, float>, 4> corners
+            {
+                std::pair<float, float>{0.0f, 0.0f},
+                std::pair<float, float>{viewportWidth, 0.0f},
+                std::pair<float, float>{viewportWidth, viewportHeight},
+                std::pair<float, float>{0.0f, viewportHeight}
+            };
+
+            bool hasBounds = false;
+            float minX = 0.0f;
+            float maxX = 0.0f;
+            float minY = 0.0f;
+            float maxY = 0.0f;
+            constexpr float kDirectionEpsilon = 1e-5f;
+
+            for (const auto& corner : corners)
+            {
+                const DirectX::XMVECTOR nearPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(corner.first, corner.second, 0.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+                const DirectX::XMVECTOR farPoint = DirectX::XMVector3Unproject(
+                    DirectX::XMVectorSet(corner.first, corner.second, 1.0f, 1.0f),
+                    0.0f,
+                    0.0f,
+                    viewportWidth,
+                    viewportHeight,
+                    0.0f,
+                    1.0f,
+                    proj,
+                    view,
+                    DirectX::XMMatrixIdentity());
+
+                const DirectX::XMVECTOR direction = DirectX::XMVectorSubtract(farPoint, nearPoint);
+                const float dirZ = DirectX::XMVectorGetZ(direction);
+                if (std::fabs(dirZ) < kDirectionEpsilon)
+                {
+                    continue;
+                }
+
+                const float nearZ = DirectX::XMVectorGetZ(nearPoint);
+                const float t = (planeZ - nearZ) / dirZ;
+                if (t < 0.0f || t > 1.0f)
+                {
+                    continue;
+                }
+
+                const DirectX::XMVECTOR hitPoint = DirectX::XMVectorAdd(nearPoint, DirectX::XMVectorScale(direction, t));
+                const float hitX = DirectX::XMVectorGetX(hitPoint);
+                const float hitY = DirectX::XMVectorGetY(hitPoint);
+
+                if (!hasBounds)
+                {
+                    minX = maxX = hitX;
+                    minY = maxY = hitY;
+                    hasBounds = true;
+                }
+                else
+                {
+                    minX = std::min(minX, hitX);
+                    maxX = std::max(maxX, hitX);
+                    minY = std::min(minY, hitY);
+                    maxY = std::max(maxY, hitY);
+                }
+            }
+
+            if (!hasBounds)
+            {
+                return false;
+            }
+
+            outMinX = minX;
+            outMaxX = maxX;
+            outMinY = minY;
+            outMaxY = maxY;
+            return true;
+        }
+
         Transform ComputePlatformTransformForCamera(
             const CameraSpace::PerspectiveCamera& camera,
             float viewportWidth,
             float viewportHeight,
-            const Stage::StageData& stageData,
+            const Stage::PlatformDescriptor& descriptor,
             float screenFraction,
-            float stageCenterX)
+            float stageCenterX,
+            std::size_t platformIndex)
         {
             Transform result{};
-            result.position = float3{ stageCenterX, stageData.GetPlatformCenterY(), stageData.GetPlaneZ() };
+            result.position = float3{ stageCenterX + descriptor.center.x, descriptor.center.y, descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
-            result.scale = stageData.GetPlatformScale();
+            float targetWidth = descriptor.scale.x;
+            float targetHeight = descriptor.scale.y;
+            const float targetDepth = std::max(0.01f, descriptor.depth);
+
+            float viewportMinX = 0.0f;
+            float viewportMaxX = 0.0f;
+            float viewportMinY = 0.0f;
+            float viewportMaxY = 0.0f;
+            const bool boundsValid = TryComputeViewportBoundsOnPlane(
+                camera,
+                viewportWidth,
+                viewportHeight,
+                descriptor.center.z,
+                viewportMinX,
+                viewportMaxX,
+                viewportMinY,
+                viewportMaxY);
+            if (boundsValid)
+            {
+                const float worldWidth = viewportMaxX - viewportMinX;
+                const float worldHeight = viewportMaxY - viewportMinY;
+                const float widthFraction = std::clamp(descriptor.widthFraction, 0.01f, 1.0f);
+                const float heightFraction = std::clamp(descriptor.heightFraction, 0.01f, 1.0f);
+                targetWidth = std::max(worldWidth * widthFraction, 0.01f);
+                targetHeight = std::max(worldHeight * heightFraction, 0.01f);
+            }
+            else
+            {
+                DebugTrace(std::string(kLogPrefix) + "[PlatformAlign] Failed to derive viewport bounds; falling back to config platformScale.\n");
+            }
+
+            result.scale = float3{ targetWidth, targetHeight, targetDepth };
 
             const float sanitizedFraction = std::clamp(screenFraction, 0.0f, 1.0f);
             const float configuredTopY = result.position.y + (result.scale.y * 0.5f);
@@ -337,12 +474,15 @@ namespace
             std::ostringstream oss;
             oss << kLogPrefix << "[PlatformAlign] fraction=" << sanitizedFraction
                 << " viewport=" << viewportWidth << 'x' << viewportHeight
+                << " platformIndex=" << platformIndex
+                << " boundsValid=" << std::boolalpha << boundsValid
+                << " scale=(" << result.scale.x << ',' << result.scale.y << ',' << result.scale.z << ')'
                 << " topY=" << derivedTopY
                 << " worldZ=" << derivedPlaneZ
                 << " applied=" << std::boolalpha << derivedValid
                 << " centerY=" << result.position.y
                 << " planeZ=" << result.position.z << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
 
             return result;
         }
@@ -361,7 +501,7 @@ SceneGame::SceneGame()
         std::ostringstream oss;
         oss << kLogPrefix << "Player move speed " << m_playerBaseMoveSpeed
             << " invalid; using fallback " << kFallbackPlayerMoveSpeed << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_playerBaseMoveSpeed = kFallbackPlayerMoveSpeed;
     }
     m_playerSpeedMultiplier = 1.0f;
@@ -372,12 +512,22 @@ SceneGame::SceneGame()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
+            << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeed=" << m_playerBaseMoveSpeed
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
             << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
-        DebugTrace(oss.str());
+        for (std::size_t i = 0; i < m_stageData.GetPlatformCount(); ++i)
+        {
+            const auto& descriptor = m_stageData.GetPlatform(i);
+            oss << kLogPrefix << " PlatformDesc[" << i << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
+                << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
+                << descriptor.scale.z << ") depth=" << descriptor.depth
+                << " widthFraction=" << descriptor.widthFraction
+                << " heightFraction=" << descriptor.heightFraction << "\n";
+        }
+        ::DebugTrace(oss.str());
     }
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
@@ -386,7 +536,7 @@ SceneGame::SceneGame()
         std::ostringstream oss;
         oss << kLogPrefix << "Guideline height " << m_guidelineHeightMeters
             << " invalid; overlay guideline disabled.\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_guidelineHeightMeters = 0.0f;
     }
 
@@ -396,7 +546,7 @@ SceneGame::SceneGame()
         std::ostringstream oss;
         oss << kLogPrefix << "Height bonus threshold " << m_heightBonusThresholdMeters
             << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_heightBonusThresholdMeters = 0.0f;
     }
 
@@ -406,14 +556,14 @@ SceneGame::SceneGame()
         std::ostringstream oss;
         oss << kLogPrefix << "Height bonus seconds " << m_heightBonusSeconds
             << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_heightBonusSeconds = 0.0f;
     }
     else if (m_heightBonusSeconds <= 0.0f)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_heightBonusSeconds = 0.0f;
     }
 
@@ -429,7 +579,7 @@ SceneGame::SceneGame()
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_backgroundRenderer.reset();
         }
     }
@@ -479,13 +629,12 @@ SceneGame::SceneGame()
         m_sweetsManager->SetDrawSystem(m_drawSystem.get());
         m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
         m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
-        m_sweetsManager->SetSpawnOrigins(m_stageData.GetSpawnPoints());
         const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
                 << " from '" << kSweetsSpawnConfigPath << "'.\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
         }
         m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
         {
@@ -506,7 +655,7 @@ SceneGame::SceneGame()
             << kHudLayoutConfig.textureWidth << 'x' << kHudLayoutConfig.textureHeight
             << ", margin=" << kHudLayoutConfig.marginPixels
             << ", warningThreshold=" << kHudLayoutConfig.warningThresholdSeconds << "s).\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -580,53 +729,160 @@ SceneGame::SceneGame()
     {
         m_drawSystem->SetRenderer(m_render.get());
     }
-    Transform platformTransform{};
-    platformTransform.position = float3{ 0.0f, m_stageData.GetPlatformCenterY(), m_stageData.GetPlaneZ() };
-    platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    platformTransform.scale = m_stageData.GetPlatformScale();
-    auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
-    m_stagePlatform = std::make_unique<Stage::FoundationPlatform>(
-        "StageFoundation",
-        platformTransform,
-        platformCollider,
-        Core::UpdatePhase::PrePhysics,
-        -100);
-    if (m_stagePlatform)
+    float platformViewportWidth = static_cast<float>(SCREEN_WIDTH);
+    float platformViewportHeight = static_cast<float>(SCREEN_HEIGHT);
+    if (RenderTarget* rtv = GetDefaultRTV())
     {
-        RefreshPlatformAnchor(true);
-        RegisterPhysicsBody(*m_stagePlatform);
-        std::ostringstream oss;
-        const auto& scale = m_stagePlatform->GetTransform().scale;
-        const auto& pos = m_stagePlatform->GetTransform().position;
-        oss << kLogPrefix << "Stage foundation initialized at ("
-            << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-            << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
-            << m_stagePlatform->GetDebugColor().x << ','
-            << m_stagePlatform->GetDebugColor().y << ','
-            << m_stagePlatform->GetDebugColor().z << ").\n";
-        DebugTrace(oss.str());
-        if (m_drawSystem)
-        {
-            m_drawSystem->RegisterRenderable(*m_stagePlatform);
-            m_stagePlatformDrawRegistered = true;
-            DebugTrace(std::string(kLogPrefix) + "Stage foundation registered with DrawSystem.\n");
-        }
+        platformViewportWidth = static_cast<float>(rtv->GetWidth());
+        platformViewportHeight = static_cast<float>(rtv->GetHeight());
+    }
+
+    const auto& platformDescriptors = m_stageData.GetPlatforms();
+    if (platformDescriptors.empty())
+    {
+        DebugTrace(std::string(kLogPrefix) + "No platform descriptors available; skipping foundation creation.\n");
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "Failed to allocate stage foundation platform.\n");
+        m_foundationPlatforms.resize(platformDescriptors.size());
+        m_platformUpdateRegistered.assign(platformDescriptors.size(), false);
+        m_platformDrawRegistered.assign(platformDescriptors.size(), false);
+
+        for (std::size_t i = 0; i < platformDescriptors.size(); ++i)
+        {
+            const auto& descriptor = platformDescriptors[i];
+            Transform platformTransform = ComputePlatformTransformForCamera(
+                *m_gameCamera,
+                platformViewportWidth,
+                platformViewportHeight,
+                descriptor,
+                kPlatformScreenBottomFraction,
+                kStageCenterX,
+                i);
+            auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
+
+            std::ostringstream tagStream;
+            tagStream << "StageFoundation" << i;
+            auto platform = std::make_unique<Stage::FoundationPlatform>(
+                tagStream.str(),
+                platformTransform,
+                platformCollider,
+                descriptor.color,
+                Core::UpdatePhase::PrePhysics,
+                -100 - static_cast<int>(i));
+
+            if (!platform)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Failed to allocate foundation platform at index " << i << " (tag='"
+                    << tagStream.str() << "').\n";
+                ::DebugTrace(oss.str());
+                continue;
+            }
+
+            m_foundationPlatforms[i] = std::move(platform);
+        }
+
+        RefreshPlatformAnchor(true);
+
+        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
+        {
+            auto& platform = m_foundationPlatforms[i];
+            if (!platform)
+            {
+                continue;
+            }
+
+            RegisterPhysicsBody(*platform);
+
+            const auto& scale = platform->GetTransform().scale;
+            const auto& pos = platform->GetTransform().position;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Stage foundation[" << i << "] initialized at ("
+                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+                << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
+                << platform->GetDebugColor().x << ','
+                << platform->GetDebugColor().y << ','
+                << platform->GetDebugColor().z << ") tag='" << platform->GetTag() << "'.\n";
+            ::DebugTrace(oss.str());
+
+            if (m_drawSystem)
+            {
+                m_drawSystem->RegisterRenderable(*platform);
+                m_platformDrawRegistered[i] = true;
+                std::ostringstream drawOss;
+                drawOss << kLogPrefix << "Stage foundation[" << i << "] registered with DrawSystem.\n";
+                DebugTrace(drawOss.str());
+            }
+        }
+
+        auto selectPlatform = [&](std::size_t preferredIndex) -> Stage::FoundationPlatform*
+        {
+            if (preferredIndex < m_foundationPlatforms.size() && m_foundationPlatforms[preferredIndex])
+            {
+                return m_foundationPlatforms[preferredIndex].get();
+            }
+            for (auto& platform : m_foundationPlatforms)
+            {
+                if (platform)
+                {
+                    return platform.get();
+                }
+            }
+            return nullptr;
+        };
+
+        m_platePlatform = selectPlatform(platformDescriptors.size() > 1 ? 1 : 0);
+        if (m_platePlatform)
+        {
+            const auto& pos = m_platePlatform->GetTransform().position;
+            const auto& scale = m_platePlatform->GetTransform().scale;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Plate platform selected tag='" << m_platePlatform->GetTag() << "' pos=("
+                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
+                << scale.x << ',' << scale.y << ',' << scale.z << ").\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "No plate platform available; player and sweets will use default spawn heights.\n");
+        }
     }
 
+    if (m_sweetsManager)
+    {
+        std::vector<float3> spawnOrigins = m_stageData.GetSpawnPoints();
+        if (m_platePlatform)
+        {
+            const auto& plateTransform = m_platePlatform->GetTransform();
+            const float plateTopY = plateTransform.position.y + (plateTransform.scale.y * 0.5f);
+            for (auto& origin : spawnOrigins)
+            {
+                origin.y = plateTopY;
+                origin.z = plateTransform.position.z;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
+                << m_platePlatform->GetTag() << "' topY=" << plateTopY
+                << " planeZ=" << plateTransform.position.z << "\n";
+            DebugTrace(oss.str());
+        }
+        m_sweetsManager->SetSpawnOrigins(spawnOrigins);
+    }
+
+    const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
-    { float3{0.0f, 0.0f, m_stageData.GetPlaneZ()}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
-    collider = std::make_shared<Collision::AABBCollider>(trans, false, 1.0f, float3{ 0.0f, 0.0f, 0.0f });
+    { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
     player = std::make_unique<SceneSpace::Player>(
         "player",
-        float3{ 0.0f, 0.0f, m_stageData.GetPlaneZ() },
+        float3{ 0.0f, 0.0f, platePlaneZ },
         float3{ 0.0f, 0.0f, 0.0f },
         float3{ 1.0f, 1.0f, 1.0f },
         collider,
+        Collision::CollisionLayer::Player,
         float3{ 0.0f, 0.0f, 0.0f },
         float3{ 0.0f, 0.0f, 0.0f },
         1.0f,
@@ -636,10 +892,11 @@ SceneGame::SceneGame()
         true);
     if (player)
     {
-        float platformTopY = m_stageData.GetPlatformCenterY() + (m_stageData.GetPlatformScale().y * 0.5f);
-        if (m_stagePlatform)
+        const auto& fallbackPlatform = m_stageData.GetPlatform(0);
+        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
+        if (m_platePlatform)
         {
-            const auto& platformXform = m_stagePlatform->GetTransform();
+            const auto& platformXform = m_platePlatform->GetTransform();
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
@@ -654,7 +911,7 @@ SceneGame::SceneGame()
             oss << kLogPrefix << "Player physics body registered (kinematic="
                 << std::boolalpha << player->IsKinematic()
                 << ", weight=" << player->GetPhysical().weight << ").\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
         }
         if (m_drawSystem)
         {
@@ -675,15 +932,20 @@ SceneGame::~SceneGame()
         m_hudRenderer->Shutdown();
         m_hudRenderer.reset();
     }
-    if (m_stagePlatformRegistered && m_stagePlatform)
+
+    for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
     {
-        Unregister(*m_stagePlatform);
-        m_stagePlatformRegistered = false;
-    }
-    if (m_stagePlatformDrawRegistered && m_stagePlatform && m_drawSystem)
-    {
-        m_drawSystem->UnregisterRenderable(*m_stagePlatform);
-        m_stagePlatformDrawRegistered = false;
+        if (i < m_platformUpdateRegistered.size() && m_platformUpdateRegistered[i] && m_foundationPlatforms[i])
+        {
+            Unregister(*m_foundationPlatforms[i]);
+            m_platformUpdateRegistered[i] = false;
+        }
+
+        if (i < m_platformDrawRegistered.size() && m_platformDrawRegistered[i] && m_drawSystem && m_foundationPlatforms[i])
+        {
+            m_drawSystem->UnregisterRenderable(*m_foundationPlatforms[i]);
+            m_platformDrawRegistered[i] = false;
+        }
     }
 
         UnregisterAllPhysicsBodies();
@@ -738,7 +1000,7 @@ SceneGame::~SceneGame()
         if (m_drawSystem)
         {
                 m_drawSystem->ClearRenderables();
-                m_stagePlatformDrawRegistered = false;
+                std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -786,16 +1048,38 @@ void SceneGame::ConfigureUpdates()
                 m_sweetsRegistered = true;
         }
 
-        if (m_stagePlatform && !m_stagePlatformRegistered)
+        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
         {
-                Register(*m_stagePlatform);
-                m_stagePlatformRegistered = true;
+                auto* platform = m_foundationPlatforms[i].get();
+                if (!platform)
+                {
+                        continue;
+                }
+
+                if (i >= m_platformUpdateRegistered.size())
+                {
+                        m_platformUpdateRegistered.resize(m_foundationPlatforms.size(), false);
+                }
+                if (!m_platformUpdateRegistered[i])
+                {
+                        Register(*platform);
+                        m_platformUpdateRegistered[i] = true;
+                }
+
+                if (m_drawSystem)
+                {
+                        if (i >= m_platformDrawRegistered.size())
+                        {
+                                m_platformDrawRegistered.resize(m_foundationPlatforms.size(), false);
+                        }
+                        if (!m_platformDrawRegistered[i])
+                        {
+                                m_drawSystem->RegisterRenderable(*platform);
+                                m_platformDrawRegistered[i] = true;
+                        }
+                }
         }
-        if (m_stagePlatform && m_drawSystem && !m_stagePlatformDrawRegistered)
-        {
-                m_drawSystem->RegisterRenderable(*m_stagePlatform);
-                m_stagePlatformDrawRegistered = true;
-        }
+
 
         if (player)
         {
@@ -808,7 +1092,7 @@ void SceneGame::ConfigureUpdates()
                         std::ostringstream oss;
                         oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
                             << std::boolalpha << player->IsKinematic() << ").\n";
-                        DebugTrace(oss.str());
+                        ::DebugTrace(oss.str());
                 }
         }
 
@@ -821,8 +1105,75 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleColliderDebugCommands(ctx);
 #endif
     RefreshPlatformAnchor(false);
-UpdateCountdown(ctx);
-UpdateTowerHeightTelemetry();
+    UpdateCountdown(ctx);
+    UpdateTowerHeightTelemetry();
+
+    float viewportWidth = static_cast<float>(SCREEN_WIDTH);
+    float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
+    bool viewportFromDefault = true;
+    bool boundsIssueThisFrame = false;
+    if (RenderTarget* rtv = GetDefaultRTV())
+    {
+        viewportWidth = static_cast<float>(rtv->GetWidth());
+        viewportHeight = static_cast<float>(rtv->GetHeight());
+    }
+
+    // =========================================
+// SIMPLE & CORRECT PLAYER WORLD-BOUNDS
+// =========================================
+
+    if (player && m_gameCamera)
+    {
+        const float playerZ = player->GetTransform().position.z;
+        const float3 camPos = m_gameCamera->GetPosition();
+
+        // Distance camera → player plane
+        float d = std::fabs(camPos.z - playerZ);
+        if (d < 0.001f) d = 0.001f;
+
+        // Camera params
+        const float fovY = DirectX::XMConvertToRadians(m_gameCamera->GetFieldOfViewDegrees());
+        const float aspect = m_gameCamera->GetAspectRatio();
+        const float fovX = 2.0f * std::atan(std::tan(fovY * 0.5f) * aspect);
+
+        // Visible half-width
+        const float halfWidth = d * std::tan(fovX * 0.5f);
+
+        // World bounds on X
+        const float minX = camPos.x - halfWidth;
+        const float maxX = camPos.x + halfWidth;
+
+        // Log bounds if changed
+        const bool changed =
+            !m_cachedPlayerBoundsValid ||
+            HasMeaningfulDifference(m_cachedPlayerMinX, minX) ||
+            HasMeaningfulDifference(m_cachedPlayerMaxX, maxX);
+
+        if (changed)
+        {
+            std::ostringstream oss;
+            oss << "[SceneGame] [PlayerBounds] camX=" << camPos.x
+                << " d=" << d
+                << " fovX=" << DirectX::XMConvertToDegrees(fovX)
+                << " halfWidth=" << halfWidth
+                << " => minX=" << minX
+                << " maxX=" << maxX << "\n";
+            ::DebugTrace(oss.str());
+        }
+
+        // Apply to player
+        player->SetScreenBounds(minX, maxX, std::nullopt);
+
+        // Apply to sweets manager
+        if (m_sweetsManager)
+            m_sweetsManager->SetHorizontalBounds(minX, maxX);
+
+        // Cache
+        m_cachedPlayerMinX = minX;
+        m_cachedPlayerMaxX = maxX;
+        m_cachedPlayerBoundsValid = true;
+    }
+
 
 if (m_timeUp)
 {
@@ -840,7 +1191,7 @@ if (m_timeUp)
                 std::ostringstream oss;
                 oss << kLogPrefix << "[SpeedBoost] " << reason
                     << " ignored; base speed invalid (" << m_playerBaseMoveSpeed << ").\n";
-                DebugTrace(oss.str());
+                ::DebugTrace(oss.str());
                 return;
             }
 
@@ -853,7 +1204,7 @@ if (m_timeUp)
                 oss << kLogPrefix << "[SpeedBoost] " << reason
                     << " requestedMultiplier=" << requestedMultiplier
                     << " has no effect (current=" << currentMultiplier << ").\n";
-                DebugTrace(oss.str());
+                ::DebugTrace(oss.str());
                 return;
             }
 
@@ -871,7 +1222,7 @@ if (m_timeUp)
                 << " prevSpeed=" << beforeSpeed
                 << " newSpeed=" << newSpeed
                 << " clamped=" << std::boolalpha << clamped << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
         };
 
         if (input.IsKeyTrigger(kPlayerSpeedBoostKey))
@@ -946,7 +1297,7 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
             << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
             << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
             << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
 }
 #endif
 
@@ -1061,14 +1412,14 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
             << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
     }
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
 
     RefreshPlatformAnchor(true);
 }
 
 void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
 {
-    if (!m_stagePlatform || !m_gameCamera)
+    if (m_foundationPlatforms.empty() || !m_gameCamera)
     {
         return;
     }
@@ -1106,14 +1457,33 @@ void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
         return;
     }
 
-    Transform updated = ComputePlatformTransformForCamera(
-        *m_gameCamera,
-        viewportWidth,
-        viewportHeight,
-        m_stageData,
-        kPlatformScreenBottomFraction,
-        kStageCenterX);
-    m_stagePlatform->SetAnchorTransform(updated);
+    const auto& platformDescriptors = m_stageData.GetPlatforms();
+    const std::size_t platformCount = std::min(m_foundationPlatforms.size(), platformDescriptors.size());
+    if (platformCount == 0)
+    {
+        return;
+    }
+
+    for (std::size_t i = 0; i < platformCount; ++i)
+    {
+        auto& platform = m_foundationPlatforms[i];
+        if (!platform)
+        {
+            continue;
+        }
+
+        const auto& descriptor = platformDescriptors[i];
+        Transform updated = ComputePlatformTransformForCamera(
+            *m_gameCamera,
+            viewportWidth,
+            viewportHeight,
+            descriptor,
+            kPlatformScreenBottomFraction,
+            kStageCenterX,
+            i);
+        platform->SetAnchorTransform(updated);
+    }
+
     m_platformAnchorInitialized = true;
 
     m_cachedViewportWidth = viewportWidth;
@@ -1138,7 +1508,7 @@ void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "RegisterPhysicsBody ignored duplicate entity=" << &entity << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         return;
     }
 
@@ -1158,7 +1528,7 @@ void SceneGame::UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
     }
     else
     {
@@ -1199,7 +1569,7 @@ void SceneGame::InitializeStageAnchors()
         m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", fallback, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
         std::ostringstream oss;
         oss << kLogPrefix << "InitializeStageAnchors fallback anchor at z=" << fallback.z << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         return;
     }
 
@@ -1210,7 +1580,7 @@ void SceneGame::InitializeStageAnchors()
 
     std::ostringstream oss;
     oss << kLogPrefix << "InitializeStageAnchors loaded " << m_pObjects.size() << " stage anchors.\n";
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
@@ -1218,7 +1588,7 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     std::ostringstream oss;
     oss << kLogPrefix << "Broadcasting phase " << newPhase
         << " (stackedPeak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << ")\n";
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
 
     if (m_sweetsManager)
     {
@@ -1232,7 +1602,7 @@ void SceneGame::ForwardSweetsPhaseChange(int newPhase)
     std::ostringstream oss;
     oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
         << " to spawn pacing system.\n";
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
 
     if (m_sweetsManager)
     {
@@ -1306,7 +1676,7 @@ void SceneGame::ResetPlaySession()
 
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
@@ -1327,7 +1697,7 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
                 std::ostringstream oss;
                 oss << kLogPrefix << "[Countdown] Ignored non-positive bonus event seconds="
                     << bonus.seconds << " queue=" << m_pendingTimeBonuses.size() << "\n";
-                DebugTrace(oss.str());
+                ::DebugTrace(oss.str());
                 continue;
             }
 
@@ -1340,7 +1710,7 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
                 << bonus.seconds << "s height=" << std::fixed << std::setprecision(2)
                 << bonus.triggerHeight << "m remaining=" << std::fixed << std::setprecision(2)
                 << m_remainingCountdownSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
         }
     }
 
@@ -1365,7 +1735,7 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
             std::ostringstream oss;
             oss << kLogPrefix << "[Countdown] remaining=" << std::fixed << std::setprecision(2)
                 << m_remainingCountdownSeconds << "s\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_lastAnnouncedCountdownSeconds = currentSeconds;
         }
     }
@@ -1378,7 +1748,7 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
         std::ostringstream oss;
         oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
     }
 }
 
@@ -1400,7 +1770,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
         oss << kLogPrefix << "[Tower] newPeakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
             << m_remainingCountdownSeconds << "s\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
     }
 
     if (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f)
@@ -1416,7 +1786,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
                     << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
                     << m_heightBonusThresholdMeters << "m bonus=" << std::fixed << std::setprecision(2)
                     << m_heightBonusSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
-                DebugTrace(oss.str());
+                ::DebugTrace(oss.str());
             }
         }
         else if (!m_heightBonusArmed)
@@ -1426,7 +1796,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
             oss << kLogPrefix << "[TowerBonus] rearmed height=" << std::fixed << std::setprecision(2)
                 << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
                 << m_heightBonusThresholdMeters << "m\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
         }
     }
 }
@@ -1444,7 +1814,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         ResetPlaySession();
         return;
     }
@@ -1454,7 +1824,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
             << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
     }
 }
 
@@ -1474,7 +1844,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
     oss << kLogPrefix << "[Countdown] Retry requested elapsed="
         << std::fixed << std::setprecision(2) << (m_totalPlaySeconds - m_remainingCountdownSeconds)
         << "s peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
-    DebugTrace(oss.str());
+    ::DebugTrace(oss.str());
     ResetPlaySession();
 }
 
@@ -1486,7 +1856,7 @@ bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& 
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[Guideline] Disabled because height=" << m_guidelineHeightMeters << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_guidelineInvalidLogged = true;
         }
         return false;
@@ -1508,7 +1878,7 @@ bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& 
             oss << kLogPrefix << "[Guideline] Invalid clip W=" << clipW
                 << " threshold=" << m_guidelineHeightMeters
                 << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_guidelineInvalidLogged = true;
         }
         return false;
@@ -1522,7 +1892,7 @@ bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& 
             std::ostringstream oss;
             oss << kLogPrefix << "[Guideline] Non-finite clipY derived from threshold="
                 << m_guidelineHeightMeters << " clipW=" << clipW << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_guidelineInvalidLogged = true;
         }
         return false;
@@ -1537,7 +1907,7 @@ bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& 
             oss << kLogPrefix << "[Guideline] Clamped clipY from " << clipY
                 << " to " << outClipY << " threshold=" << m_guidelineHeightMeters
                 << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
-            DebugTrace(oss.str());
+            ::DebugTrace(oss.str());
             m_guidelineClampLogged = true;
         }
     }
@@ -1608,8 +1978,12 @@ void SceneGame::RenderRunTelemetryOverlay() const
     carryLine << "[SceneGame] Player carry: ";
     if (player && player->IsCarryingSweets())
     {
-        const auto carried = player->GetCarriedSweets();
-        carryLine << (carried ? carried->GetTag() : "<unknown>");
+        for (auto it : player->GetCarriedSweets())
+        {
+            const auto carried = it;
+            carryLine << (carried ? carried->GetTag() : "<unknown>");
+        }
+
     }
     else
     {
@@ -1644,7 +2018,7 @@ int SceneGame::ComputeScore() const
             << " basePerMeter=" << kBaseScorePerMeter
             << " totalMultiplier=" << totalMultiplier
             << " score=" << score << "\n";
-        DebugTrace(oss.str());
+        ::DebugTrace(oss.str());
         m_lastScoreLogValue = score;
         m_lastScoreLogMultiplier = phaseMultiplier;
     }

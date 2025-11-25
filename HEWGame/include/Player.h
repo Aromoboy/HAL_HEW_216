@@ -8,6 +8,8 @@
 #include "ModelRender.h"
 #include "PhysicalEntity.h"
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace SweetsSpace
 {
@@ -27,6 +29,7 @@ namespace SceneSpace
 
         Player(std::string a_tag, float3 pos, float3 rot, float3 scl,
             std::shared_ptr<Collision::ICollider> collide,
+            Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             float3 velocity = { 0.0f, 0.0f, 0.0f }, float3 force = { 0.0f, 0.0f, 0.0f }, float weight = 1.0f, float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0,
@@ -40,7 +43,7 @@ namespace SceneSpace
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
-        std::shared_ptr<SweetsSpace::BaseSweets> GetCarriedSweets() const;
+        const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;
         void ClearCarriedSweets();
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
@@ -48,11 +51,13 @@ namespace SceneSpace
         void SetMinimumY(float minY);
         float GetMinimumY() const;
         bool HasMinimumY() const;
+        void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
 
     private:
         std::shared_ptr<ModelDX> model;
         SweetsSpace::SweetsManager* m_sweetsManager;
-        std::shared_ptr<SweetsSpace::BaseSweets> m_carried;
+        std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+        int m_maxCarry;
         float m_pickupRadius;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
@@ -60,6 +65,12 @@ namespace SceneSpace
         float m_moveSpeed;
         bool m_hasMinimumY;
         float m_minimumY;
+        bool m_missingModelWarned;
+        bool m_hasScreenBounds;
+        float m_minScreenX;
+        float m_maxScreenX;
+        bool m_hasMaximumY;
+        float m_maximumY;
 
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
@@ -67,6 +78,7 @@ namespace SceneSpace
         void DropCarriedSweets();
         float3 ComputeCarryAnchor() const;
         void ClampVerticalPosition();
+        void ClampScreenBounds();
     };
 }
 

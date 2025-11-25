@@ -4,8 +4,10 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "MaterialDX.h"
+#include "MeshDX.h"
 #include "ModelCache.h"
 #include "ModelDX.h"
 
@@ -32,8 +34,6 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/SweetsPrototype/CakeCube.obj";
-    const DirectX::XMFLOAT4 kDefaultPlatformColor{ 0.2f, 0.8f, 0.35f, 1.0f };
-
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
@@ -46,6 +46,77 @@ namespace
             clampComponent(color.z),
             clampComponent(color.w));
     }
+
+    struct ModelCloneStats
+    {
+        unsigned int meshCount{ 0 };
+        unsigned int materialCount{ 0 };
+        unsigned int nullMeshes{ 0 };
+        unsigned int nullMaterials{ 0 };
+    };
+
+    std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
+    {
+        const unsigned int meshCount = source.GetMeshCount();
+        std::vector<std::shared_ptr<MeshDX>> meshes;
+        meshes.reserve(meshCount);
+
+        maxMaterialId = 0;
+        nullMeshes = 0;
+        for (unsigned int meshIndex = 0; meshIndex < meshCount; ++meshIndex)
+        {
+            auto mesh = source.GetMesh(static_cast<int>(meshIndex)).lock();
+            if (mesh)
+            {
+                maxMaterialId = std::max(maxMaterialId, mesh->GetMaterialID());
+            }
+            else
+            {
+                ++nullMeshes;
+            }
+            meshes.push_back(mesh);
+        }
+
+        return meshes;
+    }
+
+    std::vector<std::shared_ptr<MaterialDX>> CopyMaterials(const ModelDX& source, unsigned int materialCount, unsigned int& nullMaterials)
+    {
+        std::vector<std::shared_ptr<MaterialDX>> materials;
+        materials.reserve(materialCount);
+
+        nullMaterials = 0;
+        for (unsigned int materialIndex = 0; materialIndex < materialCount; ++materialIndex)
+        {
+            auto baseMaterial = source.GetMaterial(static_cast<int>(materialIndex)).lock();
+            if (!baseMaterial)
+            {
+                ++nullMaterials;
+                materials.push_back(nullptr);
+                continue;
+            }
+
+            materials.push_back(std::make_shared<MaterialDX>(
+                baseMaterial->GetDiffuse(),
+                baseMaterial->GetAmbient(),
+                baseMaterial->GetSpecular(),
+                baseMaterial->GetTextureResource()));
+        }
+
+        return materials;
+    }
+
+    std::shared_ptr<ModelDX> CloneModelWithUniqueMaterials(const ModelDX& source, ModelCloneStats& stats)
+    {
+        unsigned int maxMaterialId = 0;
+        stats.meshCount = source.GetMeshCount();
+
+        std::vector<std::shared_ptr<MeshDX>> meshes = CopyMeshes(source, maxMaterialId, stats.nullMeshes);
+        std::vector<std::shared_ptr<MaterialDX>> materials = CopyMaterials(source, maxMaterialId + 1, stats.nullMaterials);
+        stats.materialCount = static_cast<unsigned int>(materials.size());
+
+        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials));
+    }
 }
 
 namespace Stage
@@ -53,6 +124,7 @@ namespace Stage
     FoundationPlatform::FoundationPlatform(const std::string& tag,
         const Transform& transform,
         std::shared_ptr<Collision::ICollider> collider,
+        const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
         int priority)
         : SceneSpace::PhysicalEntity(tag,
@@ -60,6 +132,7 @@ namespace Stage
             transform.rotation,
             transform.scale,
             std::move(collider),
+            Collision::CollisionLayer::Default,
             float3{ 0.0f, 0.0f, 0.0f },
             float3{ 0.0f, 0.0f, 0.0f },
             0.0f,
@@ -68,11 +141,11 @@ namespace Stage
             priority)
         , m_anchorTransform(transform)
         , m_model(nullptr)
-        , m_debugColor(kDefaultPlatformColor)
+        , m_debugColor(SanitizeColor(color))
     {
         SyncColliderBounds();
         LoadPlatformModel();
-        SetDebugColor(kDefaultPlatformColor);
+        SetDebugColor(m_debugColor);
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
@@ -153,8 +226,8 @@ namespace Stage
     void FoundationPlatform::LoadPlatformModel()
     {
         Render::ModelCache& cache = Render::ModelCache::Instance();
-        m_model = cache.Get(kPlatformModelPath);
-        if (!m_model)
+        std::shared_ptr<ModelDX> baseModel = cache.Get(kPlatformModelPath);
+        if (!baseModel)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Failed to load render model at '" << kPlatformModelPath << "'.\n";
@@ -162,9 +235,15 @@ namespace Stage
             return;
         }
 
+        ModelCloneStats cloneStats{};
+        m_model = CloneModelWithUniqueMaterials(*baseModel, cloneStats);
+
         std::ostringstream oss;
         oss << kLogPrefix << "Loaded platform model from '" << kPlatformModelPath
-            << "' (meshes=" << m_model->GetMeshCount() << ").\n";
+            << "' (meshes=" << m_model->GetMeshCount()
+            << ", materials=" << cloneStats.materialCount
+            << ", nullMeshes=" << cloneStats.nullMeshes
+            << ", nullMaterials=" << cloneStats.nullMaterials << ").\n";
         DebugTrace(oss.str());
     }
 

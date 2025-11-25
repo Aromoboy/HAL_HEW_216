@@ -14,8 +14,10 @@
 
 #include "Core/IUpdatable.h"
 #include "Entity.h"
+#include "CollisionEntity.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
+#include "Geometory.h"
 
 namespace
 {
@@ -48,6 +50,7 @@ namespace Systems
                 , m_renderer(nullptr)
                 , m_renderables()
                 , m_commands()
+                , m_colliderCommands()
                 , m_missingModelEntities()
                 , m_debugLoggingEnabled(false)
                 , m_warnedMissingRenderer(false)
@@ -97,13 +100,41 @@ namespace Systems
                 }
 
                 m_renderables.erase(it, m_renderables.end());
+
+                std::unordered_map<SceneSpace::Entity*, Collision::ICollider*>::iterator colIt = m_colliderRenderables.find(entityPtr);
+
+                if (colIt != m_colliderRenderables.end())
+                {
+                    m_colliderRenderables.erase(colIt);
+                }
+
                 m_missingModelEntities.erase(entityPtr);
+        }
+
+        void DrawSystem::RegisterRenderable(SceneSpace::CollisionEntity& entity)
+        {
+            SceneSpace::CollisionEntity* entityPtr = &entity;
+            if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Duplicate renderable registration ignored entity=" << entityPtr << "\n";
+                DebugTrace(oss.str());
+#endif
+                return;
+            }
+
+            m_renderables.push_back(entityPtr);
+
+            m_colliderRenderables[entityPtr] = entityPtr->GetCollider();
         }
 
         void DrawSystem::ClearRenderables()
         {
                 m_renderables.clear();
+                m_colliderRenderables.clear();
                 m_commands.clear();
+                m_colliderCommands.clear();
                 m_missingModelEntities.clear();
         }
 
@@ -117,6 +148,7 @@ namespace Systems
                 (void)ctx;
 
                 m_commands.clear();
+                m_colliderCommands.clear();
                 if (m_renderables.empty())
                 {
                         return;
@@ -154,6 +186,12 @@ namespace Systems
                                 DebugTrace(oss.str());
                         }
                 }
+
+                for (auto it : m_colliderRenderables)
+                {
+                    m_colliderCommands.push_back(DrawColliderCommand{it.first, it.second->GetAABB()});
+
+                }
         }
 
         void DrawSystem::RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera)
@@ -172,33 +210,10 @@ namespace Systems
 
                 m_warnedMissingCamera = false;
 
-                if (m_commands.empty())
-                {
-                        if (m_debugLoggingEnabled)
-                        {
-                                DebugTrace(std::string(kLogPrefix) + "RenderQueued called with no commands.\n");
-                        }
-                        return;
-                }
+                RenderEntity(camera);
 
-                for (const DrawCommand& command : m_commands)
-                {
-                        if (!command.model)
-                        {
-                                continue;
-                        }
+                RenderCollision(camera);
 
-                        m_renderer->Draw(*command.model, command.transform, camera.get());
-                }
-
-                if (m_debugLoggingEnabled)
-                {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Submitted " << m_commands.size() << " draw commands.\n";
-                        DebugTrace(oss.str());
-                }
-
-                m_commands.clear();
         }
 
         size_t DrawSystem::GetRenderCommandCount() const
@@ -257,5 +272,96 @@ namespace Systems
                         oss << kLogPrefix << "Renderable entity=" << entity << " has no model assigned.\n";
                         DebugTrace(oss.str());
                 }
+        }
+        void DrawSystem::RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera)
+        {
+            if (m_commands.empty())
+            {
+                if (m_debugLoggingEnabled)
+                {
+                    DebugTrace(std::string(kLogPrefix) + "RenderQueued called with no commands.\n");
+                }
+                return;
+            }
+
+            for (const DrawCommand& command : m_commands)
+            {
+                if (!command.model)
+                {
+                    continue;
+                }
+
+                m_renderer->Draw(*command.model, command.transform, camera.get());
+            }
+
+            if (m_debugLoggingEnabled)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Submitted " << m_commands.size() << " draw commands.\n";
+                DebugTrace(oss.str());
+            }
+
+
+
+
+            m_commands.clear();
+        }
+
+        void DrawSystem::RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera)
+        {
+            if (m_colliderCommands.empty())
+            {
+                if (m_debugLoggingEnabled)
+                {
+                    DebugTrace(std::string(kLogPrefix) + "RenderQueued called with no commands.\n");
+                }
+                return;
+            }
+
+            for (const DrawColliderCommand& command : m_colliderCommands)
+            {
+                // •`‰æ
+
+                DirectX::XMFLOAT3 leftup, rightup, leftdown, rightdown;
+
+                Transform trandform = command.source->GetTransform();
+                AABB itAABB = command.aabb;
+
+                leftup.x = itAABB.min.x;
+                leftup.y = itAABB.max.y;
+                leftup.z = trandform.position.z;
+
+                rightup.x = itAABB.max.x;
+                rightup.y = itAABB.max.y;
+                rightup.z = trandform.position.z;
+
+                leftdown.x = itAABB.min.x;
+                leftdown.y = itAABB.min.y;
+                leftdown.z = trandform.position.z;
+
+                rightdown.x = itAABB.max.x;
+                rightdown.y = itAABB.min.y;
+                rightdown.z = trandform.position.z;
+
+                Geometory::AddLine(leftup, leftdown);
+
+                Geometory::AddLine(leftup, rightup);
+
+                Geometory::AddLine(rightdown, leftdown);
+
+                Geometory::AddLine(rightdown, rightup);
+            }
+
+            if (m_debugLoggingEnabled)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Submitted " << m_colliderCommands.size() << " draw commands.\n";
+                DebugTrace(oss.str());
+            }
+
+
+
+
+            m_colliderCommands.clear();
         }
 }
