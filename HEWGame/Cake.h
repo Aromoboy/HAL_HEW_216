@@ -3,7 +3,7 @@
 
 namespace SweetsSpace
 {
-    class Cake : public BaseSweets
+    class Cake : public LegacyBaseSweets
     {
     public:
         Cake(const std::string& tag,

@@ -15,7 +15,7 @@ namespace SweetsSpace
                      float damping,
                      Core::UpdatePhase phase,
                      int priority)
-        : BaseSweets(tag, model, pos, rot, scl, collider, layer, velocity, force,
+        : LegacyBaseSweets(tag, model, pos, rot, scl, collider, layer, velocity, force,
           weight, damping, phase, priority)
     { }
 }

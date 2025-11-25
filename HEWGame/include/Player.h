@@ -13,7 +13,7 @@
 
 namespace SweetsSpace
 {
-    class BaseSweets;
+    class LegacyBaseSweets;
     class SweetsManager;
 }
 
@@ -43,7 +43,7 @@ namespace SceneSpace
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
-        const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;
+        const std::vector<std::shared_ptr<SweetsSpace::LegacyBaseSweets>>& GetCarriedSweets() const;
         void ClearCarriedSweets();
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
@@ -56,7 +56,7 @@ namespace SceneSpace
     private:
         std::shared_ptr<ModelDX> model;
         SweetsSpace::SweetsManager* m_sweetsManager;
-        std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+        std::vector<std::shared_ptr<SweetsSpace::LegacyBaseSweets>> m_carrieds;
         int m_maxCarry;
         float m_pickupRadius;
         float3 m_carryOffset;

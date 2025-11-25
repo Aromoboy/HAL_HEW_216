@@ -38,6 +38,15 @@ class ModelDX;
 namespace SweetsSpace
 {
     class BaseSweets;
+    class LegacyBaseSweets;
+
+#if defined(SWEETS_USE_ENTITIES_PIPELINE)
+    // New pipeline stub (Entities::PhysicalEntity-based)
+    using ActiveSweets = BaseSweets;
+#else
+    // Prototype pipeline implementation
+    using ActiveSweets = LegacyBaseSweets;
+#endif
 
     struct WeightedSweetsType
     {
@@ -82,7 +91,7 @@ namespace SweetsSpace
     class SweetsManager : public Core::UpdateNode
     {
     public:
-        using SweetsList = std::list<std::shared_ptr<BaseSweets>>;
+        using SweetsList = std::list<std::shared_ptr<ActiveSweets>>;
 
         using PhaseChangeCallback = std::function<void(int)>;
 
@@ -98,8 +107,8 @@ namespace SweetsSpace
 
         float GetHighestStackedHeight() const;
 
-        void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
-        void Erase(const std::shared_ptr<BaseSweets>& sweets);
+        void SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state);
+        void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
 
         void SetDrawSystem(Systems::DrawSystem* drawSystem);
@@ -116,10 +125,10 @@ namespace SweetsSpace
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
 
-        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
-        std::shared_ptr<BaseSweets> FindNearestCarryable(const float3& position, float radius) const;
-        bool TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets);
-        bool ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets);
+        std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
+        std::shared_ptr<ActiveSweets> FindNearestCarryable(const float3& position, float radius) const;
+        bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
+        bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
 
@@ -133,9 +142,9 @@ namespace SweetsSpace
         };
 
         std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
-        std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> m_lookup;
+        std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState> m_lookup;
 
-        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(const Transform&)>> m_spawner;
+        std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
 
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
@@ -181,7 +190,7 @@ namespace SweetsSpace
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
-        void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
+        void RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         int CountLiveSweets() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;
@@ -194,8 +203,8 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
         Transform BuildSpawnTransform(const float3& origin) const;
-        void UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings = true);
-        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+        void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
+        void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,
             const char* context,
             bool logWarnings,
@@ -205,7 +214,7 @@ namespace SweetsSpace
         int m_lastLiveSweetsCount;
 
         template<typename T>
-        std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
+        std::shared_ptr<ActiveSweets> MakeSweets(const std::string& tag,
             const std::shared_ptr<ModelDX>& model,
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
