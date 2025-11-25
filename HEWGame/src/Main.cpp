@@ -73,7 +73,7 @@ void Update()
         }
 
 #ifdef _DEBUG
-        if (g_input.IsKeyTrigger(VK_F1)) DebugConsole::ToggleConsole();
+        if (g_input.IsAction(Core::ActionId::DebugConsole)) DebugConsole::ToggleConsole();
 #endif
 }
 
@@ -116,11 +116,11 @@ void Draw()
         static bool camAutoSwitch = false;
         static bool camUpDownSwitch = true;
         static float camAutoRotate = 1.0f;
-        if (g_input.IsKeyTrigger(VK_RETURN))
+        if (g_input.IsAction(Core::ActionId::CameraToggle))
         {
                 camAutoSwitch ^= true;
         }
-        if (g_input.IsKeyTrigger(VK_SPACE))
+        if (g_input.IsAction(Core::ActionId::CameraHeightToggle))
         {
                 camUpDownSwitch ^= true;
         }

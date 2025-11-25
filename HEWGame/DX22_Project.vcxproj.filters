@@ -23,6 +23,7 @@
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Core\InputMap.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -82,6 +83,7 @@
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\CollisionEntity.h" />
     <ClInclude Include="include\Core\IUpdatable.h" />
+    <ClInclude Include="include\Core\InputMap.h" />
     <ClInclude Include="include\Core\UpdateNode.h" />
     <ClInclude Include="include\Core\UpdateScheduler.h" />
     <ClInclude Include="include\Debug.h" />
