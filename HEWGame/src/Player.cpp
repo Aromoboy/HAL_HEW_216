@@ -151,7 +151,7 @@ namespace
         d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
         auto mesh = std::make_shared<MeshDX>(d, 0);
-        if (!mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
+        if (!mesh->GetVertexBuffer().IsValid() || !mesh->HasIndexBuffer())
             return nullptr;
 
         auto mat = std::make_shared<MaterialDX>(
