@@ -4,12 +4,39 @@
 #include <array>
 #include <Xinput.h>
 
+#include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
 
 #pragma comment(lib, "xinput.lib")
 
 namespace Core
 {
+        class Gamepad
+        {
+        public:
+                Gamepad();
+
+                void Poll(int index = 0);
+
+                bool IsConnected() const;
+                bool IsButtonDown(WORD button) const;
+                bool WasButtonDown(WORD button) const;
+
+                float AxisLX() const;
+                float AxisLY() const;
+                float AxisRX() const;
+                float AxisRY() const;
+
+                const XINPUT_STATE& GetPreviousState() const { return m_prevState; }
+
+        private:
+                float Normalize(short value) const;
+
+                XINPUT_STATE m_state{};
+                XINPUT_STATE m_prevState{};
+                bool m_connected = false;
+        };
+
         class Input : public UpdateNode
         {
         public:
@@ -20,35 +47,25 @@ namespace Core
 
                 void OnUpdate(UpdateContext& ctx) override;
 
-                bool IsKeyPress(BYTE key) const;
-                bool IsKeyTrigger(BYTE key) const;
-                bool IsKeyRelease(BYTE key) const;
-                bool IsKeyRepeat(BYTE key) const;
-
-                bool IsPadConnected(int index = 0) const;
-                bool IsPadPress(WORD button, int index = 0) const;
-                bool IsPadTrigger(WORD button, int index = 0) const;
-                bool IsPadRelease(WORD button, int index = 0) const;
-
-                float GetPadLX(int index = 0) const;
-                float GetPadLY(int index = 0) const;
-                float GetPadRX(int index = 0) const;
-                float GetPadRY(int index = 0) const;
-
-                float GetPadLeftTrigger(int index = 0) const;   // 0.0 - 1.0
-                float GetPadRightTrigger(int index = 0) const;  // 0.0 - 1.0
+                float GetAxis(ActionId action) const;
+                bool IsAction(ActionId action) const;
+                void Rebind(ActionId action, const Binding& binding);
 
         private:
                 void PollKeyboardState();
                 void PollPadState(int index = 0);
 
+                bool IsKeyDown(BYTE key) const;
+                bool WasKeyDown(BYTE key) const;
+
                 std::array<BYTE, 256> m_currentKeys;
                 std::array<BYTE, 256> m_previousKeys;
                 bool m_initialized;
 
-                XINPUT_STATE m_padState{};
-                XINPUT_STATE m_prevPadState{};
-                bool m_padConnected = false;
+                Gamepad m_pad;
+                InputMap m_map;
+
+                friend class InputMap;
         };
 }
 

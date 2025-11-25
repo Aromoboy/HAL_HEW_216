@@ -1,12 +1,70 @@
 #include "Core/Input.h"
 
+namespace
+{
+        constexpr BYTE kKeyPressedMask = 0x80;
+        constexpr float kStickNorm = 32767.0f;
+}
+
 namespace Core
 {
-        namespace
+        Gamepad::Gamepad()
+                : m_state{}
+                , m_prevState{}
+                , m_connected(false)
         {
-                constexpr BYTE kKeyPressedMask = 0x80;
-                constexpr float kStickNorm = 32767.0f;
-                constexpr float kTriggerNorm = 255.0f;
+        }
+
+        void Gamepad::Poll(int index)
+        {
+                m_prevState = m_state;
+                const bool wasConnected = m_connected;
+
+                XINPUT_STATE state{};
+                DWORD result = XInputGetState(index, &state);
+
+                if (result == ERROR_SUCCESS)
+                {
+                        m_connected = true;
+                        m_state = state;
+                }
+                else
+                {
+                        m_connected = false;
+                        ZeroMemory(&m_state, sizeof(XINPUT_STATE));
+                }
+
+                if (m_connected != wasConnected)
+                {
+                        OutputDebugStringA(m_connected
+                                ? "[Core::Gamepad] Controller connected.\n"
+                                : "[Core::Gamepad] Controller disconnected; cleared state.\n");
+                }
+        }
+
+        bool Gamepad::IsConnected() const
+        {
+                return m_connected;
+        }
+
+        bool Gamepad::IsButtonDown(WORD button) const
+        {
+                return m_connected && (m_state.Gamepad.wButtons & button) != 0;
+        }
+
+        bool Gamepad::WasButtonDown(WORD button) const
+        {
+                return m_connected && (m_prevState.Gamepad.wButtons & button) != 0;
+        }
+
+        float Gamepad::AxisLX() const { return m_connected ? Normalize(m_state.Gamepad.sThumbLX) : 0.0f; }
+        float Gamepad::AxisLY() const { return m_connected ? Normalize(m_state.Gamepad.sThumbLY) : 0.0f; }
+        float Gamepad::AxisRX() const { return m_connected ? Normalize(m_state.Gamepad.sThumbRX) : 0.0f; }
+        float Gamepad::AxisRY() const { return m_connected ? Normalize(m_state.Gamepad.sThumbRY) : 0.0f; }
+
+        float Gamepad::Normalize(short value) const
+        {
+                return static_cast<float>(value) / kStickNorm;
         }
 
         Input::Input()
@@ -22,9 +80,6 @@ namespace Core
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
-                // èâä˙ pad èÛë‘
-                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
-                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
                 PollPadState();
 
                 m_initialized = true;
@@ -37,9 +92,7 @@ namespace Core
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
 
-                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
-                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
-                m_padConnected = false;
+                m_pad = Gamepad();
         }
 
         void Input::OnUpdate(UpdateContext& ctx)
@@ -57,28 +110,22 @@ namespace Core
                 m_previousKeys = m_currentKeys;
                 PollKeyboardState();
 
-                m_prevPadState = m_padState;
                 PollPadState();
         }
 
-        bool Input::IsKeyPress(BYTE key) const
+        float Input::GetAxis(ActionId action) const
         {
-                return (m_currentKeys[key] & kKeyPressedMask) != 0;
+                return m_map.GetAxis(action, *this, m_pad);
         }
 
-        bool Input::IsKeyTrigger(BYTE key) const
+        bool Input::IsAction(ActionId action) const
         {
-                return ((m_currentKeys[key] ^ m_previousKeys[key]) & m_currentKeys[key] & kKeyPressedMask) != 0;
+                return m_map.Is(action, *this, m_pad);
         }
 
-        bool Input::IsKeyRelease(BYTE key) const
+        void Input::Rebind(ActionId action, const Binding& binding)
         {
-                return ((m_currentKeys[key] ^ m_previousKeys[key]) & m_previousKeys[key] & kKeyPressedMask) != 0;
-        }
-
-        bool Input::IsKeyRepeat(BYTE) const
-        {
-                return false;
+                m_map.Rebind(action, binding);
         }
 
         void Input::PollKeyboardState()
@@ -90,88 +137,19 @@ namespace Core
                 }
         }
 
-        // Gamepad
-
         void Input::PollPadState(int index)
         {
-            XINPUT_STATE state{};
-            DWORD result = XInputGetState(index, &state);
-
-            if (result == ERROR_SUCCESS)
-            {
-                m_padConnected = true;
-                m_padState = state;
-            }
-            else
-            {
-                m_padConnected = false;
-                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
-            }
+                m_pad.Poll(index);
         }
 
-        bool Input::IsPadConnected(int) const
+        bool Input::IsKeyDown(BYTE key) const
         {
-            return m_padConnected;
+                return (m_currentKeys[key] & kKeyPressedMask) != 0;
         }
 
-        bool Input::IsPadPress(WORD button, int) const
+        bool Input::WasKeyDown(BYTE key) const
         {
-            return m_padConnected &&
-                (m_padState.Gamepad.wButtons & button) != 0;
-        }
-
-        bool Input::IsPadTrigger(WORD button, int) const
-        {
-            return m_padConnected &&
-                !(m_prevPadState.Gamepad.wButtons & button) &&
-                (m_padState.Gamepad.wButtons & button);
-        }
-
-        bool Input::IsPadRelease(WORD button, int) const
-        {
-            return m_padConnected &&
-                (m_prevPadState.Gamepad.wButtons & button) &&
-                !(m_padState.Gamepad.wButtons & button);
-        }
-
-        // Stick
-
-        float Input::GetPadLX(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.sThumbLX / kStickNorm;
-        }
-
-        float Input::GetPadLY(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.sThumbLY / kStickNorm;
-        }
-
-        float Input::GetPadRX(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.sThumbRX / kStickNorm;
-        }
-
-        float Input::GetPadRY(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.sThumbRY / kStickNorm;
-        }
-
-        // Trigger (0.0 - 1.0)
-
-        float Input::GetPadLeftTrigger(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.bLeftTrigger / kTriggerNorm;
-        }
-
-        float Input::GetPadRightTrigger(int) const
-        {
-            if (!m_padConnected) return 0.0f;
-            return m_padState.Gamepad.bRightTrigger / kTriggerNorm;
+                return (m_previousKeys[key] & kKeyPressedMask) != 0;
         }
 }
 
