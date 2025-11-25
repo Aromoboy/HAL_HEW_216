@@ -173,6 +173,10 @@
     <ClCompile Include="src\CameraManager.cpp" />
     <ClCompile Include="src\CameraRig.cpp" />
     <ClCompile Include="src\CollisionEntity.cpp" />
+    <ClCompile Include="src\Entities\CollisionEntity.cpp" />
+    <ClCompile Include="src\Entities\Entity.cpp" />
+    <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
+    <ClCompile Include="src\Entities\Player.cpp" />
     <ClCompile Include="src\Core\InputMap.cpp" />
     <ClCompile Include="src\Core\UpdateNode.cpp" />
     <ClCompile Include="src\Core\UpdateScheduler.cpp" />
@@ -242,6 +246,10 @@
     <ClInclude Include="include\CameraManager.h" />
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\CollisionEntity.h" />
+    <ClInclude Include="include\Entities\CollisionEntity.h" />
+    <ClInclude Include="include\Entities\Entity.h" />
+    <ClInclude Include="include\Entities\PhysicalEntity.h" />
+    <ClInclude Include="include\Entities\Player.h" />
     <ClInclude Include="include\Core\IUpdatable.h" />
     <ClInclude Include="include\Core\InputMap.h" />
     <ClInclude Include="include\Core\UpdateNode.h" />
