@@ -22,7 +22,7 @@
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
-#include "Player.h"
+#include "Entities/Player.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
