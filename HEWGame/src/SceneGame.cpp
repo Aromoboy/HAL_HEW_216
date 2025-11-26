@@ -21,6 +21,7 @@
 #include "DirectX.h"
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
+#include "Sweets/BaseSweets.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
