@@ -39,8 +39,8 @@ namespace Core
                 if (m_connected != wasConnected)
                 {
                         OutputDebugStringA(m_connected
-                                ? "[Core::Gamepad] Controller connected.\n"
-                                : "[Core::Gamepad] Controller disconnected; cleared state.\n");
+                                ? "[Core::Gamepad] コントローラを検出しました（状態を更新）。推奨: そのまま入力テストを継続してください。\n"
+                                : "[Core::Gamepad] コントローラが切断されました（状態を初期化）。推奨: ケーブル/電源を確認し、再接続後に挙動を確認してください。\n");
                 }
         }
 
@@ -79,9 +79,12 @@ namespace Core
 
         HRESULT Input::Initialize()
         {
+                // 初期化順序: 先に現在のキー状態を取得し、そのスナップショットを前フレームとして保存する。
+                // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える。
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
+                // パッドも同様に初回の状態を確定させる。未接続時はゼロクリアされた状態が入る。
                 PollPadState();
 
                 m_initialized = true;
@@ -90,6 +93,7 @@ namespace Core
 
         void Input::Shutdown()
         {
+                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する。
                 m_initialized = false;
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
@@ -101,14 +105,16 @@ namespace Core
         {
                 if (!m_initialized)
                 {
+                        // Initialize を忘れた場合は安全に抜ける。入力参照先が未初期化であることがデバッグログから分かるようにする。
                         return;
                 }
 
                 if (&ctx.input != this)
                 {
-                        OutputDebugStringA("[Core::Input] UpdateContext input reference mismatch.\n");
+                        OutputDebugStringA("[Core::Input] UpdateContext.input が別インスタンスを指しています。推奨: Input の生成/登録順を確認してください。\n");
                 }
 
+                // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持。
                 m_previousKeys = m_currentKeys;
                 PollKeyboardState();
 
@@ -131,7 +137,8 @@ namespace Core
                 if (state.current && !state.previous)
                 {
                         std::ostringstream oss;
-                        oss << "[Core::Input] Triggered action " << static_cast<int>(action) << "\n";
+                        oss << "[Core::Input] アクション " << static_cast<int>(action)
+                                << " が立ち上がりました。推奨: バインド設定や入力遷移の想定と一致するか確認してください。\n";
                         OutputDebugStringA(oss.str().c_str());
                 }
                 return state.current && !state.previous;
@@ -158,7 +165,7 @@ namespace Core
                 if (!::GetKeyboardState(m_currentKeys.data()))
                 {
                         m_currentKeys.fill(0);
-                        OutputDebugStringA("[Core::Input] GetKeyboardState failed; clearing keyboard state.\n");
+                        OutputDebugStringA("[Core::Input] GetKeyboardState に失敗したためキーボード状態を初期化しました。推奨: フォーカス/アクセス権限を確認してください。\n");
                 }
         }
 
