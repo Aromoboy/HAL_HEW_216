@@ -40,8 +40,8 @@ namespace Entities
 
         std::shared_ptr<Render::Model> GetModel() const;
         const std::string& GetTag() const;
-        ModelDX* GetRenderableModel();
-        const ModelDX* GetRenderableModel() const;
+        virtual ModelDX* GetRenderableModel();
+        virtual const ModelDX* GetRenderableModel() const;
         bool IsRenderable() const;
 
     protected:
