@@ -3,13 +3,14 @@
 #include "ModelDX.h"
 #include "Transform.h"
 #include "ModelRender.h"
-#include "Entities/PhysicalEntity.h"
-#include <Scene.h>
+#include "Sweets/BaseSweets.h"
 
 namespace SweetsSpace
 {
     // Prototype-era implementation retained for the existing gameplay pipeline.
-    class LegacyBaseSweets : public SceneSpace::PhysicalEntity
+    // Now implemented on top of the unified BaseSweets type to avoid legacy/active
+    // mismatches across systems.
+    class LegacyBaseSweets : public BaseSweets
     {
     public:
         ModelDX* GetRenderableModel() override;
@@ -30,14 +31,11 @@ namespace SweetsSpace
             Core::UpdatePhase phase = Core::UpdatePhase::Physics,
             int priority = 0);
 
-        ~LegacyBaseSweets() = default;
+        ~LegacyBaseSweets() override = default;
 
         // 更新処理
         void OnUpdate(const Core::UpdateContext& ctx);
         // 描画処理
         void Draw(ModelRender& render, const std::shared_ptr<CameraSpace::ICamera>& cam);
-
-    protected:
-        std::shared_ptr<ModelDX> m_model;  // 描画対象のモデルを保持
     };
 }
