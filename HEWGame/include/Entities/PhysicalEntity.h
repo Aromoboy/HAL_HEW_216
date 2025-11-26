@@ -51,5 +51,7 @@ namespace Entities
 namespace SceneSpace
 {
     using PhysicalEntity = Entities::PhysicalEntity;
+
+    void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta);
 }
 
