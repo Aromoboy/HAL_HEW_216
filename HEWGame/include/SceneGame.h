@@ -7,11 +7,11 @@
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
+#include "Entities/Player.h"
 #include "IModelLoader.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
-#include "Player.h"
 #include "Core/StepTimer.h"
 #include "Systems/PhysicsMachine.h"
 #include "Vector.h"
@@ -52,6 +52,11 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
+namespace SceneSpace
+{
+    class Player;
+}
+
 class SceneGame : public SceneSpace::Scene
 {
 public:
@@ -66,8 +71,8 @@ private:
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
 #endif
-    void RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity);
-    void UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity);
+    void RegisterPhysicsBody(Entities::PhysicalEntity& entity);
+    void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
     void UnregisterAllPhysicsBodies();
     void ResetPlaySession();
     void UpdateCountdown(Core::UpdateContext& ctx);
@@ -83,12 +88,13 @@ private:
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
-    std::shared_ptr<SceneSpace::Entity> m_cameraAnchor;
+    std::shared_ptr<Entities::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::shared_ptr<IModelLoader> m_loader;
     std::shared_ptr<ModelDX> m_model;
     std::unique_ptr<ModelRender> m_render;
-    std::unique_ptr<SceneSpace::Player> player;
+    std::unique_ptr<SceneSpace::Player> m_legacyPlayer;
+    std::unique_ptr<Entities::Player> player;
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::IntegrateSystem> m_integrateSystem;
@@ -100,7 +106,7 @@ private:
     std::vector<bool> m_platformUpdateRegistered;
     std::vector<bool> m_platformDrawRegistered;
     Stage::FoundationPlatform* m_platePlatform = nullptr;
-    std::unordered_set<SceneSpace::PhysicalEntity*> m_registeredPhysicsBodies;
+    std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_contactRegistered = false;
