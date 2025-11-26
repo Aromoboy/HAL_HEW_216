@@ -38,6 +38,11 @@ namespace Entities
         const Collision::ICollider* GetCollider() const;
 
         Collision::CollisionLayer GetCollisionLayer() const;
+        void SetCollisionLayer(Collision::CollisionLayer layer);
+
+        void SyncColliderBounds();
+
+        void ApplyTranslation(const float3& delta);
 
         Systems::ContactLiteSystem* GetContactSystem() const;
 
