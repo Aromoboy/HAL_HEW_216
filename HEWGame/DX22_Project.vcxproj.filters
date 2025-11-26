@@ -1,169 +1,431 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- ===================== -->
   <!-- All .cpp with filters -->
   <!-- ===================== -->
   <ItemGroup>
-    <ClCompile Include="src\AABBCollider.cpp" />
-    <ClCompile Include="src\AssimpModelLorder.cpp" />
-    <ClCompile Include="src\CameraDebug.cpp" />
-    <ClCompile Include="src\CameraManager.cpp" />
-    <ClCompile Include="src\CameraRig.cpp" />
-    <ClCompile Include="src\Core\UpdateNode.cpp" />
-    <ClCompile Include="src\Core\UpdateScheduler.cpp" />
-    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp" />
-    <ClCompile Include="src\Core\DXContext.cpp" />
-    <ClCompile Include="src\Core\IndexBuffer.cpp" />
-    <ClCompile Include="src\Core\VertexBuffer.cpp" />
-    <ClCompile Include="src\Debug.cpp" />
-    <ClCompile Include="src\DebugConsole.cpp" />
-    <ClCompile Include="src\DirectX.cpp" />
-    <ClCompile Include="src\DrawMatrix.cpp" />
-    <ClCompile Include="src\Geometory.cpp" />
-    <ClCompile Include="src\BaseCamera.cpp" />
-    <ClCompile Include="src\PerspectiveCamera.cpp" />
-    <ClCompile Include="src\IModelLoader.cpp" />
-    <ClCompile Include="src\Input.cpp" />
-    <ClCompile Include="src\Core\InputMap.cpp" />
-    <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\MeshBuffer.cpp" />
-    <ClCompile Include="src\Model.cpp" />
-    <ClCompile Include="src\ModelCache.cpp" />
-    <ClCompile Include="src\ModelRender.cpp" />
-    <ClCompile Include="src\MaterialDX.cpp" />
-    <ClCompile Include="src\MeshDX.cpp" />
-    <ClCompile Include="src\ModelDX.cpp" />
-    <ClCompile Include="src\Scene.cpp" />
-    <ClCompile Include="src\SceneGame.cpp" />
-    <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
-    <ClCompile Include="src\Stage\StageData.cpp" />
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
-    <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
-    <ClCompile Include="src\Systems\DrawSystem.cpp" />
-    <ClCompile Include="src\Systems\IntegrateSystem.cpp" />
-    <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
-    <ClCompile Include="src\Systems\PhysicsMachineTests.cpp" />
-    <ClCompile Include="src\Shader.cpp" />
-    <ClCompile Include="src\ShaderCache.cpp" />
-    <ClCompile Include="src\ShaderList.cpp" />
-    <ClCompile Include="src\ShaderProgram.cpp" />
-    <ClCompile Include="src\SoundManagerEX.cpp" />
-    <ClCompile Include="src\SoundSystem.cpp" />
-    <ClCompile Include="src\Sprite.cpp" />
-    <ClCompile Include="src\Startup.cpp" />
-    <ClCompile Include="src\TestObject.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
-    <ClCompile Include="src\TextureCache.cpp" />
-    <ClCompile Include="src\TextureDX.cpp" />
-    <ClCompile Include="src\Entities\Player.cpp" />
-    <ClCompile Include="src\GravityDampingSystem.cpp" />
-    <ClCompile Include="src\HudRenderer.cpp" />
-    <ClCompile Include="src\BackgroundRenderer.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="src\AABB.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Sweets\BaseSweets.cpp" />
-    <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
-    <ClCompile Include="src\SweetsManager.cpp" />
+    <ClCompile Include="src\AABBCollider.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AssimpModelLorder.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\BackgroundRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\BaseCamera.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CameraDebug.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CameraManager.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CameraRig.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\DXContext.cpp">
+      <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\IndexBuffer.cpp">
+      <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\InputMap.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\UpdateNode.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\UpdateScheduler.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\VertexBuffer.cpp">
+      <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Debug.cpp">
+      <Filter>Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DebugConsole.cpp">
+      <Filter>Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DirectX.cpp">
+      <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DrawMatrix.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Entities\Player.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameFlow\PhaseManager.cpp">
+      <Filter>GameFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Geometory.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GravityDampingSystem.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HudRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IModelLoader.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Input.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Main.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MaterialDX.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MeshBuffer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MeshDX.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Model.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ModelCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ModelDX.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ModelRender.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PerspectiveCamera.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Scene.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SceneGame.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Shader.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ShaderCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ShaderList.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ShaderProgram.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SoundManagerEX.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SoundSystem.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sprite.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stage\FoundationPlatform.cpp">
+      <Filter>Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stage\StageData.cpp">
+      <Filter>Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Startup.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\BaseSweets.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SweetsManager.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SweetsPrototypeManifest.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\ContactLiteSystem.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\DrawSystem.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\IntegrateSystem.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\PhysicsMachine.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\PhysicsMachineTests.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TestObject.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Texture.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TextureCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TextureDX.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
 
   <!-- ==================== -->
   <!-- All .h with filters  -->
   <!-- ==================== -->
   <ItemGroup>
-    <ClInclude Include="include\AABB.h" />
-    <ClInclude Include="include\AABBCollider.h" />
-    <ClInclude Include="include\AssimpModelLorder.h" />
-    <ClInclude Include="include\CameraDebug.h" />
-    <ClInclude Include="include\CameraManager.h" />
-    <ClInclude Include="include\CameraRig.h" />
-    <ClInclude Include="include\CollisionEntity.h" />
-    <ClInclude Include="include\Core\IUpdatable.h" />
-    <ClInclude Include="include\Core\InputMap.h" />
-    <ClInclude Include="include\Core\UpdateNode.h" />
-    <ClInclude Include="include\Core\UpdateScheduler.h" />
-    <ClInclude Include="include\Core\DXContext.h" />
-    <ClInclude Include="include\Core\IndexBuffer.h" />
-    <ClInclude Include="include\Core\VertexBuffer.h" />
-    <ClInclude Include="include\Debug.h" />
-    <ClInclude Include="include\DebugConsole.h" />
-    <ClInclude Include="include\Defines.h" />
-    <ClInclude Include="include\DirectX.h" />
-    <ClInclude Include="include\DrawMatrix.h" />
-    <ClInclude Include="include\Entity.h" />
-    <ClInclude Include="include\Geometory.h" />
-    <ClInclude Include="include\BaseCamera.h" />
-    <ClInclude Include="include\PerspectiveCamera.h" />
-    <ClInclude Include="include\ICamera.h" />
-    <ClInclude Include="include\ICollider.h" />
-    <ClInclude Include="include\IModelLoader.h" />
-    <ClInclude Include="include\Input.h" />
-    <ClInclude Include="include\Main.h" />
-    <ClInclude Include="include\MeshBuffer.h" />
-    <ClInclude Include="include\Model.h" />
-    <ClInclude Include="include\ModelCache.h" />
-    <ClInclude Include="include\ModelRender.h" />
-    <ClInclude Include="include\MaterialDX.h" />
-    <ClInclude Include="include\MeshDX.h" />
-    <ClInclude Include="include\ModelDX.h" />
-    <ClInclude Include="include\SweetsPrototypeManifest.h" />
-    <ClInclude Include="include\Physical.h" />
-    <ClInclude Include="include\PhysicalEntity.h" />
-    <ClInclude Include="include\Scene.h" />
-    <ClInclude Include="include\SceneGame.h" />
-    <ClInclude Include="include\GameFlow\PhaseManager.h" />
-    <ClInclude Include="include\Stage\StageData.h" />
-    <ClInclude Include="include\Stage\FoundationPlatform.h" />
-    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
-    <ClInclude Include="include\Systems\DrawSystem.h" />
-    <ClInclude Include="include\Systems\IntegrateSystem.h" />
-    <ClInclude Include="include\Systems\PhysicsMachine.h" />
-    <ClInclude Include="include\Shader.h" />
-    <ClInclude Include="include\ShaderCache.h" />
-    <ClInclude Include="include\ShaderList.h" />
-    <ClInclude Include="include\ShaderProgram.h" />
-    <ClInclude Include="include\SoundManagerEX.h" />
-    <ClInclude Include="include\SoundSystem.h" />
-    <ClInclude Include="include\Sprite.h" />
-    <ClInclude Include="include\TestObject.h" />
-    <ClInclude Include="include\Texture.h" />
-    <ClInclude Include="include\TextureCache.h" />
-    <ClInclude Include="include\TextureDX.h" />
-    <ClInclude Include="include\Transform.h" />
-    <ClInclude Include="include\Vector.h" />
-    <ClInclude Include="include\conioex.h" />
-    <ClInclude Include="include\GravityDampingSystem.h" />
-    <ClInclude Include="include\HudRenderer.h" />
-    <ClInclude Include="include\BackgroundRenderer.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="include\AABB.h">
+      <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\Sweets\BaseSweets.h" />
-    <ClInclude Include="include\SweetsManager.h" />
+    <ClInclude Include="include\AABBCollider.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AssimpModelLorder.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\BackgroundRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\BaseCamera.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CameraDebug.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CameraManager.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CameraRig.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CollisionEntity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\conioex.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\DXContext.h">
+      <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\IndexBuffer.h">
+      <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\InputMap.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\IUpdatable.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\UpdateNode.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\UpdateScheduler.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\VertexBuffer.h">
+      <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Debug.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DebugConsole.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Defines.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DirectX.h">
+      <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DrawMatrix.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Entity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GameFlow\PhaseManager.h">
+      <Filter>GameFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Geometory.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GravityDampingSystem.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\HudRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ICamera.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ICollider.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\IModelLoader.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Input.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Main.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MaterialDX.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MeshBuffer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MeshDX.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Model.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelDX.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelRender.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PerspectiveCamera.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Physical.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PhysicalEntity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Scene.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SceneGame.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Shader.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ShaderCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ShaderList.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ShaderProgram.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SoundManagerEX.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SoundSystem.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sprite.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stage\FoundationPlatform.h">
+      <Filter>Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stage\StageData.h">
+      <Filter>Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\BaseSweets.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SweetsManager.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SweetsPrototypeManifest.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\ContactLiteSystem.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\DrawSystem.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\IntegrateSystem.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\PhysicsMachine.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TestObject.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Texture.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TextureCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TextureDX.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Transform.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Vector.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
 
   <!-- =================== -->
   <!-- Filter definitions  -->
   <!-- =================== -->
   <ItemGroup>
+    <Filter Include="App">
+      <UniqueIdentifier>{8654e2a1-f166-4f20-9c6e-348f98c22312}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Audio">
+      <UniqueIdentifier>{a5202f65-5797-4b12-bcd1-61ee87f5a94d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Camera">
+      <UniqueIdentifier>{f67f3091-b57f-4b70-a832-a6ad57503882}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{c0201565-d312-4c4a-9a59-eb70b61b7702}</UniqueIdentifier>
     </Filter>
     <Filter Include="Core\DirectX">
       <UniqueIdentifier>{58586234-8be6-48e3-8263-5f68de2d083e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Camera">
-      <UniqueIdentifier>{f67f3091-b57f-4b70-a832-a6ad57503882}</UniqueIdentifier>
+    <Filter Include="Debug">
+      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Entities">
       <UniqueIdentifier>{38d16add-f8cd-4f23-8494-c3fce06e36e8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Components">
-      <UniqueIdentifier>{93f64bc5-ddd6-4dc6-afee-ec72e8758b6f}</UniqueIdentifier>
+    <Filter Include="GameFlow">
+      <UniqueIdentifier>{71782b0c-11fb-40b8-9d5d-f7c626a2dbaa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scene">
-      <UniqueIdentifier>{ea13b8db-85ce-4a9a-88c9-05c595714d17}</UniqueIdentifier>
+    <Filter Include="Rendering">
+      <UniqueIdentifier>{5dfca3d5-e0cd-4c75-af87-42cb12625aa6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Debug">
-      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
+    <Filter Include="Stage">
+      <UniqueIdentifier>{d2b5d854-546c-4102-a868-98610ff3ea9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sweets">
+      <UniqueIdentifier>{836b4fc0-4474-4415-8699-b9b46d00f457}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Systems">
+      <UniqueIdentifier>{65e26d16-506d-46f8-a2b7-bfc524717648}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 
