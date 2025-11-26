@@ -873,20 +873,6 @@ SceneGame::SceneGame()
     Transform trans =
     { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
-    m_legacyPlayer = std::make_unique<SceneSpace::Player>(
-        "player",
-        float3{ 0.0f, 0.0f, platePlaneZ },
-        float3{ 0.0f, 0.0f, 0.0f },
-        float3{ 1.0f, 1.0f, 1.0f },
-        collider,
-        Collision::CollisionLayer::Player,
-        float3{ 0.0f, 0.0f, 0.0f },
-        float3{ 0.0f, 0.0f, 0.0f },
-        1.0f,
-        0.98f,
-        Core::UpdatePhase::Gameplay,
-        0,
-        true);
     player = std::make_unique<Entities::Player>(
         Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
         nullptr,
@@ -894,13 +880,15 @@ SceneGame::SceneGame()
         Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
         m_physicsMachine.get(),
         m_contactSystem.get(),
-        m_legacyPlayer.get(),
+        m_sweetsManager.get(),
+        Collision::CollisionLayer::Player,
+        true,
         Core::UpdatePhase::Gameplay,
-        0);
+        0,
+        "player");
 
-    if (player && player->GetLegacyPlayer())
+    if (player)
     {
-        auto* legacyPlayer = player->GetLegacyPlayer();
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
         float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
         if (m_platePlatform)
@@ -908,16 +896,12 @@ SceneGame::SceneGame()
             const auto& platformXform = m_platePlatform->GetTransform();
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
-        legacyPlayer->SetMinimumY(platformTopY);
-        legacyPlayer->SetMoveSpeed(m_playerBaseMoveSpeed);
-        if (m_sweetsManager)
-        {
-            legacyPlayer->SetSweetsManager(m_sweetsManager.get());
-        }
+        player->SetMinimumY(platformTopY);
+        player->SetMoveSpeed(m_playerBaseMoveSpeed);
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
-            const bool isKinematic = legacyPlayer ? legacyPlayer->IsKinematic() : false;
+            const bool isKinematic = player->IsKinematic();
             oss << kLogPrefix << "Player physics body registered (kinematic="
                 << std::boolalpha << isKinematic
                 << ", weight=" << player->GetPhysical().weight << ").\n";
@@ -1100,7 +1084,7 @@ void SceneGame::ConfigureUpdates()
                 {
                         RegisterPhysicsBody(*player);
                         std::ostringstream oss;
-                        const bool isKinematic = player->GetLegacyPlayer() ? player->GetLegacyPlayer()->IsKinematic() : false;
+                        const bool isKinematic = player->IsKinematic();
                         oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
                             << std::boolalpha << isKinematic << ").\n";
                         ::DebugTrace(oss.str());
@@ -1173,9 +1157,9 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         }
 
         // Apply to player
-        if (auto* legacyPlayer = player ? player->GetLegacyPlayer() : nullptr)
+        if (player)
         {
-            legacyPlayer->SetScreenBounds(minX, maxX, std::nullopt);
+            player->SetScreenBounds(minX, maxX, std::nullopt);
         }
 
         // Apply to sweets manager
@@ -1198,12 +1182,6 @@ if (m_timeUp)
     Core::Input& input = ctx.input;
     if (player)
     {
-        auto* legacyPlayer = player->GetLegacyPlayer();
-        if (!legacyPlayer)
-        {
-            ::DebugTrace(std::string(kLogPrefix) + "[SpeedBoost] ignored; legacy player not initialized.\n");
-            return;
-        }
         const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
         {
             if (!(m_playerBaseMoveSpeed > 0.0f))
@@ -1228,11 +1206,11 @@ if (m_timeUp)
                 return;
             }
 
-            const float beforeSpeed = legacyPlayer->GetMoveSpeed();
+            const float beforeSpeed = player->GetMoveSpeed();
             const float newMultiplier = clampedMultiplier;
             const float newSpeed = m_playerBaseMoveSpeed * newMultiplier;
             m_playerSpeedMultiplier = newMultiplier;
-            legacyPlayer->SetMoveSpeed(newSpeed);
+            player->SetMoveSpeed(newSpeed);
 
             std::ostringstream oss;
             oss << kLogPrefix << "[SpeedBoost] " << reason
@@ -1355,9 +1333,9 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                   hudData.score = ComputeScore();
                   hudData.timeUp = m_timeUp;
                   hudData.moveSpeedMultiplier = m_playerSpeedMultiplier;
-                  if (auto* legacyPlayer = player ? player->GetLegacyPlayer() : nullptr)
+                  if (player)
                   {
-                          hudData.moveSpeedUnitsPerSecond = legacyPlayer->GetMoveSpeed();
+                          hudData.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
                   }
 
                   float guidelineClip = 0.0f;
@@ -1644,13 +1622,13 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
     }
 
-    if (auto* legacyPlayer = player ? player->GetLegacyPlayer() : nullptr)
+    if (player)
     {
-        legacyPlayer->ClearCarriedSweets();
+        player->ClearCarriedSweets();
         if (m_playerBaseMoveSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
-            legacyPlayer->SetMoveSpeed(m_playerBaseMoveSpeed);
+            player->SetMoveSpeed(m_playerBaseMoveSpeed);
         }
     }
 
@@ -1996,14 +1974,13 @@ void SceneGame::RenderRunTelemetryOverlay() const
 
     std::ostringstream carryLine;
     carryLine << "[SceneGame] Player carry: ";
-    if (auto* legacyPlayer = player ? player->GetLegacyPlayer() : nullptr)
+    if (player)
     {
-        for (auto it : legacyPlayer->GetCarriedSweets())
+        for (auto it : player->GetCarriedSweets())
         {
             const auto carried = it;
             carryLine << (carried ? carried->GetTag() : "<unknown>");
         }
-
     }
     else
     {
