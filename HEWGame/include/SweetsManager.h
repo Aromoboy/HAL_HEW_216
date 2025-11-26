@@ -16,6 +16,7 @@
 #include "ModelRender.h"
 #include "Transform.h"
 #include "CollisionLayer.h"
+#include "Physical.h"
 
 namespace Core
 {
@@ -38,15 +39,7 @@ class ModelDX;
 namespace SweetsSpace
 {
     class BaseSweets;
-    class LegacyBaseSweets;
-
-#if defined(SWEETS_USE_ENTITIES_PIPELINE)
-    // New pipeline stub (Entities::PhysicalEntity-based)
     using ActiveSweets = BaseSweets;
-#else
-    // Prototype pipeline implementation
-    using ActiveSweets = LegacyBaseSweets;
-#endif
 
     struct WeightedSweetsType
     {
@@ -231,17 +224,16 @@ namespace SweetsSpace
                 return nullptr;
             }
 
+            Physics::Physical physical{ velocity, force, weight, damping };
+
             return std::make_shared<T>(tag,
+                transform,
                 model,
-                transform.position,
-                transform.rotation,
-                transform.scale,
                 collider,
                 layer,
-                velocity,
-                force,
-                weight,
-                damping,
+                physical,
+                m_physicsMachine,
+                nullptr,
                 phase,
                 priority);
         }

@@ -164,9 +164,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Cake.cpp" />
-    <ClCompile Include="Pdding.cpp" />
-    <ClCompile Include="Sherbet.cpp" />
     <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
@@ -232,10 +229,8 @@
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
-    <ClCompile Include="Sweets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cake.h" />
     <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
@@ -304,11 +299,8 @@
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
-    <ClInclude Include="Pdding.h" />
-    <ClInclude Include="Sherbet.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />
-    <ClInclude Include="Sweets.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
