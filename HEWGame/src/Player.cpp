@@ -2,7 +2,7 @@
 #include "Core/Input.h"
 #include "ModelCache.h"
 #include "Physical.h"
-#include "Sweets.h"
+#include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 
@@ -409,7 +409,7 @@ bool SceneSpace::Player::IsCarryingSweets() const
         return !m_carrieds.empty();
 }
 
-const std::vector<std::shared_ptr<SweetsSpace::LegacyBaseSweets>>& SceneSpace::Player::GetCarriedSweets() const
+const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& SceneSpace::Player::GetCarriedSweets() const
 {
         return m_carrieds;
 }

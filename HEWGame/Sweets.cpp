@@ -1,5 +1,7 @@
 #include "Sweets.h"
 
+#include <utility>
+
 namespace SweetsSpace
 {
     // コンストラクタ：モデルを受け取り、Transform を初期化
@@ -16,9 +18,18 @@ namespace SweetsSpace
         float damping,
         Core::UpdatePhase phase,
         int priority)
-        :PhysicalEntity(tag, pos, rot, scl, collider, layer, velocity, force, weight, damping, phase, priority)
-        ,m_model(model)
-    { }
+        : BaseSweets(tag,
+            Transform{ pos, rot, scl },
+            std::move(model),
+            std::move(collider),
+            layer,
+            Physics::Physical{ velocity, force, weight, damping },
+            nullptr,
+            nullptr,
+            phase,
+            priority)
+    {
+    }
 
 
     ModelDX* LegacyBaseSweets::GetRenderableModel()
@@ -39,7 +50,10 @@ namespace SweetsSpace
     // 描画処理
     void LegacyBaseSweets::Draw(ModelRender& render, const std::shared_ptr<CameraSpace::ICamera>& cam)
     {
-        if (!m_model) return;
+        if (!m_model)
+        {
+            return;
+        }
 
         // ModelRender に渡して描画
         // cam.get() で shared_ptr からポインタを取得
