@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "Entities/PhysicalEntity.h"
 #include "ICollider.h"
@@ -10,7 +11,8 @@ namespace SweetsSpace
     class BaseSweets : public Entities::PhysicalEntity
     {
     public:
-        BaseSweets(const Transform& transform,
+        BaseSweets(const std::string& tag,
+            const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,

@@ -2,7 +2,8 @@
 
 namespace SweetsSpace
 {
-    BaseSweets::BaseSweets(const Transform& transform,
+    BaseSweets::BaseSweets(const std::string& tag,
+        const Transform& transform,
         std::shared_ptr<Render::Model> model,
         std::shared_ptr<Collision::ICollider> collider,
         Collision::CollisionLayer layer,
@@ -19,7 +20,8 @@ namespace SweetsSpace
             physicsMachine,
             contactSystem,
             phase,
-            priority)
+            priority,
+            tag)
     {
     }
 

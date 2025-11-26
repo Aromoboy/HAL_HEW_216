@@ -22,16 +22,9 @@
 #endif
 #include <vector>
 #include "AABBCollider.h"
-#include "Cake.h"
 #include "Core/UpdateScheduler.h"
 #include "ModelCache.h"
-#include "Pdding.h"
-#include "Sherbet.h"
-#if defined(SWEETS_USE_ENTITIES_PIPELINE)
-#    include "Sweets/BaseSweets.h"
-#else
-#    include "Sweets.h"
-#endif
+#include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
@@ -721,22 +714,8 @@ namespace SweetsSpace
                     DebugTrace(oss.str());
                 }
 
-                switch (type)
-                {
-                case SweetsType::Cake:
-                    return MakeSweets<Cake>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
-                        Core::UpdatePhase::Physics, 0);
-                case SweetsType::Pudding:
-                    return MakeSweets<Pudding>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
-                        Core::UpdatePhase::Physics, 0);
-                case SweetsType::Sherbet:
-                    return MakeSweets<Sherbet>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
-                        Core::UpdatePhase::Physics, 0);
-                default:
-                    break;
-                }
-
-                return nullptr;
+                return MakeSweets<ActiveSweets>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
+                    Core::UpdatePhase::Physics, 0);
             };
 
             auto [_, inserted] = m_spawner.emplace(kind, std::move(factory));
