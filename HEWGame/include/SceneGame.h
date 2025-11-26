@@ -93,7 +93,6 @@ private:
     std::shared_ptr<IModelLoader> m_loader;
     std::shared_ptr<ModelDX> m_model;
     std::unique_ptr<ModelRender> m_render;
-    std::unique_ptr<SceneSpace::Player> m_legacyPlayer;
     std::unique_ptr<Entities::Player> player;
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
