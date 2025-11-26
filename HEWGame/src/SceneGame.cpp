@@ -19,7 +19,6 @@
 #include "GravityDampingSystem.h"
 #include "TextureCache.h"
 #include "DirectX.h"
-#include "Sweets.h"
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
 #include <algorithm>
