@@ -69,9 +69,9 @@ namespace Systems
                 m_warnedMissingRenderer = false;
         }
 
-        void DrawSystem::RegisterRenderable(SceneSpace::Entity& entity)
+        void DrawSystem::RegisterRenderable(Entities::Entity& entity)
         {
-                SceneSpace::Entity* entityPtr = &entity;
+                Entities::Entity* entityPtr = &entity;
                 if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
                 {
 #if defined(_DEBUG)
@@ -85,9 +85,9 @@ namespace Systems
                 m_renderables.push_back(entityPtr);
         }
 
-        void DrawSystem::UnregisterRenderable(SceneSpace::Entity& entity)
+        void DrawSystem::UnregisterRenderable(Entities::Entity& entity)
         {
-                SceneSpace::Entity* entityPtr = &entity;
+                Entities::Entity* entityPtr = &entity;
                 auto it = std::remove(m_renderables.begin(), m_renderables.end(), entityPtr);
                 if (it == m_renderables.end())
                 {
@@ -101,7 +101,7 @@ namespace Systems
 
                 m_renderables.erase(it, m_renderables.end());
 
-                std::unordered_map<SceneSpace::Entity*, Collision::ICollider*>::iterator colIt = m_colliderRenderables.find(entityPtr);
+                std::unordered_map<Entities::Entity*, Collision::ICollider*>::iterator colIt = m_colliderRenderables.find(entityPtr);
 
                 if (colIt != m_colliderRenderables.end())
                 {
@@ -111,9 +111,9 @@ namespace Systems
                 m_missingModelEntities.erase(entityPtr);
         }
 
-        void DrawSystem::RegisterRenderable(SceneSpace::CollisionEntity& entity)
+        void DrawSystem::RegisterRenderable(Entities::CollisionEntity& entity)
         {
-            SceneSpace::CollisionEntity* entityPtr = &entity;
+            Entities::CollisionEntity* entityPtr = &entity;
             if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
             {
 #if defined(_DEBUG)
@@ -154,7 +154,7 @@ namespace Systems
                         return;
                 }
 
-                for (SceneSpace::Entity* entity : m_renderables)
+                for (Entities::Entity* entity : m_renderables)
                 {
                         if (!entity)
                         {
@@ -221,7 +221,7 @@ namespace Systems
                 return m_commands.size();
         }
 
-        bool DrawSystem::ValidateTransform(const Transform& transform, const SceneSpace::Entity* source) const
+        bool DrawSystem::ValidateTransform(const Transform& transform, const Entities::Entity* source) const
         {
                 if (IsFiniteVector(transform.position) && IsFiniteVector(transform.rotation) && IsFiniteVector(transform.scale))
                 {
@@ -259,7 +259,7 @@ namespace Systems
                 m_warnedMissingCamera = true;
         }
 
-        void DrawSystem::LogMissingModel(SceneSpace::Entity* entity)
+        void DrawSystem::LogMissingModel(Entities::Entity* entity)
         {
                 if (!entity)
                 {
