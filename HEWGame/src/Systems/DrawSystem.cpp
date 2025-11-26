@@ -161,7 +161,7 @@ namespace Systems
                                 continue;
                         }
 
-                        ModelDX* model = entity->GetRenderableModel();
+                        Render::Model* model = entity->GetRenderableModel();
                         if (!model)
                         {
                                 LogMissingModel(entity);

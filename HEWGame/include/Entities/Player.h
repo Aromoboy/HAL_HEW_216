@@ -19,7 +19,7 @@ namespace Entities
     {
     public:
         Player(const Transform& transform,
-            std::shared_ptr<ModelDX> model = nullptr,
+            std::shared_ptr<Render::Model> model = nullptr,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Physics::Physical physical = Physics::Physical{},
             Systems::PhysicsMachine* physicsMachine = nullptr,
@@ -48,7 +48,7 @@ namespace Entities
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
 
     private:
-        std::shared_ptr<ModelDX> m_fairyModel;
+        std::shared_ptr<Render::Model> m_fairyModel;
         Systems::ContactLiteSystem* m_contactSystem;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;

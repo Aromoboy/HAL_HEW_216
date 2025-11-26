@@ -485,7 +485,6 @@ namespace
         }
 }
 
-Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 SceneGame::SceneGame()
@@ -659,16 +658,6 @@ SceneGame::SceneGame()
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
-    m_pModel = std::make_unique<Model>();
-    if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
-    {
-        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
-    }
-
-    no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
-
-    m_pModel->Play(no, 1, 1.0f);
-
     InitializeStageAnchors();
 
     m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
@@ -717,9 +706,6 @@ SceneGame::SceneGame()
     {
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
-
-    // 描画テスト用
-    m_model = cache.Get("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
@@ -875,7 +861,7 @@ SceneGame::SceneGame()
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
     player = std::make_unique<Entities::Player>(
         Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
-        std::shared_ptr<ModelDX>{},
+        std::shared_ptr<Render::Model>{},
         collider,
         Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
         m_physicsMachine.get(),

@@ -37,7 +37,7 @@ ModelRender::ModelRender() = default;
 
 ModelRender::~ModelRender() = default;
 
-void ModelRender::Draw(ModelDX& a_model, Transform transform, const CameraSpace::ICamera* camera)
+void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera)
 {
     if (!camera)
     {

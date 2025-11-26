@@ -13,6 +13,7 @@
 
 #include "Core/UpdateNode.h"
 #include "ICamera.h"
+#include "ModelDX.h"
 #include "ModelRender.h"
 #include "Transform.h"
 #include "CollisionLayer.h"
@@ -33,8 +34,6 @@ namespace Collision
 {
     class ICollider;
 }
-
-class ModelDX;
 
 namespace SweetsSpace
 {
@@ -208,7 +207,7 @@ namespace SweetsSpace
 
         template<typename T>
         std::shared_ptr<ActiveSweets> MakeSweets(const std::string& tag,
-            const std::shared_ptr<ModelDX>& model,
+            const std::shared_ptr<Render::Model>& model,
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
             Collision::CollisionLayer layer,

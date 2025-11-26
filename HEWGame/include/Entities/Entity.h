@@ -8,12 +8,6 @@
 #include "ModelRender.h"
 #include "ICamera.h"
 
-class ModelDX;
-namespace Render
-{
-    using Model = ::ModelDX;
-}
-
 namespace Entities
 {
     class Entity : public Core::UpdateNode
@@ -40,8 +34,8 @@ namespace Entities
 
         std::shared_ptr<Render::Model> GetModel() const;
         const std::string& GetTag() const;
-        virtual ModelDX* GetRenderableModel();
-        virtual const ModelDX* GetRenderableModel() const;
+        virtual Render::Model* GetRenderableModel();
+        virtual const Render::Model* GetRenderableModel() const;
         bool IsRenderable() const;
 
     protected:

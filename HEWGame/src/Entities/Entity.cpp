@@ -46,12 +46,12 @@ namespace Entities
         return m_tag;
     }
 
-    ModelDX* Entity::GetRenderableModel()
+    Render::Model* Entity::GetRenderableModel()
     {
         return m_model.get();
     }
 
-    const ModelDX* Entity::GetRenderableModel() const
+    const Render::Model* Entity::GetRenderableModel() const
     {
         return m_model.get();
     }

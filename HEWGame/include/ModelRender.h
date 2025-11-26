@@ -10,7 +10,7 @@ public:
 ModelRender();
 ~ModelRender();
 
-void Draw(ModelDX& model, Transform transform, const CameraSpace::ICamera* camera);
+void Draw(Render::Model& model, Transform transform, const CameraSpace::ICamera* camera);
 
 private:
 void MeshDraw(MeshDX&);

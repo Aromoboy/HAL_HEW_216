@@ -46,9 +46,9 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
 
-    std::shared_ptr<ModelDX> CreateProceduralFairyModel()
+    std::shared_ptr<Render::Model> CreateProceduralFairyModel()
     {
-        static std::weak_ptr<ModelDX> cached;
+        static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy.\n");
@@ -158,7 +158,7 @@ namespace
 
 namespace Entities
 {
-    Player::Player(const Transform& transform, std::shared_ptr<ModelDX> model, std::shared_ptr<Collision::ICollider> collider, Physics::Physical physical, Systems::PhysicsMachine* physicsMachine, Systems::ContactLiteSystem* contactSystem, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Physics::Physical physical, Systems::PhysicsMachine* physicsMachine, Systems::ContactLiteSystem* contactSystem, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
         : PhysicalEntity(transform, std::move(collider), collisionLayer, physical, std::move(model), physicsMachine, contactSystem, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
         , m_contactSystem(contactSystem)
