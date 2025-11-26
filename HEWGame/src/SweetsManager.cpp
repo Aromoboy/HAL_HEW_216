@@ -870,7 +870,7 @@ namespace SweetsSpace
             {
                 if (sweets)
                 {
-                    sweets->Draw(renderer, camera);
+                    sweets->Draw(renderer, *camera);
                 }
             }
         }
