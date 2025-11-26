@@ -166,7 +166,7 @@ bool CameraRig::IsYawPitchLocked() const
         return m_lockYawPitch;
 }
 
-void CameraRig::Attach(const std::shared_ptr<SceneSpace::Entity>& target)
+void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
         m_warnedAboutExpiredTarget = false;

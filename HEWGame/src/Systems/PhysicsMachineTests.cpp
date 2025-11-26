@@ -12,10 +12,10 @@
 
 namespace
 {
-    SceneSpace::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform, float weight, float damping)
+    Entities::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform, float weight, float damping)
     {
         auto collider = std::make_shared<Collision::AABBCollider>(transform, false, float3{ 1.0f,1.0f,1.0f } , float3{ 0.0f, 0.0f, 0.0f });
-        return SceneSpace::PhysicalEntity(tag,
+        return Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
             transform.scale,

@@ -53,8 +53,3 @@ namespace Entities
     };
 }
 
-namespace SceneSpace
-{
-    using CollisionEntity = Entities::CollisionEntity;
-}
-

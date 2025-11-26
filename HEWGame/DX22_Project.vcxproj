@@ -222,8 +222,6 @@
     <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\TextureCache.cpp" />
     <ClCompile Include="src\TextureDX.cpp" />
-    <ClCompile Include="src\_geometory.cpp" />
-    <ClCompile Include="src\_model.cpp" />
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />

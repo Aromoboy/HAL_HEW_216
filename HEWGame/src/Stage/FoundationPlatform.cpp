@@ -127,7 +127,7 @@ namespace Stage
         const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
         int priority)
-        : SceneSpace::PhysicalEntity(tag,
+        : Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
             transform.scale,

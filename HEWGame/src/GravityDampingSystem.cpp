@@ -33,7 +33,7 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 {
 }
 
-void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
+void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
 {
     // Physicalコンポーネントを取得
     auto& physical = entity.GetPhysical();

@@ -13,9 +13,9 @@ namespace Systems
         GravityDampingSystem(float gravity = 9.8f, float damping = 0.98f);
         virtual ~GravityDampingSystem() = default;
 
-        std::unordered_set<const SceneSpace::PhysicalEntity*> m_loggedKinematicSkips;
+        std::unordered_set<const Entities::PhysicalEntity*> m_loggedKinematicSkips;
         // IPhysicsSystemのApply関数をオーバーライド
-        void Apply(SceneSpace::PhysicalEntity& entity, float dt) override;
+        void Apply(Entities::PhysicalEntity& entity, float dt) override;
 
         void SetGravity(float gravity) { m_gravity = gravity; }
         void SetDamping(float damping) { m_damping = damping; }

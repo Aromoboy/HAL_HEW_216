@@ -35,13 +35,13 @@ public:
         void SetYawPitchLocked(bool locked);
         bool IsYawPitchLocked() const;
 
-        void Attach(const std::shared_ptr<SceneSpace::Entity>& target);
+        void Attach(const std::shared_ptr<Entities::Entity>& target);
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
 private:
         std::shared_ptr<CameraSpace::BaseCamera> m_camera;
-        std::weak_ptr<SceneSpace::Entity> m_target;
+        std::weak_ptr<Entities::Entity> m_target;
         float3 m_offset;
         float m_yaw;
         float m_pitch;

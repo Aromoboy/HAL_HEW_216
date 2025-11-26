@@ -93,12 +93,12 @@ namespace Systems
                 return m_integrator;
         }
 
-        const std::vector<SceneSpace::PhysicalEntity*>& PhysicsMachine::GetBodies() const
+        const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
         {
                 return m_bodies;
         }
 
-        void PhysicsMachine::RegisterBody(SceneSpace::PhysicalEntity& body)
+        void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
         {
                 auto* bodyPtr = &body;
                 if (std::find(m_bodies.begin(), m_bodies.end(), bodyPtr) != m_bodies.end())
@@ -114,7 +114,7 @@ namespace Systems
                 m_bodies.push_back(bodyPtr);
         }
 
-        void PhysicsMachine::UnregisterBody(SceneSpace::PhysicalEntity& body)
+        void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
         {
                 auto* bodyPtr = &body;
                 auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
@@ -157,7 +157,7 @@ namespace Systems
                         m_loggedMissingIntegrator = true;
                 }
 
-                for (SceneSpace::PhysicalEntity* body : m_bodies)
+                for (Entities::PhysicalEntity* body : m_bodies)
                 {
                         if (!body)
                         {

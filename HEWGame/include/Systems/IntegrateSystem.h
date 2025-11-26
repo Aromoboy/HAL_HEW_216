@@ -15,7 +15,7 @@ namespace Systems
         void SetVerboseLoggingEnabled(bool enabled);
         bool IsVerboseLoggingEnabled() const;
 
-        float3 Integrate(SceneSpace::PhysicalEntity& entity, float dt);
+        float3 Integrate(Entities::PhysicalEntity& entity, float dt);
 
     private:
         float m_translationEpsilon;

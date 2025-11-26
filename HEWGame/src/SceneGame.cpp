@@ -660,7 +660,7 @@ SceneGame::SceneGame()
     SetDepthTest(true);
     InitializeStageAnchors();
 
-    m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
+    m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
     if (!m_pObjects.empty())
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
@@ -1264,7 +1264,7 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 return;
         }
 
-        SceneSpace::TranslatePhysicalEntity(*player, delta);
+        Entities::TranslatePhysicalEntity(*player, delta);
 
         const auto& transform = player->GetTransform();
 
@@ -1479,7 +1479,7 @@ void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
     m_cachedCameraAspect = cameraAspect;
 }
 
-void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
+void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 {
     if (!m_physicsMachine)
     {
@@ -1499,7 +1499,7 @@ void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
     m_physicsMachine->RegisterBody(entity);
 }
 
-void SceneGame::UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity)
+void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
 {
     if (!entity)
     {
@@ -1536,8 +1536,8 @@ void SceneGame::UnregisterAllPhysicsBodies()
         return;
     }
 
-    std::vector<SceneSpace::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
-    for (SceneSpace::PhysicalEntity* body : bodies)
+    std::vector<Entities::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
+    for (Entities::PhysicalEntity* body : bodies)
     {
         UnregisterPhysicsBody(body);
     }
