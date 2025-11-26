@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 
 namespace Systems
 {

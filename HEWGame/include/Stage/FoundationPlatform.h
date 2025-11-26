@@ -5,7 +5,7 @@
 
 #include <DirectXMath.h>
 
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include "Transform.h"
 
 class ModelDX;

@@ -6,7 +6,7 @@
 #include "TestObject.h"
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
-#include "Entity.h"
+#include "Entities/PhysicalEntity.h"
 #include "IModelLoader.h"
 #include "ModelDX.h"
 #include "ModelRender.h"

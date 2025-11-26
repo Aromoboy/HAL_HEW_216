@@ -21,6 +21,19 @@ namespace Entities
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Systems::ContactLiteSystem* contactSystem = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
+            int priority = 0,
+            std::string tag = {});
+        PhysicalEntity(const std::string& tag,
+            const float3& pos,
+            const float3& rot,
+            const float3& scl,
+            std::shared_ptr<Collision::ICollider> collider,
+            Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
+            const float3& velocity = float3{ 0.0f, 0.0f, 0.0f },
+            const float3& force = float3{ 0.0f, 0.0f, 0.0f },
+            float weight = 1.0f,
+            float damping = 0.98f,
+            Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
         ~PhysicalEntity() override = default;
 
@@ -33,5 +46,10 @@ namespace Entities
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine;
     };
+}
+
+namespace SceneSpace
+{
+    using PhysicalEntity = Entities::PhysicalEntity;
 }
 

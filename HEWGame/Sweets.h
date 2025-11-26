@@ -3,7 +3,7 @@
 #include "ModelDX.h"
 #include "Transform.h"
 #include "ModelRender.h"
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include <Scene.h>
 
 namespace SweetsSpace

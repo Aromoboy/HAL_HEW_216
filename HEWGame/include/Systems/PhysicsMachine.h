@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 
 namespace Systems
 // PhysicsMachine  Entity ̊S`QƂ悤ɍXV

@@ -1,6 +1,6 @@
 // GravityDampingSystem.cpp
 #include "GravityDampingSystem.h"
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
