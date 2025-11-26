@@ -9,13 +9,13 @@
 #include "AABBCollider.h"
 #include "Entities/CollisionEntity.h"
 #include "Transform.h"
+#include "ModelDX.h"
 
 namespace CameraSpace
 {
         class ICamera;
 }
 
-class ModelDX;
 class ModelRender;
 
 namespace Systems
@@ -43,7 +43,7 @@ namespace Systems
                 struct DrawCommand
                 {
                         Entities::Entity* source;
-                        ModelDX* model;
+                        Render::Model* model;
                         Transform transform;
                 };
 

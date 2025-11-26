@@ -62,7 +62,7 @@ namespace Render
     // モデルの取得（キャッシュ対応）
     // 既にロード済みであればキャッシュから取り出し、無ければロードする
     //============================================================
-    std::shared_ptr<ModelDX> ModelCache::Get(const std::string& path)
+    std::shared_ptr<Render::Model> ModelCache::Get(const std::string& path)
     {
         // キャッシュに存在するか確認
         auto it = m_models.find(path);
@@ -93,7 +93,7 @@ namespace Render
 
         // キャッシュに無かったのでロードを実行
         //MODELCACHE_VERBOSE(std::string(u8"モデルのロードを開始します [パス] ") + path);
-        std::shared_ptr<ModelDX> model = m_loader->Load(path, m_device, *m_textureCache);
+        std::shared_ptr<Render::Model> model = m_loader->Load(path, m_device, *m_textureCache);
 
         // ロード結果の判定
         if (model)
@@ -135,7 +135,7 @@ modelCache.SetLoader(std::make_shared<FBXLoader>(device), device, TextureCache::
 // 3. モデルをロード
 try {
     // 初回アクセスでロードされ、キャッシュへ登録される
-    std::shared_ptr<ModelDX> robotModel = modelCache.Get("models/robot.fbx");
+    std::shared_ptr<Render::Model> robotModel = modelCache.Get("models/robot.fbx");
 
     // 4. モデルの描画（取得に成功した場合）
     if (robotModel) {
@@ -144,10 +144,10 @@ try {
 
     // 5. キャッシュ利用
     // 同じパスで呼び出すとキャッシュされたインスタンスが返る
-    std::shared_ptr<ModelDX> sameModel = modelCache.Get("models/robot.fbx");
+    std::shared_ptr<Render::Model> sameModel = modelCache.Get("models/robot.fbx");
 
     // 6. 別のモデルをロード
-    std::shared_ptr<ModelDX> mapModel = modelCache.Get("models/map.obj");
+    std::shared_ptr<Render::Model> mapModel = modelCache.Get("models/map.obj");
 
 } catch (...) {
     std::cerr << "モデルのロードに失敗" << std::endl;

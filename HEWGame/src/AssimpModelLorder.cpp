@@ -23,7 +23,7 @@ AssimpModelLorder::~AssimpModelLorder()
 }
 
 // [h
-std::shared_ptr<ModelDX> AssimpModelLorder::Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache)
+std::shared_ptr<Render::Model> AssimpModelLorder::Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache)
 {
 #ifdef _DEBUG
 	std::string errorStr = "";

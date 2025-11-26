@@ -2,14 +2,12 @@
 #define __SCENE_GAME_H__
 
 #include "Scene.h"
-#include "Model.h"
 #include "TestObject.h"
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
 #include "IModelLoader.h"
-#include "ModelDX.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Core/StepTimer.h"
@@ -80,13 +78,11 @@ private:
     void RenderRunTelemetryOverlay() const;
 #endif
     int ComputeScore() const;
-    std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::shared_ptr<IModelLoader> m_loader;
-    std::shared_ptr<ModelDX> m_model;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
     std::vector<std::shared_ptr<TestObject>> m_pObjects;

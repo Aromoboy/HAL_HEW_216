@@ -46,7 +46,7 @@ public:
 
 	~AssimpModelLorder();
 
-	virtual std::shared_ptr<ModelDX> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
+    virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
 
 private:
 	
