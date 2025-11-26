@@ -45,11 +45,3 @@ namespace Entities
     };
 }
 
-// Backward compatibility: allow legacy SceneSpace namespace to reference the
-// new Entities implementation to avoid mismatches between old and new header
-// paths.
-namespace SceneSpace
-{
-    using Entity = Entities::Entity;
-}
-

@@ -16,7 +16,7 @@ namespace Core
 
 namespace Stage
 {
-    class FoundationPlatform : public SceneSpace::PhysicalEntity
+    class FoundationPlatform : public Entities::PhysicalEntity
     {
     public:
         FoundationPlatform(const std::string& tag,

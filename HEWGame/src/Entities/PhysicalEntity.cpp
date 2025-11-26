@@ -33,9 +33,9 @@ namespace Entities
     }
 }
 
-namespace SceneSpace
+namespace Entities
 {
-    void TranslatePhysicalEntity(Entities::PhysicalEntity& entity, const float3& delta)
+    void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
     {
         entity.ApplyTranslation(delta);
     }

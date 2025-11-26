@@ -73,7 +73,7 @@ namespace
                 }
         }
 
-        bool IsPlayerBody(const SceneSpace::PhysicalEntity* body)
+        bool IsPlayerBody(const Entities::PhysicalEntity* body)
         {
                 return body && body->GetTag() == "player";
         }
@@ -139,7 +139,7 @@ namespace Systems
         {
         }
 
-        void ContactLiteSystem::SetBodySource(const std::vector<SceneSpace::PhysicalEntity*>* bodies)
+        void ContactLiteSystem::SetBodySource(const std::vector<Entities::PhysicalEntity*>* bodies)
         {
                 m_bodies = bodies;
                 m_loggedMissingBodyList = false;
@@ -200,7 +200,7 @@ namespace Systems
                 }
 
                 const size_t bodyCount = m_bodies->size();
-                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](SceneSpace::PhysicalEntity* body)
+                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](Entities::PhysicalEntity* body)
                 {
                         return IsPlayerBody(body);
                 });
@@ -233,7 +233,7 @@ namespace Systems
 
                 for (size_t i = 0; i < bodyCount; ++i)
                 {
-                        SceneSpace::PhysicalEntity* bodyA = (*m_bodies)[i];
+                        Entities::PhysicalEntity* bodyA = (*m_bodies)[i];
                         if (!bodyA)
                         {
                                 continue;
@@ -251,7 +251,7 @@ namespace Systems
 
                         for (size_t j = i + 1; j < bodyCount; ++j)
                         {
-                                SceneSpace::PhysicalEntity* bodyB = (*m_bodies)[j];
+                                Entities::PhysicalEntity* bodyB = (*m_bodies)[j];
                                 if (!bodyB)
                                 {
                                         continue;
@@ -294,7 +294,7 @@ namespace Systems
                                 const bool playerPair = IsPlayerBody(bodyA) || IsPlayerBody(bodyB);
                                 if (playerPair)
                                 {
-                                        SceneSpace::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
+                                        Entities::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
                                         if (other)
                                         {
                                                 const std::string& otherTag = other->GetTag();
@@ -506,8 +506,8 @@ namespace Systems
                                         translationB.z = 0.0f;
                                 }
 
-                                SceneSpace::TranslatePhysicalEntity(*bodyA, translationA);
-                                SceneSpace::TranslatePhysicalEntity(*bodyB, translationB);
+                                Entities::TranslatePhysicalEntity(*bodyA, translationA);
+                                Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {

@@ -14,7 +14,7 @@ namespace Systems
         ContactLiteSystem();
         ~ContactLiteSystem() override = default;
 
-        void SetBodySource(const std::vector<SceneSpace::PhysicalEntity*>* bodies);
+        void SetBodySource(const std::vector<Entities::PhysicalEntity*>* bodies);
         void SetPenetrationTolerance(float tolerance);
         void SetRestitution(float restitution);
         void SetStableSupportThreshold(float threshold);
@@ -30,7 +30,7 @@ namespace Systems
         void OnUpdate(Core::UpdateContext& ctx) override;
 
     private:
-        const std::vector<SceneSpace::PhysicalEntity*>* m_bodies;
+        const std::vector<Entities::PhysicalEntity*>* m_bodies;
         float m_penetrationTolerance;
         float m_restitution;
         float m_stableSupportThreshold;
