@@ -4,17 +4,12 @@
 
 #include "BaseCamera.h"
 #include "Core/UpdateNode.h"
-#include "Entity.h"
+#include "Entities/Entity.h"
 #include "Vector.h"
 
-namespace SceneSpace
-{
-        class Entity;
-}
-
 class CameraRig : public Core::UpdateNode
-// Entity ‚ğƒtƒ‹’è‹`‚É‡‚í‚¹‚½‚Ì‚ÅAƒJƒƒ‰‚Ìƒ^[ƒQƒbƒg‚âƒAƒ“ƒJ[‚ğ
-// ’¼ÚQÆ‚Å‚«‚é‚æ‚¤‚É‚È‚Á‚½BTransform ‚ğ’Ê‚µ‚ÄˆÊ’uæ“¾‚ª‚Å‚«‚é
+// Entity ã‚’ãƒ•ãƒ«å®šç¾©ã«åˆã‚ã›ãŸã®ã§ã€ã‚«ãƒ¡ãƒ©ã®ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã‚„ã‚¢ãƒ³ã‚«ãƒ¼ã‚’
+// ç›´æ¥å‚ç…§ã§ãã‚‹ã‚ˆã†ã«ãªã£ãŸã€‚Transform ã‚’é€šã—ã¦ä½ç½®å–å¾—ãŒã§ãã‚‹
 
 {
 public:

@@ -13,8 +13,8 @@
 #endif
 
 #include "Core/IUpdatable.h"
-#include "Entity.h"
-#include "CollisionEntity.h"
+#include "Entities/Entity.h"
+#include "Entities/CollisionEntity.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
@@ -320,7 +320,7 @@ namespace Systems
 
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
-                // •`‰æ
+                // Â•`Â‰Ã¦
 
                 DirectX::XMFLOAT3 leftup, rightup, leftdown, rightdown;
 

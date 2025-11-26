@@ -1,12 +1,12 @@
 #ifndef ___PLAYER_H___
 #define ___PLAYER_H___
 
-#include "CollisionEntity.h"
+#include "Entities/CollisionEntity.h"
 #include "Input.h"
 #include "ICamera.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include <memory>
 #include <optional>
 #include <vector>

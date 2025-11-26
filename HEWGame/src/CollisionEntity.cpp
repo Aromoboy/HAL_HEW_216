@@ -1,5 +1,5 @@
 // CollisionEntity.cpp
-#include "CollisionEntity.h"
+#include "Entities/CollisionEntity.h"
 
 #include <sstream>
 #include <utility>
