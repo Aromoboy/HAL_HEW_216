@@ -875,7 +875,7 @@ SceneGame::SceneGame()
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
     player = std::make_unique<Entities::Player>(
         Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
-        nullptr,
+        std::shared_ptr<ModelDX>{},
         collider,
         Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
         m_physicsMachine.get(),
