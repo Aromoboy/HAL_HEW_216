@@ -41,8 +41,8 @@ namespace Core
                 Input& input;
                 SceneSpace::Scene* scene;
 
-                UpdateContext(float deltaSeconds, StepTimer& timerRef, Input& inputRef, SceneSpace::Scene* owner)
-                        : dt(deltaSeconds)
+                UpdateContext(float deltaTime, StepTimer& timerRef, Input& inputRef, SceneSpace::Scene* owner)
+                        : dt(deltaTime)
                         , timer(timerRef)
                         , input(inputRef)
                         , scene(owner)
