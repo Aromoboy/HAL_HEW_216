@@ -199,6 +199,7 @@
     <ClCompile Include="src\Entities\CollisionEntity.cpp" />
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
+    <ClCompile Include="src\Entities\Player.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\Scene\PlayScene.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
