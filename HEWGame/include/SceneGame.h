@@ -52,11 +52,6 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-namespace SceneSpace
-{
-    class Player;
-}
-
 class SceneGame : public SceneSpace::Scene
 {
 public:
