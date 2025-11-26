@@ -52,7 +52,7 @@ Scene::Scene()
                         m_isConfigured = true;
                 }
 
-                const float deltaTime = timer.DeltaSeconds();
+                const float deltaTime = timer.DeltaTime();
                 Core::UpdateContext ctx(deltaTime, timer, input, this);
 
                 Update(ctx);
