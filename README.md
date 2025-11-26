@@ -85,6 +85,14 @@ namespace Core {
     Confirm
     Cancel
     Pause
+    Retry
+    DebugConsole
+    CameraToggle
+    CameraHeightToggle
+    SpeedBoost
+    SpeedReset
+    ColliderNudgeUp
+    ColliderNudgeDown
   }
   class Binding["Core::Binding"] { <<struct>>
     key:int

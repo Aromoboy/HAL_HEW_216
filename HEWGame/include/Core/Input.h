@@ -48,8 +48,15 @@ namespace Core
                 void OnUpdate(UpdateContext& ctx) override;
 
                 float GetAxis(ActionId action) const;
+                bool IsPress(ActionId action) const;
+                bool IsTrigger(ActionId action) const;
+                bool IsRelease(ActionId action) const;
                 bool IsAction(ActionId action) const;
                 void Rebind(ActionId action, const Binding& binding);
+
+                bool IsPress(int vk) const;
+                bool IsTrigger(int vk) const;
+                bool IsRelease(int vk) const;
 
         private:
                 void PollKeyboardState();

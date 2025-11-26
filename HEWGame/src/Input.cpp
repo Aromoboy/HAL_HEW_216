@@ -1,5 +1,7 @@
 #include "Core/Input.h"
 
+#include <sstream>
+
 namespace
 {
         constexpr BYTE kKeyPressedMask = 0x80;
@@ -118,9 +120,32 @@ namespace Core
                 return m_map.GetAxis(action, *this, m_pad);
         }
 
+        bool Input::IsPress(ActionId action) const
+        {
+                return m_map.IsPressed(action, *this, m_pad);
+        }
+
+        bool Input::IsTrigger(ActionId action) const
+        {
+                const auto state = m_map.GetState(action, *this, m_pad);
+                if (state.current && !state.previous)
+                {
+                        std::ostringstream oss;
+                        oss << "[Core::Input] Triggered action " << static_cast<int>(action) << "\n";
+                        OutputDebugStringA(oss.str().c_str());
+                }
+                return state.current && !state.previous;
+        }
+
+        bool Input::IsRelease(ActionId action) const
+        {
+                const auto state = m_map.GetState(action, *this, m_pad);
+                return !state.current && state.previous;
+        }
+
         bool Input::IsAction(ActionId action) const
         {
-                return m_map.Is(action, *this, m_pad);
+                return IsTrigger(action);
         }
 
         void Input::Rebind(ActionId action, const Binding& binding)
@@ -150,6 +175,21 @@ namespace Core
         bool Input::WasKeyDown(BYTE key) const
         {
                 return (m_previousKeys[key] & kKeyPressedMask) != 0;
+        }
+
+        bool Input::IsPress(int vk) const
+        {
+                return IsKeyDown(static_cast<BYTE>(vk));
+        }
+
+        bool Input::IsTrigger(int vk) const
+        {
+                return IsKeyDown(static_cast<BYTE>(vk)) && !WasKeyDown(static_cast<BYTE>(vk));
+        }
+
+        bool Input::IsRelease(int vk) const
+        {
+                return !IsKeyDown(static_cast<BYTE>(vk)) && WasKeyDown(static_cast<BYTE>(vk));
         }
 }
 
