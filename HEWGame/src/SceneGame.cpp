@@ -1209,12 +1209,12 @@ if (m_timeUp)
             ::DebugTrace(oss.str());
         };
 
-        if (input.IsAction(Core::ActionId::SpeedBoost))
+        if (input.IsTrigger(Core::ActionId::SpeedBoost))
         {
             adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
         }
 
-        if (input.IsAction(Core::ActionId::SpeedReset))
+        if (input.IsTrigger(Core::ActionId::SpeedReset))
         {
             adjustMoveSpeed(1.0f, "Reset key '2'");
         }
@@ -1250,11 +1250,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
-        if (input.IsAction(Core::ActionId::ColliderNudgeUp))
+        if (input.IsTrigger(Core::ActionId::ColliderNudgeUp))
         {
                 delta.y += kDebugNudge;
         }
-        if (input.IsAction(Core::ActionId::ColliderNudgeDown))
+        if (input.IsTrigger(Core::ActionId::ColliderNudgeDown))
         {
                 delta.y -= kDebugNudge;
         }
@@ -1793,7 +1793,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     }
 
     Core::Input& input = ctx.input;
-    if (input.IsAction(Core::ActionId::Confirm))
+    if (input.IsTrigger(Core::ActionId::Confirm))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
@@ -1803,7 +1803,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (input.IsAction(Core::ActionId::Retry))
+    if (input.IsTrigger(Core::ActionId::Retry))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
@@ -1819,7 +1819,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (!ctx.input.IsAction(Core::ActionId::Retry))
+    if (!ctx.input.IsTrigger(Core::ActionId::Retry))
     {
         return;
     }

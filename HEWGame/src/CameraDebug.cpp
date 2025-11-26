@@ -15,7 +15,7 @@ METER(1000.0f));
 
 void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
-if (ctx.input.IsAction(Core::ActionId::CameraToggle))
+if (ctx.input.IsTrigger(Core::ActionId::CameraToggle))
 {
 bIsMove = !bIsMove;
 }

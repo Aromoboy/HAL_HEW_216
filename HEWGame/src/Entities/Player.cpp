@@ -448,13 +448,13 @@ namespace Entities
     {
         Core::Input& input = ctx.input;
 
-        if (input.IsAction(Core::ActionId::Drop) && !m_carrieds.empty())
+        if (input.IsTrigger(Core::ActionId::Drop) && !m_carrieds.empty())
         {
             DropCarriedSweets();
             return;
         }
 
-        if (input.IsAction(Core::ActionId::Confirm) && m_carrieds.size() < m_maxCarry)
+        if (input.IsTrigger(Core::ActionId::Confirm) && m_carrieds.size() < m_maxCarry)
         {
             TryPickupNearest();
         }

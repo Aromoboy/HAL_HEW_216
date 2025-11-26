@@ -114,7 +114,7 @@ namespace Core
         return std::clamp(axisValue, -1.0f, 1.0f);
     }
 
-    bool InputMap::Is(ActionId action, const Input& input, const Gamepad& gamepad) const
+    InputMap::ActionState InputMap::GetState(ActionId action, const Input& input, const Gamepad& gamepad) const
     {
         bool current = false;
         bool previous = false;
@@ -123,7 +123,7 @@ namespace Core
         {
             if (binding->key != 0)
             {
-                current |= input.IsKeyDown(static_cast<BYTE>(binding->key));
+                current |= input.IsPress(binding->key);
                 previous |= input.WasKeyDown(static_cast<BYTE>(binding->key));
             }
 
@@ -146,12 +146,35 @@ namespace Core
         {
             for (unsigned char key : extra->second)
             {
-                current |= input.IsKeyDown(key);
+                current |= input.IsPress(key);
                 previous |= input.WasKeyDown(key);
             }
         }
 
-        return current && !previous;
+        return ActionState{ current, previous };
+    }
+
+    bool InputMap::IsPressed(ActionId action, const Input& input, const Gamepad& gamepad) const
+    {
+        return GetState(action, input, gamepad).current;
+    }
+
+    bool InputMap::WasPressed(ActionId action, const Input& input, const Gamepad& gamepad) const
+    {
+        return GetState(action, input, gamepad).previous;
+    }
+
+    bool InputMap::Is(ActionId action, const Input& input, const Gamepad& gamepad) const
+    {
+        const auto state = GetState(action, input, gamepad);
+        if (state.current && !state.previous)
+        {
+            std::ostringstream oss;
+            oss << "[Core::InputMap] Trigger state resolved for action " << ToString(action)
+                << " (" << static_cast<int>(action) << ")\n";
+            OutputDebugStringA(oss.str().c_str());
+        }
+        return state.current && !state.previous;
     }
 
     void InputMap::Rebind(ActionId action, const Binding& binding)
@@ -204,6 +227,28 @@ namespace Core
         default: value = 0.0f; break;
         }
         return value * sign;
+    }
+
+    const char* InputMap::ToString(ActionId action)
+    {
+        switch (action)
+        {
+        case ActionId::MoveX: return "MoveX";
+        case ActionId::RotateYaw: return "RotateYaw";
+        case ActionId::Drop: return "Drop";
+        case ActionId::Confirm: return "Confirm";
+        case ActionId::Cancel: return "Cancel";
+        case ActionId::Pause: return "Pause";
+        case ActionId::Retry: return "Retry";
+        case ActionId::DebugConsole: return "DebugConsole";
+        case ActionId::CameraToggle: return "CameraToggle";
+        case ActionId::CameraHeightToggle: return "CameraHeightToggle";
+        case ActionId::SpeedBoost: return "SpeedBoost";
+        case ActionId::SpeedReset: return "SpeedReset";
+        case ActionId::ColliderNudgeUp: return "ColliderNudgeUp";
+        case ActionId::ColliderNudgeDown: return "ColliderNudgeDown";
+        default: return "Unknown";
+        }
     }
 }
 
