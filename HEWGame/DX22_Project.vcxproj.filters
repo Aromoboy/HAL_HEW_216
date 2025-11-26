@@ -59,6 +59,7 @@
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\_geometory.cpp" />
     <ClCompile Include="src\_model.cpp" />
+    <ClCompile Include="src\Entities\Player.cpp" />
     <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\GravityDampingSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
