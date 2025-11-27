@@ -34,6 +34,50 @@ namespace
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
 
+        struct ContactNormalClassification
+        {
+                float3 normal{ 0.0f, 0.0f, 0.0f };
+                bool isGround{ false };
+        };
+
+        ContactNormalClassification ClassifyContactNormal(float3 normal, float maxSlopeCos)
+        {
+                ContactNormalClassification classification{};
+
+                const float lenSq = normal.x * normal.x + normal.y * normal.y;
+                if (lenSq <= 1e-6f)
+                {
+                        return classification;
+                }
+
+                const float invLen = 1.0f / std::sqrt(lenSq);
+                normal.x *= invLen;
+                normal.y *= invLen;
+
+                const float slopeThreshold = std::clamp(maxSlopeCos, 0.0f, 1.0f);
+                const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
+
+                classification.isGround = verticalComponent >= slopeThreshold;
+                if (classification.isGround)
+                {
+                        const float originalX = normal.x;
+                        normal.x = 0.0f;
+                        normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
+#if defined(_DEBUG)
+                        if (std::fabs(originalX) > 1e-4f)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Snapped near-vertical normal to Y axis for stability."
+                                        << " slopeThreshold=" << slopeThreshold << '\n';
+                                DebugTrace(oss.str());
+                        }
+#endif
+                }
+
+                classification.normal = normal;
+                return classification;
+        }
+
         bool Is2DCollider(const Collision::ICollider* collider)
         {
                 return dynamic_cast<const Collision::ICollider2D*>(collider) != nullptr;
@@ -502,6 +546,13 @@ namespace Systems
                                         contactNormal.y = -contactNormal.y;
                                 }
 
+                                const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_maxSlopeCos);
+                                contactNormal = classification.normal;
+                                if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
+                                {
+                                        continue;
+                                }
+
                                 float pushDistance = contactPenetration + m_penetrationTolerance;
                                 if (pushDistance <= 0.0f)
                                 {
@@ -515,9 +566,7 @@ namespace Systems
                                 float slideDir = 0.0f;
                                 float verticalResolutionScale = 1.0f;
 
-                                const float slopeThreshold = std::clamp(m_maxSlopeCos, 0.0f, 1.0f);
-                                const float supportCosine = std::fabs(contactNormal.y);
-                                const bool treatedAsSupport = supportCosine + 1e-4f >= slopeThreshold;
+                                const bool treatedAsSupport = classification.isGround;
                                 if (treatedAsSupport)
                                 {
                                         const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
@@ -790,7 +839,9 @@ namespace Systems
                                         if (tangentLenSq > 1e-6f)
                                         {
                                                 const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                                if (std::fabs(relativeTangentialVelocity) <= m_staticFriction)
+                                                const bool allowStaticFriction = classification.isGround;
+                                                const bool withinStaticThreshold = std::fabs(relativeTangentialVelocity) <= m_staticFriction;
+                                                if (allowStaticFriction && withinStaticThreshold)
                                                 {
                                                         const float sharedVelocity = (bodyAStatic && bodyBStatic)
                                                                 ? 0.0f
@@ -817,6 +868,18 @@ namespace Systems
                                                 }
                                                 else
                                                 {
+                                                        if (!allowStaticFriction && withinStaticThreshold)
+                                                        {
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction suppressed for steep contact between '"
+                                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
+                                                                        << "' |n.y|=" << std::fabs(contactNormal.y)
+                                                                        << " threshold=" << m_maxSlopeCos
+                                                                        << " relativeTangentialVelocity=" << relativeTangentialVelocity << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
                                                         const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
                                                         if (!bodyAStatic)
                                                         {
@@ -859,6 +922,7 @@ namespace Systems
                                                 oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
                                                         << ")";
                                         }
+                                        oss << " ground=" << (classification.isGround ? "yes" : "no");
                                         oss << "\n";
                                         DebugTrace(oss.str());
                                 }
