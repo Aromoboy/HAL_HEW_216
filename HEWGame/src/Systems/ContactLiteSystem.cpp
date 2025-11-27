@@ -128,6 +128,10 @@ namespace Systems
                 , m_bodies(nullptr)
                 , m_penetrationTolerance(0.01f)
                 , m_restitution(0.15f)
+                , m_staticFriction(0.8f)
+                , m_dynamicFriction(0.65f)
+                , m_maxSlopeCos(1.0f)
+                , m_maxRestitutionVelocity(25.0f)
                 , m_stableSupportThreshold(0.35f)
                 , m_edgeSlideBoost(0.25f)
                 , m_unstableVerticalDamping(0.35f)
@@ -175,6 +179,22 @@ namespace Systems
                 m_restitution = std::clamp(restitution, 0.0f, 1.0f);
         }
 
+        void ContactLiteSystem::SetFriction(float staticCoeff, float dynamicCoeff)
+        {
+                m_staticFriction = std::max(0.0f, staticCoeff);
+                m_dynamicFriction = std::max(0.0f, dynamicCoeff);
+        }
+
+        void ContactLiteSystem::SetMaxSlopeCos(float maxSlopeCos)
+        {
+                m_maxSlopeCos = std::clamp(maxSlopeCos, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetMaxRestitutionVelocity(float maxRestitutionVelocity)
+        {
+                m_maxRestitutionVelocity = std::max(0.0f, maxRestitutionVelocity);
+        }
+
         void ContactLiteSystem::SetStableSupportThreshold(float threshold)
         {
                 m_stableSupportThreshold = std::clamp(threshold, 0.0f, 1.0f);
@@ -192,8 +212,6 @@ namespace Systems
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
         {
-                (void)ctx;
-
                 if (!m_bodies)
                 {
                         if (!m_loggedMissingBodyList)
@@ -566,6 +584,24 @@ namespace Systems
                                         }
 
                                         float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
+                                        const float relativeSpeed = std::fabs(relativeVelocity);
+                                        if (m_maxRestitutionVelocity > 0.0f && relativeSpeed > m_maxRestitutionVelocity)
+                                        {
+                                                const float clampedImpulse = -(relativeVelocity / activeBodyCount);
+#if defined(_DEBUG)
+                                                if (relativeSpeed > 0.0f)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Restitution capped for pair '" << bodyA->GetTag()
+                                                                << "' vs '" << bodyB->GetTag()
+                                                                << "' relativeSpeed=" << relativeSpeed
+                                                                << " limit=" << m_maxRestitutionVelocity
+                                                                << " impulse=" << impulse << " -> " << clampedImpulse << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+                                                impulse = clampedImpulse;
+                                        }
                                         if (axis == 1 && sweetsSupportPair && unstableSupport)
                                         {
                                                 const float previousImpulse = impulse;
@@ -615,10 +651,10 @@ namespace Systems
                                                 {
                                                         *velA = 0.0f;
 #if defined(_DEBUG)
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
-                                                    << "' from " << previousVelocity << " due to static contact.\n";
-                                                DebugTrace(oss.str());
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyA->GetTag()
+                                                            << "' from " << previousVelocity << " due to static contact.\n";
+                                                        DebugTrace(oss.str());
 #endif
                                                 }
                                         }
@@ -645,10 +681,67 @@ namespace Systems
                                                 {
                                                         *velB = 0.0f;
 #if defined(_DEBUG)
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
-                                                    << "' from " << previousVelocity << " due to static contact.\n";
-                                                DebugTrace(oss.str());
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Vertical velocity clamped for body '" << bodyB->GetTag()
+                                                            << "' from " << previousVelocity << " due to static contact.\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                        }
+
+                                        const float relativeHorizontalVelocity = physA.velocity.x - physB.velocity.x;
+                                        const float slopeThreshold = std::clamp(m_maxSlopeCos, 0.0f, 1.0f);
+                                        const float supportCosine = (axis == 1) ? 1.0f : 0.0f;
+                                        const bool treatedAsSupport = supportCosine + 1e-4f >= slopeThreshold;
+                                        if (treatedAsSupport)
+                                        {
+                                                if (std::fabs(relativeHorizontalVelocity) <= m_staticFriction)
+                                                {
+                                                        const float sharedVelocity = (bodyAStatic && bodyBStatic)
+                                                                ? 0.0f
+                                                                : (physA.velocity.x + physB.velocity.x) * 0.5f;
+                                                        if (!bodyAStatic)
+                                                        {
+                                                                physA.velocity.x = sharedVelocity;
+                                                        }
+                                                        if (!bodyBStatic)
+                                                        {
+                                                                physB.velocity.x = sharedVelocity;
+                                                        }
+#if defined(_DEBUG)
+                                                        {
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction applied to pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' relativeHorizontalVelocity=" << relativeHorizontalVelocity
+                                                                        << " threshold=" << m_staticFriction
+                                                                        << " sharedVelocity=" << sharedVelocity << "\n";
+                                                                DebugTrace(oss.str());
+                                                        }
+#endif
+                                                }
+                                                else
+                                                {
+                                                        const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
+                                                        if (!bodyAStatic)
+                                                        {
+                                                                physA.velocity.x *= frictionScale;
+                                                        }
+                                                        if (!bodyBStatic)
+                                                        {
+                                                                physB.velocity.x *= frictionScale;
+                                                        }
+#if defined(_DEBUG)
+                                                        {
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Dynamic friction applied to pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' scale=" << frictionScale
+                                                                        << " static=" << bodyAStatic << '/' << bodyBStatic
+                                                                        << " velocityA=" << physA.velocity.x
+                                                                        << " velocityB=" << physB.velocity.x << "\n";
+                                                                DebugTrace(oss.str());
+                                                        }
 #endif
                                                 }
                                         }
@@ -687,7 +780,12 @@ namespace Systems
                         std::ostringstream oss;
                         oss << kLogPrefix << "Resolved " << resolvedPairs << " overlaps out of "
                             << testedPairs << " tested pairs. tolerance=" << m_penetrationTolerance
-                            << ", restitution=" << m_restitution << "\n";
+                            << ", restitution=" << m_restitution
+                            << ", staticFriction=" << m_staticFriction
+                            << ", dynamicFriction=" << m_dynamicFriction
+                            << ", slopeCosLimit=" << m_maxSlopeCos
+                            << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
+                            << "\n";
                         DebugTrace(oss.str());
                 }
 #endif

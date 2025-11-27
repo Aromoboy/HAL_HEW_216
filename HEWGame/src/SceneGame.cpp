@@ -91,6 +91,10 @@ namespace
             float damping = 0.98f;
             float penetrationTolerance = 0.01f;
             float restitution = 0.15f;
+            float frictionStatic = 0.8f;
+            float frictionDynamic = 0.65f;
+            float maxSlopeCos = 1.0f;
+            float maxRestitutionVelocity = 25.0f;
         };
 
         std::string TrimWhitespace(const std::string& input)
@@ -124,7 +128,12 @@ namespace
                     << "'. Using defaults (gravity=" << settings.gravity
                     << ", damping=" << settings.damping
                     << ", penetrationTolerance=" << settings.penetrationTolerance
-                    << ", restitution=" << settings.restitution << ").\n";
+                    << ", restitution=" << settings.restitution
+                    << ", frictionStatic=" << settings.frictionStatic
+                    << ", frictionDynamic=" << settings.frictionDynamic
+                    << ", maxSlopeCos=" << settings.maxSlopeCos
+                    << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                    << ").\n";
                 ::DebugTrace(oss.str());
                 return settings;
             }
@@ -180,6 +189,22 @@ namespace
                     {
                         settings.restitution = std::clamp(std::stof(value), 0.0f, 1.0f);
                     }
+                    else if (key == "frictionStatic")
+                    {
+                        settings.frictionStatic = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "frictionDynamic")
+                    {
+                        settings.frictionDynamic = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "maxSlopeCos")
+                    {
+                        settings.maxSlopeCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "maxRestitutionVelocity")
+                    {
+                        settings.maxRestitutionVelocity = std::max(0.0f, std::stof(value));
+                    }
                     else
                     {
                         std::ostringstream oss;
@@ -202,7 +227,12 @@ namespace
                 << "' (gravity=" << settings.gravity
                 << ", damping=" << settings.damping
                 << ", penetrationTolerance=" << settings.penetrationTolerance
-                << ", restitution=" << settings.restitution << ").\n";
+                << ", restitution=" << settings.restitution
+                << ", frictionStatic=" << settings.frictionStatic
+                << ", frictionDynamic=" << settings.frictionDynamic
+                << ", maxSlopeCos=" << settings.maxSlopeCos
+                << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                << ").\n";
             ::DebugTrace(oss.str());
             return settings;
         }
@@ -613,6 +643,18 @@ SceneGame::SceneGame()
     {
         m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
         m_contactSystem->SetRestitution(tuning.restitution);
+        m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
+        m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
+        m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
+        std::ostringstream oss;
+        oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
+            << ", restitution=" << tuning.restitution
+            << ", frictionStatic=" << tuning.frictionStatic
+            << ", frictionDynamic=" << tuning.frictionDynamic
+            << ", maxSlopeCos=" << tuning.maxSlopeCos
+            << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
+            << ").\n";
+        ::DebugTrace(oss.str());
     }
 
     if (m_drawSystem)

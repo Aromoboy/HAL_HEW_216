@@ -17,12 +17,19 @@ namespace Systems
         void SetBodySource(const std::vector<Entities::PhysicalEntity*>* bodies);
         void SetPenetrationTolerance(float tolerance);
         void SetRestitution(float restitution);
+        void SetFriction(float staticCoeff, float dynamicCoeff);
+        void SetMaxSlopeCos(float maxSlopeCos);
+        void SetMaxRestitutionVelocity(float maxRestitutionVelocity);
         void SetStableSupportThreshold(float threshold);
         void SetEdgeSlideBoost(float boost);
         void SetUnstableVerticalDamping(float damping);
 
         float GetPenetrationTolerance() const { return m_penetrationTolerance; }
         float GetRestitution() const { return m_restitution; }
+        float GetStaticFriction() const { return m_staticFriction; }
+        float GetDynamicFriction() const { return m_dynamicFriction; }
+        float GetMaxSlopeCos() const { return m_maxSlopeCos; }
+        float GetMaxRestitutionVelocity() const { return m_maxRestitutionVelocity; }
         float GetStableSupportThreshold() const { return m_stableSupportThreshold; }
         float GetEdgeSlideBoost() const { return m_edgeSlideBoost; }
         float GetUnstableVerticalDamping() const { return m_unstableVerticalDamping; }
@@ -33,6 +40,10 @@ namespace Systems
         const std::vector<Entities::PhysicalEntity*>* m_bodies;
         float m_penetrationTolerance;
         float m_restitution;
+        float m_staticFriction;
+        float m_dynamicFriction;
+        float m_maxSlopeCos;
+        float m_maxRestitutionVelocity;
         float m_stableSupportThreshold;
         float m_edgeSlideBoost;
         float m_unstableVerticalDamping;
