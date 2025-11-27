@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <DirectXMath.h>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -33,6 +34,41 @@ namespace
 
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
+
+        struct ContactClassification
+        {
+                DirectX::XMFLOAT3 normal{};
+                bool isGround = false;
+                bool isVerticalSnapped = false;
+        };
+
+        ContactClassification ClassifyContactNormal(
+                const DirectX::XMFLOAT3& inNormal,
+                float verticalSnapCos,
+                float groundMinCos)
+        {
+                ContactClassification result{};
+                result.normal = inNormal;
+
+                DirectX::XMVECTOR n = DirectX::XMLoadFloat3(&result.normal);
+                n = DirectX::XMVector3Normalize(n);
+                DirectX::XMStoreFloat3(&result.normal, n);
+
+                float ny = result.normal.y;
+                float absNy = std::fabs(ny);
+
+                if (absNy >= verticalSnapCos)
+                {
+                        result.normal.x = 0.0f;
+                        result.normal.z = 0.0f;
+                        result.normal.y = (ny >= 0.0f) ? 1.0f : -1.0f;
+                        result.isVerticalSnapped = true;
+                        absNy = 1.0f;
+                }
+
+                result.isGround = (absNy >= groundMinCos);
+                return result;
+        }
 
         bool Is2DCollider(const Collision::ICollider* collider)
         {
@@ -154,6 +190,13 @@ namespace Systems
                 , m_stableSupportThreshold(0.35f)
                 , m_edgeSlideBoost(0.25f)
                 , m_unstableVerticalDamping(0.35f)
+                , m_verticalSnapCos(0.96f)
+                , m_groundMinCos(0.85f)
+                , m_baumgarteFactor(0.2f)
+                , m_maxPenetrationCorrection(0.5f)
+                , m_minLinearSpeed(0.03f)
+                , m_minVerticalSpeed(0.02f)
+                , m_minTangentialSpeed(0.02f)
                 , m_loggedMissingBodyList(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
@@ -227,6 +270,41 @@ namespace Systems
         void ContactLiteSystem::SetUnstableVerticalDamping(float damping)
         {
                 m_unstableVerticalDamping = std::clamp(damping, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetVerticalSnapCos(float verticalSnapCos)
+        {
+                m_verticalSnapCos = std::clamp(verticalSnapCos, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetGroundMinCos(float groundMinCos)
+        {
+                m_groundMinCos = std::clamp(groundMinCos, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetBaumgarteFactor(float factor)
+        {
+                m_baumgarteFactor = std::max(0.0f, factor);
+        }
+
+        void ContactLiteSystem::SetMaxPenetrationCorrection(float maxCorrection)
+        {
+                m_maxPenetrationCorrection = std::max(0.0f, maxCorrection);
+        }
+
+        void ContactLiteSystem::SetMinLinearSpeed(float speed)
+        {
+                m_minLinearSpeed = std::max(0.0f, speed);
+        }
+
+        void ContactLiteSystem::SetMinVerticalSpeed(float speed)
+        {
+                m_minVerticalSpeed = std::max(0.0f, speed);
+        }
+
+        void ContactLiteSystem::SetMinTangentialSpeed(float speed)
+        {
+                m_minTangentialSpeed = std::max(0.0f, speed);
         }
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -360,6 +438,8 @@ namespace Systems
                                 }
 
                                 const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
+                                const bool foundationContact = bodyA->GetTag().rfind("StageFoundation", 0) == 0
+                                        || bodyB->GetTag().rfind("StageFoundation", 0) == 0;
 
                                 const AABB boundsA = colliderA->GetAABB();
                                 const AABB boundsB = colliderB->GetAABB();
@@ -474,18 +554,25 @@ namespace Systems
                                         }
 
                                         contactPenetration = rawOverlap;
-
-                                        switch (axis)
+                                        if (foundationContact)
                                         {
-                                        case 0:
-                                                contactNormal = float3{ axisDir, 0.0f, 0.0f };
-                                                break;
-                                        case 1:
-                                                contactNormal = float3{ 0.0f, axisDir, 0.0f };
-                                                break;
-                                        default:
-                                                contactNormal = float3{ 0.0f, 0.0f, axisDir };
-                                                break;
+                                                const bool aAboveB = centerA.y >= centerB.y;
+                                                contactNormal = float3{ 0.0f, aAboveB ? 1.0f : -1.0f, 0.0f };
+                                        }
+                                        else
+                                        {
+                                                switch (axis)
+                                                {
+                                                case 0:
+                                                        contactNormal = float3{ axisDir, 0.0f, 0.0f };
+                                                        break;
+                                                case 1:
+                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
+                                                        break;
+                                                default:
+                                                        contactNormal = float3{ 0.0f, 0.0f, axisDir };
+                                                        break;
+                                                }
                                         }
                                         fallbackAABB = true;
                                 }
@@ -502,7 +589,33 @@ namespace Systems
                                         contactNormal.y = -contactNormal.y;
                                 }
 
-                                float pushDistance = contactPenetration + m_penetrationTolerance;
+                                const DirectX::XMFLOAT3 rawNormal{ contactNormal.x, contactNormal.y, contactNormal.z };
+                                const ContactClassification classified = ClassifyContactNormal(
+                                        rawNormal, m_verticalSnapCos, m_groundMinCos);
+                                contactNormal = float3{ classified.normal.x, classified.normal.y, classified.normal.z };
+
+                                const float postClassifyDot = contactNormal.x * separationVec.x + contactNormal.y * separationVec.y;
+                                if (postClassifyDot < 0.0f)
+                                {
+                                        contactNormal.x = -contactNormal.x;
+                                        contactNormal.y = -contactNormal.y;
+                                }
+
+                                const float absNy = std::fabs(contactNormal.y);
+                                const bool isTooSteep = (absNy < m_maxSlopeCos);
+                                const bool allowStaticFriction = !isTooSteep && classified.isGround;
+
+                                float correctionError = contactPenetration - m_penetrationTolerance;
+                                if (correctionError < 0.0f)
+                                {
+                                        correctionError = 0.0f;
+                                }
+
+                                float pushDistance = m_baumgarteFactor * correctionError;
+                                if (pushDistance > m_maxPenetrationCorrection)
+                                {
+                                        pushDistance = m_maxPenetrationCorrection;
+                                }
                                 if (pushDistance <= 0.0f)
                                 {
                                         continue;
@@ -515,9 +628,7 @@ namespace Systems
                                 float slideDir = 0.0f;
                                 float verticalResolutionScale = 1.0f;
 
-                                const float slopeThreshold = std::clamp(m_maxSlopeCos, 0.0f, 1.0f);
-                                const float supportCosine = std::fabs(contactNormal.y);
-                                const bool treatedAsSupport = supportCosine + 1e-4f >= slopeThreshold;
+                                const bool treatedAsSupport = allowStaticFriction;
                                 if (treatedAsSupport)
                                 {
                                         const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
@@ -789,19 +900,18 @@ namespace Systems
                                         const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
                                         if (tangentLenSq > 1e-6f)
                                         {
-                                                const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                                if (std::fabs(relativeTangentialVelocity) <= m_staticFriction)
+                                                const float invTangentLen = 1.0f / std::sqrt(tangentLenSq);
+                                                const float3 tangentDir{ tangent.x * invTangentLen, tangent.y * invTangentLen, 0.0f };
+                                                const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangentDir);
+                                                if (allowStaticFriction && std::fabs(relativeTangentialVelocity) < m_minTangentialSpeed)
                                                 {
-                                                        const float sharedVelocity = (bodyAStatic && bodyBStatic)
-                                                                ? 0.0f
-                                                                : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
                                                         if (!bodyAStatic)
                                                         {
-                                                                ApplyComponent(physA, tangent, sharedVelocity);
+                                                                ApplyComponent(physA, tangentDir, 0.0f);
                                                         }
                                                         if (!bodyBStatic)
                                                         {
-                                                                ApplyComponent(physB, tangent, sharedVelocity);
+                                                                ApplyComponent(physB, tangentDir, 0.0f);
                                                         }
 #if defined(_DEBUG)
                                                         {
@@ -809,8 +919,10 @@ namespace Systems
                                                                 oss << kLogPrefix << "Static friction applied to pair '"
                                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
                                                                         << "' relativeTangentialVelocity=" << relativeTangentialVelocity
-                                                                        << " threshold=" << m_staticFriction
-                                                                        << " sharedVelocity=" << sharedVelocity << "\n";
+                                                                        << " threshold=" << m_minTangentialSpeed
+                                                                        << " ground=" << (classified.isGround ? "yes" : "no")
+                                                                        << " steep=" << (isTooSteep ? "yes" : "no")
+                                                                        << "\n";
                                                                 DebugTrace(oss.str());
                                                         }
 #endif
@@ -820,13 +932,13 @@ namespace Systems
                                                         const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
                                                         if (!bodyAStatic)
                                                         {
-                                                                const float current = Project(physA.velocity, tangent);
-                                                                ApplyComponent(physA, tangent, current * frictionScale);
+                                                                const float current = Project(physA.velocity, tangentDir);
+                                                                ApplyComponent(physA, tangentDir, current * frictionScale);
                                                         }
                                                         if (!bodyBStatic)
                                                         {
-                                                                const float current = Project(physB.velocity, tangent);
-                                                                ApplyComponent(physB, tangent, current * frictionScale);
+                                                                const float current = Project(physB.velocity, tangentDir);
+                                                                ApplyComponent(physB, tangentDir, current * frictionScale);
                                                         }
 #if defined(_DEBUG)
                                                         {
@@ -835,15 +947,36 @@ namespace Systems
                                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
                                                                         << "' scale=" << frictionScale
                                                                         << " static=" << bodyAStatic << '/' << bodyBStatic
-                                                                        << " tangentVelocityA=" << Project(physA.velocity, tangent)
-                                                                        << " tangentVelocityB=" << Project(physB.velocity, tangent)
+                                                                        << " tangentVelocityA=" << Project(physA.velocity, tangentDir)
+                                                                        << " tangentVelocityB=" << Project(physB.velocity, tangentDir)
                                                                         << "\n";
                                                                 DebugTrace(oss.str());
                                                         }
 #endif
                                                 }
                                         }
-                                }
+                                        }
+
+                                const auto ClampSmall = [](float v, float eps)
+                                {
+                                        return (std::fabs(v) < eps) ? 0.0f : v;
+                                };
+
+                                const auto ApplyVelocityThresholds = [&](Physics::Physical& phys, bool treatTangential)
+                                {
+                                        if (phys.weight <= 0.0f)
+                                        {
+                                                return;
+                                        }
+
+                                        const float tangentialEps = treatTangential ? m_minTangentialSpeed : m_minLinearSpeed;
+                                        phys.velocity.x = ClampSmall(phys.velocity.x, tangentialEps);
+                                        phys.velocity.z = 0.0f;
+                                        phys.velocity.y = ClampSmall(phys.velocity.y, m_minVerticalSpeed);
+                                };
+
+                                ApplyVelocityThresholds(physA, allowStaticFriction && !bodyAStatic);
+                                ApplyVelocityThresholds(physB, allowStaticFriction && !bodyBStatic);
 
 #if defined(_DEBUG)
                                 {
@@ -853,7 +986,12 @@ namespace Systems
                                                 << " penetration=" << contactPenetration
                                                 << " pushDistance=" << pushDistance
                                                 << " usedSAT=" << (usedSAT ? "yes" : "no")
-                                                << " fallback=" << (fallbackAABB ? "yes" : "no");
+                                                << " fallback=" << (fallbackAABB ? "yes" : "no")
+                                                << " ground=" << (classified.isGround ? "yes" : "no")
+                                                << " snapped=" << (classified.isVerticalSnapped ? "yes" : "no")
+                                                << " steep=" << (isTooSteep ? "yes" : "no")
+                                                << " allowStaticFriction=" << (allowStaticFriction ? "yes" : "no")
+                                                << " correctionError=" << correctionError;
                                         if (usedSAT)
                                         {
                                                 oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
@@ -901,6 +1039,13 @@ if (physA.velocity.z != 0.0f)
                             << ", dynamicFriction=" << m_dynamicFriction
                             << ", slopeCosLimit=" << m_maxSlopeCos
                             << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
+                            << ", verticalSnapCos=" << m_verticalSnapCos
+                            << ", groundMinCos=" << m_groundMinCos
+                            << ", baumgarteFactor=" << m_baumgarteFactor
+                            << ", maxPenetrationCorrection=" << m_maxPenetrationCorrection
+                            << ", minLinearSpeed=" << m_minLinearSpeed
+                            << ", minVerticalSpeed=" << m_minVerticalSpeed
+                            << ", minTangentialSpeed=" << m_minTangentialSpeed
                             << "\n";
                         DebugTrace(oss.str());
                 }

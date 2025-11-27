@@ -23,6 +23,13 @@ namespace Systems
         void SetStableSupportThreshold(float threshold);
         void SetEdgeSlideBoost(float boost);
         void SetUnstableVerticalDamping(float damping);
+        void SetVerticalSnapCos(float verticalSnapCos);
+        void SetGroundMinCos(float groundMinCos);
+        void SetBaumgarteFactor(float factor);
+        void SetMaxPenetrationCorrection(float maxCorrection);
+        void SetMinLinearSpeed(float speed);
+        void SetMinVerticalSpeed(float speed);
+        void SetMinTangentialSpeed(float speed);
 
         float GetPenetrationTolerance() const { return m_penetrationTolerance; }
         float GetRestitution() const { return m_restitution; }
@@ -33,6 +40,13 @@ namespace Systems
         float GetStableSupportThreshold() const { return m_stableSupportThreshold; }
         float GetEdgeSlideBoost() const { return m_edgeSlideBoost; }
         float GetUnstableVerticalDamping() const { return m_unstableVerticalDamping; }
+        float GetVerticalSnapCos() const { return m_verticalSnapCos; }
+        float GetGroundMinCos() const { return m_groundMinCos; }
+        float GetBaumgarteFactor() const { return m_baumgarteFactor; }
+        float GetMaxPenetrationCorrection() const { return m_maxPenetrationCorrection; }
+        float GetMinLinearSpeed() const { return m_minLinearSpeed; }
+        float GetMinVerticalSpeed() const { return m_minVerticalSpeed; }
+        float GetMinTangentialSpeed() const { return m_minTangentialSpeed; }
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
@@ -47,6 +61,13 @@ namespace Systems
         float m_stableSupportThreshold;
         float m_edgeSlideBoost;
         float m_unstableVerticalDamping;
+        float m_verticalSnapCos;
+        float m_groundMinCos;
+        float m_baumgarteFactor;
+        float m_maxPenetrationCorrection;
+        float m_minLinearSpeed;
+        float m_minVerticalSpeed;
+        float m_minTangentialSpeed;
         bool m_loggedMissingBodyList;
         bool m_loggedPlayerPresence;
         bool m_loggedPlayerAbsence;

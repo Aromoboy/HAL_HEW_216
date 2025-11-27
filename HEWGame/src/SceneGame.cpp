@@ -95,6 +95,13 @@ namespace
             float frictionDynamic = 0.65f;
             float maxSlopeCos = 1.0f;
             float maxRestitutionVelocity = 25.0f;
+            float verticalSnapCos = 0.96f;
+            float groundMinCos = 0.85f;
+            float baumgarteFactor = 0.2f;
+            float maxPenetrationCorrection = 0.5f;
+            float minLinearSpeed = 0.03f;
+            float minVerticalSpeed = 0.02f;
+            float minTangentialSpeed = 0.02f;
         };
 
         std::string TrimWhitespace(const std::string& input)
@@ -205,6 +212,34 @@ namespace
                     {
                         settings.maxRestitutionVelocity = std::max(0.0f, std::stof(value));
                     }
+                    else if (key == "verticalSnapCos")
+                    {
+                        settings.verticalSnapCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "groundMinCos")
+                    {
+                        settings.groundMinCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "baumgarteFactor")
+                    {
+                        settings.baumgarteFactor = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "maxPenetrationCorrection")
+                    {
+                        settings.maxPenetrationCorrection = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minLinearSpeed")
+                    {
+                        settings.minLinearSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minVerticalSpeed")
+                    {
+                        settings.minVerticalSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minTangentialSpeed")
+                    {
+                        settings.minTangentialSpeed = std::max(0.0f, std::stof(value));
+                    }
                     else
                     {
                         std::ostringstream oss;
@@ -232,6 +267,13 @@ namespace
                 << ", frictionDynamic=" << settings.frictionDynamic
                 << ", maxSlopeCos=" << settings.maxSlopeCos
                 << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                << ", verticalSnapCos=" << settings.verticalSnapCos
+                << ", groundMinCos=" << settings.groundMinCos
+                << ", baumgarteFactor=" << settings.baumgarteFactor
+                << ", maxPenetrationCorrection=" << settings.maxPenetrationCorrection
+                << ", minLinearSpeed=" << settings.minLinearSpeed
+                << ", minVerticalSpeed=" << settings.minVerticalSpeed
+                << ", minTangentialSpeed=" << settings.minTangentialSpeed
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -646,6 +688,13 @@ SceneGame::SceneGame()
         m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
         m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
         m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
+        m_contactSystem->SetVerticalSnapCos(tuning.verticalSnapCos);
+        m_contactSystem->SetGroundMinCos(tuning.groundMinCos);
+        m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
+        m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
+        m_contactSystem->SetMinLinearSpeed(tuning.minLinearSpeed);
+        m_contactSystem->SetMinVerticalSpeed(tuning.minVerticalSpeed);
+        m_contactSystem->SetMinTangentialSpeed(tuning.minTangentialSpeed);
         std::ostringstream oss;
         oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
             << ", restitution=" << tuning.restitution
@@ -653,6 +702,13 @@ SceneGame::SceneGame()
             << ", frictionDynamic=" << tuning.frictionDynamic
             << ", maxSlopeCos=" << tuning.maxSlopeCos
             << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
+            << ", verticalSnapCos=" << tuning.verticalSnapCos
+            << ", groundMinCos=" << tuning.groundMinCos
+            << ", baumgarteFactor=" << tuning.baumgarteFactor
+            << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
+            << ", minLinearSpeed=" << tuning.minLinearSpeed
+            << ", minVerticalSpeed=" << tuning.minVerticalSpeed
+            << ", minTangentialSpeed=" << tuning.minTangentialSpeed
             << ").\n";
         ::DebugTrace(oss.str());
     }

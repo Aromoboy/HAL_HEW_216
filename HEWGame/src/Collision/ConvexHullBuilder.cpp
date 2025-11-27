@@ -164,7 +164,38 @@ namespace Collision
             return extracted;
         }
 
-        auto hull = ComputeConvexHull(extracted);
+        constexpr int kDirectionSamples = 8;
+        constexpr float kTwoPi = 6.28318530718f;
+        std::vector<float2> sampled;
+        sampled.reserve(static_cast<std::size_t>(kDirectionSamples));
+
+        for (int i = 0; i < kDirectionSamples; ++i)
+        {
+            const float angle = kTwoPi * static_cast<float>(i) / static_cast<float>(kDirectionSamples);
+            const float2 dir{ std::cos(angle), std::sin(angle) };
+
+            float bestDot = -std::numeric_limits<float>::infinity();
+            float2 bestPoint{};
+            bool hasBest = false;
+
+            for (const auto& v : extracted)
+            {
+                const float dot = v.x * dir.x + v.y * dir.y;
+                if (!hasBest || dot > bestDot)
+                {
+                    bestDot = dot;
+                    bestPoint = v;
+                    hasBest = true;
+                }
+            }
+
+            if (hasBest)
+            {
+                sampled.push_back(bestPoint);
+            }
+        }
+
+        auto hull = ComputeConvexHull(sampled);
         if (hull.size() > 1 && AlmostEqual(hull.front(), hull.back()))
         {
             hull.pop_back();
@@ -180,7 +211,8 @@ namespace Collision
 #if defined(_DEBUG)
         std::ostringstream oss;
         oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points (" << extracted.size()
-            << " vertices sampled). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
+            << " vertices sampled, directions=" << kDirectionSamples << "). Centroid shifted to (" << centroid.x
+            << ", " << centroid.y << ")\n";
         DebugTrace(oss.str());
 #endif
 
