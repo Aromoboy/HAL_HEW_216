@@ -1,9 +1,9 @@
 #include "Systems/ContactLiteSystem.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -18,6 +18,7 @@
 #include "ICollider.h"
 #include "CollisionLayer.h"
 #include "Collision2D.h"
+#include "SweetsPrototypeManifest.h"
 
 namespace
 {
@@ -203,17 +204,24 @@ namespace
                 return true;
         }
 
+        std::optional<SweetsSpace::SweetsType> ResolveSweetsTag(const std::string& tag)
+        {
+                return SweetsSpace::ParseSweetsType(tag);
+        }
+
         bool IsSweetsTag(const std::string& tag)
         {
-                static const std::array<const char*, 3> kSweetsTags{ { "Cake", "Pudding", "Sherbet" } };
-                for (const char* sweetsTag : kSweetsTags)
+                return ResolveSweetsTag(tag).has_value();
+        }
+
+        std::string DescribeSweetsTag(const std::string& tag)
+        {
+                const auto resolved = ResolveSweetsTag(tag);
+                if (resolved)
                 {
-                        if (tag == sweetsTag)
-                        {
-                                return true;
-                        }
+                        return std::string(tag).append("/").append(SweetsSpace::ToString(*resolved));
                 }
-                return false;
+                return tag;
         }
 }
 
@@ -417,6 +425,7 @@ namespace Systems
                                         if (other)
                                         {
                                                 const std::string& otherTag = other->GetTag();
+                                                const auto otherSweets = ResolveSweetsTag(otherTag);
                                                 if (otherTag == "StageFoundation" && !m_loggedPlayerPlatformContact)
                                                 {
                                                         std::ostringstream oss;
@@ -424,10 +433,11 @@ namespace Systems
                                                         DebugTrace(oss.str());
                                                         m_loggedPlayerPlatformContact = true;
                                                 }
-                                                else if (IsSweetsTag(otherTag) && !m_loggedPlayerSweetsContact)
+                                                else if (otherSweets && !m_loggedPlayerSweetsContact)
                                                 {
                                                         std::ostringstream oss;
-                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag << "'.\n";
+                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag
+                                                                << "' type='" << SweetsSpace::ToString(*otherSweets) << "'.\n";
                                                         DebugTrace(oss.str());
                                                         m_loggedPlayerSweetsContact = true;
                                                 }
@@ -582,8 +592,10 @@ namespace Systems
                                 const bool treatedAsSupport = supportCosine + 1e-4f >= slopeThreshold;
                                 if (treatedAsSupport)
                                 {
-                                        const bool sweetsTagA = IsSweetsTag(bodyA->GetTag());
-                                        const bool sweetsTagB = IsSweetsTag(bodyB->GetTag());
+                                        const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
+                                        const auto sweetsTypeB = ResolveSweetsTag(bodyB->GetTag());
+                                        const bool sweetsTagA = sweetsTypeA.has_value();
+                                        const bool sweetsTagB = sweetsTypeB.has_value();
                                         const bool foundationA = bodyA->GetTag() == "StageFoundation";
                                         const bool foundationB = bodyB->GetTag() == "StageFoundation";
                                         sweetsSupportPair = (sweetsTagA && sweetsTagB)
@@ -610,8 +622,12 @@ namespace Systems
 
 #if defined(_DEBUG)
                                                 {
-                                                        const char* baseTag = topIsA ? bodyB->GetTag().c_str() : bodyA->GetTag().c_str();
-                                                        const char* topTag = topIsA ? bodyA->GetTag().c_str() : bodyB->GetTag().c_str();
+                                                        const std::string baseTag = topIsA
+                                                                ? DescribeSweetsTag(bodyB->GetTag())
+                                                                : DescribeSweetsTag(bodyA->GetTag());
+                                                        const std::string topTag = topIsA
+                                                                ? DescribeSweetsTag(bodyA->GetTag())
+                                                                : DescribeSweetsTag(bodyB->GetTag());
                                                         std::ostringstream oss;
                                                         oss << kLogPrefix << "Support analysis: top='" << topTag << "' base='"
                                                                 << baseTag << "' overlapFraction=" << supportOverlapFraction
@@ -633,8 +649,8 @@ namespace Systems
 #if defined(_DEBUG)
                                                                 std::ostringstream oss;
                                                                 oss << kLogPrefix << "Unstable support slide boost: top='"
-                                                                        << (topIsA ? bodyA->GetTag() : bodyB->GetTag())
-                                                                        << "' base='" << (topIsA ? bodyB->GetTag() : bodyA->GetTag())
+                                                                        << (topIsA ? DescribeSweetsTag(bodyA->GetTag()) : DescribeSweetsTag(bodyB->GetTag()))
+                                                                        << "' base='" << (topIsA ? DescribeSweetsTag(bodyB->GetTag()) : DescribeSweetsTag(bodyA->GetTag()))
                                                                         << "' overlapFraction=" << supportOverlapFraction
                                                                         << " boost=" << m_edgeSlideBoost
                                                                         << " dir=" << slideDir
