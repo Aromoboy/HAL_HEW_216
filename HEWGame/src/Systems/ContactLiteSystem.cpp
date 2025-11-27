@@ -719,7 +719,7 @@ namespace Systems
                                         return v.x * dir.x + v.y * dir.y + v.z * dir.z;
                                 };
 
-                                const auto ApplyComponent = [](Physics::Physical& phys, const float3& dir, float target)
+                                const auto ApplyComponent = [&Project](Physics::Physical& phys, const float3& dir, float target)
                                 {
                                         const float current = Project(phys.velocity, dir);
                                         const float delta = target - current;
