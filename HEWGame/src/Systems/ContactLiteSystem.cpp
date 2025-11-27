@@ -725,25 +725,24 @@ namespace Systems
 
                                         if (activeBodyCount > 0.0f)
                                         {
-                                                float impulse = -(1.0f + m_restitution) * relativeVelocity / activeBodyCount;
                                                 const float relativeSpeed = std::fabs(relativeVelocity);
-                                                if (m_maxRestitutionVelocity > 0.0f && relativeSpeed > m_maxRestitutionVelocity)
-                                                {
-                                                        const float clampedImpulse = -(relativeVelocity / activeBodyCount);
+                                                const float restitutionScale = (m_maxRestitutionVelocity > 0.0f)
+                                                        ? std::clamp(relativeSpeed / m_maxRestitutionVelocity, 0.0f, 1.0f)
+                                                        : 1.0f;
+                                                float impulse = -(1.0f + m_restitution * restitutionScale) * relativeVelocity / activeBodyCount;
 #if defined(_DEBUG)
-                                                        if (relativeSpeed > 0.0f)
-                                                        {
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Restitution capped for pair '" << bodyA->GetTag()
-                                                                        << "' vs '" << bodyB->GetTag()
-                                                                        << "' relativeSpeed=" << relativeSpeed
-                                                                        << " limit=" << m_maxRestitutionVelocity
-                                                                        << " impulse=" << impulse << " -> " << clampedImpulse << "\n";
-                                                                DebugTrace(oss.str());
-                                                        }
-#endif
-                                                        impulse = clampedImpulse;
+                                                if (restitutionScale < 1.0f)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Restitution scaled for low-speed pair '" << bodyA->GetTag()
+                                                                << "' vs '" << bodyB->GetTag()
+                                                                << "' relativeSpeed=" << relativeSpeed
+                                                                << " threshold=" << m_maxRestitutionVelocity
+                                                                << " scale=" << restitutionScale
+                                                                << " impulse=" << impulse << "\n";
+                                                        DebugTrace(oss.str());
                                                 }
+#endif
                                                 if (treatedAsSupport && sweetsSupportPair && unstableSupport)
                                                 {
                                                         const float previousImpulse = impulse;
