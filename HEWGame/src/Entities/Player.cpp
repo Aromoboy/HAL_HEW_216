@@ -224,7 +224,7 @@ namespace Entities
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
         const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
-
+       
         const bool canMove = (ctx.dt > 0.0f && m_moveSpeed > 0.0f);
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
         {
