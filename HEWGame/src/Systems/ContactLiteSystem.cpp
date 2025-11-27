@@ -36,109 +36,24 @@ namespace
 
         bool Is2DCollider(const Collision::ICollider* collider)
         {
-                return dynamic_cast<const Collision::Collider2DBase*>(collider) != nullptr;
+                return dynamic_cast<const Collision::ICollider2D*>(collider) != nullptr;
         }
 
-        bool Compute2DContact(const Collision::ICollider& a, const Collision::ICollider& b, Collision::Contact2D& out)
+        bool Compute2DContact(const Collision::ICollider& a, const Collision::ICollider& b, Collision::ContactManifold2D& out)
         {
-                if (const auto* circleA = dynamic_cast<const Collision::CircleCollider2D*>(&a))
+                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(&a);
+                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(&b);
+                if (!colliderA2D || !colliderB2D)
                 {
-                        if (const auto* circleB = dynamic_cast<const Collision::CircleCollider2D*>(&b))
-                        {
-                                return circleA->ComputeContact(*circleB, &out);
-                        }
-                        if (const auto* hullB = dynamic_cast<const Collision::ConvexHullCollider2D*>(&b))
-                        {
-                                return circleA->ComputeContact(*hullB, &out);
-                        }
-                        if (const auto* compoundB = dynamic_cast<const Collision::CompoundCollider2D*>(&b))
-                        {
-                                bool hit = false;
-                                Collision::Contact2D best{};
-                                best.penetration = std::numeric_limits<float>::max();
-                                for (const auto& child : compoundB->GetChildren())
-                                {
-                                        if (!child)
-                                        {
-                                                continue;
-                                        }
-                                        Collision::Contact2D candidate{};
-                                        if (Compute2DContact(*circleA, *child, candidate) && candidate.penetration < best.penetration)
-                                        {
-                                                best = candidate;
-                                                hit = true;
-                                        }
-                                }
-                                if (hit)
-                                {
-                                        out = best;
-                                }
-                                return hit;
-                        }
+                        return false;
                 }
 
-                if (const auto* hullA = dynamic_cast<const Collision::ConvexHullCollider2D*>(&a))
+                if (colliderA2D->ComputeContact(*colliderB2D, out))
                 {
-                        if (const auto* hullB = dynamic_cast<const Collision::ConvexHullCollider2D*>(&b))
-                        {
-                                return hullA->ComputeContact(*hullB, &out);
-                        }
-                        if (const auto* circleB = dynamic_cast<const Collision::CircleCollider2D*>(&b))
-                        {
-                                return hullA->ComputeContact(*circleB, &out);
-                        }
-                        if (const auto* compoundB = dynamic_cast<const Collision::CompoundCollider2D*>(&b))
-                        {
-                                bool hit = false;
-                                Collision::Contact2D best{};
-                                best.penetration = std::numeric_limits<float>::max();
-                                for (const auto& child : compoundB->GetChildren())
-                                {
-                                        if (!child)
-                                        {
-                                                continue;
-                                        }
-                                        Collision::Contact2D candidate{};
-                                        if (Compute2DContact(*hullA, *child, candidate) && candidate.penetration < best.penetration)
-                                        {
-                                                best = candidate;
-                                                hit = true;
-                                        }
-                                }
-                                if (hit)
-                                {
-                                        out = best;
-                                }
-                                return hit;
-                        }
+                        return true;
                 }
 
-                if (const auto* compoundA = dynamic_cast<const Collision::CompoundCollider2D*>(&a))
-                {
-                        bool hit = false;
-                        Collision::Contact2D best{};
-                        best.penetration = std::numeric_limits<float>::max();
-                        for (const auto& child : compoundA->GetChildren())
-                        {
-                                if (!child)
-                                {
-                                        continue;
-                                }
-                                Collision::Contact2D candidate{};
-                                if (Compute2DContact(*child, b, candidate) && candidate.penetration < best.penetration)
-                                {
-                                        best = candidate;
-                                        hit = true;
-                                }
-                        }
-                        if (hit)
-                        {
-                                out = best;
-                        }
-                        return hit;
-                }
-
-                return false;
+                return colliderB2D->ComputeContact(*colliderA2D, out);
         }
 
         float GetAxisOverlap(const AABB& a, const AABB& b, int axis)
@@ -494,7 +409,7 @@ namespace Systems
                                 const bool bodyAStatic = !(physA.weight > 0.0f);
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
-                                Collision::Contact2D contact2D{};
+                                Collision::ContactManifold2D contact2D{};
                                 bool usedSAT = Is2DCollider(colliderA) && Is2DCollider(colliderB)
                                         && Compute2DContact(*colliderA, *colliderB, contact2D);
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
@@ -925,7 +840,13 @@ namespace Systems
                                                 << " penetration=" << contactPenetration
                                                 << " pushDistance=" << pushDistance
                                                 << " usedSAT=" << (usedSAT ? "yes" : "no")
-                                                << " fallback=" << (fallbackAABB ? "yes" : "no") << "\n";
+                                                << " fallback=" << (fallbackAABB ? "yes" : "no");
+                                        if (usedSAT)
+                                        {
+                                                oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
+                                                        << ")";
+                                        }
+                                        oss << "\n";
                                         DebugTrace(oss.str());
                                 }
 #endif

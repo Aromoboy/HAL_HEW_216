@@ -101,27 +101,9 @@ namespace Collision
 
         bool CircleCollider2D::CheckCollision(const Collision::ICollider& other)
         {
-                if (const auto* circle = dynamic_cast<const CircleCollider2D*>(&other))
-                {
-                        return ComputeContact(*circle);
-                }
-                if (const auto* hull = dynamic_cast<const ConvexHullCollider2D*>(&other))
-                {
-                        return ComputeContact(*hull);
-                }
-                if (const auto* compound = dynamic_cast<const CompoundCollider2D*>(&other))
-                {
-                        for (const auto& child : compound->GetChildren())
-                        {
-                                if (child && CheckCollision(*child))
-                                {
-                                        return true;
-                                }
-                        }
-                        return false;
-                }
-
-                return false;
+                ContactManifold2D unused{};
+                const auto* other2D = dynamic_cast<const ICollider2D*>(&other);
+                return other2D && ComputeContact(*other2D, unused);
         }
 
         void CircleCollider2D::UpdateBounds(const Transform& transform)
@@ -149,7 +131,46 @@ namespace Collision
                 UpdateZBounds(transform, transform.scale.z);
         }
 
-        bool CircleCollider2D::ComputeContact(const CircleCollider2D& other, Contact2D* outContact) const
+        bool CircleCollider2D::ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const
+        {
+                if (const auto* circle = dynamic_cast<const CircleCollider2D*>(&other))
+                {
+                        return ComputeContact(*circle, &manifold);
+                }
+                if (const auto* hull = dynamic_cast<const ConvexHullCollider2D*>(&other))
+                {
+                        return hull->ComputeContact(*this, manifold);
+                }
+                if (const auto* compound = dynamic_cast<const CompoundCollider2D*>(&other))
+                {
+                        bool hit = false;
+                        ContactManifold2D best{};
+                        best.penetration = std::numeric_limits<float>::max();
+                        for (const auto& child : compound->GetChildren())
+                        {
+                                const auto* child2D = dynamic_cast<const ICollider2D*>(child.get());
+                                if (!child2D)
+                                {
+                                        continue;
+                                }
+                                ContactManifold2D candidate{};
+                                if (ComputeContact(*child2D, candidate) && candidate.penetration < best.penetration)
+                                {
+                                        best = candidate;
+                                        hit = true;
+                                }
+                        }
+                        if (hit)
+                        {
+                                manifold = best;
+                        }
+                        return hit;
+                }
+
+                return false;
+        }
+
+        bool CircleCollider2D::ComputeContact(const CircleCollider2D& other, ContactManifold2D* outContact) const
         {
                 const float2 diff = Sub(other.m_center, m_center);
                 const float combinedRadius = m_scaledRadius + other.m_scaledRadius;
@@ -164,14 +185,16 @@ namespace Collision
                         const float distance = std::sqrt(std::max(distSq, 0.0f));
                         const float penetration = combinedRadius - distance;
                         const float2 normal = (distance > 1e-4f) ? Scale(diff, 1.0f / distance) : float2{ 0.0f, 1.0f };
+                        const float2 contactPoint = Add(m_center, Scale(normal, m_scaledRadius));
                         outContact->normal = normal;
                         outContact->penetration = penetration;
+                        outContact->contactPoint = contactPoint;
                 }
 
                 return true;
         }
 
-        bool CircleCollider2D::ComputeContact(const ConvexHullCollider2D& hull, Contact2D* outContact) const
+        bool CircleCollider2D::ComputeContact(const ConvexHullCollider2D& hull, ContactManifold2D* outContact) const
         {
                 return hull.ComputeContact(*this, outContact);
         }
@@ -188,27 +211,9 @@ namespace Collision
 
         bool ConvexHullCollider2D::CheckCollision(const Collision::ICollider& other)
         {
-                if (const auto* circle = dynamic_cast<const CircleCollider2D*>(&other))
-                {
-                        return ComputeContact(*circle);
-                }
-                if (const auto* hull = dynamic_cast<const ConvexHullCollider2D*>(&other))
-                {
-                        return ComputeContact(*hull);
-                }
-                if (const auto* compound = dynamic_cast<const CompoundCollider2D*>(&other))
-                {
-                        for (const auto& child : compound->GetChildren())
-                        {
-                                if (child && CheckCollision(*child))
-                                {
-                                        return true;
-                                }
-                        }
-                        return false;
-                }
-
-                return false;
+                ContactManifold2D unused{};
+                const auto* other2D = dynamic_cast<const ICollider2D*>(&other);
+                return other2D && ComputeContact(*other2D, unused);
         }
 
         void ConvexHullCollider2D::UpdateBounds(const Transform& transform)
@@ -240,7 +245,84 @@ namespace Collision
                 UpdateZBounds(transform, transform.scale.z);
         }
 
-        bool ConvexHullCollider2D::ComputeContact(const ConvexHullCollider2D& other, Contact2D* outContact) const
+        float2 ComputeCentroid(const std::vector<float2>& points)
+        {
+                float2 centroid{ 0.0f, 0.0f };
+                if (points.empty())
+                {
+                        return centroid;
+                }
+                for (const auto& p : points)
+                {
+                        centroid.x += p.x;
+                        centroid.y += p.y;
+                }
+                const float invCount = 1.0f / static_cast<float>(points.size());
+                centroid.x *= invCount;
+                centroid.y *= invCount;
+                return centroid;
+        }
+
+        float2 SupportPoint(const std::vector<float2>& points, const float2& direction)
+        {
+                if (points.empty())
+                {
+                        return float2{ 0.0f, 0.0f };
+                }
+                float bestDot = Dot(points.front(), direction);
+                float2 bestPoint = points.front();
+                for (const auto& p : points)
+                {
+                        const float d = Dot(p, direction);
+                        if (d > bestDot)
+                        {
+                                bestDot = d;
+                                bestPoint = p;
+                        }
+                }
+                return bestPoint;
+        }
+
+        bool ConvexHullCollider2D::ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const
+        {
+                if (const auto* hull = dynamic_cast<const ConvexHullCollider2D*>(&other))
+                {
+                        return ComputeContact(*hull, &manifold);
+                }
+                if (const auto* circle = dynamic_cast<const CircleCollider2D*>(&other))
+                {
+                        return ComputeContact(*circle, &manifold);
+                }
+                if (const auto* compound = dynamic_cast<const CompoundCollider2D*>(&other))
+                {
+                        bool hit = false;
+                        ContactManifold2D best{};
+                        best.penetration = std::numeric_limits<float>::max();
+                        for (const auto& child : compound->GetChildren())
+                        {
+                                const auto* child2D = dynamic_cast<const ICollider2D*>(child.get());
+                                if (!child2D)
+                                {
+                                        continue;
+                                }
+                                ContactManifold2D candidate{};
+                                if (ComputeContact(*child2D, candidate) && candidate.penetration < best.penetration)
+                                {
+                                        best = candidate;
+                                        hit = true;
+                                }
+                        }
+                        if (hit)
+                        {
+                                manifold = best;
+                        }
+                        return hit;
+                }
+
+                return false;
+        }
+
+        bool ConvexHullCollider2D::ComputeContact(const ConvexHullCollider2D& other, ContactManifold2D* outContact) const
         {
                 const auto& aPoints = GetWorldPoints();
                 const auto& bPoints = other.GetWorldPoints();
@@ -249,7 +331,7 @@ namespace Collision
                         return false;
                 }
 
-                const auto satTest = [&](const std::vector<float2>& polyA, const std::vector<float2>& polyB, Contact2D& bestContact) -> bool
+                const auto satTest = [&](const std::vector<float2>& polyA, const std::vector<float2>& polyB, ContactManifold2D& bestContact) -> bool
                 {
                         for (size_t i = 0; i < polyA.size(); ++i)
                         {
@@ -295,7 +377,7 @@ namespace Collision
                         return true;
                 };
 
-                Contact2D contact{};
+                ContactManifold2D contact{};
                 if (!satTest(aPoints, bPoints, contact))
                 {
                         return false;
@@ -305,6 +387,22 @@ namespace Collision
                         return false;
                 }
 
+                const float2 centroidA = ComputeCentroid(aPoints);
+                const float2 centroidB = ComputeCentroid(bPoints);
+                float2 normal = Normalize(contact.normal);
+                if (LengthSq(normal) <= 0.0f)
+                {
+                        return false;
+                }
+                if (Dot(Sub(centroidB, centroidA), normal) < 0.0f)
+                {
+                        normal = Scale(normal, -1.0f);
+                }
+                const float2 supportA = SupportPoint(aPoints, normal);
+                const float2 supportB = SupportPoint(bPoints, Scale(normal, -1.0f));
+                contact.normal = normal;
+                contact.contactPoint = Scale(Add(supportA, supportB), 0.5f);
+
                 if (outContact)
                 {
                         *outContact = contact;
@@ -313,7 +411,7 @@ namespace Collision
                 return true;
         }
 
-        bool ConvexHullCollider2D::ComputeContact(const CircleCollider2D& circle, Contact2D* outContact) const
+        bool ConvexHullCollider2D::ComputeContact(const CircleCollider2D& circle, ContactManifold2D* outContact) const
         {
                 const auto& hull = GetWorldPoints();
                 if (hull.empty())
@@ -321,7 +419,7 @@ namespace Collision
                         return false;
                 }
 
-                Contact2D bestContact{};
+                ContactManifold2D bestContact{};
                 bestContact.penetration = std::numeric_limits<float>::max();
 
                 // Test polygon axes
@@ -374,7 +472,8 @@ namespace Collision
                         }
                 }
 
-                const float2 axisToCenter = Normalize(Sub(circle.GetCenter(), closest));
+                const float2 axisToCenterRaw = Sub(circle.GetCenter(), closest);
+                const float2 axisToCenter = Normalize(axisToCenterRaw);
                 if (LengthSq(axisToCenter) > 0.0f)
                 {
                         const float centerProj = Dot(circle.GetCenter(), axisToCenter);
@@ -401,6 +500,21 @@ namespace Collision
                         }
                 }
 
+                float2 normal = Normalize(bestContact.normal);
+                if (LengthSq(normal) <= 0.0f)
+                {
+                        return false;
+                }
+                const float2 hullCentroid = ComputeCentroid(hull);
+                if (Dot(Sub(circle.GetCenter(), hullCentroid), normal) < 0.0f)
+                {
+                        normal = Scale(normal, -1.0f);
+                }
+                bestContact.normal = normal;
+                const float2 hullSupport = SupportPoint(hull, normal);
+                const float2 circlePoint = Add(circle.GetCenter(), Scale(normal, -circle.GetRadius()));
+                bestContact.contactPoint = Scale(Add(hullSupport, circlePoint), 0.5f);
+
                 if (outContact)
                 {
                         *outContact = bestContact;
@@ -420,14 +534,9 @@ namespace Collision
 
         bool CompoundCollider2D::CheckCollision(const Collision::ICollider& other)
         {
-                for (const auto& child : m_children)
-                {
-                        if (child && child->CheckCollision(other))
-                        {
-                                return true;
-                        }
-                }
-                return false;
+                ContactManifold2D unused{};
+                const auto* other2D = dynamic_cast<const ICollider2D*>(&other);
+                return other2D && ComputeContact(*other2D, unused);
         }
 
         void CompoundCollider2D::UpdateBounds(const Transform& transform)
@@ -455,6 +564,36 @@ namespace Collision
                 m_aabb.min = minBounds;
                 m_aabb.max = maxBounds;
                 UpdateZBounds(transform, transform.scale.z);
+        }
+
+        bool CompoundCollider2D::ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const
+        {
+                bool hit = false;
+                ContactManifold2D best{};
+                best.penetration = std::numeric_limits<float>::max();
+
+                for (const auto& child : m_children)
+                {
+                        const auto* child2D = dynamic_cast<const ICollider2D*>(child.get());
+                        if (!child2D)
+                        {
+                                continue;
+                        }
+
+                        ContactManifold2D candidate{};
+                        if (child2D->ComputeContact(other, candidate) && candidate.penetration < best.penetration)
+                        {
+                                best = candidate;
+                                hit = true;
+                        }
+                }
+
+                if (hit)
+                {
+                        manifold = best;
+                }
+
+                return hit;
         }
 }
 
