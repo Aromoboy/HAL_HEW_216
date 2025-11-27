@@ -200,6 +200,9 @@ namespace Systems
                 , m_unstableVerticalDamping(0.35f)
                 , m_baumgarteFactor(0.2f)
                 , m_maxPenetrationCorrection(0.1f)
+                , m_minLinearSpeed(0.05f)
+                , m_minVerticalSpeed(0.02f)
+                , m_minTangentialSpeed(0.01f)
                 , m_loggedMissingBodyList(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
@@ -283,6 +286,21 @@ namespace Systems
         void ContactLiteSystem::SetMaxPenetrationCorrection(float maxCorrection)
         {
                 m_maxPenetrationCorrection = std::max(0.0f, maxCorrection);
+        }
+
+        void ContactLiteSystem::SetMinLinearSpeed(float minSpeed)
+        {
+                m_minLinearSpeed = std::max(0.0f, minSpeed);
+        }
+
+        void ContactLiteSystem::SetMinVerticalSpeed(float minSpeed)
+        {
+                m_minVerticalSpeed = std::max(0.0f, minSpeed);
+        }
+
+        void ContactLiteSystem::SetMinTangentialSpeed(float minSpeed)
+        {
+                m_minTangentialSpeed = std::max(0.0f, minSpeed);
         }
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -718,6 +736,64 @@ namespace Systems
                                         phys.velocity.z += dir.z * delta;
                                 };
 
+                                const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
+                                        bool hasTangent, bool groundContact, const std::string& tag)
+                                {
+                                        if (phys.weight <= 0.0f)
+                                        {
+                                                return;
+                                        }
+
+                                        const auto clampComponent = [](float& component, float minSpeed)
+                                        {
+                                                if (std::fabs(component) < minSpeed)
+                                                {
+                                                        component = 0.0f;
+                                                        return true;
+                                                }
+                                                return false;
+                                        };
+
+                                        bool clamped = false;
+                                        clamped |= clampComponent(phys.velocity.x, m_minLinearSpeed);
+                                        clamped |= clampComponent(phys.velocity.y, m_minLinearSpeed);
+                                        clamped |= clampComponent(phys.velocity.z, m_minLinearSpeed);
+
+                                        if (groundContact)
+                                        {
+                                                const float normalComponent = Project(phys.velocity, normal);
+                                                if (std::fabs(normalComponent) < m_minVerticalSpeed)
+                                                {
+                                                        ApplyComponent(phys, normal, 0.0f);
+                                                        clamped = true;
+                                                }
+
+                                                if (hasTangent)
+                                                {
+                                                        const float tangentialComponent = Project(phys.velocity, tangent);
+                                                        if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
+                                                        {
+                                                                ApplyComponent(phys, tangent, 0.0f);
+                                                                clamped = true;
+                                                        }
+                                                }
+                                        }
+
+#if defined(_DEBUG)
+                                        if (clamped)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Velocity clamped for '" << tag
+                                                        << "' ground=" << (groundContact ? "yes" : "no")
+                                                        << " thresholds(linear=" << m_minLinearSpeed
+                                                        << ", vertical=" << m_minVerticalSpeed
+                                                        << ", tangential=" << m_minTangentialSpeed << ")"
+                                                        << " newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
+                                                DebugTrace(oss.str());
+                                        }
+#endif
+                                };
+
                                 const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
@@ -852,8 +928,8 @@ namespace Systems
                                         if (tangentLenSq > 1e-6f)
                                         {
                                                 const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                                const bool allowStaticFriction = classification.isGround;
-                                                const bool withinStaticThreshold = std::fabs(relativeTangentialVelocity) <= m_staticFriction;
+                                                const bool allowStaticFriction = classification.isGround && (m_staticFriction > 0.0f);
+                                                const bool withinStaticThreshold = std::fabs(relativeTangentialVelocity) <= m_minTangentialSpeed;
                                                 if (allowStaticFriction && withinStaticThreshold)
                                                 {
                                                         const float sharedVelocity = (bodyAStatic && bodyBStatic)
@@ -873,7 +949,7 @@ namespace Systems
                                                                 oss << kLogPrefix << "Static friction applied to pair '"
                                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
                                                                         << "' relativeTangentialVelocity=" << relativeTangentialVelocity
-                                                                        << " threshold=" << m_staticFriction
+                                                                        << " threshold=" << m_minTangentialSpeed
                                                                         << " sharedVelocity=" << sharedVelocity << "\n";
                                                                 DebugTrace(oss.str());
                                                         }
@@ -889,7 +965,8 @@ namespace Systems
                                                                         << bodyA->GetTag() << "' and '" << bodyB->GetTag()
                                                                         << "' |n.y|=" << std::fabs(contactNormal.y)
                                                                         << " threshold=" << m_maxSlopeCos
-                                                                        << " relativeTangentialVelocity=" << relativeTangentialVelocity << "\n";
+                                                                        << " relativeTangentialVelocity=" << relativeTangentialVelocity
+                                                                        << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
                                                                 DebugTrace(oss.str());
 #endif
                                                         }
@@ -919,6 +996,10 @@ namespace Systems
 #endif
                                                 }
                                         }
+
+                                        const bool hasTangent = tangentLenSq > 1e-6f;
+                                        ClampVelocity(physA, contactNormal, tangent, hasTangent, classification.isGround, bodyA->GetTag());
+                                        ClampVelocity(physB, contactNormal, tangent, hasTangent, classification.isGround, bodyB->GetTag());
                                 }
 
 #if defined(_DEBUG)
@@ -978,6 +1059,9 @@ if (physA.velocity.z != 0.0f)
                             << ", dynamicFriction=" << m_dynamicFriction
                             << ", slopeCosLimit=" << m_maxSlopeCos
                             << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
+                            << ", minLinearSpeed=" << m_minLinearSpeed
+                            << ", minVerticalSpeed=" << m_minVerticalSpeed
+                            << ", minTangentialSpeed=" << m_minTangentialSpeed
                             << "\n";
                         DebugTrace(oss.str());
                 }

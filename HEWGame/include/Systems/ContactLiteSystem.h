@@ -25,6 +25,9 @@ namespace Systems
         void SetUnstableVerticalDamping(float damping);
         void SetBaumgarteFactor(float factor);
         void SetMaxPenetrationCorrection(float maxCorrection);
+        void SetMinLinearSpeed(float minSpeed);
+        void SetMinVerticalSpeed(float minSpeed);
+        void SetMinTangentialSpeed(float minSpeed);
 
         float GetPenetrationTolerance() const { return m_penetrationTolerance; }
         float GetRestitution() const { return m_restitution; }
@@ -37,6 +40,9 @@ namespace Systems
         float GetUnstableVerticalDamping() const { return m_unstableVerticalDamping; }
         float GetBaumgarteFactor() const { return m_baumgarteFactor; }
         float GetMaxPenetrationCorrection() const { return m_maxPenetrationCorrection; }
+        float GetMinLinearSpeed() const { return m_minLinearSpeed; }
+        float GetMinVerticalSpeed() const { return m_minVerticalSpeed; }
+        float GetMinTangentialSpeed() const { return m_minTangentialSpeed; }
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
@@ -53,6 +59,9 @@ namespace Systems
         float m_unstableVerticalDamping;
         float m_baumgarteFactor;
         float m_maxPenetrationCorrection;
+        float m_minLinearSpeed;
+        float m_minVerticalSpeed;
+        float m_minTangentialSpeed;
         bool m_loggedMissingBodyList;
         bool m_loggedPlayerPresence;
         bool m_loggedPlayerAbsence;
