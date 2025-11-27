@@ -297,7 +297,7 @@ namespace Collision
                 {
                         bool hit = false;
                         ContactManifold2D best{};
-                        best.penetration = std::numeric_limits<float>::max();
+                        best.penetration = std::numeric_limits<float>::lowest();
                         for (const auto& child : compound->GetChildren())
                         {
                                 const auto* child2D = dynamic_cast<const ICollider2D*>(child.get());
@@ -306,7 +306,7 @@ namespace Collision
                                         continue;
                                 }
                                 ContactManifold2D candidate{};
-                                if (ComputeContact(*child2D, candidate) && candidate.penetration < best.penetration)
+                                if (ComputeContact(*child2D, candidate) && candidate.penetration > best.penetration)
                                 {
                                         best = candidate;
                                         hit = true;
@@ -570,7 +570,7 @@ namespace Collision
         {
                 bool hit = false;
                 ContactManifold2D best{};
-                best.penetration = std::numeric_limits<float>::max();
+                best.penetration = std::numeric_limits<float>::lowest();
 
                 for (const auto& child : m_children)
                 {
@@ -581,7 +581,7 @@ namespace Collision
                         }
 
                         ContactManifold2D candidate{};
-                        if (child2D->ComputeContact(other, candidate) && candidate.penetration < best.penetration)
+                        if (child2D->ComputeContact(other, candidate) && candidate.penetration > best.penetration)
                         {
                                 best = candidate;
                                 hit = true;
