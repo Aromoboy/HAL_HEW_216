@@ -697,6 +697,9 @@ SceneGame::SceneGame()
         m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
         m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
         m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
+        m_contactSystem->SetMinLinearSpeed(tuning.minLinearSpeed);
+        m_contactSystem->SetMinVerticalSpeed(tuning.minVerticalSpeed);
+        m_contactSystem->SetMinTangentialSpeed(tuning.minTangentialSpeed);
         std::ostringstream oss;
         oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
             << ", restitution=" << tuning.restitution
@@ -706,6 +709,9 @@ SceneGame::SceneGame()
             << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
             << ", baumgarteFactor=" << tuning.baumgarteFactor
             << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
+            << ", minLinearSpeed=" << tuning.minLinearSpeed
+            << ", minVerticalSpeed=" << tuning.minVerticalSpeed
+            << ", minTangentialSpeed=" << tuning.minTangentialSpeed
             << ").\n";
         ::DebugTrace(oss.str());
     }
