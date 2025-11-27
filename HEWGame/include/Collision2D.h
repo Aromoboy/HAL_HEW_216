@@ -12,17 +12,24 @@
 
 namespace Collision
 {
-        struct Contact2D
+        struct ContactManifold2D
         {
                 float2 normal{ 0.0f, 1.0f };
                 float penetration{ 0.0f };
+                float2 contactPoint{ 0.0f, 0.0f };
         };
 
         class CircleCollider2D;
         class ConvexHullCollider2D;
         class CompoundCollider2D;
 
-        class Collider2DBase : public Collision::ICollider
+        class ICollider2D : public Collision::ICollider
+        {
+        public:
+                virtual bool ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const = 0;
+        };
+
+        class Collider2DBase : public Collision::ICollider2D
         {
         public:
                 Collider2DBase() = default;
@@ -49,8 +56,10 @@ namespace Collision
                 bool CheckCollision(const Collision::ICollider& other) override;
                 void UpdateBounds(const Transform& transform) override;
 
-                bool ComputeContact(const CircleCollider2D& other, Contact2D* outContact = nullptr) const;
-                bool ComputeContact(const ConvexHullCollider2D& hull, Contact2D* outContact = nullptr) const;
+                bool ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const override;
+
+                bool ComputeContact(const CircleCollider2D& other, ContactManifold2D* outContact = nullptr) const;
+                bool ComputeContact(const ConvexHullCollider2D& hull, ContactManifold2D* outContact = nullptr) const;
 
                 float2 GetCenter() const { return m_center; }
                 float GetRadius() const { return m_scaledRadius; }
@@ -72,8 +81,10 @@ namespace Collision
                 bool CheckCollision(const Collision::ICollider& other) override;
                 void UpdateBounds(const Transform& transform) override;
 
-                bool ComputeContact(const ConvexHullCollider2D& other, Contact2D* outContact = nullptr) const;
-                bool ComputeContact(const CircleCollider2D& circle, Contact2D* outContact = nullptr) const;
+                bool ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const override;
+
+                bool ComputeContact(const ConvexHullCollider2D& other, ContactManifold2D* outContact = nullptr) const;
+                bool ComputeContact(const CircleCollider2D& circle, ContactManifold2D* outContact = nullptr) const;
 
                 const std::vector<float2>& GetWorldPoints() const { return m_worldPoints; }
 
@@ -93,6 +104,8 @@ namespace Collision
 
                 bool CheckCollision(const Collision::ICollider& other) override;
                 void UpdateBounds(const Transform& transform) override;
+
+                bool ComputeContact(const ICollider2D& other, ContactManifold2D& manifold) const override;
 
                 const std::vector<std::shared_ptr<Collision::ICollider>>& GetChildren() const { return m_children; }
 
