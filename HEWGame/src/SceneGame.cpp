@@ -721,6 +721,9 @@ SceneGame::SceneGame()
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
 
+    // ModelCacheの設定後、ステージレイアウトをロード
+    LoadStageLayout("Assets/StageLayout.csv");
+
     // 描画テスト用
     m_model = cache.Get("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
@@ -1118,6 +1121,15 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         viewportHeight = static_cast<float>(rtv->GetHeight());
     }
 
+    float deltaTime = ctx.timer.DeltaSeconds();
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.spinEnabled)
+        {
+            obj.currentRotation += obj.spinSpeed * deltaTime;
+        }
+    }
+
     // =========================================
 // SIMPLE & CORRECT PLAYER WORLD-BOUNDS
 // =========================================
@@ -1301,6 +1313,94 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 }
 #endif
 
+bool SceneGame::LoadStageLayout(const std::string& csvPath)
+{
+    // CSVファイルを開く
+    std::ifstream file(csvPath);
+    if (!file.is_open())
+    {
+        DebugTrace(std::string(kLogPrefix) + "StageLayout.csvを開けませんでした\n");
+        return false;
+    }
+
+    DebugTrace(std::string(kLogPrefix) + "CSVファイルを開きました: " + csvPath + "\n");
+
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    std::string line;
+
+    // ファイルを1行ずつ読み込む
+    while (std::getline(file, line))
+    {
+        // コメント行と空行をスキップ
+        if (line.empty() || line[0] == '#')
+            continue;
+
+        // カンマ区切りでパース
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<std::string> values;
+
+        while (std::getline(ss, token, ','))
+        {
+            values.push_back(token);
+        }
+
+        // 最低15個の値が必要（spin情報を含む）
+        if (values.size() < 15)
+            continue;
+
+        // ステージオブジェクトを作成
+        StageObject obj;
+        obj.modelPath = values[0];
+
+        // 位置を設定
+        obj.transform.position.x = std::stof(values[1]);
+        obj.transform.position.y = std::stof(values[2]);
+        obj.transform.position.z = std::stof(values[3]);
+
+        // 回転を設定（度数）
+        obj.transform.rotation.x = std::stof(values[4]);
+        obj.transform.rotation.y = std::stof(values[5]);
+        obj.transform.rotation.z = std::stof(values[6]);
+
+        // スケールを設定
+        obj.transform.scale.x = std::stof(values[7]);
+        obj.transform.scale.y = std::stof(values[8]);
+        obj.transform.scale.z = std::stof(values[9]);
+
+        // 回転アニメーション設定
+        std::string spinValue = values[10];
+        // 小文字に変換
+        std::transform(spinValue.begin(), spinValue.end(), spinValue.begin(), ::tolower);
+        
+        obj.spinEnabled = (spinValue == "true" || spinValue == "1" || spinValue == "yes" || spinValue == "on");
+        obj.spinAxis.x = std::stof(values[11]);
+        obj.spinAxis.y = std::stof(values[12]);
+        obj.spinAxis.z = std::stof(values[13]);
+        obj.spinSpeed = std::stof(values[14]);
+        obj.currentRotation = 0.0f;
+
+        // モデルをロード
+        DebugTrace(std::string(kLogPrefix) + "モデルをロード中\n");
+        obj.model = cache.Get(obj.modelPath);
+        if (!obj.model)
+        {
+            DebugTrace(std::string(kLogPrefix) + "モデルのロードに失敗: " + obj.modelPath + "\n");
+            continue;
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "モデルをロード成功\n");
+        }
+
+        // リストに追加
+        m_stageObjects.push_back(obj);
+    }
+
+    DebugTrace(std::string(kLogPrefix) + "ステージオブジェクトを" + std::to_string(m_stageObjects.size()) + "個ロードしました\n");
+    return true;
+}
+
 void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 {
         if (m_backgroundRenderer)
@@ -1313,6 +1413,42 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         {
                 DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
                 return;
+        }
+
+        if (m_render)
+        {
+            DebugTrace(std::string(kLogPrefix) + "描画開始: " + std::to_string(m_stageObjects.size()) + "個のオブジェクト\n");
+
+            for (const auto& obj : m_stageObjects)
+            {
+                if (obj.model)
+                {
+                    DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
+
+                    Transform renderTransform = obj.transform;
+                    
+                    // 回転アニメーションを適用
+                    if (obj.spinEnabled)
+                    {
+                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
+                            renderTransform.rotation.y += obj.currentRotation;
+                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
+                            renderTransform.rotation.x += obj.currentRotation;
+                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
+                            renderTransform.rotation.z += obj.currentRotation;
+                    }
+
+                    m_render->Draw(*obj.model, renderTransform, activeCamera.get());
+                }
+                else
+                {
+                    DebugTrace(std::string(kLogPrefix) + "モデルがnull\n");
+                }
+            }
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "m_renderがnull\n");
         }
 
         Geometory::SetView(activeCamera->GetView());

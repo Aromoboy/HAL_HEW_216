@@ -1,0 +1,5 @@
+# meshPath,posX,posY,posZ,rotX,rotY,rotZ,scaleX,scaleY,scaleZ,spinEnabled,spinAxisX,spinAxisY,spinAxisZ,spinSpeed
+,,,,,,,,,,,,,,
+# ===== TEST TREE =====,,,,,,,,,,,,,,
+Assets/Model/LowPolyNature/Models/Tree_01.fbx,0,0,3,0,0,0,0.01,0.01,0.01,FALSE,0,1,0,0
+Assets/Model/LowPolyNature/Models/Tree_02.fbx,1,0,3,0,0,0,0.01,0.01,0.01,1,1,1,1,1

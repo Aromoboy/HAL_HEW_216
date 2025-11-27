@@ -38,6 +38,17 @@ struct CameraPrototypeSettings
     float pitchRadians = 0.0f;
 };
 
+struct StageObject
+{
+    std::string modelPath;
+    Transform transform;
+    bool spinEnabled;
+    float3 spinAxis;
+    float spinSpeed;
+    std::shared_ptr<ModelDX> model;
+    float currentRotation;
+};
+
 namespace Systems
 {
     class PhysicsMachine;
@@ -76,10 +87,12 @@ private:
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
     bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
+    bool LoadStageLayout(const std::string& csvPath);
 #if defined(_DEBUG)
     void RenderRunTelemetryOverlay() const;
 #endif
     int ComputeScore() const;
+    std::vector<StageObject> m_stageObjects;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
