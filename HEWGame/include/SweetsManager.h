@@ -4,6 +4,7 @@
 #include <deque>
 #include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <random>
@@ -18,6 +19,7 @@
 #include "Transform.h"
 #include "CollisionLayer.h"
 #include "Physical.h"
+#include "ColliderConfigLoader.h"
 
 namespace Core
 {
@@ -138,6 +140,8 @@ namespace SweetsSpace
 
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
 
+        std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
+
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
         Core::UpdateScheduler* m_scheduler;
@@ -174,6 +178,7 @@ namespace SweetsSpace
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
+        bool m_warnedMissingColliderDefinition;
         bool m_hasHorizontalBounds;
         float m_minHorizontalBound;
         float m_maxHorizontalBound;

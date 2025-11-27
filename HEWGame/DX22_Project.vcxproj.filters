@@ -10,6 +10,12 @@
     <ClCompile Include="src\AABBCollider.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\ColliderConfigLoader.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Collision2D.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\AssimpModelLorder.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -191,6 +197,12 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\AABBCollider.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ColliderConfigLoader.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Collision2D.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\AssimpModelLorder.h">
