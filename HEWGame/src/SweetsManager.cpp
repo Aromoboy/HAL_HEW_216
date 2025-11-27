@@ -22,6 +22,7 @@
 #endif
 #include <vector>
 #include "AABBCollider.h"
+#include "ColliderConfigLoader.h"
 #include "Core/UpdateScheduler.h"
 #include "ModelCache.h"
 #include "Sweets/BaseSweets.h"
@@ -56,6 +57,7 @@ namespace
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
+    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_fruits.cfg";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
@@ -557,6 +559,7 @@ namespace SweetsSpace
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
+        , m_warnedMissingColliderDefinition(false)
         , m_hasHorizontalBounds(false)
         , m_minHorizontalBound(0.0f)
         , m_maxHorizontalBound(0.0f)
@@ -569,6 +572,11 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Stacked, SweetsList{});
         m_byState.emplace(SweetsState::Ground, SweetsList{});
         m_byState.emplace(SweetsState::Carried, SweetsList{});
+
+        if (!Collision::LoadColliderDefinitions(kColliderConfigPath, m_colliderDefinitions))
+        {
+            DebugTrace(std::string(kLogPrefix) + "Failed to load collider definitions; using AABB fallbacks.\n");
+        }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
@@ -682,12 +690,36 @@ namespace SweetsSpace
                 scaledTransform.scale.x *= sampledScale.x;
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
+                std::shared_ptr<Collision::ICollider> collider;
+
+                const auto colliderDef = m_colliderDefinitions.find(kind);
+                if (colliderDef != m_colliderDefinitions.end())
+                {
+                    collider = Collision::BuildColliderFromDefinition(colliderDef->second, scaledTransform, Collision::CollisionLayer::Sweets);
+                    if (collider)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Loaded collider definition for '" << kind << "' children=" << colliderDef->second.children.size() << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
 
                 const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset);
                 const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
                 const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
 
-                auto collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
+                if (!collider)
+                {
+                    if (!m_warnedMissingColliderDefinition)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Using fallback AABB collider for kind '" << kind << "'.\n";
+                        DebugTrace(warn.str());
+                        m_warnedMissingColliderDefinition = true;
+                    }
+
+                    collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
+                }
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
                 const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
@@ -706,11 +738,11 @@ namespace SweetsSpace
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Collider applied kind='" << kind
-                        << "' shape=" << ToString(preset.shape)
-                        << " scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
+                        << "' scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
                         << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
                         << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
-                        << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")\n";
+                        << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")"
+                        << " defFound=" << std::boolalpha << (colliderDef != m_colliderDefinitions.end()) << "\n";
                     DebugTrace(oss.str());
                 }
 
