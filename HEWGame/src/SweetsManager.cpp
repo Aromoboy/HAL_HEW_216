@@ -20,10 +20,13 @@
 #    endif
 #    include <windows.h>
 #endif
+#include <d3d11.h>
 #include <vector>
 #include "AABBCollider.h"
 #include "ColliderConfigLoader.h"
+#include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
+#include "MeshBuffer.h"
 #include "ModelCache.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
@@ -144,6 +147,13 @@ namespace
         float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
         float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
         bool valid{ false };
+    };
+
+    struct MeshHullSummary
+    {
+        ModelBounds bounds{};
+        std::vector<float2> hull{};
+        float thickness{ 1.0f };
     };
 
     void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
@@ -365,18 +375,26 @@ namespace
         return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
     }
 
-    ModelBounds LoadModelBounds(const std::string& path)
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path)
     {
-        ModelBounds bounds;
+        MeshHullSummary summary{};
         std::ifstream file(path);
         if (!file)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to open model for bounds path='" << path << "'\n";
+            oss << kLogPrefix << "Failed to open model for geometry analysis path='" << path << "'\n";
             DebugTrace(oss.str());
-            return bounds;
+            return summary;
         }
 
+        struct PositionOnly
+        {
+            float x;
+            float y;
+            float z;
+        };
+
+        std::vector<PositionOnly> positions;
         std::string line;
         while (std::getline(file, line))
         {
@@ -394,24 +412,54 @@ namespace
                 continue;
             }
 
-            bounds.min.x = std::min(bounds.min.x, x);
-            bounds.min.y = std::min(bounds.min.y, y);
-            bounds.min.z = std::min(bounds.min.z, z);
+            positions.push_back(PositionOnly{ x, y, z });
 
-            bounds.max.x = std::max(bounds.max.x, x);
-            bounds.max.y = std::max(bounds.max.y, y);
-            bounds.max.z = std::max(bounds.max.z, z);
-            bounds.valid = true;
+            summary.bounds.min.x = std::min(summary.bounds.min.x, x);
+            summary.bounds.min.y = std::min(summary.bounds.min.y, y);
+            summary.bounds.min.z = std::min(summary.bounds.min.z, z);
+
+            summary.bounds.max.x = std::max(summary.bounds.max.x, x);
+            summary.bounds.max.y = std::max(summary.bounds.max.y, y);
+            summary.bounds.max.z = std::max(summary.bounds.max.z, z);
+            summary.bounds.valid = true;
         }
 
-        if (!bounds.valid)
+        if (!summary.bounds.valid)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "No vertex positions parsed from model path='" << path << "'; using fallback bounds.\n";
             DebugTrace(oss.str());
         }
+        else
+        {
+            summary.thickness = std::max(summary.bounds.max.z - summary.bounds.min.z, 0.0f);
+        }
 
-        return bounds;
+        if (!positions.empty())
+        {
+            MeshBuffer::Description desc{};
+            desc.pVtx = positions.data();
+            desc.vtxSize = sizeof(PositionOnly);
+            desc.vtxCount = static_cast<UINT>(positions.size());
+            desc.pIdx = nullptr;
+            desc.idxSize = 0;
+            desc.idxCount = 0;
+            desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+            summary.hull = Collision::BuildConvexHullFromMesh(desc);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Analyzed geometry for '" << path << "' positions=" << positions.size()
+                << " hullPoints=" << summary.hull.size() << " thickness=" << summary.thickness << "\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Geometry analysis found no positions for '" << path << "'.\n";
+            DebugTrace(oss.str());
+        }
+
+        return summary;
     }
 
     float3 ComputeHalfExtents(const ModelBounds& bounds, const float3& scale, const ColliderPreset& preset)
@@ -560,6 +608,7 @@ namespace SweetsSpace
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
         , m_warnedMissingColliderDefinition(false)
+        , m_warnedMissingGeneratedHull(false)
         , m_hasHorizontalBounds(false)
         , m_minHorizontalBound(0.0f)
         , m_maxHorizontalBound(0.0f)
@@ -617,14 +666,34 @@ namespace SweetsSpace
             const std::string kind = descriptor->key;
             const std::string modelPath = descriptor->modelPath;
 
-            ModelBounds bounds = LoadModelBounds(modelPath);
-            if (!bounds.valid)
+            MeshHullSummary geometry = AnalyzeModelGeometry(modelPath);
+            const float fallbackThickness = fallbackBounds.max.z - fallbackBounds.min.z;
+            if (geometry.hull.empty() && geometry.bounds.valid)
             {
-                bounds = fallbackBounds;
+                std::ostringstream warn;
+                warn << kLogPrefix << "No hull generated for kind '" << kind
+                    << "'; collider definition or fallback will be used.\n";
+                DebugTrace(warn.str());
+            }
+
+            ModelBounds bounds = geometry.bounds.valid ? geometry.bounds : fallbackBounds;
+            if (!geometry.bounds.valid)
+            {
                 std::ostringstream warn;
                 warn << kLogPrefix << "Fallback collider bounds applied for kind '" << kind
                     << "' because model bounds were unavailable.\n";
                 DebugTrace(warn.str());
+            }
+            const float resolvedThickness = geometry.bounds.valid ? geometry.thickness : fallbackThickness;
+            GeneratedCollider generatedCollider{ geometry.hull, std::max(resolvedThickness, fallbackThickness) };
+            m_generatedColliders[kind] = generatedCollider;
+
+            if (!generatedCollider.hull.empty())
+            {
+                std::ostringstream hullLog;
+                hullLog << kLogPrefix << "Cached generated hull for kind '" << kind << "' points="
+                    << generatedCollider.hull.size() << " thickness=" << generatedCollider.thickness << "\n";
+                DebugTrace(hullLog.str());
             }
 
             {
@@ -647,7 +716,8 @@ namespace SweetsSpace
 
             auto factory = [this, &cache, kind, modelPath, type, weight = config.weight,
                                damping = config.damping, minScale = config.minScale,
-                               maxScale = config.maxScale, bounds, preset = config.colliderPreset](const Transform& transform)
+                               maxScale = config.maxScale, bounds, preset = config.colliderPreset,
+                               generatedCollider](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -691,6 +761,8 @@ namespace SweetsSpace
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
                 std::shared_ptr<Collision::ICollider> collider;
+                const bool hasGeneratedHull = !generatedCollider.hull.empty();
+                bool usedGeneratedHull = false;
 
                 const auto colliderDef = m_colliderDefinitions.find(kind);
                 if (colliderDef != m_colliderDefinitions.end())
@@ -710,12 +782,39 @@ namespace SweetsSpace
 
                 if (!collider)
                 {
+                    if (hasGeneratedHull)
+                    {
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
+                        usedGeneratedHull = true;
+                        if (!m_warnedMissingColliderDefinition)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Using generated convex hull for kind '" << kind
+                                << "' points=" << generatedCollider.hull.size()
+                                << " thickness=" << generatedCollider.thickness << " due to missing definition.\n";
+                            DebugTrace(warn.str());
+                            m_warnedMissingColliderDefinition = true;
+                        }
+                    }
+                }
+
+                if (!collider)
+                {
                     if (!m_warnedMissingColliderDefinition)
                     {
                         std::ostringstream warn;
                         warn << kLogPrefix << "Using fallback AABB collider for kind '" << kind << "'.\n";
                         DebugTrace(warn.str());
                         m_warnedMissingColliderDefinition = true;
+                    }
+
+                    if (!usedGeneratedHull && !hasGeneratedHull && !m_warnedMissingGeneratedHull)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "No explicit collider definition or generated hull available for kind '" << kind
+                            << "'; defaulting to AABB.\n";
+                        DebugTrace(warn.str());
+                        m_warnedMissingGeneratedHull = true;
                     }
 
                     collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
@@ -742,7 +841,10 @@ namespace SweetsSpace
                         << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
                         << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
                         << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")"
-                        << " defFound=" << std::boolalpha << (colliderDef != m_colliderDefinitions.end()) << "\n";
+                        << " defFound=" << std::boolalpha << (colliderDef != m_colliderDefinitions.end())
+                        << " usedGeneratedHull=" << std::boolalpha << usedGeneratedHull
+                        << " hullPoints=" << generatedCollider.hull.size()
+                        << "\n";
                     DebugTrace(oss.str());
                 }
 

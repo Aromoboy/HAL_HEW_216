@@ -166,6 +166,7 @@
   <ItemGroup>
     <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
+    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
@@ -232,6 +233,7 @@
     <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
+    <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
     <ClInclude Include="include\Collision2D.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
