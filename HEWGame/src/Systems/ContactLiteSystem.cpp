@@ -198,6 +198,8 @@ namespace Systems
                 , m_stableSupportThreshold(0.35f)
                 , m_edgeSlideBoost(0.25f)
                 , m_unstableVerticalDamping(0.35f)
+                , m_baumgarteFactor(0.2f)
+                , m_maxPenetrationCorrection(0.1f)
                 , m_loggedMissingBodyList(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
@@ -271,6 +273,16 @@ namespace Systems
         void ContactLiteSystem::SetUnstableVerticalDamping(float damping)
         {
                 m_unstableVerticalDamping = std::clamp(damping, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetBaumgarteFactor(float factor)
+        {
+                m_baumgarteFactor = std::clamp(factor, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetMaxPenetrationCorrection(float maxCorrection)
+        {
+                m_maxPenetrationCorrection = std::max(0.0f, maxCorrection);
         }
 
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -553,7 +565,8 @@ namespace Systems
                                         continue;
                                 }
 
-                                float pushDistance = contactPenetration + m_penetrationTolerance;
+                                const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
+                                float pushDistance = std::min(m_baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
                                 if (pushDistance <= 0.0f)
                                 {
                                         continue;
