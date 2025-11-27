@@ -29,6 +29,7 @@ namespace
         }
 
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
+        constexpr float kPlanarZTolerance = 1e-3f;
 
         float GetAxisOverlap(const AABB& a, const AABB& b, int axis)
         {
@@ -136,6 +137,8 @@ namespace Systems
                 , m_loggedPlayerPlatformContact(false)
                 , m_loggedPlayerSweetsContact(false)
                 , m_loggedSuppressedSweetsFloor(false)
+                , m_loggedPlanarZSeparation(false)
+                , m_loggedPlanarZIgnore(false)
         {
         }
 
@@ -148,6 +151,8 @@ namespace Systems
                 m_loggedPlayerPlatformContact = false;
                 m_loggedPlayerSweetsContact = false;
                 m_loggedSuppressedSweetsFloor = false;
+                m_loggedPlanarZSeparation = false;
+                m_loggedPlanarZIgnore = false;
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
@@ -325,7 +330,40 @@ namespace Systems
 
                                 const float planarOverlapX = overlaps[0];
                                 const float planarOverlapY = overlaps[1];
-                                const bool suppressedZAxis = overlaps[2] < std::min(planarOverlapX, planarOverlapY);
+                                const float planarOverlapZ = overlaps[2];
+
+                                if (planarOverlapZ < -kPlanarZTolerance)
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedPlanarZSeparation)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Skipping collision resolution due to Z separation exceeding planar tolerance. tags='"
+                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " tolerance=" << kPlanarZTolerance << "\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedPlanarZSeparation = true;
+                                        }
+#endif
+                                        continue;
+                                }
+
+                                const bool ignoringZPenetration = planarOverlapZ < kPlanarZTolerance;
+#if defined(_DEBUG)
+                                if (ignoringZPenetration && !m_loggedPlanarZIgnore)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Proceeding with planar collision despite marginal Z overlap. tags='"
+                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                << " overlapZ=" << planarOverlapZ
+                                                << " tolerance=" << kPlanarZTolerance << "\n";
+                                        DebugTrace(oss.str());
+                                        m_loggedPlanarZIgnore = true;
+                                }
+#endif
+
+                                const bool suppressedZAxis = (!ignoringZPenetration) && planarOverlapZ < std::min(planarOverlapX, planarOverlapY);
                                 const bool chooseX = planarOverlapX <= planarOverlapY;
                                 const int axis = chooseX ? 0 : 1;
                                 const float minOverlap = chooseX ? planarOverlapX : planarOverlapY;
@@ -334,8 +372,9 @@ namespace Systems
                                 if (suppressedZAxis && minOverlap > 0.0f)
                                 {
                                         std::ostringstream oss;
-                                        oss << kLogPrefix << "Suppressed Z-axis overlap (" << overlaps[2]
-                                            << ") to maintain planar constraint. Using axis " << axis
+                                        oss << kLogPrefix << "Suppressed Z-axis overlap (" << planarOverlapZ
+                                            << ") to maintain planar constraint (tolerance=" << kPlanarZTolerance
+                                            << "). Using axis " << axis
                                             << " overlap=" << minOverlap << "\n";
                                         DebugTrace(oss.str());
                                 }

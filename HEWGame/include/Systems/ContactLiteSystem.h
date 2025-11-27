@@ -42,5 +42,7 @@ namespace Systems
         bool m_loggedPlayerPlatformContact;
         bool m_loggedPlayerSweetsContact;
         bool m_loggedSuppressedSweetsFloor;
+        bool m_loggedPlanarZSeparation;
+        bool m_loggedPlanarZIgnore;
     };
 }
