@@ -53,11 +53,13 @@ namespace Collision
                 bool ComputeContact(const ConvexHullCollider2D& hull, Contact2D* outContact = nullptr) const;
 
                 float2 GetCenter() const { return m_center; }
-                float GetRadius() const { return m_radius; }
+                float GetRadius() const { return m_scaledRadius; }
 
         private:
                 float2 m_offset;
                 float m_radius;
+                float m_scaledRadius{ 0.0f };
+                float m_radiusScale{ 1.0f };
                 float2 m_center;
         };
 

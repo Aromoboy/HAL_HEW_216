@@ -127,15 +127,24 @@ namespace Collision
         void CircleCollider2D::UpdateBounds(const Transform& transform)
         {
                 const float radiusScale = std::max(transform.scale.x, transform.scale.y);
-                const float scaledRadius = m_radius * radiusScale;
+                if (std::abs(radiusScale - m_radiusScale) > 1e-4f)
+                {
+                        std::ostringstream oss;
+                        oss << "[CircleCollider2D] radius scale updated from " << m_radiusScale << " to " << radiusScale
+                                << " (base radius: " << m_radius << ", scaled radius: " << (m_radius * radiusScale) << ", offset: ("
+                                << m_offset.x << ", " << m_offset.y << ") )\n";
+                        DebugTrace(oss.str());
+                        m_radiusScale = radiusScale;
+                }
+                m_scaledRadius = m_radius * m_radiusScale;
                 const float2 scaledOffset{ m_offset.x * transform.scale.x, m_offset.y * transform.scale.y };
 
                 m_center = Add(float2{ transform.position.x, transform.position.y }, scaledOffset);
 
-                m_aabb.min.x = m_center.x - scaledRadius;
-                m_aabb.max.x = m_center.x + scaledRadius;
-                m_aabb.min.y = m_center.y - scaledRadius;
-                m_aabb.max.y = m_center.y + scaledRadius;
+                m_aabb.min.x = m_center.x - m_scaledRadius;
+                m_aabb.max.x = m_center.x + m_scaledRadius;
+                m_aabb.min.y = m_center.y - m_scaledRadius;
+                m_aabb.max.y = m_center.y + m_scaledRadius;
 
                 UpdateZBounds(transform, transform.scale.z);
         }
@@ -143,7 +152,7 @@ namespace Collision
         bool CircleCollider2D::ComputeContact(const CircleCollider2D& other, Contact2D* outContact) const
         {
                 const float2 diff = Sub(other.m_center, m_center);
-                const float combinedRadius = m_radius + other.m_radius;
+                const float combinedRadius = m_scaledRadius + other.m_scaledRadius;
                 const float distSq = LengthSq(diff);
                 if (distSq > combinedRadius * combinedRadius)
                 {
