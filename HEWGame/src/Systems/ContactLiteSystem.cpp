@@ -529,11 +529,13 @@ namespace Systems
                                         const float axisCenterA = GetAxisCenter(boundsA, axis);
                                         const float axisCenterB = GetAxisCenter(boundsB, axis);
                                         const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-                                        contactPenetration = minOverlap - m_penetrationTolerance;
-                                        if (contactPenetration <= 0.0f)
+                                        const float rawOverlap = minOverlap;
+                                        if (rawOverlap <= m_penetrationTolerance)
                                         {
                                                 continue;
                                         }
+
+                                        contactPenetration = rawOverlap;
 
                                         switch (axis)
                                         {
@@ -562,7 +564,7 @@ namespace Systems
                                         contactNormal.y = -contactNormal.y;
                                 }
 
-                                float pushDistance = usedSAT ? (contactPenetration + m_penetrationTolerance) : contactPenetration;
+                                float pushDistance = contactPenetration + m_penetrationTolerance;
                                 if (pushDistance <= 0.0f)
                                 {
                                         continue;
