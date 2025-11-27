@@ -17,6 +17,7 @@
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Transform.h"
+#include "Vector.h"
 #include "CollisionLayer.h"
 #include "Physical.h"
 #include "ColliderConfigLoader.h"
@@ -141,6 +142,12 @@ namespace SweetsSpace
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
 
         std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
+        struct GeneratedCollider
+        {
+            std::vector<float2> hull;
+            float thickness = 1.0f;
+        };
+        std::map<std::string, GeneratedCollider> m_generatedColliders;
 
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
@@ -179,6 +186,7 @@ namespace SweetsSpace
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
         bool m_warnedMissingColliderDefinition;
+        bool m_warnedMissingGeneratedHull;
         bool m_hasHorizontalBounds;
         float m_minHorizontalBound;
         float m_maxHorizontalBound;

@@ -13,6 +13,9 @@
     <ClCompile Include="src\ColliderConfigLoader.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Collision2D.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -200,6 +203,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\ColliderConfigLoader.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Collision\ConvexHullBuilder.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Collision2D.h">
