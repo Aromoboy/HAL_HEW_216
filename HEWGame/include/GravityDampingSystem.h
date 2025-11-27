@@ -14,6 +14,7 @@ namespace Systems
         virtual ~GravityDampingSystem() = default;
 
         std::unordered_set<const Entities::PhysicalEntity*> m_loggedKinematicSkips;
+        std::unordered_set<const Entities::PhysicalEntity*> m_loggedPlanarViolations;
         // IPhysicsSystemのApply関数をオーバーライド
         void Apply(Entities::PhysicalEntity& entity, float dt) override;
 
