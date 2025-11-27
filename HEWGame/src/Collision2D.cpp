@@ -15,6 +15,20 @@
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kCircleLogPrefix = "[CircleCollider2D] ";
+
         float2 Add(const float2& a, const float2& b)
         {
                 return float2{ a.x + b.x, a.y + b.y };
@@ -67,18 +81,6 @@ namespace
                 const float s = std::sin(radians);
                 return float2{ v.x * c - v.y * s, v.x * s + v.y * c };
         }
-
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
 }
 
 namespace Collision
@@ -145,7 +147,9 @@ namespace Collision
                 {
                         bool hit = false;
                         ContactManifold2D best{};
-                        best.penetration = std::numeric_limits<float>::max();
+                        best.penetration = std::numeric_limits<float>::lowest();
+                        size_t bestIndex = std::numeric_limits<size_t>::max();
+                        size_t childIndex = 0;
                         for (const auto& child : compound->GetChildren())
                         {
                                 const auto* child2D = dynamic_cast<const ICollider2D*>(child.get());
@@ -154,15 +158,21 @@ namespace Collision
                                         continue;
                                 }
                                 ContactManifold2D candidate{};
-                                if (ComputeContact(*child2D, candidate) && candidate.penetration < best.penetration)
+                                if (ComputeContact(*child2D, candidate) && candidate.penetration > best.penetration)
                                 {
                                         best = candidate;
                                         hit = true;
+                                        bestIndex = childIndex;
                                 }
+                                ++childIndex;
                         }
                         if (hit)
                         {
                                 manifold = best;
+                                std::ostringstream oss;
+                                oss << kCircleLogPrefix << "Compound contact selected child index=" << bestIndex
+                                    << " penetration=" << best.penetration << '\n';
+                                DebugTrace(oss.str());
                         }
                         return hit;
                 }
