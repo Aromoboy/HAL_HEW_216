@@ -23,6 +23,8 @@ namespace Systems
         void SetStableSupportThreshold(float threshold);
         void SetEdgeSlideBoost(float boost);
         void SetUnstableVerticalDamping(float damping);
+        void SetBaumgarteFactor(float factor);
+        void SetMaxPenetrationCorrection(float maxCorrection);
 
         float GetPenetrationTolerance() const { return m_penetrationTolerance; }
         float GetRestitution() const { return m_restitution; }
@@ -33,6 +35,8 @@ namespace Systems
         float GetStableSupportThreshold() const { return m_stableSupportThreshold; }
         float GetEdgeSlideBoost() const { return m_edgeSlideBoost; }
         float GetUnstableVerticalDamping() const { return m_unstableVerticalDamping; }
+        float GetBaumgarteFactor() const { return m_baumgarteFactor; }
+        float GetMaxPenetrationCorrection() const { return m_maxPenetrationCorrection; }
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
@@ -47,6 +51,8 @@ namespace Systems
         float m_stableSupportThreshold;
         float m_edgeSlideBoost;
         float m_unstableVerticalDamping;
+        float m_baumgarteFactor;
+        float m_maxPenetrationCorrection;
         bool m_loggedMissingBodyList;
         bool m_loggedPlayerPresence;
         bool m_loggedPlayerAbsence;

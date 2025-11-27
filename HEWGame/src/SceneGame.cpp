@@ -695,6 +695,8 @@ SceneGame::SceneGame()
         m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
         m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
         m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
+        m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
+        m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
         std::ostringstream oss;
         oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
             << ", restitution=" << tuning.restitution
@@ -702,6 +704,8 @@ SceneGame::SceneGame()
             << ", frictionDynamic=" << tuning.frictionDynamic
             << ", maxSlopeCos=" << tuning.maxSlopeCos
             << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
+            << ", baumgarteFactor=" << tuning.baumgarteFactor
+            << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
             << ").\n";
         ::DebugTrace(oss.str());
     }
