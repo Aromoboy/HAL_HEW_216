@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -12,6 +13,7 @@
 
 namespace
 {
+        constexpr float kPlanarZTolerance = 1e-3f;
 #if defined(_WIN32) && defined(_DEBUG)
         void DebugTrace(const std::string& message)
         {
@@ -49,6 +51,34 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
         // Y軸方向で重なっているかを確認
         if (thisAABB.max.y < otherAABB.min.y ||           // Y軸方向で分離している
                 thisAABB.min.y > otherAABB.max.y) return false;
+
+        const float planarZOverlap = std::min(thisAABB.max.z, otherAABB.max.z) - std::max(thisAABB.min.z, otherAABB.min.z);
+        if (planarZOverlap < -kPlanarZTolerance)
+        {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[AABBCollider] Rejecting collision due to Z separation. this=" << this
+                        << " other=" << &other
+                        << " zOverlap=" << planarZOverlap
+                        << " tolerance=" << kPlanarZTolerance
+                        << " thisZ=[" << thisAABB.min.z << ',' << thisAABB.max.z
+                        << "] otherZ=[" << otherAABB.min.z << ',' << otherAABB.max.z << "]\n";
+                DebugTrace(oss.str());
+#endif
+                return false;
+        }
+
+#if defined(_DEBUG)
+        if (planarZOverlap < kPlanarZTolerance)
+        {
+                std::ostringstream oss;
+                oss << "[AABBCollider] Treating marginal Z overlap (" << planarZOverlap
+                        << ") as planar contact. tolerance=" << kPlanarZTolerance
+                        << " boundsZ this=[" << thisAABB.min.z << ',' << thisAABB.max.z
+                        << "] other=[" << otherAABB.min.z << ',' << otherAABB.max.z << "]\n";
+                DebugTrace(oss.str());
+        }
+#endif
 
         return true;
 
