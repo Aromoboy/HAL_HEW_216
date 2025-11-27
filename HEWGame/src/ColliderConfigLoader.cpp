@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -111,6 +112,39 @@ namespace
                 return std::nullopt;
         }
 
+        void ApplyScalarOption(const std::string& key, const std::string& value, Collision::ColliderDefinition& outDef)
+        {
+                try
+                {
+                        const float parsed = std::stof(value);
+                        if (key == "scale")
+                        {
+                                const float sanitized = std::max(parsed, 0.0f);
+#if defined(_DEBUG)
+                                if (std::abs(sanitized - parsed) > 1e-4f)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Clamped negative scale to " << sanitized << "\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
+                                outDef.scale = sanitized;
+                        }
+                        else if (key == "margin")
+                        {
+                                outDef.margin = parsed;
+                        }
+                }
+                catch (...)
+                {
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Failed to parse scalar option '" << key << "' from value '" << value << "'\n";
+                        DebugTrace(oss.str());
+#endif
+                }
+        }
+
         bool ParseChild(const std::string& token, Collision::ColliderDefinition& outDef)
         {
                 const auto colon = token.find(':');
@@ -121,9 +155,22 @@ namespace
 
                 const std::string typeToken = Trim(token.substr(0, colon));
                 const std::string rest = Trim(token.substr(colon + 1));
-                const auto atPos = rest.find('@');
-                const std::string shapeData = (atPos == std::string::npos) ? rest : rest.substr(0, atPos);
-                const std::string offsetToken = (atPos == std::string::npos) ? std::string{} : rest.substr(atPos + 1);
+
+                std::string shapeData = rest;
+                std::string optionData;
+
+                if (const auto optionPos = rest.find('|'); optionPos != std::string::npos)
+                {
+                        shapeData = Trim(rest.substr(0, optionPos));
+                        optionData = rest.substr(optionPos + 1);
+                }
+
+                const auto atPos = shapeData.find('@');
+                const std::string offsetToken = (atPos == std::string::npos) ? std::string{} : shapeData.substr(atPos + 1);
+                if (atPos != std::string::npos)
+                {
+                        shapeData = Trim(shapeData.substr(0, atPos));
+                }
 
                 const auto kind = ParseKind(typeToken);
                 if (!kind)
@@ -137,6 +184,35 @@ namespace
                         if (auto offset = ParseFloat2(offsetToken))
                         {
                                 outDef.offset = *offset;
+                        }
+                }
+
+                if (!optionData.empty())
+                {
+                        std::stringstream options(optionData);
+                        std::string optionToken;
+                        while (std::getline(options, optionToken, '|'))
+                        {
+                                optionToken = Trim(optionToken);
+                                if (optionToken.empty())
+                                {
+                                        continue;
+                                }
+
+                                const auto eqPos = optionToken.find('=');
+                                if (eqPos == std::string::npos)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Ignoring malformed child option: '" << optionToken << "'\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        continue;
+                                }
+
+                                const std::string key = Trim(optionToken.substr(0, eqPos));
+                                const std::string value = Trim(optionToken.substr(eqPos + 1));
+                                ApplyScalarOption(key, value, outDef);
                         }
                 }
 
@@ -256,6 +332,14 @@ namespace Collision
                                 {
                                 }
                         }
+                        else if (key == "scale")
+                        {
+                                ApplyScalarOption(key, value, current);
+                        }
+                        else if (key == "margin")
+                        {
+                                ApplyScalarOption(key, value, current);
+                        }
                         else if (key == "children")
                         {
                                 current.children.clear();
@@ -295,19 +379,77 @@ namespace Collision
         std::shared_ptr<Collision::ICollider> BuildColliderFromDefinition(
                 const ColliderDefinition& definition,
                 const Transform& transform,
-                Collision::CollisionLayer layer)
+                Collision::CollisionLayer layer,
+                float inheritedScale,
+                float inheritedMargin)
         {
+                const float effectiveScale = std::max(0.0f, definition.scale * inheritedScale);
+                const float effectiveMargin = definition.margin + inheritedMargin;
+
                 switch (definition.type)
                 {
                 case ColliderKind::Circle:
                 {
-                        auto collider = std::make_shared<CircleCollider2D>(definition.radius, definition.offset, definition.thickness, layer);
+                        const float scaledRadius = std::max(0.0f, definition.radius * effectiveScale + effectiveMargin);
+                        const float2 scaledOffset{ definition.offset.x * effectiveScale, definition.offset.y * effectiveScale };
+
+#if defined(_DEBUG)
+                        if (std::abs(effectiveScale - 1.0f) > 1e-4f || std::abs(effectiveMargin) > 1e-4f)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Circle scale/margin applied: base radius=" << definition.radius
+                                        << ", offset=(" << definition.offset.x << ", " << definition.offset.y << ")"
+                                        << ", effectiveScale=" << effectiveScale << ", margin=" << effectiveMargin
+                                        << ", final radius=" << scaledRadius
+                                        << ", final offset=(" << scaledOffset.x << ", " << scaledOffset.y << ")\n";
+                                DebugTrace(oss.str());
+                        }
+#endif
+
+                        auto collider = std::make_shared<CircleCollider2D>(scaledRadius, scaledOffset, definition.thickness, layer);
                         collider->UpdateBounds(transform);
                         return collider;
                 }
                 case ColliderKind::Hull:
                 {
-                        auto collider = std::make_shared<ConvexHullCollider2D>(definition.points, definition.offset, definition.thickness, layer);
+                        std::vector<float2> scaledPoints;
+                        scaledPoints.reserve(definition.points.size());
+
+                        for (const auto& p : definition.points)
+                        {
+                                float2 scaled{ p.x * effectiveScale, p.y * effectiveScale };
+                                if (std::abs(effectiveMargin) > 1e-6f)
+                                {
+                                        const float lenSq = (scaled.x * scaled.x) + (scaled.y * scaled.y);
+                                        if (lenSq > 1e-8f)
+                                        {
+                                                const float invLen = 1.0f / std::sqrt(lenSq);
+                                                scaled.x += scaled.x * invLen * effectiveMargin;
+                                                scaled.y += scaled.y * invLen * effectiveMargin;
+                                        }
+                                        else
+                                        {
+                                                scaled.x += effectiveMargin;
+                                        }
+                                }
+                                scaledPoints.push_back(scaled);
+                        }
+
+                        const float2 scaledOffset{ definition.offset.x * effectiveScale, definition.offset.y * effectiveScale };
+
+#if defined(_DEBUG)
+                        if (std::abs(effectiveScale - 1.0f) > 1e-4f || std::abs(effectiveMargin) > 1e-4f)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Hull scale/margin applied: points=" << definition.points.size()
+                                        << ", effectiveScale=" << effectiveScale << ", margin=" << effectiveMargin
+                                        << ", offset=(" << definition.offset.x << ", " << definition.offset.y << ")"
+                                        << ", final offset=(" << scaledOffset.x << ", " << scaledOffset.y << ")\n";
+                                DebugTrace(oss.str());
+                        }
+#endif
+
+                        auto collider = std::make_shared<ConvexHullCollider2D>(scaledPoints, scaledOffset, definition.thickness, layer);
                         collider->UpdateBounds(transform);
                         return collider;
                 }
@@ -317,7 +459,7 @@ namespace Collision
                         children.reserve(definition.children.size());
                         for (const auto& childDef : definition.children)
                         {
-                                auto child = BuildColliderFromDefinition(childDef, transform, layer);
+                                auto child = BuildColliderFromDefinition(childDef, transform, layer, effectiveScale, effectiveMargin);
                                 if (child)
                                 {
                                         children.push_back(child);
