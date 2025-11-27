@@ -359,6 +359,8 @@ namespace Systems
                                         }
                                 }
 
+                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
+
                                 const AABB boundsA = colliderA->GetAABB();
                                 const AABB boundsB = colliderB->GetAABB();
 
@@ -371,7 +373,7 @@ namespace Systems
                                 const float planarOverlapY = overlaps[1];
                                 const float planarOverlapZ = overlaps[2];
 
-                                if (planarOverlapZ < -kPlanarZTolerance)
+                                if (!pairIs2D && planarOverlapZ < -kPlanarZTolerance)
                                 {
 #if defined(_DEBUG)
                                         if (!m_loggedPlanarZSeparation)
@@ -388,15 +390,26 @@ namespace Systems
                                         continue;
                                 }
 
-                                const bool ignoringZPenetration = planarOverlapZ < kPlanarZTolerance;
+                                const bool ignoringZPenetration = pairIs2D || planarOverlapZ < kPlanarZTolerance;
 #if defined(_DEBUG)
                                 if (ignoringZPenetration && !m_loggedPlanarZIgnore)
                                 {
                                         std::ostringstream oss;
-                                        oss << kLogPrefix << "Proceeding with planar collision despite marginal Z overlap. tags='"
-                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
-                                                << " overlapZ=" << planarOverlapZ
-                                                << " tolerance=" << kPlanarZTolerance << "\n";
+                                        oss << kLogPrefix;
+                                        if (pairIs2D)
+                                        {
+                                                oss << "Ignoring Z overlap for 2D collider pair '" << bodyA->GetTag()
+                                                        << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " (planar evaluation only).\n";
+                                        }
+                                        else
+                                        {
+                                                oss << "Proceeding with planar collision despite marginal Z overlap. tags='"
+                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " tolerance=" << kPlanarZTolerance << "\n";
+                                        }
                                         DebugTrace(oss.str());
                                         m_loggedPlanarZIgnore = true;
                                 }
@@ -410,8 +423,7 @@ namespace Systems
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 Collision::ContactManifold2D contact2D{};
-                                bool usedSAT = Is2DCollider(colliderA) && Is2DCollider(colliderB)
-                                        && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                bool usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
@@ -438,7 +450,8 @@ namespace Systems
                                 {
                                         int axis = 0;
                                         float minOverlap = planarOverlapX;
-                                        for (int ax = 1; ax < 3; ++ax)
+                                        const int axisLimit = pairIs2D ? 2 : 3;
+                                        for (int ax = 1; ax < axisLimit; ++ax)
                                         {
                                                 if (overlaps[ax] < minOverlap)
                                                 {
