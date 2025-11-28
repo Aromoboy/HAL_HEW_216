@@ -95,13 +95,13 @@ namespace
             float frictionDynamic = 0.65f;
             float maxSlopeCos = 1.0f;
             float maxRestitutionVelocity = 25.0f;
-            float verticalSnapCos = 0.98f;
-            float groundMinCos = 0.5f;
+            float verticalSnapCos = 0.96f;
+            float groundMinCos = 0.85f;
             float baumgarteFactor = 0.2f;
-            float maxPenetrationCorrection = 0.1f;
-            float minLinearSpeed = 0.05f;
+            float maxPenetrationCorrection = 0.5f;
+            float minLinearSpeed = 0.03f;
             float minVerticalSpeed = 0.02f;
-            float minTangentialSpeed = 0.01f;
+            float minTangentialSpeed = 0.02f;
         };
 
         std::string TrimWhitespace(const std::string& input)
