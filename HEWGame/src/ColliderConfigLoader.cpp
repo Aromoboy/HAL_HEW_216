@@ -412,6 +412,16 @@ namespace Collision
                 }
                 case ColliderKind::Hull:
                 {
+                        if (definition.points.empty())
+                        {
+#if defined(_DEBUG)
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Hull collider definition contained no points; skipping creation.\n";
+                                DebugTrace(oss.str());
+#endif
+                                return nullptr;
+                        }
+
                         std::vector<float2> scaledPoints;
                         scaledPoints.reserve(definition.points.size());
 
