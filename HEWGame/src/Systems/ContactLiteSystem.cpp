@@ -633,6 +633,21 @@ namespace Systems
                                 {
                                         continue;
                                 }
+                                const float absContactNormalY = std::fabs(contactNormal.y);
+                                const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
+                                bool isGroundContact = classification.isGround && slopeAllowsSupport;
+#if defined(_DEBUG)
+                                if (classification.isGround && !isGroundContact)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Ground contact demoted due to slope for '" << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                << "' |n.y|=" << absContactNormalY
+                                                << " slopeCosLimit=" << m_maxSlopeCos
+                                                << " groundMinCos=" << m_groundMinCos
+                                                << " normal=(" << contactNormal.x << ',' << contactNormal.y << ',' << contactNormal.z << ")\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
 
                                 const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
                                 float pushDistance = std::min(m_baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
@@ -648,7 +663,7 @@ namespace Systems
                                 float slideDir = 0.0f;
                                 float verticalResolutionScale = 1.0f;
 
-                                const bool treatedAsSupport = classification.isGround;
+                                const bool treatedAsSupport = isGroundContact;
                                 if (treatedAsSupport)
                                 {
                                         const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
@@ -985,8 +1000,8 @@ namespace Systems
                                         {
                                         const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
                                         const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
-                                        const bool slopeAllowsStaticFriction = classification.verticalComponent >= m_maxSlopeCos;
-                                        const bool allowStaticFriction = classification.isGround && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
+                                        const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
+                                        const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
                                         const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
                                         if (allowStaticFriction && withinStaticThreshold)
                                         {
@@ -1019,9 +1034,10 @@ namespace Systems
                                                         {
 #if defined(_DEBUG)
                                                                 std::ostringstream oss;
-                                                                oss << kLogPrefix << "Static friction suppressed for steep contact between '"
+                                                                oss << kLogPrefix << "Static friction suppressed for steep or non-ground contact between '"
                                                                         << bodyA->GetTag() << "' and '" << bodyB->GetTag()
-                                                                        << "' |n.y|=" << classification.verticalComponent
+                                                                        << "' ground=" << (isGroundContact ? "yes" : "no")
+                                                                        << " |n.y|=" << absContactNormalY
                                                                         << " slopeLimit=" << m_maxSlopeCos
                                                                         << " relativeTangentialVelocity=" << relativeTangentialVelocity
                                                                         << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
@@ -1067,8 +1083,8 @@ namespace Systems
                                         }
 
                                         const bool hasTangent = tangentLenSq > 1e-6f;
-                                        ClampVelocity(physA, contactNormal, tangent, hasTangent, classification.isGround, bodyA->GetTag());
-                                        ClampVelocity(physB, contactNormal, tangent, hasTangent, classification.isGround, bodyB->GetTag());
+                                        ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, bodyA->GetTag());
+                                        ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, bodyB->GetTag());
                                 }
 
 #if defined(_DEBUG)
@@ -1085,7 +1101,7 @@ namespace Systems
                                                 oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
                                                         << ")";
                                         }
-                                        oss << " ground=" << (classification.isGround ? "yes" : "no");
+                                        oss << " ground=" << (isGroundContact ? "yes" : "no");
                                         oss << "\n";
                                         DebugTrace(oss.str());
                                 }
