@@ -40,6 +40,7 @@ namespace
                 float3 normal{ 0.0f, 0.0f, 0.0f };
                 float verticalComponent{ 0.0f };
                 bool isGround{ false };
+                bool isVerticalSnapped{ false };
         };
 
         ContactNormalClassification ClassifyContactNormal(float3 normal, float verticalSnapCos, float groundMinCos)
@@ -70,6 +71,7 @@ namespace
                         normal.x = 0.0f;
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
                         normal.z = 0.0f;
+                        classification.isVerticalSnapped = true;
 #if defined(_DEBUG)
                         if (std::fabs(originalX) > 1e-4f || std::fabs(originalZ) > 1e-4f)
                         {
@@ -633,6 +635,10 @@ namespace Systems
                                 }
 
                                 const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
+                                const bool snappedToVertical = classification.isVerticalSnapped;
+#if !defined(_DEBUG)
+                                (void)snappedToVertical;
+#endif
                                 contactNormal = classification.normal;
                                 if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
                                 {
@@ -649,6 +655,7 @@ namespace Systems
                                                 << "' |n.y|=" << absContactNormalY
                                                 << " slopeCosLimit=" << m_maxSlopeCos
                                                 << " groundMinCos=" << m_groundMinCos
+                                                << " snappedVertical=" << (snappedToVertical ? "yes" : "no")
                                                 << " normal=(" << contactNormal.x << ',' << contactNormal.y << ',' << contactNormal.z << ")\n";
                                         DebugTrace(oss.str());
                                 }
@@ -1107,6 +1114,7 @@ namespace Systems
                                                         << ")";
                                         }
                                         oss << " ground=" << (isGroundContact ? "yes" : "no");
+                                        oss << " snappedVertical=" << (snappedToVertical ? "yes" : "no");
                                         oss << "\n";
                                         DebugTrace(oss.str());
                                 }
