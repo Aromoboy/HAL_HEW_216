@@ -524,8 +524,9 @@ namespace Systems
 
                                 const bool foundationPair = colliderA->GetLayer() == Collision::CollisionLayer::Floor
                                         || colliderB->GetLayer() == Collision::CollisionLayer::Floor;
+                                const bool staticFoundationPair = foundationPair && (bodyAStatic || bodyBStatic);
                                 const float verticalOverlap = planarOverlapY;
-                                const bool shallowFoundationContact = foundationPair
+                                const bool shallowFoundationContact = staticFoundationPair
                                         && verticalOverlap > m_penetrationTolerance
                                         && verticalOverlap <= (m_penetrationTolerance * kFoundationSatBypassScale);
 
@@ -535,6 +536,7 @@ namespace Systems
                                         contactNormal = float3{ 0.0f, axisDir, 0.0f };
                                         contactPenetration = verticalOverlap;
                                         fallbackAABB = true;
+                                        usedSAT = false;
 #if defined(_DEBUG)
                                         {
                                                 std::ostringstream oss;
@@ -543,7 +545,10 @@ namespace Systems
                                                         << "' penetration=" << contactPenetration
                                                         << " tolerance=" << m_penetrationTolerance
                                                         << " layerA=" << ToString(colliderA->GetLayer())
-                                                        << " layerB=" << ToString(colliderB->GetLayer()) << "\n";
+                                                        << " layerB=" << ToString(colliderB->GetLayer())
+                                                        << " staticA=" << (bodyAStatic ? "yes" : "no")
+                                                        << " staticB=" << (bodyBStatic ? "yes" : "no")
+                                                        << " forcedNormal=(0," << axisDir << ",0)\n";
                                                 DebugTrace(oss.str());
                                         }
 #endif
