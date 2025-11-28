@@ -805,20 +805,63 @@ namespace SweetsSpace
                 bool colliderDefinitionFound = false;
                 bool colliderDefinitionFailed = false;
                 bool colliderDefinitionEmpty = false;
+                bool colliderDefinitionHullMissingPoints = false;
 
                 const auto colliderDef = m_colliderDefinitions.find(kind);
                 if (colliderDef != m_colliderDefinitions.end())
                 {
                     colliderDefinitionFound = true;
-                    colliderDefinitionEmpty = colliderDef->second.children.empty();
+                    const Collision::ColliderDefinition& definition = colliderDef->second;
+                    const bool colliderDefinitionIsCompound = definition.type == Collision::ColliderKind::Compound;
+                    const bool colliderDefinitionIsHull = definition.type == Collision::ColliderKind::Hull;
+                    const bool colliderDefinitionIsCircle = definition.type == Collision::ColliderKind::Circle;
+
+                    if (colliderDefinitionIsCompound)
+                    {
+                        colliderDefinitionEmpty = definition.children.empty();
+                    }
+                    else if (colliderDefinitionIsHull)
+                    {
+                        colliderDefinitionHullMissingPoints = definition.points.empty();
+                        colliderDefinitionEmpty = colliderDefinitionHullMissingPoints;
+                    }
+                    else if (colliderDefinitionIsCircle)
+                    {
+                        colliderDefinitionEmpty = definition.radius <= std::numeric_limits<float>::epsilon();
+                    }
+
                     if (!colliderDefinitionEmpty)
                     {
-                        collider = Collision::BuildColliderFromDefinition(colliderDef->second, scaledTransform, Collision::CollisionLayer::Sweets);
+                        collider = Collision::BuildColliderFromDefinition(definition, scaledTransform, Collision::CollisionLayer::Sweets);
                         if (collider)
                         {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Loaded collider definition for '" << kind << "' children=" << colliderDef->second.children.size() << "\n";
-                            DebugTrace(oss.str());
+                            if (colliderDefinitionIsCompound)
+                            {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Loaded compound collider definition for '" << kind
+                                    << "' children=" << definition.children.size() << "\n";
+                                DebugTrace(oss.str());
+                            }
+                            else if (colliderDefinitionIsHull)
+                            {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Loaded hull collider definition for '" << kind
+                                    << "' points=" << definition.points.size()
+                                    << " scale=" << definition.scale
+                                    << " margin=" << definition.margin
+                                    << " thickness=" << definition.thickness << "\n";
+                                DebugTrace(oss.str());
+                            }
+                            else if (colliderDefinitionIsCircle)
+                            {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Loaded circle collider definition for '" << kind
+                                    << " radius=" << definition.radius
+                                    << " scale=" << definition.scale
+                                    << " margin=" << definition.margin
+                                    << " thickness=" << definition.thickness << "\n";
+                                DebugTrace(oss.str());
+                            }
                         }
                         else
                         {
@@ -827,6 +870,13 @@ namespace SweetsSpace
                     }
                     else
                     {
+                        if (colliderDefinitionIsHull && colliderDefinitionHullMissingPoints)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Hull collider definition for '" << kind
+                                << "' contained no points; attempting to fall back.\n";
+                            DebugTrace(warn.str());
+                        }
                         colliderDefinitionFailed = true;
                     }
                 }
@@ -842,7 +892,18 @@ namespace SweetsSpace
                         collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
                         usedGeneratedHull = true;
                         const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
-                        if (colliderDefinitionFailed)
+                        if (colliderDefinitionHullMissingPoints)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Hull collider definition for '" << kind
+                                << "' had no usable points; using auto-generated hull points=" << generatedCollider.hull.size()
+                                << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
+                                << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
+                                << " thickness=" << generatedCollider.thickness
+                                << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
+                            DebugTrace(warn.str());
+                        }
+                        else if (colliderDefinitionFailed)
                         {
                             std::ostringstream warn;
                             warn << kLogPrefix << "Collider definition for '" << kind
@@ -853,7 +914,7 @@ namespace SweetsSpace
                         else if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Using generated hull for '" << kind << "' ("
+                            warn << kLogPrefix << "Using auto-generated hull for '" << kind << "' ("
                                 << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found") << ")"
                                 << " points=" << generatedCollider.hull.size()
                                 << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
