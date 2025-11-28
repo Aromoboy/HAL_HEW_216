@@ -50,6 +50,7 @@ namespace Systems
                 struct DrawColliderCommand
                 {
                     Entities::Entity* source;
+                    Collision::ICollider* collider;
                     AABB aabb;
                 };
 
