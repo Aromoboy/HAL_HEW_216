@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -19,6 +20,8 @@
 #include "CollisionLayer.h"
 #include "Collision2D.h"
 #include "SweetsPrototypeManifest.h"
+
+static_assert(std::is_class_v<Systems::ContactLiteSystem>, "ContactLiteSystem declaration must remain visible to the implementation.");
 
 namespace
 {
