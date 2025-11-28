@@ -33,6 +33,7 @@ namespace
 
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
+        constexpr float kFoundationSatBypassScale = 2.0f;
 
         struct ContactNormalClassification
         {
@@ -497,71 +498,102 @@ namespace Systems
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 Collision::ContactManifold2D contact2D{};
-                                bool usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                bool usedSAT = false;
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
 
-                                if (usedSAT)
-                                {
-                                        contactNormal.x = contact2D.normal.x;
-                                        contactNormal.y = contact2D.normal.y;
-                                        const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
-                                        if (lenSq > 1e-6f)
-                                        {
-                                                const float invLen = 1.0f / std::sqrt(lenSq);
-                                                contactNormal.x *= invLen;
-                                                contactNormal.y *= invLen;
-                                                contactPenetration = contact2D.penetration;
-                                        }
-                                        else
-                                        {
-                                                usedSAT = false;
-                                        }
-                                }
+                                const bool foundationPair = colliderA->GetLayer() == Collision::CollisionLayer::Floor
+                                        || colliderB->GetLayer() == Collision::CollisionLayer::Floor;
+                                const float verticalOverlap = planarOverlapY;
+                                const bool shallowFoundationContact = foundationPair
+                                        && verticalOverlap > m_penetrationTolerance
+                                        && verticalOverlap <= (m_penetrationTolerance * kFoundationSatBypassScale);
 
-                                if (!usedSAT)
+                                if (shallowFoundationContact)
                                 {
-                                        int axis = 0;
-                                        float minOverlap = planarOverlapX;
-                                        const int axisLimit = pairIs2D ? 2 : 3;
-                                        for (int ax = 1; ax < axisLimit; ++ax)
+                                        const float axisDir = (centerA.y < centerB.y) ? -1.0f : 1.0f;
+                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
+                                        contactPenetration = verticalOverlap;
+                                        fallbackAABB = true;
+#if defined(_DEBUG)
                                         {
-                                                if (overlaps[ax] < minOverlap)
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Bypassing SAT for shallow foundation contact between '"
+                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
+                                                        << "' penetration=" << contactPenetration
+                                                        << " tolerance=" << m_penetrationTolerance
+                                                        << " layerA=" << ToString(colliderA->GetLayer())
+                                                        << " layerB=" << ToString(colliderB->GetLayer()) << "\n";
+                                                DebugTrace(oss.str());
+                                        }
+#endif
+                                }
+                                else
+                                {
+                                        usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
+
+                                        if (usedSAT)
+                                        {
+                                                contactNormal.x = contact2D.normal.x;
+                                                contactNormal.y = contact2D.normal.y;
+                                                const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
+                                                if (lenSq > 1e-6f)
                                                 {
-                                                        minOverlap = overlaps[ax];
-                                                        axis = ax;
+                                                        const float invLen = 1.0f / std::sqrt(lenSq);
+                                                        contactNormal.x *= invLen;
+                                                        contactNormal.y *= invLen;
+                                                        contactPenetration = contact2D.penetration;
+                                                }
+                                                else
+                                                {
+                                                        usedSAT = false;
                                                 }
                                         }
-                                        if (minOverlap <= 0.0f)
-                                        {
-                                                continue;
-                                        }
 
-                                        const float axisCenterA = GetAxisCenter(boundsA, axis);
-                                        const float axisCenterB = GetAxisCenter(boundsB, axis);
-                                        const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-                                        const float rawOverlap = minOverlap;
-                                        if (rawOverlap <= m_penetrationTolerance)
+                                        if (!usedSAT)
                                         {
-                                                continue;
-                                        }
+                                                int axis = 0;
+                                                float minOverlap = planarOverlapX;
+                                                const int axisLimit = pairIs2D ? 2 : 3;
+                                                for (int ax = 1; ax < axisLimit; ++ax)
+                                                {
+                                                        if (overlaps[ax] < minOverlap)
+                                                        {
+                                                                minOverlap = overlaps[ax];
+                                                                axis = ax;
+                                                        }
+                                                }
+                                                if (minOverlap <= 0.0f)
+                                                {
+                                                        continue;
+                                                }
 
-                                        contactPenetration = rawOverlap;
+                                                const float axisCenterA = GetAxisCenter(boundsA, axis);
+                                                const float axisCenterB = GetAxisCenter(boundsB, axis);
+                                                const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
+                                                const float rawOverlap = minOverlap;
+                                                if (rawOverlap <= m_penetrationTolerance)
+                                                {
+                                                        continue;
+                                                }
 
-                                        switch (axis)
-                                        {
-                                        case 0:
-                                                contactNormal = float3{ axisDir, 0.0f, 0.0f };
-                                                break;
-                                        case 1:
-                                                contactNormal = float3{ 0.0f, axisDir, 0.0f };
-                                                break;
-                                        default:
-                                                contactNormal = float3{ 0.0f, 0.0f, axisDir };
-                                                break;
+                                                contactPenetration = rawOverlap;
+
+                                                switch (axis)
+                                                {
+                                                case 0:
+                                                        contactNormal = float3{ axisDir, 0.0f, 0.0f };
+                                                        break;
+                                                case 1:
+                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
+                                                        break;
+                                                default:
+                                                        contactNormal = float3{ 0.0f, 0.0f, axisDir };
+                                                        break;
+                                                }
+                                                fallbackAABB = true;
                                         }
-                                        fallbackAABB = true;
                                 }
 
                                 const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, 0.0f };
