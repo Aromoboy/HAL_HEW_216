@@ -64,6 +64,7 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
+    constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
 
     struct FallbackMaterialColors
     {
@@ -153,8 +154,20 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
+        float rawThickness{ 0.0f };
         float thickness{ 1.0f };
+        float paddingFactor{ 1.0f };
     };
+
+    float SanitizeThicknessPadding(float value)
+    {
+        if (!std::isfinite(value))
+        {
+            return 1.0f;
+        }
+
+        return std::max(value, 1.0f);
+    }
 
     void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
     {
@@ -375,7 +388,7 @@ namespace
         return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
     }
 
-    MeshHullSummary AnalyzeModelGeometry(const std::string& path)
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding)
     {
         MeshHullSummary summary{};
         std::ifstream file(path);
@@ -396,6 +409,9 @@ namespace
 
         std::vector<PositionOnly> positions;
         std::string line;
+        const float sanitizedPadding = SanitizeThicknessPadding(thicknessPadding);
+        summary.paddingFactor = sanitizedPadding;
+
         while (std::getline(file, line))
         {
             if (line.size() < 2 || line[0] != 'v' || line[1] != ' ')
@@ -432,7 +448,9 @@ namespace
         }
         else
         {
-            summary.thickness = std::max(summary.bounds.max.z - summary.bounds.min.z, 0.0f);
+            summary.rawThickness = std::max(summary.bounds.max.z - summary.bounds.min.z, 0.0f);
+            summary.paddingFactor = sanitizedPadding;
+            summary.thickness = summary.rawThickness * summary.paddingFactor;
         }
 
         if (!positions.empty())
@@ -449,7 +467,10 @@ namespace
             summary.hull = Collision::BuildConvexHullFromMesh(desc);
             std::ostringstream oss;
             oss << kLogPrefix << "Analyzed geometry for '" << path << "' positions=" << positions.size()
-                << " hullPoints=" << summary.hull.size() << " thickness=" << summary.thickness << "\n";
+                << " hullPoints=" << summary.hull.size()
+                << " rawThickness=" << summary.rawThickness
+                << " paddedThickness=" << summary.thickness
+                << " paddingFactor=" << summary.paddingFactor << "\n";
             DebugTrace(oss.str());
         }
         else
@@ -613,6 +634,7 @@ namespace SweetsSpace
         , m_minHorizontalBound(0.0f)
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
+        , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
         , m_lastLiveSweetsCount(0)
@@ -666,8 +688,9 @@ namespace SweetsSpace
             const std::string kind = descriptor->key;
             const std::string modelPath = descriptor->modelPath;
 
-            MeshHullSummary geometry = AnalyzeModelGeometry(modelPath);
-            const float fallbackThickness = fallbackBounds.max.z - fallbackBounds.min.z;
+            MeshHullSummary geometry = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding);
+            const float baseFallbackThickness = fallbackBounds.max.z - fallbackBounds.min.z;
+            const float fallbackThickness = baseFallbackThickness * m_generatedColliderThicknessPadding;
             if (geometry.hull.empty() && geometry.bounds.valid)
             {
                 std::ostringstream warn;
@@ -684,9 +707,25 @@ namespace SweetsSpace
                     << "' because model bounds were unavailable.\n";
                 DebugTrace(warn.str());
             }
-            const float resolvedThickness = geometry.bounds.valid ? geometry.thickness : fallbackThickness;
-            GeneratedCollider generatedCollider{ geometry.hull, std::max(resolvedThickness, fallbackThickness) };
+            const float resolvedRawThickness = geometry.bounds.valid ? geometry.rawThickness : baseFallbackThickness;
+            const float paddedThickness = std::max(resolvedRawThickness * m_generatedColliderThicknessPadding, fallbackThickness);
+            GeneratedCollider generatedCollider{ geometry.hull, paddedThickness };
             m_generatedColliders[kind] = generatedCollider;
+
+            const auto colliderDefinition = m_colliderDefinitions.find(kind);
+            const bool colliderDefinitionFound = colliderDefinition != m_colliderDefinitions.end();
+            const bool colliderDefinitionEmpty = colliderDefinitionFound && colliderDefinition->second.children.empty();
+            if (!colliderDefinitionFound || colliderDefinitionEmpty)
+            {
+                std::ostringstream padLog;
+                padLog << kLogPrefix << "Using padded thickness for kind '" << kind
+                    << "' baseThickness=" << resolvedRawThickness
+                    << " paddingFactor=" << m_generatedColliderThicknessPadding
+                    << " paddedThickness=" << paddedThickness
+                    << (colliderDefinitionFound ? " because collider config was empty.\n"
+                        : " because collider config was missing.\n");
+                DebugTrace(padLog.str());
+            }
 
             if (!generatedCollider.hull.empty())
             {
@@ -1871,6 +1910,25 @@ namespace SweetsSpace
             << " max=" << m_maxHorizontalBound
             << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
         DebugTrace(oss.str());
+    }
+
+    void SweetsManager::SetGeneratedColliderThicknessPadding(float factor)
+    {
+        const float sanitized = SanitizeThicknessPadding(factor);
+        const bool clamped = std::fabs(sanitized - factor) > 1e-4f;
+        const bool changed = std::fabs(sanitized - m_generatedColliderThicknessPadding) > 1e-4f;
+        m_generatedColliderThicknessPadding = sanitized;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Generated collider thickness padding set to " << sanitized
+            << (clamped ? " (clamped to minimum of 1.0)" : "")
+            << "; cached colliders will retain previously generated thickness values until regeneration.\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Thickness padding unchanged from prior value.\n");
+        }
     }
 
     void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
