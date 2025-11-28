@@ -232,8 +232,9 @@ namespace Collision
                 const float2 offsetScaled{ m_offset.x * transform.scale.x, m_offset.y * transform.scale.y };
                 const float2 center{ transform.position.x + offsetScaled.x, transform.position.y + offsetScaled.y };
 
-                float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0.0f };
-                float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), 0.0f };
+                float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                bool hasChildBounds = false;
                 m_worldPoints.clear();
                 m_worldPoints.reserve(m_points.size());
 
@@ -551,8 +552,9 @@ namespace Collision
 
         void CompoundCollider2D::UpdateBounds(const Transform& transform)
         {
-                float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0.0f };
-                float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), 0.0f };
+                float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                bool hasChildBounds = false;
 
                 for (const auto& child : m_children)
                 {
@@ -563,6 +565,14 @@ namespace Collision
 
                         child->UpdateBounds(transform);
                         const AABB childAABB = child->GetAABB();
+                        if (!hasChildBounds)
+                        {
+                                minBounds = childAABB.min;
+                                maxBounds = childAABB.max;
+                                hasChildBounds = true;
+                                continue;
+                        }
+
                         minBounds.x = std::min(minBounds.x, childAABB.min.x);
                         minBounds.y = std::min(minBounds.y, childAABB.min.y);
                         minBounds.z = std::min(minBounds.z, childAABB.min.z);
@@ -571,8 +581,15 @@ namespace Collision
                         maxBounds.z = std::max(maxBounds.z, childAABB.max.z);
                 }
 
-                m_aabb.min = minBounds;
-                m_aabb.max = maxBounds;
+                if (hasChildBounds)
+                {
+                        m_aabb.min = minBounds;
+                        m_aabb.max = maxBounds;
+                        return;
+                }
+
+                m_aabb.min = transform.position;
+                m_aabb.max = transform.position;
                 UpdateZBounds(transform, transform.scale.z);
         }
 
