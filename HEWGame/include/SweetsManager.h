@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "Core/UpdateNode.h"
@@ -186,7 +187,7 @@ namespace SweetsSpace
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
-        bool m_warnedMissingColliderDefinition;
+        std::unordered_set<std::string> m_warnedMissingColliderDefinitionKinds;
         bool m_warnedMissingGeneratedHull;
         bool m_hasHorizontalBounds;
         float m_minHorizontalBound;

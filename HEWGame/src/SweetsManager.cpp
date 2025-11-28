@@ -628,7 +628,7 @@ namespace SweetsSpace
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
-        , m_warnedMissingColliderDefinition(false)
+        , m_warnedMissingColliderDefinitionKinds()
         , m_warnedMissingGeneratedHull(false)
         , m_hasHorizontalBounds(false)
         , m_minHorizontalBound(0.0f)
@@ -804,17 +804,26 @@ namespace SweetsSpace
                 bool usedGeneratedHull = false;
                 bool colliderDefinitionFound = false;
                 bool colliderDefinitionFailed = false;
+                bool colliderDefinitionEmpty = false;
 
                 const auto colliderDef = m_colliderDefinitions.find(kind);
                 if (colliderDef != m_colliderDefinitions.end())
                 {
                     colliderDefinitionFound = true;
-                    collider = Collision::BuildColliderFromDefinition(colliderDef->second, scaledTransform, Collision::CollisionLayer::Sweets);
-                    if (collider)
+                    colliderDefinitionEmpty = colliderDef->second.children.empty();
+                    if (!colliderDefinitionEmpty)
                     {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Loaded collider definition for '" << kind << "' children=" << colliderDef->second.children.size() << "\n";
-                        DebugTrace(oss.str());
+                        collider = Collision::BuildColliderFromDefinition(colliderDef->second, scaledTransform, Collision::CollisionLayer::Sweets);
+                        if (collider)
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Loaded collider definition for '" << kind << "' children=" << colliderDef->second.children.size() << "\n";
+                            DebugTrace(oss.str());
+                        }
+                        else
+                        {
+                            colliderDefinitionFailed = true;
+                        }
                     }
                     else
                     {
@@ -832,6 +841,7 @@ namespace SweetsSpace
                     {
                         collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
                         usedGeneratedHull = true;
+                        const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
                         if (colliderDefinitionFailed)
                         {
                             std::ostringstream warn;
@@ -840,14 +850,18 @@ namespace SweetsSpace
                                 << " thickness=" << generatedCollider.thickness << "\n";
                             DebugTrace(warn.str());
                         }
-                        else if (!colliderDefinitionFound && !m_warnedMissingColliderDefinition)
+                        else if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Using generated convex hull for kind '" << kind
-                                << "' points=" << generatedCollider.hull.size()
-                                << " thickness=" << generatedCollider.thickness << " due to missing definition.\n";
+                            warn << kLogPrefix << "Using generated hull for '" << kind << "' ("
+                                << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found") << ")"
+                                << " points=" << generatedCollider.hull.size()
+                                << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
+                                << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
+                                << " thickness=" << generatedCollider.thickness
+                                << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
                             DebugTrace(warn.str());
-                            m_warnedMissingColliderDefinition = true;
+                            m_warnedMissingColliderDefinitionKinds.insert(kind);
                         }
                     }
                 }
@@ -861,12 +875,16 @@ namespace SweetsSpace
                             << "' could not be built and no generated hull was available; using fallback AABB.\n";
                         DebugTrace(warn.str());
                     }
-                    else if (!colliderDefinitionFound && !m_warnedMissingColliderDefinition)
+                    else if ((!colliderDefinitionFound || colliderDefinitionEmpty)
+                        && m_warnedMissingColliderDefinitionKinds.find(kind) == m_warnedMissingColliderDefinitionKinds.end())
                     {
                         std::ostringstream warn;
-                        warn << kLogPrefix << "Using fallback AABB collider for kind '" << kind << "'.\n";
+                        warn << kLogPrefix << "Using fallback AABB collider for '" << kind << "' ("
+                            << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found")
+                            << ") scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
+                            << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")\n";
                         DebugTrace(warn.str());
-                        m_warnedMissingColliderDefinition = true;
+                        m_warnedMissingColliderDefinitionKinds.insert(kind);
                     }
 
                     if (!usedGeneratedHull && !hasGeneratedHull && !m_warnedMissingGeneratedHull)
