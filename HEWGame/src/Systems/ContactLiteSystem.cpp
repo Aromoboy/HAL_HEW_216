@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -16,6 +17,7 @@
 #endif
 
 #include "AABB.h"
+#include "AABBCollider.h"
 #include "ICollider.h"
 #include "CollisionLayer.h"
 #include "Collision2D.h"
@@ -111,6 +113,26 @@ namespace
                 }
 
                 return colliderB2D->ComputeContact(*colliderA2D, out);
+        }
+
+        std::vector<float2> BuildAABBHull(const AABB& bounds)
+        {
+                return {
+                        float2{ bounds.min.x, bounds.min.y },
+                        float2{ bounds.max.x, bounds.min.y },
+                        float2{ bounds.max.x, bounds.max.y },
+                        float2{ bounds.min.x, bounds.max.y },
+                };
+        }
+
+        bool Compute2DContactWithAABBProxy(const Collision::ICollider2D& collider2D,
+                const Collision::AABBCollider& aabbCollider,
+                Collision::ContactManifold2D& out)
+        {
+                const AABB bounds = aabbCollider.GetAABB();
+                const float thickness = std::max(bounds.max.z - bounds.min.z, 0.0f);
+                Collision::ConvexHullCollider2D proxy(BuildAABBHull(bounds), float2{ 0.0f, 0.0f }, thickness, aabbCollider.GetLayer());
+                return collider2D.ComputeContact(proxy, out);
         }
 
         float GetAxisOverlap(const AABB& a, const AABB& b, int axis)
@@ -522,7 +544,11 @@ namespace Systems
                                 const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 Collision::ContactManifold2D contact2D{};
+                                std::string contactMethod = "none";
+                                const bool sweetsPair = IsSweetsTag(bodyA->GetTag()) || IsSweetsTag(bodyB->GetTag());
                                 bool usedSAT = false;
+                                bool attemptedSAT = false;
+                                bool usedProxySAT = false;
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
@@ -541,6 +567,7 @@ namespace Systems
                                         contactNormal = float3{ 0.0f, axisDir, 0.0f };
                                         contactPenetration = verticalOverlap;
                                         fallbackAABB = true;
+                                        contactMethod = "foundation_aabb";
                                         usedSAT = false;
 #if defined(_DEBUG)
                                         {
@@ -560,7 +587,48 @@ namespace Systems
                                 }
                                 else
                                 {
+                                        attemptedSAT = pairIs2D;
                                         usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                        contactMethod = usedSAT ? "sat_2d" : contactMethod;
+
+                                        const bool preferSAT = sweetsPair && !foundationPair;
+                                        if (!usedSAT && preferSAT)
+                                        {
+                                                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
+                                                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
+                                                const auto* aabbA = dynamic_cast<const Collision::AABBCollider*>(colliderA);
+                                                const auto* aabbB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
+
+                                                if (colliderA2D && aabbB)
+                                                {
+                                                        attemptedSAT = true;
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *aabbB, contact2D);
+                                                        usedProxySAT = usedSAT;
+                                                }
+                                                if (!usedSAT && colliderB2D && aabbA)
+                                                {
+                                                        attemptedSAT = true;
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *aabbA, contact2D);
+                                                        usedProxySAT = usedSAT;
+                                                }
+
+                                                if (usedSAT)
+                                                {
+                                                        contactMethod = "sat_proxy_aabb";
+                                                }
+#if defined(_DEBUG)
+                                                else if (attemptedSAT)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "SAT failed for sweets pair; skipping AABB fallback. tags='"
+                                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                                << " foundationPair=" << (foundationPair ? "yes" : "no")
+                                                                << " overlapX=" << planarOverlapX << " overlapY=" << planarOverlapY
+                                                                << " overlapZ=" << planarOverlapZ << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+                                        }
 
                                         if (usedSAT)
                                         {
@@ -580,7 +648,8 @@ namespace Systems
                                                 }
                                         }
 
-                                        if (!usedSAT)
+                                        const bool allowFallback = !sweetsPair || foundationPair || !attemptedSAT;
+                                        if (!usedSAT && allowFallback)
                                         {
                                                 int axis = 0;
                                                 float minOverlap = planarOverlapX;
@@ -622,6 +691,11 @@ namespace Systems
                                                         break;
                                                 }
                                                 fallbackAABB = true;
+                                                contactMethod = "aabb_overlap";
+                                        }
+                                        else if (!usedSAT)
+                                        {
+                                                continue;
                                         }
                                 }
 
@@ -1113,7 +1187,9 @@ namespace Systems
                                                 << " penetration=" << contactPenetration
                                                 << " pushDistance=" << pushDistance
                                                 << " usedSAT=" << (usedSAT ? "yes" : "no")
-                                                << " fallback=" << (fallbackAABB ? "yes" : "no");
+                                                << " fallback=" << (fallbackAABB ? "yes" : "no")
+                                                << " proxySAT=" << (usedProxySAT ? "yes" : "no")
+                                                << " method=" << contactMethod;
                                         if (usedSAT)
                                         {
                                                 oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
