@@ -786,18 +786,20 @@ namespace Systems
                                                 return false;
                                         };
 
-                                        bool clamped = false;
-                                        clamped |= clampComponent(phys.velocity.x, m_minLinearSpeed);
-                                        clamped |= clampComponent(phys.velocity.y, m_minLinearSpeed);
-                                        clamped |= clampComponent(phys.velocity.z, m_minLinearSpeed);
+                                        bool clampedLinear = false;
+                                        clampedLinear |= clampComponent(phys.velocity.x, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(phys.velocity.y, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(phys.velocity.z, m_minLinearSpeed);
 
+                                        bool clampedNormal = false;
+                                        bool clampedTangent = false;
                                         if (groundContact)
                                         {
                                                 const float normalComponent = Project(phys.velocity, normal);
                                                 if (std::fabs(normalComponent) < m_minVerticalSpeed)
                                                 {
                                                         ApplyComponent(phys, normal, 0.0f);
-                                                        clamped = true;
+                                                        clampedNormal = true;
                                                 }
 
                                                 if (hasTangent)
@@ -806,13 +808,13 @@ namespace Systems
                                                         if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
                                                         {
                                                                 ApplyComponent(phys, tangent, 0.0f);
-                                                                clamped = true;
+                                                                clampedTangent = true;
                                                         }
                                                 }
                                         }
 
 #if defined(_DEBUG)
-                                        if (clamped)
+                                        if (clampedLinear || clampedNormal || clampedTangent)
                                         {
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Velocity clamped for '" << tag
@@ -820,7 +822,10 @@ namespace Systems
                                                         << " thresholds(linear=" << m_minLinearSpeed
                                                         << ", vertical=" << m_minVerticalSpeed
                                                         << ", tangential=" << m_minTangentialSpeed << ")"
-                                                        << " newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
+                                                        << " components(linear=" << (clampedLinear ? "yes" : "no")
+                                                        << ", normal=" << (clampedNormal ? "yes" : "no")
+                                                        << ", tangent=" << (clampedTangent ? "yes" : "no")
+                                                        << ") newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
                                                 DebugTrace(oss.str());
                                         }
 #endif
@@ -960,8 +965,9 @@ namespace Systems
                                         if (tangentLenSq > 1e-6f)
                                         {
                                                 const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
+                                                const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
                                                 const bool allowStaticFriction = classification.isGround && (m_staticFriction > 0.0f);
-                                                const bool withinStaticThreshold = std::fabs(relativeTangentialVelocity) <= m_minTangentialSpeed;
+                                                const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
                                                 if (allowStaticFriction && withinStaticThreshold)
                                                 {
                                                         const float sharedVelocity = (bodyAStatic && bodyBStatic)
@@ -999,6 +1005,17 @@ namespace Systems
                                                                         << " threshold=" << m_maxSlopeCos
                                                                         << " relativeTangentialVelocity=" << relativeTangentialVelocity
                                                                         << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                        else if (allowStaticFriction && !withinStaticThreshold)
+                                                        {
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction bypassed due to tangential speed for pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' tangentialSpeed=" << absRelativeTangentialVelocity
+                                                                        << " threshold=" << m_minTangentialSpeed << "\n";
                                                                 DebugTrace(oss.str());
 #endif
                                                         }
