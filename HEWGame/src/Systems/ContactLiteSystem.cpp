@@ -38,14 +38,15 @@ namespace
         struct ContactNormalClassification
         {
                 float3 normal{ 0.0f, 0.0f, 0.0f };
+                float verticalComponent{ 0.0f };
                 bool isGround{ false };
         };
 
-        ContactNormalClassification ClassifyContactNormal(float3 normal, float maxSlopeCos)
+        ContactNormalClassification ClassifyContactNormal(float3 normal, float verticalSnapCos, float groundMinCos)
         {
                 ContactNormalClassification classification{};
 
-                const float lenSq = normal.x * normal.x + normal.y * normal.y;
+                const float lenSq = normal.x * normal.x + normal.y * normal.y + normal.z * normal.z;
                 if (lenSq <= 1e-6f)
                 {
                         return classification;
@@ -54,22 +55,28 @@ namespace
                 const float invLen = 1.0f / std::sqrt(lenSq);
                 normal.x *= invLen;
                 normal.y *= invLen;
+                normal.z *= invLen;
 
-                const float slopeThreshold = std::clamp(maxSlopeCos, 0.0f, 1.0f);
+                const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
+                const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
 
-                classification.isGround = verticalComponent >= slopeThreshold;
-                if (classification.isGround)
+                classification.verticalComponent = verticalComponent;
+                classification.isGround = verticalComponent >= groundThreshold;
+                if (verticalComponent >= snapThreshold)
                 {
                         const float originalX = normal.x;
+                        const float originalZ = normal.z;
                         normal.x = 0.0f;
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
+                        normal.z = 0.0f;
 #if defined(_DEBUG)
-                        if (std::fabs(originalX) > 1e-4f)
+                        if (std::fabs(originalX) > 1e-4f || std::fabs(originalZ) > 1e-4f)
                         {
                                 std::ostringstream oss;
                                 oss << kLogPrefix << "Snapped near-vertical normal to Y axis for stability."
-                                        << " slopeThreshold=" << slopeThreshold << '\n';
+                                        << " verticalSnapCos=" << snapThreshold
+                                        << " verticalComponent=" << verticalComponent << '\n';
                                 DebugTrace(oss.str());
                         }
 #endif
@@ -195,6 +202,8 @@ namespace Systems
                 , m_staticFriction(0.8f)
                 , m_dynamicFriction(0.65f)
                 , m_maxSlopeCos(1.0f)
+                , m_verticalSnapCos(0.98f)
+                , m_groundMinCos(0.5f)
                 , m_maxRestitutionVelocity(25.0f)
                 , m_stableSupportThreshold(0.35f)
                 , m_edgeSlideBoost(0.25f)
@@ -257,6 +266,16 @@ namespace Systems
         void ContactLiteSystem::SetMaxSlopeCos(float maxSlopeCos)
         {
                 m_maxSlopeCos = std::clamp(maxSlopeCos, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetVerticalSnapCos(float verticalSnapCos)
+        {
+                m_verticalSnapCos = std::clamp(verticalSnapCos, 0.0f, 1.0f);
+        }
+
+        void ContactLiteSystem::SetGroundMinCos(float groundMinCos)
+        {
+                m_groundMinCos = std::clamp(groundMinCos, 0.0f, 1.0f);
         }
 
         void ContactLiteSystem::SetMaxRestitutionVelocity(float maxRestitutionVelocity)
@@ -608,7 +627,7 @@ namespace Systems
                                         contactNormal.y = -contactNormal.y;
                                 }
 
-                                const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_maxSlopeCos);
+                                const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
                                 contactNormal = classification.normal;
                                 if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
                                 {
@@ -964,12 +983,13 @@ namespace Systems
                                         const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
                                         if (tangentLenSq > 1e-6f)
                                         {
-                                                const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                                const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
-                                                const bool allowStaticFriction = classification.isGround && (m_staticFriction > 0.0f);
-                                                const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
-                                                if (allowStaticFriction && withinStaticThreshold)
-                                                {
+                                        const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
+                                        const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
+                                        const bool slopeAllowsStaticFriction = classification.verticalComponent >= m_maxSlopeCos;
+                                        const bool allowStaticFriction = classification.isGround && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
+                                        const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
+                                        if (allowStaticFriction && withinStaticThreshold)
+                                        {
                                                         const float sharedVelocity = (bodyAStatic && bodyBStatic)
                                                                 ? 0.0f
                                                                 : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
@@ -1001,8 +1021,8 @@ namespace Systems
                                                                 std::ostringstream oss;
                                                                 oss << kLogPrefix << "Static friction suppressed for steep contact between '"
                                                                         << bodyA->GetTag() << "' and '" << bodyB->GetTag()
-                                                                        << "' |n.y|=" << std::fabs(contactNormal.y)
-                                                                        << " threshold=" << m_maxSlopeCos
+                                                                        << "' |n.y|=" << classification.verticalComponent
+                                                                        << " slopeLimit=" << m_maxSlopeCos
                                                                         << " relativeTangentialVelocity=" << relativeTangentialVelocity
                                                                         << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
                                                                 DebugTrace(oss.str());
@@ -1107,6 +1127,8 @@ if (physA.velocity.z != 0.0f)
                             << ", staticFriction=" << m_staticFriction
                             << ", dynamicFriction=" << m_dynamicFriction
                             << ", slopeCosLimit=" << m_maxSlopeCos
+                            << ", verticalSnapCos=" << m_verticalSnapCos
+                            << ", groundMinCos=" << m_groundMinCos
                             << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
                             << ", minLinearSpeed=" << m_minLinearSpeed
                             << ", minVerticalSpeed=" << m_minVerticalSpeed

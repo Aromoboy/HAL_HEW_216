@@ -694,6 +694,8 @@ SceneGame::SceneGame()
         m_contactSystem->SetRestitution(tuning.restitution);
         m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
         m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
+        m_contactSystem->SetVerticalSnapCos(tuning.verticalSnapCos);
+        m_contactSystem->SetGroundMinCos(tuning.groundMinCos);
         m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
         m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
         m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
@@ -706,6 +708,8 @@ SceneGame::SceneGame()
             << ", frictionStatic=" << tuning.frictionStatic
             << ", frictionDynamic=" << tuning.frictionDynamic
             << ", maxSlopeCos=" << tuning.maxSlopeCos
+            << ", verticalSnapCos=" << tuning.verticalSnapCos
+            << ", groundMinCos=" << tuning.groundMinCos
             << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
             << ", baumgarteFactor=" << tuning.baumgarteFactor
             << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
