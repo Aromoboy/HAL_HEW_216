@@ -19,6 +19,8 @@ namespace Systems
         void SetRestitution(float restitution);
         void SetFriction(float staticCoeff, float dynamicCoeff);
         void SetMaxSlopeCos(float maxSlopeCos);
+        void SetVerticalSnapCos(float verticalSnapCos);
+        void SetGroundMinCos(float groundMinCos);
         void SetMaxRestitutionVelocity(float maxRestitutionVelocity);
         void SetStableSupportThreshold(float threshold);
         void SetEdgeSlideBoost(float boost);
@@ -34,6 +36,8 @@ namespace Systems
         float GetStaticFriction() const { return m_staticFriction; }
         float GetDynamicFriction() const { return m_dynamicFriction; }
         float GetMaxSlopeCos() const { return m_maxSlopeCos; }
+        float GetVerticalSnapCos() const { return m_verticalSnapCos; }
+        float GetGroundMinCos() const { return m_groundMinCos; }
         float GetMaxRestitutionVelocity() const { return m_maxRestitutionVelocity; }
         float GetStableSupportThreshold() const { return m_stableSupportThreshold; }
         float GetEdgeSlideBoost() const { return m_edgeSlideBoost; }
@@ -53,6 +57,8 @@ namespace Systems
         float m_staticFriction;
         float m_dynamicFriction;
         float m_maxSlopeCos;
+        float m_verticalSnapCos;
+        float m_groundMinCos;
         float m_maxRestitutionVelocity;
         float m_stableSupportThreshold;
         float m_edgeSlideBoost;
