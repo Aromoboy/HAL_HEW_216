@@ -126,6 +126,7 @@ namespace SweetsSpace
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+        void SetGeneratedColliderThicknessPadding(float factor);
 
     private:
         struct SweetsStateHash
@@ -191,6 +192,7 @@ namespace SweetsSpace
         float m_minHorizontalBound;
         float m_maxHorizontalBound;
         float m_horizontalBoundsMargin;
+        float m_generatedColliderThicknessPadding;
         bool m_warnedMissingHorizontalBounds;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
