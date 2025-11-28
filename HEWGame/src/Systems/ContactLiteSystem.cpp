@@ -815,7 +815,7 @@ namespace Systems
                                 };
 
                                 const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
-                                        bool hasTangent, bool groundContact, const std::string& tag)
+                                        bool hasTangent, bool groundContact, bool supportContact, const std::string& tag)
                                 {
                                         if (phys.weight <= 0.0f)
                                         {
@@ -865,6 +865,7 @@ namespace Systems
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Velocity clamped for '" << tag
                                                         << "' ground=" << (groundContact ? "yes" : "no")
+                                                        << " support=" << (supportContact ? "yes" : "no")
                                                         << " thresholds(linear=" << m_minLinearSpeed
                                                         << ", vertical=" << m_minVerticalSpeed
                                                         << ", tangential=" << m_minTangentialSpeed << ")"
@@ -876,6 +877,10 @@ namespace Systems
                                         }
 #endif
                                 };
+
+                                const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
+                                const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
+                                const bool hasTangent = tangentLenSq > 1e-6f;
 
                                 const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
                                 if (std::fabs(relativeVelocity) > 1e-5f)
@@ -1006,9 +1011,7 @@ namespace Systems
                                                 }
                                         }
 
-                                        const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
-                                        const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
-                                        if (tangentLenSq > 1e-6f)
+                                        if (hasTangent)
                                         {
                                         const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
                                         const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
@@ -1094,10 +1097,10 @@ namespace Systems
                                                 }
                                         }
 
-                                        const bool hasTangent = tangentLenSq > 1e-6f;
-                                        ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, bodyA->GetTag());
-                                        ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, bodyB->GetTag());
                                 }
+
+                                ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyA->GetTag());
+                                ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyB->GetTag());
 
 #if defined(_DEBUG)
                                 {
@@ -1119,7 +1122,7 @@ namespace Systems
                                         DebugTrace(oss.str());
                                 }
 #endif
-if (physA.velocity.z != 0.0f)
+                                if (physA.velocity.z != 0.0f)
                                 {
 #if defined(_DEBUG)
                                         std::ostringstream oss;
