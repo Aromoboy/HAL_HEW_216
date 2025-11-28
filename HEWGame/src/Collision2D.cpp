@@ -585,6 +585,7 @@ namespace Collision
                 {
                         m_aabb.min = minBounds;
                         m_aabb.max = maxBounds;
+                        UpdateZBounds(transform, transform.scale.z);
                         return;
                 }
 
