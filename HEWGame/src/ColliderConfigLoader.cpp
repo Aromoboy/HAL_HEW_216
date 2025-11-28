@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -29,6 +30,12 @@ namespace
                 (void)message;
         }
 #endif
+
+        void LogWarning(const std::string& message)
+        {
+                std::cerr << message;
+                DebugTrace(message);
+        }
 
         std::string Trim(const std::string& value)
         {
@@ -145,11 +152,15 @@ namespace
                 }
         }
 
-        bool ParseChild(const std::string& token, Collision::ColliderDefinition& outDef)
+        bool ParseChild(const std::string& token, const std::string& colliderName, Collision::ColliderDefinition& outDef)
         {
                 const auto colon = token.find(':');
                 if (colon == std::string::npos)
                 {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Ignoring malformed child token for collider '" << colliderName
+                                << "': missing ':' in '" << token << "'\n";
+                        LogWarning(oss.str());
                         return false;
                 }
 
@@ -175,6 +186,10 @@ namespace
                 const auto kind = ParseKind(typeToken);
                 if (!kind)
                 {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Unknown child type for collider '" << colliderName << "': '" << typeToken
+                                << "' in token '" << token << "'\n";
+                        LogWarning(oss.str());
                         return false;
                 }
 
@@ -202,11 +217,10 @@ namespace
                                 const auto eqPos = optionToken.find('=');
                                 if (eqPos == std::string::npos)
                                 {
-#if defined(_DEBUG)
                                         std::ostringstream oss;
-                                        oss << kLogPrefix << "Ignoring malformed child option: '" << optionToken << "'\n";
-                                        DebugTrace(oss.str());
-#endif
+                                        oss << kLogPrefix << "Ignoring malformed child option for collider '" << colliderName
+                                                << "': '" << optionToken << "'\n";
+                                        LogWarning(oss.str());
                                         continue;
                                 }
 
@@ -224,6 +238,10 @@ namespace
                         }
                         catch (...)
                         {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Failed to parse circle radius for collider '" << colliderName
+                                        << "' from '" << shapeData << "'\n";
+                                LogWarning(oss.str());
                                 return false;
                         }
                         return true;
@@ -232,6 +250,13 @@ namespace
                 if (outDef.type == Collision::ColliderKind::Hull)
                 {
                         outDef.points = ParsePoints(shapeData);
+                        if (outDef.points.empty())
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Hull collider '" << colliderName
+                                        << "' contained no valid points in token '" << shapeData << "'\n";
+                                LogWarning(oss.str());
+                        }
                         return !outDef.points.empty();
                 }
 
@@ -246,9 +271,7 @@ namespace Collision
                 std::ifstream file(path);
                 if (!file)
                 {
-#if defined(_DEBUG)
-                        DebugTrace(std::string(kLogPrefix) + "Failed to open config: " + path + "\n");
-#endif
+                        LogWarning(std::string(kLogPrefix) + "Failed to open config: " + path + "\n");
                         return false;
                 }
 
@@ -278,6 +301,11 @@ namespace Collision
                         const auto eq = line.find('=');
                         if (eq == std::string::npos)
                         {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Ignoring malformed line (missing '=') while parsing collider '"
+                                        << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                        << "': " << line << "\n";
+                                LogWarning(oss.str());
                                 continue;
                         }
 
@@ -300,6 +328,14 @@ namespace Collision
                                 {
                                         current.type = *kind;
                                 }
+                                else
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Unknown collider type for '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "': '" << value << "'\n";
+                                        LogWarning(oss.str());
+                                }
                         }
                         else if (key == "radius")
                         {
@@ -309,6 +345,11 @@ namespace Collision
                                 }
                                 catch (...)
                                 {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Failed to parse radius for collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' from '" << value << "'\n";
+                                        LogWarning(oss.str());
                                 }
                         }
                         else if (key == "offset")
@@ -317,10 +358,26 @@ namespace Collision
                                 {
                                         current.offset = *parsed;
                                 }
+                                else
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Failed to parse offset for collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' from '" << value << "'\n";
+                                        LogWarning(oss.str());
+                                }
                         }
                         else if (key == "points")
                         {
                                 current.points = ParsePoints(value);
+                                if (current.points.empty())
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' contained no valid points in '" << value << "'\n";
+                                        LogWarning(oss.str());
+                                }
                         }
                         else if (key == "thickness")
                         {
@@ -330,6 +387,11 @@ namespace Collision
                                 }
                                 catch (...)
                                 {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Failed to parse thickness for collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' from '" << value << "'\n";
+                                        LogWarning(oss.str());
                                 }
                         }
                         else if (key == "scale")
@@ -354,9 +416,17 @@ namespace Collision
                                         }
 
                                         ColliderDefinition child{};
-                                        if (ParseChild(token, child))
+                                        const std::string childName = currentName.empty() ? std::string{"<unnamed>"} : currentName;
+                                        if (ParseChild(token, childName, child))
                                         {
                                                 current.children.push_back(child);
+                                        }
+                                        else
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Skipping malformed child token for collider '" << childName
+                                                        << "': '" << token << "'\n";
+                                                LogWarning(oss.str());
                                         }
                                 }
                         }
