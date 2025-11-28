@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -164,7 +165,39 @@ namespace Collision
             return extracted;
         }
 
-        auto hull = ComputeConvexHull(extracted);
+        constexpr std::size_t kDirectionCount = 12;
+        constexpr float kTwoPi = 6.28318530718f;
+
+        std::vector<float2> directionalSamples;
+        directionalSamples.reserve(kDirectionCount);
+
+        for (std::size_t i = 0; i < kDirectionCount; ++i)
+        {
+            const float angle = static_cast<float>(i) * (kTwoPi / static_cast<float>(kDirectionCount));
+            const float2 dir{ std::cos(angle), std::sin(angle) };
+
+            float maxDot = -std::numeric_limits<float>::infinity();
+            float2 furthest{ 0.0f, 0.0f };
+            bool found = false;
+
+            for (const auto& p : extracted)
+            {
+                const float dot = (p.x * dir.x) + (p.y * dir.y);
+                if (!found || dot > maxDot)
+                {
+                    maxDot = dot;
+                    furthest = p;
+                    found = true;
+                }
+            }
+
+            if (found)
+            {
+                directionalSamples.push_back(furthest);
+            }
+        }
+
+        auto hull = ComputeConvexHull(directionalSamples);
         if (hull.size() > 1 && AlmostEqual(hull.front(), hull.back()))
         {
             hull.pop_back();
@@ -179,8 +212,9 @@ namespace Collision
 
 #if defined(_DEBUG)
         std::ostringstream oss;
-        oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points (" << extracted.size()
-            << " vertices sampled). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
+        oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points from "
+            << directionalSamples.size() << " directional samples (" << extracted.size()
+            << " vertices). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
         DebugTrace(oss.str());
 #endif
 
