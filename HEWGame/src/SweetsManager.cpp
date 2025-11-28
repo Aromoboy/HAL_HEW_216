@@ -763,16 +763,23 @@ namespace SweetsSpace
                 std::shared_ptr<Collision::ICollider> collider;
                 const bool hasGeneratedHull = !generatedCollider.hull.empty();
                 bool usedGeneratedHull = false;
+                bool colliderDefinitionFound = false;
+                bool colliderDefinitionFailed = false;
 
                 const auto colliderDef = m_colliderDefinitions.find(kind);
                 if (colliderDef != m_colliderDefinitions.end())
                 {
+                    colliderDefinitionFound = true;
                     collider = Collision::BuildColliderFromDefinition(colliderDef->second, scaledTransform, Collision::CollisionLayer::Sweets);
                     if (collider)
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "Loaded collider definition for '" << kind << "' children=" << colliderDef->second.children.size() << "\n";
                         DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        colliderDefinitionFailed = true;
                     }
                 }
 
@@ -786,7 +793,15 @@ namespace SweetsSpace
                     {
                         collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
                         usedGeneratedHull = true;
-                        if (!m_warnedMissingColliderDefinition)
+                        if (colliderDefinitionFailed)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Collider definition for '" << kind
+                                << "' failed or was empty; using generated hull points=" << generatedCollider.hull.size()
+                                << " thickness=" << generatedCollider.thickness << "\n";
+                            DebugTrace(warn.str());
+                        }
+                        else if (!colliderDefinitionFound && !m_warnedMissingColliderDefinition)
                         {
                             std::ostringstream warn;
                             warn << kLogPrefix << "Using generated convex hull for kind '" << kind
@@ -800,7 +815,14 @@ namespace SweetsSpace
 
                 if (!collider)
                 {
-                    if (!m_warnedMissingColliderDefinition)
+                    if (colliderDefinitionFailed)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Collider definition for kind '" << kind
+                            << "' could not be built and no generated hull was available; using fallback AABB.\n";
+                        DebugTrace(warn.str());
+                    }
+                    else if (!colliderDefinitionFound && !m_warnedMissingColliderDefinition)
                     {
                         std::ostringstream warn;
                         warn << kLogPrefix << "Using fallback AABB collider for kind '" << kind << "'.\n";
@@ -812,7 +834,8 @@ namespace SweetsSpace
                     {
                         std::ostringstream warn;
                         warn << kLogPrefix << "No explicit collider definition or generated hull available for kind '" << kind
-                            << "'; defaulting to AABB.\n";
+                            << (colliderDefinitionFailed ? "' after collider build failure; defaulting to AABB.\n"
+                                : "'; defaulting to AABB.\n");
                         DebugTrace(warn.str());
                         m_warnedMissingGeneratedHull = true;
                     }
