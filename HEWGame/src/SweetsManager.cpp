@@ -169,6 +169,21 @@ namespace
         return std::max(value, 1.0f);
     }
 
+    bool IsColliderDefinitionEmpty(const Collision::ColliderDefinition& definition)
+    {
+        switch (definition.type)
+        {
+        case Collision::ColliderKind::Compound:
+            return definition.children.empty();
+        case Collision::ColliderKind::Hull:
+            return definition.points.empty();
+        case Collision::ColliderKind::Circle:
+            return definition.radius <= std::numeric_limits<float>::epsilon();
+        default:
+            return false;
+        }
+    }
+
     void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
     {
         if (!batch)
@@ -714,7 +729,8 @@ namespace SweetsSpace
 
             const auto colliderDefinition = m_colliderDefinitions.find(kind);
             const bool colliderDefinitionFound = colliderDefinition != m_colliderDefinitions.end();
-            const bool colliderDefinitionEmpty = colliderDefinitionFound && colliderDefinition->second.children.empty();
+            const bool colliderDefinitionEmpty = colliderDefinitionFound
+                && IsColliderDefinitionEmpty(colliderDefinition->second);
             if (!colliderDefinitionFound || colliderDefinitionEmpty)
             {
                 std::ostringstream padLog;
@@ -816,19 +832,8 @@ namespace SweetsSpace
                     const bool colliderDefinitionIsHull = definition.type == Collision::ColliderKind::Hull;
                     const bool colliderDefinitionIsCircle = definition.type == Collision::ColliderKind::Circle;
 
-                    if (colliderDefinitionIsCompound)
-                    {
-                        colliderDefinitionEmpty = definition.children.empty();
-                    }
-                    else if (colliderDefinitionIsHull)
-                    {
-                        colliderDefinitionHullMissingPoints = definition.points.empty();
-                        colliderDefinitionEmpty = colliderDefinitionHullMissingPoints;
-                    }
-                    else if (colliderDefinitionIsCircle)
-                    {
-                        colliderDefinitionEmpty = definition.radius <= std::numeric_limits<float>::epsilon();
-                    }
+                    colliderDefinitionHullMissingPoints = colliderDefinitionIsHull && definition.points.empty();
+                    colliderDefinitionEmpty = IsColliderDefinitionEmpty(definition);
 
                     if (!colliderDefinitionEmpty)
                     {
