@@ -147,6 +147,8 @@ namespace SweetsSpace
         std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
         std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState> m_lookup;
 
+        std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
+
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
 
         std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
