@@ -18,59 +18,61 @@
 
 namespace Core
 {
-        class Input : public UpdateNode
-        {
-        public:
-                Input();
+    class Input : public UpdateNode
+    {
+    public:
+        Input();
 
-                HRESULT Initialize();
-                void Shutdown();
+        HRESULT Initialize();
+        void Shutdown();
 
-                void OnUpdate(UpdateContext& ctx) override;
+        void OnUpdate(UpdateContext& ctx) override;
 
-                float GetAxis(ActionId action) const;
+        float GetAxis(ActionId action) const;
 
-                bool IsPress(BYTE key) const;
-                bool IsTrigger(BYTE key) const;
-                bool IsRelease(BYTE key) const;
+        bool IsPress(BYTE key) const;
+        bool IsTrigger(BYTE key) const;
+        bool IsRelease(BYTE key) const;
 
-                bool IsAction(ActionId action) const;
-                bool IsPress(ActionId action) const;
-                bool IsTrigger(ActionId action) const;
-                bool IsRelease(ActionId action) const;
+        bool IsAction(ActionId action) const;
+        bool IsPress(ActionId action) const;
+        bool IsTrigger(ActionId action) const;
+        bool IsRelease(ActionId action) const;
 
-                bool IsKeyPress(BYTE key) const;
-                bool IsKeyTrigger(BYTE key) const;
-                bool IsKeyRelease(BYTE key) const;
-                bool IsKeyRepeat(BYTE key) const;
+        bool IsKeyPress(BYTE key) const;
+        bool IsKeyTrigger(BYTE key) const;
+        bool IsKeyRelease(BYTE key) const;
+        bool IsKeyRepeat(BYTE key) const;
 
-                bool IsPress(int vk) const;
-                bool IsTrigger(int vk) const;
-                bool IsRelease(int vk) const;
+        bool IsPress(int vk) const;
+        bool IsTrigger(int vk) const;
+        bool IsRelease(int vk) const;
 
-                void Rebind(ActionId action, const Binding& binding);
+        void Rebind(ActionId action, const Binding& binding);
 
-        private:
-                // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する。
-                // 初期化に失敗した場合は安全側に倒すためゼロクリアする。
-                void PollKeyboardState();
+    private:
+        // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する。
+        // 初期化に失敗した場合は安全側に倒すためゼロクリアする。
+        void PollKeyboardState();
 
-                // XInput ゲームパッドをポーリングする。接続状態が変わった際はデバッグログで通知。
-                void PollPadState(int index = 0);
+        // XInput ゲームパッドをポーリングする。接続状態が変わった際はデバッグログで通知。
+        void PollPadState(int index = 0);
 
-                // 現フレーム/前フレームの状態を参照するヘルパー。未初期化時は false になる。
-                bool IsKeyDown(BYTE key) const;
-                bool WasKeyDown(BYTE key) const;
+        // 現フレーム/前フレームの状態を参照するヘルパー。未初期化時は false になる。
+        InputMap::ActionState GetActionState(ActionId action) const;
 
-                // 配列は UpdatePhase::Input の開始時に current へ読み出し、更新前に previous に退避する。
-                std::array<BYTE, 256> m_currentKeys;
-                std::array<BYTE, 256> m_previousKeys;
-                bool m_initialized;
+        bool IsKeyDown(BYTE key) const;
+        bool WasKeyDown(BYTE key) const;
 
-                Gamepad m_pad;
-                InputMap m_map;
+        // 配列は UpdatePhase::Input の開始時に current へ読み出し、更新前に previous に退避する。
+        std::array<BYTE, 256> m_currentKeys;
+        std::array<BYTE, 256> m_previousKeys;
+        bool m_initialized;
 
-                friend class InputMap;
-        };
+        Gamepad m_pad;
+        InputMap m_map;
+
+        friend class InputMap;
+    };
 }
 
