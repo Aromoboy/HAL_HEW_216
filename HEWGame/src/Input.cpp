@@ -5,75 +5,17 @@
 namespace
 {
         constexpr BYTE kKeyPressedMask = 0x80;
-        constexpr float kStickNorm = 32767.0f;
 }
 
 namespace Core
 {
-        Gamepad::Gamepad()
-                : m_state{}
-                , m_prevState{}
-                , m_connected(false)
-        {
-        }
-
-        void Gamepad::Poll(int index)
-        {
-                m_prevState = m_state;
-                const bool wasConnected = m_connected;
-
-                XINPUT_STATE state{};
-                DWORD result = XInputGetState(index, &state);
-
-                if (result == ERROR_SUCCESS)
-                {
-                        m_connected = true;
-                        m_state = state;
-                }
-                else
-                {
-                        m_connected = false;
-                        ZeroMemory(&m_state, sizeof(XINPUT_STATE));
-                }
-
-                if (m_connected != wasConnected)
-                {
-                        OutputDebugStringA(m_connected
-                                ? "[Core::Gamepad] コントローラを検出しました（状態を更新）。推奨: そのまま入力テストを継続してください。\n"
-                                : "[Core::Gamepad] コントローラが切断されました（状態を初期化）。推奨: ケーブル/電源を確認し、再接続後に挙動を確認してください。\n");
-                }
-        }
-
-        bool Gamepad::IsConnected() const
-        {
-                return m_connected;
-        }
-
-        bool Gamepad::IsButtonDown(WORD button) const
-        {
-                return m_connected && (m_state.Gamepad.wButtons & button) != 0;
-        }
-
-        bool Gamepad::WasButtonDown(WORD button) const
-        {
-                return m_connected && (m_prevState.Gamepad.wButtons & button) != 0;
-        }
-
-        float Gamepad::AxisLX() const { return m_connected ? Normalize(m_state.Gamepad.sThumbLX) : 0.0f; }
-        float Gamepad::AxisLY() const { return m_connected ? Normalize(m_state.Gamepad.sThumbLY) : 0.0f; }
-        float Gamepad::AxisRX() const { return m_connected ? Normalize(m_state.Gamepad.sThumbRX) : 0.0f; }
-        float Gamepad::AxisRY() const { return m_connected ? Normalize(m_state.Gamepad.sThumbRY) : 0.0f; }
-
-        float Gamepad::Normalize(short value) const
-        {
-                return static_cast<float>(value) / kStickNorm;
-        }
-
         Input::Input()
                 : UpdateNode(UpdatePhase::Input, 0)
                 , m_currentKeys{}
                 , m_previousKeys{}
                 , m_initialized(false)
+                , m_pad{}
+                , m_map{}
         {
         }
 
@@ -84,9 +26,6 @@ namespace Core
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
-                //  pad 
-                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
-                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
                 PollPadState();
 
                 m_initialized = true;
@@ -101,6 +40,7 @@ namespace Core
                 m_previousKeys.fill(0);
 
                 m_pad = Gamepad();
+                m_map = InputMap();
         }
 
         void Input::OnUpdate(UpdateContext& ctx)
@@ -108,6 +48,7 @@ namespace Core
                 if (!m_initialized)
                 {
                         // Initialize を忘れた場合は安全に抜ける。入力参照先が未初期化であることがデバッグログから分かるようにする。
+                        OutputDebugStringA("[Core::Input] OnUpdate が未初期化状態で呼ばれました。推奨: Initialize 呼び出し順を確認してください。\n");
                         return;
                 }
 
@@ -121,6 +62,11 @@ namespace Core
                 PollKeyboardState();
 
                 PollPadState();
+        }
+
+        float Input::GetAxis(ActionId action) const
+        {
+                return m_map.GetAxis(action, *this, m_pad);
         }
 
         bool Input::IsPress(BYTE key) const
@@ -139,33 +85,6 @@ namespace Core
         }
 
         bool Input::IsAction(ActionId action) const
-        {
-                switch (action)
-                {
-                case ActionId::Confirm:
-                        return IsPress(VK_RETURN) || IsPadPress(XINPUT_GAMEPAD_START);
-                default:
-                        return false;
-                }
-        }
-
-        bool Input::IsTrigger(ActionId action) const
-        {
-                switch (action)
-                {
-                case ActionId::Confirm:
-                        return IsTrigger(VK_RETURN) || IsPadTrigger(XINPUT_GAMEPAD_START);
-                default:
-                        return false;
-                }
-        }
-
-        bool Input::IsKeyPress(BYTE key) const
-        {
-                return m_map.GetAxis(action, *this, m_pad);
-        }
-
-        bool Input::IsPress(ActionId action) const
         {
                 return m_map.IsPressed(action, *this, m_pad);
         }
@@ -189,14 +108,49 @@ namespace Core
                 return !state.current && state.previous;
         }
 
-        bool Input::IsAction(ActionId action) const
-        {
-                return IsTrigger(action);
-        }
-
         void Input::Rebind(ActionId action, const Binding& binding)
         {
                 m_map.Rebind(action, binding);
+        }
+
+        bool Input::IsKeyPress(BYTE key) const
+        {
+                return IsKeyDown(key);
+        }
+
+        bool Input::IsKeyTrigger(BYTE key) const
+        {
+                return IsKeyDown(key) && !WasKeyDown(key);
+        }
+
+        bool Input::IsKeyRelease(BYTE key) const
+        {
+                return !IsKeyDown(key) && WasKeyDown(key);
+        }
+
+        bool Input::IsKeyRepeat(BYTE key) const
+        {
+                return IsKeyDown(key);
+        }
+
+        bool Input::IsPress(ActionId action) const
+        {
+                return m_map.IsPressed(action, *this, m_pad);
+        }
+
+        bool Input::IsTrigger(int vk) const
+        {
+                return IsKeyDown(static_cast<BYTE>(vk)) && !WasKeyDown(static_cast<BYTE>(vk));
+        }
+
+        bool Input::IsRelease(int vk) const
+        {
+                return !IsKeyDown(static_cast<BYTE>(vk)) && WasKeyDown(static_cast<BYTE>(vk));
+        }
+
+        bool Input::IsPress(int vk) const
+        {
+                return IsKeyDown(static_cast<BYTE>(vk));
         }
 
         void Input::PollKeyboardState()
@@ -221,21 +175,6 @@ namespace Core
         bool Input::WasKeyDown(BYTE key) const
         {
                 return (m_previousKeys[key] & kKeyPressedMask) != 0;
-        }
-
-        bool Input::IsPress(int vk) const
-        {
-                return IsKeyDown(static_cast<BYTE>(vk));
-        }
-
-        bool Input::IsTrigger(int vk) const
-        {
-                return IsKeyDown(static_cast<BYTE>(vk)) && !WasKeyDown(static_cast<BYTE>(vk));
-        }
-
-        bool Input::IsRelease(int vk) const
-        {
-                return !IsKeyDown(static_cast<BYTE>(vk)) && WasKeyDown(static_cast<BYTE>(vk));
         }
 }
 

@@ -6,6 +6,7 @@
 #include <Xinput.h>
 
 #include "Core/ActionId.h"
+#include "Core/Gamepad.h"
 
 namespace Core
 {
@@ -18,7 +19,6 @@ namespace Core
     };
 
     class Input;
-    class Gamepad;
 
     class InputMap
     {
