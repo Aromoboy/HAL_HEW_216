@@ -117,6 +117,8 @@ namespace SweetsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetRandomScaleEnabled(bool enabled);
         void SetLiveSweetsCap(int cap);
+        void SetForceGeneratedColliders(bool force);
+        void SetColliderConfigOverridesEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
@@ -195,6 +197,8 @@ namespace SweetsSpace
         float m_maxHorizontalBound;
         float m_horizontalBoundsMargin;
         float m_generatedColliderThicknessPadding;
+        bool m_forceGeneratedColliders;
+        bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
