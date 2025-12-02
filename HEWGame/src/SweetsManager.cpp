@@ -1470,6 +1470,7 @@ namespace SweetsSpace
         (void)ctx;
 
         std::size_t removed = 0;
+        std::size_t markedSafe = 0;
 
         for (auto& entry : m_byState)
         {
@@ -1478,13 +1479,24 @@ namespace SweetsSpace
             while (it != sweetsList.end())
             {
                 const auto& sweets = *it;
-                const bool pendingRemoval = !sweets || sweets->IsPendingDestroy();
-                if (pendingRemoval)
+                if (!sweets)
                 {
-                    if (sweets)
+                    it = sweetsList.erase(it);
+                    ++removed;
+                    continue;
+                }
+
+                if (sweets->IsPendingDestroy())
+                {
+                    if (!sweets->IsSafeToDelete())
                     {
-                        m_lookup.erase(sweets);
+                        sweets->MarkSafeToDelete();
+                        ++markedSafe;
+                        ++it;
+                        continue;
                     }
+
+                    m_lookup.erase(sweets);
                     it = sweetsList.erase(it);
                     ++removed;
                     continue;
@@ -1495,10 +1507,12 @@ namespace SweetsSpace
         }
 
 #if defined(_DEBUG)
-        if (removed > 0)
+        if (removed > 0 || markedSafe > 0)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Late prune removed " << removed << " pending sweets entries.\n";
+            oss << kLogPrefix << "Late prune removed " << removed
+                << " pending sweets entries, marked " << markedSafe
+                << " ready for deletion.\n";
             DebugTrace(oss.str());
         }
 #endif
@@ -2057,6 +2071,7 @@ namespace SweetsSpace
 
         const SweetsState previousState = found->second;
         sweets->MarkPendingDestroy();
+        sweets->Enable(false);
 
         const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
         UpdateBatchUsage(batchContext, outcome);

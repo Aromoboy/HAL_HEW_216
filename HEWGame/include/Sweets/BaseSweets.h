@@ -35,10 +35,22 @@ namespace SweetsSpace
         void MarkPendingDestroy() noexcept
         {
             m_pendingDestroy = true;
+            m_safeToDelete = false;
+        }
+
+        bool IsSafeToDelete() const noexcept
+        {
+            return m_safeToDelete;
+        }
+
+        void MarkSafeToDelete() noexcept
+        {
+            m_safeToDelete = true;
         }
 
     private:
         bool m_pendingDestroy = false;
+        bool m_safeToDelete = true;
     };
 }
 
