@@ -5,3 +5,9 @@ struct float3{
 	float y;
 	float z;
 };
+
+struct float2
+{
+	float x;
+	float y;
+};
