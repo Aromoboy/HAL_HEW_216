@@ -154,6 +154,7 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
+        std::vector<std::vector<float2>> polygons{};
         float rawThickness{ 0.0f };
         float thickness{ 1.0f };
         float paddingFactor{ 1.0f };
@@ -423,6 +424,7 @@ namespace
         };
 
         std::vector<PositionOnly> positions;
+        std::vector<UINT> indices;
         std::string line;
         const float sanitizedPadding = SanitizeThicknessPadding(thicknessPadding);
         summary.paddingFactor = sanitizedPadding;
@@ -431,28 +433,69 @@ namespace
         {
             if (line.size() < 2 || line[0] != 'v' || line[1] != ' ')
             {
-                continue;
+                if (line.size() < 2 || line[0] != 'f' || line[1] != ' ')
+                {
+                    continue;
+                }
             }
 
-            std::istringstream parser(line.substr(2));
-            float x = 0.0f;
-            float y = 0.0f;
-            float z = 0.0f;
-            if (!(parser >> x >> y >> z))
+            if (line[0] == 'v')
             {
-                continue;
+                std::istringstream parser(line.substr(2));
+                float x = 0.0f;
+                float y = 0.0f;
+                float z = 0.0f;
+                if (!(parser >> x >> y >> z))
+                {
+                    continue;
+                }
+
+                positions.push_back(PositionOnly{ x, y, z });
+
+                summary.bounds.min.x = std::min(summary.bounds.min.x, x);
+                summary.bounds.min.y = std::min(summary.bounds.min.y, y);
+                summary.bounds.min.z = std::min(summary.bounds.min.z, z);
+
+                summary.bounds.max.x = std::max(summary.bounds.max.x, x);
+                summary.bounds.max.y = std::max(summary.bounds.max.y, y);
+                summary.bounds.max.z = std::max(summary.bounds.max.z, z);
+                summary.bounds.valid = true;
             }
+            else if (line[0] == 'f')
+            {
+                std::istringstream parser(line.substr(2));
+                std::string token;
+                std::vector<UINT> faceIndices;
+                while (parser >> token)
+                {
+                    const auto slash = token.find('/');
+                    const std::string indexToken = token.substr(0, slash);
+                    try
+                    {
+                        int index = std::stoi(indexToken);
+                        if (index < 0)
+                        {
+                            index = static_cast<int>(positions.size()) + index + 1;
+                        }
+                        const UINT zeroBased = static_cast<UINT>(std::max(index - 1, 0));
+                        faceIndices.push_back(zeroBased);
+                    }
+                    catch (...)
+                    {
+                        continue;
+                    }
+                }
 
-            positions.push_back(PositionOnly{ x, y, z });
-
-            summary.bounds.min.x = std::min(summary.bounds.min.x, x);
-            summary.bounds.min.y = std::min(summary.bounds.min.y, y);
-            summary.bounds.min.z = std::min(summary.bounds.min.z, z);
-
-            summary.bounds.max.x = std::max(summary.bounds.max.x, x);
-            summary.bounds.max.y = std::max(summary.bounds.max.y, y);
-            summary.bounds.max.z = std::max(summary.bounds.max.z, z);
-            summary.bounds.valid = true;
+                if (faceIndices.size() >= 3)
+                {
+                    for (size_t i = 1; i + 1 < faceIndices.size(); ++i)
+                    {
+                        indices.push_back(faceIndices[0]);
+                        indices.push_back(faceIndices[i]);
+                        indices.push_back(faceIndices[i + 1]);
+                    }
+                }
+            }
         }
 
         if (!summary.bounds.valid)
@@ -474,15 +517,17 @@ namespace
             desc.pVtx = positions.data();
             desc.vtxSize = sizeof(PositionOnly);
             desc.vtxCount = static_cast<UINT>(positions.size());
-            desc.pIdx = nullptr;
-            desc.idxSize = 0;
-            desc.idxCount = 0;
+            desc.pIdx = indices.empty() ? nullptr : indices.data();
+            desc.idxSize = indices.empty() ? 0u : sizeof(UINT);
+            desc.idxCount = static_cast<UINT>(indices.size());
             desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+            const Collision::Mesh2DExtraction meshExtraction = Collision::ExtractProjectedPolygons(desc);
             summary.hull = Collision::BuildConvexHullFromMesh(desc);
+            summary.polygons = meshExtraction.polygons;
             std::ostringstream oss;
             oss << kLogPrefix << "Analyzed geometry for '" << path << "' positions=" << positions.size()
-                << " hullPoints=" << summary.hull.size()
+                << " hullPoints=" << summary.hull.size() << " polygonParts=" << summary.polygons.size()
                 << " rawThickness=" << summary.rawThickness
                 << " paddedThickness=" << summary.thickness
                 << " paddingFactor=" << summary.paddingFactor << "\n";
@@ -560,6 +605,32 @@ namespace
         }
 
         return expand;
+    }
+
+    std::shared_ptr<Collision::CompoundCollider2D> BuildCompoundFromPolygons(
+        const std::vector<std::vector<float2>>& polygons,
+        float thickness,
+        Collision::CollisionLayer layer)
+    {
+        std::vector<std::shared_ptr<Collision::ICollider>> parts;
+        parts.reserve(polygons.size());
+
+        for (const auto& poly : polygons)
+        {
+            if (poly.size() < 3)
+            {
+                continue;
+            }
+
+            parts.push_back(std::make_shared<Collision::ConvexHullCollider2D>(poly, float2{ 0.0f, 0.0f }, thickness, layer));
+        }
+
+        if (parts.empty())
+        {
+            return nullptr;
+        }
+
+        return std::make_shared<Collision::CompoundCollider2D>(parts, thickness, layer);
     }
 }
 
@@ -724,7 +795,7 @@ namespace SweetsSpace
             }
             const float resolvedRawThickness = geometry.bounds.valid ? geometry.rawThickness : baseFallbackThickness;
             const float paddedThickness = std::max(resolvedRawThickness * m_generatedColliderThicknessPadding, fallbackThickness);
-            GeneratedCollider generatedCollider{ geometry.hull, paddedThickness };
+            GeneratedCollider generatedCollider{ geometry.hull, geometry.polygons, paddedThickness };
             m_generatedColliders[kind] = generatedCollider;
 
             const auto colliderDefinition = m_colliderDefinitions.find(kind);
@@ -747,8 +818,22 @@ namespace SweetsSpace
             {
                 std::ostringstream hullLog;
                 hullLog << kLogPrefix << "Cached generated hull for kind '" << kind << "' points="
-                    << generatedCollider.hull.size() << " thickness=" << generatedCollider.thickness << "\n";
+                    << generatedCollider.hull.size() << " polyParts=" << generatedCollider.polygons.size()
+                    << " thickness=" << generatedCollider.thickness << "\n";
                 DebugTrace(hullLog.str());
+            }
+
+            if (!generatedCollider.polygons.empty())
+            {
+                std::ostringstream polyLog;
+                polyLog << kLogPrefix << "Generated polygon decomposition for kind '" << kind
+                    << "' parts=" << generatedCollider.polygons.size() << " vertices=";
+                for (size_t i = 0; i < generatedCollider.polygons.size(); ++i)
+                {
+                    polyLog << (i == 0 ? '[' : ',') << generatedCollider.polygons[i].size();
+                }
+                polyLog << "] thickness=" << generatedCollider.thickness << "\n";
+                DebugTrace(polyLog.str());
             }
 
             {
@@ -817,11 +902,14 @@ namespace SweetsSpace
                 scaledTransform.scale.z *= sampledScale.z;
                 std::shared_ptr<Collision::ICollider> collider;
                 const bool hasGeneratedHull = !generatedCollider.hull.empty();
+                const bool hasGeneratedPolygons = !generatedCollider.polygons.empty();
                 bool usedGeneratedHull = false;
+                bool usedGeneratedCompound = false;
                 bool colliderDefinitionFound = false;
                 bool colliderDefinitionFailed = false;
                 bool colliderDefinitionEmpty = false;
                 bool colliderDefinitionHullMissingPoints = false;
+                const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
                 std::string colliderTypeChosen = "unresolved";
                 std::string colliderResolutionReason = "unresolved";
 
@@ -912,11 +1000,55 @@ namespace SweetsSpace
 
                 if (!collider)
                 {
-                    if (hasGeneratedHull)
+                    if (hasGeneratedPolygons)
+                    {
+                        collider = BuildCompoundFromPolygons(generatedCollider.polygons, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
+                        usedGeneratedHull = collider != nullptr;
+                        usedGeneratedCompound = collider != nullptr;
+                        if (collider)
+                        {
+                            colliderTypeChosen = "generated compound";
+                            if (colliderDefinitionHullMissingPoints)
+                            {
+                                colliderResolutionReason = "config hull empty -> generated polygons";
+                            }
+                            else if (colliderDefinitionFailed)
+                            {
+                                colliderResolutionReason = "build failed -> generated polygons";
+                            }
+                            else if (colliderDefinitionEmpty)
+                            {
+                                colliderResolutionReason = "config empty -> generated polygons";
+                            }
+                            else if (!colliderDefinitionFound)
+                            {
+                                colliderResolutionReason = "no config -> generated polygons";
+                            }
+                            else
+                            {
+                                colliderResolutionReason = "generated polygons used";
+                            }
+
+                            if (!colliderDefinitionFound || colliderDefinitionEmpty || colliderDefinitionFailed)
+                            {
+                                std::ostringstream warn;
+                                warn << kLogPrefix << "Using generated polygon decomposition for '" << kind
+                                    << "' parts=" << generatedCollider.polygons.size()
+                                    << " thickness=" << generatedCollider.thickness
+                                    << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
+                                DebugTrace(warn.str());
+                                if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
+                                {
+                                    m_warnedMissingColliderDefinitionKinds.insert(kind);
+                                }
+                            }
+                        }
+                    }
+
+                    if (!collider && hasGeneratedHull)
                     {
                         collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
                         usedGeneratedHull = true;
-                        const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
                         if (colliderDefinitionHullMissingPoints)
                         {
                             std::ostringstream warn;
@@ -980,7 +1112,7 @@ namespace SweetsSpace
                     {
                         std::ostringstream warn;
                         warn << kLogPrefix << "Collider definition for kind '" << kind
-                            << "' could not be built and no generated hull was available; using fallback AABB.\n";
+                            << "' could not be built and no generated hull/polygons were available; using fallback AABB.\n";
                         DebugTrace(warn.str());
                     }
                     else if ((!colliderDefinitionFound || colliderDefinitionEmpty)
@@ -995,10 +1127,10 @@ namespace SweetsSpace
                         m_warnedMissingColliderDefinitionKinds.insert(kind);
                     }
 
-                    if (!usedGeneratedHull && !hasGeneratedHull && !m_warnedMissingGeneratedHull)
+                    if (!usedGeneratedHull && !hasGeneratedHull && !hasGeneratedPolygons && !m_warnedMissingGeneratedHull)
                     {
                         std::ostringstream warn;
-                        warn << kLogPrefix << "No explicit collider definition or generated hull available for kind '" << kind
+                        warn << kLogPrefix << "No explicit collider definition or generated hull/polygons available for kind '" << kind
                             << (colliderDefinitionFailed ? "' after collider build failure; defaulting to AABB.\n"
                                 : "'; defaulting to AABB.\n");
                         DebugTrace(warn.str());
@@ -1041,6 +1173,19 @@ namespace SweetsSpace
                 }
 
                 {
+                    std::string polygonVertexSummary;
+                    if (hasGeneratedPolygons)
+                    {
+                        std::ostringstream contourStream;
+                        contourStream << '[';
+                        for (size_t i = 0; i < generatedCollider.polygons.size(); ++i)
+                        {
+                            contourStream << (i == 0 ? "" : ",") << generatedCollider.polygons[i].size();
+                        }
+                        contourStream << ']';
+                        polygonVertexSummary = contourStream.str();
+                    }
+
                     std::ostringstream oss;
                     oss << kLogPrefix << "Collider resolved kind='" << kind << "'"
                         << " type=" << colliderTypeChosen
@@ -1054,8 +1199,12 @@ namespace SweetsSpace
                         << " defEmpty=" << std::boolalpha << colliderDefinitionEmpty
                         << " buildFailed=" << std::boolalpha << colliderDefinitionFailed
                         << " usedGeneratedHull=" << std::boolalpha << usedGeneratedHull
+                        << " usedGeneratedCompound=" << std::boolalpha << usedGeneratedCompound
                         << " hullAvailable=" << std::boolalpha << hasGeneratedHull
+                        << " polygonAvailable=" << std::boolalpha << hasGeneratedPolygons
                         << " hullPoints=" << generatedCollider.hull.size()
+                        << " polygonParts=" << generatedCollider.polygons.size()
+                        << " polygonVertexCounts=" << (polygonVertexSummary.empty() ? "[]" : polygonVertexSummary)
                         << " paddingFactor=" << m_generatedColliderThicknessPadding
                         << "\n";
                     DebugTrace(oss.str());
