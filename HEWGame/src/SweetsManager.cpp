@@ -822,6 +822,8 @@ namespace SweetsSpace
                 bool colliderDefinitionFailed = false;
                 bool colliderDefinitionEmpty = false;
                 bool colliderDefinitionHullMissingPoints = false;
+                std::string colliderTypeChosen = "unresolved";
+                std::string colliderResolutionReason = "unresolved";
 
                 const auto colliderDef = m_colliderDefinitions.find(kind);
                 if (colliderDef != m_colliderDefinitions.end())
@@ -867,6 +869,24 @@ namespace SweetsSpace
                                     << " thickness=" << definition.thickness << "\n";
                                 DebugTrace(oss.str());
                             }
+
+                            if (colliderDefinitionIsCompound)
+                            {
+                                colliderTypeChosen = "config compound";
+                            }
+                            else if (colliderDefinitionIsHull)
+                            {
+                                colliderTypeChosen = "config hull";
+                            }
+                            else if (colliderDefinitionIsCircle)
+                            {
+                                colliderTypeChosen = "config circle";
+                            }
+                            else
+                            {
+                                colliderTypeChosen = "config collider";
+                            }
+                            colliderResolutionReason = colliderTypeChosen + " built";
                         }
                         else
                         {
@@ -929,6 +949,28 @@ namespace SweetsSpace
                             DebugTrace(warn.str());
                             m_warnedMissingColliderDefinitionKinds.insert(kind);
                         }
+
+                        if (colliderDefinitionHullMissingPoints)
+                        {
+                            colliderResolutionReason = "config hull empty -> generated hull";
+                        }
+                        else if (colliderDefinitionFailed)
+                        {
+                            colliderResolutionReason = "build failed -> generated hull";
+                        }
+                        else if (colliderDefinitionEmpty)
+                        {
+                            colliderResolutionReason = "config empty -> generated hull";
+                        }
+                        else if (!colliderDefinitionFound)
+                        {
+                            colliderResolutionReason = "no config -> generated hull";
+                        }
+                        else
+                        {
+                            colliderResolutionReason = "generated hull used";
+                        }
+                        colliderTypeChosen = "generated hull";
                     }
                 }
 
@@ -964,6 +1006,24 @@ namespace SweetsSpace
                     }
 
                     collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
+
+                    if (colliderDefinitionFailed)
+                    {
+                        colliderResolutionReason = "build failed -> AABB";
+                    }
+                    else if (colliderDefinitionEmpty)
+                    {
+                        colliderResolutionReason = "config empty -> AABB";
+                    }
+                    else if (!colliderDefinitionFound)
+                    {
+                        colliderResolutionReason = "no config -> AABB";
+                    }
+                    else
+                    {
+                        colliderResolutionReason = "no hull available -> AABB";
+                    }
+                    colliderTypeChosen = "AABB";
                 }
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
@@ -982,14 +1042,21 @@ namespace SweetsSpace
 
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Collider applied kind='" << kind
-                        << "' scale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
+                    oss << kLogPrefix << "Collider resolved kind='" << kind << "'"
+                        << " type=" << colliderTypeChosen
+                        << " reason=" << colliderResolutionReason
+                        << " sampledScale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
+                        << " appliedScale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
                         << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
                         << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
                         << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")"
-                        << " defFound=" << std::boolalpha << (colliderDef != m_colliderDefinitions.end())
+                        << " defFound=" << std::boolalpha << colliderDefinitionFound
+                        << " defEmpty=" << std::boolalpha << colliderDefinitionEmpty
+                        << " buildFailed=" << std::boolalpha << colliderDefinitionFailed
                         << " usedGeneratedHull=" << std::boolalpha << usedGeneratedHull
+                        << " hullAvailable=" << std::boolalpha << hasGeneratedHull
                         << " hullPoints=" << generatedCollider.hull.size()
+                        << " paddingFactor=" << m_generatedColliderThicknessPadding
                         << "\n";
                     DebugTrace(oss.str());
                 }
