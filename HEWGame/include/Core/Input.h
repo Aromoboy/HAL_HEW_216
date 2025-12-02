@@ -4,6 +4,7 @@
 #include <array>
 #include <Xinput.h>
 
+#include "Core/ActionId.h"
 #include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
 
@@ -16,16 +17,6 @@
 
 namespace Core
 {
-        enum class ActionId
-        {
-                MoveX,
-                RotateYaw,
-                Drop,
-                Confirm,
-                Cancel,
-                Pause,
-        };
-
         class Input : public UpdateNode
         {
         public:

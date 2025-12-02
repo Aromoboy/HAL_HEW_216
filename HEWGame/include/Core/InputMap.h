@@ -5,26 +5,10 @@
 #include <vector>
 #include <Xinput.h>
 
+#include "Core/ActionId.h"
+
 namespace Core
 {
-    enum class ActionId
-    {
-        MoveX,
-        RotateYaw,
-        Drop,
-        Confirm,
-        Cancel,
-        Pause,
-        Retry,
-        DebugConsole,
-        CameraToggle,
-        CameraHeightToggle,
-        SpeedBoost,
-        SpeedReset,
-        ColliderNudgeUp,
-        ColliderNudgeDown,
-    };
-
     struct Binding
     {
         int key = 0;
