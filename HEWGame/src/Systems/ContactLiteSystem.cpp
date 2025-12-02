@@ -241,6 +241,7 @@ namespace Systems
                 , m_minVerticalSpeed(0.02f)
                 , m_minTangentialSpeed(0.01f)
                 , m_loggedMissingBodyList(false)
+                , m_loggedBodySnapshot(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
                 , m_loggedPlayerPlatformContact(false)
@@ -255,6 +256,7 @@ namespace Systems
         {
                 m_bodies = bodies;
                 m_loggedMissingBodyList = false;
+                m_loggedBodySnapshot = false;
                 m_loggedPlayerPresence = false;
                 m_loggedPlayerAbsence = false;
                 m_loggedPlayerPlatformContact = false;
@@ -363,6 +365,32 @@ namespace Systems
                 }
 
                 const size_t bodyCount = m_bodies->size();
+#if defined(_DEBUG)
+                if (!m_loggedBodySnapshot)
+                {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "OnUpdate body list snapshot count=" << bodyCount << " tags=[";
+                        for (size_t i = 0; i < bodyCount; ++i)
+                        {
+                                if (i > 0)
+                                {
+                                        oss << ", ";
+                                }
+                                const auto* body = (*m_bodies)[i];
+                                if (body)
+                                {
+                                        oss << '\"' << body->GetTag() << '\"';
+                                }
+                                else
+                                {
+                                        oss << "<null>";
+                                }
+                        }
+                        oss << "]\n";
+                        DebugTrace(oss.str());
+                        m_loggedBodySnapshot = true;
+                }
+#endif
                 const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](Entities::PhysicalEntity* body)
                 {
                         return IsPlayerBody(body);

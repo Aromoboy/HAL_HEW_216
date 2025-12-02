@@ -69,6 +69,7 @@ namespace Systems
         float m_minVerticalSpeed;
         float m_minTangentialSpeed;
         bool m_loggedMissingBodyList;
+        bool m_loggedBodySnapshot;
         bool m_loggedPlayerPresence;
         bool m_loggedPlayerAbsence;
         bool m_loggedPlayerPlatformContact;
