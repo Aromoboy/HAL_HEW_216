@@ -43,6 +43,7 @@ namespace Core
                         UpdatePhase phase = UpdatePhase::Input;
                         int priority = 0;
                         std::size_t registrationOrder = 0;
+                        // インデックス系はUpdateScheduler.cppで計算される値に合わせて既定値を持つ
                         std::size_t sortedIndex = 0;
                         std::size_t executionIndex = 0;
                         bool invoked = false;
