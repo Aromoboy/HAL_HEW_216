@@ -136,6 +136,16 @@ namespace GameFlow
 
         return advanced;
     }
+    
+    //ミニフェーズ
+    bool PhaseManager::UpdateMiniHeight(float currentMaxMiniHeight)
+    {
+        if (!m_initialized)
+        {
+            return false;
+        }
+
+    }
 
     int PhaseManager::GetCurrentPhase() const noexcept
     {
