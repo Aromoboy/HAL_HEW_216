@@ -26,6 +26,19 @@ namespace SweetsSpace
 
         void OnUpdate(Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera) override;
+
+        bool IsPendingDestroy() const noexcept
+        {
+            return m_pendingDestroy;
+        }
+
+        void MarkPendingDestroy() noexcept
+        {
+            m_pendingDestroy = true;
+        }
+
+    private:
+        bool m_pendingDestroy = false;
     };
 }
 

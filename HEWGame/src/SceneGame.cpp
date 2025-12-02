@@ -1103,6 +1103,15 @@ SceneGame::~SceneGame()
                 m_drawRegistered = false;
         }
 
+        if (m_sweetsLateRegistered && m_sweetsManager)
+        {
+                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+                {
+                        GetUpdateScheduler().Unregister(*lateNode);
+                }
+                m_sweetsLateRegistered = false;
+        }
+
         if (m_sweetsRegistered && m_sweetsManager)
         {
                 GetUpdateScheduler().Unregister(*m_sweetsManager);
@@ -1122,6 +1131,15 @@ SceneGame::~SceneGame()
         {
                 m_drawSystem->ClearRenderables();
                 std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+        }
+
+        if (m_sweetsLateRegistered && m_sweetsManager)
+        {
+                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+                {
+                        GetUpdateScheduler().Unregister(*lateNode);
+                }
+                m_sweetsLateRegistered = false;
         }
 
         if (m_sweetsRegistered && m_sweetsManager)
@@ -1169,6 +1187,15 @@ void SceneGame::ConfigureUpdates()
         {
                 GetUpdateScheduler().Register(*m_sweetsManager);
                 m_sweetsRegistered = true;
+        }
+
+        if (m_sweetsManager && !m_sweetsLateRegistered)
+        {
+                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+                {
+                        GetUpdateScheduler().Register(*lateNode);
+                        m_sweetsLateRegistered = true;
+                }
         }
 
         for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)

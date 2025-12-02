@@ -110,6 +110,7 @@ private:
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
+    bool m_sweetsLateRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     void InitializeStageAnchors();
