@@ -454,7 +454,7 @@ namespace Core
                         }
                 }
 
-                auto removeExpiredHandle = [this](const NodeHandle& handle)
+auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& handle)
                 {
                         if (!handle.IsExpired())
                         {
