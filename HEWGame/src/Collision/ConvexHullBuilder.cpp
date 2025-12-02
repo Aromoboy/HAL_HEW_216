@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
-#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -165,43 +164,21 @@ namespace Collision
             return extracted;
         }
 
-        constexpr std::size_t kDirectionCount = 12;
-        constexpr float kTwoPi = 6.28318530718f;
-
-        std::vector<float2> directionalSamples;
-        directionalSamples.reserve(kDirectionCount);
-
-        for (std::size_t i = 0; i < kDirectionCount; ++i)
-        {
-            const float angle = static_cast<float>(i) * (kTwoPi / static_cast<float>(kDirectionCount));
-            const float2 dir{ std::cos(angle), std::sin(angle) };
-
-            float maxDot = -std::numeric_limits<float>::infinity();
-            float2 furthest{ 0.0f, 0.0f };
-            bool found = false;
-
-            for (const auto& p : extracted)
+        auto uniquePoints = extracted;
+        std::sort(uniquePoints.begin(), uniquePoints.end(), [](const float2& lhs, const float2& rhs)
             {
-                const float dot = (p.x * dir.x) + (p.y * dir.y);
-                if (!found || dot > maxDot)
+                if (!AlmostEqual(lhs.x, rhs.x))
                 {
-                    maxDot = dot;
-                    furthest = p;
-                    found = true;
+                    return lhs.x < rhs.x;
                 }
-            }
-
-            if (found)
+                return lhs.y < rhs.y;
+            });
+        uniquePoints.erase(std::unique(uniquePoints.begin(), uniquePoints.end(), [](const float2& a, const float2& b)
             {
-                directionalSamples.push_back(furthest);
-            }
-        }
+                return AlmostEqual(a, b);
+            }), uniquePoints.end());
 
-        auto hull = ComputeConvexHull(directionalSamples);
-        if (hull.size() > 1 && AlmostEqual(hull.front(), hull.back()))
-        {
-            hull.pop_back();
-        }
+        auto hull = ComputeConvexHull(uniquePoints);
 
         const float2 centroid = ComputeCentroid(hull);
         for (auto& p : hull)
@@ -213,8 +190,8 @@ namespace Collision
 #if defined(_DEBUG)
         std::ostringstream oss;
         oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points from "
-            << directionalSamples.size() << " directional samples (" << extracted.size()
-            << " vertices). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
+            << uniquePoints.size() << " unique XY vertices (" << extracted.size()
+            << " raw). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
         DebugTrace(oss.str());
 #endif
 
