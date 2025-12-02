@@ -679,10 +679,29 @@ namespace SweetsSpace
         }
     }
 
+    class LateUpdateNode : public Core::UpdateNode
+    {
+    public:
+        explicit LateUpdateNode(SweetsSpace::SweetsManager& owner)
+            : Core::UpdateNode(Core::UpdatePhase::Late, 0)
+            , m_owner(owner)
+        {
+        }
+
+        void OnUpdate(Core::UpdateContext& ctx) override
+        {
+            m_owner.OnLateUpdate(ctx);
+        }
+
+    private:
+        SweetsSpace::SweetsManager& m_owner;
+    };
+
     SweetsManager::SweetsManager()
         : m_drawSystem(nullptr)
         , m_physicsMachine(nullptr)
         , m_scheduler(nullptr)
+        , m_lateUpdateNode(std::make_unique<LateUpdateNode>(*this))
         , m_phaseChangeCallback()
         , m_currentPhase(0)
         , m_phaseConfigs()
@@ -1310,7 +1329,13 @@ namespace SweetsSpace
 
     }
 
-    SweetsManager::~SweetsManager() = default;
+    SweetsManager::~SweetsManager()
+    {
+        if (m_scheduler && m_lateUpdateNode)
+        {
+            m_scheduler->Unregister(*m_lateUpdateNode);
+        }
+    }
 
     void SweetsManager::OnUpdate(Core::UpdateContext& ctx)
     {
@@ -1346,6 +1371,12 @@ namespace SweetsSpace
                     DebugTrace(oss.str());
 #endif
                     it = sweetsList.erase(it);
+                    continue;
+                }
+
+                if (sweets->IsPendingDestroy())
+                {
+                    ++it;
                     continue;
                 }
 
@@ -1434,6 +1465,45 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsManager::OnLateUpdate(Core::UpdateContext& ctx)
+    {
+        (void)ctx;
+
+        std::size_t removed = 0;
+
+        for (auto& entry : m_byState)
+        {
+            auto& sweetsList = entry.second;
+            auto it = sweetsList.begin();
+            while (it != sweetsList.end())
+            {
+                const auto& sweets = *it;
+                const bool pendingRemoval = !sweets || sweets->IsPendingDestroy();
+                if (pendingRemoval)
+                {
+                    if (sweets)
+                    {
+                        m_lookup.erase(sweets);
+                    }
+                    it = sweetsList.erase(it);
+                    ++removed;
+                    continue;
+                }
+
+                ++it;
+            }
+        }
+
+#if defined(_DEBUG)
+        if (removed > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Late prune removed " << removed << " pending sweets entries.\n";
+            DebugTrace(oss.str());
+        }
+#endif
+    }
+
     void SweetsManager::DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera)
     {
         if (!camera)
@@ -1446,7 +1516,7 @@ namespace SweetsSpace
             SweetsList& sweetsList = entry.second;
             for (auto& sweets : sweetsList)
             {
-                if (sweets)
+                if (sweets && !sweets->IsPendingDestroy())
                 {
                     sweets->Draw(renderer, *camera);
                 }
@@ -1476,7 +1546,7 @@ namespace SweetsSpace
         const auto& stacked = GetByState(SweetsState::Stacked);
         for (const auto& sweets : stacked)
         {
-            if (!sweets)
+            if (!sweets || sweets->IsPendingDestroy())
             {
                 continue;
             }
@@ -1514,6 +1584,11 @@ namespace SweetsSpace
     void SweetsManager::SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state)
     {
         if (!sweets)
+        {
+            return;
+        }
+
+        if (sweets->IsPendingDestroy())
         {
             return;
         }
@@ -1559,9 +1634,12 @@ namespace SweetsSpace
             return;
         }
 
-        auto& currentList = GetByState(found->second);
-        currentList.remove(sweets);
-        m_lookup.erase(found);
+        if (sweets->IsPendingDestroy())
+        {
+            return;
+        }
+
+        sweets->MarkPendingDestroy();
     }
 
     void SweetsManager::ClearAllSweets()
@@ -1680,6 +1758,16 @@ namespace SweetsSpace
         return m_currentPhase;
     }
 
+    Core::IUpdatable* SweetsManager::GetLateUpdateNode()
+    {
+        return m_lateUpdateNode.get();
+    }
+
+    const Core::IUpdatable* SweetsManager::GetLateUpdateNode() const
+    {
+        return m_lateUpdateNode.get();
+    }
+
     std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
         auto it = m_spawner.find(kind);
@@ -1736,7 +1824,7 @@ namespace SweetsSpace
 
             for (const auto& sweets : it->second)
             {
-                if (!sweets)
+                if (!sweets || sweets->IsPendingDestroy())
                 {
                     continue;
                 }
@@ -1763,6 +1851,11 @@ namespace SweetsSpace
     bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
+        {
+            return false;
+        }
+
+        if (sweets->IsPendingDestroy())
         {
             return false;
         }
@@ -1799,6 +1892,11 @@ namespace SweetsSpace
     bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
+        {
+            return false;
+        }
+
+        if (sweets->IsPendingDestroy())
         {
             return false;
         }
@@ -1952,10 +2050,13 @@ namespace SweetsSpace
             return;
         }
 
+        if (sweets->IsPendingDestroy())
+        {
+            return;
+        }
+
         const SweetsState previousState = found->second;
-        auto& currentList = GetByState(previousState);
-        currentList.remove(sweets);
-        m_lookup.erase(found);
+        sweets->MarkPendingDestroy();
 
         const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
         UpdateBatchUsage(batchContext, outcome);
@@ -2455,7 +2556,13 @@ namespace SweetsSpace
             const auto it = m_byState.find(state);
             if (it != m_byState.end())
             {
-                total += static_cast<int>(it->second.size());
+                for (const auto& sweets : it->second)
+                {
+                    if (sweets && !sweets->IsPendingDestroy())
+                    {
+                        ++total;
+                    }
+                }
             }
         }
 

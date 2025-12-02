@@ -43,6 +43,7 @@ namespace SweetsSpace
 {
     class BaseSweets;
     using ActiveSweets = BaseSweets;
+    class LateUpdateNode;
 
     struct WeightedSweetsType
     {
@@ -95,6 +96,7 @@ namespace SweetsSpace
         ~SweetsManager();
 
         void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnLateUpdate(Core::UpdateContext& ctx);
 
         void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera);
 
@@ -121,6 +123,8 @@ namespace SweetsSpace
         void SetColliderConfigOverridesEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
+        Core::IUpdatable* GetLateUpdateNode();
+        const Core::IUpdatable* GetLateUpdateNode() const;
         int GetCurrentPhase() const noexcept;
 
         std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
@@ -157,6 +161,7 @@ namespace SweetsSpace
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
         Core::UpdateScheduler* m_scheduler;
+        std::unique_ptr<LateUpdateNode> m_lateUpdateNode;
         PhaseChangeCallback m_phaseChangeCallback;
         int m_currentPhase;
         std::vector<PhaseSpawnConfig> m_phaseConfigs;
