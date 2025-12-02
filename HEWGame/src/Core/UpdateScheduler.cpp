@@ -162,6 +162,24 @@ namespace Core
                 m_executionLogListener = std::move(listener);
         }
 
+        UpdateScheduler::NodeHandleList::iterator UpdateScheduler::FindNodeHandle(IUpdatable* node)
+        {
+                return std::find_if(m_nodes.begin(), m_nodes.end(),
+                        [node](const NodeHandle& handle)
+                        {
+                                return handle.Get() == node;
+                        });
+        }
+
+        UpdateScheduler::NodeHandleList::const_iterator UpdateScheduler::FindNodeHandle(const IUpdatable* node) const
+        {
+                return std::find_if(m_nodes.begin(), m_nodes.end(),
+                        [node](const NodeHandle& handle)
+                        {
+                                return handle.Get() == node;
+                        });
+        }
+
         bool UpdateScheduler::IsRegistered(const IUpdatable* node) const
         {
                 if (!node)
@@ -169,7 +187,8 @@ namespace Core
                         return false;
                 }
 
-                return std::find(m_nodes.begin(), m_nodes.end(), node) != m_nodes.end();
+                auto it = FindNodeHandle(node);
+                return it != m_nodes.end();
         }
 
         bool UpdateScheduler::IsPendingRegistration(const IUpdatable* node) const
@@ -223,7 +242,8 @@ namespace Core
                         return;
                 }
 
-                m_nodes.emplace_back(&node);
+                auto sharedHandle = std::shared_ptr<IUpdatable>(&node, [](IUpdatable*){});
+                m_nodes.push_back({ &node, sharedHandle, sharedHandle });
                 m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
@@ -239,7 +259,7 @@ namespace Core
 
         void UpdateScheduler::UnregisterInternal(IUpdatable& node)
         {
-                auto it = std::remove(m_nodes.begin(), m_nodes.end(), &node);
+                auto it = FindNodeHandle(&node);
                 if (it == m_nodes.end())
                 {
                         std::ostringstream oss;
@@ -248,7 +268,8 @@ namespace Core
                 }
                 else
                 {
-                        m_nodes.erase(it, m_nodes.end());
+                        it->Expire();
+                        m_nodes.erase(it);
                 }
 
                 m_registrationOrder.erase(&node);
@@ -403,6 +424,38 @@ namespace Core
                         }
                         m_pendingOrderChanges.clear();
                 }
+
+                auto removeExpiredHandle = [this](const NodeHandle& handle)
+                {
+                        if (!handle.IsExpired())
+                        {
+                                return false;
+                        }
+
+                        IUpdatable* raw = handle.Get();
+                        if (raw)
+                        {
+                                m_registrationOrder.erase(raw);
+                                m_orderOverrides.erase(raw);
+                                auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
+                                        [raw](const Dependency& dep)
+                                        {
+                                                return dep.first == raw || dep.second == raw;
+                                        });
+                                if (depIt != m_dependencies.end())
+                                {
+                                        m_dependencies.erase(depIt, m_dependencies.end());
+                                }
+                        }
+
+                        return true;
+                };
+
+                auto expiredIt = std::remove_if(m_nodes.begin(), m_nodes.end(), removeExpiredHandle);
+                if (expiredIt != m_nodes.end())
+                {
+                        m_nodes.erase(expiredIt, m_nodes.end());
+                }
         }
 
         void UpdateScheduler::Register(IUpdatable& node)
@@ -435,6 +488,13 @@ namespace Core
                                         std::ostringstream oss;
                                         oss << "[UpdateScheduler] Pending unregistration cancelled due to re-registration node=" << &node << '\n';
                                         DebugLog(oss.str());
+                                        auto handleIt = FindNodeHandle(&node);
+                                        if (handleIt != m_nodes.end() && handleIt->IsExpired())
+                                        {
+                                                auto revived = std::shared_ptr<IUpdatable>(&node, [](IUpdatable*){});
+                                                handleIt->owner = revived;
+                                                handleIt->weak = revived;
+                                        }
                                 }
                         }
 
@@ -518,6 +578,12 @@ namespace Core
                                 return;
                         }
 
+                        auto handleIt = FindNodeHandle(&node);
+                        if (handleIt != m_nodes.end())
+                        {
+                                handleIt->Expire();
+                        }
+
                         m_pendingUnregistrations.emplace_back(&node);
                         return;
                 }
@@ -591,12 +657,23 @@ namespace Core
 
         void UpdateScheduler::Tick(UpdateContext& ctx)
         {
+                ApplyPendingOperations();
                 m_isTicking = true;
 
                 if (!m_nodes.empty())
                 {
                         // 更新リストをコピーしてソート用に使用する
-                        std::vector<IUpdatable*> sortedNodes = m_nodes;
+                        std::vector<IUpdatable*> sortedNodes;
+                        sortedNodes.reserve(m_nodes.size());
+                        for (const auto& handle : m_nodes)
+                        {
+                                if (handle.IsExpired())
+                                {
+                                        continue;
+                                }
+
+                                sortedNodes.push_back(handle.Get());
+                        }
                         sortedNodes.erase(std::remove(sortedNodes.begin(), sortedNodes.end(), nullptr), sortedNodes.end());
                         std::stable_sort(sortedNodes.begin(), sortedNodes.end(),
                                 [this](const IUpdatable* lhs, const IUpdatable* rhs)
