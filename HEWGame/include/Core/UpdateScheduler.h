@@ -78,7 +78,7 @@ namespace Core
                 struct NodeHandle
                 {
                         IUpdatable* raw = nullptr;
-                        std::shared_ptr<IUpdatable> owner;
+                        std::shared_ptr<IUpdatable> handle;
                         std::weak_ptr<IUpdatable> weak;
 
                         bool IsExpired() const
@@ -94,7 +94,7 @@ namespace Core
                         void Expire()
                         {
                                 raw = nullptr;
-                                owner.reset();
+                                handle.reset();
                                 weak.reset();
                         }
                 };
