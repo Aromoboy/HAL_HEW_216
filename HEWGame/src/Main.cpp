@@ -7,6 +7,8 @@
 #include "Geometory.h"
 #include "Sprite.h"
 #include "SceneGame.h"
+#include "SceneManager.h"
+#include "TitleScene.h"
 #include "Defines.h"
 #include "ShaderList.h"
 #include "DebugConsole.h"
@@ -17,9 +19,8 @@ namespace
 {
         Core::StepTimer g_stepTimer;
         Core::Input g_input;
+        std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
 }
-
-SceneSpace::Scene* g_pScene = nullptr;
 
 HRESULT Init(HWND hWnd, UINT width, UINT height)
 {
@@ -43,7 +44,8 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         ShaderList::Init();
 
         // シーン
-        g_pScene = new SceneGame();
+        g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
+        g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
 
         return hr;
 }
@@ -52,11 +54,7 @@ void Uninit()
 {
         g_input.Shutdown();
 
-        if (g_pScene)
-        {
-                delete g_pScene;
-                g_pScene = nullptr;
-        }
+        g_sceneManager.reset();
 
         ShaderList::Uninit();
         Sprite::Uninit();
@@ -66,10 +64,9 @@ void Uninit()
 
 void Update()
 {
-        if (g_pScene)
+        if (g_sceneManager)
         {
-                g_stepTimer.Tick();
-                g_pScene->RootUpdate(g_stepTimer, g_input);
+                g_sceneManager->Update();
         }
 
 #ifdef _DEBUG
@@ -152,9 +149,9 @@ void Draw()
         Geometory::SetProjection(mat[1]);
 #endif
 
-        if (g_pScene)
+        if (g_sceneManager)
         {
-                g_pScene->RootDraw();
+                g_sceneManager->Draw();
         }
         EndDrawDirectX();
 }

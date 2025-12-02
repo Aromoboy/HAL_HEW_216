@@ -491,6 +491,38 @@ namespace
 Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
+void SceneGame::Load(Core::Input& input)
+{
+    (void)input;
+    std::ostringstream oss;
+    oss << kLogPrefix << "Load scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
+{
+    RootUpdate(timer, input);
+}
+
+void SceneGame::Draw()
+{
+    RootDraw();
+}
+
+void SceneGame::OnEnter()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::OnExit()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+}
+
 SceneGame::SceneGame()
 {
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
