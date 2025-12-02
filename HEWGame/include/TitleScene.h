@@ -4,6 +4,13 @@
 #include "Scene.h"
 #include "SceneManager.h"
 
+#include <memory>
+
+namespace CameraSpace
+{
+    class PerspectiveCamera;
+}
+
 class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
@@ -24,6 +31,7 @@ private:
     void LogLifecycle(const char* label) const;
 
     SceneSpace::SceneManager* m_manager;
+    std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
 };
 
 #endif // __TITLE_SCENE_H__

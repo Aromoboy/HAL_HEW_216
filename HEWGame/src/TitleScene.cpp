@@ -2,6 +2,7 @@
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
+#include "PerspectiveCamera.h"
 #include "SceneGame.h"
 
 #include <memory>
@@ -56,6 +57,38 @@ void TitleScene::Draw()
 void TitleScene::OnEnter()
 {
     LogLifecycle("Enter");
+
+    const bool createdNewCamera = !m_camera;
+    if (!m_camera)
+    {
+        m_camera = std::make_shared<CameraSpace::PerspectiveCamera>();
+    }
+
+    auto registeredCamera = AddCamera(m_camera);
+    if (!registeredCamera)
+    {
+#if defined(_DEBUG)
+        DebugTrace(std::string(kLogPrefix) + "Failed to register title camera; RootDraw may lack an active camera.\n");
+#endif
+        return;
+    }
+
+    SetActiveCamera(registeredCamera);
+
+#if defined(_DEBUG)
+    std::ostringstream oss;
+    oss << kLogPrefix << "Title camera " << (createdNewCamera ? "created" : "reused")
+        << " ptr=" << registeredCamera.get();
+    if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(registeredCamera))
+    {
+        oss << " fov=" << perspectiveCamera->GetFieldOfViewDegrees()
+            << " aspect=" << perspectiveCamera->GetAspectRatio()
+            << " near=" << perspectiveCamera->GetNearPlane()
+            << " far=" << perspectiveCamera->GetFarPlane();
+    }
+    oss << " set active.\n";
+    DebugTrace(oss.str());
+#endif
 }
 
 void TitleScene::OnExit()
