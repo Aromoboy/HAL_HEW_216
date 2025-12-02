@@ -29,6 +29,10 @@ virtual void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) = 0
 protected:
 virtual void ConfigureUpdates();
 virtual void Update(Core::UpdateContext& ctx) = 0;
+void RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority);
+void UnregisterSceneUpdateNode();
+Core::IUpdatable* GetSceneUpdateNode();
+const Core::IUpdatable* GetSceneUpdateNode() const;
 
 void Register(Core::IUpdatable& node);
 void Unregister(Core::IUpdatable& node);
@@ -48,6 +52,9 @@ bool m_isConfigured;
 Core::Input* m_input;
 CameraSpace::CameraManager m_cameraManager;
 bool m_warnedAboutMissingCameraForDraw;
+class SceneUpdateNode;
+std::unique_ptr<SceneUpdateNode> m_sceneUpdateNode;
+bool m_sceneUpdateRegistered;
 };
 }
 

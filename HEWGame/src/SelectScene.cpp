@@ -63,6 +63,8 @@ void SelectScene::ConfigureUpdates()
     {
         Register(*input);
     }
+
+    RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 }
 
 void SelectScene::Update(Core::UpdateContext& ctx)
