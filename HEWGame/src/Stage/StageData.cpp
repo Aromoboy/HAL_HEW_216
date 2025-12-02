@@ -512,14 +512,15 @@ namespace Stage
                 {
                     parseError = true;
                 }
-                else if (spawnPoints.size() - beforeCount != 2)
+                else
                 {
+                    const size_t added = spawnPoints.size() - beforeCount;
                     std::ostringstream oss;
                     oss << kLogPrefix << "spawnPoints on line " << lineNumber
-                        << " expected exactly two spawn anchors but found "
-                        << (spawnPoints.size() - beforeCount) << ". Raw='" << rawValue << "'\n";
+                        << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
+                        << " (" << spawnPoints.size() << " total). Each anchor requires"
+                        << " three coordinates. Raw='" << rawValue << "'\n";
                     DebugTrace(oss.str());
-                    parseError = true;
                 }
             }
             else if (key == "phaseRewardMultipliers")
