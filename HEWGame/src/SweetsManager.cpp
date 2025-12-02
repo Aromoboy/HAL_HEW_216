@@ -721,6 +721,8 @@ namespace SweetsSpace
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
+        , m_forceGeneratedColliders(false)
+        , m_colliderConfigOverridesEnabled(false)
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
         , m_lastLiveSweetsCount(0)
@@ -909,6 +911,10 @@ namespace SweetsSpace
                 bool colliderDefinitionFailed = false;
                 bool colliderDefinitionEmpty = false;
                 bool colliderDefinitionHullMissingPoints = false;
+                bool colliderDefinitionIsCompound = false;
+                bool colliderDefinitionIsHull = false;
+                bool colliderDefinitionIsCircle = false;
+                const Collision::ColliderDefinition* colliderDefinition = nullptr;
                 const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
                 std::string colliderTypeChosen = "unresolved";
                 std::string colliderResolutionReason = "unresolved";
@@ -917,89 +923,45 @@ namespace SweetsSpace
                 if (colliderDef != m_colliderDefinitions.end())
                 {
                     colliderDefinitionFound = true;
-                    const Collision::ColliderDefinition& definition = colliderDef->second;
-                    const bool colliderDefinitionIsCompound = definition.type == Collision::ColliderKind::Compound;
-                    const bool colliderDefinitionIsHull = definition.type == Collision::ColliderKind::Hull;
-                    const bool colliderDefinitionIsCircle = definition.type == Collision::ColliderKind::Circle;
+                    colliderDefinition = &colliderDef->second;
+                    colliderDefinitionIsCompound = colliderDefinition->type == Collision::ColliderKind::Compound;
+                    colliderDefinitionIsHull = colliderDefinition->type == Collision::ColliderKind::Hull;
+                    colliderDefinitionIsCircle = colliderDefinition->type == Collision::ColliderKind::Circle;
 
-                    colliderDefinitionHullMissingPoints = colliderDefinitionIsHull && definition.points.empty();
-                    colliderDefinitionEmpty = IsColliderDefinitionEmpty(definition);
-
-                    if (!colliderDefinitionEmpty)
-                    {
-                        collider = Collision::BuildColliderFromDefinition(definition, scaledTransform, Collision::CollisionLayer::Sweets);
-                        if (collider)
-                        {
-                            if (colliderDefinitionIsCompound)
-                            {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Loaded compound collider definition for '" << kind
-                                    << "' children=" << definition.children.size() << "\n";
-                                DebugTrace(oss.str());
-                            }
-                            else if (colliderDefinitionIsHull)
-                            {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Loaded hull collider definition for '" << kind
-                                    << "' points=" << definition.points.size()
-                                    << " scale=" << definition.scale
-                                    << " margin=" << definition.margin
-                                    << " thickness=" << definition.thickness << "\n";
-                                DebugTrace(oss.str());
-                            }
-                            else if (colliderDefinitionIsCircle)
-                            {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Loaded circle collider definition for '" << kind
-                                    << " radius=" << definition.radius
-                                    << " scale=" << definition.scale
-                                    << " margin=" << definition.margin
-                                    << " thickness=" << definition.thickness << "\n";
-                                DebugTrace(oss.str());
-                            }
-
-                            if (colliderDefinitionIsCompound)
-                            {
-                                colliderTypeChosen = "config compound";
-                            }
-                            else if (colliderDefinitionIsHull)
-                            {
-                                colliderTypeChosen = "config hull";
-                            }
-                            else if (colliderDefinitionIsCircle)
-                            {
-                                colliderTypeChosen = "config circle";
-                            }
-                            else
-                            {
-                                colliderTypeChosen = "config collider";
-                            }
-                            colliderResolutionReason = colliderTypeChosen + " built";
-                        }
-                        else
-                        {
-                            colliderDefinitionFailed = true;
-                        }
-                    }
-                    else
-                    {
-                        if (colliderDefinitionIsHull && colliderDefinitionHullMissingPoints)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Hull collider definition for '" << kind
-                                << "' contained no points; attempting to fall back.\n";
-                            DebugTrace(warn.str());
-                        }
-                        colliderDefinitionFailed = true;
-                    }
+                    colliderDefinitionHullMissingPoints = colliderDefinitionIsHull && colliderDefinition->points.empty();
+                    colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
                 }
 
                 const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset);
                 const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
                 const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
 
-                if (!collider)
+                const bool configDefinitionAvailable = colliderDefinitionFound && !colliderDefinitionEmpty;
+                const bool configOverrideRequested = configDefinitionAvailable
+                    && m_colliderConfigOverridesEnabled && !m_forceGeneratedColliders;
+                const bool preferGenerated = m_forceGeneratedColliders || !configOverrideRequested;
+
                 {
+                    std::ostringstream plan;
+                    plan << kLogPrefix << "Collider resolve plan kind='" << kind << "'"
+                        << " preferGenerated=" << std::boolalpha << preferGenerated
+                        << " forceGenerated=" << m_forceGeneratedColliders
+                        << " configOverride=" << m_colliderConfigOverridesEnabled
+                        << " configFound=" << colliderDefinitionFound
+                        << " configEmpty=" << colliderDefinitionEmpty
+                        << " hasPolygons=" << hasGeneratedPolygons
+                        << " hasHull=" << hasGeneratedHull
+                        << "\n";
+                    DebugTrace(plan.str());
+                }
+
+                const auto tryBuildGeneratedColliders = [&]()
+                {
+                    if (collider)
+                    {
+                        return;
+                    }
+
                     if (hasGeneratedPolygons)
                     {
                         collider = BuildCompoundFromPolygons(generatedCollider.polygons, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
@@ -1026,10 +988,12 @@ namespace SweetsSpace
                             }
                             else
                             {
-                                colliderResolutionReason = "generated polygons used";
+                                colliderResolutionReason = configOverrideRequested
+                                    ? "config override bypassed -> generated polygons"
+                                    : "generated polygons used";
                             }
 
-                            if (!colliderDefinitionFound || colliderDefinitionEmpty || colliderDefinitionFailed)
+                            if (!colliderDefinitionFound || colliderDefinitionEmpty || colliderDefinitionFailed || !preferGenerated)
                             {
                                 std::ostringstream warn;
                                 warn << kLogPrefix << "Using generated polygon decomposition for '" << kind
@@ -1081,6 +1045,13 @@ namespace SweetsSpace
                             DebugTrace(warn.str());
                             m_warnedMissingColliderDefinitionKinds.insert(kind);
                         }
+                        else if (colliderDefinitionFound && !colliderDefinitionEmpty && !preferGenerated)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Generated hull used despite available collider config for '" << kind
+                                << "' because generated colliders are preferred.\n";
+                            DebugTrace(warn.str());
+                        }
 
                         if (colliderDefinitionHullMissingPoints)
                         {
@@ -1100,14 +1071,119 @@ namespace SweetsSpace
                         }
                         else
                         {
-                            colliderResolutionReason = "generated hull used";
+                            colliderResolutionReason = configOverrideRequested
+                                ? "config override bypassed -> generated hull"
+                                : "generated hull used";
                         }
                         colliderTypeChosen = "generated hull";
                     }
+                };
+
+                const auto buildColliderFromDefinition = [&]()
+                {
+                    if (!colliderDefinition || colliderDefinitionEmpty || m_forceGeneratedColliders || collider)
+                    {
+                        return;
+                    }
+
+                    const Collision::ColliderDefinition& definition = *colliderDefinition;
+                    collider = Collision::BuildColliderFromDefinition(definition, scaledTransform, Collision::CollisionLayer::Sweets);
+                    if (collider)
+                    {
+                        if (colliderDefinitionIsCompound)
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Loaded compound collider definition for '" << kind
+                                << "' children=" << definition.children.size() << "\n";
+                            DebugTrace(oss.str());
+                            colliderTypeChosen = "config compound";
+                        }
+                        else if (colliderDefinitionIsHull)
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Loaded hull collider definition for '" << kind
+                                << "' points=" << definition.points.size()
+                                << " scale=" << definition.scale
+                                << " margin=" << definition.margin
+                                << " thickness=" << definition.thickness << "\n";
+                            DebugTrace(oss.str());
+                            colliderTypeChosen = "config hull";
+                        }
+                        else if (colliderDefinitionIsCircle)
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Loaded circle collider definition for '" << kind
+                                << " radius=" << definition.radius
+                                << " scale=" << definition.scale
+                                << " margin=" << definition.margin
+                                << " thickness=" << definition.thickness << "\n";
+                            DebugTrace(oss.str());
+                            colliderTypeChosen = "config circle";
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Loaded collider definition for '" << kind << "'\n";
+                            DebugTrace(oss.str());
+                            colliderTypeChosen = "config collider";
+                        }
+
+                        colliderResolutionReason = colliderTypeChosen + " built";
+                    }
+                    else
+                    {
+                        if (colliderDefinitionIsHull && colliderDefinitionHullMissingPoints)
+                        {
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Hull collider definition for '" << kind
+                                << "' contained no points; attempting to fall back.\n";
+                            DebugTrace(warn.str());
+                        }
+
+                        colliderDefinitionFailed = true;
+                    }
+                };
+
+                if (preferGenerated)
+                {
+                    tryBuildGeneratedColliders();
+                }
+
+                if (!collider && configDefinitionAvailable && !m_forceGeneratedColliders)
+                {
+                    if (!preferGenerated)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Collider config override requested for '" << kind
+                            << "'; attempting to use collider definitions before generated geometry.\n";
+                        DebugTrace(warn.str());
+                    }
+                    else if (colliderDefinitionFound)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Collider config present for '" << kind
+                            << "' but generated geometry is preferred; config will only be used if generation fails.\n";
+                        DebugTrace(warn.str());
+                    }
+
+                    buildColliderFromDefinition();
+                }
+
+                if (!collider && !preferGenerated)
+                {
+                    tryBuildGeneratedColliders();
                 }
 
                 if (!collider)
                 {
+                    if (m_forceGeneratedColliders && configDefinitionAvailable)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Ignoring collider config for '" << kind
+                            << "' because force-generated collider mode is enabled and no generated shape was available.\n";
+                        DebugTrace(warn.str());
+                    }
+
                     if (colliderDefinitionFailed)
                     {
                         std::ostringstream warn;
@@ -1150,6 +1226,10 @@ namespace SweetsSpace
                     else if (!colliderDefinitionFound)
                     {
                         colliderResolutionReason = "no config -> AABB";
+                    }
+                    else if (m_forceGeneratedColliders)
+                    {
+                        colliderResolutionReason = "force generated -> AABB";
                     }
                     else
                     {
@@ -1198,6 +1278,8 @@ namespace SweetsSpace
                         << " defFound=" << std::boolalpha << colliderDefinitionFound
                         << " defEmpty=" << std::boolalpha << colliderDefinitionEmpty
                         << " buildFailed=" << std::boolalpha << colliderDefinitionFailed
+                        << " forceGenerated=" << std::boolalpha << m_forceGeneratedColliders
+                        << " configOverride=" << std::boolalpha << m_colliderConfigOverridesEnabled
                         << " usedGeneratedHull=" << std::boolalpha << usedGeneratedHull
                         << " usedGeneratedCompound=" << std::boolalpha << usedGeneratedCompound
                         << " hullAvailable=" << std::boolalpha << hasGeneratedHull
@@ -2228,6 +2310,43 @@ namespace SweetsSpace
         if (!changed)
         {
             DebugTrace(std::string(kLogPrefix) + "Thickness padding unchanged from prior value.\n");
+        }
+    }
+
+    void SweetsManager::SetForceGeneratedColliders(bool force)
+    {
+        const bool changed = m_forceGeneratedColliders != force;
+        m_forceGeneratedColliders = force;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Force-generated colliders " << (force ? "enabled" : "disabled")
+            << "; config collider definitions "
+            << (force ? "will be ignored when generated geometry is available." : "may be used as overrides or fallbacks.")
+            << "\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Force-generated collider flag unchanged from prior value.\n");
+        }
+    }
+
+    void SweetsManager::SetColliderConfigOverridesEnabled(bool enabled)
+    {
+        const bool changed = m_colliderConfigOverridesEnabled != enabled;
+        m_colliderConfigOverridesEnabled = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Collider config overrides " << (enabled ? "enabled" : "disabled")
+            << "; config definitions will "
+            << (enabled ? "replace generated colliders when available (unless force-generated is enabled)."
+                : "only be used when generated colliders are unavailable or forced off.")
+            << "\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Collider config override flag unchanged from prior value.\n");
         }
     }
 
