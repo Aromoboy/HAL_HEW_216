@@ -46,6 +46,9 @@
     <ClCompile Include="src\Core\InputMap.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\Gamepad.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\UpdateNode.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -242,6 +245,9 @@
       <Filter>Core\DirectX</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\InputMap.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\Gamepad.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\IUpdatable.h">

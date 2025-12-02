@@ -5,6 +5,7 @@
 #include <Xinput.h>
 
 #include "Core/ActionId.h"
+#include "Core/Gamepad.h"
 #include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
 
@@ -27,12 +28,16 @@ namespace Core
 
                 void OnUpdate(UpdateContext& ctx) override;
 
+                float GetAxis(ActionId action) const;
+
                 bool IsPress(BYTE key) const;
                 bool IsTrigger(BYTE key) const;
                 bool IsRelease(BYTE key) const;
 
                 bool IsAction(ActionId action) const;
+                bool IsPress(ActionId action) const;
                 bool IsTrigger(ActionId action) const;
+                bool IsRelease(ActionId action) const;
 
                 bool IsKeyPress(BYTE key) const;
                 bool IsKeyTrigger(BYTE key) const;
@@ -42,6 +47,8 @@ namespace Core
                 bool IsPress(int vk) const;
                 bool IsTrigger(int vk) const;
                 bool IsRelease(int vk) const;
+
+                void Rebind(ActionId action, const Binding& binding);
 
         private:
                 // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する。
