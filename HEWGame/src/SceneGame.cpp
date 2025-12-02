@@ -1139,6 +1139,8 @@ void SceneGame::ConfigureUpdates()
                 m_inputRegistered = true;
         }
 
+        RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
+
         if (m_physicsMachine && !m_physicsRegistered)
         {
                 GetUpdateScheduler().Register(*m_physicsMachine);

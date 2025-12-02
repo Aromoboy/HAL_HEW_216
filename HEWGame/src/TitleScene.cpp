@@ -94,6 +94,19 @@ void TitleScene::OnEnter()
 void TitleScene::OnExit()
 {
     LogLifecycle("Exit");
+
+#if defined(_DEBUG)
+    if (const auto* node = GetSceneUpdateNode())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Unregistering title update node ptr=" << node
+            << " phase=" << static_cast<int>(node->GetPhase())
+            << " priority=" << node->GetPriority() << '\n';
+        DebugTrace(oss.str());
+    }
+#endif
+
+    UnregisterSceneUpdateNode();
 }
 
 void TitleScene::ConfigureUpdates()
@@ -102,6 +115,19 @@ void TitleScene::ConfigureUpdates()
     {
         Register(*input);
     }
+
+    RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
+
+#if defined(_DEBUG)
+    if (const auto* node = GetSceneUpdateNode())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Registered title update node ptr=" << node
+            << " phase=" << static_cast<int>(node->GetPhase())
+            << " priority=" << node->GetPriority() << '\n';
+        DebugTrace(oss.str());
+    }
+#endif
 }
 
 void TitleScene::Update(Core::UpdateContext& ctx)
