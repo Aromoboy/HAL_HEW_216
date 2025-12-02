@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 
+#include "Core/IUpdatable.h"
+
 #if defined(_WIN32)
 #       ifndef NOMINMAX
 #               define NOMINMAX
@@ -114,9 +116,10 @@ namespace CameraSpace
                 return m_active.lock();
         }
 
-        void CameraManager::Update()
+        void CameraManager::Update(Core::UpdateContext& ctx)
         {
                 ++m_stats.updateCalls;
+                (void)ctx;
                 auto active = m_active.lock();
                 if (!active)
                 {
