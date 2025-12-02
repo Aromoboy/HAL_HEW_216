@@ -37,6 +37,15 @@
     <ClCompile Include="src\CameraRig.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
+    <ClCompile Include="src\Entities\CollisionEntity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Entities\Entity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Entities\PhysicalEntity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\DXContext.cpp">
       <Filter>Core\DirectX</Filter>
     </ClCompile>
@@ -127,6 +136,12 @@
     <ClCompile Include="src\SceneGame.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneManager.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SelectScene.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\Shader.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -144,6 +159,9 @@
     </ClCompile>
     <ClCompile Include="src\SoundSystem.cpp">
       <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TitleScene.cpp">
+      <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\Sprite.cpp">
       <Filter>Rendering</Filter>
@@ -337,10 +355,16 @@
     <ClInclude Include="include\PhysicalEntity.h">
       <Filter>Entities</Filter>
     </ClInclude>
+    <ClInclude Include="include\SceneManager.h">
+      <Filter>App</Filter>
+    </ClInclude>
     <ClInclude Include="include\Scene.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneGame.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SelectScene.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Shader.h">
@@ -363,6 +387,9 @@
     </ClInclude>
     <ClInclude Include="include\Sprite.h">
       <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TitleScene.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\FoundationPlatform.h">
       <Filter>Stage</Filter>
