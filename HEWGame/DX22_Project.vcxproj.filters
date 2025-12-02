@@ -232,6 +232,9 @@
     <ClInclude Include="include\Collision2D.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\CollisionLayer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\AssimpModelLorder.h">
       <Filter>Rendering</Filter>
     </ClInclude>
@@ -256,11 +259,17 @@
     <ClInclude Include="include\conioex.h">
       <Filter>Debug</Filter>
     </ClInclude>
+    <ClInclude Include="include\Core\ActionId.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\Core\DXContext.h">
       <Filter>Core\DirectX</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\IndexBuffer.h">
       <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\Input.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\InputMap.h">
       <Filter>Core</Filter>
@@ -271,10 +280,16 @@
     <ClInclude Include="include\Core\IUpdatable.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\Core\StepTimer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\Core\UpdateNode.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\UpdateScheduler.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\UpdateSchedulerTests.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\VertexBuffer.h">
