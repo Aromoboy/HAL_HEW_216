@@ -64,10 +64,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr BYTE kConfirmInputKey = VK_RETURN;
-        constexpr BYTE kRetryInputKey = 'R';
-        constexpr BYTE kPlayerSpeedBoostKey = '1';
-        constexpr BYTE kPlayerSpeedResetKey = '2';
         constexpr float kPlayerSpeedBoostStep = 1.1f;
         constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
         constexpr float kFallbackPlayerMoveSpeed = 15.0f;
@@ -1257,12 +1253,12 @@ if (m_timeUp)
             ::DebugTrace(oss.str());
         };
 
-        if (input.IsKeyTrigger(kPlayerSpeedBoostKey))
+        if (input.IsTrigger(Core::ActionId::SpeedBoost))
         {
             adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
         }
 
-        if (input.IsKeyTrigger(kPlayerSpeedResetKey))
+        if (input.IsTrigger(Core::ActionId::SpeedReset))
         {
             adjustMoveSpeed(1.0f, "Reset key '2'");
         }
@@ -1298,11 +1294,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
-        if (input.IsKeyTrigger(VK_F2))
+        if (input.IsTrigger(Core::ActionId::DebugNudgeUp))
         {
                 delta.y += kDebugNudge;
         }
-        if (input.IsKeyTrigger(VK_F3))
+        if (input.IsTrigger(Core::ActionId::DebugNudgeDown))
         {
                 delta.y -= kDebugNudge;
         }
@@ -1841,7 +1837,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     }
 
     Core::Input& input = ctx.input;
-    if (input.IsKeyTrigger(kConfirmInputKey))
+    if (input.IsTrigger(Core::ActionId::Confirm))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
@@ -1851,7 +1847,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (input.IsKeyTrigger(kRetryInputKey))
+    if (input.IsTrigger(Core::ActionId::Retry))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
@@ -1867,7 +1863,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (!ctx.input.IsKeyTrigger(kRetryInputKey))
+    if (!ctx.input.IsTrigger(Core::ActionId::Retry))
     {
         return;
     }

@@ -15,16 +15,16 @@ METER(1000.0f));
 
 void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
-if (ctx.input.IsKeyTrigger(VK_RETURN))
-{
-bIsMove = !bIsMove;
-}
+        if (ctx.input.IsTrigger(Core::ActionId::ToggleCameraMove))
+        {
+                bIsMove = !bIsMove;
+        }
 
-if (bIsMove)
-{
-constexpr float kMoveSpeed = 6.0f;
-float3 position = GetPosition();
-position.y += kMoveSpeed * ctx.dt;
-SetPosition(position);
-}
+        if (bIsMove)
+        {
+                constexpr float kMoveSpeed = 6.0f;
+                float3 position = GetPosition();
+                position.y += kMoveSpeed * ctx.dt;
+                SetPosition(position);
+        }
 }

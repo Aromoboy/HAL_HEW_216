@@ -21,14 +21,6 @@
 #    include <windows.h>
 #endif
 
-#define PLAYER_KEY_MOVE_UP    0x57 // W
-#define PLAYER_KEY_MOVE_LEFT  0x41 // A
-#define PLAYER_KEY_MOVE_DOWN  0x53 // S
-#define PLAYER_KEY_MOVE_RIGHT 0x44 // D
-
-#define PLAYER_KEY_PICKUP 0x45 // E
-#define PLAYER_KEY_DROP   0x51 // Q
-
 // ===============================================================
 // =============== CLEAN ANONYMOUS NAMESPACE =====================
 // ===============================================================
@@ -238,31 +230,8 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 {
         Core::Input& input = ctx.input;
 
-        float horizontal = 0.0f;
-        const bool moveLeft = input.IsKeyPress(PLAYER_KEY_MOVE_LEFT);
-        const bool moveRight = input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT);
-
-        if (moveLeft && !moveRight)
-        {
-                horizontal = -1.0f;
-        }
-        else if (moveRight && !moveLeft)
-        {
-                horizontal = 1.0f;
-        }
-
-        float vertical = 0.0f;
-        const bool moveUp = input.IsKeyPress(PLAYER_KEY_MOVE_UP);
-        const bool moveDown = input.IsKeyPress(PLAYER_KEY_MOVE_DOWN);
-
-        if (moveUp && !moveDown)
-        {
-                vertical = 1.0f;
-        }
-        else if (moveDown && !moveUp)
-        {
-                vertical = -1.0f;
-        }
+        float horizontal = input.GetAxis(Core::ActionId::MoveX);
+        float vertical = input.GetAxis(Core::ActionId::MoveY);
 
         const bool canMove = (ctx.dt > 0.0f && m_moveSpeed > 0.0f);
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
@@ -480,13 +449,13 @@ void SceneSpace::Player::HandleCarryInput(Core::UpdateContext& ctx)
 {
         Core::Input& input = ctx.input;
 
-        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && !m_carrieds.empty())
+        if (input.IsTrigger(Core::ActionId::Drop) && !m_carrieds.empty())
         {
                 DropCarriedSweets();
                 return;
         }
 
-        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && m_carrieds.size() < m_maxCarry)
+        if (input.IsTrigger(Core::ActionId::Pickup) && m_carrieds.size() < m_maxCarry)
         {
                 TryPickupNearest();
         }
