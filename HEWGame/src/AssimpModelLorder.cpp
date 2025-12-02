@@ -10,6 +10,7 @@
 #include "AssimpModelLorder.h"
 #include <DirectXMath.h>
 #include "TextureCache.h"
+#include "TextureDX.h"
 #include <locale>
 #include <codecvt>
 
@@ -149,9 +150,6 @@ std::vector<std::shared_ptr<MeshDX>> AssimpModelLorder::MakeMesh(const aiScene* 
 // }eA̍쐬
 std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const aiScene* ptr, const std::string& directory, ID3D11Device* device, TextureCache& textureCache)
 {
-	(void)directory;
-	(void)device;
-	(void)textureCache;
 	// O
 	aiColor3D color(0.0f, 0.0f, 0.0f);
 	float shininess = 0.0f;
@@ -188,9 +186,34 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 		if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
 			specular.w = shininess;
 
+		// テクスチャの読み込み
+		std::shared_ptr<Texture2D> texture = nullptr;
+
+		aiString texturePath;
+		if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+		{
+			std::string textureFile = texturePath.C_Str();
+			std::string fullPath = directory + textureFile;
+
+			// Convert string to wstring for TextureCache::Load
+			std::wstring wPath(fullPath.begin(), fullPath.end());
+
+			// Try to load texture
+			texture = textureCache.Load(fullPath, device, wPath);
+
+			// Only show error if loading failed
+			if (!texture)
+			{
+				OutputDebugStringA(("[AssimpLoader] テクスチャロード失敗: " + fullPath + "\n").c_str());
+				// Don't popup - just continue without texture
+			}
+		}
+
+		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 
 
-		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, nullptr);
+
+		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 	}
 
 

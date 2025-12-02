@@ -7,6 +7,8 @@
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
+#include "TextureDX.h"
+
 #include "TextureCache.h"
 
 #include "IModelLoader.h"

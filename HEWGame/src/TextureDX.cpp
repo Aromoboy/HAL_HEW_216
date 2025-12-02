@@ -24,7 +24,6 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     if (FAILED(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder)))
     {
-        DebugMessage("[Texture2D] ファイルを開けません: ");
         return false;
     }
 
