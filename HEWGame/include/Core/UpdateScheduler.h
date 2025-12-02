@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -74,6 +75,31 @@ namespace Core
                 std::size_t GetRegistrationOrder(const IUpdatable* node) const;
                 NodeOrderOverride GetEffectiveOrder(const IUpdatable* node) const;
                 const NodeOrderOverride* FindOrderOverride(const IUpdatable* node) const;
+                struct NodeHandle
+                {
+                        IUpdatable* raw = nullptr;
+                        std::shared_ptr<IUpdatable> owner;
+                        std::weak_ptr<IUpdatable> weak;
+
+                        bool IsExpired() const
+                        {
+                                return owner == nullptr || weak.expired();
+                        }
+
+                        IUpdatable* Get() const
+                        {
+                                return owner ? owner.get() : raw;
+                        }
+
+                        void Expire()
+                        {
+                                owner.reset();
+                                weak.reset();
+                        }
+                };
+                using NodeHandleList = std::vector<NodeHandle>;
+                NodeHandleList::iterator FindNodeHandle(IUpdatable* node);
+                NodeHandleList::const_iterator FindNodeHandle(const IUpdatable* node) const;
 
                 void RegisterInternal(IUpdatable& node);
                 void UnregisterInternal(IUpdatable& node);
@@ -87,7 +113,7 @@ namespace Core
                 bool IsPendingUnregistration(const IUpdatable* node) const;
                 PendingOrderChange* FindPendingOrderChange(const IUpdatable* node);
 
-                std::vector<IUpdatable*> m_nodes;          // 登録済みノード
+                NodeHandleList m_nodes;          // 登録済みノード
                 std::vector<Dependency> m_dependencies;    // before -> afterの矢印リスト
                 std::unordered_map<const IUpdatable*, std::size_t> m_registrationOrder;
                 std::size_t m_nextRegistrationOrder = 0;
