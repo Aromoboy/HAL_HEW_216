@@ -1,12 +1,14 @@
 #pragma once
 
 #include "DirectX.h"
+#include "Core/VertexBuffer.h"
+#include "Core/IndexBuffer.h"
 #include <DirectXMath.h>
 
 class MeshDX
 {
 public:
-	// ’¸“_î•ñ
+	// é ‚ç‚¹æƒ…å ±
 	struct Vertex
 	{
 		DirectX::XMFLOAT3	pos;
@@ -17,7 +19,7 @@ public:
 		unsigned int		index[4];
 	};
 
-	// ì¬—p‚Ìî•ñ
+	// ä½œæˆç”¨ã®æƒ…å ±
 	struct Description
 	{
 		const void* pVtx;
@@ -29,34 +31,36 @@ public:
 		D3D11_PRIMITIVE_TOPOLOGY topology;
 	};
 
-	// ƒRƒ“ƒXƒgƒ‰ƒNƒ^AƒfƒXƒgƒ‰ƒNƒ^
+	// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã€ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 	MeshDX(const MeshDX::Description& desc, unsigned long materialID);
 	~MeshDX();
 	
-	// ƒƒbƒVƒ…‚É‘Î‰‚·‚éƒ‚ƒfƒ‹‚Ìƒ}ƒeƒŠƒAƒ‹ID‚ğæ“¾
+	// ãƒ¡ãƒƒã‚·ãƒ¥ã«å¯¾å¿œã™ã‚‹ãƒ¢ãƒ‡ãƒ«ã®ãƒãƒ†ãƒªã‚¢ãƒ«IDã‚’å–å¾—
 	unsigned int GetMaterialID();
 
-	// Šeƒoƒbƒtƒ@‚Ìæ“¾
-	ID3D11Buffer* GetVertecBuffer();
-	ID3D11Buffer* GetIndexBuffer();
+	// å„ãƒãƒƒãƒ•ã‚¡ã®å–å¾—
+        const Core::VertexBuffer& GetVertexBuffer() const;
+        const Core::IndexBuffer* GetIndexBuffer() const;
+        bool HasIndexBuffer() const;
 
-	// Index”‚Ìæ“¾
+	// Indexæ•°ã®å–å¾—
 	unsigned int GetIndexCount();
 
 private:
 
-	// Šeƒoƒbƒtƒ@
-	ID3D11Buffer* m_pVtxBuffer;
-	ID3D11Buffer* m_pIdxBuffer;
+	// å„ãƒãƒƒãƒ•ã‚¡
+        Core::VertexBuffer m_vertexBuffer;
+        Core::IndexBuffer m_indexBuffer;
+        bool m_hasIndexBuffer;
 
-	// ‘Î‰‚·‚éƒ}ƒeƒŠƒAƒ‹ID
+	// å¯¾å¿œã™ã‚‹ãƒãƒ†ãƒªã‚¢ãƒ«ID
 	unsigned int m_materialID;
 
-	// Index”
+	// Indexæ•°
 	unsigned int m_indexCount;
 
-	// ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Åg—p‚·‚éƒoƒbƒtƒ@ì¬ˆ—
-	HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);
-	HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
+	// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§ä½¿ç”¨ã™ã‚‹ãƒãƒƒãƒ•ã‚¡ä½œæˆå‡¦ç†
+        HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);
+        HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
 };
 

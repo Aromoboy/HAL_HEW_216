@@ -4,12 +4,44 @@
 #include <array>
 #include <Xinput.h>
 
+#include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
+
+// Input/UpdateContext 対応メモ（README のクラス図準拠）
+// - 本クラスは Core::UpdateNode を継承し、UpdatePhase::Input で最初に入力を集約する役割を担う。
+// - UpdateContext は各フェーズで共有され、Input フェーズでポーリング済みのこのインスタンスへの参照を保持する。
+// - ゲームループの更新順序を崩さないため、ポーリングは OnUpdate 内でのみ行い、他フェーズは取得済み状態を参照する方針。
 
 #pragma comment(lib, "xinput.lib")
 
 namespace Core
 {
+        class Gamepad
+        {
+        public:
+                Gamepad();
+
+                void Poll(int index = 0);
+
+                bool IsConnected() const;
+                bool IsButtonDown(WORD button) const;
+                bool WasButtonDown(WORD button) const;
+
+                float AxisLX() const;
+                float AxisLY() const;
+                float AxisRX() const;
+                float AxisRY() const;
+
+                const XINPUT_STATE& GetPreviousState() const { return m_prevState; }
+
+        private:
+                float Normalize(short value) const;
+
+                XINPUT_STATE m_state{};
+                XINPUT_STATE m_prevState{};
+                bool m_connected = false;
+        };
+
         class Input : public UpdateNode
         {
         public:
@@ -20,35 +52,38 @@ namespace Core
 
                 void OnUpdate(UpdateContext& ctx) override;
 
-                bool IsKeyPress(BYTE key) const;
-                bool IsKeyTrigger(BYTE key) const;
-                bool IsKeyRelease(BYTE key) const;
-                bool IsKeyRepeat(BYTE key) const;
+                float GetAxis(ActionId action) const;
+                bool IsPress(ActionId action) const;
+                bool IsTrigger(ActionId action) const;
+                bool IsRelease(ActionId action) const;
+                bool IsAction(ActionId action) const;
+                void Rebind(ActionId action, const Binding& binding);
 
-                bool IsPadConnected(int index = 0) const;
-                bool IsPadPress(WORD button, int index = 0) const;
-                bool IsPadTrigger(WORD button, int index = 0) const;
-                bool IsPadRelease(WORD button, int index = 0) const;
-
-                float GetPadLX(int index = 0) const;
-                float GetPadLY(int index = 0) const;
-                float GetPadRX(int index = 0) const;
-                float GetPadRY(int index = 0) const;
-
-                float GetPadLeftTrigger(int index = 0) const;   // 0.0 - 1.0
-                float GetPadRightTrigger(int index = 0) const;  // 0.0 - 1.0
+                bool IsPress(int vk) const;
+                bool IsTrigger(int vk) const;
+                bool IsRelease(int vk) const;
 
         private:
+                // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する。
+                // 初期化に失敗した場合は安全側に倒すためゼロクリアする。
                 void PollKeyboardState();
+
+                // XInput ゲームパッドをポーリングする。接続状態が変わった際はデバッグログで通知。
                 void PollPadState(int index = 0);
 
+                // 現フレーム/前フレームの状態を参照するヘルパー。未初期化時は false になる。
+                bool IsKeyDown(BYTE key) const;
+                bool WasKeyDown(BYTE key) const;
+
+                // 配列は UpdatePhase::Input の開始時に current へ読み出し、更新前に previous に退避する。
                 std::array<BYTE, 256> m_currentKeys;
                 std::array<BYTE, 256> m_previousKeys;
                 bool m_initialized;
 
-                XINPUT_STATE m_padState{};
-                XINPUT_STATE m_prevPadState{};
-                bool m_padConnected = false;
+                Gamepad m_pad;
+                InputMap m_map;
+
+                friend class InputMap;
         };
 }
 

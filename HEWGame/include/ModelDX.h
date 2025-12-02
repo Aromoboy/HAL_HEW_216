@@ -10,8 +10,8 @@
 class ModelDX
 {
 public:
-	ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs);
-	~ModelDX();
+        ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs);
+        ~ModelDX();
 
 	unsigned int GetMeshCount() const;
 
@@ -23,8 +23,18 @@ private:
 	std::vector<std::shared_ptr<MeshDX>> m_meshes;
 	std::vector<std::shared_ptr<MaterialDX>> m_materials;
 
-	unsigned int m_meshCount;
+        unsigned int m_meshCount;
 };
+
+
+// Render-layer model abstraction
+// The class diagram groups renderable meshes under Render::Model.
+// ModelDX provides the concrete implementation, so we alias it here to
+// keep a single, unified model type across entities and systems.
+namespace Render
+{
+    using Model = ::ModelDX;
+}
 
 
 

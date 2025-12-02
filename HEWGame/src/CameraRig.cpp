@@ -1,6 +1,6 @@
 #include "CameraRig.h"
-// Entity ‚Ì’è‹`‚ªŠ®‘S‚É‚È‚Á‚½‚Ì‚ÅATransform ‚ğ’¼ÚQÆ‚µ‚Ä
-// ƒJƒƒ‰‚Ì’Ç]‚â‰ñ“]ŒvZ‚ª‚µ‚â‚·‚­‚È‚Á‚½
+#include "Entities/Entity.h"
+// ã‚«ãƒ¡ãƒ©ã®è¿½å¾“ã‚„å›è»¢è¨ˆç®—ãŒã—ã‚„ã™ããªã£ãŸ
 
 #include <sstream>
 #include <utility>
@@ -38,8 +38,8 @@ namespace
                 DirectX::XMStoreFloat3(&temp, value);
                 return float3{ temp.x, temp.y, temp.z };
         }
-// ƒIƒtƒZƒbƒg‚ğƒ„[Eƒsƒbƒ`‚Å‰ñ“]‚³‚¹‚ÄA
-// ƒJƒƒ‰‚Ì‘Š‘ÎˆÊ’u‚ğ_“î‚ÉƒRƒ“ƒgƒ[ƒ‹‚·‚é‚½‚ß‚Ìƒwƒ‹ƒp[
+// ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’ãƒ¤ãƒ¼ãƒ»ãƒ”ãƒƒãƒã§å›è»¢ã•ã›ã¦ã€
+// ã‚«ãƒ¡ãƒ©ã®ç›¸å¯¾ä½ç½®ã‚’æŸ”è»Ÿã«ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã™ã‚‹ãŸã‚ã®ãƒ˜ãƒ«ãƒ‘ãƒ¼
         DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
         {
                 DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
@@ -166,7 +166,7 @@ bool CameraRig::IsYawPitchLocked() const
         return m_lockYawPitch;
 }
 
-void CameraRig::Attach(const std::shared_ptr<SceneSpace::Entity>& target)
+void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
         m_warnedAboutExpiredTarget = false;

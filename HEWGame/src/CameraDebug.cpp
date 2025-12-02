@@ -15,7 +15,7 @@ METER(1000.0f));
 
 void CameraDebug::OnUpdate(Core::UpdateContext& ctx)
 {
-if (ctx.input.IsKeyTrigger(VK_RETURN))
+if (ctx.input.IsTrigger(Core::ActionId::CameraToggle))
 {
 bIsMove = !bIsMove;
 }

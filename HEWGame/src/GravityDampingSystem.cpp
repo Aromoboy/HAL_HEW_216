@@ -1,6 +1,6 @@
 // GravityDampingSystem.cpp
 #include "GravityDampingSystem.h"
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -33,7 +33,7 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 {
 }
 
-void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
+void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
 {
     // Physicalコンポーネントを取得
     auto& physical = entity.GetPhysical();
@@ -56,6 +56,29 @@ void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
 
     m_loggedKinematicSkips.erase(&entity);
 
+    constexpr float kPlanarEpsilon = 1e-6f;
+    const bool hasZInput = (std::fabs(physical.velocity.z) > kPlanarEpsilon)
+        || (std::fabs(physical.force.z) > kPlanarEpsilon);
+    if (hasZInput)
+    {
+#if defined(_DEBUG)
+        if (m_loggedPlanarViolations.insert(&entity).second)
+        {
+            std::ostringstream oss;
+            oss << "[GravityDampingSystem] Planar assumption violated by entity '" << entity.GetTag()
+                << "': velocity.z=" << physical.velocity.z
+                << " force.z=" << physical.force.z << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
+        physical.velocity.z = 0.0f;
+        physical.force.z = 0.0f;
+    }
+    else
+    {
+        m_loggedPlanarViolations.erase(&entity);
+    }
+
     // 重力加速度を速度に加算（-y方向）
     physical.velocity.y -= m_gravity * dt;
 
@@ -63,5 +86,4 @@ void GravityDampingSystem::Apply(SceneSpace::PhysicalEntity& entity, float dt)
     const float dampingFactor = std::pow(m_damping, dt);
     physical.velocity.x *= dampingFactor;
     physical.velocity.y *= dampingFactor;
-    physical.velocity.z *= dampingFactor;
 }

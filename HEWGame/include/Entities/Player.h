@@ -1,15 +1,11 @@
-#ifndef ___PLAYER_H___
-#define ___PLAYER_H___
+#pragma once
 
-#include "CollisionEntity.h"
-#include "Input.h"
-#include "ICamera.h"
-#include "ModelDX.h"
-#include "ModelRender.h"
-#include "PhysicalEntity.h"
-#include <memory>
 #include <optional>
+#include <string>
 #include <vector>
+
+#include "Entities/PhysicalEntity.h"
+#include "Input.h"
 
 namespace SweetsSpace
 {
@@ -17,29 +13,27 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-void Test();
-
-namespace SceneSpace
+namespace Entities
 {
-    class Player : public SceneSpace::PhysicalEntity
+    class Player : public PhysicalEntity
     {
     public:
-        ModelDX* GetRenderableModel() override;
-        const ModelDX* GetRenderableModel() const override;
-
-        Player(std::string a_tag, float3 pos, float3 rot, float3 scl,
-            std::shared_ptr<Collision::ICollider> collide,
-            Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
-            float3 velocity = { 0.0f, 0.0f, 0.0f }, float3 force = { 0.0f, 0.0f, 0.0f }, float weight = 1.0f, float damping = 0.98f,
+        Player(const Transform& transform,
+            std::shared_ptr<Render::Model> model = nullptr,
+            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            Physics::Physical physical = Physics::Physical{},
+            Systems::PhysicsMachine* physicsMachine = nullptr,
+            Systems::ContactLiteSystem* contactSystem = nullptr,
+            SweetsSpace::SweetsManager* sweetsManager = nullptr,
+            Collision::CollisionLayer collisionLayer = Collision::CollisionLayer::Player,
+            bool kinematic = false,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0,
-            bool kinematic = false);
+            std::string tag = "player");
+        ~Player() override = default;
 
-        virtual void OnUpdate(Core::UpdateContext& ctx) override;
-
-        virtual void Draw(ModelRender& render, CameraSpace::ICamera& camera);
-
-        void HandleInput(Core::Input input);
+        void OnUpdate(Core::UpdateContext& ctx) override;
+        void Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera) override;
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
@@ -54,7 +48,8 @@ namespace SceneSpace
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
 
     private:
-        std::shared_ptr<ModelDX> model;
+        std::shared_ptr<Render::Model> m_fairyModel;
+        Systems::ContactLiteSystem* m_contactSystem;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         int m_maxCarry;
@@ -72,14 +67,13 @@ namespace SceneSpace
         bool m_hasMaximumY;
         float m_maximumY;
 
+        float3 ComputeCarryAnchor() const;
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
         void TryPickupNearest();
         void DropCarriedSweets();
-        float3 ComputeCarryAnchor() const;
         void ClampVerticalPosition();
         void ClampScreenBounds();
     };
 }
 
-#endif // !___PLAYER_H___

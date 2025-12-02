@@ -3,119 +3,98 @@
 #include "Debug.h"
 
 MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
-	: m_pVtxBuffer(nullptr)
-	, m_pIdxBuffer(nullptr)
+        : m_vertexBuffer()
+        , m_indexBuffer()
+        , m_hasIndexBuffer(false)
 {
-	HRESULT hr;
+        HRESULT hr;
 
-	// ŠeŽíƒXƒe[ƒ^ƒX‚ðÝ’è
-	m_indexCount = desc.idxCount;
+        // å„ç¨®ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
+        m_indexCount = desc.idxCount;
 
-	m_materialID = materialID;
+        m_materialID = materialID;
 
-	// ’¸“_ƒoƒbƒtƒ@ì¬
-	hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
-	if (FAILED(hr))
-	{
+        // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
+        hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
+        if (FAILED(hr))
+        {
 #ifdef _DEBUG
-		DebugMessage("’¸“_ƒoƒbƒtƒ@‚Ìì¬‚ÉŽ¸”s‚µ‚Ü‚µ‚½B");
+                DebugMessage("é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
-		return;
-	}
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ì¬
-	if (desc.pIdx) {
-		hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
-		if (FAILED(hr))
-		{
+                return;
+        }
+        // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
+        if (desc.pIdx) {
+                hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
+                if (FAILED(hr))
+                {
 #ifdef _DEBUG
-			DebugMessage("ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚Ìì¬‚ÉŽ¸”s‚µ‚Ü‚µ‚½B");
+                        DebugMessage("ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
 
-
-			return;
-		}
-	}
-
-	
-
+                        return;
+                }
+        }
 }
 
 MeshDX::~MeshDX()
 {
-	if (m_pVtxBuffer) m_pVtxBuffer->Release();
-	if (m_pIdxBuffer) m_pIdxBuffer->Release();
+        m_vertexBuffer.Shutdown();
+        m_indexBuffer.Shutdown();
 }
 
 
-// ŠeŽíƒQƒbƒ^
+// å„ç¨®ã‚²ãƒƒã‚¿
 unsigned int MeshDX::GetMaterialID()
 {
-	return m_materialID;
+        return m_materialID;
 }
 
-ID3D11Buffer* MeshDX::GetVertecBuffer()
+const Core::VertexBuffer& MeshDX::GetVertexBuffer() const
 {
-	return m_pVtxBuffer;
+        return m_vertexBuffer;
 }
 
-ID3D11Buffer* MeshDX::GetIndexBuffer()
+const Core::IndexBuffer* MeshDX::GetIndexBuffer() const
 {
-	return m_pIdxBuffer;
+        return m_hasIndexBuffer ? &m_indexBuffer : nullptr;
+}
+
+bool MeshDX::HasIndexBuffer() const
+{
+        return m_hasIndexBuffer;
 }
 
 unsigned int MeshDX::GetIndexCount()
 {
-	return m_indexCount;
+        return m_indexCount;
 }
 
 
-// ’¸“_ƒoƒbƒtƒ@‚Ìì¬
+// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 HRESULT MeshDX::CreateVertexBuffer(const void* pVtx, UINT size, UINT count)
 {
-	//--- ì¬‚·‚éƒoƒbƒtƒ@‚Ìî•ñ
-	D3D11_BUFFER_DESC bufDesc = {};
-	bufDesc.ByteWidth = size * count;
-	bufDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-	//--- ƒoƒbƒtƒ@‚Ì‰Šú’l‚ðÝ’è
-	D3D11_SUBRESOURCE_DATA subResource = {};
-	subResource.pSysMem = pVtx;
-
-	//--- ’¸“_ƒoƒbƒtƒ@‚Ìì¬
-	HRESULT hr;
-	ID3D11Device* pDevice = GetDevice();
-	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pVtxBuffer);
-
-	return hr;
+        return m_vertexBuffer.Init(pVtx, size, count, false);
 }
 
-// ’¸“_ƒoƒbƒtƒ@‚Ìì¬
+// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 HRESULT MeshDX::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
 {
-	// ƒCƒ“ƒfƒbƒNƒXƒTƒCƒY‚ÌŠm”F
-	switch (size)
-	{
-	default:
-		return E_FAIL;
-	case 2:
-	case 4:
-		break;
-	}
+        // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚µã‚¤ã‚ºã®ç¢ºèª
+        switch (size)
+        {
+        default:
+                return E_FAIL;
+        case 2:
+        case 4:
+                break;
+        }
 
-	// ƒoƒbƒtƒ@‚Ìî•ñ‚ðÝ’è
-	D3D11_BUFFER_DESC bufDesc = {};
-	bufDesc.ByteWidth = size * count;
-	bufDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	// ƒoƒbƒtƒ@‚Ì‰Šúƒf[ƒ^
-	D3D11_SUBRESOURCE_DATA subResource = {};
-	subResource.pSysMem = pIdx;
+        HRESULT hr = m_indexBuffer.Init(pIdx, size, count);
+        if (SUCCEEDED(hr))
+        {
+                m_hasIndexBuffer = true;
+        }
 
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@¶¬
-	ID3D11Device* pDevice = GetDevice();
-	HRESULT hr;
-	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pIdxBuffer);
-
-	return hr;
+        return hr;
 }

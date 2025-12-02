@@ -5,21 +5,17 @@
 #include <memory>
 #include <vector>
 
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
 
 namespace Systems
-// PhysicsMachine  Entity ̊S`QƂ悤ɍXV
-// sS^G[邽߁ASceneSpace::PhysicalEntity 𒼐ڈ
+// PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する
+// UpdateNode。旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける。
 {
     class IPhysicsSystem
- // VXe PhysicalEntity 𒼐ڑ
-// ȑO Entity::PhysicalEntity  SceneSpace ɓ
-
-
     {
     public:
         virtual ~IPhysicsSystem() = default;
-        virtual void Apply(SceneSpace::PhysicalEntity& entity, float dt) = 0;
+        virtual void Apply(Entities::PhysicalEntity& entity, float dt) = 0;
     };
 
     class IntegrateSystem;
@@ -37,14 +33,12 @@ namespace Systems
         void SetIntegrator(IntegratorPtr integrator);
         SystemPtr GetSystem() const;
         IntegratorPtr GetIntegrator() const;
-        const std::vector<SceneSpace::PhysicalEntity*>& GetBodies() const;
+        const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
 
 
-// o^{fB SceneSpace OԂɓ
-// Entity ̍č\ɍ킹ύX
 
-        void RegisterBody(SceneSpace::PhysicalEntity& body);
-        void UnregisterBody(SceneSpace::PhysicalEntity& body);
+        void RegisterBody(Entities::PhysicalEntity& body);
+        void UnregisterBody(Entities::PhysicalEntity& body);
         void ClearBodies();
 
         void OnUpdate(Core::UpdateContext& ctx) override;
@@ -52,7 +46,7 @@ namespace Systems
     private:
         SystemPtr m_system;
         IntegratorPtr m_integrator;
-        std::vector<SceneSpace::PhysicalEntity*> m_bodies;
+        std::vector<Entities::PhysicalEntity*> m_bodies;
         bool m_loggedMissingSystem;
         bool m_loggedMissingIntegrator;
     };

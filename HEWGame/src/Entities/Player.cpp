@@ -1,18 +1,19 @@
-#include "Player.h"
+#include "Entities/Player.h"
+
 #include "Core/Input.h"
 #include "ModelCache.h"
-#include "Physical.h"
-#include "Sweets.h"
+#include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
-#include <vector>
-#include <array>
-#include <DirectXMath.h>
+#include <optional>
 #include <sstream>
+#include <vector>
+#include <DirectXMath.h>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -21,17 +22,6 @@
 #    include <windows.h>
 #endif
 
-#define PLAYER_KEY_MOVE_UP    0x57 // W
-#define PLAYER_KEY_MOVE_LEFT  0x41 // A
-#define PLAYER_KEY_MOVE_DOWN  0x53 // S
-#define PLAYER_KEY_MOVE_RIGHT 0x44 // D
-
-#define PLAYER_KEY_PICKUP 0x45 // E
-#define PLAYER_KEY_DROP   0x51 // Q
-
-// ===============================================================
-// =============== CLEAN ANONYMOUS NAMESPACE =====================
-// ===============================================================
 namespace
 {
 #if defined(_WIN32) && defined(_DEBUG)
@@ -56,12 +46,9 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
 
-    // ===============================================================
-    // =============== PROCEDURAL FAIRY MODEL ========================
-    // ===============================================================
-    std::shared_ptr<ModelDX> CreateProceduralFairyModel()
+    std::shared_ptr<Render::Model> CreateProceduralFairyModel()
     {
-        static std::weak_ptr<ModelDX> cached;
+        static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Reusing cached procedural fairy.\n");
@@ -151,7 +138,7 @@ namespace
         d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
         auto mesh = std::make_shared<MeshDX>(d, 0);
-        if (!mesh->GetVertecBuffer() || !mesh->GetIndexBuffer())
+        if (!mesh->GetVertexBuffer().IsValid() || !mesh->HasIndexBuffer())
             return nullptr;
 
         auto mat = std::make_shared<MaterialDX>(
@@ -167,110 +154,93 @@ namespace
         cached = model;
         return model;
     }
-} // END namespace
-
-
-// ===============================================================
-// ===================== PLAYER CONSTRUCTOR =======================
-// ===============================================================
-SceneSpace::Player::Player(
-    std::string a_tag,
-    float3 pos,
-    float3 rot,
-    float3 scl,
-    std::shared_ptr<Collision::ICollider> collide,
-    Collision::CollisionLayer layer,
-    float3 velocity,
-    float3 force,
-    float weight,
-    float damping,
-    Core::UpdatePhase phase,
-    int priority,
-    bool kinematic)
-    : PhysicalEntity(a_tag, pos, rot, scl, collide, layer,
-        velocity, force,
-        kinematic ? 0.0f : weight,
-        damping, phase, priority)
-    , model(nullptr)
-    , m_sweetsManager(nullptr)
-    , m_carrieds()
-    , m_pickupRadius(kDefaultPickupRadius)
-    , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
-    , m_dropUpwardBoost(4.0f)
-    , m_isKinematic(kinematic)
-    , m_moveSpeed(kDefaultPlayerMoveSpeed)
-    , m_hasMinimumY(false)
-    , m_minimumY(0.0f)
-    , m_missingModelWarned(false)
-    , m_hasScreenBounds(false)
-    , m_minScreenX(0.0f)
-    , m_maxScreenX(0.0f)
-    , m_hasMaximumY(false)
-    , m_maximumY(0.0f)
-    , m_maxCarry(kDefaultMaxCarry)
-{
-    Render::ModelCache& cache = Render::ModelCache::Instance();
-    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-
-    const auto* d = manifest.Find(SweetsSpace::SweetsType::Fairy);
-    const std::string modelPath = d ? d->modelPath : std::string(kFairyFallbackPath);
-
-    PlayerDebugTrace(std::string(kPlayerLogPrefix)
-        + "Using fairy prototype or fallback.\n");
-
-    model = CreateProceduralFairyModel();
-    if (!model)
-        model = cache.Get(modelPath);
-
-    if (!model && modelPath != kFairyFallbackPath)
-        model = cache.Get(kFairyFallbackPath);
-
-    if (!model)
-        m_missingModelWarned = true;
 }
 
-bool SceneSpace::Player::IsKinematic() const
+namespace Entities
 {
-        return m_isKinematic;
-}
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Physics::Physical physical, Systems::PhysicsMachine* physicsMachine, Systems::ContactLiteSystem* contactSystem, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+        : PhysicalEntity(transform, std::move(collider), collisionLayer, physical, std::move(model), physicsMachine, contactSystem, phase, priority, std::move(tag))
+        , m_fairyModel(nullptr)
+        , m_contactSystem(contactSystem)
+        , m_sweetsManager(sweetsManager)
+        , m_carrieds()
+        , m_maxCarry(kDefaultMaxCarry)
+        , m_pickupRadius(kDefaultPickupRadius)
+        , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
+        , m_dropUpwardBoost(4.0f)
+        , m_isKinematic(kinematic)
+        , m_moveSpeed(kDefaultPlayerMoveSpeed)
+        , m_hasMinimumY(false)
+        , m_minimumY(0.0f)
+        , m_missingModelWarned(false)
+        , m_hasScreenBounds(false)
+        , m_minScreenX(0.0f)
+        , m_maxScreenX(0.0f)
+        , m_hasMaximumY(false)
+        , m_maximumY(0.0f)
+    {
+        if (m_isKinematic)
+        {
+            m_physical.weight = 0.0f;
+        }
 
-void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
-{
+        if (model)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Using provided player model.\n");
+        }
+        else
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "No player model supplied; resolving fairy prototype.\n");
+        }
+
+        Render::ModelCache& cache = Render::ModelCache::Instance();
+        const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+
+        const auto* d = manifest.Find(SweetsSpace::SweetsType::Fairy);
+        const std::string modelPath = d ? d->modelPath : std::string(kFairyFallbackPath);
+
+        PlayerDebugTrace(std::string(kPlayerLogPrefix)
+            + "Using fairy prototype or fallback.\n");
+
+        m_fairyModel = CreateProceduralFairyModel();
+        if (!m_fairyModel)
+            m_fairyModel = cache.Get(modelPath);
+
+        if (!m_fairyModel && modelPath != kFairyFallbackPath)
+            m_fairyModel = cache.Get(kFairyFallbackPath);
+
+        if (!m_fairyModel)
+            m_missingModelWarned = true;
+
+        if (!m_model)
+        {
+            m_model = m_fairyModel;
+        }
+    }
+
+    void Player::OnUpdate(Core::UpdateContext& ctx)
+    {
         Core::Input& input = ctx.input;
 
-        float horizontal = 0.0f;
-        const bool moveLeft = input.IsKeyPress(PLAYER_KEY_MOVE_LEFT);
-        const bool moveRight = input.IsKeyPress(PLAYER_KEY_MOVE_RIGHT);
-
-        if (moveLeft && !moveRight)
-        {
-                horizontal = -1.0f;
-        }
-        else if (moveRight && !moveLeft)
-        {
-                horizontal = 1.0f;
-        }
-
-        float vertical = 0.0f;
-        const bool moveUp = input.IsKeyPress(PLAYER_KEY_MOVE_UP);
-        const bool moveDown = input.IsKeyPress(PLAYER_KEY_MOVE_DOWN);
-
-        if (moveUp && !moveDown)
-        {
-                vertical = 1.0f;
-        }
-        else if (moveDown && !moveUp)
-        {
-                vertical = -1.0f;
-        }
+        const float horizontal = input.GetAxis(Core::ActionId::MoveX);
+        const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
 
         const bool canMove = (ctx.dt > 0.0f && m_moveSpeed > 0.0f);
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
         {
-                float3 translation{ 0.0f, 0.0f, 0.0f };
-                translation.x = horizontal * m_moveSpeed * ctx.dt;
-                translation.y = vertical * m_moveSpeed * ctx.dt;
-                ApplyTranslation(translation);
+            float3 translation{ 0.0f, 0.0f, 0.0f };
+            translation.x = horizontal * m_moveSpeed * ctx.dt;
+            translation.y = vertical * m_moveSpeed * ctx.dt;
+
+            ApplyTranslation(translation);
+
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Move input hx=" << horizontal
+                << " vy=" << vertical
+                << " speed=" << m_moveSpeed
+                << " dt=" << ctx.dt
+                << " delta=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
+            PlayerDebugTrace(oss.str());
         }
 
         ClampVerticalPosition();
@@ -278,58 +248,83 @@ void SceneSpace::Player::OnUpdate(Core::UpdateContext& ctx)
 
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
-}
+    }
 
-void SceneSpace::Player::Draw(ModelRender& render, CameraSpace::ICamera& camera)
-{
-        if (!model)
+    void Player::Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
+    {
+        if (!m_model)
         {
-                if (!m_missingModelWarned)
-                {
-                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Draw skipped: player model missing.\n");
-                        m_missingModelWarned = true;
-                }
-                return;
+            if (!m_missingModelWarned)
+            {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Draw skipped: player model missing.\n");
+                m_missingModelWarned = true;
+            }
+            return;
         }
 
-        render.Draw(*model, m_transform, &camera);
-}
+        renderer.Draw(*m_model, m_transform, &camera);
+    }
 
-ModelDX* SceneSpace::Player::GetRenderableModel()
-{
-        return model.get();
-}
+    void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
+    {
+        if (m_sweetsManager == manager)
+        {
+            return;
+        }
 
-const ModelDX* SceneSpace::Player::GetRenderableModel() const
-{
-        return model.get();
-}
+        if (!manager && !m_carrieds.empty())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "SweetsManager cleared while carrying; forcing release.\n");
+            m_carrieds.clear();
+        }
 
+        m_sweetsManager = manager;
+    }
 
-void SceneSpace::Player::HandleInput(Core::Input input)
-{
-}
+    bool Player::IsCarryingSweets() const
+    {
+        return !m_carrieds.empty();
+    }
 
-void SceneSpace::Player::SetMoveSpeed(float speed)
-{
+    const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& Player::GetCarriedSweets() const
+    {
+        return m_carrieds;
+    }
+
+    void Player::ClearCarriedSweets()
+    {
+        if (m_carrieds.empty())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Clearing carried sweets handle.\n");
+        }
+        m_carrieds.clear();
+    }
+
+    bool Player::IsKinematic() const
+    {
+        return m_isKinematic;
+    }
+
+    void Player::SetMoveSpeed(float speed)
+    {
         if (!std::isfinite(speed))
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite move speed assignment.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite move speed assignment.\n");
+            return;
         }
 
         const float sanitized = std::max(0.0f, speed);
         if (sanitized != speed)
         {
-                std::ostringstream oss;
-                oss << kPlayerLogPrefix << "Move speed sanitized from " << speed
-                    << " to " << sanitized << " (negative disallowed).\n";
-                PlayerDebugTrace(oss.str());
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Move speed sanitized from " << speed
+                << " to " << sanitized << " (negative disallowed).\n";
+            PlayerDebugTrace(oss.str());
         }
 
         if (std::fabs(m_moveSpeed - sanitized) < std::numeric_limits<float>::epsilon())
         {
-                return;
+            return;
         }
 
         m_moveSpeed = sanitized;
@@ -337,24 +332,24 @@ void SceneSpace::Player::SetMoveSpeed(float speed)
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Move speed set to " << m_moveSpeed << " units/sec.\n";
         PlayerDebugTrace(oss.str());
-}
+    }
 
-float SceneSpace::Player::GetMoveSpeed() const
-{
+    float Player::GetMoveSpeed() const
+    {
         return m_moveSpeed;
-}
+    }
 
-void SceneSpace::Player::SetMinimumY(float minY)
-{
+    void Player::SetMinimumY(float minY)
+    {
         if (!std::isfinite(minY))
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite minimum Y assignment.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite minimum Y assignment.\n");
+            return;
         }
 
         if (m_hasMinimumY && std::fabs(m_minimumY - minY) < std::numeric_limits<float>::epsilon())
         {
-                return;
+            return;
         }
 
         m_hasMinimumY = true;
@@ -365,24 +360,24 @@ void SceneSpace::Player::SetMinimumY(float minY)
         PlayerDebugTrace(oss.str());
 
         ClampVerticalPosition();
-}
+    }
 
-float SceneSpace::Player::GetMinimumY() const
-{
+    float Player::GetMinimumY() const
+    {
         return m_minimumY;
-}
+    }
 
-bool SceneSpace::Player::HasMinimumY() const
-{
+    bool Player::HasMinimumY() const
+    {
         return m_hasMinimumY;
-}
+    }
 
-void SceneSpace::Player::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
-{
+    void Player::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
+    {
         if (!std::isfinite(minX) || !std::isfinite(maxX))
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite screen bounds.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite screen bounds.\n");
+            return;
         }
 
         const float sanitizedMinX = std::min(minX, maxX);
@@ -400,12 +395,12 @@ void SceneSpace::Player::SetScreenBounds(float minX, float maxX, std::optional<f
         m_hasMaximumY = maxY.has_value() && std::isfinite(*maxY);
         if (m_hasMaximumY)
         {
-                m_maximumY = *maxY;
+            m_maximumY = *maxY;
         }
 
         if (!boundsChanged)
         {
-                return;
+            return;
         }
 
         std::ostringstream oss;
@@ -413,52 +408,25 @@ void SceneSpace::Player::SetScreenBounds(float minX, float maxX, std::optional<f
             << " maxX=" << m_maxScreenX;
         if (m_hasMaximumY)
         {
-                oss << " maxY=" << m_maximumY;
+            oss << " maxY=" << m_maximumY;
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
-}
+    }
 
-void SceneSpace::Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
-{
-        if (m_sweetsManager == manager)
-        {
-                return;
-        }
+    float3 Player::ComputeCarryAnchor() const
+    {
+        return float3{
+            m_transform.position.x + m_carryOffset.x,
+            m_transform.position.y + m_carryOffset.y,
+            m_transform.position.z + m_carryOffset.z };
+    }
 
-        if (!manager && !m_carrieds.empty())
-        {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "SweetsManager cleared while carrying; forcing release.\n");
-                m_carrieds.clear();
-        }
-
-        m_sweetsManager = manager;
-}
-
-bool SceneSpace::Player::IsCarryingSweets() const
-{
-        return !m_carrieds.empty();
-}
-
-const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& SceneSpace::Player::GetCarriedSweets() const
-{
-        return m_carrieds;
-}
-
-void SceneSpace::Player::ClearCarriedSweets()
-{
+    void Player::UpdateCarriedSweets()
+    {
         if (m_carrieds.empty())
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Clearing carried sweets handle.\n");
-        }
-        m_carrieds.clear();
-}
-
-void SceneSpace::Player::UpdateCarriedSweets()
-{
-        if (m_carrieds.empty())
-        {
-                return;
+            return;
         }
 
         for (auto& it : m_carrieds)
@@ -474,37 +442,37 @@ void SceneSpace::Player::UpdateCarriedSweets()
             physical.force = { 0.0f, 0.0f, 0.0f };
         }
 
-}
+    }
 
-void SceneSpace::Player::HandleCarryInput(Core::UpdateContext& ctx)
-{
+    void Player::HandleCarryInput(Core::UpdateContext& ctx)
+    {
         Core::Input& input = ctx.input;
 
-        if (input.IsKeyTrigger(PLAYER_KEY_DROP) && !m_carrieds.empty())
+        if (input.IsTrigger(Core::ActionId::Drop) && !m_carrieds.empty())
         {
-                DropCarriedSweets();
-                return;
+            DropCarriedSweets();
+            return;
         }
 
-        if (input.IsKeyTrigger(PLAYER_KEY_PICKUP) && m_carrieds.size() < m_maxCarry)
+        if (input.IsTrigger(Core::ActionId::Confirm) && m_carrieds.size() < m_maxCarry)
         {
-                TryPickupNearest();
+            TryPickupNearest();
         }
-}
+    }
 
-void SceneSpace::Player::TryPickupNearest()
-{
+    void Player::TryPickupNearest()
+    {
         if (!m_sweetsManager)
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: SweetsManager missing.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: SweetsManager missing.\n");
+            return;
         }
 
         auto candidate = m_sweetsManager->FindNearestCarryable(m_transform.position, m_pickupRadius);
         if (!candidate)
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within radius.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within radius.\n");
+            return;
         }
 
 
@@ -517,8 +485,8 @@ void SceneSpace::Player::TryPickupNearest()
 
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: manager rejected transition.\n");
-                return;
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: manager rejected transition.\n");
+            return;
         }
 
 
@@ -537,13 +505,13 @@ void SceneSpace::Player::TryPickupNearest()
         oss << kPlayerLogPrefix << "Pickup success tag='" << candidate->GetTag()
             << "' radius=" << m_pickupRadius << "\n";
         PlayerDebugTrace(oss.str());
-}
+    }
 
-void SceneSpace::Player::DropCarriedSweets()
-{
+    void Player::DropCarriedSweets()
+    {
         if (m_carrieds.empty())
         {
-                return;
+            return;
         };
 
         auto sweets = m_carrieds.back();
@@ -558,14 +526,14 @@ void SceneSpace::Player::DropCarriedSweets()
 
         if (m_sweetsManager)
         {
-                if (!m_sweetsManager->ReleaseCarriedSweets(sweets))
-                {
-                        PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Drop warning: manager refused release.\n");
-                }
+            if (!m_sweetsManager->ReleaseCarriedSweets(sweets))
+            {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Drop warning: manager refused release.\n");
+            }
         }
         else
         {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Drop warning: SweetsManager missing.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Drop warning: SweetsManager missing.\n");
         }
 
         std::ostringstream oss;
@@ -574,27 +542,19 @@ void SceneSpace::Player::DropCarriedSweets()
         PlayerDebugTrace(oss.str());
 
         m_carrieds.pop_back();
-}
+    }
 
-float3 SceneSpace::Player::ComputeCarryAnchor() const
-{
-        return float3{
-            m_transform.position.x + m_carryOffset.x,
-            m_transform.position.y + m_carryOffset.y,
-            m_transform.position.z + m_carryOffset.z };
-}
-
-void SceneSpace::Player::ClampVerticalPosition()
-{
+    void Player::ClampVerticalPosition()
+    {
         if (!m_hasMinimumY)
         {
-                return;
+            return;
         }
 
         auto& position = m_transform.position;
         if (position.y >= m_minimumY)
         {
-                return;
+            return;
         }
 
         const float previousY = position.y;
@@ -605,13 +565,13 @@ void SceneSpace::Player::ClampVerticalPosition()
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
             << m_minimumY << " (platform boundary).\n";
         PlayerDebugTrace(oss.str());
-}
+    }
 
-void SceneSpace::Player::ClampScreenBounds()
-{
+    void Player::ClampScreenBounds()
+    {
         if (!m_hasScreenBounds)
         {
-                return;
+            return;
         }
 
         auto& position = m_transform.position;
@@ -622,12 +582,12 @@ void SceneSpace::Player::ClampScreenBounds()
         float clampedY = position.y;
         if (m_hasMaximumY)
         {
-                clampedY = std::min(clampedY, m_maximumY);
+            clampedY = std::min(clampedY, m_maximumY);
         }
 
         if (clampedX == originalX && clampedY == originalY)
         {
-                return;
+            return;
         }
 
         position.x = clampedX;
@@ -642,8 +602,9 @@ void SceneSpace::Player::ClampScreenBounds()
             << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
         if (m_hasMaximumY)
         {
-                oss << " maxY=" << m_maximumY;
+            oss << " maxY=" << m_maximumY;
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
+    }
 }

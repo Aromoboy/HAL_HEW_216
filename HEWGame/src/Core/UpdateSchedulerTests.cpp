@@ -227,6 +227,30 @@ namespace
 #endif
         }
 
+        void RunStepTimerFixedStepTest()
+        {
+                Core::StepTimer timer;
+
+                constexpr float kFixedDelta = 0.016f;
+                timer.SetFixedStep(kFixedDelta, true);
+
+                const float initialDelta = timer.Tick();
+                const float fixedDelta = timer.Tick();
+
+#if defined(_DEBUG)
+                assert(initialDelta == 0.0f);
+                assert(fixedDelta == kFixedDelta);
+#endif
+
+                timer.SetFixedStep(0.0f, false);
+
+                const float overrideDelta = timer.Tick(0.033f);
+
+#if defined(_DEBUG)
+                assert(overrideDelta == 0.033f);
+#endif
+        }
+
         struct UpdateSchedulerTestRunner
         {
                 UpdateSchedulerTestRunner()
@@ -235,6 +259,7 @@ namespace
                         RunDependencyOrderingTest();
                         RunReadyQueueOrderingStabilityTest();
                         RunPendingUnregistrationCancellationTest();
+                        RunStepTimerFixedStepTest();
                 }
         };
 

@@ -1,5 +1,4 @@
-// CollisionEntity.cpp
-#include "CollisionEntity.h"
+#include "Entities/CollisionEntity.h"
 
 #include <sstream>
 #include <utility>
@@ -26,19 +25,13 @@ namespace
 #endif
 }
 
-namespace SceneSpace
+namespace Entities
 {
-    CollisionEntity::CollisionEntity(const std::string& tag,
-        const float3& pos,
-        const float3& rot,
-        const float3& scl,
-        std::shared_ptr<Collision::ICollider> collider,
-        Collision::CollisionLayer layer,
-        Core::UpdatePhase phase,
-        int priority)
-        : Entity(tag, pos, rot, scl, phase, priority)
+    CollisionEntity::CollisionEntity(const Transform& transform, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::ContactLiteSystem* contactSystem, Core::UpdatePhase phase, int priority, std::string tag)
+        : Entity(transform, std::move(model), phase, priority, std::move(tag))
         , m_collider(std::move(collider))
         , m_collisionLayer(layer)
+        , m_contactSystem(contactSystem)
     {
         if (m_collider)
         {
@@ -47,7 +40,10 @@ namespace SceneSpace
         SyncColliderBounds();
     }
 
-    CollisionEntity::~CollisionEntity() = default;
+    CollisionEntity::CollisionEntity(const std::string& tag, const float3& pos, const float3& rot, const float3& scl, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, Core::UpdatePhase phase, int priority)
+        : CollisionEntity(Transform{ pos, rot, scl }, std::move(collider), layer, nullptr, nullptr, phase, priority, tag)
+    {
+    }
 
     Collision::ICollider* CollisionEntity::GetCollider()
     {
@@ -101,4 +97,10 @@ namespace SceneSpace
         m_transform.position.z += delta.z;
         SyncColliderBounds();
     }
+
+    Systems::ContactLiteSystem* CollisionEntity::GetContactSystem() const
+    {
+        return m_contactSystem;
+    }
 }
+

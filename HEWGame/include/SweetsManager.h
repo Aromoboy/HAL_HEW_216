@@ -4,18 +4,24 @@
 #include <deque>
 #include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "Core/UpdateNode.h"
 #include "ICamera.h"
+#include "ModelDX.h"
 #include "ModelRender.h"
 #include "Transform.h"
+#include "Vector.h"
 #include "CollisionLayer.h"
+#include "Physical.h"
+#include "ColliderConfigLoader.h"
 
 namespace Core
 {
@@ -33,11 +39,10 @@ namespace Collision
     class ICollider;
 }
 
-class ModelDX;
-
 namespace SweetsSpace
 {
     class BaseSweets;
+    using ActiveSweets = BaseSweets;
 
     struct WeightedSweetsType
     {
@@ -82,7 +87,7 @@ namespace SweetsSpace
     class SweetsManager : public Core::UpdateNode
     {
     public:
-        using SweetsList = std::list<std::shared_ptr<BaseSweets>>;
+        using SweetsList = std::list<std::shared_ptr<ActiveSweets>>;
 
         using PhaseChangeCallback = std::function<void(int)>;
 
@@ -98,8 +103,8 @@ namespace SweetsSpace
 
         float GetHighestStackedHeight() const;
 
-        void SetState(const std::shared_ptr<BaseSweets>& sweets, SweetsState state);
-        void Erase(const std::shared_ptr<BaseSweets>& sweets);
+        void SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state);
+        void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
 
         void SetDrawSystem(Systems::DrawSystem* drawSystem);
@@ -112,16 +117,19 @@ namespace SweetsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetRandomScaleEnabled(bool enabled);
         void SetLiveSweetsCap(int cap);
+        void SetForceGeneratedColliders(bool force);
+        void SetColliderConfigOverridesEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         int GetCurrentPhase() const noexcept;
 
-        std::shared_ptr<BaseSweets> Spawn(const std::string& kind, const Transform& transform);
-        std::shared_ptr<BaseSweets> FindNearestCarryable(const float3& position, float radius) const;
-        bool TryMarkAsCarried(const std::shared_ptr<BaseSweets>& sweets);
-        bool ReleaseCarriedSweets(const std::shared_ptr<BaseSweets>& sweets);
+        std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
+        std::shared_ptr<ActiveSweets> FindNearestCarryable(const float3& position, float radius) const;
+        bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
+        bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+        void SetGeneratedColliderThicknessPadding(float factor);
 
     private:
         struct SweetsStateHash
@@ -133,9 +141,18 @@ namespace SweetsSpace
         };
 
         std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
-        std::unordered_map<std::shared_ptr<BaseSweets>, SweetsState> m_lookup;
+        std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState> m_lookup;
 
-        std::unordered_map<std::string, std::function<std::shared_ptr<BaseSweets>(const Transform&)>> m_spawner;
+        std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
+
+        std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
+        struct GeneratedCollider
+        {
+            std::vector<float2> hull;
+            std::vector<std::vector<float2>> polygons;
+            float thickness = 1.0f;
+        };
+        std::map<std::string, GeneratedCollider> m_generatedColliders;
 
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
@@ -173,15 +190,20 @@ namespace SweetsSpace
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
+        std::unordered_set<std::string> m_warnedMissingColliderDefinitionKinds;
+        bool m_warnedMissingGeneratedHull;
         bool m_hasHorizontalBounds;
         float m_minHorizontalBound;
         float m_maxHorizontalBound;
         float m_horizontalBoundsMargin;
+        float m_generatedColliderThicknessPadding;
+        bool m_forceGeneratedColliders;
+        bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
-        void RegisterWithSystems(const std::shared_ptr<BaseSweets>& sweets);
+        void RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         int CountLiveSweets() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;
@@ -194,8 +216,8 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
         Transform BuildSpawnTransform(const float3& origin) const;
-        void UnregisterSweetsFromSystems(const std::shared_ptr<BaseSweets>& sweets, const char* context, bool logWarnings = true);
-        void RemoveSweetsEntry(const std::shared_ptr<BaseSweets>& sweets,
+        void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
+        void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,
             const char* context,
             bool logWarnings,
@@ -205,8 +227,8 @@ namespace SweetsSpace
         int m_lastLiveSweetsCount;
 
         template<typename T>
-        std::shared_ptr<BaseSweets> MakeSweets(const std::string& tag,
-            const std::shared_ptr<ModelDX>& model,
+        std::shared_ptr<ActiveSweets> MakeSweets(const std::string& tag,
+            const std::shared_ptr<Render::Model>& model,
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
             Collision::CollisionLayer layer,
@@ -222,17 +244,16 @@ namespace SweetsSpace
                 return nullptr;
             }
 
+            Physics::Physical physical{ velocity, force, weight, damping };
+
             return std::make_shared<T>(tag,
+                transform,
                 model,
-                transform.position,
-                transform.rotation,
-                transform.scale,
                 collider,
                 layer,
-                velocity,
-                force,
-                weight,
-                damping,
+                physical,
+                m_physicsMachine,
+                nullptr,
                 phase,
                 priority);
         }

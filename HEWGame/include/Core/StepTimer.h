@@ -19,6 +19,8 @@ namespace Core
                         m_lastTick = Clock::now();
                         m_hasLastTick = false;
                         m_deltaSeconds = 0.0f;
+                        m_fixedStep = 0.0f;
+                        m_useFixedStep = false;
                         m_frameIndex = 0;
                 }
 
@@ -32,7 +34,14 @@ namespace Core
                         }
                         else
                         {
-                                m_deltaSeconds = std::chrono::duration<float>(now - m_lastTick).count();
+                                if (m_useFixedStep)
+                                {
+                                        m_deltaSeconds = m_fixedStep;
+                                }
+                                else
+                                {
+                                        m_deltaSeconds = std::chrono::duration<float>(now - m_lastTick).count();
+                                }
                         }
 
                         m_lastTick = now;
@@ -49,9 +58,15 @@ namespace Core
                         return m_deltaSeconds;
                 }
 
-                float DeltaSeconds() const
+                float DeltaTime() const
                 {
                         return m_deltaSeconds;
+                }
+
+                void SetFixedStep(float dt, bool enable)
+                {
+                        m_fixedStep = std::max(0.0f, dt);
+                        m_useFixedStep = enable && m_fixedStep > 0.0f;
                 }
 
                 std::uint64_t FrameIndex() const
@@ -65,6 +80,8 @@ namespace Core
                 Clock::time_point m_lastTick;
                 bool m_hasLastTick = false;
                 float m_deltaSeconds = 0.0f;
+                float m_fixedStep = 0.0f;
+                bool m_useFixedStep = false;
                 std::uint64_t m_frameIndex = 0;
         };
 }

@@ -5,10 +5,9 @@
 
 #include <DirectXMath.h>
 
-#include "PhysicalEntity.h"
+#include "Entities/PhysicalEntity.h"
+#include "ModelDX.h"
 #include "Transform.h"
-
-class ModelDX;
 
 namespace Core
 {
@@ -17,7 +16,7 @@ namespace Core
 
 namespace Stage
 {
-    class FoundationPlatform : public SceneSpace::PhysicalEntity
+    class FoundationPlatform : public Entities::PhysicalEntity
     {
     public:
         FoundationPlatform(const std::string& tag,
@@ -32,8 +31,8 @@ namespace Stage
 
         void OnUpdate(Core::UpdateContext& ctx) override;
 
-        ModelDX* GetRenderableModel() override;
-        const ModelDX* GetRenderableModel() const override;
+        Render::Model* GetRenderableModel() override;
+        const Render::Model* GetRenderableModel() const override;
 
         void SetDebugColor(const DirectX::XMFLOAT4& color);
         const DirectX::XMFLOAT4& GetDebugColor() const noexcept;
@@ -43,7 +42,7 @@ namespace Stage
         void ApplyColorToModelMaterials();
 
         Transform m_anchorTransform;
-        std::shared_ptr<ModelDX> m_model;
+        std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
     };
 }

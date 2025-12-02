@@ -1,154 +1,124 @@
 #include "MeshBuffer.h"
 
+#include <cstring>
+
+#include "Debug.h"
+
 MeshBuffer::MeshBuffer()
-	: m_pVtxBuffer(NULL), m_pIdxBuffer(NULL), m_desc{}
+        : m_vertexBuffer()
+        , m_indexBuffer()
+        , m_desc{}
 {
 }
 MeshBuffer::~MeshBuffer()
 {
-	SAFE_DELETE_ARRAY(m_desc.pIdx);
-	SAFE_DELETE_ARRAY(m_desc.pVtx);
-	SAFE_RELEASE(m_pIdxBuffer);
-	SAFE_RELEASE(m_pVtxBuffer);
+        SAFE_DELETE_ARRAY(m_desc.pIdx);
+        SAFE_DELETE_ARRAY(m_desc.pVtx);
+        m_indexBuffer.Shutdown();
+        m_vertexBuffer.Shutdown();
 }
 
 HRESULT MeshBuffer::Create(const Description& desc)
 {
-	HRESULT hr = E_FAIL;
+        HRESULT hr = E_FAIL;
 
-	// ’¸“_ƒoƒbƒtƒ@ì¬
-	hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount, desc.isWrite);
-	if (FAILED(hr)) { return hr; }
+        // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
+        hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount, desc.isWrite);
+        if (FAILED(hr)) { return hr; }
 
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ì¬
-	if (desc.pIdx) {
-		hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
-		if (FAILED(hr)) { return hr; }
-	}
+        // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ
+        if (desc.pIdx) {
+                hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
+                if (FAILED(hr)) { return hr; }
+        }
 
-	// ƒoƒbƒtƒ@î•ñ‚ÌƒRƒs[
-	m_desc = desc;
+        // ãƒãƒƒãƒ•ã‚¡ã®ã‚³ãƒ”ãƒ¼
+        m_desc = desc;
 
-	// ’¸“_AƒCƒ“ƒfƒbƒNƒX‚Ìî•ñ‚ðƒRƒs[
-	rsize_t vtxMemSize = desc.vtxSize * desc.vtxCount;
-	void* pVtx = new char[vtxMemSize];
-	memcpy_s(pVtx, vtxMemSize, desc.pVtx, vtxMemSize);
-	m_desc.pVtx = pVtx;
-	if (m_desc.pIdx) {
-		rsize_t idxMemSize = desc.idxSize * desc.idxCount;
-		void* pIdx = new char[idxMemSize];
-		memcpy_s(pIdx, idxMemSize, desc.pIdx, idxMemSize);
-		m_desc.pIdx = pIdx;
-	}
+        rsize_t vtxMemSize = desc.vtxSize * desc.vtxCount;
+        void* pVtx = new char[vtxMemSize];
+        memcpy_s(pVtx, vtxMemSize, desc.pVtx, vtxMemSize);
+        m_desc.pVtx = pVtx;
+        if (m_desc.pIdx) {
+                rsize_t idxMemSize = desc.idxSize * desc.idxCount;
+                void* pIdx = new char[idxMemSize];
+                memcpy_s(pIdx, idxMemSize, desc.pIdx, idxMemSize);
+                m_desc.pIdx = pIdx;
+        }
 
-	return hr;
+        return hr;
 }
 
 
 void MeshBuffer::Draw(int count)
 {
-	ID3D11DeviceContext* pContext = GetContext();
-	UINT stride = m_desc.vtxSize;
-	UINT offset = 0;
+        UINT stride = m_desc.vtxSize;
+        UINT offset = 0;
 
-	pContext->IASetPrimitiveTopology(m_desc.topology);
-	pContext->IASetVertexBuffers(0, 1, &m_pVtxBuffer, &stride, &offset);
+        m_vertexBuffer.Bind(0, offset);
 
-	// •`‰æ
-	if (m_desc.idxCount > 0)
-	{
-		DXGI_FORMAT format;
-		switch (m_desc.idxSize)
-		{
-		case 4: format = DXGI_FORMAT_R32_UINT; break;
-		case 2: format = DXGI_FORMAT_R16_UINT; break;
-		}
-		pContext->IASetIndexBuffer(m_pIdxBuffer, format, 0);
-		pContext->DrawIndexed(count ? count : m_desc.idxCount, 0, 0);
-	}
-	else
-	{
-		// ’¸“_ƒoƒbƒtƒ@‚Ì‚Ý‚Å•`‰æ
-		pContext->Draw(count ? count : m_desc.vtxCount, 0);
-	}
+        // æç”»
+        if (m_desc.idxCount > 0 && m_indexBuffer.IsValid())
+        {
+                m_indexBuffer.Bind();
+                GetContext()->IASetPrimitiveTopology(m_desc.topology);
+                GetContext()->DrawIndexed(count ? count : m_desc.idxCount, 0, 0);
+        }
+        else
+        {
+                // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ã¿ã§æç”»
+                GetContext()->IASetPrimitiveTopology(m_desc.topology);
+                GetContext()->Draw(count ? count : m_desc.vtxCount, 0);
+        }
 
 }
 
 HRESULT MeshBuffer::Write(void* pVtx)
 {
-	if (!m_desc.isWrite) { return E_FAIL; }
+        if (!m_desc.isWrite) { return E_FAIL; }
 
-	HRESULT hr;
-	ID3D11Device* pDevice = GetDevice();
-	ID3D11DeviceContext* pContext = GetContext();
-	D3D11_MAPPED_SUBRESOURCE mapResource;
+        if (!m_vertexBuffer.IsValid())
+        {
+                DebugMessage("[MeshBuffer] Write called before vertex buffer initialization.\n");
+                return E_FAIL;
+        }
 
-	// ƒf[ƒ^ƒRƒs[
-	hr = pContext->Map(m_pVtxBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapResource);
-	if (SUCCEEDED(hr))
-	{
-		rsize_t size = m_desc.vtxCount * m_desc.vtxSize;
-		memcpy_s(mapResource.pData, size, pVtx, size);
-		pContext->Unmap(m_pVtxBuffer, 0);
-	}
-	return hr;
+        HRESULT hr;
+        ID3D11DeviceContext* pContext = GetContext();
+        D3D11_MAPPED_SUBRESOURCE mapResource;
+
+        // ãƒãƒƒãƒ•ã‚¡æ›¸ãè¾¼ã¿
+        hr = pContext->Map(m_vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapResource);
+        if (SUCCEEDED(hr))
+        {
+                rsize_t size = m_desc.vtxCount * m_desc.vtxSize;
+                memcpy_s(mapResource.pData, size, pVtx, size);
+                pContext->Unmap(m_vertexBuffer.Get(), 0);
+        }
+        return hr;
 }
 
 MeshBuffer::Description MeshBuffer::GetDesc()
 {
-	return m_desc;
+        return m_desc;
 }
 
 HRESULT MeshBuffer::CreateVertexBuffer(const void* pVtx, UINT size, UINT count, bool isWrite)
 {
-	//--- ì¬‚·‚éƒoƒbƒtƒ@‚Ìî•ñ
-	D3D11_BUFFER_DESC bufDesc = {};
-	bufDesc.ByteWidth = size * count;
-	bufDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	if (isWrite)
-	{
-		bufDesc.Usage = D3D11_USAGE_DYNAMIC;
-		bufDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	}
-
-	//--- ƒoƒbƒtƒ@‚Ì‰Šú’l‚ðÝ’è
-	D3D11_SUBRESOURCE_DATA subResource = {};
-	subResource.pSysMem = pVtx;
-
-	//--- ’¸“_ƒoƒbƒtƒ@‚Ìì¬
-	HRESULT hr;
-	ID3D11Device* pDevice = GetDevice();
-	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pVtxBuffer);
-
-	return hr;
+        return m_vertexBuffer.Init(pVtx, size, count, isWrite);
 }
 
 HRESULT MeshBuffer::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
 {
-	// ƒCƒ“ƒfƒbƒNƒXƒTƒCƒY‚ÌŠm”F
-	switch (size)
-	{
-	default:
-		return E_FAIL;
-	case 2:
-	case 4:
-		break;
-	}
+        // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚µã‚¤ã‚ºã®ç¢ºèª
+        switch (size)
+        {
+        default:
+                return E_FAIL;
+        case 2:
+        case 4:
+                break;
+        }
 
-	// ƒoƒbƒtƒ@‚Ìî•ñ‚ðÝ’è
-	D3D11_BUFFER_DESC bufDesc = {};
-	bufDesc.ByteWidth = size * count;
-	bufDesc.Usage = D3D11_USAGE_DEFAULT;
-	bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	// ƒoƒbƒtƒ@‚Ì‰Šúƒf[ƒ^
-	D3D11_SUBRESOURCE_DATA subResource = {};
-	subResource.pSysMem = pIdx;
-
-	// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@¶¬
-	ID3D11Device* pDevice = GetDevice();
-	HRESULT hr;
-	hr = pDevice->CreateBuffer(&bufDesc, &subResource, &m_pIdxBuffer);
-
-	return hr;
+        return m_indexBuffer.Init(pIdx, size, count);
 }

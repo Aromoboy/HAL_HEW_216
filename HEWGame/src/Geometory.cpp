@@ -1,5 +1,9 @@
 #include "Geometory.h"
 
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
 MeshBuffer* Geometory::m_pBox;
 MeshBuffer* Geometory::m_pCylinder;
 MeshBuffer* Geometory::m_pSphere;
@@ -91,12 +95,250 @@ void Geometory::DrawCylinder()
 }
 void Geometory::DrawSphere()
 {
-	if (m_pSphere == nullptr)
-		return;
-	m_pVS->WriteBuffer(0, m_WVP);
-	m_pVS->Bind();
-	m_pPS->Bind();
-	m_pSphere->Draw();
+        if (m_pSphere == nullptr)
+                return;
+        m_pVS->WriteBuffer(0, m_WVP);
+        m_pVS->Bind();
+        m_pPS->Bind();
+        m_pSphere->Draw();
+}
+
+void Geometory::MakeBox()
+{
+        const int MAX_VERTEX = 4 * 6;
+        const int MAX_INDEX = 6 * 6;
+
+        Vertex vtx[MAX_VERTEX] =
+        {
+                // -Z
+                {{-0.5f, 0.5f, -0.5f}, {0.0f, 0.0f}},
+                {{ 0.5f, 0.5f, -0.5f}, {1.0f, 0.0f}},
+                {{-0.5f,-0.5f, -0.5f}, {0.0f, 1.0f}},
+                {{ 0.5f,-0.5f, -0.5f}, {1.0f, 1.0f}},
+
+                // Z
+                {{ 0.5f, 0.5f,  0.5f}, {0.0f, 0.0f}},
+                {{-0.5f, 0.5f,  0.5f}, {1.0f, 0.0f}},
+                {{ 0.5f,-0.5f,  0.5f}, {0.0f, 1.0f}},
+                {{-0.5f,-0.5f,  0.5f}, {1.0f, 1.0f}},
+
+                // -X
+                {{-0.5f, 0.5f,  0.5f}, {0.0f, 0.0f}},
+                {{-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f}},
+                {{-0.5f,-0.5f,  0.5f}, {0.0f, 1.0f}},
+                {{-0.5f,-0.5f, -0.5f}, {1.0f, 1.0f}},
+
+                // X
+                {{ 0.5f, 0.5f,  -0.5f},{0.0f, 0.0f}},
+                {{ 0.5f, 0.5f,  0.5f}, {1.0f, 0.0f}},
+                {{ 0.5f,-0.5f,  -0.5f},{0.0f, 1.0f}},
+                {{ 0.5f,-0.5f,  0.5f}, {1.0f, 1.0f}},
+
+                // -Y
+                {{  0.5f, -0.5f, -0.5f},{0.0f, 0.0f}},
+                {{  0.5f, -0.5f,  0.5f},{1.0f, 0.0f}},
+                {{ -0.5f, -0.5f, -0.5f},{0.0f, 1.0f}},
+                {{ -0.5f, -0.5f,  0.5f},{1.0f, 1.0f}},
+
+                // Y
+                {{ -0.5f, 0.5f, -0.5f},{0.0f, 0.0f}},
+                {{ -0.5f, 0.5f,  0.5f},{1.0f, 0.0f}},
+                {{  0.5f, 0.5f, -0.5f},{0.0f, 1.0f}},
+                {{  0.5f, 0.5f,  0.5f},{1.0f, 1.0f}},
+
+        };
+
+        int idx[MAX_INDEX] =
+        {
+                0,1,2, 1,3,2, // -Z
+                4,5,6, 5,7,6,  //  Z
+                8,9,10, 9,11,10,
+                12,13,14, 13,15,14,
+                16,17,18, 17,19,18,
+                20,21,22, 21,23,22,
+        };
+
+        MeshBuffer::Description desc = {};
+        desc.pVtx = vtx;
+        desc.vtxCount = MAX_VERTEX;
+        desc.vtxSize = sizeof(vtx[0]);
+        desc.pIdx = idx;
+        desc.idxCount = MAX_INDEX;
+        desc.idxSize = sizeof(idx[0]);
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+
+        m_pBox = new MeshBuffer();
+        m_pBox->Create(desc);
+}
+
+void Geometory::MakeCylinder()
+{
+        const float radius = 0.5f;
+        const float halfHeight = 0.5f;
+        const int slices = CIRCLE_DETAIL;
+        const float step = DirectX::XM_2PI / static_cast<float>(slices);
+
+        std::vector<Vertex> vertices;
+        vertices.reserve((slices + 1) * 2 + (slices + 1) * 2 + 2);
+
+        std::vector<uint16_t> indices;
+        indices.reserve(slices * 6 * 2);
+
+        // Side vertices
+        for (int i = 0; i <= slices; ++i)
+        {
+                float angle = step * static_cast<float>(i);
+                float x = std::cos(angle) * radius;
+                float z = std::sin(angle) * radius;
+                float u = static_cast<float>(i) / static_cast<float>(slices);
+
+                vertices.push_back({ { x,  halfHeight, z }, { u, 0.0f } });
+                vertices.push_back({ { x, -halfHeight, z }, { u, 1.0f } });
+        }
+
+        // Side indices
+        for (int i = 0; i < slices; ++i)
+        {
+                uint16_t top0 = static_cast<uint16_t>(i * 2);
+                uint16_t bottom0 = top0 + 1;
+                uint16_t top1 = static_cast<uint16_t>(i * 2 + 2);
+                uint16_t bottom1 = top1 + 1;
+
+                indices.push_back(top0);
+                indices.push_back(bottom0);
+                indices.push_back(top1);
+
+                indices.push_back(top1);
+                indices.push_back(bottom0);
+                indices.push_back(bottom1);
+        }
+
+        // Top cap center
+        uint16_t topCenter = static_cast<uint16_t>(vertices.size());
+        vertices.push_back({ { 0.0f, halfHeight, 0.0f }, { 0.5f, 0.5f } });
+
+        // Top ring
+        for (int i = 0; i <= slices; ++i)
+        {
+                float angle = step * static_cast<float>(i);
+                float x = std::cos(angle) * radius;
+                float z = std::sin(angle) * radius;
+                float u = 0.5f + 0.5f * std::cos(angle);
+                float v = 0.5f - 0.5f * std::sin(angle);
+                vertices.push_back({ { x, halfHeight, z }, { u, v } });
+        }
+
+        for (int i = 0; i < slices; ++i)
+        {
+                uint16_t ring0 = topCenter + 1 + static_cast<uint16_t>(i);
+                uint16_t ring1 = ring0 + 1;
+                indices.push_back(topCenter);
+                indices.push_back(ring0);
+                indices.push_back(ring1);
+        }
+
+        // Bottom cap center
+        uint16_t bottomCenter = static_cast<uint16_t>(vertices.size());
+        vertices.push_back({ { 0.0f, -halfHeight, 0.0f }, { 0.5f, 0.5f } });
+
+        // Bottom ring
+        for (int i = 0; i <= slices; ++i)
+        {
+                float angle = step * static_cast<float>(i);
+                float x = std::cos(angle) * radius;
+                float z = std::sin(angle) * radius;
+                float u = 0.5f + 0.5f * std::cos(angle);
+                float v = 0.5f + 0.5f * std::sin(angle);
+                vertices.push_back({ { x, -halfHeight, z }, { u, v } });
+        }
+
+        for (int i = 0; i < slices; ++i)
+        {
+                uint16_t ring0 = bottomCenter + 1 + static_cast<uint16_t>(i);
+                uint16_t ring1 = ring0 + 1;
+                indices.push_back(bottomCenter);
+                indices.push_back(ring1);
+                indices.push_back(ring0);
+        }
+
+        MeshBuffer::Description desc = {};
+        desc.pVtx = vertices.data();
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.vtxSize = sizeof(Vertex);
+        desc.pIdx = indices.data();
+        desc.idxCount = static_cast<UINT>(indices.size());
+        desc.idxSize = sizeof(uint16_t);
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        m_pCylinder = new MeshBuffer();
+        m_pCylinder->Create(desc);
+}
+
+void Geometory::MakeSphere()
+{
+        const float radius = 0.5f;
+        const int slices = CIRCLE_DETAIL;
+        const int stacks = CIRCLE_DETAIL;
+
+        std::vector<Vertex> vertices;
+        vertices.reserve((slices + 1) * (stacks + 1));
+
+        std::vector<uint16_t> indices;
+        indices.reserve(slices * stacks * 6);
+
+        for (int stack = 0; stack <= stacks; ++stack)
+        {
+                float v = static_cast<float>(stack) / static_cast<float>(stacks);
+                float phi = DirectX::XM_PI * v;
+                float sinPhi = std::sin(phi);
+                float cosPhi = std::cos(phi);
+
+                for (int slice = 0; slice <= slices; ++slice)
+                {
+                        float u = static_cast<float>(slice) / static_cast<float>(slices);
+                        float theta = DirectX::XM_2PI * u;
+                        float sinTheta = std::sin(theta);
+                        float cosTheta = std::cos(theta);
+
+                        float x = radius * sinPhi * cosTheta;
+                        float y = radius * cosPhi;
+                        float z = radius * sinPhi * sinTheta;
+                        vertices.push_back({ { x, y, z }, { u, v } });
+                }
+        }
+
+        int ringStride = slices + 1;
+        for (int stack = 0; stack < stacks; ++stack)
+        {
+                for (int slice = 0; slice < slices; ++slice)
+                {
+                        uint16_t idx0 = static_cast<uint16_t>(stack * ringStride + slice);
+                        uint16_t idx1 = static_cast<uint16_t>(idx0 + 1);
+                        uint16_t idx2 = static_cast<uint16_t>((stack + 1) * ringStride + slice);
+                        uint16_t idx3 = static_cast<uint16_t>(idx2 + 1);
+
+                        indices.push_back(idx0);
+                        indices.push_back(idx2);
+                        indices.push_back(idx1);
+
+                        indices.push_back(idx1);
+                        indices.push_back(idx2);
+                        indices.push_back(idx3);
+                }
+        }
+
+        MeshBuffer::Description desc = {};
+        desc.pVtx = vertices.data();
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.vtxSize = sizeof(Vertex);
+        desc.pIdx = indices.data();
+        desc.idxCount = static_cast<UINT>(indices.size());
+        desc.idxSize = sizeof(uint16_t);
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        m_pSphere = new MeshBuffer();
+        m_pSphere->Create(desc);
 }
 
 void Geometory::MakeVS()

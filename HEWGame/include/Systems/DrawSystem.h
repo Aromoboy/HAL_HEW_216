@@ -7,21 +7,16 @@
 #include <vector>
 #include <unordered_map>
 #include "AABBCollider.h"
+#include "Entities/CollisionEntity.h"
 #include "Transform.h"
+#include "ModelDX.h"
 
 namespace CameraSpace
 {
         class ICamera;
 }
 
-class ModelDX;
 class ModelRender;
-
-namespace SceneSpace
-{
-        class Entity;
-        class CollisionEntity;
-}
 
 namespace Systems
 {
@@ -32,9 +27,9 @@ namespace Systems
                 ~DrawSystem() override = default;
 
                 void SetRenderer(ModelRender* renderer);
-                void RegisterRenderable(SceneSpace::Entity& entity);
-                void RegisterRenderable(SceneSpace::CollisionEntity& entity);
-                void UnregisterRenderable(SceneSpace::Entity& entity);
+                void RegisterRenderable(Entities::Entity& entity);
+                void RegisterRenderable(Entities::CollisionEntity& entity);
+                void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
 
                 void SetDebugLoggingEnabled(bool enabled);
@@ -47,31 +42,32 @@ namespace Systems
         private:
                 struct DrawCommand
                 {
-                        SceneSpace::Entity* source;
-                        ModelDX* model;
+                        Entities::Entity* source;
+                        Render::Model* model;
                         Transform transform;
                 };
 
                 struct DrawColliderCommand
                 {
-                    SceneSpace::Entity* source;
+                    Entities::Entity* source;
+                    Collision::ICollider* collider;
                     AABB aabb;
                 };
 
-                bool ValidateTransform(const Transform& transform, const SceneSpace::Entity* source) const;
+                bool ValidateTransform(const Transform& transform, const Entities::Entity* source) const;
                 void LogMissingRendererOnce();
                 void LogMissingCameraOnce();
-                void LogMissingModel(SceneSpace::Entity* entity);
+                void LogMissingModel(Entities::Entity* entity);
                 void RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera);
 
 
                 ModelRender* m_renderer;
-                std::vector<SceneSpace::Entity*> m_renderables;
-                std::unordered_map<SceneSpace::Entity*, Collision::ICollider*> m_colliderRenderables;
+                std::vector<Entities::Entity*> m_renderables;
+                std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
-                std::unordered_set<const SceneSpace::Entity*> m_missingModelEntities;
+                std::unordered_set<const Entities::Entity*> m_missingModelEntities;
                 bool m_debugLoggingEnabled;
                 bool m_warnedMissingRenderer;
                 bool m_warnedMissingCamera;

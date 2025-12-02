@@ -127,7 +127,7 @@ namespace Stage
         const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
         int priority)
-        : SceneSpace::PhysicalEntity(tag,
+        : Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
             transform.scale,
@@ -191,12 +191,12 @@ namespace Stage
         }
     }
 
-    ModelDX* FoundationPlatform::GetRenderableModel()
+    Render::Model* FoundationPlatform::GetRenderableModel()
     {
         return m_model.get();
     }
 
-    const ModelDX* FoundationPlatform::GetRenderableModel() const
+    const Render::Model* FoundationPlatform::GetRenderableModel() const
     {
         return m_model.get();
     }
@@ -226,7 +226,7 @@ namespace Stage
     void FoundationPlatform::LoadPlatformModel()
     {
         Render::ModelCache& cache = Render::ModelCache::Instance();
-        std::shared_ptr<ModelDX> baseModel = cache.Get(kPlatformModelPath);
+        std::shared_ptr<Render::Model> baseModel = cache.Get(kPlatformModelPath);
         if (!baseModel)
         {
             std::ostringstream oss;

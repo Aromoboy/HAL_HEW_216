@@ -47,7 +47,7 @@ namespace Systems
         return m_verboseLogging;
     }
 
-    float3 IntegrateSystem::Integrate(SceneSpace::PhysicalEntity& entity, float dt)
+float3 IntegrateSystem::Integrate(Entities::PhysicalEntity& entity, float dt)
     {
         float3 translation{ 0.0f, 0.0f, 0.0f };
         if (!(dt > 0.0f))
@@ -85,7 +85,7 @@ namespace Systems
             return float3{ 0.0f, 0.0f, 0.0f };
         }
 
-        SceneSpace::TranslatePhysicalEntity(entity, translation);
+        Entities::TranslatePhysicalEntity(entity, translation);
 
 #if defined(_DEBUG)
         if (m_verboseLogging)

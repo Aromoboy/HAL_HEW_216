@@ -19,9 +19,10 @@
 #include "GravityDampingSystem.h"
 #include "TextureCache.h"
 #include "DirectX.h"
-#include "Sweets.h"
 #include "SweetsManager.h"
 #include "BackgroundRenderer.h"
+#include "Sweets/BaseSweets.h"
+#include "Entities/Player.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -64,10 +65,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr BYTE kConfirmInputKey = VK_RETURN;
-        constexpr BYTE kRetryInputKey = 'R';
-        constexpr BYTE kPlayerSpeedBoostKey = '1';
-        constexpr BYTE kPlayerSpeedResetKey = '2';
         constexpr float kPlayerSpeedBoostStep = 1.1f;
         constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
         constexpr float kFallbackPlayerMoveSpeed = 15.0f;
@@ -94,6 +91,17 @@ namespace
             float damping = 0.98f;
             float penetrationTolerance = 0.01f;
             float restitution = 0.15f;
+            float frictionStatic = 0.8f;
+            float frictionDynamic = 0.65f;
+            float maxSlopeCos = 1.0f;
+            float maxRestitutionVelocity = 25.0f;
+            float verticalSnapCos = 0.96f;
+            float groundMinCos = 0.85f;
+            float baumgarteFactor = 0.2f;
+            float maxPenetrationCorrection = 0.5f;
+            float minLinearSpeed = 0.03f;
+            float minVerticalSpeed = 0.02f;
+            float minTangentialSpeed = 0.02f;
         };
 
         std::string TrimWhitespace(const std::string& input)
@@ -127,7 +135,19 @@ namespace
                     << "'. Using defaults (gravity=" << settings.gravity
                     << ", damping=" << settings.damping
                     << ", penetrationTolerance=" << settings.penetrationTolerance
-                    << ", restitution=" << settings.restitution << ").\n";
+                    << ", restitution=" << settings.restitution
+                    << ", frictionStatic=" << settings.frictionStatic
+                    << ", frictionDynamic=" << settings.frictionDynamic
+                    << ", maxSlopeCos=" << settings.maxSlopeCos
+                    << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                    << ", verticalSnapCos=" << settings.verticalSnapCos
+                    << ", groundMinCos=" << settings.groundMinCos
+                    << ", baumgarteFactor=" << settings.baumgarteFactor
+                    << ", maxPenetrationCorrection=" << settings.maxPenetrationCorrection
+                    << ", minLinearSpeed=" << settings.minLinearSpeed
+                    << ", minVerticalSpeed=" << settings.minVerticalSpeed
+                    << ", minTangentialSpeed=" << settings.minTangentialSpeed
+                    << ").\n";
                 ::DebugTrace(oss.str());
                 return settings;
             }
@@ -183,6 +203,50 @@ namespace
                     {
                         settings.restitution = std::clamp(std::stof(value), 0.0f, 1.0f);
                     }
+                    else if (key == "frictionStatic")
+                    {
+                        settings.frictionStatic = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "frictionDynamic")
+                    {
+                        settings.frictionDynamic = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "maxSlopeCos")
+                    {
+                        settings.maxSlopeCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "maxRestitutionVelocity")
+                    {
+                        settings.maxRestitutionVelocity = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "verticalSnapCos")
+                    {
+                        settings.verticalSnapCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "groundMinCos")
+                    {
+                        settings.groundMinCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "baumgarteFactor")
+                    {
+                        settings.baumgarteFactor = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "maxPenetrationCorrection")
+                    {
+                        settings.maxPenetrationCorrection = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minLinearSpeed")
+                    {
+                        settings.minLinearSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minVerticalSpeed")
+                    {
+                        settings.minVerticalSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minTangentialSpeed")
+                    {
+                        settings.minTangentialSpeed = std::max(0.0f, std::stof(value));
+                    }
                     else
                     {
                         std::ostringstream oss;
@@ -205,7 +269,19 @@ namespace
                 << "' (gravity=" << settings.gravity
                 << ", damping=" << settings.damping
                 << ", penetrationTolerance=" << settings.penetrationTolerance
-                << ", restitution=" << settings.restitution << ").\n";
+                << ", restitution=" << settings.restitution
+                << ", frictionStatic=" << settings.frictionStatic
+                << ", frictionDynamic=" << settings.frictionDynamic
+                << ", maxSlopeCos=" << settings.maxSlopeCos
+                << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                << ", verticalSnapCos=" << settings.verticalSnapCos
+                << ", groundMinCos=" << settings.groundMinCos
+                << ", baumgarteFactor=" << settings.baumgarteFactor
+                << ", maxPenetrationCorrection=" << settings.maxPenetrationCorrection
+                << ", minLinearSpeed=" << settings.minLinearSpeed
+                << ", minVerticalSpeed=" << settings.minVerticalSpeed
+                << ", minTangentialSpeed=" << settings.minTangentialSpeed
+                << ").\n";
             ::DebugTrace(oss.str());
             return settings;
         }
@@ -488,7 +564,6 @@ namespace
         }
 }
 
-Model::AnimeNo no;
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 void SceneGame::Load(Core::Input& input)
@@ -649,6 +724,32 @@ SceneGame::SceneGame()
     {
         m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
         m_contactSystem->SetRestitution(tuning.restitution);
+        m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
+        m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
+        m_contactSystem->SetVerticalSnapCos(tuning.verticalSnapCos);
+        m_contactSystem->SetGroundMinCos(tuning.groundMinCos);
+        m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
+        m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
+        m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
+        m_contactSystem->SetMinLinearSpeed(tuning.minLinearSpeed);
+        m_contactSystem->SetMinVerticalSpeed(tuning.minVerticalSpeed);
+        m_contactSystem->SetMinTangentialSpeed(tuning.minTangentialSpeed);
+        std::ostringstream oss;
+        oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
+            << ", restitution=" << tuning.restitution
+            << ", frictionStatic=" << tuning.frictionStatic
+            << ", frictionDynamic=" << tuning.frictionDynamic
+            << ", maxSlopeCos=" << tuning.maxSlopeCos
+            << ", verticalSnapCos=" << tuning.verticalSnapCos
+            << ", groundMinCos=" << tuning.groundMinCos
+            << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
+            << ", baumgarteFactor=" << tuning.baumgarteFactor
+            << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
+            << ", minLinearSpeed=" << tuning.minLinearSpeed
+            << ", minVerticalSpeed=" << tuning.minVerticalSpeed
+            << ", minTangentialSpeed=" << tuning.minTangentialSpeed
+            << ").\n";
+        ::DebugTrace(oss.str());
     }
 
     if (m_drawSystem)
@@ -694,19 +795,9 @@ SceneGame::SceneGame()
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
-    m_pModel = std::make_unique<Model>();
-    if (!m_pModel->Load("Assets/Model/LowPolyNature/Models/Flowers_01.fbx", 1.0f, Model::Flip::None))
-    {
-        no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/Models/BoxsLam.fbx");
-    }
-
-    no = m_pModel->AddAnimation("Assets/Model/LowPolyNature/BoxsLam.fbx");
-
-    m_pModel->Play(no, 1, 1.0f);
-
     InitializeStageAnchors();
 
-    m_cameraAnchor = std::make_shared<SceneSpace::Entity>("PlayerAnchor");
+    m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
     if (!m_pObjects.empty())
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
@@ -752,9 +843,6 @@ SceneGame::SceneGame()
     {
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
-
-    // 描画テスト用
-    m_model = cache.Get("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
@@ -908,20 +996,20 @@ SceneGame::SceneGame()
     Transform trans =
     { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
-    player = std::make_unique<SceneSpace::Player>(
-        "player",
-        float3{ 0.0f, 0.0f, platePlaneZ },
-        float3{ 0.0f, 0.0f, 0.0f },
-        float3{ 1.0f, 1.0f, 1.0f },
+    player = std::make_unique<Entities::Player>(
+        Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
+        std::shared_ptr<Render::Model>{},
         collider,
+        Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
+        m_physicsMachine.get(),
+        m_contactSystem.get(),
+        m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
-        float3{ 0.0f, 0.0f, 0.0f },
-        float3{ 0.0f, 0.0f, 0.0f },
-        1.0f,
-        0.98f,
+        true,
         Core::UpdatePhase::Gameplay,
         0,
-        true);
+        "player");
+
     if (player)
     {
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
@@ -933,15 +1021,12 @@ SceneGame::SceneGame()
         }
         player->SetMinimumY(platformTopY);
         player->SetMoveSpeed(m_playerBaseMoveSpeed);
-        if (m_sweetsManager)
-        {
-            player->SetSweetsManager(m_sweetsManager.get());
-        }
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
+            const bool isKinematic = player->IsKinematic();
             oss << kLogPrefix << "Player physics body registered (kinematic="
-                << std::boolalpha << player->IsKinematic()
+                << std::boolalpha << isKinematic
                 << ", weight=" << player->GetPhysical().weight << ").\n";
             ::DebugTrace(oss.str());
         }
@@ -1122,8 +1207,9 @@ void SceneGame::ConfigureUpdates()
                 {
                         RegisterPhysicsBody(*player);
                         std::ostringstream oss;
+                        const bool isKinematic = player->IsKinematic();
                         oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
-                            << std::boolalpha << player->IsKinematic() << ").\n";
+                            << std::boolalpha << isKinematic << ").\n";
                         ::DebugTrace(oss.str());
                 }
         }
@@ -1194,7 +1280,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         }
 
         // Apply to player
-        player->SetScreenBounds(minX, maxX, std::nullopt);
+        if (player)
+        {
+            player->SetScreenBounds(minX, maxX, std::nullopt);
+        }
 
         // Apply to sweets manager
         if (m_sweetsManager)
@@ -1257,12 +1346,12 @@ if (m_timeUp)
             ::DebugTrace(oss.str());
         };
 
-        if (input.IsKeyTrigger(kPlayerSpeedBoostKey))
+        if (input.IsTrigger(Core::ActionId::SpeedBoost))
         {
             adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
         }
 
-        if (input.IsKeyTrigger(kPlayerSpeedResetKey))
+        if (input.IsTrigger(Core::ActionId::SpeedReset))
         {
             adjustMoveSpeed(1.0f, "Reset key '2'");
         }
@@ -1298,11 +1387,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
-        if (input.IsKeyTrigger(VK_F2))
+        if (input.IsTrigger(Core::ActionId::ColliderNudgeUp))
         {
                 delta.y += kDebugNudge;
         }
-        if (input.IsKeyTrigger(VK_F3))
+        if (input.IsTrigger(Core::ActionId::ColliderNudgeDown))
         {
                 delta.y -= kDebugNudge;
         }
@@ -1312,7 +1401,7 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 return;
         }
 
-        SceneSpace::TranslatePhysicalEntity(*player, delta);
+        Entities::TranslatePhysicalEntity(*player, delta);
 
         const auto& transform = player->GetTransform();
 
@@ -1527,7 +1616,7 @@ void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
     m_cachedCameraAspect = cameraAspect;
 }
 
-void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
+void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 {
     if (!m_physicsMachine)
     {
@@ -1547,7 +1636,7 @@ void SceneGame::RegisterPhysicsBody(SceneSpace::PhysicalEntity& entity)
     m_physicsMachine->RegisterBody(entity);
 }
 
-void SceneGame::UnregisterPhysicsBody(SceneSpace::PhysicalEntity* entity)
+void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
 {
     if (!entity)
     {
@@ -1584,8 +1673,8 @@ void SceneGame::UnregisterAllPhysicsBodies()
         return;
     }
 
-    std::vector<SceneSpace::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
-    for (SceneSpace::PhysicalEntity* body : bodies)
+    std::vector<Entities::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
+    for (Entities::PhysicalEntity* body : bodies)
     {
         UnregisterPhysicsBody(body);
     }
@@ -1841,7 +1930,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     }
 
     Core::Input& input = ctx.input;
-    if (input.IsKeyTrigger(kConfirmInputKey))
+    if (input.IsTrigger(Core::ActionId::Confirm))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
@@ -1851,7 +1940,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (input.IsKeyTrigger(kRetryInputKey))
+    if (input.IsTrigger(Core::ActionId::Retry))
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
@@ -1867,7 +1956,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
         return;
     }
 
-    if (!ctx.input.IsKeyTrigger(kRetryInputKey))
+    if (!ctx.input.IsTrigger(Core::ActionId::Retry))
     {
         return;
     }
@@ -2008,14 +2097,13 @@ void SceneGame::RenderRunTelemetryOverlay() const
 
     std::ostringstream carryLine;
     carryLine << "[SceneGame] Player carry: ";
-    if (player && player->IsCarryingSweets())
+    if (player)
     {
         for (auto it : player->GetCarriedSweets())
         {
             const auto carried = it;
             carryLine << (carried ? carried->GetTag() : "<unknown>");
         }
-
     }
     else
     {

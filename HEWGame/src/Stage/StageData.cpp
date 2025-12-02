@@ -45,6 +45,8 @@ namespace
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
+    constexpr std::size_t kRequiredSpawnAnchors = 2;
+    constexpr std::size_t kSpawnCoordinatesPerAnchor = 3;
 
     const float3 kDefaultSpawnPoints[] =
     {
@@ -154,7 +156,7 @@ namespace
             return false;
         }
 
-        if (parsed.size() % 3 != 0)
+        if (parsed.size() % kSpawnCoordinatesPerAnchor != 0)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Spawn point on line " << lineNumber
@@ -164,7 +166,7 @@ namespace
             return false;
         }
 
-        for (size_t i = 0; i + 2 < parsed.size(); i += 3)
+        for (size_t i = 0; i + 2 < parsed.size(); i += kSpawnCoordinatesPerAnchor)
         {
             outPoints.push_back(float3{ parsed[i], parsed[i + 1], parsed[i + 2] });
         }
@@ -512,14 +514,15 @@ namespace Stage
                 {
                     parseError = true;
                 }
-                else if (spawnPoints.size() - beforeCount != 2)
+                else
                 {
+                    const size_t added = spawnPoints.size() - beforeCount;
                     std::ostringstream oss;
                     oss << kLogPrefix << "spawnPoints on line " << lineNumber
-                        << " expected exactly two spawn anchors but found "
-                        << (spawnPoints.size() - beforeCount) << ". Raw='" << rawValue << "'\n";
+                        << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
+                        << " (" << spawnPoints.size() << " total). Each anchor requires"
+                        << " three coordinates. Raw='" << rawValue << "'\n";
                     DebugTrace(oss.str());
-                    parseError = true;
                 }
             }
             else if (key == "phaseRewardMultipliers")
@@ -989,6 +992,19 @@ namespace Stage
             thresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
             std::ostringstream oss;
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
+            DebugTrace(oss.str());
+        }
+
+        const std::size_t parsedAnchorCount = spawnPoints.size();
+        if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
+        {
+            parseError = true;
+            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+            std::ostringstream oss;
+            oss << kLogPrefix << "spawnPoints provided " << parsedAnchorCount
+                << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
+                << "; expected at least " << kRequiredSpawnAnchors
+                << ". Falling back to defaults and marking parse error.\n";
             DebugTrace(oss.str());
         }
 
