@@ -3,9 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <iterator>
+#include <map>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #if defined(_WIN32)
@@ -50,6 +54,304 @@ namespace
     bool AlmostEqual(const float2& a, const float2& b, float epsilon = kEpsilon)
     {
         return AlmostEqual(a.x, b.x, epsilon) && AlmostEqual(a.y, b.y, epsilon);
+    }
+
+    float Dot(const float3& a, const float3& b)
+    {
+        return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+    }
+
+    float3 Cross(const float3& a, const float3& b)
+    {
+        return float3{
+            (a.y * b.z) - (a.z * b.y),
+            (a.z * b.x) - (a.x * b.z),
+            (a.x * b.y) - (a.y * b.x)
+        };
+    }
+
+    float3 Normalize(const float3& v)
+    {
+        const float lenSq = Dot(v, v);
+        if (lenSq <= kEpsilon)
+        {
+            return float3{ 0.0f, 0.0f, 1.0f };
+        }
+        const float invLen = 1.0f / std::sqrt(lenSq);
+        return float3{ v.x * invLen, v.y * invLen, v.z * invLen };
+    }
+
+    float2 Project(const float3& p, const float3& tangent, const float3& bitangent)
+    {
+        return float2{ Dot(p, tangent), Dot(p, bitangent) };
+    }
+
+    float ComputeSignedArea(const std::vector<float2>& polygon)
+    {
+        if (polygon.size() < 3)
+        {
+            return 0.0f;
+        }
+
+        float area = 0.0f;
+        for (size_t i = 0; i < polygon.size(); ++i)
+        {
+            const float2& p1 = polygon[i];
+            const float2& p2 = polygon[(i + 1) % polygon.size()];
+            area += (p1.x * p2.y) - (p2.x * p1.y);
+        }
+        return 0.5f * area;
+    }
+
+    bool IsPointInsideTriangle(const float2& p, const float2& a, const float2& b, const float2& c)
+    {
+        const float area = Cross(a, b, c);
+        const float area1 = Cross(p, a, b);
+        const float area2 = Cross(p, b, c);
+        const float area3 = Cross(p, c, a);
+
+        const bool hasNeg = (area1 < -kEpsilon) || (area2 < -kEpsilon) || (area3 < -kEpsilon);
+        const bool hasPos = (area1 > kEpsilon) || (area2 > kEpsilon) || (area3 > kEpsilon);
+
+        if (AlmostEqual(area, 0.0f))
+        {
+            return false;
+        }
+
+        return !(hasNeg && hasPos);
+    }
+
+    std::vector<std::vector<float2>> EarClipTriangulate(std::vector<float2> polygon)
+    {
+        std::vector<std::vector<float2>> triangles;
+        if (polygon.size() < 3)
+        {
+            return triangles;
+        }
+
+        if (ComputeSignedArea(polygon) < 0.0f)
+        {
+            std::reverse(polygon.begin(), polygon.end());
+        }
+
+        std::vector<size_t> indices(polygon.size());
+        for (size_t i = 0; i < polygon.size(); ++i)
+        {
+            indices[i] = i;
+        }
+
+        auto isConvex = [&](size_t i0, size_t i1, size_t i2)
+        {
+            const float2& a = polygon[i0];
+            const float2& b = polygon[i1];
+            const float2& c = polygon[i2];
+            return Cross(a, b, c) >= -kEpsilon;
+        };
+
+        while (indices.size() >= 3)
+        {
+            bool earFound = false;
+            for (size_t i = 0; i < indices.size(); ++i)
+            {
+                const size_t iPrev = (i == 0) ? indices.size() - 1 : i - 1;
+                const size_t iNext = (i + 1) % indices.size();
+
+                const size_t i0 = indices[iPrev];
+                const size_t i1 = indices[i];
+                const size_t i2 = indices[iNext];
+
+                if (!isConvex(i0, i1, i2))
+                {
+                    continue;
+                }
+
+                const float2& a = polygon[i0];
+                const float2& b = polygon[i1];
+                const float2& c = polygon[i2];
+
+                bool containsPoint = false;
+                for (size_t j = 0; j < indices.size(); ++j)
+                {
+                    if (j == iPrev || j == i || j == iNext)
+                    {
+                        continue;
+                    }
+                    const float2& p = polygon[indices[j]];
+                    if (IsPointInsideTriangle(p, a, b, c))
+                    {
+                        containsPoint = true;
+                        break;
+                    }
+                }
+
+                if (containsPoint)
+                {
+                    continue;
+                }
+
+                triangles.push_back({ a, b, c });
+                indices.erase(indices.begin() + i);
+                earFound = true;
+                break;
+            }
+
+            if (!earFound)
+            {
+                break;
+            }
+        }
+
+        return triangles;
+    }
+
+    float3 ComputeTangent(const float3& projectionNormal)
+    {
+        const float3 up{ 0.0f, 1.0f, 0.0f };
+        const float3 right{ 1.0f, 0.0f, 0.0f };
+        float3 tangent = Cross(projectionNormal, up);
+        if (Dot(tangent, tangent) < kEpsilon)
+        {
+            tangent = Cross(projectionNormal, right);
+        }
+        return Normalize(tangent);
+    }
+
+    float3 ComputeBitangent(const float3& projectionNormal, const float3& tangent)
+    {
+        return Normalize(Cross(projectionNormal, tangent));
+    }
+
+    struct EdgeKey
+    {
+        UINT a;
+        UINT b;
+
+        bool operator==(const EdgeKey& other) const noexcept
+        {
+            return a == other.a && b == other.b;
+        }
+    };
+
+    struct EdgeKeyHash
+    {
+        size_t operator()(const EdgeKey& key) const noexcept
+        {
+            return (static_cast<size_t>(key.a) << 32) ^ static_cast<size_t>(key.b);
+        }
+    };
+
+    std::optional<UINT> ReadIndex(const MeshBuffer::Description& desc, UINT index)
+    {
+        if (!desc.pIdx || desc.idxSize == 0 || desc.idxCount <= index)
+        {
+            return std::nullopt;
+        }
+
+        const auto* base = static_cast<const std::byte*>(desc.pIdx);
+        const std::byte* addr = base + static_cast<std::size_t>(index) * desc.idxSize;
+        if (desc.idxSize == sizeof(std::uint16_t))
+        {
+            return static_cast<UINT>(*reinterpret_cast<const std::uint16_t*>(addr));
+        }
+        if (desc.idxSize == sizeof(std::uint32_t))
+        {
+            return static_cast<UINT>(*reinterpret_cast<const std::uint32_t*>(addr));
+        }
+        return std::nullopt;
+    }
+
+    std::vector<std::vector<UINT>> BuildBoundaryContours(const MeshBuffer::Description& desc)
+    {
+        std::vector<std::vector<UINT>> contours;
+        if (!desc.pIdx || desc.idxCount < 3)
+        {
+            return contours;
+        }
+
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> edgeUseCounts;
+        std::unordered_multimap<UINT, UINT> orientedEdges;
+
+        const UINT triCount = desc.idxCount / 3;
+        for (UINT tri = 0; tri < triCount; ++tri)
+        {
+            const auto i0 = ReadIndex(desc, tri * 3 + 0);
+            const auto i1 = ReadIndex(desc, tri * 3 + 1);
+            const auto i2 = ReadIndex(desc, tri * 3 + 2);
+            if (!i0 || !i1 || !i2)
+            {
+                continue;
+            }
+
+            const EdgeKey edges[3] = {
+                EdgeKey{ std::min(*i0, *i1), std::max(*i0, *i1) },
+                EdgeKey{ std::min(*i1, *i2), std::max(*i1, *i2) },
+                EdgeKey{ std::min(*i2, *i0), std::max(*i2, *i0) }
+            };
+
+            for (const auto& edge : edges)
+            {
+                ++edgeUseCounts[edge];
+            }
+
+            orientedEdges.emplace(*i0, *i1);
+            orientedEdges.emplace(*i1, *i2);
+            orientedEdges.emplace(*i2, *i0);
+        }
+
+        std::unordered_multimap<UINT, UINT> boundaryGraph;
+        for (const auto& entry : orientedEdges)
+        {
+            const EdgeKey key{ std::min(entry.first, entry.second), std::max(entry.first, entry.second) };
+            const auto it = edgeUseCounts.find(key);
+            if (it != edgeUseCounts.end() && it->second == 1)
+            {
+                boundaryGraph.emplace(entry.first, entry.second);
+            }
+        }
+
+        std::unordered_multimap<UINT, UINT> remaining = boundaryGraph;
+        while (!remaining.empty())
+        {
+            std::vector<UINT> contour;
+            const UINT start = remaining.begin()->first;
+            UINT current = start;
+            std::unordered_map<UINT, int> visitedCount;
+
+            while (true)
+            {
+                contour.push_back(current);
+                auto range = remaining.equal_range(current);
+                if (range.first == range.second)
+                {
+                    break;
+                }
+
+                UINT next = range.first->second;
+                remaining.erase(range.first);
+                if (++visitedCount[next] > 2)
+                {
+                    break;
+                }
+
+                current = next;
+                if (current == start)
+                {
+                    break;
+                }
+            }
+
+            if (contour.size() >= 3 && contour.front() == contour.back())
+            {
+                contour.pop_back();
+            }
+
+            if (contour.size() >= 3)
+            {
+                contours.push_back(contour);
+            }
+        }
+
+        return contours;
     }
 
     float2 ComputeCentroid(const std::vector<float2>& points)
@@ -131,35 +433,121 @@ namespace
 
 namespace Collision
 {
-    std::vector<float2> BuildConvexHullFromMesh(const MeshBuffer::Description& desc)
+    Mesh2DExtraction ExtractProjectedPolygons(const MeshBuffer::Description& desc, const float3& projectionNormal)
     {
-        std::vector<float2> extracted;
-        if (!desc.pVtx || desc.vtxSize < sizeof(float) * 2 || desc.vtxCount == 0)
+        Mesh2DExtraction extraction{};
+        if (!desc.pVtx || desc.vtxSize < sizeof(float) * 3 || desc.vtxCount == 0)
         {
 #if defined(_DEBUG)
-            DebugTrace("[ConvexHullBuilder] Invalid mesh description; skipping hull extraction.\n");
+            DebugTrace("[ConvexHullBuilder] Invalid mesh description; skipping polygon extraction.\n");
 #endif
-            return extracted;
+            return extraction;
         }
 
+        const float3 basisNormal = Normalize(projectionNormal);
+        const float3 tangent = ComputeTangent(basisNormal);
+        const float3 bitangent = ComputeBitangent(basisNormal, tangent);
+
         const auto* base = static_cast<const std::byte*>(desc.pVtx);
-        extracted.reserve(desc.vtxCount);
+        std::vector<float2> projected;
+        projected.reserve(desc.vtxCount);
 
         for (UINT i = 0; i < desc.vtxCount; ++i)
         {
             const auto* vertexBytes = base + (static_cast<std::size_t>(i) * desc.vtxSize);
             const float* pos = reinterpret_cast<const float*>(vertexBytes);
-            if (!std::isfinite(pos[0]) || !std::isfinite(pos[1]))
+            const float3 position{ pos[0], pos[1], pos[2] };
+            projected.push_back(Project(position, tangent, bitangent));
+        }
+
+        const auto contours = BuildBoundaryContours(desc);
+        if (contours.empty())
+        {
+            extraction.boundary = projected;
+            return extraction;
+        }
+
+        float largestArea = std::numeric_limits<float>::lowest();
+        for (const auto& contour : contours)
+        {
+            std::vector<float2> polygon;
+            polygon.reserve(contour.size());
+            for (UINT index : contour)
+            {
+                if (index < projected.size())
+                {
+                    polygon.push_back(projected[index]);
+                }
+            }
+
+            if (polygon.size() < 3)
             {
                 continue;
             }
-            extracted.push_back(float2{ pos[0], pos[1] });
+
+            const float area = ComputeSignedArea(polygon);
+            if (area < 0.0f)
+            {
+                std::reverse(polygon.begin(), polygon.end());
+            }
+
+            const auto triangles = EarClipTriangulate(polygon);
+            extraction.polygons.insert(extraction.polygons.end(), triangles.begin(), triangles.end());
+
+            if (std::abs(area) > largestArea)
+            {
+                largestArea = std::abs(area);
+                extraction.boundary = polygon;
+            }
+        }
+
+#if defined(_DEBUG)
+        std::ostringstream oss;
+        oss << "[ConvexHullBuilder] Extracted " << extraction.polygons.size() << " convex polygon parts from "
+            << contours.size() << " contour(s); boundary vertex count=" << extraction.boundary.size() << "\n";
+        DebugTrace(oss.str());
+#endif
+
+        return extraction;
+    }
+
+    std::vector<float2> BuildConvexHullFromMesh(const MeshBuffer::Description& desc)
+    {
+        std::vector<float2> extracted;
+        Mesh2DExtraction meshExtraction = ExtractProjectedPolygons(desc);
+        if (!meshExtraction.boundary.empty())
+        {
+            extracted = meshExtraction.boundary;
+        }
+        else if (desc.vtxSize >= sizeof(float) * 2)
+        {
+            if (!desc.pVtx || desc.vtxCount == 0)
+            {
+#if defined(_DEBUG)
+                DebugTrace("[ConvexHullBuilder] Invalid mesh description; skipping hull extraction.\n");
+#endif
+                return extracted;
+            }
+
+            const auto* base = static_cast<const std::byte*>(desc.pVtx);
+            extracted.reserve(desc.vtxCount);
+
+            for (UINT i = 0; i < desc.vtxCount; ++i)
+            {
+                const auto* vertexBytes = base + (static_cast<std::size_t>(i) * desc.vtxSize);
+                const float* pos = reinterpret_cast<const float*>(vertexBytes);
+                if (!std::isfinite(pos[0]) || !std::isfinite(pos[1]))
+                {
+                    continue;
+                }
+                extracted.push_back(float2{ pos[0], pos[1] });
+            }
         }
 
         if (extracted.empty())
         {
 #if defined(_DEBUG)
-            DebugTrace("[ConvexHullBuilder] No finite XY vertices found in mesh; hull cannot be built.\n");
+            DebugTrace("[ConvexHullBuilder] No finite projected vertices found in mesh; hull cannot be built.\n");
 #endif
             return extracted;
         }
@@ -190,8 +578,9 @@ namespace Collision
 #if defined(_DEBUG)
         std::ostringstream oss;
         oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points from "
-            << uniquePoints.size() << " unique XY vertices (" << extracted.size()
-            << " raw). Centroid shifted to (" << centroid.x << ", " << centroid.y << ")\n";
+            << uniquePoints.size() << " unique projected vertices (" << extracted.size()
+            << " raw, " << meshExtraction.polygons.size() << " polygon parts). Centroid shifted to ("
+            << centroid.x << ", " << centroid.y << ")\n";
         DebugTrace(oss.str());
 #endif
 
