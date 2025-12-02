@@ -109,6 +109,8 @@ namespace
                 DirectX::XMFLOAT4{ 0.8f, 0.3f, 1.0f, 1.0f },
                 DirectX::XMFLOAT4{ 0.3f, 1.0f, 1.0f, 1.0f },
         };
+
+        constexpr DirectX::XMFLOAT4 kColliderOutlineColor{ 1.0f, 0.0f, 0.0f, 1.0f };
 }
 
 namespace Systems
@@ -387,6 +389,7 @@ namespace Systems
             }
 
             size_t compoundChildDrawCount = 0;
+            size_t aabbFallbackCount = 0;
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
                 if (!command.source)
@@ -396,42 +399,56 @@ namespace Systems
 
                 const Transform transform = command.source->GetTransform();
                 const float z = transform.position.z;
+                const auto* collider2D = dynamic_cast<const Collision::ICollider2D*>(command.collider);
 
-                if (m_debugLoggingEnabled && command.collider)
+                if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(collider2D))
                 {
-                    if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(command.collider))
+                    size_t childIndex = 0;
+                    for (const auto& child : compound->GetChildren())
                     {
-                        size_t childIndex = 0;
-                        for (const auto& child : compound->GetChildren())
+                        const auto* child2D = dynamic_cast<const Collision::ICollider2D*>(child.get());
+                        if (!child2D)
                         {
-                            const auto* child2D = dynamic_cast<const Collision::ICollider2D*>(child.get());
-                            if (!child2D)
-                            {
-                                ++childIndex;
-                                continue;
-                            }
-
-                            const DirectX::XMFLOAT4 color = kCompoundChildColors[childIndex % kCompoundChildColors.size()];
-                            if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(child2D))
-                            {
-                                DrawCircleOutline(*circle, z, color);
-                            }
-                            else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(child2D))
-                            {
-                                DrawHullOutline(*hull, z, color);
-                            }
-                            else
-                            {
-                                DrawAABB2D(child2D->GetAABB(), z, color);
-                            }
-
                             ++childIndex;
-                            ++compoundChildDrawCount;
+                            continue;
                         }
+
+                        const DirectX::XMFLOAT4 color = kCompoundChildColors[childIndex % kCompoundChildColors.size()];
+                        if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(child2D))
+                        {
+                            DrawCircleOutline(*circle, z, color);
+                        }
+                        else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(child2D))
+                        {
+                            DrawHullOutline(*hull, z, color);
+                        }
+                        else
+                        {
+                            DrawAABB2D(child2D->GetAABB(), z, color);
+                        }
+
+                        ++childIndex;
+                        ++compoundChildDrawCount;
                     }
                 }
 
-                DrawAABB2D(command.aabb, z, DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 1.0f });
+                if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(collider2D))
+                {
+                    DrawCircleOutline(*circle, z, kColliderOutlineColor);
+                }
+                else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(collider2D))
+                {
+                    DrawHullOutline(*hull, z, kColliderOutlineColor);
+                }
+                else if (collider2D)
+                {
+                    DrawAABB2D(collider2D->GetAABB(), z, kColliderOutlineColor);
+                }
+                else
+                {
+                    DrawAABB2D(command.aabb, z, kColliderOutlineColor);
+                    ++aabbFallbackCount;
+                }
             }
 
             if (m_debugLoggingEnabled)
@@ -442,11 +459,13 @@ namespace Systems
                 {
                         oss << " Rendered " << compoundChildDrawCount << " compound child shapes.";
                 }
+                if (aabbFallbackCount > 0)
+                {
+                        oss << " Used AABB fallback for " << aabbFallbackCount << " collider(s).";
+                }
                 oss << "\n";
                 DebugTrace(oss.str());
             }
-
-
 
             m_colliderCommands.clear();
         }
