@@ -10,6 +10,16 @@
 
 namespace Core
 {
+        enum class ActionId
+        {
+                MoveX,
+                RotateYaw,
+                Drop,
+                Confirm,
+                Cancel,
+                Pause,
+        };
+
         class Input : public UpdateNode
         {
         public:
@@ -19,6 +29,13 @@ namespace Core
                 void Shutdown();
 
                 void OnUpdate(UpdateContext& ctx) override;
+
+                bool IsPress(BYTE key) const;
+                bool IsTrigger(BYTE key) const;
+                bool IsRelease(BYTE key) const;
+
+                bool IsAction(ActionId action) const;
+                bool IsTrigger(ActionId action) const;
 
                 bool IsKeyPress(BYTE key) const;
                 bool IsKeyTrigger(BYTE key) const;

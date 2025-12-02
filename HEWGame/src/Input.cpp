@@ -22,7 +22,7 @@ namespace Core
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
-                // èâä˙ pad èÛë‘
+                //  pad 
                 ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
                 ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
                 PollPadState();
@@ -59,6 +59,43 @@ namespace Core
 
                 m_prevPadState = m_padState;
                 PollPadState();
+        }
+
+        bool Input::IsPress(BYTE key) const
+        {
+                return IsKeyPress(key);
+        }
+
+        bool Input::IsTrigger(BYTE key) const
+        {
+                return IsKeyTrigger(key);
+        }
+
+        bool Input::IsRelease(BYTE key) const
+        {
+                return IsKeyRelease(key);
+        }
+
+        bool Input::IsAction(ActionId action) const
+        {
+                switch (action)
+                {
+                case ActionId::Confirm:
+                        return IsPress(VK_RETURN) || IsPadPress(XINPUT_GAMEPAD_START);
+                default:
+                        return false;
+                }
+        }
+
+        bool Input::IsTrigger(ActionId action) const
+        {
+                switch (action)
+                {
+                case ActionId::Confirm:
+                        return IsTrigger(VK_RETURN) || IsPadTrigger(XINPUT_GAMEPAD_START);
+                default:
+                        return false;
+                }
         }
 
         bool Input::IsKeyPress(BYTE key) const
