@@ -16,30 +16,14 @@
 
 namespace Core
 {
-        class Gamepad
+        enum class ActionId
         {
-        public:
-                Gamepad();
-
-                void Poll(int index = 0);
-
-                bool IsConnected() const;
-                bool IsButtonDown(WORD button) const;
-                bool WasButtonDown(WORD button) const;
-
-                float AxisLX() const;
-                float AxisLY() const;
-                float AxisRX() const;
-                float AxisRY() const;
-
-                const XINPUT_STATE& GetPreviousState() const { return m_prevState; }
-
-        private:
-                float Normalize(short value) const;
-
-                XINPUT_STATE m_state{};
-                XINPUT_STATE m_prevState{};
-                bool m_connected = false;
+                MoveX,
+                RotateYaw,
+                Drop,
+                Confirm,
+                Cancel,
+                Pause,
         };
 
         class Input : public UpdateNode
@@ -52,12 +36,17 @@ namespace Core
 
                 void OnUpdate(UpdateContext& ctx) override;
 
-                float GetAxis(ActionId action) const;
-                bool IsPress(ActionId action) const;
-                bool IsTrigger(ActionId action) const;
-                bool IsRelease(ActionId action) const;
+                bool IsPress(BYTE key) const;
+                bool IsTrigger(BYTE key) const;
+                bool IsRelease(BYTE key) const;
+
                 bool IsAction(ActionId action) const;
-                void Rebind(ActionId action, const Binding& binding);
+                bool IsTrigger(ActionId action) const;
+
+                bool IsKeyPress(BYTE key) const;
+                bool IsKeyTrigger(BYTE key) const;
+                bool IsKeyRelease(BYTE key) const;
+                bool IsKeyRepeat(BYTE key) const;
 
                 bool IsPress(int vk) const;
                 bool IsTrigger(int vk) const;

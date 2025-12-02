@@ -29,7 +29,6 @@ namespace
 #endif
 
     constexpr const char* kLogPrefix = "[TitleScene] ";
-    constexpr BYTE kStartKey = VK_RETURN;
 }
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
@@ -74,7 +73,7 @@ void TitleScene::ConfigureUpdates()
 
 void TitleScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsKeyTrigger(kStartKey))
+    if (ctx.input.IsTrigger(Core::ActionId::Confirm))
     {
         LogLifecycle("StartRequested");
         if (m_manager)

@@ -84,7 +84,9 @@ namespace Core
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
-                // パッドも同様に初回の状態を確定させる。未接続時はゼロクリアされた状態が入る。
+                //  pad 
+                ZeroMemory(&m_padState, sizeof(XINPUT_STATE));
+                ZeroMemory(&m_prevPadState, sizeof(XINPUT_STATE));
                 PollPadState();
 
                 m_initialized = true;
@@ -121,7 +123,44 @@ namespace Core
                 PollPadState();
         }
 
-        float Input::GetAxis(ActionId action) const
+        bool Input::IsPress(BYTE key) const
+        {
+                return IsKeyPress(key);
+        }
+
+        bool Input::IsTrigger(BYTE key) const
+        {
+                return IsKeyTrigger(key);
+        }
+
+        bool Input::IsRelease(BYTE key) const
+        {
+                return IsKeyRelease(key);
+        }
+
+        bool Input::IsAction(ActionId action) const
+        {
+                switch (action)
+                {
+                case ActionId::Confirm:
+                        return IsPress(VK_RETURN) || IsPadPress(XINPUT_GAMEPAD_START);
+                default:
+                        return false;
+                }
+        }
+
+        bool Input::IsTrigger(ActionId action) const
+        {
+                switch (action)
+                {
+                case ActionId::Confirm:
+                        return IsTrigger(VK_RETURN) || IsPadTrigger(XINPUT_GAMEPAD_START);
+                default:
+                        return false;
+                }
+        }
+
+        bool Input::IsKeyPress(BYTE key) const
         {
                 return m_map.GetAxis(action, *this, m_pad);
         }
