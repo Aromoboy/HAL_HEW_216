@@ -1471,6 +1471,7 @@ namespace SweetsSpace
 
         std::size_t removed = 0;
         std::size_t markedSafe = 0;
+        std::size_t stagedThisFrame = 0;
 
         for (auto& entry : m_byState)
         {
@@ -1488,6 +1489,15 @@ namespace SweetsSpace
 
                 if (sweets->IsPendingDestroy())
                 {
+                    auto watched = m_pendingLateDeletion.find(sweets);
+                    if (watched == m_pendingLateDeletion.end())
+                    {
+                        m_pendingLateDeletion.insert(sweets);
+                        ++stagedThisFrame;
+                        ++it;
+                        continue;
+                    }
+
                     if (!sweets->IsSafeToDelete())
                     {
                         sweets->MarkSafeToDelete();
@@ -1497,6 +1507,7 @@ namespace SweetsSpace
                     }
 
                     m_lookup.erase(sweets);
+                    m_pendingLateDeletion.erase(watched);
                     it = sweetsList.erase(it);
                     ++removed;
                     continue;
@@ -1507,12 +1518,13 @@ namespace SweetsSpace
         }
 
 #if defined(_DEBUG)
-        if (removed > 0 || markedSafe > 0)
+        if (removed > 0 || markedSafe > 0 || stagedThisFrame > 0)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Late prune removed " << removed
-                << " pending sweets entries, marked " << markedSafe
-                << " ready for deletion.\n";
+            oss << kLogPrefix << "Late prune staged " << stagedThisFrame
+                << " pending entries, marked " << markedSafe
+                << " ready for deletion, removed " << removed
+                << " finalized sweets.\n";
             DebugTrace(oss.str());
         }
 #endif
@@ -1660,40 +1672,38 @@ namespace SweetsSpace
     {
         ForceSpawnRefresh();
 
-        std::vector<std::shared_ptr<ActiveSweets>> sweetsToRemove;
-        sweetsToRemove.reserve(m_lookup.size());
-        size_t totalStatesCleared = 0;
+        std::size_t staged = 0;
+        std::size_t alreadyPending = 0;
 
         for (auto& entry : m_byState)
         {
             SweetsList& list = entry.second;
-            totalStatesCleared += list.size();
             for (auto& sweets : list)
             {
-                if (sweets)
+                if (!sweets)
                 {
-                    sweetsToRemove.push_back(sweets);
+                    continue;
                 }
+
+                if (sweets->IsPendingDestroy())
+                {
+                    ++alreadyPending;
+                }
+                else
+                {
+                    sweets->MarkPendingDestroy();
+                    sweets->Enable(false);
+                    ++staged;
+                }
+
+                UnregisterSweetsFromSystems(sweets, "ClearAllSweets");
             }
-            list.clear();
-        }
-
-        m_lookup.clear();
-
-        for (const auto& sweets : sweetsToRemove)
-        {
-            if (!sweets)
-            {
-                continue;
-            }
-
-            UnregisterSweetsFromSystems(sweets, "ClearAllSweets");
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets removed " << sweetsToRemove.size()
-            << " sweets across " << m_byState.size() << " states (" << totalStatesCleared
-            << " tracked entries).\n";
+        oss << kLogPrefix << "ClearAllSweets staged " << staged
+            << " sweets for pending destroy (" << alreadyPending << " already pending) across "
+            << m_byState.size() << " states.\n";
         DebugTrace(oss.str());
     }
 
