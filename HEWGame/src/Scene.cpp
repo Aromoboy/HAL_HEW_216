@@ -51,17 +51,37 @@ private:
         Scene& m_owner;
 };
 
+class Scene::CameraUpdateNode : public Core::UpdateNode
+{
+public:
+        CameraUpdateNode(Scene& owner, Core::UpdatePhase phase, int priority)
+                : Core::UpdateNode(phase, priority)
+                , m_owner(owner)
+        {
+        }
+
+        void OnUpdate(Core::UpdateContext& ctx) override
+        {
+                m_owner.m_cameraManager.Update(ctx);
+        }
+
+private:
+        Scene& m_owner;
+};
+
 Scene::Scene()
 : m_isConfigured(false)
 , m_input(nullptr)
 , m_warnedAboutMissingCameraForDraw(false)
 , m_sceneUpdateRegistered(false)
+, m_cameraUpdateRegistered(false)
 {
 }
 
         Scene::~Scene()
         {
                 UnregisterSceneUpdateNode();
+                UnregisterCameraUpdateNode();
         }
 
         void Scene::RootUpdate(Core::StepTimer& timer, Core::Input& input)
@@ -74,11 +94,15 @@ Scene::Scene()
                         m_isConfigured = true;
                 }
 
+                if (!m_cameraUpdateRegistered)
+                {
+                        RegisterCameraUpdateNode(Core::UpdatePhase::Camera, 0);
+                }
+
                 const float deltaTime = timer.DeltaTime();
                 Core::UpdateContext ctx(deltaTime, timer, input, this);
 
                 m_scheduler.Tick(ctx);
-                m_cameraManager.Update();
         }
 
 void Scene::RootDraw()
@@ -144,6 +168,44 @@ void Scene::RootDraw()
         const Core::IUpdatable* Scene::GetSceneUpdateNode() const
         {
                 return m_sceneUpdateNode.get();
+        }
+
+        void Scene::RegisterCameraUpdateNode(Core::UpdatePhase phase, int priority)
+        {
+                if (!m_cameraUpdateNode)
+                {
+                        m_cameraUpdateNode = std::make_unique<CameraUpdateNode>(*this, phase, priority);
+                }
+                else
+                {
+                        m_cameraUpdateNode->SetPhase(phase);
+                        m_cameraUpdateNode->SetPriority(priority);
+                }
+
+                if (!m_cameraUpdateRegistered)
+                {
+                        Register(*m_cameraUpdateNode);
+                        m_cameraUpdateRegistered = true;
+                }
+        }
+
+        void Scene::UnregisterCameraUpdateNode()
+        {
+                if (m_cameraUpdateRegistered && m_cameraUpdateNode)
+                {
+                        Unregister(*m_cameraUpdateNode);
+                        m_cameraUpdateRegistered = false;
+                }
+        }
+
+        Core::IUpdatable* Scene::GetCameraUpdateNode()
+        {
+                return m_cameraUpdateNode.get();
+        }
+
+        const Core::IUpdatable* Scene::GetCameraUpdateNode() const
+        {
+                return m_cameraUpdateNode.get();
         }
 
         void Scene::Register(Core::IUpdatable& node)

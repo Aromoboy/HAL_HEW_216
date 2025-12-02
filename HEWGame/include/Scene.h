@@ -33,6 +33,10 @@ void RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority);
 void UnregisterSceneUpdateNode();
 Core::IUpdatable* GetSceneUpdateNode();
 const Core::IUpdatable* GetSceneUpdateNode() const;
+void RegisterCameraUpdateNode(Core::UpdatePhase phase, int priority);
+void UnregisterCameraUpdateNode();
+Core::IUpdatable* GetCameraUpdateNode();
+const Core::IUpdatable* GetCameraUpdateNode() const;
 
 void Register(Core::IUpdatable& node);
 void Unregister(Core::IUpdatable& node);
@@ -55,6 +59,9 @@ bool m_warnedAboutMissingCameraForDraw;
 class SceneUpdateNode;
 std::unique_ptr<SceneUpdateNode> m_sceneUpdateNode;
 bool m_sceneUpdateRegistered;
+class CameraUpdateNode;
+std::unique_ptr<CameraUpdateNode> m_cameraUpdateNode;
+bool m_cameraUpdateRegistered;
 };
 }
 

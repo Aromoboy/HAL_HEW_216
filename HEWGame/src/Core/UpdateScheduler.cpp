@@ -581,7 +581,10 @@ namespace Core
                         ExecutionLog executionLog;
                         executionLog.reserve(nodeCount);
 
-                        auto appendExecutionRecord = [this, &executionLog](IUpdatable* node, bool invoked)
+                        ExecutionLog phasePriorityPlan;
+                        phasePriorityPlan.reserve(nodeCount);
+
+                        auto appendExecutionRecord = [this, &executionLog](IUpdatable* node, bool invoked, std::size_t sortedIndex, std::size_t executionIndex)
                         {
                                 if (!node)
                                 {
@@ -594,9 +597,34 @@ namespace Core
                                 record.phase = order.phase;
                                 record.priority = order.priority;
                                 record.registrationOrder = GetRegistrationOrder(node);
+                                record.sortedIndex = sortedIndex;
+                                record.executionIndex = executionIndex;
                                 record.invoked = invoked;
                                 executionLog.emplace_back(record);
                         };
+
+                        auto appendPhasePriorityRecord = [this, &phasePriorityPlan](IUpdatable* node, std::size_t sortedIndex)
+                        {
+                                if (!node)
+                                {
+                                        return;
+                                }
+
+                                ExecutionRecord record;
+                                record.node = node;
+                                const NodeOrderOverride order = GetEffectiveOrder(node);
+                                record.phase = order.phase;
+                                record.priority = order.priority;
+                                record.registrationOrder = GetRegistrationOrder(node);
+                                record.sortedIndex = sortedIndex;
+                                record.executionIndex = sortedIndex;
+                                phasePriorityPlan.emplace_back(record);
+                        };
+
+                        for (std::size_t i = 0; i < sortedNodes.size(); ++i)
+                        {
+                                appendPhasePriorityRecord(sortedNodes[i], i);
+                        }
 
                         while (!ready.empty())
                         {
@@ -610,7 +638,7 @@ namespace Core
                                         node->OnUpdate(ctx);
                                         invoked = true;
                                 }
-                                appendExecutionRecord(node, invoked);
+                                appendExecutionRecord(node, invoked, current, executionLog.size());
 
                                 for (std::size_t next : edges[current])
                                 {
@@ -648,7 +676,7 @@ namespace Core
                                                 node->OnUpdate(ctx);
                                                 invoked = true;
                                         }
-                                        appendExecutionRecord(node, invoked);
+                                        appendExecutionRecord(node, invoked, i, executionLog.size());
                                 }
                         }
 
@@ -656,10 +684,21 @@ namespace Core
                         {
                                 m_executionLogListener(executionLog);
                         }
-#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS && defined(_WIN32)
-                else if (!executionLog.empty())
-                {
-                        std::ostringstream oss;
+#if defined(_DEBUG) && defined(_WIN32)
+                        if (!executionLog.empty())
+                        {
+                                std::ostringstream oss;
+                                oss << "[UpdateScheduler] phase/priority plan (phase, priority, order):\n";
+                                for (const auto& record : phasePriorityPlan)
+                                {
+                                        oss << "  node=" << record.node
+                                            << " phase=" << static_cast<int>(record.phase)
+                                            << " priority=" << record.priority
+                                            << " order=" << record.registrationOrder
+                                            << " sortedIndex=" << record.sortedIndex
+                                            << '\n';
+                                }
+
                                 oss << "[UpdateScheduler] execution order (phase, priority, order, invoked):\n";
                                 for (const auto& record : executionLog)
                                 {
@@ -667,6 +706,8 @@ namespace Core
                                             << " phase=" << static_cast<int>(record.phase)
                                             << " priority=" << record.priority
                                             << " order=" << record.registrationOrder
+                                            << " sortedIndex=" << record.sortedIndex
+                                            << " execIndex=" << record.executionIndex
                                             << " invoked=" << (record.invoked ? 1 : 0) << '\n';
                                 }
                                 ::OutputDebugStringA(oss.str().c_str());
