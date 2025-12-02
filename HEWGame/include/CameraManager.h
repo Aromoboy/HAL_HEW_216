@@ -6,6 +6,11 @@
 #include <memory>
 #include <vector>
 
+namespace Core
+{
+        struct UpdateContext;
+}
+
 namespace CameraSpace
 {
         class CameraManager
@@ -26,7 +31,7 @@ namespace CameraSpace
                 void SetActive(const std::shared_ptr<ICamera>& camera);
                 std::shared_ptr<ICamera> GetActiveCamera() const;
 
-                void Update();
+                void Update(Core::UpdateContext& ctx);
 
                 const ExecutionStats& GetExecutionStats() const;
                 const std::vector<std::shared_ptr<ICamera>>& GetCameras() const;
