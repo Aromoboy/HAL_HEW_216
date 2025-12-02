@@ -242,8 +242,8 @@ namespace Core
                         return;
                 }
 
-                auto sharedHandle = std::shared_ptr<IUpdatable>(std::addressof(node));
-                m_nodes.push_back({ sharedHandle.get(), sharedHandle, sharedHandle });
+                auto handle = std::shared_ptr<IUpdatable>(std::addressof(node), [](IUpdatable*) {});
+                m_nodes.push_back({ std::addressof(node), handle, handle });
                 m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
@@ -507,9 +507,9 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                                         auto handleIt = FindNodeHandle(&node);
                                         if (handleIt != m_nodes.end() && handleIt->IsExpired())
                                         {
-                                                auto revived = std::shared_ptr<IUpdatable>(std::addressof(node));
-                                                handleIt->raw = revived.get();
-                                                handleIt->owner = revived;
+                                                auto revived = std::shared_ptr<IUpdatable>(std::addressof(node), [](IUpdatable*) {});
+                                                handleIt->raw = std::addressof(node);
+                                                handleIt->handle = revived;
                                                 handleIt->weak = revived;
                                         }
                                 }
