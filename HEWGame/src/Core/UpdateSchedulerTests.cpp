@@ -1,3 +1,5 @@
+#if defined(ENABLE_UPDATE_SCHEDULER_TESTS)
+
 #include "Core/UpdateScheduler.h"
 #include "Core/UpdateNode.h"
 #include "Core/StepTimer.h"
@@ -251,18 +253,23 @@ namespace
 #endif
         }
 
-        struct UpdateSchedulerTestRunner
+        void RunAllUpdateSchedulerTests()
         {
-                UpdateSchedulerTestRunner()
-                {
-                        RunPlainIUpdatableOrderOverrideTest();
-                        RunDependencyOrderingTest();
-                        RunReadyQueueOrderingStabilityTest();
-                        RunPendingUnregistrationCancellationTest();
-                        RunStepTimerFixedStepTest();
-                }
-        };
-
-        static UpdateSchedulerTestRunner g_updateSchedulerTestRunner;
+                RunPlainIUpdatableOrderOverrideTest();
+                RunDependencyOrderingTest();
+                RunReadyQueueOrderingStabilityTest();
+                RunPendingUnregistrationCancellationTest();
+                RunStepTimerFixedStepTest();
+        }
 }
+
+namespace Core::Tests
+{
+        void RunUpdateSchedulerTests()
+        {
+                RunAllUpdateSchedulerTests();
+        }
+}
+
+#endif // defined(ENABLE_UPDATE_SCHEDULER_TESTS)
 

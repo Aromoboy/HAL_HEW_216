@@ -8,6 +8,14 @@
 #include <string>
 #include <unordered_map>
 
+#if !defined(UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS)
+#if defined(_DEBUG)
+#define UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS 1
+#else
+#define UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS 0
+#endif
+#endif
+
 #if defined(_WIN32)
 #   ifndef NOMINMAX
 #       define NOMINMAX
@@ -25,12 +33,8 @@ namespace Core
         {
                 void DebugLog(const std::string& message)
                 {
-#if defined(_WIN32)
-#if defined(_DEBUG)
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS && defined(_WIN32)
                         ::OutputDebugStringA(message.c_str());
-#else
-                        (void)message;
-#endif
 #else
                         (void)message;
 #endif
@@ -88,7 +92,7 @@ namespace Core
                         return it->second;
                 }
 
-#if defined(_DEBUG) && defined(_WIN32)
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS && defined(_WIN32)
                 std::ostringstream oss;
                 oss << "[UpdateScheduler] registration order missing for node=" << node << "\n";
                 ::OutputDebugStringA(oss.str().c_str());
@@ -243,11 +247,15 @@ namespace Core
                         entry.phase = phase;
                         entry.priority = priority;
 
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Applied order override to non-UpdateNode node=" << &node
-                            << " phase=" << static_cast<int>(phase)
-                            << " priority=" << priority << '\n';
+                            << " requestedPhase=" << static_cast<int>(phase)
+                            << " requestedPriority=" << priority
+                            << " currentPhase=" << static_cast<int>(node.GetPhase())
+                            << " currentPriority=" << node.GetPriority() << '\n';
                         DebugLog(oss.str());
+#endif
                         return;
                 }
 
@@ -255,11 +263,13 @@ namespace Core
                 updateNode->SetPriority(priority);
                 if (m_orderOverrides.erase(&node) > 0)
                 {
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Cleared redundant order override for UpdateNode node=" << &node
                             << " phase=" << static_cast<int>(phase)
                             << " priority=" << priority << '\n';
                         DebugLog(oss.str());
+#endif
                 }
         }
 
