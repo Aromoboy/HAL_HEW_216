@@ -12,10 +12,10 @@
 
 constexpr const char* kPowerUpConfigPath = "Assets/Config/PowerUp.cfg";
 constexpr const char* kNameKey = "PowerUpName=";
-constexpr const char* kMaxLevel = "PowerUpName=";
-constexpr const char* kNameKey = "DefaultCost=";
-constexpr const char* kNameKey = "costAdditional=";
-constexpr const char* kNameKey = "costMagnification=";
+constexpr const char* kMaxLevel = "MaxLLevel=";
+constexpr const char* kDefaultCost = "DefaultCost=";
+constexpr const char* kCostAdditional = "costAdditional=";
+constexpr const char* kCostMagnification = "costMagnification=";
 
 enum PowerUpStatus
 {
@@ -125,32 +125,38 @@ namespace SceneSpace
 
 		while(std::getline(file, nameKey))
 		{
-			if (nameKey.find(kNameKey) == std::string::npos) continue;
-
-			std::stringstream ss(nameKey);
+			
 
 			std::string key[MaxStatusNum];
 			std::string value[MaxStatusNum];
 
-
-
 			std::string status;
 
-			for (int i = 1; i < MaxStatusNum; i++)
-			{
-				std::getline(file, status);
-				
-				
-
-				std::stringstream ss(status);
-
-				std::getline(ss, key[i], '=');
-				std::getline(ss, value[i]);
-			}
-
-			m_powerUpManager->AddNode(value[Name], 0, std::stoi(value[MaxLevel]), std::stoi(value[DefaultCost]), std::stoi(value[DefaultCost]), std::stof(value[DefaultCost]));
+			//m_powerUpManager->AddNode(value[Name], 0, std::stoi(value[MaxLevel]), std::stoi(value[DefaultCost]), std::stoi(value[DefaultCost]), std::stof(value[DefaultCost]));
 		}
 
 		return false;
 	}
+
+	bool ScenePowerUp::GetValue(std::string& a_outValue, std::string a_status, const char* checkKey)
+	{
+
+
+		// àÍî‘ç≈èâÇ…å©Ç¬Ç©ÇÁÇ»ÇØÇÍÇŒï‘Ç∑
+		if (a_status.rfind(checkKey,0) != 0) return false;
+
+		std::stringstream ss(a_status);
+
+		// àÍâûï€éù
+		std::string key;
+
+		std::getline(ss, key, '=');
+		std::getline(ss, a_outValue);
+
+		return true;
+	}
+
+
+	
+	
 }

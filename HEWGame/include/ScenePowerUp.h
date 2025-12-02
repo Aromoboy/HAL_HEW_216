@@ -33,6 +33,8 @@ namespace SceneSpace
 
 		bool LoadPowerUpFile();
 
+		bool GetValue(std::string& a_outValue, std::string status, const char*checkKey);
+
 		int m_cost;
 
 
