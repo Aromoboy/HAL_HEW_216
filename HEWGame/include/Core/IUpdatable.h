@@ -34,6 +34,31 @@ namespace Core
                 Late,        // 最終調整。依存関係が複雑なものはここに逃がす
         };
 
+        inline const char* ToString(UpdatePhase phase)
+        {
+                switch (phase)
+                {
+                case UpdatePhase::Input:
+                        return "Input";
+                case UpdatePhase::PrePhysics:
+                        return "PrePhysics";
+                case UpdatePhase::Physics:
+                        return "Physics";
+                case UpdatePhase::PostPhysics:
+                        return "PostPhysics";
+                case UpdatePhase::Gameplay:
+                        return "Gameplay";
+                case UpdatePhase::Camera:
+                        return "Camera";
+                case UpdatePhase::UI:
+                        return "UI";
+                case UpdatePhase::Late:
+                        return "Late";
+                default:
+                        return "<unknown>";
+                }
+        }
+
         struct UpdateContext
         {
                 float dt;

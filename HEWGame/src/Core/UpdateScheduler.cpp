@@ -6,6 +6,7 @@
 #include <queue>
 #include <sstream>
 #include <string>
+#include <typeinfo>
 #include <unordered_map>
 
 #if !defined(UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS)
@@ -38,6 +39,28 @@ namespace Core
 #else
                         (void)message;
 #endif
+                }
+
+                std::string DescribeNode(const Core::IUpdatable* node, Core::UpdatePhase phase, int priority)
+                {
+                        std::ostringstream oss;
+                        if (!node)
+                        {
+                                oss << "<null>";
+                                return oss.str();
+                        }
+
+                        oss << "node=" << node
+                                << " phase=" << Core::ToString(phase)
+                                << '(' << static_cast<int>(phase) << ')'
+                                << " priority=" << priority
+                                << " enabled=" << node->IsEnabled();
+
+#if defined(_CPPRTTI)
+                        oss << " type=" << typeid(*node).name();
+#endif
+
+                        return oss.str();
                 }
         }
 
@@ -202,6 +225,16 @@ namespace Core
 
                 m_nodes.emplace_back(&node);
                 m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
+
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
+                const NodeOrderOverride order = GetEffectiveOrder(&node);
+                std::ostringstream oss;
+                oss << "[UpdateScheduler] Registered "
+                    << DescribeNode(&node, order.phase, order.priority)
+                    << " order=" << (m_nextRegistrationOrder - 1)
+                    << '\n';
+                DebugLog(oss.str());
+#endif
         }
 
         void UpdateScheduler::UnregisterInternal(IUpdatable& node)
@@ -236,6 +269,15 @@ namespace Core
                         oss << "[UpdateScheduler] Removed order override for unregistered node=" << &node << '\n';
                         DebugLog(oss.str());
                 }
+
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
+                std::ostringstream oss;
+                const NodeOrderOverride order = GetEffectiveOrder(&node);
+                oss << "[UpdateScheduler] Unregistered "
+                    << DescribeNode(&node, order.phase, order.priority)
+                    << '\n';
+                DebugLog(oss.str());
+#endif
         }
 
         void UpdateScheduler::SetOrderInternal(IUpdatable& node, UpdatePhase phase, int priority)
@@ -365,6 +407,21 @@ namespace Core
 
         void UpdateScheduler::Register(IUpdatable& node)
         {
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
+                {
+                        const NodeOrderOverride order = GetEffectiveOrder(&node);
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Register requested for "
+                            << DescribeNode(&node, order.phase, order.priority);
+                        if (m_isTicking)
+                        {
+                                oss << " (deferred)";
+                        }
+                        oss << '\n';
+                        DebugLog(oss.str());
+                }
+#endif
+
                 if (m_isTicking)
                 {
                         bool cancelledPendingUnregistration = false;
@@ -415,6 +472,21 @@ namespace Core
 
         void UpdateScheduler::Unregister(IUpdatable& node)
         {
+#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
+                {
+                        const NodeOrderOverride order = GetEffectiveOrder(&node);
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Unregister requested for "
+                            << DescribeNode(&node, order.phase, order.priority);
+                        if (m_isTicking)
+                        {
+                                oss << " (deferred)";
+                        }
+                        oss << '\n';
+                        DebugLog(oss.str());
+                }
+#endif
+
                 if (m_isTicking)
                 {
                         if (IsPendingRegistration(&node))
