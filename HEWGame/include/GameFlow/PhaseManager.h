@@ -14,6 +14,7 @@ namespace GameFlow
         void Reset();
         // 現在のフェーズが増加した場合に true を返す
         bool UpdateHeight(float currentMaxHeight);
+
         bool UpdateMiniHeight(float currentMaxMiniHeight); //ミニフェーズ
 
         int GetCurrentPhase() const noexcept;
@@ -26,7 +27,7 @@ namespace GameFlow
         std::vector<float> m_thresholds;
         std::vector<float> m_rewardMultipliers;
 
-        //ミニフェーズ
+        //ミニフェーズ 
         std::vector<float> m_minithresholds;
         std::vector<float> m_minirewardMultipliers;
 

@@ -145,6 +145,26 @@ namespace GameFlow
             return false;
         }
 
+        if (!std::isfinite(currentMaxMiniHeight))
+        {
+            return false;
+        }
+
+        m_lastReportedHeight = std::max(m_lastReportedHeight, currentMaxMiniHeight);
+
+        bool advanced = false;
+        while (m_nextThresholdIndex < m_minithresholds.size()
+            && m_lastReportedHeight >= m_thresholds[m_nextThresholdIndex])
+        {
+            const float threshold = m_minithresholds[m_nextThresholdIndex];
+            ++m_nextThresholdIndex;
+            ++m_currentPhase;
+            advanced = true;
+            LogPhaseAdvance(threshold, m_lastReportedHeight);
+        }
+
+        
+        return advanced;
     }
 
     int PhaseManager::GetCurrentPhase() const noexcept
