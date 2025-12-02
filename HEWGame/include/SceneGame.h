@@ -2,6 +2,7 @@
 #define __SCENE_GAME_H__
 
 #include "Scene.h"
+#include "SceneManager.h"
 #include "Model.h"
 #include "TestObject.h"
 #include "SoundManagerEX.h"
@@ -52,11 +53,16 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-class SceneGame : public SceneSpace::Scene
+class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
     SceneGame();
     ~SceneGame();
+    void Load(Core::Input& input) override;
+    void Update(Core::StepTimer& timer, Core::Input& input) override;
+    void Draw() override;
+    void OnEnter() override;
+    void OnExit() override;
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;

@@ -200,7 +200,10 @@
     <ClCompile Include="src\PhysicalEntity.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\SceneManager.cpp" />
+    <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
+    <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Player.cpp" />
@@ -271,6 +274,9 @@
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
+    <ClInclude Include="include\SceneManager.h" />
+    <ClInclude Include="include\SelectScene.h" />
+    <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
     <ClInclude Include="include\Stage\FoundationPlatform.h" />
