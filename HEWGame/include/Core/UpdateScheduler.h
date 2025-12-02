@@ -83,16 +83,17 @@ namespace Core
 
                         bool IsExpired() const
                         {
-                                return owner == nullptr || weak.expired();
+                                return raw == nullptr || weak.expired();
                         }
 
                         IUpdatable* Get() const
                         {
-                                return owner ? owner.get() : raw;
+                                return IsExpired() ? nullptr : raw;
                         }
 
                         void Expire()
                         {
+                                raw = nullptr;
                                 owner.reset();
                                 weak.reset();
                         }

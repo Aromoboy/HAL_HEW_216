@@ -242,8 +242,8 @@ namespace Core
                         return;
                 }
 
-                auto sharedHandle = std::shared_ptr<IUpdatable>(&node, [](IUpdatable*){});
-                m_nodes.push_back({ &node, sharedHandle, sharedHandle });
+                auto sharedHandle = std::shared_ptr<IUpdatable>(std::addressof(node));
+                m_nodes.push_back({ sharedHandle.get(), sharedHandle, sharedHandle });
                 m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
@@ -425,6 +425,35 @@ namespace Core
                         m_pendingOrderChanges.clear();
                 }
 
+                auto cleanupNodeReferences = [this](IUpdatable* raw)
+                {
+                        if (!raw)
+                        {
+                                return;
+                        }
+
+                        m_registrationOrder.erase(raw);
+                        m_orderOverrides.erase(raw);
+                        auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
+                                [raw](const Dependency& dep)
+                                {
+                                        return dep.first == raw || dep.second == raw;
+                                });
+                        if (depIt != m_dependencies.end())
+                        {
+                                m_dependencies.erase(depIt, m_dependencies.end());
+                        }
+                };
+
+                for (auto& handle : m_nodes)
+                {
+                        if (handle.raw && handle.weak.expired())
+                        {
+                                cleanupNodeReferences(handle.raw);
+                                handle.Expire();
+                        }
+                }
+
                 auto removeExpiredHandle = [this](const NodeHandle& handle)
                 {
                         if (!handle.IsExpired())
@@ -433,20 +462,7 @@ namespace Core
                         }
 
                         IUpdatable* raw = handle.Get();
-                        if (raw)
-                        {
-                                m_registrationOrder.erase(raw);
-                                m_orderOverrides.erase(raw);
-                                auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
-                                        [raw](const Dependency& dep)
-                                        {
-                                                return dep.first == raw || dep.second == raw;
-                                        });
-                                if (depIt != m_dependencies.end())
-                                {
-                                        m_dependencies.erase(depIt, m_dependencies.end());
-                                }
-                        }
+                        cleanupNodeReferences(raw);
 
                         return true;
                 };
@@ -491,7 +507,8 @@ namespace Core
                                         auto handleIt = FindNodeHandle(&node);
                                         if (handleIt != m_nodes.end() && handleIt->IsExpired())
                                         {
-                                                auto revived = std::shared_ptr<IUpdatable>(&node, [](IUpdatable*){});
+                                                auto revived = std::shared_ptr<IUpdatable>(std::addressof(node));
+                                                handleIt->raw = revived.get();
                                                 handleIt->owner = revived;
                                                 handleIt->weak = revived;
                                         }
@@ -576,12 +593,6 @@ namespace Core
                                 oss << "[UpdateScheduler] Duplicate pending unregistration detected for node=" << &node << '\n';
                                 DebugLog(oss.str());
                                 return;
-                        }
-
-                        auto handleIt = FindNodeHandle(&node);
-                        if (handleIt != m_nodes.end())
-                        {
-                                handleIt->Expire();
                         }
 
                         m_pendingUnregistrations.emplace_back(&node);
