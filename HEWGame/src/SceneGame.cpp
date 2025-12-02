@@ -1022,6 +1022,10 @@ SceneGame::SceneGame()
         player->SetMinimumY(platformTopY);
         player->SetMoveSpeed(m_playerBaseMoveSpeed);
         RegisterPhysicsBody(*player);
+        if (m_contactSystem && m_physicsMachine)
+        {
+            m_contactSystem->SetBodySource(&m_physicsMachine->GetBodies());
+        }
         {
             std::ostringstream oss;
             const bool isKinematic = player->IsKinematic();
