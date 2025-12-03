@@ -554,7 +554,6 @@ UpdateNode:
 | `Cake` | `Cake.obj` | 1m 立方体（テクスチャ・法線つき） | キューブ状のスポンジケーキ |
 | `Pudding` | `Pudding.obj` | 三角柱（UV展開済み） | 断面が三角形のプリン |
 | `Sherbet` | `Sherbet.obj` | ローポリ球（シェーディング対応） | 丸いシャーベット |
-| `Strawberry` | `Strawberry.obj` | ローポリ球（UV展開済み） | 種付きのイチゴシャーベット |
 | `Fairy` | Procedural cross-plane (fallback: `Fairy.obj`) | 青系頂点カラーの板ポリ×2 | プレイヤーフェアリー |
 
 ### プレースホルダーの使い方
