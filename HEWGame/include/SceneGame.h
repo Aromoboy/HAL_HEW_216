@@ -95,6 +95,7 @@ private:
     void ToggleGameplaySystems(bool enabled);
     bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
+    void ValidatePlayerPhysicsRegistration();
 #if defined(_DEBUG)
     void RenderRunTelemetryOverlay() const;
 #endif
@@ -120,6 +121,8 @@ private:
     std::vector<bool> m_platformDrawRegistered;
     Stage::FoundationPlatform* m_platePlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
+    bool m_loggedPlayerBodyRecovery = false;
+    bool m_loggedPlayerContactRecovery = false;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_contactRegistered = false;

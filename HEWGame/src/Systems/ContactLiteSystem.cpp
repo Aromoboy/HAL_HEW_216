@@ -240,10 +240,14 @@ namespace Systems
                 , m_minLinearSpeed(0.05f)
                 , m_minVerticalSpeed(0.02f)
                 , m_minTangentialSpeed(0.01f)
+                , m_includeKinematicBodies(true)
+                , m_allowKinematicPlayerCollision(true)
                 , m_loggedMissingBodyList(false)
                 , m_loggedBodySnapshot(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
+                , m_loggedKinematicFilter(false)
+                , m_loggedKinematicPlayerFilter(false)
                 , m_loggedPlayerPlatformContact(false)
                 , m_loggedPlayerSweetsContact(false)
                 , m_loggedSuppressedSweetsFloor(false)
@@ -259,6 +263,8 @@ namespace Systems
                 m_loggedBodySnapshot = false;
                 m_loggedPlayerPresence = false;
                 m_loggedPlayerAbsence = false;
+                m_loggedKinematicFilter = false;
+                m_loggedKinematicPlayerFilter = false;
                 m_loggedPlayerPlatformContact = false;
                 m_loggedPlayerSweetsContact = false;
                 m_loggedSuppressedSweetsFloor = false;
@@ -352,6 +358,16 @@ namespace Systems
                 m_minTangentialSpeed = std::max(0.0f, minSpeed);
         }
 
+        void ContactLiteSystem::SetIncludeKinematicBodies(bool include)
+        {
+                m_includeKinematicBodies = include;
+        }
+
+        void ContactLiteSystem::SetAllowKinematicPlayerCollision(bool allow)
+        {
+                m_allowKinematicPlayerCollision = allow;
+        }
+
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
         {
                 if (!m_bodies)
@@ -364,19 +380,57 @@ namespace Systems
                         return;
                 }
 
-                const size_t bodyCount = m_bodies->size();
+                const size_t sourceBodyCount = m_bodies->size();
+                std::vector<Entities::PhysicalEntity*> activeBodies;
+                activeBodies.reserve(sourceBodyCount);
+                for (Entities::PhysicalEntity* body : *m_bodies)
+                {
+                        if (!body)
+                        {
+                                continue;
+                        }
+
+                        const bool isPlayer = IsPlayerBody(body);
+                        const bool kinematic = !(body->GetPhysical().weight > 0.0f);
+                        if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
+                        {
+#if defined(_DEBUG)
+                                if (isPlayer && !m_loggedKinematicPlayerFilter)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Skipping kinematic player body due to filter; set AllowKinematicPlayerCollision(true) to opt in. tag='"
+                                                << body->GetTag() << "'\n";
+                                        DebugTrace(oss.str());
+                                        m_loggedKinematicPlayerFilter = true;
+                                }
+                                else if (!isPlayer && !m_loggedKinematicFilter)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Kinematic body filtered from contact pass. tag='" << body->GetTag()
+                                                << "' weight=" << body->GetPhysical().weight << "\n";
+                                        DebugTrace(oss.str());
+                                        m_loggedKinematicFilter = true;
+                                }
+#endif
+                                continue;
+                        }
+
+                        activeBodies.push_back(body);
+                }
+
+                const size_t bodyCount = activeBodies.size();
 #if defined(_DEBUG)
                 if (!m_loggedBodySnapshot)
                 {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "OnUpdate body list snapshot count=" << bodyCount << " tags=[";
+                        oss << kLogPrefix << "OnUpdate body list snapshot count=" << bodyCount << " source=" << sourceBodyCount << " tags=[";
                         for (size_t i = 0; i < bodyCount; ++i)
                         {
                                 if (i > 0)
                                 {
                                         oss << ", ";
                                 }
-                                const auto* body = (*m_bodies)[i];
+                                const auto* body = activeBodies[i];
                                 if (body)
                                 {
                                         oss << '\"' << body->GetTag() << '\"';
@@ -391,7 +445,7 @@ namespace Systems
                         m_loggedBodySnapshot = true;
                 }
 #endif
-                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](Entities::PhysicalEntity* body)
+                const bool playerPresent = std::any_of(activeBodies.begin(), activeBodies.end(), [](Entities::PhysicalEntity* body)
                 {
                         return IsPlayerBody(body);
                 });
@@ -424,7 +478,7 @@ namespace Systems
 
                 for (size_t i = 0; i < bodyCount; ++i)
                 {
-                        Entities::PhysicalEntity* bodyA = (*m_bodies)[i];
+                        Entities::PhysicalEntity* bodyA = activeBodies[i];
                         if (!bodyA)
                         {
                                 continue;
@@ -442,7 +496,7 @@ namespace Systems
 
                         for (size_t j = i + 1; j < bodyCount; ++j)
                         {
-                                Entities::PhysicalEntity* bodyB = (*m_bodies)[j];
+                                Entities::PhysicalEntity* bodyB = activeBodies[j];
                                 if (!bodyB)
                                 {
                                         continue;
