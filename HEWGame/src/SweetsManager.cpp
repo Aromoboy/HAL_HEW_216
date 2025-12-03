@@ -3308,13 +3308,13 @@ namespace SweetsSpace
             {
                 spawnWeight = presetIt->second.spawnWeight;
             }
-            else if (m_warnedMissingFactoryPresetKinds.insert(entry.first).second)
+            /*else if (m_warnedMissingFactoryPresetKinds.insert(entry.first).second)
             {
                 std::ostringstream warn;
                 warn << kLogPrefix << "No factory preset found for kind '" << entry.first
                     << "' while building default weights; using fallback weight=" << spawnWeight << ".\n";
                 DebugTrace(warn.str());
-            }
+            }*/ //このラインがバグってるのでコメントアウトした（ミハイルより）
 
             if (spawnWeight <= 0.0f)
             {
