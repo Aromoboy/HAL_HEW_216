@@ -34,6 +34,11 @@
 #include "Systems/PhysicsMachine.h"
 #include <DirectXMath.h>
 
+namespace SweetsSpace
+{
+    const char* ToString(ColliderShape shape);
+}
+
 namespace
 {
 #if defined(_WIN32) && defined(_DEBUG)
@@ -73,22 +78,22 @@ namespace
         DirectX::XMFLOAT4 ambient{};
     };
 
-    FallbackMaterialColors GetFallbackColorsFor(SweetsSpace::SweetsType type)
+    FallbackMaterialColors GetFallbackColorsFor(::SweetsSpace::SweetsType type)
     {
         // Ambient alpha is kept at 1.0 to disable texture sampling for texture-less meshes.
         switch (type)
         {
-        case SweetsSpace::SweetsType::Pudding:
+        case ::SweetsSpace::SweetsType::Pudding:
             return { DirectX::XMFLOAT4{ 0.89f, 0.72f, 0.38f, 1.0f }, DirectX::XMFLOAT4{ 0.65f, 0.52f, 0.28f, 1.0f } };
-        case SweetsSpace::SweetsType::Sherbet:
+        case ::SweetsSpace::SweetsType::Sherbet:
             return { DirectX::XMFLOAT4{ 0.96f, 0.78f, 0.86f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.62f, 0.69f, 1.0f } };
-        case SweetsSpace::SweetsType::Cake:
+        case ::SweetsSpace::SweetsType::Cake:
         default:
             return { DirectX::XMFLOAT4{ 1.0f, 0.94f, 0.85f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.72f, 0.62f, 1.0f } };
         }
     }
 
-    void ApplyFallbackMaterials(ModelDX& model, SweetsSpace::SweetsType type)
+    void ApplyFallbackMaterials(ModelDX& model, ::SweetsSpace::SweetsType type)
     {
         const FallbackMaterialColors colors = GetFallbackColorsFor(type);
         std::unordered_set<unsigned int> visitedMaterials;
@@ -126,21 +131,16 @@ namespace
             oss << kLogPrefix << "Applied fallback material for materialId=" << materialId
                 << " diffuse=(" << colors.diffuse.x << ',' << colors.diffuse.y << ',' << colors.diffuse.z
                 << ") ambient=(" << colors.ambient.x << ',' << colors.ambient.y << ',' << colors.ambient.z
-                << ") sweetsType=" << SweetsSpace::ToString(type) << "\n";
+                << ") sweetsType=" << ::SweetsSpace::ToString(type) << "\n";
             DebugTrace(oss.str());
 #endif
         }
     }
 
-    using SweetsSpace::ColliderPreset;
-    using SweetsSpace::ColliderShape;
-    using SweetsSpace::SweetsPrototypeManifest;
-    using SweetsSpace::SweetsType;
-
-    namespace SweetsSpace
-    {
-        const char* ToString(ColliderShape shape);
-    }
+    using ::SweetsSpace::ColliderPreset;
+    using ::SweetsSpace::ColliderShape;
+    using ::SweetsSpace::SweetsPrototypeManifest;
+    using ::SweetsSpace::SweetsType;
 
     struct ModelBounds
     {
@@ -184,7 +184,7 @@ namespace
         }
     }
 
-    void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
+    void UpdateBatchUsage(::SweetsSpace::DeleteBatchContext* batch, ::SweetsSpace::UseOutcome outcome)
     {
         if (!batch)
         {
@@ -196,7 +196,7 @@ namespace
             --batch->usesRemaining;
         }
 
-        if (outcome == SweetsSpace::UseOutcome::Hit)
+        if (outcome == ::SweetsSpace::UseOutcome::Hit)
         {
             ++batch->usesRemaining;
         }
@@ -224,11 +224,11 @@ namespace
         return (kPlatformWidth * 0.5f) + sanitizedMargin;
     }
 
-    SweetsSpace::SweetsState EvaluateState(SweetsSpace::ActiveSweets& sweets, SweetsSpace::SweetsState currentState)
+    ::SweetsSpace::SweetsState EvaluateState(::SweetsSpace::ActiveSweets& sweets, ::SweetsSpace::SweetsState currentState)
     {
-        if (currentState == SweetsSpace::SweetsState::Carried)
+        if (currentState == ::SweetsSpace::SweetsState::Carried)
         {
-            return SweetsSpace::SweetsState::Carried;
+            return ::SweetsSpace::SweetsState::Carried;
         }
 
         const float speedSq = ComputeSpeedSq(sweets.GetPhysical());
@@ -236,19 +236,19 @@ namespace
 
         if (height <= kGroundHeightThreshold && speedSq <= kRestVelocityThresholdSq)
         {
-            return SweetsSpace::SweetsState::Stacked;
+            return ::SweetsSpace::SweetsState::Stacked;
         }
 
         if (speedSq <= kRestVelocityThresholdSq)
         {
-            return SweetsSpace::SweetsState::Stacked;
+            return ::SweetsSpace::SweetsState::Stacked;
         }
 
-        return SweetsSpace::SweetsState::Active;
+        return ::SweetsSpace::SweetsState::Active;
     }
 
     bool IsHorizontallyOutOfBounds(
-        const SweetsSpace::ActiveSweets& sweets,
+        const ::SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
         float margin,
         float fallbackLimit,
@@ -311,9 +311,9 @@ namespace
         return std::string(begin, end);
     }
 
-    std::vector<SweetsSpace::WeightedSweetsType> ParseWeights(const std::string& raw, bool* outError)
+    std::vector<::SweetsSpace::WeightedSweetsType> ParseWeights(const std::string& raw, bool* outError)
     {
-        std::vector<SweetsSpace::WeightedSweetsType> weights;
+        std::vector<::SweetsSpace::WeightedSweetsType> weights;
         auto& manifest = SweetsPrototypeManifest::Instance();
         std::string token;
         std::istringstream stream(raw);
@@ -410,13 +410,13 @@ namespace
         }
     }
 
-    const char* SweetsSpace::ToString(ColliderShape shape)
+    const char* ::SweetsSpace::ToString(::SweetsSpace::ColliderShape shape)
     {
         switch (shape)
         {
-        case ColliderShape::Box:
+        case ::SweetsSpace::ColliderShape::Box:
             return "Box";
-        case ColliderShape::Capsule:
+        case ::SweetsSpace::ColliderShape::Capsule:
             return "Capsule";
         default:
             return "Unknown";
@@ -876,7 +876,7 @@ namespace SweetsSpace
     class LateUpdateNode : public Core::UpdateNode
     {
     public:
-        explicit LateUpdateNode(SweetsSpace::SweetsManager& owner)
+        explicit LateUpdateNode(::SweetsSpace::SweetsManager& owner)
             : Core::UpdateNode(Core::UpdatePhase::Late, 0)
             , m_owner(owner)
         {
@@ -888,7 +888,7 @@ namespace SweetsSpace
         }
 
     private:
-        SweetsSpace::SweetsManager& m_owner;
+        ::SweetsSpace::SweetsManager& m_owner;
     };
 
     SweetsManager::SweetsManager()
@@ -2273,8 +2273,8 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
             << "' state=" << StateToString(previousState)
-            << " deleteReason=" << SweetsSpace::ToString(reason)
-            << " outcome=" << SweetsSpace::ToString(outcome)
+            << " deleteReason=" << ::SweetsSpace::ToString(reason)
+            << " outcome=" << ::SweetsSpace::ToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
