@@ -244,6 +244,9 @@ namespace SweetsSpace
         std::string ChooseKindFromActiveConfig();
         void OnPhaseConfigurationChanged(int newPhase);
         void LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const;
+        void EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
+            const std::unordered_set<std::string>& registeredKindsNormalized,
+            const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
