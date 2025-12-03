@@ -84,6 +84,39 @@ namespace
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
 
+    std::optional<std::string> ResolveFallbackModelPath(SweetsSpace::SweetsType type, const std::string& currentPath)
+    {
+        std::string fallbackPath;
+
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Cake:
+            fallbackPath = "Assets/Model/SweetsPrototype/Cake.obj";
+            break;
+        case SweetsSpace::SweetsType::Pudding:
+            fallbackPath = "Assets/Model/SweetsPrototype/Pudding.obj";
+            break;
+        case SweetsSpace::SweetsType::Sherbet:
+            fallbackPath = "Assets/Model/SweetsPrototype/Sherbet.obj";
+            break;
+        case SweetsSpace::SweetsType::Strawberry:
+            fallbackPath = "Assets/Model/strawberry_low01.fbx";
+            break;
+        case SweetsSpace::SweetsType::Fairy:
+            fallbackPath = "Assets/Model/SweetsPrototype/Fairy.obj";
+            break;
+        default:
+            break;
+        }
+
+        if (!fallbackPath.empty() && fallbackPath != currentPath)
+        {
+            return fallbackPath;
+        }
+
+        return std::nullopt;
+    }
+
     struct FallbackMaterialColors
     {
         DirectX::XMFLOAT4 diffuse{};
@@ -1107,7 +1140,29 @@ namespace SweetsSpace
                     fail << kLogPrefix << "Model load failed for sweets kind '" << kind
                         << "' path='" << modelPath << "'.\n";
                     DebugTrace(fail.str());
-                    return nullptr;
+
+                    const auto fallbackPath = ResolveFallbackModelPath(type, modelPath);
+                    if (fallbackPath)
+                    {
+                        std::ostringstream fallbackAttempt;
+                        fallbackAttempt << kLogPrefix << "Attempting fallback model for kind '" << kind
+                            << "' path='" << *fallbackPath << "' (primary='" << modelPath << "').\n";
+                        DebugTrace(fallbackAttempt.str());
+
+                        model = cache.Get(*fallbackPath);
+                        if (!model)
+                        {
+                            std::ostringstream fallbackFail;
+                            fallbackFail << kLogPrefix << "Fallback model also failed for sweets kind '" << kind
+                                << "' fallbackPath='" << *fallbackPath << "'.\n";
+                            DebugTrace(fallbackFail.str());
+                        }
+                    }
+
+                    if (!model)
+                    {
+                        return nullptr;
+                    }
                 }
 
                 ApplyFallbackMaterials(*model, type);
