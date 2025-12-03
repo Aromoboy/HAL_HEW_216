@@ -30,6 +30,12 @@ namespace Systems
         void SetMinLinearSpeed(float minSpeed);
         void SetMinVerticalSpeed(float minSpeed);
         void SetMinTangentialSpeed(float minSpeed);
+        void SetIncludeKinematicBodies(bool include);
+        void SetAllowKinematicPlayerCollision(bool allow);
+
+        const std::vector<Entities::PhysicalEntity*>* GetBodySource() const { return m_bodies; }
+        bool IsIncludingKinematicBodies() const { return m_includeKinematicBodies; }
+        bool IsAllowingKinematicPlayerCollision() const { return m_allowKinematicPlayerCollision; }
 
         float GetPenetrationTolerance() const { return m_penetrationTolerance; }
         float GetRestitution() const { return m_restitution; }
@@ -68,10 +74,14 @@ namespace Systems
         float m_minLinearSpeed;
         float m_minVerticalSpeed;
         float m_minTangentialSpeed;
+        bool m_includeKinematicBodies;
+        bool m_allowKinematicPlayerCollision;
         bool m_loggedMissingBodyList;
         bool m_loggedBodySnapshot;
         bool m_loggedPlayerPresence;
         bool m_loggedPlayerAbsence;
+        bool m_loggedKinematicFilter;
+        bool m_loggedKinematicPlayerFilter;
         bool m_loggedPlayerPlatformContact;
         bool m_loggedPlayerSweetsContact;
         bool m_loggedSuppressedSweetsFloor;

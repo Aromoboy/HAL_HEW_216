@@ -1077,6 +1077,8 @@ SceneGame::SceneGame()
         m_contactSystem->SetMinLinearSpeed(tuning.minLinearSpeed);
         m_contactSystem->SetMinVerticalSpeed(tuning.minVerticalSpeed);
         m_contactSystem->SetMinTangentialSpeed(tuning.minTangentialSpeed);
+        m_contactSystem->SetIncludeKinematicBodies(true);
+        m_contactSystem->SetAllowKinematicPlayerCollision(true);
         std::ostringstream oss;
         oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
             << ", restitution=" << tuning.restitution
@@ -1439,6 +1441,19 @@ SceneGame::SceneGame()
                 << ", weight=" << player->GetPhysical().weight << ").\n";
             ::DebugTrace(oss.str());
         }
+        if (m_contactSystem)
+        {
+            const auto* bodies = m_contactSystem->GetBodySource();
+            const bool inContactList = bodies
+                && std::find(bodies->begin(), bodies->end(), player.get()) != bodies->end();
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerSpawn] Contact solver input injection"
+                << " confirmed=" << std::boolalpha << inContactList
+                << " bodyCount=" << (bodies ? bodies->size() : 0)
+                << " playerWeight=" << player->GetPhysical().weight
+                << " kinematic=" << player->IsKinematic() << "\n";
+            ::DebugTrace(oss.str());
+        }
         if (collider)
         {
             const AABB bounds = collider->GetAABB();
@@ -1674,6 +1689,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
         HandleColliderDebugCommands(ctx);
 #endif
+    ValidatePlayerPhysicsRegistration();
     RefreshPlatformAnchor(false);
     UpdateCountdown(ctx);
     UpdateTowerHeightTelemetry();
@@ -2248,6 +2264,67 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
     else
     {
         DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
+    }
+}
+
+void SceneGame::ValidatePlayerPhysicsRegistration()
+{
+    if (!player || !m_physicsMachine)
+    {
+        return;
+    }
+
+    const auto& physicsBodies = m_physicsMachine->GetBodies();
+    const bool registeredWithPhysics = std::find(physicsBodies.begin(), physicsBodies.end(), player.get()) != physicsBodies.end();
+    if (!registeredWithPhysics)
+    {
+        RegisterPhysicsBody(*player);
+        std::ostringstream oss;
+        oss << kLogPrefix << "Player body missing from PhysicsMachine list; re-registering (kinematic="
+            << std::boolalpha << player->IsKinematic()
+            << ", weight=" << player->GetPhysical().weight << ").\n";
+        ::DebugTrace(oss.str());
+        m_loggedPlayerBodyRecovery = true;
+    }
+    else if (m_loggedPlayerBodyRecovery)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Player body present in PhysicsMachine after prior recovery.\n");
+        m_loggedPlayerBodyRecovery = false;
+    }
+
+    if (!m_contactSystem)
+    {
+        return;
+    }
+
+    const auto* contactBodies = m_contactSystem->GetBodySource();
+    const bool contactListInitialized = (contactBodies != nullptr);
+    const bool registeredWithContact = contactListInitialized
+        && std::find(contactBodies->begin(), contactBodies->end(), player.get()) != contactBodies->end();
+
+    if (!registeredWithContact && contactListInitialized)
+    {
+        m_contactSystem->SetBodySource(&physicsBodies);
+        std::ostringstream oss;
+        oss << kLogPrefix << "Player body was absent from ContactLiteSystem input; refreshing body source"
+            << " (physicsBodies=" << physicsBodies.size()
+            << ", contactBodies=" << contactBodies->size()
+            << ", allowKinematicPlayer=" << std::boolalpha << m_contactSystem->IsAllowingKinematicPlayerCollision()
+            << ").\n";
+        ::DebugTrace(oss.str());
+        m_loggedPlayerContactRecovery = true;
+    }
+    else if (!contactListInitialized)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ContactLiteSystem body source missing; cannot validate player registration.\n");
+    }
+    else if (m_loggedPlayerContactRecovery)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Player body confirmed in ContactLiteSystem after recovery. bodyCount="
+            << contactBodies->size() << "\n";
+        ::DebugTrace(oss.str());
+        m_loggedPlayerContactRecovery = false;
     }
 }
 
