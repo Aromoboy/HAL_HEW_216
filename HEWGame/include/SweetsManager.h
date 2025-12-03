@@ -254,6 +254,10 @@ namespace SweetsSpace
             bool logWarnings,
             DeleteBatchContext* batchContext);
 
+        static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
+        static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);
+        static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
+
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
 

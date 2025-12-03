@@ -410,178 +410,6 @@ namespace
         }
     }
 
-    using FactoryPreset = SweetsSpace::SweetsManager::FactoryPreset;
-
-    std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsSpace::SweetsType type)
-    {
-        FactoryPreset preset{};
-        preset.spawnWeight = 0.0f;
-        preset.weight = 1.0f;
-        preset.damping = 0.98f;
-        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
-        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
-        preset.colliderPreset = ColliderPreset{};
-
-        switch (type)
-        {
-        case SweetsSpace::SweetsType::Cake:
-            preset.spawnWeight = 1.0f;
-            preset.weight = 1.35f;
-            preset.damping = 0.96f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
-            return preset;
-        case SweetsSpace::SweetsType::Pudding:
-            preset.spawnWeight = 1.0f;
-            preset.weight = 1.0f;
-            preset.damping = 0.98f;
-            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
-            return preset;
-        case SweetsSpace::SweetsType::Sherbet:
-            preset.spawnWeight = 1.0f;
-            preset.weight = 0.85f;
-            preset.damping = 0.99f;
-            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
-            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
-            return preset;
-        default:
-            return std::nullopt;
-        }
-    }
-
-    bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
-    {
-        if (tokens.size() < 13)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset row on line " << lineNumber
-                << " had " << tokens.size() << " tokens; expected 13.\n";
-            DebugTrace(oss.str());
-            return false;
-        }
-
-        bool parseError = false;
-        parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.weight);
-        parseError |= !TryParseFloat(tokens[3], &outPreset.damping);
-        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.x);
-        parseError |= !TryParseFloat(tokens[5], &outPreset.minScale.y);
-        parseError |= !TryParseFloat(tokens[6], &outPreset.minScale.z);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.x);
-        parseError |= !TryParseFloat(tokens[8], &outPreset.maxScale.y);
-        parseError |= !TryParseFloat(tokens[9], &outPreset.maxScale.z);
-        parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[12], &outPreset.colliderPreset.padding.y);
-
-        if (tokens.size() > 13)
-        {
-            parseError |= !TryParseFloat(tokens[13], &outPreset.colliderPreset.padding.z);
-        }
-        else
-        {
-            outPreset.colliderPreset.padding.z = 0.0f;
-        }
-
-        const std::string colliderShape = NormalizeKey(tokens[10]);
-        if (colliderShape == "capsule")
-        {
-            outPreset.colliderPreset.shape = ColliderShape::Capsule;
-        }
-        else if (colliderShape == "box" || colliderShape.empty())
-        {
-            outPreset.colliderPreset.shape = ColliderShape::Box;
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Unknown collider preset '" << tokens[10]
-                << "' on line " << lineNumber << "; defaulting to Box.\n";
-            DebugTrace(oss.str());
-            outPreset.colliderPreset.shape = ColliderShape::Box;
-        }
-
-        outPreset.spawnWeight = std::max(0.0f, outPreset.spawnWeight);
-        outPreset.weight = std::max(0.0f, outPreset.weight);
-        outPreset.damping = std::clamp(outPreset.damping, 0.0f, 0.999f);
-        return !parseError;
-    }
-
-    std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError)
-    {
-        std::map<std::string, FactoryPreset> overrides;
-        std::ifstream file(kFactoryPresetCsvPath);
-        if (!file.is_open())
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset CSV missing at '" << kFactoryPresetCsvPath
-                << "'; falling back to legacy defaults.\n";
-            DebugTrace(oss.str());
-            return overrides;
-        }
-
-        std::string line;
-        size_t lineNumber = 0;
-        while (std::getline(file, line))
-        {
-            ++lineNumber;
-            std::string trimmed = TrimToken(line);
-            if (trimmed.empty() || trimmed[0] == '#')
-            {
-                continue;
-            }
-
-            std::vector<std::string> tokens;
-            std::stringstream ss(trimmed);
-            std::string column;
-            while (std::getline(ss, column, ','))
-            {
-                tokens.push_back(TrimToken(column));
-            }
-
-            if (tokens.empty())
-            {
-                continue;
-            }
-
-            const std::string normalizedHeader = NormalizeKey(tokens[0]);
-            if (normalizedHeader == "key")
-            {
-                continue;
-            }
-
-            FactoryPreset preset{};
-            if (!ParseFactoryRow(tokens, preset, lineNumber))
-            {
-                if (parseError)
-                {
-                    *parseError = true;
-                }
-                continue;
-            }
-
-            const std::string normalizedKey = NormalizeKey(tokens[0]);
-            overrides[normalizedKey] = preset;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
-                << "' spawnWeight=" << preset.spawnWeight
-                << " weight=" << preset.weight
-                << " damping=" << preset.damping
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
-                << " collider=" << ToString(preset.colliderPreset.shape)
-                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
-                << preset.colliderPreset.padding.z << ")\n";
-            DebugTrace(oss.str());
-        }
-
-        return overrides;
-    }
-
     const char* SweetsSpace::ToString(ColliderShape shape)
     {
         switch (shape)
@@ -873,6 +701,176 @@ namespace SweetsSpace
         default:
             return "Unknown";
         }
+    }
+
+    std::optional<SweetsManager::FactoryPreset> SweetsManager::BuildDefaultFactoryPreset(SweetsType type)
+    {
+        FactoryPreset preset{};
+        preset.spawnWeight = 0.0f;
+        preset.weight = 1.0f;
+        preset.damping = 0.98f;
+        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.colliderPreset = ColliderPreset{};
+
+        switch (type)
+        {
+        case SweetsType::Cake:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 1.35f;
+            preset.damping = 0.96f;
+            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
+            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
+            return preset;
+        case SweetsType::Pudding:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 1.0f;
+            preset.damping = 0.98f;
+            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
+            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
+            return preset;
+        case SweetsType::Sherbet:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 0.85f;
+            preset.damping = 0.99f;
+            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
+            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            return preset;
+        default:
+            return std::nullopt;
+        }
+    }
+
+    bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
+    {
+        if (tokens.size() < 13)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Factory preset row on line " << lineNumber
+                << " had " << tokens.size() << " tokens; expected 13.\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        bool parseError = false;
+        parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
+        parseError |= !TryParseFloat(tokens[2], &outPreset.weight);
+        parseError |= !TryParseFloat(tokens[3], &outPreset.damping);
+        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.x);
+        parseError |= !TryParseFloat(tokens[5], &outPreset.minScale.y);
+        parseError |= !TryParseFloat(tokens[6], &outPreset.minScale.z);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.x);
+        parseError |= !TryParseFloat(tokens[8], &outPreset.maxScale.y);
+        parseError |= !TryParseFloat(tokens[9], &outPreset.maxScale.z);
+        parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[12], &outPreset.colliderPreset.padding.y);
+
+        if (tokens.size() > 13)
+        {
+            parseError |= !TryParseFloat(tokens[13], &outPreset.colliderPreset.padding.z);
+        }
+        else
+        {
+            outPreset.colliderPreset.padding.z = 0.0f;
+        }
+
+        const std::string colliderShape = NormalizeKey(tokens[10]);
+        if (colliderShape == "capsule")
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Capsule;
+        }
+        else if (colliderShape == "box" || colliderShape.empty())
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Box;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Unknown collider preset '" << tokens[10]
+                << "' on line " << lineNumber << "; defaulting to Box.\n";
+            DebugTrace(oss.str());
+            outPreset.colliderPreset.shape = ColliderShape::Box;
+        }
+
+        outPreset.spawnWeight = std::max(0.0f, outPreset.spawnWeight);
+        outPreset.weight = std::max(0.0f, outPreset.weight);
+        outPreset.damping = std::clamp(outPreset.damping, 0.0f, 0.999f);
+        return !parseError;
+    }
+
+    std::map<std::string, SweetsManager::FactoryPreset> SweetsManager::LoadFactoryPresets(bool* parseError)
+    {
+        std::map<std::string, FactoryPreset> overrides;
+        std::ifstream file(kFactoryPresetCsvPath);
+        if (!file.is_open())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Factory preset CSV missing at '" << kFactoryPresetCsvPath
+                << "'; falling back to legacy defaults.\n";
+            DebugTrace(oss.str());
+            return overrides;
+        }
+
+        std::string line;
+        size_t lineNumber = 0;
+        while (std::getline(file, line))
+        {
+            ++lineNumber;
+            std::string trimmed = TrimToken(line);
+            if (trimmed.empty() || trimmed[0] == '#')
+            {
+                continue;
+            }
+
+            std::vector<std::string> tokens;
+            std::stringstream ss(trimmed);
+            std::string column;
+            while (std::getline(ss, column, ','))
+            {
+                tokens.push_back(TrimToken(column));
+            }
+
+            if (tokens.empty())
+            {
+                continue;
+            }
+
+            const std::string normalizedHeader = NormalizeKey(tokens[0]);
+            if (normalizedHeader == "key")
+            {
+                continue;
+            }
+
+            FactoryPreset preset{};
+            if (!ParseFactoryRow(tokens, preset, lineNumber))
+            {
+                if (parseError)
+                {
+                    *parseError = true;
+                }
+                continue;
+            }
+
+            const std::string normalizedKey = NormalizeKey(tokens[0]);
+            overrides[normalizedKey] = preset;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
+                << "' spawnWeight=" << preset.spawnWeight
+                << " weight=" << preset.weight
+                << " damping=" << preset.damping
+                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
+                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                << preset.colliderPreset.padding.z << ")\n";
+            DebugTrace(oss.str());
+        }
+
+        return overrides;
     }
 
     class LateUpdateNode : public Core::UpdateNode
