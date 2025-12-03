@@ -68,6 +68,13 @@ namespace SweetsSpace
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
+    struct PlayerColliderTuning
+    {
+        float thicknessPadding = 1.0f;
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+        float3 offset{ 0.0f, 0.0f, 0.0f };
+    };
+
     SceneGame();
     ~SceneGame();
     void Load(Core::Input& input) override;
@@ -178,12 +185,6 @@ private:
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
-    struct PlayerColliderTuning
-    {
-        float thicknessPadding = 1.0f;
-        float3 padding{ 0.0f, 0.0f, 0.0f };
-        float3 offset{ 0.0f, 0.0f, 0.0f };
-    };
     PlayerColliderTuning m_playerColliderTuning;
 };
 
