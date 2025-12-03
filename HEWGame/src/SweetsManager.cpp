@@ -137,7 +137,10 @@ namespace
     using SweetsSpace::SweetsPrototypeManifest;
     using SweetsSpace::SweetsType;
 
-    const char* ToString(ColliderShape shape);
+    namespace SweetsSpace
+    {
+        const char* ToString(ColliderShape shape);
+    }
 
     struct ModelBounds
     {
@@ -579,7 +582,7 @@ namespace
         return overrides;
     }
 
-    const char* ToString(ColliderShape shape)
+    const char* SweetsSpace::ToString(ColliderShape shape)
     {
         switch (shape)
         {
