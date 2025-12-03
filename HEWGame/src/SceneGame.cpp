@@ -8,6 +8,7 @@
 #include "Defines.h"
 #include "DebugConsole.h"
 #include "AssimpModelLorder.h"
+#include "MeshBuffer.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
 #include "Systems/IntegrateSystem.h"
@@ -24,6 +25,8 @@
 #include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
 #include "Entities/Player.h"
+#include "Collision/ConvexHullBuilder.h"
+#include "ColliderConfigLoader.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -63,6 +66,8 @@ namespace
         constexpr bool kEnablePhysicsIntegrationLogging = true;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
+        constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
+        constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -70,6 +75,10 @@ namespace
         constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
         constexpr float kFallbackPlayerMoveSpeed = 15.0f;
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+        constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
+        constexpr float kMinGeneratedThickness = 0.05f;
+        constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
+        constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
         const HudLayoutConfig kHudLayoutConfig
         {
             512u,
@@ -86,6 +95,306 @@ namespace
             32.0f,
             DirectX::XMFLOAT4(0.95f, 0.95f, 1.0f, 0.8f)
         };
+
+        struct ModelBounds
+        {
+            float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            bool valid{ false };
+        };
+
+        struct PlayerColliderGeometry
+        {
+            ModelBounds bounds{};
+            std::vector<float2> hull;
+            float rawThickness{ 0.0f };
+            float paddedThickness{ 0.0f };
+        };
+
+        float3 ScaleVector(const float3& value, const float3& scale)
+        {
+            return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
+        }
+
+        float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
+        {
+            const float3 scaledMin = ScaleVector(bounds.min, scale);
+            const float3 scaledMax = ScaleVector(bounds.max, scale);
+            return float3{ (scaledMax.x + scaledMin.x) * 0.5f, (scaledMax.y + scaledMin.y) * 0.5f, (scaledMax.z + scaledMin.z) * 0.5f };
+        }
+
+        PlayerColliderGeometry AnalyzePlayerModelGeometry(const std::string& path, float thicknessPadding)
+        {
+            PlayerColliderGeometry summary{};
+            std::ifstream file(path);
+            if (!file)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Failed to open model for geometry analysis path='" << path << "'\n";
+                DebugTrace(oss.str());
+                return summary;
+            }
+
+            struct PositionOnly
+            {
+                float x;
+                float y;
+                float z;
+            };
+
+            std::vector<PositionOnly> positions;
+            std::vector<UINT> indices;
+            std::string line;
+            const float sanitizedPadding = std::max(thicknessPadding, 1.0f);
+
+            while (std::getline(file, line))
+            {
+                if (line.size() < 2 || (line[0] != 'v' && line[0] != 'f') || line[1] != ' ')
+                {
+                    continue;
+                }
+
+                if (line[0] == 'v')
+                {
+                    std::istringstream parser(line.substr(2));
+                    float x = 0.0f;
+                    float y = 0.0f;
+                    float z = 0.0f;
+                    if (!(parser >> x >> y >> z))
+                    {
+                        continue;
+                    }
+
+                    positions.push_back(PositionOnly{ x, y, z });
+
+                    summary.bounds.min.x = std::min(summary.bounds.min.x, x);
+                    summary.bounds.min.y = std::min(summary.bounds.min.y, y);
+                    summary.bounds.min.z = std::min(summary.bounds.min.z, z);
+
+                    summary.bounds.max.x = std::max(summary.bounds.max.x, x);
+                    summary.bounds.max.y = std::max(summary.bounds.max.y, y);
+                    summary.bounds.max.z = std::max(summary.bounds.max.z, z);
+                    summary.bounds.valid = true;
+                }
+                else if (line[0] == 'f')
+                {
+                    std::istringstream parser(line.substr(2));
+                    std::string token;
+                    std::vector<UINT> faceIndices;
+                    while (parser >> token)
+                    {
+                        const auto slash = token.find('/');
+                        const std::string indexToken = token.substr(0, slash);
+                        try
+                        {
+                            int index = std::stoi(indexToken);
+                            if (index < 0)
+                            {
+                                index = static_cast<int>(positions.size()) + index + 1;
+                            }
+                            const UINT zeroBased = static_cast<UINT>(std::max(index - 1, 0));
+                            faceIndices.push_back(zeroBased);
+                        }
+                        catch (...)
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (faceIndices.size() >= 3)
+                    {
+                        for (size_t i = 1; i + 1 < faceIndices.size(); ++i)
+                        {
+                            indices.push_back(faceIndices[0]);
+                            indices.push_back(faceIndices[i]);
+                            indices.push_back(faceIndices[i + 1]);
+                        }
+                    }
+                }
+            }
+
+            if (summary.bounds.valid)
+            {
+                summary.rawThickness = std::max(summary.bounds.max.z - summary.bounds.min.z, 0.0f);
+                summary.paddedThickness = summary.rawThickness * sanitizedPadding;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] No vertex positions parsed from model path='" << path << "'; bounds invalid.\n";
+                DebugTrace(oss.str());
+            }
+
+            if (!positions.empty())
+            {
+                MeshBuffer::Description desc{};
+                desc.pVtx = positions.data();
+                desc.vtxSize = sizeof(PositionOnly);
+                desc.vtxCount = static_cast<UINT>(positions.size());
+                desc.pIdx = indices.empty() ? nullptr : indices.data();
+                desc.idxSize = indices.empty() ? 0u : sizeof(UINT);
+                desc.idxCount = static_cast<UINT>(indices.size());
+                desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+                summary.hull = Collision::BuildConvexHullFromMesh(desc);
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Geometry analyzed path='" << path << "' positions=" << positions.size()
+                    << " hullPoints=" << summary.hull.size()
+                    << " rawThickness=" << summary.rawThickness
+                    << " paddedThickness=" << summary.paddedThickness
+                    << " paddingFactor=" << sanitizedPadding << "\n";
+                DebugTrace(oss.str());
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Geometry analysis found no positions for '" << path << "'.\n";
+                DebugTrace(oss.str());
+            }
+
+            return summary;
+        }
+
+        SceneGame::PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path)
+        {
+            SceneGame::PlayerColliderTuning tuning{};
+            tuning.thicknessPadding = kDefaultGeneratedThicknessPadding;
+            tuning.padding = kDefaultPlayerColliderPadding;
+            tuning.offset = kDefaultPlayerColliderOffset;
+
+            std::ifstream file(path);
+            if (!file)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Tuning file missing; using defaults path='" << path << "'.\n";
+                DebugTrace(oss.str());
+                return tuning;
+            }
+
+            std::string header;
+            if (!std::getline(file, header))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Tuning file empty; using defaults path='" << path << "'.\n";
+                DebugTrace(oss.str());
+                return tuning;
+            }
+
+            std::string line;
+            while (std::getline(file, line))
+            {
+                if (line.empty() || line[0] == '#')
+                {
+                    continue;
+                }
+
+                std::vector<std::string> tokens;
+                std::stringstream stream(line);
+                std::string token;
+                while (std::getline(stream, token, ','))
+                {
+                    tokens.push_back(token);
+                }
+
+                if (tokens.size() < 7)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerCollider] Expected at least 7 tokens in tuning CSV; got " << tokens.size() << " from '" << line << "'.\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                try
+                {
+                    tuning.thicknessPadding = std::max(std::stof(tokens[0]), 1.0f);
+                    tuning.padding.x = std::stof(tokens[1]);
+                    tuning.padding.y = std::stof(tokens[2]);
+                    tuning.padding.z = std::stof(tokens[3]);
+                    tuning.offset.x = std::stof(tokens[4]);
+                    tuning.offset.y = std::stof(tokens[5]);
+                    tuning.offset.z = std::stof(tokens[6]);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerCollider] Failed to parse tuning row: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Tuning applied pad=(" << tuning.padding.x << ',' << tuning.padding.y << ',' << tuning.padding.z
+                    << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
+                DebugTrace(oss.str());
+                break;
+            }
+
+            return tuning;
+        }
+
+        std::vector<float2> BuildPaddedHull(const PlayerColliderGeometry& geometry, const SceneGame::PlayerColliderTuning& tuning, const float3& scale)
+        {
+            std::vector<float2> hull;
+            hull.reserve(geometry.hull.empty() ? 4u : geometry.hull.size());
+
+            if (geometry.hull.empty())
+            {
+                const float3 scaledMin = ScaleVector(geometry.bounds.min, scale);
+                const float3 scaledMax = ScaleVector(geometry.bounds.max, scale);
+                const float halfWidth = ((scaledMax.x - scaledMin.x) * 0.5f) + tuning.padding.x;
+                const float halfHeight = ((scaledMax.y - scaledMin.y) * 0.5f) + tuning.padding.y;
+                hull.push_back(float2{ -halfWidth, -halfHeight });
+                hull.push_back(float2{ halfWidth, -halfHeight });
+                hull.push_back(float2{ halfWidth, halfHeight });
+                hull.push_back(float2{ -halfWidth, halfHeight });
+            }
+            else
+            {
+                for (auto p : geometry.hull)
+                {
+                    float2 scaled{ p.x * scale.x, p.y * scale.y };
+                    if (scaled.x >= 0.0f)
+                    {
+                        scaled.x += tuning.padding.x;
+                    }
+                    else
+                    {
+                        scaled.x -= tuning.padding.x;
+                    }
+                    if (scaled.y >= 0.0f)
+                    {
+                        scaled.y += tuning.padding.y;
+                    }
+                    else
+                    {
+                        scaled.y -= tuning.padding.y;
+                    }
+                    hull.push_back(scaled);
+                }
+            }
+
+            return hull;
+        }
+
+        std::shared_ptr<Collision::ICollider> BuildGeneratedPlayerCollider(
+            const PlayerColliderGeometry& geometry,
+            const SceneGame::PlayerColliderTuning& tuning,
+            const Transform& transform)
+        {
+            if (!geometry.bounds.valid)
+            {
+                return nullptr;
+            }
+
+            const float clampedThickness = std::max(geometry.paddedThickness * transform.scale.z, kMinGeneratedThickness);
+            const float3 colliderOffset = ComputeColliderOffset(geometry.bounds, transform.scale);
+            const float2 offset2D{ colliderOffset.x + tuning.offset.x, colliderOffset.y + tuning.offset.y };
+            auto hull = BuildPaddedHull(geometry, tuning, transform.scale);
+
+            auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hull, offset2D, clampedThickness, Collision::CollisionLayer::Player);
+            collider->UpdateBounds(transform);
+            return collider;
+        }
 
         struct PhysicsTuningSettings
         {
@@ -602,6 +911,21 @@ void SceneGame::OnExit()
 
 SceneGame::SceneGame()
 {
+    m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
+    m_playerColliderTuning = LoadPlayerColliderTuning(kPlayerColliderTuningPath);
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
+            << " definitions=" << m_playerColliderDefinitions.size()
+            << " tuningPadding=" << m_playerColliderTuning.thicknessPadding
+            << " padXYZ=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
+            << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ")\n";
+        ::DebugTrace(oss.str());
+    }
+
+    PlayerColliderGeometry playerGeometry{};
+    std::string playerColliderKey = "Player";
+
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
     m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
     m_playerBaseMoveSpeed = m_stageData.GetPlayerMoveSpeed();
@@ -870,6 +1194,7 @@ SceneGame::SceneGame()
     }
 
     const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string(kFallbackPlayerModelPath);
+    playerColliderKey = fairyDescriptor ? fairyDescriptor->key : std::string("Fairy");
     std::string resolvedModelPath = primaryModelPath;
     m_playerModel = cache.Get(primaryModelPath);
     if (!m_playerModel && primaryModelPath != kFallbackPlayerModelPath)
@@ -878,6 +1203,8 @@ SceneGame::SceneGame()
         resolvedModelPath = kFallbackPlayerModelPath;
         m_playerModel = cache.Get(resolvedModelPath);
     }
+
+    playerGeometry = AnalyzePlayerModelGeometry(resolvedModelPath, m_playerColliderTuning.thicknessPadding);
 
     if (m_playerModel)
     {
@@ -1047,7 +1374,33 @@ SceneGame::SceneGame()
     std::shared_ptr<Collision::ICollider> collider;
     Transform trans =
     { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
-    collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
+    bool colliderFromConfig = false;
+    std::string colliderSource = "unresolved";
+    const auto colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
+    if (colliderDef != m_playerColliderDefinitions.end())
+    {
+        collider = Collision::BuildColliderFromDefinition(colliderDef->second, trans, Collision::CollisionLayer::Player);
+        colliderFromConfig = collider != nullptr;
+        colliderSource = colliderFromConfig ? "config" : "config_build_failed";
+        if (!colliderFromConfig)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] Definition found for key='" << playerColliderKey << "' but build failed; falling back to generated collider.\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+    if (!collider)
+    {
+        collider = BuildGeneratedPlayerCollider(playerGeometry, m_playerColliderTuning, trans);
+        colliderSource = collider ? "generated" : "generated_failed";
+    }
+
+    if (!collider)
+    {
+        collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
+        colliderSource = "aabb_fallback";
+    }
     player = std::make_unique<Entities::Player>(
         Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
         m_playerModel,
@@ -1084,6 +1437,20 @@ SceneGame::SceneGame()
             oss << kLogPrefix << "Player physics body registered (kinematic="
                 << std::boolalpha << isKinematic
                 << ", weight=" << player->GetPhysical().weight << ").\n";
+            ::DebugTrace(oss.str());
+        }
+        if (collider)
+        {
+            const AABB bounds = collider->GetAABB();
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
+                << " key='" << playerColliderKey << "'"
+                << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
+                << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
+                << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
+                << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
+                << " configLoaded=" << std::boolalpha << colliderFromConfig
+                << " geometryValid=" << playerGeometry.bounds.valid << "\n";
             ::DebugTrace(oss.str());
         }
         if (m_drawSystem)
