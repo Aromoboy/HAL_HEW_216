@@ -953,13 +953,12 @@ SceneGame::SceneGame()
         std::ostringstream oss;
         oss << kLogPrefix << "Manifest CSV " << (manifestLoaded ? "applied" : "missing; using defaults")
             << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultCsvPath << "'\n";
-        for (SweetsSpace::SweetsType type : { SweetsSpace::SweetsType::Cake, SweetsSpace::SweetsType::Pudding,
-            SweetsSpace::SweetsType::Sherbet, SweetsSpace::SweetsType::Fairy })
+        const auto prototypes = manifest.Enumerate();
+        oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
+        for (const auto& entry : prototypes)
         {
-            const auto* descriptor = manifest.Find(type);
-            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(type) << " key='"
-                << (descriptor ? descriptor->key : std::string("<missing>"))
-                << "' model='" << (descriptor ? descriptor->modelPath : std::string("<missing>")) << "'\n";
+            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(entry.type) << " key='"
+                << entry.descriptor.key << "' model='" << entry.descriptor.modelPath << "'\n";
         }
         ::DebugTrace(oss.str());
     }
@@ -1096,6 +1095,35 @@ SceneGame::SceneGame()
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
                 << " from '" << kSweetsSpawnConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+        }
+        {
+            const auto presets = m_sweetsManager->EnumerateFactoryPresets();
+            const auto colliderShapeToString = [](SweetsSpace::ColliderShape shape)
+            {
+                switch (shape)
+                {
+                case SweetsSpace::ColliderShape::Box:
+                    return "Box";
+                case SweetsSpace::ColliderShape::Capsule:
+                    return "Capsule";
+                default:
+                    return "Unknown";
+                }
+            };
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, collider)\n";
+            for (const auto& preset : presets)
+            {
+                oss << kLogPrefix << "  kind='" << preset.first << "' collider="
+                    << colliderShapeToString(preset.second.colliderPreset.shape)
+                    << " pad=(" << preset.second.colliderPreset.padding.x << ','
+                    << preset.second.colliderPreset.padding.y << ','
+                    << preset.second.colliderPreset.padding.z << ")"
+                    << " spawnWeight=" << preset.second.spawnWeight
+                    << " weight=" << preset.second.weight
+                    << " damping=" << preset.second.damping << "\n";
+            }
             ::DebugTrace(oss.str());
         }
         m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)

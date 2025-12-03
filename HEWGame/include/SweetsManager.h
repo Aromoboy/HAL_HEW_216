@@ -149,6 +149,7 @@ namespace SweetsSpace
         Core::IUpdatable* GetLateUpdateNode();
         const Core::IUpdatable* GetLateUpdateNode() const;
         int GetCurrentPhase() const noexcept;
+        std::vector<std::pair<std::string, FactoryPreset>> EnumerateFactoryPresets() const;
 
         std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
         std::shared_ptr<ActiveSweets> FindNearestCarryable(const float3& position, float radius) const;
