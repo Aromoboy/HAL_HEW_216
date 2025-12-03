@@ -1,3 +1,5 @@
+//ドロスミハイル
+//このファイルにて変更が必要な場合、まず相談しておいてください
 #pragma once
 
 #include <algorithm>
