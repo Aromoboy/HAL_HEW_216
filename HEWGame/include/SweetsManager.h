@@ -105,6 +105,16 @@ namespace SweetsSpace
 
         using PhaseChangeCallback = std::function<void(int)>;
 
+        struct FactoryPreset
+        {
+            float spawnWeight = 1.0f;
+            float weight = 1.0f;
+            float damping = 0.98f;
+            float3 minScale{ 1.0f, 1.0f, 1.0f };
+            float3 maxScale{ 1.0f, 1.0f, 1.0f };
+            ColliderPreset colliderPreset;
+        };
+
         SweetsManager();
         ~SweetsManager();
 
@@ -163,15 +173,6 @@ namespace SweetsSpace
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
 
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
-        struct FactoryPreset
-        {
-            float spawnWeight = 1.0f;
-            float weight = 1.0f;
-            float damping = 0.98f;
-            float3 minScale{ 1.0f, 1.0f, 1.0f };
-            float3 maxScale{ 1.0f, 1.0f, 1.0f };
-            ColliderPreset colliderPreset;
-        };
         std::map<std::string, FactoryPreset> m_factoryPresets;
 
         std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
