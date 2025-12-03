@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
     
 namespace SweetsSpace
 {
@@ -20,6 +21,12 @@ namespace SweetsSpace
         std::string key;
         std::string modelPath;
         std::string description;
+    };
+
+    struct SweetsPrototypeEntry
+    {
+        SweetsType type;
+        SweetsPrototypeDescriptor descriptor;
     };
 
     struct SweetsTypeHash
@@ -40,6 +47,7 @@ namespace SweetsSpace
         const SweetsPrototypeDescriptor* Find(SweetsType type) const;
         const SweetsPrototypeDescriptor* Find(const std::string& key) const;
         std::optional<SweetsType> Resolve(const std::string& key) const;
+        std::vector<SweetsPrototypeEntry> Enumerate() const;
 
         bool ReloadFromCsv(const std::string& csvPath = kDefaultCsvPath);
 

@@ -311,6 +311,17 @@ namespace SweetsSpace
         return it->second;
     }
 
+    std::vector<SweetsPrototypeEntry> SweetsPrototypeManifest::Enumerate() const
+    {
+        std::vector<SweetsPrototypeEntry> entries;
+        entries.reserve(m_byType.size());
+        for (const auto& pair : m_byType)
+        {
+            entries.push_back({ pair.first, pair.second });
+        }
+        return entries;
+    }
+
     const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(const std::string& key) const
     {
         auto resolved = Resolve(key);
