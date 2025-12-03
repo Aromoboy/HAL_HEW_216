@@ -68,6 +68,7 @@ namespace
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
         constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
+        constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -417,6 +418,143 @@ namespace
                 --end;
             } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
             return std::string(begin, end + 1);
+        }
+
+        SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
+        {
+            SceneGame::PlayerSpawnTransform result{};
+            constexpr float kDegToRad = 3.14159265358979323846f / 180.0f;
+
+            auto parseFloat3 = [&](const std::string& value, float3& out, const std::string& key, int lineNumber) -> bool
+                {
+                    std::vector<float> values;
+                    std::stringstream ss(value);
+                    std::string token;
+                    while (std::getline(ss, token, ','))
+                    {
+                        const std::string trimmed = TrimWhitespace(token);
+                        if (trimmed.empty())
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            values.push_back(std::stof(trimmed));
+                        }
+                        catch (const std::exception& ex)
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "[PlayerTransform] Failed to parse token line=" << lineNumber
+                                << " key='" << key << "' token='" << trimmed << "' reason='" << ex.what() << "'\n";
+                            DebugTrace(oss.str());
+                            return false;
+                        }
+                    }
+
+                    if (values.size() != 3)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[PlayerTransform] Expected 3 components for key='" << key
+                            << "' on line " << lineNumber << "; got " << values.size() << "\n";
+                        DebugTrace(oss.str());
+                        return false;
+                    }
+
+                    out = float3{ values[0], values[1], values[2] };
+                    return true;
+                };
+
+            std::ifstream config(path);
+            if (!config.is_open())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerTransform] Config missing; using defaults path='" << path << "'.\n";
+                DebugTrace(oss.str());
+                return result;
+            }
+
+            std::string line;
+            int lineNumber = 0;
+            int parsedFields = 0;
+            while (std::getline(config, line))
+            {
+                ++lineNumber;
+                const std::string trimmed = TrimWhitespace(line);
+                if (trimmed.empty() || trimmed[0] == '#')
+                {
+                    continue;
+                }
+
+                const std::size_t eq = trimmed.find('=');
+                if (eq == std::string::npos)
+                {
+                    continue;
+                }
+
+                const std::string key = TrimWhitespace(trimmed.substr(0, eq));
+                const std::string value = TrimWhitespace(trimmed.substr(eq + 1));
+                if (key.empty() || value.empty())
+                {
+                    continue;
+                }
+
+                float3 parsed{};
+                if (key == "position" || key == "positionOffset")
+                {
+                    if (parseFloat3(value, parsed, key, lineNumber))
+                    {
+                        result.transform.position = parsed;
+                        ++parsedFields;
+                    }
+                }
+                else if (key == "rotationDegrees" || key == "rotationDeg")
+                {
+                    if (parseFloat3(value, parsed, key, lineNumber))
+                    {
+                        result.transform.rotation = float3{ parsed.x * kDegToRad, parsed.y * kDegToRad, parsed.z * kDegToRad };
+                        result.rotationFromDegrees = true;
+                        ++parsedFields;
+                    }
+                }
+                else if (key == "rotation" || key == "rotationRadians")
+                {
+                    if (parseFloat3(value, parsed, key, lineNumber))
+                    {
+                        result.transform.rotation = parsed;
+                        result.rotationFromDegrees = false;
+                        ++parsedFields;
+                    }
+                }
+                else if (key == "scale")
+                {
+                    if (parseFloat3(value, parsed, key, lineNumber))
+                    {
+                        result.transform.scale = parsed;
+                        ++parsedFields;
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerTransform] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            result.loadedFromFile = true;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerTransform] Applied path='" << path
+                << "' loaded=" << std::boolalpha << result.loadedFromFile
+                << " parsedFields=" << parsedFields
+                << " position=(" << result.transform.position.x << ',' << result.transform.position.y << ',' << result.transform.position.z << ')'
+                << " rotationRad=(" << result.transform.rotation.x << ',' << result.transform.rotation.y << ',' << result.transform.rotation.z << ')'
+                << " scale=(" << result.transform.scale.x << ',' << result.transform.scale.y << ',' << result.transform.scale.z << ')'
+                << " rotationSource=" << (result.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
+            DebugTrace(oss.str());
+
+            return result;
         }
 
         PhysicsTuningSettings LoadPhysicsTuningSettings()
@@ -897,6 +1035,7 @@ SceneGame::SceneGame()
 {
     m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
     m_playerColliderTuning = LoadPlayerColliderTuning(kPlayerColliderTuningPath);
+    m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
@@ -1386,8 +1525,18 @@ SceneGame::SceneGame()
 
     const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
     std::shared_ptr<Collision::ICollider> collider;
-    Transform trans =
-    { float3{0.0f, 0.0f, platePlaneZ}, float3{0.0f, 0.0f, 0.0f}, float3{1.0f, 1.0f, 1.0f} };
+    Transform trans = m_playerSpawnTransform.transform;
+    trans.position.z += platePlaneZ;
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerSpawn] transform(model+collider) position=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
+            << " rotationRad=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
+            << " scale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
+            << " planeZ=" << platePlaneZ
+            << " configLoaded=" << std::boolalpha << m_playerSpawnTransform.loadedFromFile
+            << " rotationSource=" << (m_playerSpawnTransform.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
+        DebugTrace(oss.str());
+    }
     bool colliderFromConfig = false;
     std::string colliderSource = "unresolved";
     const auto colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
@@ -1416,7 +1565,7 @@ SceneGame::SceneGame()
         colliderSource = "aabb_fallback";
     }
     player = std::make_unique<Entities::Player>(
-        Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
+        trans,
         m_playerModel,
         collider,
         Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
@@ -1476,6 +1625,8 @@ SceneGame::SceneGame()
                 << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
                 << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
                 << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
+                << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
+                << " spawnRotation=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
                 << " configLoaded=" << std::boolalpha << colliderFromConfig
                 << " geometryValid=" << playerGeometry.bounds.valid << "\n";
             ::DebugTrace(oss.str());
