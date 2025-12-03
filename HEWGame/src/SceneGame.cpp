@@ -20,6 +20,7 @@
 #include "TextureCache.h"
 #include "DirectX.h"
 #include "SweetsManager.h"
+#include "SweetsPrototypeManifest.h"
 #include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
 #include "Entities/Player.h"
@@ -68,6 +69,7 @@ namespace
         constexpr float kPlayerSpeedBoostStep = 1.1f;
         constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
         constexpr float kFallbackPlayerMoveSpeed = 15.0f;
+        constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         const HudLayoutConfig kHudLayoutConfig
         {
             512u,
@@ -844,6 +846,35 @@ SceneGame::SceneGame()
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
 
+    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const auto* fairyDescriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+    if (!fairyDescriptor && !m_playerModel)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using placeholder.\n");
+    }
+
+    const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string(kFallbackPlayerModelPath);
+    std::string resolvedModelPath = primaryModelPath;
+    m_playerModel = cache.Get(primaryModelPath);
+    if (!m_playerModel && primaryModelPath != kFallbackPlayerModelPath)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; trying placeholder.\n");
+        resolvedModelPath = kFallbackPlayerModelPath;
+        m_playerModel = cache.Get(resolvedModelPath);
+    }
+
+    if (m_playerModel)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ModelLoad] Player model ready path='" << resolvedModelPath
+            << "' refCount=" << m_playerModel.use_count() << "\n";
+        ::DebugTrace(oss.str());
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.\n");
+    }
+
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
     {
@@ -998,7 +1029,7 @@ SceneGame::SceneGame()
     collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
     player = std::make_unique<Entities::Player>(
         Transform{ float3{ 0.0f, 0.0f, platePlaneZ }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } },
-        std::shared_ptr<Render::Model>{},
+        m_playerModel,
         collider,
         Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
         m_physicsMachine.get(),
