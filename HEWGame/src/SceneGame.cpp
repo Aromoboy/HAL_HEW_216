@@ -126,14 +126,6 @@ namespace
         PlayerColliderGeometry AnalyzePlayerModelGeometry(const std::string& path, float thicknessPadding)
         {
             PlayerColliderGeometry summary{};
-            std::ifstream file(path);
-            if (!file)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Failed to open model for geometry analysis path='" << path << "'\n";
-                DebugTrace(oss.str());
-                return summary;
-            }
 
             struct PositionOnly
             {
@@ -142,74 +134,63 @@ namespace
                 float z;
             };
 
+            const float sanitizedPadding = std::max(thicknessPadding, 1.0f);
             std::vector<PositionOnly> positions;
             std::vector<UINT> indices;
-            std::string line;
-            const float sanitizedPadding = std::max(thicknessPadding, 1.0f);
 
-            while (std::getline(file, line))
+            Assimp::Importer importer;
+            const unsigned int flags = aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices;
+            const aiScene* scene = importer.ReadFile(path.c_str(), flags);
+            if (!scene || !scene->HasMeshes())
             {
-                if (line.size() < 2 || (line[0] != 'v' && line[0] != 'f') || line[1] != ' ')
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Failed to load model for geometry analysis path='" << path
+                    << "' reason='" << (scene ? "No meshes" : importer.GetErrorString()) << "'\n";
+                DebugTrace(oss.str());
+                return summary;
+            }
+
+            const std::string::size_type dot = path.find_last_of('.');
+            const std::string format = dot != std::string::npos ? path.substr(dot + 1) : std::string("unknown");
+
+            for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex)
+            {
+                const aiMesh* mesh = scene->mMeshes[meshIndex];
+                if (!mesh || !mesh->HasPositions())
                 {
                     continue;
                 }
 
-                if (line[0] == 'v')
+                const unsigned int baseIndex = static_cast<unsigned int>(positions.size());
+                positions.reserve(positions.size() + mesh->mNumVertices);
+                for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
                 {
-                    std::istringstream parser(line.substr(2));
-                    float x = 0.0f;
-                    float y = 0.0f;
-                    float z = 0.0f;
-                    if (!(parser >> x >> y >> z))
+                    const aiVector3D pos = mesh->mVertices[v];
+                    positions.push_back(PositionOnly{ pos.x, pos.y, pos.z });
+
+                    summary.bounds.min.x = std::min(summary.bounds.min.x, pos.x);
+                    summary.bounds.min.y = std::min(summary.bounds.min.y, pos.y);
+                    summary.bounds.min.z = std::min(summary.bounds.min.z, pos.z);
+
+                    summary.bounds.max.x = std::max(summary.bounds.max.x, pos.x);
+                    summary.bounds.max.y = std::max(summary.bounds.max.y, pos.y);
+                    summary.bounds.max.z = std::max(summary.bounds.max.z, pos.z);
+                    summary.bounds.valid = true;
+                }
+
+                const unsigned int numFaces = mesh->mNumFaces;
+                for (unsigned int faceIndex = 0; faceIndex < numFaces; ++faceIndex)
+                {
+                    const aiFace& face = mesh->mFaces[faceIndex];
+                    if (face.mNumIndices < 3)
                     {
                         continue;
                     }
 
-                    positions.push_back(PositionOnly{ x, y, z });
-
-                    summary.bounds.min.x = std::min(summary.bounds.min.x, x);
-                    summary.bounds.min.y = std::min(summary.bounds.min.y, y);
-                    summary.bounds.min.z = std::min(summary.bounds.min.z, z);
-
-                    summary.bounds.max.x = std::max(summary.bounds.max.x, x);
-                    summary.bounds.max.y = std::max(summary.bounds.max.y, y);
-                    summary.bounds.max.z = std::max(summary.bounds.max.z, z);
-                    summary.bounds.valid = true;
-                }
-                else if (line[0] == 'f')
-                {
-                    std::istringstream parser(line.substr(2));
-                    std::string token;
-                    std::vector<UINT> faceIndices;
-                    while (parser >> token)
-                    {
-                        const auto slash = token.find('/');
-                        const std::string indexToken = token.substr(0, slash);
-                        try
-                        {
-                            int index = std::stoi(indexToken);
-                            if (index < 0)
-                            {
-                                index = static_cast<int>(positions.size()) + index + 1;
-                            }
-                            const UINT zeroBased = static_cast<UINT>(std::max(index - 1, 0));
-                            faceIndices.push_back(zeroBased);
-                        }
-                        catch (...)
-                        {
-                            continue;
-                        }
-                    }
-
-                    if (faceIndices.size() >= 3)
-                    {
-                        for (size_t i = 1; i + 1 < faceIndices.size(); ++i)
-                        {
-                            indices.push_back(faceIndices[0]);
-                            indices.push_back(faceIndices[i]);
-                            indices.push_back(faceIndices[i + 1]);
-                        }
-                    }
+                    // aiProcess_Triangulate guarantees triangles
+                    indices.push_back(baseIndex + face.mIndices[0]);
+                    indices.push_back(baseIndex + face.mIndices[1]);
+                    indices.push_back(baseIndex + face.mIndices[2]);
                 }
             }
 
@@ -238,7 +219,10 @@ namespace
 
                 summary.hull = Collision::BuildConvexHullFromMesh(desc);
                 std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Geometry analyzed path='" << path << "' positions=" << positions.size()
+                oss << kLogPrefix << "[PlayerCollider] Geometry analyzed path='" << path
+                    << "' format=" << format
+                    << " vertices=" << positions.size()
+                    << " indices=" << indices.size()
                     << " hullPoints=" << summary.hull.size()
                     << " rawThickness=" << summary.rawThickness
                     << " paddedThickness=" << summary.paddedThickness
