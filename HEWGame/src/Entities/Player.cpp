@@ -196,21 +196,42 @@ namespace Entities
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
 
-        const auto* d = manifest.Find(SweetsSpace::SweetsType::Fairy);
-        const std::string modelPath = d ? d->modelPath : std::string(kFairyFallbackPath);
-
-        PlayerDebugTrace(std::string(kPlayerLogPrefix)
-            + "Using fairy prototype or fallback.\n");
+        const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+        std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
+        if (!descriptor)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy descriptor missing; using placeholder fallback.\n");
+            modelPath = kFairyFallbackPath;
+        }
+        else if (modelPath.empty())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Fairy descriptor path empty; using placeholder fallback.\n");
+            modelPath = kFairyFallbackPath;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Resolved fairy descriptor key='" << descriptor->key
+                << "' path='" << descriptor->modelPath << "'.\n";
+            PlayerDebugTrace(oss.str());
+        }
 
         m_fairyModel = CreateProceduralFairyModel();
         if (!m_fairyModel)
+        {
             m_fairyModel = cache.Get(modelPath);
-
-        if (!m_fairyModel && modelPath != kFairyFallbackPath)
-            m_fairyModel = cache.Get(kFairyFallbackPath);
+            if (!m_fairyModel && modelPath != kFairyFallbackPath)
+            {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Primary fairy model load failed; trying placeholder.\n");
+                m_fairyModel = cache.Get(kFairyFallbackPath);
+            }
+        }
 
         if (!m_fairyModel)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "No fairy model available after fallbacks.\n");
             m_missingModelWarned = true;
+        }
 
         if (!m_model)
         {

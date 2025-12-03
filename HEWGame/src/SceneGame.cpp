@@ -639,6 +639,23 @@ SceneGame::SceneGame()
         ::DebugTrace(oss.str());
     }
 
+    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const bool manifestLoaded = manifest.ReloadFromCsv();
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Manifest CSV " << (manifestLoaded ? "applied" : "missing; using defaults")
+            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultCsvPath << "'\n";
+        for (SweetsSpace::SweetsType type : { SweetsSpace::SweetsType::Cake, SweetsSpace::SweetsType::Pudding,
+            SweetsSpace::SweetsType::Sherbet, SweetsSpace::SweetsType::Fairy })
+        {
+            const auto* descriptor = manifest.Find(type);
+            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(type) << " key='"
+                << (descriptor ? descriptor->key : std::string("<missing>"))
+                << "' model='" << (descriptor ? descriptor->modelPath : std::string("<missing>")) << "'\n";
+        }
+        ::DebugTrace(oss.str());
+    }
+
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
     if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
     {
@@ -846,7 +863,6 @@ SceneGame::SceneGame()
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
 
-    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
     const auto* fairyDescriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
     if (!fairyDescriptor && !m_playerModel)
     {
