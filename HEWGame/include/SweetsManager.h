@@ -60,6 +60,18 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> weights;
     };
 
+    enum class ColliderShape : std::uint8_t
+    {
+        Box,
+        Capsule,
+    };
+
+    struct ColliderPreset
+    {
+        ColliderShape shape{ ColliderShape::Box };
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+    };
+
     enum class DeleteReason : std::uint8_t
     {
         Hit,
@@ -150,6 +162,16 @@ namespace SweetsSpace
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
 
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
+        struct FactoryPreset
+        {
+            float spawnWeight = 1.0f;
+            float weight = 1.0f;
+            float damping = 0.98f;
+            float3 minScale{ 1.0f, 1.0f, 1.0f };
+            float3 maxScale{ 1.0f, 1.0f, 1.0f };
+            ColliderPreset colliderPreset;
+        };
+        std::map<std::string, FactoryPreset> m_factoryPresets;
 
         std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
         struct GeneratedCollider

@@ -60,7 +60,8 @@ namespace
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_fruits.cfg";
+    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
+    constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
@@ -131,17 +132,8 @@ namespace
         }
     }
 
-    enum class ColliderShape : std::uint8_t
-    {
-        Box,
-        Capsule,
-    };
-
-    struct ColliderPreset
-    {
-        ColliderShape shape{ ColliderShape::Box };
-        float3 padding{ 0.0f, 0.0f, 0.0f };
-    };
+    using SweetsSpace::ColliderPreset;
+    using SweetsSpace::ColliderShape;
 
     struct ModelBounds
     {
@@ -360,8 +352,8 @@ namespace
                 continue;
             }
 
-            const auto resolved = SweetsSpace::ParseSweetsType(kind);
-            if (!resolved)
+            const auto* descriptor = SweetsPrototypeManifest::Instance().Find(kind);
+            if (!descriptor)
             {
                 if (outError)
                 {
@@ -369,13 +361,13 @@ namespace
                 }
 
                 std::ostringstream oss;
-                oss << kLogPrefix << "Unknown sweets type '" << kind
+                oss << kLogPrefix << "Unknown sweets key '" << kind
                     << "' in weight definition '" << raw << "'.\n";
                 DebugTrace(oss.str());
                 continue;
             }
 
-            weights.push_back({ SweetsSpace::ToString(*resolved), weight });
+            weights.push_back({ descriptor->key, weight });
         }
 
         if (weights.empty() && outError)
@@ -384,6 +376,202 @@ namespace
         }
 
         return weights;
+    }
+
+    std::string NormalizeKey(const std::string& key)
+    {
+        std::string normalized;
+        normalized.reserve(key.size());
+        for (unsigned char ch : key)
+        {
+            normalized.push_back(static_cast<char>(std::tolower(ch)));
+        }
+        return normalized;
+    }
+
+    bool TryParseFloat(const std::string& token, float* out)
+    {
+        try
+        {
+            *out = std::stof(token);
+            return std::isfinite(*out);
+        }
+        catch (const std::exception&)
+        {
+            return false;
+        }
+    }
+
+    using FactoryPreset = SweetsSpace::SweetsManager::FactoryPreset;
+
+    std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsSpace::SweetsType type)
+    {
+        FactoryPreset preset{};
+        preset.spawnWeight = 0.0f;
+        preset.weight = 1.0f;
+        preset.damping = 0.98f;
+        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.colliderPreset = ColliderPreset{};
+
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Cake:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 1.35f;
+            preset.damping = 0.96f;
+            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
+            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
+            return preset;
+        case SweetsSpace::SweetsType::Pudding:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 1.0f;
+            preset.damping = 0.98f;
+            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
+            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
+            return preset;
+        case SweetsSpace::SweetsType::Sherbet:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 0.85f;
+            preset.damping = 0.99f;
+            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
+            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            return preset;
+        default:
+            return std::nullopt;
+        }
+    }
+
+    bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
+    {
+        if (tokens.size() < 13)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Factory preset row on line " << lineNumber
+                << " had " << tokens.size() << " tokens; expected 13.\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        bool parseError = false;
+        parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
+        parseError |= !TryParseFloat(tokens[2], &outPreset.weight);
+        parseError |= !TryParseFloat(tokens[3], &outPreset.damping);
+        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.x);
+        parseError |= !TryParseFloat(tokens[5], &outPreset.minScale.y);
+        parseError |= !TryParseFloat(tokens[6], &outPreset.minScale.z);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.x);
+        parseError |= !TryParseFloat(tokens[8], &outPreset.maxScale.y);
+        parseError |= !TryParseFloat(tokens[9], &outPreset.maxScale.z);
+        parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[12], &outPreset.colliderPreset.padding.y);
+
+        if (tokens.size() > 13)
+        {
+            parseError |= !TryParseFloat(tokens[13], &outPreset.colliderPreset.padding.z);
+        }
+        else
+        {
+            outPreset.colliderPreset.padding.z = 0.0f;
+        }
+
+        const std::string colliderShape = NormalizeKey(tokens[10]);
+        if (colliderShape == "capsule")
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Capsule;
+        }
+        else if (colliderShape == "box" || colliderShape.empty())
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Box;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Unknown collider preset '" << tokens[10]
+                << "' on line " << lineNumber << "; defaulting to Box.\n";
+            DebugTrace(oss.str());
+            outPreset.colliderPreset.shape = ColliderShape::Box;
+        }
+
+        outPreset.spawnWeight = std::max(0.0f, outPreset.spawnWeight);
+        outPreset.weight = std::max(0.0f, outPreset.weight);
+        outPreset.damping = std::clamp(outPreset.damping, 0.0f, 0.999f);
+        return !parseError;
+    }
+
+    std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError)
+    {
+        std::map<std::string, FactoryPreset> overrides;
+        std::ifstream file(kFactoryPresetCsvPath);
+        if (!file.is_open())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Factory preset CSV missing at '" << kFactoryPresetCsvPath
+                << "'; falling back to legacy defaults.\n";
+            DebugTrace(oss.str());
+            return overrides;
+        }
+
+        std::string line;
+        size_t lineNumber = 0;
+        while (std::getline(file, line))
+        {
+            ++lineNumber;
+            std::string trimmed = TrimToken(line);
+            if (trimmed.empty() || trimmed[0] == '#')
+            {
+                continue;
+            }
+
+            std::vector<std::string> tokens;
+            std::stringstream ss(trimmed);
+            std::string column;
+            while (std::getline(ss, column, ','))
+            {
+                tokens.push_back(TrimToken(column));
+            }
+
+            if (tokens.empty())
+            {
+                continue;
+            }
+
+            const std::string normalizedHeader = NormalizeKey(tokens[0]);
+            if (normalizedHeader == "key")
+            {
+                continue;
+            }
+
+            FactoryPreset preset{};
+            if (!ParseFactoryRow(tokens, preset, lineNumber))
+            {
+                if (parseError)
+                {
+                    *parseError = true;
+                }
+                continue;
+            }
+
+            const std::string normalizedKey = NormalizeKey(tokens[0]);
+            overrides[normalizedKey] = preset;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
+                << "' spawnWeight=" << preset.spawnWeight
+                << " weight=" << preset.weight
+                << " damping=" << preset.damping
+                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
+                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                << preset.colliderPreset.padding.z << ")\n";
+            DebugTrace(oss.str());
+        }
+
+        return overrides;
     }
 
     const char* ToString(ColliderShape shape)
@@ -759,41 +947,60 @@ namespace SweetsSpace
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
 
-        struct SweetsFactoryConfig
-        {
-            SweetsType type;
-            ColliderPreset colliderPreset;
-            float weight;
-            float damping;
-            float3 minScale;
-            float3 maxScale;
-        };
-
-        const std::array<SweetsFactoryConfig, 3> kConfigs = { {
-            { SweetsType::Cake, ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } }, 1.35f, 0.96f,
-                float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
-            { SweetsType::Pudding, ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } }, 1.0f, 0.98f,
-                float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
-            { SweetsType::Sherbet, ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } }, 0.85f, 0.99f,
-                float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
-        } };
-
+        bool factoryParseError = false;
+        const auto factoryOverrides = LoadFactoryPresets(&factoryParseError);
         const ModelBounds fallbackBounds{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f }, true };
-
-        for (const auto& config : kConfigs)
+        const auto prototypes = manifest.Enumerate();
+        if (prototypes.empty())
         {
-            const auto* descriptor = manifest.Find(config.type);
+            DebugTrace(std::string(kLogPrefix) + "No sweets prototypes registered; spawner map will remain empty.\n");
+        }
+
+        for (const auto& prototype : prototypes)
+        {
+            const auto* descriptor = manifest.Find(prototype.type);
             if (!descriptor)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Manifest missing prototype for sweets type '"
-                    << SweetsSpace::ToString(config.type) << "'. Skipping spawner registration.\n";
+                oss << kLogPrefix << "Prototype lookup failed for type '" << ToString(prototype.type)
+                    << "'; skipping.\n";
                 DebugTrace(oss.str());
                 continue;
             }
 
             const std::string kind = descriptor->key;
+            const std::string normalizedKind = NormalizeKey(kind);
             const std::string modelPath = descriptor->modelPath;
+
+            const auto overrideIt = factoryOverrides.find(normalizedKind);
+            const bool hasOverride = overrideIt != factoryOverrides.end();
+            std::optional<FactoryPreset> defaultPreset = BuildDefaultFactoryPreset(prototype.type);
+
+            if (!hasOverride && !defaultPreset)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "No factory preset available for kind '" << kind
+                    << "' (type=" << ToString(prototype.type) << "); skipping registration.\n";
+                DebugTrace(warn.str());
+                continue;
+            }
+
+            FactoryPreset preset = hasOverride ? overrideIt->second : *defaultPreset;
+            m_factoryPresets[kind] = preset;
+
+            std::ostringstream presetLog;
+            presetLog << kLogPrefix << "Resolved factory preset for kind '" << kind
+                << "' source=" << (hasOverride ? "config" : "fallback")
+                << " spawnWeight=" << preset.spawnWeight
+                << " weight=" << preset.weight
+                << " damping=" << preset.damping
+                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
+                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                << preset.colliderPreset.padding.z << ")"
+                << " overrideParseError=" << std::boolalpha << factoryParseError << "\n";
+            DebugTrace(presetLog.str());
 
             MeshHullSummary geometry = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding);
             const float baseFallbackThickness = fallbackBounds.max.z - fallbackBounds.min.z;
@@ -858,11 +1065,11 @@ namespace SweetsSpace
             }
 
             {
-                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, config.colliderPreset);
+                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, preset.colliderPreset);
                 const float3 baseCenter = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
                 std::ostringstream boundsLog;
                 boundsLog << kLogPrefix << "Resolved collider template for kind '" << kind
-                    << "' shape=" << ToString(config.colliderPreset.shape)
+                    << "' shape=" << ToString(preset.colliderPreset.shape)
                     << " halfExtents=(" << baseHalfExtents.x << ',' << baseHalfExtents.y << ',' << baseHalfExtents.z << ")"
                     << " center=(" << baseCenter.x << ',' << baseCenter.y << ',' << baseCenter.z << ")\n";
                 DebugTrace(boundsLog.str());
@@ -873,12 +1080,9 @@ namespace SweetsSpace
                 << "' with asset '" << modelPath << "'.\n";
             DebugTrace(oss.str());
 
-            const SweetsType type = config.type;
+            const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, weight = config.weight,
-                               damping = config.damping, minScale = config.minScale,
-                               maxScale = config.maxScale, bounds, preset = config.colliderPreset,
-                               generatedCollider](const Transform& transform)
+            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -913,9 +1117,9 @@ namespace SweetsSpace
                 };
 
                 const float3 sampledScale{
-                    sampleScale(minScale.x, maxScale.x),
-                    sampleScale(minScale.y, maxScale.y),
-                    sampleScale(minScale.z, maxScale.z)
+                    sampleScale(preset.minScale.x, preset.maxScale.x),
+                    sampleScale(preset.minScale.y, preset.maxScale.y),
+                    sampleScale(preset.minScale.z, preset.maxScale.z)
                 };
 
                 scaledTransform.scale.x *= sampledScale.x;
@@ -951,7 +1155,7 @@ namespace SweetsSpace
                     colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
                 }
 
-                const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset);
+                const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset.colliderPreset);
                 const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
                 const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
 
@@ -1098,176 +1302,116 @@ namespace SweetsSpace
                     }
                 };
 
-                const auto buildColliderFromDefinition = [&]()
+                const auto tryBuildConfigColliders = [&]()
                 {
-                    if (!colliderDefinition || colliderDefinitionEmpty || m_forceGeneratedColliders || collider)
+                    if (!colliderDefinitionFound)
                     {
                         return;
                     }
 
-                    const Collision::ColliderDefinition& definition = *colliderDefinition;
-                    collider = Collision::BuildColliderFromDefinition(definition, scaledTransform, Collision::CollisionLayer::Sweets);
-                    if (collider)
+                    if (colliderDefinitionIsCircle)
                     {
-                        if (colliderDefinitionIsCompound)
+                        collider = std::make_shared<Collision::CircleCollider2D>(colliderDefinition->radius, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
+                        if (!collider)
                         {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Loaded compound collider definition for '" << kind
-                                << "' children=" << definition.children.size() << "\n";
-                            DebugTrace(oss.str());
-                            colliderTypeChosen = "config compound";
-                        }
-                        else if (colliderDefinitionIsHull)
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Loaded hull collider definition for '" << kind
-                                << "' points=" << definition.points.size()
-                                << " scale=" << definition.scale
-                                << " margin=" << definition.margin
-                                << " thickness=" << definition.thickness << "\n";
-                            DebugTrace(oss.str());
-                            colliderTypeChosen = "config hull";
-                        }
-                        else if (colliderDefinitionIsCircle)
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Loaded circle collider definition for '" << kind
-                                << " radius=" << definition.radius
-                                << " scale=" << definition.scale
-                                << " margin=" << definition.margin
-                                << " thickness=" << definition.thickness << "\n";
-                            DebugTrace(oss.str());
-                            colliderTypeChosen = "config circle";
-                        }
-                        else
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Loaded collider definition for '" << kind << "'\n";
-                            DebugTrace(oss.str());
-                            colliderTypeChosen = "config collider";
+                            colliderDefinitionFailed = true;
+                            return;
                         }
 
-                        colliderResolutionReason = colliderTypeChosen + " built";
+                        colliderTypeChosen = "circle from config";
+                        colliderResolutionReason = "config circle used";
+                        return;
                     }
-                    else
+
+                    if (colliderDefinitionIsHull)
                     {
-                        if (colliderDefinitionIsHull && colliderDefinitionHullMissingPoints)
+                        const auto colliderHull = colliderDefinition->points;
+                        if (colliderHull.empty())
                         {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Hull collider definition for '" << kind
-                                << "' contained no points; attempting to fall back.\n";
-                            DebugTrace(warn.str());
+                            colliderDefinitionHullMissingPoints = true;
+                            return;
                         }
 
-                        colliderDefinitionFailed = true;
+                        std::vector<float2> scaled;
+                        scaled.reserve(colliderHull.size());
+                        const auto clampMargin = [](float value)
+                        {
+                            if (!std::isfinite(value))
+                            {
+                                return 0.0f;
+                            }
+                            return std::clamp(value, -0.25f, 0.25f);
+                        };
+                        const float xMargin = clampMargin(colliderDefinition->margin.x);
+                        const float yMargin = clampMargin(colliderDefinition->margin.y);
+                        const float zMargin = clampMargin(colliderDefinition->margin.z);
+                        for (const auto& point : colliderHull)
+                        {
+                            scaled.emplace_back(float2{ point.x * colliderDefinition->scale.x + xMargin,
+                                point.y * colliderDefinition->scale.y + zMargin });
+                        }
+
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(scaled, float2{ colliderDefinition->offset.x + xMargin,
+                            colliderDefinition->offset.z + zMargin }, generatedCollider.thickness + yMargin, Collision::CollisionLayer::Sweets);
+                        if (!collider)
+                        {
+                            colliderDefinitionFailed = true;
+                            return;
+                        }
+
+                        colliderTypeChosen = "hull from config";
+                        colliderResolutionReason = "config hull used";
+                        return;
+                    }
+
+                    if (colliderDefinitionIsCompound)
+                    {
+                        collider = Collision::BuildColliderFromDefinition(*colliderDefinition, Collision::CollisionLayer::Sweets);
+                        if (!collider)
+                        {
+                            colliderDefinitionFailed = true;
+                            return;
+                        }
+
+                        colliderTypeChosen = "compound from config";
+                        colliderResolutionReason = "config compound used";
+                        return;
                     }
                 };
 
                 if (preferGenerated)
                 {
                     tryBuildGeneratedColliders();
+                    tryBuildConfigColliders();
                 }
-
-                if (!collider && configDefinitionAvailable && !m_forceGeneratedColliders)
+                else
                 {
-                    if (!preferGenerated)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Collider config override requested for '" << kind
-                            << "'; attempting to use collider definitions before generated geometry.\n";
-                        DebugTrace(warn.str());
-                    }
-                    else if (colliderDefinitionFound)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Collider config present for '" << kind
-                            << "' but generated geometry is preferred; config will only be used if generation fails.\n";
-                        DebugTrace(warn.str());
-                    }
-
-                    buildColliderFromDefinition();
-                }
-
-                if (!collider && !preferGenerated)
-                {
+                    tryBuildConfigColliders();
                     tryBuildGeneratedColliders();
                 }
 
-                if (!collider)
+                if (colliderDefinitionFound && !colliderDefinitionEmpty && !collider)
                 {
-                    if (m_forceGeneratedColliders && configDefinitionAvailable)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Ignoring collider config for '" << kind
-                            << "' because force-generated collider mode is enabled and no generated shape was available.\n";
-                        DebugTrace(warn.str());
-                    }
+                    colliderDefinitionFailed = true;
 
-                    if (colliderDefinitionFailed)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Collider definition for kind '" << kind
-                            << "' could not be built and no generated hull/polygons were available; using fallback AABB.\n";
-                        DebugTrace(warn.str());
-                    }
-                    else if ((!colliderDefinitionFound || colliderDefinitionEmpty)
-                        && m_warnedMissingColliderDefinitionKinds.find(kind) == m_warnedMissingColliderDefinitionKinds.end())
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Using fallback AABB collider for '" << kind << "' ("
-                            << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found")
-                            << ") scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
-                            << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")\n";
-                        DebugTrace(warn.str());
-                        m_warnedMissingColliderDefinitionKinds.insert(kind);
-                    }
-
-                    if (!usedGeneratedHull && !hasGeneratedHull && !hasGeneratedPolygons && !m_warnedMissingGeneratedHull)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "No explicit collider definition or generated hull/polygons available for kind '" << kind
-                            << (colliderDefinitionFailed ? "' after collider build failure; defaulting to AABB.\n"
-                                : "'; defaulting to AABB.\n");
-                        DebugTrace(warn.str());
-                        m_warnedMissingGeneratedHull = true;
-                    }
-
-                    collider = std::make_shared<Collision::AABBCollider>(scaledTransform, false, colliderExpand, colliderOffset, Collision::CollisionLayer::Sweets);
-
-                    if (colliderDefinitionFailed)
-                    {
-                        colliderResolutionReason = "build failed -> AABB";
-                    }
-                    else if (colliderDefinitionEmpty)
-                    {
-                        colliderResolutionReason = "config empty -> AABB";
-                    }
-                    else if (!colliderDefinitionFound)
-                    {
-                        colliderResolutionReason = "no config -> AABB";
-                    }
-                    else if (m_forceGeneratedColliders)
-                    {
-                        colliderResolutionReason = "force generated -> AABB";
-                    }
-                    else
-                    {
-                        colliderResolutionReason = "no hull available -> AABB";
-                    }
-                    colliderTypeChosen = "AABB";
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "Collider definition for '" << kind
+                        << "' could not be turned into a collider; falling back to generated or AABB.\n";
+                    DebugTrace(warn.str());
                 }
+
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
                 const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
-                const float scaledWeight = weight * scaleFactor;
-                const float scaledDamping = std::min(damping * scaleFactor, 0.999f);
+                const float scaledWeight = preset.weight * scaleFactor;
+                const float scaledDamping = std::min(preset.damping * scaleFactor, 0.999f);
 
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=("
                         << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ")"
                         << " enabledRandomScale=" << std::boolalpha << m_enableRandomScale
-                        << " weight=" << scaledWeight << " (base=" << weight << ")\n";
+                        << " weight=" << scaledWeight << " (base=" << preset.weight << ")\n";
                     DebugTrace(oss.str());
                 }
 
@@ -1325,6 +1469,7 @@ namespace SweetsSpace
             }
         }
 
+        ApplyDefaultPhaseConfigs();
         ApplyDefaultPhaseConfigs();
 
     }
@@ -3102,7 +3247,23 @@ namespace SweetsSpace
         weights.reserve(m_spawner.size());
         for (const auto& entry : m_spawner)
         {
-            weights.push_back({ entry.first, 1.0f });
+            float spawnWeight = 1.0f;
+            auto presetIt = m_factoryPresets.find(entry.first);
+            if (presetIt != m_factoryPresets.end())
+            {
+                spawnWeight = presetIt->second.spawnWeight;
+            }
+
+            if (spawnWeight <= 0.0f)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "Skipping default spawn weight for kind '" << entry.first
+                    << "' because spawnWeight=" << spawnWeight << "<= 0.\n";
+                DebugTrace(warn.str());
+                continue;
+            }
+
+            weights.push_back({ entry.first, spawnWeight });
         }
         return weights;
     }
