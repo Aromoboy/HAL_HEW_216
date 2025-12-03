@@ -137,6 +137,8 @@ namespace
     using SweetsSpace::SweetsPrototypeManifest;
     using SweetsSpace::SweetsType;
 
+    const char* ToString(ColliderShape shape);
+
     struct ModelBounds
     {
         float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
