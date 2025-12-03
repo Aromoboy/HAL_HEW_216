@@ -1,7 +1,7 @@
 key,modelPath,description
-Cake,Assets/Model/Banana_low01,Textured sponge cake cube with frosting layers
-Pudding,Assets/Model/pineapple_lowfin,UV-mapped triangular pudding slice
-Sherbet,Assets/Model/blueberry_low01,Shaded sherbet scoop with smooth normals
+Cake,Assets/Model/Banana_low01.fbx,Textured sponge cake cube with frosting layers
+Pudding,Assets/Model/pineapple_lowfin.fbx,UV-mapped triangular pudding slice
+Sherbet,Assets/Model/blueberry_low01.fbx,Shaded sherbet scoop with smooth normals
 Strawberry,Assets/Model/strawberry_low01.fbx,Textured strawberry fruit with visible seeds
 Fairy,Assets/Model/SweetsPrototype/Fairy.obj,Procedural cross-plane fairy with cross-plane wings
 Player,Assets/Model/yousei_low_fin.fbx,Player-controlled fairy alias; falls back to Fairy.obj if missing
