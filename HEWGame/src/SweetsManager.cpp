@@ -1316,7 +1316,10 @@ namespace SweetsSpace
 
                     if (colliderDefinitionIsCircle)
                     {
-                        collider = std::make_shared<Collision::CircleCollider2D>(colliderDefinition->radius, float2{ 0.0f, 0.0f }, generatedCollider.thickness, Collision::CollisionLayer::Sweets);
+                        collider = Collision::BuildColliderFromDefinition(
+                            *colliderDefinition,
+                            scaledTransform,
+                            Collision::CollisionLayer::Sweets);
                         if (!collider)
                         {
                             colliderDefinitionFailed = true;
@@ -1337,8 +1340,6 @@ namespace SweetsSpace
                             return;
                         }
 
-                        std::vector<float2> scaled;
-                        scaled.reserve(colliderHull.size());
                         const auto clampMargin = [](float value)
                         {
                             if (!std::isfinite(value))
@@ -1347,17 +1348,24 @@ namespace SweetsSpace
                             }
                             return std::clamp(value, -0.25f, 0.25f);
                         };
-                        const float xMargin = clampMargin(colliderDefinition->margin.x);
-                        const float yMargin = clampMargin(colliderDefinition->margin.y);
-                        const float zMargin = clampMargin(colliderDefinition->margin.z);
-                        for (const auto& point : colliderHull)
+
+                        Collision::ColliderDefinition adjustedDefinition = *colliderDefinition;
+                        const float clampedMargin = clampMargin(adjustedDefinition.margin);
+                        adjustedDefinition.margin = clampedMargin;
+
+                        if (std::abs(clampedMargin - colliderDefinition->margin) > 1e-6f)
                         {
-                            scaled.emplace_back(float2{ point.x * colliderDefinition->scale.x + xMargin,
-                                point.y * colliderDefinition->scale.y + zMargin });
+                            std::ostringstream warn;
+                            warn << kLogPrefix << "Hull margin for '" << kind
+                                << "' clamped from " << colliderDefinition->margin
+                                << " to " << clampedMargin << "\n";
+                            DebugTrace(warn.str());
                         }
 
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(scaled, float2{ colliderDefinition->offset.x + xMargin,
-                            colliderDefinition->offset.z + zMargin }, generatedCollider.thickness + yMargin, Collision::CollisionLayer::Sweets);
+                        collider = Collision::BuildColliderFromDefinition(
+                            adjustedDefinition,
+                            scaledTransform,
+                            Collision::CollisionLayer::Sweets);
                         if (!collider)
                         {
                             colliderDefinitionFailed = true;
@@ -1371,7 +1379,12 @@ namespace SweetsSpace
 
                     if (colliderDefinitionIsCompound)
                     {
-                        collider = Collision::BuildColliderFromDefinition(*colliderDefinition, Collision::CollisionLayer::Sweets);
+                        collider = Collision::BuildColliderFromDefinition(
+                            *colliderDefinition,
+                            scaledTransform,
+                            Collision::CollisionLayer::Sweets,
+                            1.0f,
+                            0.0f);
                         if (!collider)
                         {
                             colliderDefinitionFailed = true;
