@@ -134,6 +134,8 @@ namespace
 
     using SweetsSpace::ColliderPreset;
     using SweetsSpace::ColliderShape;
+    using SweetsSpace::SweetsPrototypeManifest;
+    using SweetsSpace::SweetsType;
 
     struct ModelBounds
     {
@@ -307,6 +309,7 @@ namespace
     std::vector<SweetsSpace::WeightedSweetsType> ParseWeights(const std::string& raw, bool* outError)
     {
         std::vector<SweetsSpace::WeightedSweetsType> weights;
+        auto& manifest = SweetsPrototypeManifest::Instance();
         std::string token;
         std::istringstream stream(raw);
 
@@ -352,8 +355,8 @@ namespace
                 continue;
             }
 
-            const auto* descriptor = SweetsPrototypeManifest::Instance().Find(kind);
-            if (!descriptor)
+            const auto resolvedType = manifest.Resolve(kind);
+            if (!resolvedType)
             {
                 if (outError)
                 {
@@ -367,7 +370,7 @@ namespace
                 continue;
             }
 
-            weights.push_back({ descriptor->key, weight });
+            weights.push_back({ *resolvedType, weight });
         }
 
         if (weights.empty() && outError)
@@ -2422,14 +2425,25 @@ namespace SweetsSpace
                     continue;
                 }
 
-                std::map<std::string, float> collapsed;
+                std::map<SweetsType, float> collapsed;
                 for (const auto& entry : parsedWeights)
                 {
-                    if (m_spawner.find(entry.kind) == m_spawner.end())
+                    const auto* descriptor = SweetsPrototypeManifest::Instance().Find(entry.kind);
+                    if (!descriptor)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets type '"
+                            << ToString(entry.kind) << "'.\n";
+                        DebugTrace(oss.str());
+                        continue;
+                    }
+
+                    const std::string normalizedKind = NormalizeKey(descriptor->key);
+                    if (m_spawner.find(normalizedKind) == m_spawner.end())
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets kind '"
-                            << entry.kind << "'.\n";
+                            << descriptor->key << "'.\n";
                         DebugTrace(oss.str());
                         continue;
                     }
@@ -3130,16 +3144,33 @@ namespace SweetsSpace
 
         std::uniform_real_distribution<float> dist(0.0f, totalWeight);
         float roll = dist(m_random);
+        std::optional<SweetsType> chosenType;
         for (const auto& entry : config.weights)
         {
             if (roll <= entry.weight)
             {
-                return entry.kind;
+                chosenType = entry.kind;
+                break;
             }
             roll -= entry.weight;
         }
 
-        return config.weights.back().kind;
+        if (!chosenType)
+        {
+            chosenType = config.weights.back().kind;
+        }
+
+        const auto* descriptor = SweetsPrototypeManifest::Instance().Find(*chosenType);
+        if (!descriptor)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Failed to resolve descriptor for sweets type '" << ToString(*chosenType)
+                << "' when choosing spawn kind.\n";
+            DebugTrace(oss.str());
+            return {};
+        }
+
+        return NormalizeKey(descriptor->key);
     }
 
     void SweetsManager::OnPhaseConfigurationChanged(int newPhase)
@@ -3194,7 +3225,7 @@ namespace SweetsSpace
             bool first = true;
             for (const auto& entry : config.weights)
             {
-                oss << (first ? ' ' : ',') << entry.kind
+                oss << (first ? ' ' : ',') << ToString(entry.kind)
                     << ':' << std::fixed << std::setprecision(2) << entry.weight;
                 first = false;
             }
@@ -3245,6 +3276,7 @@ namespace SweetsSpace
     {
         std::vector<WeightedSweetsType> weights;
         weights.reserve(m_spawner.size());
+        auto& manifest = SweetsPrototypeManifest::Instance();
         for (const auto& entry : m_spawner)
         {
             float spawnWeight = 1.0f;
@@ -3263,7 +3295,17 @@ namespace SweetsSpace
                 continue;
             }
 
-            weights.push_back({ entry.first, spawnWeight });
+            const auto resolvedType = manifest.Resolve(entry.first);
+            if (!resolvedType)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "Skipping default spawn weight for unknown sweets type key '" << entry.first
+                    << "'.\n";
+                DebugTrace(warn.str());
+                continue;
+            }
+
+            weights.push_back({ *resolvedType, spawnWeight });
         }
         return weights;
     }

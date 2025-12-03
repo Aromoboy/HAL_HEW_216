@@ -22,6 +22,7 @@
 #include "CollisionLayer.h"
 #include "Physical.h"
 #include "ColliderConfigLoader.h"
+#include "SweetsPrototypeManifest.h"
 
 namespace Core
 {
@@ -47,7 +48,7 @@ namespace SweetsSpace
 
     struct WeightedSweetsType
     {
-        std::string kind;
+        SweetsType kind{ SweetsType::Cake };
         float weight = 1.0f;
     };
 
