@@ -170,6 +170,7 @@ private:
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
     bool m_cachedPlayerBoundsValid = false;
     bool m_playerBoundsFailureLogged = false;
+    std::shared_ptr<Render::Model> m_playerModel;
 };
 
 #endif // __SCENE_GAME_H__
