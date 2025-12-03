@@ -36,7 +36,18 @@
 
 namespace SweetsSpace
 {
-    const char* ToString(ColliderShape shape);
+    const char* ToString(ColliderShape shape)
+    {
+        switch (shape)
+        {
+        case ColliderShape::Box:
+            return "Box";
+        case ColliderShape::Capsule:
+            return "Capsule";
+        default:
+            return "Unknown";
+        }
+    }
 }
 
 namespace
@@ -407,19 +418,6 @@ namespace
         catch (const std::exception&)
         {
             return false;
-        }
-    }
-
-    const char* ::SweetsSpace::ToString(::SweetsSpace::ColliderShape shape)
-    {
-        switch (shape)
-        {
-        case ::SweetsSpace::ColliderShape::Box:
-            return "Box";
-        case ::SweetsSpace::ColliderShape::Capsule:
-            return "Capsule";
-        default:
-            return "Unknown";
         }
     }
 
