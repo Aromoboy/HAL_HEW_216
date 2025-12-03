@@ -737,6 +737,14 @@ namespace SweetsSpace
             preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
+        case SweetsType::Strawberry:
+            preset.spawnWeight = 1.0f;
+            preset.weight = 0.9f;
+            preset.damping = 0.985f;
+            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
+            preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
+            return preset;
         default:
             return std::nullopt;
         }
@@ -926,6 +934,7 @@ namespace SweetsSpace
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
         , m_warnedMissingColliderDefinitionKinds()
+        , m_warnedMissingFactoryPresetKinds()
         , m_warnedMissingGeneratedHull(false)
         , m_hasHorizontalBounds(false)
         , m_minHorizontalBound(0.0f)
@@ -3298,6 +3307,13 @@ namespace SweetsSpace
             if (presetIt != m_factoryPresets.end())
             {
                 spawnWeight = presetIt->second.spawnWeight;
+            }
+            else if (m_warnedMissingFactoryPresetKinds.insert(entry.first).second)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "No factory preset found for kind '" << entry.first
+                    << "' while building default weights; using fallback weight=" << spawnWeight << ".\n";
+                DebugTrace(warn.str());
             }
 
             if (spawnWeight <= 0.0f)

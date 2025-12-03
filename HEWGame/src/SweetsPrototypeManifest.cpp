@@ -112,6 +112,7 @@ namespace SweetsSpace
         Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
+        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry_low01.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
     }
 
@@ -136,7 +137,7 @@ namespace SweetsSpace
 
         const bool loaded = LoadOverridesFromCsv(csvPath);
 
-        const std::array<SweetsType, 4> kTypes{ SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Fairy };
+        const std::array<SweetsType, 5> kTypes{ SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Strawberry, SweetsType::Fairy };
         for (const auto type : kTypes)
         {
             if (m_byType.find(type) == m_byType.end())
@@ -229,6 +230,7 @@ namespace SweetsSpace
             if (normalizedKey == NormalizeKey(ToString(SweetsType::Cake))) mappedType = SweetsType::Cake;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pudding))) mappedType = SweetsType::Pudding;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Sherbet))) mappedType = SweetsType::Sherbet;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Strawberry))) mappedType = SweetsType::Strawberry;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Fairy)) || normalizedKey == "player") mappedType = SweetsType::Fairy;
 
             if (!mappedType)
@@ -276,7 +278,7 @@ namespace SweetsSpace
             m_lookup[normalized] = type;
         }
 
-        for (SweetsType type : { SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Fairy })
+        for (SweetsType type : { SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Strawberry, SweetsType::Fairy })
         {
             if (touched.find(type) == touched.end())
             {
@@ -342,6 +344,8 @@ namespace SweetsSpace
             return "Pudding";
         case SweetsType::Sherbet:
             return "Sherbet";
+        case SweetsType::Strawberry:
+            return "Strawberry";
         case SweetsType::Fairy:
             return "Fairy";
         default:

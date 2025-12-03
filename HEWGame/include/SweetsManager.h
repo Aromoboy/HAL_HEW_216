@@ -222,6 +222,7 @@ namespace SweetsSpace
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
         std::unordered_set<std::string> m_warnedMissingColliderDefinitionKinds;
+        std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_warnedMissingGeneratedHull;
         bool m_hasHorizontalBounds;
         float m_minHorizontalBound;
