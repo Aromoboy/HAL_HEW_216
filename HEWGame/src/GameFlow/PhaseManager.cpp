@@ -133,26 +133,8 @@ namespace GameFlow
             advanced = true;
             LogPhaseAdvance(threshold, m_lastReportedHeight);
         }
-
-        return advanced;
-    }
-    
-    //ミニフェーズ
-    bool PhaseManager::UpdateMiniHeight(float currentMaxMiniHeight)
-    {
-        if (!m_initialized)
-        {
-            return false;
-        }
-
-        if (!std::isfinite(currentMaxMiniHeight))
-        {
-            return false;
-        }
-
-        m_lastReportedHeight = std::max(m_lastReportedHeight, currentMaxMiniHeight);
-
-        bool advanced = false;
+       
+        //ミニフェーズ
         while (m_nextMiniThresholdIndex < m_minithresholds.size()
             && m_lastReportedHeight >= m_minithresholds[m_nextMiniThresholdIndex])
         {
@@ -162,11 +144,11 @@ namespace GameFlow
             advanced = true;
             LogPhaseAdvance(threshold, m_lastReportedHeight);
         }
+       
 
-        
         return advanced;
     }
-
+    
     int PhaseManager::GetCurrentPhase() const noexcept
     {
         return m_currentPhase;
