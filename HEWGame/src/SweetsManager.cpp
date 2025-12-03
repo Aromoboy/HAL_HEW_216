@@ -1955,6 +1955,17 @@ namespace SweetsSpace
         return m_currentPhase;
     }
 
+    std::vector<std::pair<std::string, SweetsManager::FactoryPreset>> SweetsManager::EnumerateFactoryPresets() const
+    {
+        std::vector<std::pair<std::string, FactoryPreset>> presets;
+        presets.reserve(m_factoryPresets.size());
+        for (const auto& entry : m_factoryPresets)
+        {
+            presets.push_back(entry);
+        }
+        return presets;
+    }
+
     Core::IUpdatable* SweetsManager::GetLateUpdateNode()
     {
         return m_lateUpdateNode.get();
