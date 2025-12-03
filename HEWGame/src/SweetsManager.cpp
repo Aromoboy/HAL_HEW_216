@@ -74,6 +74,7 @@ namespace
     constexpr int kDefaultLiveSweetsCap = 24;
     constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
+    constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
@@ -152,6 +153,7 @@ namespace
     using ::SweetsSpace::ColliderShape;
     using ::SweetsSpace::SweetsPrototypeManifest;
     using ::SweetsSpace::SweetsType;
+    using ::SweetsSpace::SweetsTypeHash;
 
     struct ModelBounds
     {
@@ -2310,6 +2312,19 @@ namespace SweetsSpace
             bool hasWeights = false;
         };
 
+        std::unordered_set<std::string> registeredKindsNormalized;
+        for (const auto& entry : m_spawner)
+        {
+            registeredKindsNormalized.insert(NormalizeKey(entry.first));
+        }
+
+        const std::vector<WeightedSweetsType> defaultWeights = BuildDefaultWeights();
+        std::unordered_map<SweetsType, float, SweetsTypeHash> defaultWeightLookup;
+        for (const auto& entry : defaultWeights)
+        {
+            defaultWeightLookup[entry.kind] = entry.weight;
+        }
+
         std::map<int, PartialConfig> parsed;
         int currentPhase = -1;
         bool parseError = false;
@@ -2462,7 +2477,7 @@ namespace SweetsSpace
                     }
 
                     const std::string normalizedKind = NormalizeKey(descriptor->key);
-                    if (m_spawner.find(normalizedKind) == m_spawner.end())
+                    if (registeredKindsNormalized.find(normalizedKind) == registeredKindsNormalized.end())
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets kind '"
@@ -2533,7 +2548,7 @@ namespace SweetsSpace
 
             if (!entry.second.hasWeights || config.weights.empty())
             {
-                config.weights = BuildDefaultWeights();
+                config.weights = defaultWeights;
             }
 
             if (config.weights.empty())
@@ -2544,6 +2559,8 @@ namespace SweetsSpace
                 DebugTrace(oss.str());
                 continue;
             }
+
+            EnsureRegisteredWeights(config, entry.first, registeredKindsNormalized, defaultWeightLookup);
 
             m_phaseConfigs.push_back(std::move(config));
         }
@@ -2563,6 +2580,87 @@ namespace SweetsSpace
             << " spawn phases from '" << path << "' (parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
         return !parseError;
+    }
+
+    void SweetsManager::EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
+        const std::unordered_set<std::string>& registeredKindsNormalized,
+        const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const
+    {
+        auto& manifest = SweetsPrototypeManifest::Instance();
+
+        std::unordered_set<std::string> presentNormalized;
+        for (const auto& weight : config.weights)
+        {
+            const auto* descriptor = manifest.Find(weight.kind);
+            if (!descriptor)
+            {
+                continue;
+            }
+
+            presentNormalized.insert(NormalizeKey(descriptor->key));
+        }
+
+        std::vector<SweetsType> missingTypes;
+        missingTypes.reserve(registeredKindsNormalized.size());
+        for (const auto& normalizedKind : registeredKindsNormalized)
+        {
+            if (presentNormalized.find(normalizedKind) != presentNormalized.end())
+            {
+                continue;
+            }
+
+            const auto resolvedType = manifest.Resolve(normalizedKind);
+            if (resolvedType)
+            {
+                missingTypes.push_back(*resolvedType);
+            }
+        }
+
+        if (missingTypes.empty())
+        {
+            return;
+        }
+
+        std::sort(missingTypes.begin(), missingTypes.end(), [](SweetsType lhs, SweetsType rhs)
+        {
+            return static_cast<int>(lhs) < static_cast<int>(rhs);
+        });
+
+        std::ostringstream warn;
+        warn << kLogPrefix << "[Spawn] Phase " << phaseIndex
+            << " missing spawn weights for registered kinds:";
+        for (auto missing : missingTypes)
+        {
+            warn << ' ' << ToString(missing);
+        }
+        warn << " (registered=" << registeredKindsNormalized.size()
+            << " configured=" << presentNormalized.size() << ")\n";
+        DebugTrace(warn.str());
+
+        if (!kAutoIncludeMissingWeightKinds)
+        {
+            return;
+        }
+
+        for (const auto missing : missingTypes)
+        {
+            float fallbackWeight = 1.0f;
+            const auto defaultIt = defaultWeightLookup.find(missing);
+            if (defaultIt != defaultWeightLookup.end() && defaultIt->second > 0.0f)
+            {
+                fallbackWeight = defaultIt->second;
+            }
+
+            config.weights.push_back({ missing, fallbackWeight });
+            presentNormalized.insert(NormalizeKey(ToString(missing)));
+
+            std::ostringstream added;
+            added << kLogPrefix << "[Spawn] Phase " << phaseIndex
+                << " auto-added missing kind '" << ToString(missing)
+                << "' with fallback weight=" << std::fixed << std::setprecision(2) << fallbackWeight
+                << " (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
+            DebugTrace(added.str());
+        }
     }
 
     void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
@@ -3314,7 +3412,7 @@ namespace SweetsSpace
                 warn << kLogPrefix << "No factory preset found for kind '" << entry.first
                     << "' while building default weights; using fallback weight=" << spawnWeight << ".\n";
                 DebugTrace(warn.str());
-            }*/ //このラインがバグってるのでコメントアウトした（ミハイルより）
+            }*/ //ﾌイoOﾄのでコgAEgi~nCj
 
             if (spawnWeight <= 0.0f)
             {
