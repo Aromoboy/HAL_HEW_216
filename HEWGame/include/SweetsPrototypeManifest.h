@@ -12,6 +12,7 @@ namespace SweetsSpace
         Cake,
         Pudding,
         Sherbet,
+        Strawberry,
         Fairy,
     };
 
