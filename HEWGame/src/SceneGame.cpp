@@ -1275,7 +1275,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         viewportHeight = static_cast<float>(rtv->GetHeight());
     }
 
-    float deltaTime = ctx.timer.DeltaSeconds();
+    float deltaTime = ctx.timer.DeltaTime();
     for (auto& obj : m_stageObjects)
     {
         if (obj.spinEnabled)
