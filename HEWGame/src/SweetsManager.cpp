@@ -75,8 +75,6 @@ namespace
             return { DirectX::XMFLOAT4{ 0.89f, 0.72f, 0.38f, 1.0f }, DirectX::XMFLOAT4{ 0.65f, 0.52f, 0.28f, 1.0f } };
         case SweetsSpace::SweetsType::Sherbet:
             return { DirectX::XMFLOAT4{ 0.96f, 0.78f, 0.86f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.62f, 0.69f, 1.0f } };
-        case SweetsSpace::SweetsType::Strawberry:
-            return { DirectX::XMFLOAT4{ 0.93f, 0.25f, 0.42f, 1.0f }, DirectX::XMFLOAT4{ 0.72f, 0.2f, 0.32f, 1.0f } };
         case SweetsSpace::SweetsType::Cake:
         default:
             return { DirectX::XMFLOAT4{ 1.0f, 0.94f, 0.85f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.72f, 0.62f, 1.0f } };
@@ -585,15 +583,13 @@ namespace SweetsSpace
             float3 maxScale;
         };
 
-        const std::array<SweetsFactoryConfig, 4> kConfigs = { {
+        const std::array<SweetsFactoryConfig, 3> kConfigs = { {
             { SweetsType::Cake, ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } }, 1.35f, 0.96f,
                 float3{0.85f, 0.85f, 0.85f}, float3{1.35f, 1.35f, 1.35f} },
             { SweetsType::Pudding, ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } }, 1.0f, 0.98f,
                 float3{0.9f, 0.9f, 0.9f}, float3{1.2f, 1.2f, 1.2f} },
             { SweetsType::Sherbet, ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } }, 0.85f, 0.99f,
                 float3{0.75f, 0.75f, 0.75f}, float3{1.4f, 1.4f, 1.4f} },
-            { SweetsType::Strawberry, ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.015f, 0.01f } }, 0.72f, 0.98f,
-                float3{0.8f, 0.8f, 0.8f}, float3{1.2f, 1.2f, 1.2f} },
         } };
 
         const ModelBounds fallbackBounds{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f }, true };

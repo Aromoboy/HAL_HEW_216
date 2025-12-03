@@ -32,7 +32,6 @@ namespace SweetsSpace
         Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
-        Register(SweetsType::Strawberry, "Strawberry", "Strawberry.obj", "Juicy strawberry scoop with seeded surface");
         Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
     }
 
@@ -89,8 +88,6 @@ namespace SweetsSpace
             return "Pudding";
         case SweetsType::Sherbet:
             return "Sherbet";
-        case SweetsType::Strawberry:
-            return "Strawberry";
         case SweetsType::Fairy:
             return "Fairy";
         default:
