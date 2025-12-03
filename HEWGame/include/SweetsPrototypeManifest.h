@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
-
+    
 namespace SweetsSpace
 {
     enum class SweetsType : std::uint8_t
@@ -33,15 +33,21 @@ namespace SweetsSpace
     class SweetsPrototypeManifest
     {
     public:
-        static const SweetsPrototypeManifest& Instance();
+        static constexpr const char* kDefaultCsvPath = "Assets/Config/sweets_models.csv";
+
+        static SweetsPrototypeManifest& Instance();
 
         const SweetsPrototypeDescriptor* Find(SweetsType type) const;
         const SweetsPrototypeDescriptor* Find(const std::string& key) const;
         std::optional<SweetsType> Resolve(const std::string& key) const;
 
+        bool ReloadFromCsv(const std::string& csvPath = kDefaultCsvPath);
+
     private:
         SweetsPrototypeManifest();
 
+        void ApplyDefaults();
+        bool LoadOverridesFromCsv(const std::string& csvPath);
         void Register(SweetsType type, std::string key, std::string relativePath, std::string description);
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;

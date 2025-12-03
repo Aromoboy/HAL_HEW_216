@@ -1,0 +1,6 @@
+key,modelPath,description
+Cake,Assets/Model/SweetsPrototype/Cake.obj,Textured sponge cake cube with frosting layers
+Pudding,Assets/Model/SweetsPrototype/Pudding.obj,UV-mapped triangular pudding slice
+Sherbet,Assets/Model/SweetsPrototype/Sherbet.obj,Shaded sherbet scoop with smooth normals
+Fairy,Assets/Model/SweetsPrototype/Fairy.obj,Procedural cross-plane fairy with cross-plane wings
+Player,Assets/Model/SweetsPrototype/Fairy.obj,Player-controlled fairy alias; falls back to Fairy.obj if missing
