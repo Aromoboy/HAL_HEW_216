@@ -15,6 +15,7 @@
 #include "Core/StepTimer.h"
 #include "Systems/PhysicsMachine.h"
 #include "Vector.h"
+#include "Transform.h"
 #include "Stage/StageData.h"
 #include "Stage/FoundationPlatform.h"
 #include "GameFlow/PhaseManager.h"
@@ -73,6 +74,13 @@ public:
         float thicknessPadding = 1.0f;
         float3 padding{ 0.0f, 0.0f, 0.0f };
         float3 offset{ 0.0f, 0.0f, 0.0f };
+    };
+
+    struct PlayerSpawnTransform
+    {
+        Transform transform{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
+        bool loadedFromFile = false;
+        bool rotationFromDegrees = false;
     };
 
     SceneGame();
@@ -186,6 +194,7 @@ private:
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
     PlayerColliderTuning m_playerColliderTuning;
+    PlayerSpawnTransform m_playerSpawnTransform;
 };
 
 #endif // __SCENE_GAME_H__
