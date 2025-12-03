@@ -21,8 +21,10 @@
 #include "SweetsManager.h"
 #include "HudRenderer.h"
 #include "BackgroundRenderer.h"
+#include "ColliderConfigLoader.h"
 #include <cstddef>
 #include <memory>
+#include <map>
 #include <unordered_set>
 #include <vector>
 #include <limits>
@@ -171,6 +173,15 @@ private:
     bool m_cachedPlayerBoundsValid = false;
     bool m_playerBoundsFailureLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
+    std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
+    bool m_playerColliderConfigLoaded = false;
+    struct PlayerColliderTuning
+    {
+        float thicknessPadding = 1.0f;
+        float3 padding{ 0.0f, 0.0f, 0.0f };
+        float3 offset{ 0.0f, 0.0f, 0.0f };
+    };
+    PlayerColliderTuning m_playerColliderTuning;
 };
 
 #endif // __SCENE_GAME_H__
