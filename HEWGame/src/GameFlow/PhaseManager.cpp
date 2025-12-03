@@ -153,12 +153,12 @@ namespace GameFlow
         m_lastReportedHeight = std::max(m_lastReportedHeight, currentMaxMiniHeight);
 
         bool advanced = false;
-        while (m_nextThresholdIndex < m_minithresholds.size()
-            && m_lastReportedHeight >= m_thresholds[m_nextThresholdIndex])
+        while (m_nextMiniThresholdIndex < m_minithresholds.size()
+            && m_lastReportedHeight >= m_minithresholds[m_nextMiniThresholdIndex])
         {
-            const float threshold = m_minithresholds[m_nextThresholdIndex];
-            ++m_nextThresholdIndex;
-            ++m_currentPhase;
+            const float threshold = m_minithresholds[m_nextMiniThresholdIndex];
+            ++m_nextMiniThresholdIndex;
+            ++m_currentMiniPhase;
             advanced = true;
             LogPhaseAdvance(threshold, m_lastReportedHeight);
         }

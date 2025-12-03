@@ -33,6 +33,11 @@ namespace GameFlow
 
         std::size_t m_nextThresholdIndex;
         int m_currentPhase;
+
+        //ミニフェーズ
+        std::size_t m_nextMiniThresholdIndex;
+        int m_currentMiniPhase;
+
         bool m_initialized;
         float m_lastReportedHeight;
         std::chrono::steady_clock::time_point m_startTime;
