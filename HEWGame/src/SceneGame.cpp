@@ -114,7 +114,25 @@ namespace
             float paddedThickness{ 0.0f };
         };
 
-        std::string TrimWhitespace(const std::string& input);
+        std::string TrimWhitespace(const std::string& input)
+        {
+            const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
+            auto begin = input.begin();
+            auto end = input.end();
+            while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
+            {
+                ++begin;
+            }
+            if (begin == end)
+            {
+                return std::string{};
+            }
+            do
+            {
+                --end;
+            } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
+            return std::string(begin, end + 1);
+        }
 
         float3 ScaleVector(const float3& value, const float3& scale)
         {
@@ -490,26 +508,6 @@ namespace
             float minVerticalSpeed = 0.02f;
             float minTangentialSpeed = 0.02f;
         };
-
-        std::string TrimWhitespace(const std::string& input)
-        {
-            const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
-            auto begin = input.begin();
-            auto end = input.end();
-            while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
-            {
-                ++begin;
-            }
-            if (begin == end)
-            {
-                return std::string{};
-            }
-            do
-            {
-                --end;
-            } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
-            return std::string(begin, end + 1);
-        }
 
         SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
         {
