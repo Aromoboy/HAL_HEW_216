@@ -473,44 +473,65 @@ namespace Systems
                         return;
                 }
 
+                struct BodyProxy
+                {
+                        Entities::PhysicalEntity* body;
+                        Collision::ICollider* collider;
+                        Collision::CollisionLayer layer;
+                        AABB bounds;
+                };
+
+                std::vector<BodyProxy> proxies;
+                proxies.reserve(bodyCount);
+                for (Entities::PhysicalEntity* body : activeBodies)
+                {
+                        if (!body)
+                        {
+                                continue;
+                        }
+
+                        Collision::ICollider* collider = body->GetCollider();
+                        if (!collider)
+                        {
+                                continue;
+                        }
+
+                        body->SyncColliderBounds();
+                        proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
+                }
+
+                std::sort(proxies.begin(), proxies.end(), [](const BodyProxy& a, const BodyProxy& b)
+                {
+                        return a.bounds.min.x < b.bounds.min.x;
+                });
+
+                const size_t proxyCount = proxies.size();
+                if (proxyCount < 2)
+                {
+                        return;
+                }
+
                 size_t testedPairs = 0;
                 size_t resolvedPairs = 0;
 
-                for (size_t i = 0; i < bodyCount; ++i)
+                for (size_t i = 0; i < proxyCount; ++i)
                 {
-                        Entities::PhysicalEntity* bodyA = activeBodies[i];
-                        if (!bodyA)
+                        const BodyProxy& proxyA = proxies[i];
+                        Entities::PhysicalEntity* bodyA = proxyA.body;
+                        Collision::ICollider* colliderA = proxyA.collider;
+                        const Collision::CollisionLayer layerA = proxyA.layer;
+
+                        for (size_t j = i + 1; j < proxyCount; ++j)
                         {
-                                continue;
-                        }
-
-                        Collision::ICollider* colliderA = bodyA->GetCollider();
-                        if (!colliderA)
-                        {
-                                continue;
-                        }
-
-                        const Collision::CollisionLayer layerA = bodyA->GetCollisionLayer();
-
-                        bodyA->SyncColliderBounds();
-
-                        for (size_t j = i + 1; j < bodyCount; ++j)
-                        {
-                                Entities::PhysicalEntity* bodyB = activeBodies[j];
-                                if (!bodyB)
+                                const BodyProxy& proxyB = proxies[j];
+                                if (proxyB.bounds.min.x > proxyA.bounds.max.x)
                                 {
-                                        continue;
+                                        break;
                                 }
 
-                                Collision::ICollider* colliderB = bodyB->GetCollider();
-                                if (!colliderB)
-                                {
-                                        continue;
-                                }
-
-                                const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
-
-                                bodyB->SyncColliderBounds();
+                                Entities::PhysicalEntity* bodyB = proxyB.body;
+                                Collision::ICollider* colliderB = proxyB.collider;
+                                const Collision::CollisionLayer layerB = proxyB.layer;
 
                                 if (!CanCollide(layerA, layerB))
                                 {
@@ -564,8 +585,8 @@ namespace Systems
 
                                 const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
 
-                                const AABB boundsA = colliderA->GetAABB();
-                                const AABB boundsB = colliderB->GetAABB();
+                                const AABB boundsA = proxyA.bounds;
+                                const AABB boundsB = proxyB.bounds;
 
                                 float overlaps[3];
                                 overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);

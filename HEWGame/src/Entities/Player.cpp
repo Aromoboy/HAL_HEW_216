@@ -255,6 +255,7 @@ namespace Entities
 
             ApplyTranslation(translation);
 
+#if defined(_DEBUG)
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "Move input hx=" << horizontal
                 << " vy=" << vertical
@@ -262,6 +263,7 @@ namespace Entities
                 << " dt=" << ctx.dt
                 << " delta=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
             PlayerDebugTrace(oss.str());
+#endif
         }
 
         ClampVerticalPosition();
