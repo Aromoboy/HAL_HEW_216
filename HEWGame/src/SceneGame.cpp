@@ -25,6 +25,7 @@
 #include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
 #include "Entities/Player.h"
+#include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
 #include <algorithm>
@@ -1731,11 +1732,25 @@ SceneGame::SceneGame()
         if (collider)
         {
             const AABB bounds = collider->GetAABB();
+            const float aabbThickness = bounds.max.z - bounds.min.z;
+
+            const char* colliderType = "Unknown";
+            if (dynamic_cast<const Collision::ConvexHullCollider2D*>(collider))
+            {
+                colliderType = "ConvexHullCollider2D";
+            }
+            else if (dynamic_cast<const Collision::Collider2DBase*>(collider))
+            {
+                colliderType = "Collider2DBase";
+            }
+
             std::ostringstream oss;
             oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
                 << " key='" << playerColliderKey << "'"
                 << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
                 << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
+                << " aabbThickness=" << aabbThickness
+                << " colliderType=" << colliderType
                 << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
                 << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
                 << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
@@ -1745,7 +1760,6 @@ SceneGame::SceneGame()
                 << " configAvailable=" << configAvailable
                 << " geometryValid=" << geometryValid
                 << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
-                << " colliderThickness=" << collider->GetThickness()
                 << " reason=" << colliderDecisionReason
                 << "\n";
             ::DebugTrace(oss.str());
