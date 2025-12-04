@@ -70,67 +70,29 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             continue;
         }
 
-        if (i < a_model.GetMeshCount())
+        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
+        if (material)
         {
-            std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
-            if (material)
+#if defined(_WIN32) && defined(_DEBUG)
+            if (ID3D11ShaderResourceView* texView = material->GetTexture())
             {
-                ShaderList::SetMaterial(*material);
+                OutputDebugStringA("[ModelRender] Texture bound.\n");
             }
-            else
+#endif
+            ShaderList::SetMaterial(*material);
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
+            if (context)
             {
-                DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
-                if (context)
-                {
-                    ID3D11ShaderResourceView* nullView = nullptr;
-                    context->PSSetShaderResources(0, 1, &nullView);
-                }
+                ID3D11ShaderResourceView* nullView = nullptr;
+                context->PSSetShaderResources(0, 1, &nullView);
             }
         }
 
         MeshDraw(*mesh);
     }
-    for (int i = 0; i < a_model.GetMeshCount(); i++)
-    {
-        std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
-        if (!mesh)
-        {
-            DebugTrace(std::string(kLogPrefix) + "Skipped mesh draw: mesh resource expired.\n");
-            continue;
-        }
-
-        if (i < a_model.GetMeshCount())
-        {
-            std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
-            if (material)
-            {
-                // ? ADD THIS DEBUG
-                ID3D11ShaderResourceView* texView = material->GetTexture();
-                if (texView)
-                {
-                    OutputDebugStringA("[ModelRender] マテリアルにテクスチャあり\n");
-                }
-                else
-                {
-                    OutputDebugStringA("[ModelRender] マテリアルにテクスチャなし\n");
-                }
-
-                ShaderList::SetMaterial(*material);
-            }
-            else
-            {
-                OutputDebugStringA("[ModelRender] マテリアルがnull\n");
-                DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
-                if (context)
-                {
-                    ID3D11ShaderResourceView* nullView = nullptr;
-                    context->PSSetShaderResources(0, 1, &nullView);
-                }
-            }
-        }
-        MeshDraw(*mesh);
-    }
-
 }
 
 //void ModelRender::Draw(ModelDX& a_model, const CameraSpace::ICamera* camera)
