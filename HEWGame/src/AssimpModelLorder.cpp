@@ -19,10 +19,6 @@ AssimpModelLorder::AssimpModelLorder()
 {
 }
 
-AssimpModelLorder::~AssimpModelLorder()
-{
-}
-
 // [h
 std::shared_ptr<Render::Model> AssimpModelLorder::Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache)
 {
@@ -210,13 +206,9 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 		}
 
 		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-
-
-
-		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 	}
 
 
 
 	return materials;
-	}
+}
