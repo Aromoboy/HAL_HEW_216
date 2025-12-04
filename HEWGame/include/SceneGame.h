@@ -194,6 +194,7 @@ private:
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
+    bool m_forceConfigPlayerCollider = false;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
 };

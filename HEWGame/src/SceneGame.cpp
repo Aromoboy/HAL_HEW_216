@@ -362,6 +362,93 @@ namespace
             return hull;
         }
 
+        bool ParseBool(const std::string& value, bool& outValue)
+        {
+            std::string lowered = value;
+            std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on")
+            {
+                outValue = true;
+                return true;
+            }
+
+            if (lowered == "false" || lowered == "0" || lowered == "no" || lowered == "off")
+            {
+                outValue = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        bool LoadPlayerColliderPreference(const std::string& path, bool defaultForceConfig)
+        {
+            bool forceConfig = defaultForceConfig;
+            bool parsed = false;
+
+            std::ifstream file(path);
+            if (!file)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Preference file missing; using default forceConfig=" << std::boolalpha << defaultForceConfig
+                    << " path='" << path << "'\n";
+                DebugTrace(oss.str());
+                return forceConfig;
+            }
+
+            std::string line;
+            int lineNumber = 0;
+            while (std::getline(file, line))
+            {
+                ++lineNumber;
+                const std::string trimmed = TrimWhitespace(line);
+                if (trimmed.empty() || trimmed[0] == '#')
+                {
+                    continue;
+                }
+
+                const std::size_t eq = trimmed.find('=');
+                if (eq == std::string::npos)
+                {
+                    continue;
+                }
+
+                const std::string key = TrimWhitespace(trimmed.substr(0, eq));
+                if (key != "forceConfigCollider")
+                {
+                    continue;
+                }
+
+                const std::string value = TrimWhitespace(trimmed.substr(eq + 1));
+                if (ParseBool(value, forceConfig))
+                {
+                    parsed = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerCollider] Parsed forceConfigCollider=" << std::boolalpha << forceConfig
+                        << " from line=" << lineNumber << " path='" << path << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerCollider] Failed to parse forceConfigCollider value='" << value
+                        << "' on line=" << lineNumber << "; using default " << std::boolalpha << defaultForceConfig << "\n";
+                    DebugTrace(oss.str());
+                }
+                break;
+            }
+
+            if (!parsed)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] forceConfigCollider not specified; defaulting to "
+                    << std::boolalpha << defaultForceConfig << " (path='" << path << "')\n";
+                DebugTrace(oss.str());
+            }
+
+            return forceConfig;
+        }
+
         std::shared_ptr<Collision::ICollider> BuildGeneratedPlayerCollider(
             const PlayerColliderGeometry& geometry,
             const SceneGame::PlayerColliderTuning& tuning,
@@ -1035,6 +1122,7 @@ void SceneGame::OnExit()
 SceneGame::SceneGame()
 {
     m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
+    m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kPlayerColliderConfigPath, false);
     m_playerColliderTuning = LoadPlayerColliderTuning(kPlayerColliderTuningPath);
     m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
@@ -1540,30 +1628,70 @@ SceneGame::SceneGame()
     }
     bool colliderFromConfig = false;
     std::string colliderSource = "unresolved";
+    std::string colliderDecisionReason = "undecided";
     const auto colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
-    if (colliderDef != m_playerColliderDefinitions.end())
-    {
-        collider = Collision::BuildColliderFromDefinition(colliderDef->second, trans, Collision::CollisionLayer::Player);
-        colliderFromConfig = collider != nullptr;
-        colliderSource = colliderFromConfig ? "config" : "config_build_failed";
-        if (!colliderFromConfig)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Definition found for key='" << playerColliderKey << "' but build failed; falling back to generated collider.\n";
-            DebugTrace(oss.str());
-        }
-    }
+    const bool configAvailable = colliderDef != m_playerColliderDefinitions.end();
+    const bool geometryValid = playerGeometry.bounds.valid;
 
-    if (!collider)
+    const auto tryGenerated = [&]()
     {
         collider = BuildGeneratedPlayerCollider(playerGeometry, m_playerColliderTuning, trans);
         colliderSource = collider ? "generated" : "generated_failed";
+    };
+
+    const auto tryConfig = [&]()
+    {
+        if (configAvailable)
+        {
+            collider = Collision::BuildColliderFromDefinition(colliderDef->second, trans, Collision::CollisionLayer::Player);
+            colliderFromConfig = collider != nullptr;
+            colliderSource = colliderFromConfig ? "config" : "config_build_failed";
+            if (!colliderFromConfig)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Definition found for key='" << playerColliderKey
+                    << "' but build failed; generated collider will be used if available.\n";
+                DebugTrace(oss.str());
+            }
+        }
+        else
+        {
+            colliderSource = "config_missing";
+        }
+    };
+
+    if (m_forceConfigPlayerCollider || !geometryValid)
+    {
+        tryConfig();
+        if (!collider && geometryValid)
+        {
+            tryGenerated();
+            colliderDecisionReason = collider ? "config_unavailable_generated_fallback" : "config_unavailable_generated_failed";
+        }
+        else if (collider)
+        {
+            colliderDecisionReason = m_forceConfigPlayerCollider ? "forced_config" : "geometry_invalid";
+        }
+    }
+    else
+    {
+        tryGenerated();
+        if (!collider)
+        {
+            tryConfig();
+            colliderDecisionReason = collider ? "generated_failed_config_fallback" : "generated_failed_config_unavailable";
+        }
+        else
+        {
+            colliderDecisionReason = "preferred_generated";
+        }
     }
 
     if (!collider)
     {
         collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
         colliderSource = "aabb_fallback";
+        colliderDecisionReason = "no_config_and_generated_failed";
     }
     player = std::make_unique<Entities::Player>(
         trans,
@@ -1613,7 +1741,13 @@ SceneGame::SceneGame()
                 << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
                 << " spawnRotation=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
                 << " configLoaded=" << std::boolalpha << colliderFromConfig
-                << " geometryValid=" << playerGeometry.bounds.valid << "\n";
+                << " forceConfig=" << m_forceConfigPlayerCollider
+                << " configAvailable=" << configAvailable
+                << " geometryValid=" << geometryValid
+                << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
+                << " colliderThickness=" << collider->GetThickness()
+                << " reason=" << colliderDecisionReason
+                << "\n";
             ::DebugTrace(oss.str());
         }
         if (m_drawSystem)
