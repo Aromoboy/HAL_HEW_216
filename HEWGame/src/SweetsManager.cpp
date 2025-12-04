@@ -1037,6 +1037,25 @@ namespace SweetsSpace
         {
             DebugTrace(std::string(kLogPrefix) + "Failed to load collider definitions; using AABB fallbacks.\n");
         }
+        else
+        {
+            std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
+            for (const auto& entry : m_colliderDefinitions)
+            {
+                const std::string normalizedKey = NormalizeKey(entry.first);
+                normalizedDefinitions[normalizedKey] = entry.second;
+
+                if (normalizedKey != entry.first)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Collider definition key normalized from '" << entry.first
+                        << "' to '" << normalizedKey << "'.\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            m_colliderDefinitions.swap(normalizedDefinitions);
+        }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
@@ -1083,7 +1102,7 @@ namespace SweetsSpace
             }
 
             FactoryPreset preset = hasOverride ? overrideIt->second : *defaultPreset;
-            m_factoryPresets[resolvedKind] = preset;
+            m_factoryPresets[normalizedKind] = preset;
 
             std::ostringstream presetLog;
             presetLog << kLogPrefix << "Resolved factory preset for kind '" << resolvedKind;
@@ -1125,12 +1144,15 @@ namespace SweetsSpace
             const float resolvedRawThickness = geometry.bounds.valid ? geometry.rawThickness : baseFallbackThickness;
             const float paddedThickness = std::max(resolvedRawThickness * m_generatedColliderThicknessPadding, fallbackThickness);
             GeneratedCollider generatedCollider{ geometry.hull, geometry.polygons, paddedThickness };
-            m_generatedColliders[resolvedKind] = generatedCollider;
+            
+            m_generatedColliders[normalizedKind] = generatedCollider;
 
-            const auto colliderDefinition = FindColliderDefinition(resolvedKind);
-            const bool colliderDefinitionFound = colliderDefinition != m_colliderDefinitions.end();
-            const bool colliderDefinitionEmpty = colliderDefinitionFound
-                && IsColliderDefinitionEmpty(colliderDefinition->second);
+
+            const auto colliderDefinitionIt = FindColliderDefinition(resolvedKind);
+            const bool colliderDefinitionFound = colliderDefinitionIt != m_colliderDefinitions.end();
+            const bool colliderDefinitionEmpty =
+                colliderDefinitionFound &&
+                IsColliderDefinitionEmpty(colliderDefinitionIt->second);
             if (!colliderDefinitionFound || colliderDefinitionEmpty)
             {
                 std::ostringstream padLog;
@@ -1183,7 +1205,8 @@ namespace SweetsSpace
 
             const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider](const Transform& transform)
+            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider,
+                resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -1265,7 +1288,8 @@ namespace SweetsSpace
                 std::string colliderTypeChosen = "unresolved";
                 std::string colliderResolutionReason = "unresolved";
 
-                const auto colliderDef = FindColliderDefinition(resolvedKind);
+                const auto colliderDef = FindColliderDefinition(normalizedKind);
+
                 if (colliderDef != m_colliderDefinitions.end())
                 {
                     colliderDefinitionFound = true;
@@ -1601,7 +1625,7 @@ namespace SweetsSpace
                     Core::UpdatePhase::Physics, 0);
             };
 
-            auto [_, inserted] = m_spawner.emplace(kind, std::move(factory));
+            auto [_, inserted] = m_spawner.emplace(normalizedKind, std::move(factory));
             if (!inserted)
             {
                 std::ostringstream warn;
@@ -2092,11 +2116,13 @@ namespace SweetsSpace
 
     std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
-        auto it = m_spawner.find(kind);
+        const std::string normalizedKind = NormalizeKey(kind);
+        auto it = m_spawner.find(normalizedKind);
         if (it == m_spawner.end())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn requested for unknown kind '" << kind << "'. Registered kinds:";
+            oss << kLogPrefix << "Spawn requested for unknown kind '" << kind
+                << "' (normalized='" << normalizedKind << "'). Registered kinds:";
             if (m_spawner.empty())
             {
                 oss << " (none)";
@@ -3269,7 +3295,8 @@ namespace SweetsSpace
                 break;
             }
 
-            const std::string kind = ChooseKindFromActiveConfig();
+            const std::string chosenKind = ChooseKindFromActiveConfig();
+            const std::string kind = NormalizeKey(chosenKind);
             if (kind.empty())
             {
                 break;
@@ -3303,7 +3330,8 @@ namespace SweetsSpace
         while (!m_spawnQueue.empty() && m_burstTimer >= m_activeBurstInterval)
         {
             m_burstTimer -= m_activeBurstInterval;
-            const std::string kind = m_spawnQueue.front();
+            const std::string requestedKind = m_spawnQueue.front();
+            const std::string kind = NormalizeKey(requestedKind);
             m_spawnQueue.pop_front();
 
             if (m_currentBurstRemaining > 0)
@@ -3329,7 +3357,8 @@ namespace SweetsSpace
 
             const int remainingInBurst = std::max(0, m_currentBurstRemaining);
             std::ostringstream oss;
-            oss << kLogPrefix << "Burst emit kind='" << kind << "' remaining=" << remainingInBurst
+            oss << kLogPrefix << "Burst emit kind='" << kind << "' (requested='" << requestedKind
+                << "') remaining=" << remainingInBurst
                 << '/' << m_activeBurstPlanned << " queue=" << m_spawnQueue.size()
                 << " origins=" << emitOrigins.size() << " successful=" << successfulEmits
                 << " nextEmitIn=" << std::fixed << std::setprecision(2)
