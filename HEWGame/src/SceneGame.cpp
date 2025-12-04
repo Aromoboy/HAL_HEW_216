@@ -113,6 +113,8 @@ namespace
             float paddedThickness{ 0.0f };
         };
 
+        std::string TrimWhitespace(const std::string& input);
+
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
