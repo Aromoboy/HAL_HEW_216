@@ -44,9 +44,9 @@
 class AssimpModelLorder : public IModelLoader
 {
 public:
-	AssimpModelLorder();
+AssimpModelLorder();
 
-	~AssimpModelLorder();
+~AssimpModelLorder() override = default;
 
     virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
 

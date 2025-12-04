@@ -11,8 +11,8 @@ class TextureCache;
 class IModelLoader
 {
 public:
-        IModelLoader() {};
-        ~IModelLoader() = default;
+IModelLoader() {};
+virtual ~IModelLoader() = default;
 
         virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) = 0;
 };

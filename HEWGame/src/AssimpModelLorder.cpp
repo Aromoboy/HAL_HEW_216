@@ -19,10 +19,6 @@ AssimpModelLorder::AssimpModelLorder()
 {
 }
 
-AssimpModelLorder::~AssimpModelLorder()
-{
-}
-
 // [h
 std::shared_ptr<Render::Model> AssimpModelLorder::Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache)
 {
