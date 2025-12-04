@@ -1731,15 +1731,16 @@ SceneGame::SceneGame()
         }
         if (collider)
         {
+            const Collision::Collider2DBase* const colliderPtr = collider.get();
             const AABB bounds = collider->GetAABB();
             const float aabbThickness = bounds.max.z - bounds.min.z;
 
             const char* colliderType = "Unknown";
-            if (dynamic_cast<const Collision::ConvexHullCollider2D*>(collider))
+            if (dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr))
             {
                 colliderType = "ConvexHullCollider2D";
             }
-            else if (dynamic_cast<const Collision::Collider2DBase*>(collider))
+            else if (dynamic_cast<const Collision::Collider2DBase*>(colliderPtr))
             {
                 colliderType = "Collider2DBase";
             }
