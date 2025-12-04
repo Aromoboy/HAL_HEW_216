@@ -116,6 +116,8 @@ private:
     void RenderRunTelemetryOverlay() const;
 #endif
     int ComputeScore() const;
+    void NormalizePlayerColliderDefinitions();
+    std::string ResolvePlayerColliderKey(const std::string& key) const;
     std::vector<StageObject> m_stageObjects;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;

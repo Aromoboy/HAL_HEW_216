@@ -134,6 +134,17 @@ namespace
             return std::string(begin, end + 1);
         }
 
+        std::string NormalizeColliderKey(const std::string& key)
+        {
+            std::string normalized;
+            normalized.reserve(key.size());
+            for (unsigned char ch : key)
+            {
+                normalized.push_back(static_cast<char>(std::tolower(ch)));
+            }
+            return normalized;
+        }
+
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
@@ -1120,6 +1131,35 @@ void SceneGame::OnExit()
     ::DebugTrace(oss.str());
 }
 
+std::string SceneGame::ResolvePlayerColliderKey(const std::string& key) const
+{
+    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const auto resolvedType = manifest.Resolve(key);
+    if (resolvedType)
+    {
+        const auto* descriptor = manifest.Find(*resolvedType);
+        if (descriptor)
+        {
+            return NormalizeColliderKey(descriptor->key);
+        }
+    }
+
+    return NormalizeColliderKey(key);
+}
+
+void SceneGame::NormalizePlayerColliderDefinitions()
+{
+    std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
+
+    for (const auto& entry : m_playerColliderDefinitions)
+    {
+        const std::string canonicalKey = ResolvePlayerColliderKey(entry.first);
+        normalizedDefinitions[canonicalKey] = entry.second;
+    }
+
+    m_playerColliderDefinitions.swap(normalizedDefinitions);
+}
+
 SceneGame::SceneGame()
 {
     m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
@@ -1191,6 +1231,8 @@ SceneGame::SceneGame()
         }
         ::DebugTrace(oss.str());
     }
+
+    NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
     if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
@@ -1630,7 +1672,16 @@ SceneGame::SceneGame()
     bool colliderFromConfig = false;
     std::string colliderSource = "unresolved";
     std::string colliderDecisionReason = "undecided";
-    const auto colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
+    const std::string canonicalColliderKey = ResolvePlayerColliderKey(playerColliderKey);
+    auto colliderDef = m_playerColliderDefinitions.find(canonicalColliderKey);
+    if (colliderDef == m_playerColliderDefinitions.end())
+    {
+        colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
+        if (colliderDef == m_playerColliderDefinitions.end())
+        {
+            colliderDef = m_playerColliderDefinitions.find(NormalizeColliderKey(playerColliderKey));
+        }
+    }
     const bool configAvailable = colliderDef != m_playerColliderDefinitions.end();
     const bool geometryValid = playerGeometry.bounds.valid;
 
