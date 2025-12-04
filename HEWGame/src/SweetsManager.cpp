@@ -87,6 +87,8 @@ namespace
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
 
+    using ::SweetsSpace::SweetsPrototypeManifest;
+
     std::string ResolveManifestKeyAlias(const std::string& key)
     {
         const auto& manifest = SweetsPrototypeManifest::Instance();
