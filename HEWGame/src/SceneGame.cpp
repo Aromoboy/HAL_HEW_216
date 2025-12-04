@@ -1,6 +1,7 @@
 #include "AABBCollider.h"
 #include "Transform.h"
 #include "SceneGame.h"
+#include "Collision2D.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
 #include "Vector.h"
@@ -25,7 +26,6 @@
 #include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
 #include "Entities/Player.h"
-#include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
 #include <algorithm>
