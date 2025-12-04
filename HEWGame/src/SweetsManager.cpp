@@ -927,23 +927,23 @@ namespace SweetsSpace
 
     std::map<std::string, Collision::ColliderDefinition>::const_iterator SweetsManager::FindColliderDefinition(const std::string& key) const
     {
-        auto direct = m_colliderDefinitions.find(key);
-        if (direct != m_colliderDefinitions.end())
+        const std::string normalizedKey = NormalizeKey(key);
+        const std::string canonicalKey = ResolveKindKey(key);
+        const std::string normalizedCanonical = NormalizeKey(canonicalKey);
+
+        if (auto normalized = m_colliderDefinitions.find(normalizedKey); normalized != m_colliderDefinitions.end())
         {
-            return direct;
+            return normalized;
         }
 
-        const std::string canonicalKey = ResolveKindKey(key);
-        if (canonicalKey != key)
+        if (normalizedCanonical != normalizedKey)
         {
-            auto canonical = m_colliderDefinitions.find(canonicalKey);
-            if (canonical != m_colliderDefinitions.end())
+            if (auto canonical = m_colliderDefinitions.find(normalizedCanonical); canonical != m_colliderDefinitions.end())
             {
                 return canonical;
             }
         }
 
-        const std::string normalizedKey = NormalizeKey(key);
         for (auto it = m_colliderDefinitions.begin(); it != m_colliderDefinitions.end(); ++it)
         {
             if (NormalizeKey(it->first) == normalizedKey)
@@ -952,7 +952,6 @@ namespace SweetsSpace
             }
         }
 
-        const std::string normalizedCanonical = NormalizeKey(canonicalKey);
         if (normalizedCanonical != normalizedKey)
         {
             for (auto it = m_colliderDefinitions.begin(); it != m_colliderDefinitions.end(); ++it)
