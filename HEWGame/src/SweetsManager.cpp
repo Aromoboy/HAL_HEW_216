@@ -87,6 +87,20 @@ namespace
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
 
+    std::string ResolveManifestKeyAlias(const std::string& key)
+    {
+        const auto& manifest = SweetsPrototypeManifest::Instance();
+        if (const auto resolvedType = manifest.Resolve(key))
+        {
+            if (const auto* descriptor = manifest.Find(*resolvedType))
+            {
+                return descriptor->key;
+            }
+        }
+
+        return key;
+    }
+
     std::optional<std::string> ResolveFallbackModelPath(SweetsSpace::SweetsType type, const std::string& currentPath)
     {
         std::string fallbackPath;
@@ -857,37 +871,39 @@ namespace SweetsSpace
                 tokens.push_back(TrimToken(column));
             }
 
-            if (tokens.empty())
+        if (tokens.empty())
+        {
+            continue;
+        }
+
+        const std::string normalizedHeader = NormalizeKey(tokens[0]);
+        if (normalizedHeader == "key")
+        {
+            continue;
+        }
+
+        FactoryPreset preset{};
+        if (!ParseFactoryRow(tokens, preset, lineNumber))
+        {
+            if (parseError)
             {
-                continue;
+                *parseError = true;
             }
+            continue;
+        }
 
-            const std::string normalizedHeader = NormalizeKey(tokens[0]);
-            if (normalizedHeader == "key")
-            {
-                continue;
-            }
+        const std::string resolvedKey = ResolveManifestKeyAlias(tokens[0]);
+        const std::string normalizedKey = NormalizeKey(resolvedKey);
+        overrides[normalizedKey] = preset;
 
-            FactoryPreset preset{};
-            if (!ParseFactoryRow(tokens, preset, lineNumber))
-            {
-                if (parseError)
-                {
-                    *parseError = true;
-                }
-                continue;
-            }
-
-            const std::string normalizedKey = NormalizeKey(tokens[0]);
-            overrides[normalizedKey] = preset;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
-                << "' spawnWeight=" << preset.spawnWeight
-                << " weight=" << preset.weight
-                << " damping=" << preset.damping
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+        std::ostringstream oss;
+        oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
+            << "' resolvedKey='" << resolvedKey << "'"
+            << "' spawnWeight=" << preset.spawnWeight
+            << " weight=" << preset.weight
+            << " damping=" << preset.damping
+            << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
+            << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
@@ -895,6 +911,53 @@ namespace SweetsSpace
         }
 
         return overrides;
+    }
+
+    std::string SweetsManager::ResolveKindKey(const std::string& key) const
+    {
+        return ResolveManifestKeyAlias(key);
+    }
+
+    std::map<std::string, Collision::ColliderDefinition>::const_iterator SweetsManager::FindColliderDefinition(const std::string& key) const
+    {
+        auto direct = m_colliderDefinitions.find(key);
+        if (direct != m_colliderDefinitions.end())
+        {
+            return direct;
+        }
+
+        const std::string canonicalKey = ResolveKindKey(key);
+        if (canonicalKey != key)
+        {
+            auto canonical = m_colliderDefinitions.find(canonicalKey);
+            if (canonical != m_colliderDefinitions.end())
+            {
+                return canonical;
+            }
+        }
+
+        const std::string normalizedKey = NormalizeKey(key);
+        for (auto it = m_colliderDefinitions.begin(); it != m_colliderDefinitions.end(); ++it)
+        {
+            if (NormalizeKey(it->first) == normalizedKey)
+            {
+                return it;
+            }
+        }
+
+        const std::string normalizedCanonical = NormalizeKey(canonicalKey);
+        if (normalizedCanonical != normalizedKey)
+        {
+            for (auto it = m_colliderDefinitions.begin(); it != m_colliderDefinitions.end(); ++it)
+            {
+                if (NormalizeKey(it->first) == normalizedCanonical)
+                {
+                    return it;
+                }
+            }
+        }
+
+        return m_colliderDefinitions.end();
     }
 
     class LateUpdateNode : public Core::UpdateNode
@@ -1019,7 +1082,10 @@ namespace SweetsSpace
             }
 
             const std::string kind = descriptor->key;
-            const std::string normalizedKind = NormalizeKey(kind);
+            const std::string resolvedKind = ResolveKindKey(kind);
+            const bool isAliasedKind = NormalizeKey(kind) != NormalizeKey(resolvedKind);
+            const std::string aliasSuffix = isAliasedKind ? std::string{" (alias for '"} + kind + "')" : std::string{};
+            const std::string normalizedKind = NormalizeKey(resolvedKind);
             const std::string modelPath = descriptor->modelPath;
 
             const auto overrideIt = factoryOverrides.find(normalizedKind);
@@ -1039,8 +1105,12 @@ namespace SweetsSpace
             m_factoryPresets[normalizedKind] = preset;
 
             std::ostringstream presetLog;
-            presetLog << kLogPrefix << "Resolved factory preset for kind '" << kind
-                << "' source=" << (hasOverride ? "config" : "fallback")
+            presetLog << kLogPrefix << "Resolved factory preset for kind '" << resolvedKind;
+            if (isAliasedKind)
+            {
+                presetLog << "' (from key '" << kind << "')";
+            }
+            presetLog << "' source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
                 << " weight=" << preset.weight
                 << " damping=" << preset.damping
@@ -1058,8 +1128,8 @@ namespace SweetsSpace
             if (geometry.hull.empty() && geometry.bounds.valid)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "No hull generated for kind '" << kind
-                    << "'; collider definition or fallback will be used.\n";
+                warn << kLogPrefix << "No hull generated for kind '" << resolvedKind << "'" << aliasSuffix
+                    << "; collider definition or fallback will be used.\n";
                 DebugTrace(warn.str());
             }
 
@@ -1067,24 +1137,31 @@ namespace SweetsSpace
             if (!geometry.bounds.valid)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Fallback collider bounds applied for kind '" << kind
-                    << "' because model bounds were unavailable.\n";
+                warn << kLogPrefix << "Fallback collider bounds applied for kind '" << resolvedKind << "'" << aliasSuffix
+                    << " because model bounds were unavailable.\n";
                 DebugTrace(warn.str());
             }
             const float resolvedRawThickness = geometry.bounds.valid ? geometry.rawThickness : baseFallbackThickness;
             const float paddedThickness = std::max(resolvedRawThickness * m_generatedColliderThicknessPadding, fallbackThickness);
             GeneratedCollider generatedCollider{ geometry.hull, geometry.polygons, paddedThickness };
+            
             m_generatedColliders[normalizedKind] = generatedCollider;
 
-            const auto colliderDefinition = m_colliderDefinitions.find(normalizedKind);
+
+            const auto colliderDefinitionIt = FindColliderDefinition(resolvedKind);
+            const bool colliderDefinitionFound = colliderDefinitionIt != m_colliderDefinitions.end();
+            const bool colliderDefinitionEmpty =
+                  colliderDefinitionFound &&
+                  IsColliderDefinitionEmpty(colliderDefinitionIt->second);
+
             const bool colliderDefinitionFound = colliderDefinition != m_colliderDefinitions.end();
             const bool colliderDefinitionEmpty = colliderDefinitionFound
                 && IsColliderDefinitionEmpty(colliderDefinition->second);
             if (!colliderDefinitionFound || colliderDefinitionEmpty)
             {
                 std::ostringstream padLog;
-                padLog << kLogPrefix << "Using padded thickness for kind '" << kind
-                    << "' baseThickness=" << resolvedRawThickness
+                padLog << kLogPrefix << "Using padded thickness for kind '" << resolvedKind << "'" << aliasSuffix
+                    << " baseThickness=" << resolvedRawThickness
                     << " paddingFactor=" << m_generatedColliderThicknessPadding
                     << " paddedThickness=" << paddedThickness
                     << (colliderDefinitionFound ? " because collider config was empty.\n"
@@ -1095,7 +1172,7 @@ namespace SweetsSpace
             if (!generatedCollider.hull.empty())
             {
                 std::ostringstream hullLog;
-                hullLog << kLogPrefix << "Cached generated hull for kind '" << kind << "' points="
+                hullLog << kLogPrefix << "Cached generated hull for kind '" << resolvedKind << "' points="
                     << generatedCollider.hull.size() << " polyParts=" << generatedCollider.polygons.size()
                     << " thickness=" << generatedCollider.thickness << "\n";
                 DebugTrace(hullLog.str());
@@ -1104,7 +1181,7 @@ namespace SweetsSpace
             if (!generatedCollider.polygons.empty())
             {
                 std::ostringstream polyLog;
-                polyLog << kLogPrefix << "Generated polygon decomposition for kind '" << kind
+                polyLog << kLogPrefix << "Generated polygon decomposition for kind '" << resolvedKind
                     << "' parts=" << generatedCollider.polygons.size() << " vertices=";
                 for (size_t i = 0; i < generatedCollider.polygons.size(); ++i)
                 {
@@ -1210,11 +1287,19 @@ namespace SweetsSpace
                 bool colliderDefinitionIsHull = false;
                 bool colliderDefinitionIsCircle = false;
                 const Collision::ColliderDefinition* colliderDefinition = nullptr;
-                const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(kind) != m_warnedMissingColliderDefinitionKinds.end();
+                const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(resolvedKind) != m_warnedMissingColliderDefinitionKinds.end();
                 std::string colliderTypeChosen = "unresolved";
                 std::string colliderResolutionReason = "unresolved";
 
-                const auto colliderDef = m_colliderDefinitions.find(normalizedKind);
+                auto [_, inserted] = m_spawner.emplace(normalizedKind, std::move(factory));
+                if (!inserted)
+                {
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "Spawner for kind '" << kind
+                        << "' already existed. New factory ignored.\n";
+                    DebugTrace(warn.str());
+                }
+
                 if (colliderDef != m_colliderDefinitions.end())
                 {
                     colliderDefinitionFound = true;
@@ -1238,8 +1323,12 @@ namespace SweetsSpace
 
                 {
                     std::ostringstream plan;
-                    plan << kLogPrefix << "Collider resolve plan kind='" << kind << "'"
-                        << " preferGenerated=" << std::boolalpha << preferGenerated
+                    plan << kLogPrefix << "Collider resolve plan kind='" << resolvedKind << "'";
+                    if (isAliasedKind)
+                    {
+                        plan << " (from key '" << kind << "')";
+                    }
+                    plan << " preferGenerated=" << std::boolalpha << preferGenerated
                         << " forceGenerated=" << m_forceGeneratedColliders
                         << " configOverride=" << m_colliderConfigOverridesEnabled
                         << " configFound=" << colliderDefinitionFound
@@ -1291,14 +1380,15 @@ namespace SweetsSpace
                             if (!colliderDefinitionFound || colliderDefinitionEmpty || colliderDefinitionFailed || !preferGenerated)
                             {
                                 std::ostringstream warn;
-                                warn << kLogPrefix << "Using generated polygon decomposition for '" << kind
-                                    << "' parts=" << generatedCollider.polygons.size()
+                                warn << kLogPrefix << "Using generated polygon decomposition for '" << resolvedKind
+                                    << "'" << aliasSuffix
+                                    << " parts=" << generatedCollider.polygons.size()
                                     << " thickness=" << generatedCollider.thickness
                                     << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
                                 DebugTrace(warn.str());
                                 if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
                                 {
-                                    m_warnedMissingColliderDefinitionKinds.insert(kind);
+                                    m_warnedMissingColliderDefinitionKinds.insert(resolvedKind);
                                 }
                             }
                         }
@@ -1311,8 +1401,8 @@ namespace SweetsSpace
                         if (colliderDefinitionHullMissingPoints)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Hull collider definition for '" << kind
-                                << "' had no usable points; using auto-generated hull points=" << generatedCollider.hull.size()
+                            warn << kLogPrefix << "Hull collider definition for '" << resolvedKind << "'" << aliasSuffix
+                                << " had no usable points; using auto-generated hull points=" << generatedCollider.hull.size()
                                 << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
                                 << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
                                 << " thickness=" << generatedCollider.thickness
@@ -1322,15 +1412,15 @@ namespace SweetsSpace
                         else if (colliderDefinitionFailed)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Collider definition for '" << kind
-                                << "' failed or was empty; using generated hull points=" << generatedCollider.hull.size()
+                            warn << kLogPrefix << "Collider definition for '" << resolvedKind << "'" << aliasSuffix
+                                << " failed or was empty; using generated hull points=" << generatedCollider.hull.size()
                                 << " thickness=" << generatedCollider.thickness << "\n";
                             DebugTrace(warn.str());
                         }
                         else if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Using auto-generated hull for '" << kind << "' ("
+                            warn << kLogPrefix << "Using auto-generated hull for '" << resolvedKind << "'" << aliasSuffix << " ("
                                 << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found") << ")"
                                 << " points=" << generatedCollider.hull.size()
                                 << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
@@ -1338,13 +1428,14 @@ namespace SweetsSpace
                                 << " thickness=" << generatedCollider.thickness
                                 << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
                             DebugTrace(warn.str());
-                            m_warnedMissingColliderDefinitionKinds.insert(kind);
+                            m_warnedMissingColliderDefinitionKinds.insert(resolvedKind);
                         }
                         else if (colliderDefinitionFound && !colliderDefinitionEmpty && !preferGenerated)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Generated hull used despite available collider config for '" << kind
-                                << "' because generated colliders are preferred.\n";
+                            warn << kLogPrefix << "Generated hull used despite available collider config for '" << resolvedKind
+                                << "'" << aliasSuffix
+                                << " because generated colliders are preferred.\n";
                             DebugTrace(warn.str());
                         }
 
@@ -1423,8 +1514,8 @@ namespace SweetsSpace
                         if (std::abs(clampedMargin - colliderDefinition->margin) > 1e-6f)
                         {
                             std::ostringstream warn;
-                            warn << kLogPrefix << "Hull margin for '" << kind
-                                << "' clamped from " << colliderDefinition->margin
+                            warn << kLogPrefix << "Hull margin for '" << resolvedKind << "'" << aliasSuffix
+                                << " clamped from " << colliderDefinition->margin
                                 << " to " << clampedMargin << "\n";
                             DebugTrace(warn.str());
                         }
@@ -1480,8 +1571,8 @@ namespace SweetsSpace
                     colliderDefinitionFailed = true;
 
                     std::ostringstream warn;
-                    warn << kLogPrefix << "Collider definition for '" << kind
-                        << "' could not be turned into a collider; falling back to generated or AABB.\n";
+                    warn << kLogPrefix << "Collider definition for '" << resolvedKind << "'" << aliasSuffix
+                        << " could not be turned into a collider; falling back to generated or AABB.\n";
                     DebugTrace(warn.str());
                 }
 
@@ -1493,7 +1584,7 @@ namespace SweetsSpace
 
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Factory spawn kind='" << kind << "' scale=("
+                    oss << kLogPrefix << "Factory spawn kind='" << resolvedKind << "'" << aliasSuffix << " scale=("
                         << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ")"
                         << " enabledRandomScale=" << std::boolalpha << m_enableRandomScale
                         << " weight=" << scaledWeight << " (base=" << preset.weight << ")\n";
@@ -1515,7 +1606,7 @@ namespace SweetsSpace
                     }
 
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Collider resolved kind='" << kind << "'"
+                    oss << kLogPrefix << "Collider resolved kind='" << resolvedKind << "'" << aliasSuffix
                         << " type=" << colliderTypeChosen
                         << " reason=" << colliderResolutionReason
                         << " sampledScale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
