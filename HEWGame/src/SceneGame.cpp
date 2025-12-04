@@ -1731,39 +1731,57 @@ SceneGame::SceneGame()
         }
         if (collider)
         {
-            const Collision::Collider2DBase* const colliderPtr = collider.get();
-            const AABB bounds = collider->GetAABB();
-            const float aabbThickness = bounds.max.z - bounds.min.z;
+            const Collision::Collider2DBase* const colliderPtr = dynamic_cast<const Collision::Collider2DBase*>(collider.get());
 
-            const char* colliderType = "Unknown";
-            if (dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr))
+            if (colliderPtr)
             {
-                colliderType = "ConvexHullCollider2D";
-            }
-            else if (dynamic_cast<const Collision::Collider2DBase*>(colliderPtr))
-            {
-                colliderType = "Collider2DBase";
-            }
+                const AABB bounds = colliderPtr->GetAABB();
+                const float aabbThickness = bounds.max.z - bounds.min.z;
 
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
-                << " key='" << playerColliderKey << "'"
-                << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
-                << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
-                << " aabbThickness=" << aabbThickness
-                << " colliderType=" << colliderType
-                << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
-                << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
-                << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
-                << " spawnRotation=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
-                << " configLoaded=" << std::boolalpha << colliderFromConfig
-                << " forceConfig=" << m_forceConfigPlayerCollider
-                << " configAvailable=" << configAvailable
-                << " geometryValid=" << geometryValid
-                << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
-                << " reason=" << colliderDecisionReason
-                << "\n";
-            ::DebugTrace(oss.str());
+                const char* colliderType = "Unknown";
+                if (dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr))
+                {
+                    colliderType = "ConvexHullCollider2D";
+                }
+                else if (dynamic_cast<const Collision::Collider2DBase*>(colliderPtr))
+                {
+                    colliderType = "Collider2DBase";
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
+                    << " key='" << playerColliderKey << "'"
+                    << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
+                    << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
+                    << " aabbThickness=" << aabbThickness
+                    << " colliderType=" << colliderType
+                    << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
+                    << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
+                    << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
+                    << " spawnRotation=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
+                    << " configLoaded=" << std::boolalpha << colliderFromConfig
+                    << " forceConfig=" << m_forceConfigPlayerCollider
+                    << " configAvailable=" << configAvailable
+                    << " geometryValid=" << geometryValid
+                    << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
+                    << " reason=" << colliderDecisionReason
+                    << "\n";
+                ::DebugTrace(oss.str());
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Non-2D collider; logging minimal info. source=" << colliderSource
+                    << " key='" << playerColliderKey << "'"
+                    << " configLoaded=" << std::boolalpha << colliderFromConfig
+                    << " forceConfig=" << m_forceConfigPlayerCollider
+                    << " configAvailable=" << configAvailable
+                    << " geometryValid=" << geometryValid
+                    << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
+                    << " reason=" << colliderDecisionReason
+                    << "\n";
+                ::DebugTrace(oss.str());
+            }
         }
         if (m_drawSystem)
         {
