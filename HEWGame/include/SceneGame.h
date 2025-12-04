@@ -111,6 +111,7 @@ private:
     bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
+    void RefreshContactSolverBodies(const char* reason);
 #if defined(_DEBUG)
     void RenderRunTelemetryOverlay() const;
 #endif

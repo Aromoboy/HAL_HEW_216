@@ -38,6 +38,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <iterator>
 #include <DirectXMath.h>
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -1590,29 +1591,13 @@ SceneGame::SceneGame()
         player->SetMinimumY(platformTopY);
         player->SetMoveSpeed(m_playerBaseMoveSpeed);
         RegisterPhysicsBody(*player);
-        if (m_contactSystem && m_physicsMachine)
-        {
-            m_contactSystem->SetBodySource(&m_physicsMachine->GetBodies());
-        }
+        RefreshContactSolverBodies("spawn");
         {
             std::ostringstream oss;
             const bool isKinematic = player->IsKinematic();
             oss << kLogPrefix << "Player physics body registered (kinematic="
                 << std::boolalpha << isKinematic
                 << ", weight=" << player->GetPhysical().weight << ").\n";
-            ::DebugTrace(oss.str());
-        }
-        if (m_contactSystem)
-        {
-            const auto* bodies = m_contactSystem->GetBodySource();
-            const bool inContactList = bodies
-                && std::find(bodies->begin(), bodies->end(), player.get()) != bodies->end();
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerSpawn] Contact solver input injection"
-                << " confirmed=" << std::boolalpha << inContactList
-                << " bodyCount=" << (bodies ? bodies->size() : 0)
-                << " playerWeight=" << player->GetPhysical().weight
-                << " kinematic=" << player->IsKinematic() << "\n";
             ::DebugTrace(oss.str());
         }
         if (collider)
@@ -2430,6 +2415,64 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
     }
 }
 
+void SceneGame::RefreshContactSolverBodies(const char* reason)
+{
+    if (!player)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: player missing.\n");
+        return;
+    }
+
+    if (!m_contactSystem)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: contact system missing.\n");
+        return;
+    }
+
+    if (!m_physicsMachine)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: physics machine missing.\n");
+        return;
+    }
+
+    const auto& physicsBodies = m_physicsMachine->GetBodies();
+    m_contactSystem->SetBodySource(&physicsBodies);
+
+    const auto* contactBodies = m_contactSystem->GetBodySource();
+    const std::size_t contactCount = contactBodies ? contactBodies->size() : 0u;
+    const auto* playerPtr = player.get();
+
+    bool playerPresent = false;
+    std::ptrdiff_t playerIndex = -1;
+    if (contactBodies)
+    {
+        const auto it = std::find(contactBodies->begin(), contactBodies->end(), playerPtr);
+        playerPresent = it != contactBodies->end();
+        if (playerPresent)
+        {
+            playerIndex = std::distance(contactBodies->begin(), it);
+        }
+    }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[ContactBodies] refreshed reason='" << (reason ? reason : "unspecified") << "'"
+        << " physicsBodies=" << physicsBodies.size()
+        << " contactBodies=" << contactCount
+        << " playerPtr=" << playerPtr
+        << " present=" << std::boolalpha << playerPresent;
+    if (playerIndex >= 0)
+    {
+        oss << " index=" << playerIndex;
+    }
+    else if (contactBodies)
+    {
+        oss << " missingPlayerInContactList";
+    }
+    oss << " allowKinematicPlayer=" << std::boolalpha << m_contactSystem->IsAllowingKinematicPlayerCollision()
+        << "\n";
+    ::DebugTrace(oss.str());
+}
+
 void SceneGame::ValidatePlayerPhysicsRegistration()
 {
     if (!player || !m_physicsMachine)
@@ -2467,14 +2510,7 @@ void SceneGame::ValidatePlayerPhysicsRegistration()
 
     if (!registeredWithContact && contactListInitialized)
     {
-        m_contactSystem->SetBodySource(&physicsBodies);
-        std::ostringstream oss;
-        oss << kLogPrefix << "Player body was absent from ContactLiteSystem input; refreshing body source"
-            << " (physicsBodies=" << physicsBodies.size()
-            << ", contactBodies=" << contactBodies->size()
-            << ", allowKinematicPlayer=" << std::boolalpha << m_contactSystem->IsAllowingKinematicPlayerCollision()
-            << ").\n";
-        ::DebugTrace(oss.str());
+        RefreshContactSolverBodies("validation_recovery");
         m_loggedPlayerContactRecovery = true;
     }
     else if (!contactListInitialized)
@@ -2484,8 +2520,16 @@ void SceneGame::ValidatePlayerPhysicsRegistration()
     else if (m_loggedPlayerContactRecovery)
     {
         std::ostringstream oss;
+        const auto it = std::find(contactBodies->begin(), contactBodies->end(), player.get());
+        const bool present = it != contactBodies->end();
+        const std::ptrdiff_t index = present ? std::distance(contactBodies->begin(), it) : -1;
         oss << kLogPrefix << "Player body confirmed in ContactLiteSystem after recovery. bodyCount="
-            << contactBodies->size() << "\n";
+            << contactBodies->size() << " present=" << std::boolalpha << present;
+        if (index >= 0)
+        {
+            oss << " index=" << index;
+        }
+        oss << "\n";
         ::DebugTrace(oss.str());
         m_loggedPlayerContactRecovery = false;
     }
@@ -2578,6 +2622,8 @@ void SceneGame::ResetPlaySession()
             m_playerSpeedMultiplier = 1.0f;
             player->SetMoveSpeed(m_playerBaseMoveSpeed);
         }
+
+        RefreshContactSolverBodies("reset");
     }
 
     InitializeStageAnchors();
