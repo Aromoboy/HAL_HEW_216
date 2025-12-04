@@ -1151,12 +1151,8 @@ namespace SweetsSpace
             const auto colliderDefinitionIt = FindColliderDefinition(resolvedKind);
             const bool colliderDefinitionFound = colliderDefinitionIt != m_colliderDefinitions.end();
             const bool colliderDefinitionEmpty =
-                  colliderDefinitionFound &&
-                  IsColliderDefinitionEmpty(colliderDefinitionIt->second);
-
-            const bool colliderDefinitionFound = colliderDefinition != m_colliderDefinitions.end();
-            const bool colliderDefinitionEmpty = colliderDefinitionFound
-                && IsColliderDefinitionEmpty(colliderDefinition->second);
+                colliderDefinitionFound &&
+                IsColliderDefinitionEmpty(colliderDefinitionIt->second);
             if (!colliderDefinitionFound || colliderDefinitionEmpty)
             {
                 std::ostringstream padLog;
@@ -1209,7 +1205,8 @@ namespace SweetsSpace
 
             const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider](const Transform& transform)
+            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider,
+                resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
                 auto model = cache.Get(modelPath);
@@ -1291,14 +1288,7 @@ namespace SweetsSpace
                 std::string colliderTypeChosen = "unresolved";
                 std::string colliderResolutionReason = "unresolved";
 
-                auto [_, inserted] = m_spawner.emplace(normalizedKind, std::move(factory));
-                if (!inserted)
-                {
-                    std::ostringstream warn;
-                    warn << kLogPrefix << "Spawner for kind '" << kind
-                        << "' already existed. New factory ignored.\n";
-                    DebugTrace(warn.str());
-                }
+                const auto colliderDef = FindColliderDefinition(normalizedKind);
 
                 if (colliderDef != m_colliderDefinitions.end())
                 {
