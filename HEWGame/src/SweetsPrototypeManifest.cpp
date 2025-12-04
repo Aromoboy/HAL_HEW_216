@@ -114,6 +114,7 @@ namespace SweetsSpace
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry_low01.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
+        RegisterAlias(SweetsType::Fairy, "Player");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description)
@@ -126,6 +127,11 @@ namespace SweetsSpace
         const std::string normalized = NormalizeKey(descriptor.key);
         m_lookup[normalized] = type;
         m_byType[type] = std::move(descriptor);
+    }
+
+    void SweetsPrototypeManifest::RegisterAlias(SweetsType type, const std::string& aliasKey)
+    {
+        m_lookup[NormalizeKey(aliasKey)] = type;
     }
 
     bool SweetsPrototypeManifest::ReloadFromCsv(const std::string& csvPath)
@@ -158,6 +164,11 @@ namespace SweetsSpace
                     << m_byType[type].key << "'.\n";
                 ManifestDebugTrace(oss.str());
             }
+        }
+
+        if (!loaded)
+        {
+            LogActiveAliases();
         }
 
         return loaded;
@@ -227,11 +238,12 @@ namespace SweetsSpace
                 continue;
             }
             std::optional<SweetsType> mappedType;
+            const bool isPlayerAlias = normalizedKey == "player";
             if (normalizedKey == NormalizeKey(ToString(SweetsType::Cake))) mappedType = SweetsType::Cake;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pudding))) mappedType = SweetsType::Pudding;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Sherbet))) mappedType = SweetsType::Sherbet;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Strawberry))) mappedType = SweetsType::Strawberry;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Fairy)) || normalizedKey == "player") mappedType = SweetsType::Fairy;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Fairy)) || isPlayerAlias) mappedType = SweetsType::Fairy;
 
             if (!mappedType)
             {
@@ -258,12 +270,24 @@ namespace SweetsSpace
                 description = existing ? existing->description : std::string{};
             }
 
-            Register(*mappedType, key, resolvedPath, description);
+            const std::string canonicalKey = ToString(*mappedType);
+            const std::string registerKey = isPlayerAlias ? canonicalKey : key;
+
+            Register(*mappedType, registerKey, resolvedPath, description);
+            if (isPlayerAlias)
+            {
+                RegisterAlias(*mappedType, key);
+            }
             touched.insert(*mappedType);
 
             std::ostringstream info;
             info << kLogPrefix << "Registered/overrode type '" << ToString(*mappedType)
-                << "' with key='" << key << "' path='" << resolvedPath << "'.\n";
+                << "' with key='" << registerKey << "' path='" << resolvedPath;
+            if (isPlayerAlias && registerKey != key)
+            {
+                info << "' (alias from '" << key << "')";
+            }
+            info << "'.\n";
             ManifestDebugTrace(info.str());
         }
 
@@ -289,7 +313,48 @@ namespace SweetsSpace
             }
         }
 
+        LogActiveAliases();
+
         return true;
+    }
+
+    void SweetsPrototypeManifest::LogActiveAliases() const
+    {
+        for (const auto& pair : m_byType)
+        {
+            const auto* descriptor = Find(pair.first);
+            if (!descriptor)
+            {
+                continue;
+            }
+
+            const std::string canonical = NormalizeKey(descriptor->key);
+            std::vector<std::string> aliases;
+            for (const auto& lookup : m_lookup)
+            {
+                if (lookup.second != pair.first)
+                {
+                    continue;
+                }
+                if (lookup.first == canonical)
+                {
+                    continue;
+                }
+                aliases.push_back(lookup.first);
+            }
+
+            if (!aliases.empty())
+            {
+                std::ostringstream aliasLog;
+                aliasLog << kLogPrefix << "Aliases for '" << descriptor->key << "' -> ";
+                for (std::size_t i = 0; i < aliases.size(); ++i)
+                {
+                    aliasLog << (i == 0 ? '[' : ',') << aliases[i];
+                }
+                aliasLog << "]\n";
+                ManifestDebugTrace(aliasLog.str());
+            }
+        }
     }
 
     const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(SweetsType type) const

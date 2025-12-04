@@ -58,6 +58,9 @@ namespace SweetsSpace
         void ApplyDefaults();
         bool LoadOverridesFromCsv(const std::string& csvPath);
         void Register(SweetsType type, std::string key, std::string relativePath, std::string description);
+        void RegisterAlias(SweetsType type, const std::string& aliasKey);
+
+        void LogActiveAliases() const;
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;
         std::unordered_map<std::string, SweetsType> m_lookup;

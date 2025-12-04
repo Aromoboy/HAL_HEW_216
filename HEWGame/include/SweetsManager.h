@@ -262,6 +262,8 @@ namespace SweetsSpace
         static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
         static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);
         static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
+        std::string ResolveKindKey(const std::string& key) const;
+        std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
