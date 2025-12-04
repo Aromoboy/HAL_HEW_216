@@ -210,13 +210,9 @@ std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const a
 		}
 
 		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-
-
-
-		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
 	}
 
 
 
 	return materials;
-	}
+}
