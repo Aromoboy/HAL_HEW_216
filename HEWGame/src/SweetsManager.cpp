@@ -1083,9 +1083,9 @@ namespace SweetsSpace
 
             const std::string kind = descriptor->key;
             const std::string resolvedKind = ResolveKindKey(kind);
-            const bool isAliasedKind = NormalizeKey(kind) != NormalizeKey(resolvedKind);
-            const std::string aliasSuffix = isAliasedKind ? std::string{" (alias for '"} + kind + "')" : std::string{};
             const std::string normalizedKind = NormalizeKey(resolvedKind);
+            const bool isAliasedKind = NormalizeKey(kind) != normalizedKind;
+            const std::string aliasSuffix = isAliasedKind ? std::string{" (alias for '"} + kind + "')" : std::string{};
             const std::string modelPath = descriptor->modelPath;
 
             const auto overrideIt = factoryOverrides.find(normalizedKind);
@@ -2116,13 +2116,22 @@ namespace SweetsSpace
 
     std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
+        const std::string resolvedKind = ResolveKindKey(kind);
         const std::string normalizedKind = NormalizeKey(kind);
-        auto it = m_spawner.find(normalizedKind);
+        const std::string normalizedResolvedKind = NormalizeKey(resolvedKind);
+
+        auto it = m_spawner.find(normalizedResolvedKind);
+        if (it == m_spawner.end() && normalizedResolvedKind != normalizedKind)
+        {
+            it = m_spawner.find(normalizedKind);
+        }
         if (it == m_spawner.end())
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Spawn requested for unknown kind '" << kind
-                << "' (normalized='" << normalizedKind << "'). Registered kinds:";
+                << "' (resolved='" << resolvedKind
+                << "' normalizedRaw='" << normalizedKind
+                << "' normalizedResolved='" << normalizedResolvedKind << "'). Registered kinds:";
             if (m_spawner.empty())
             {
                 oss << " (none)";
@@ -3296,10 +3305,20 @@ namespace SweetsSpace
             }
 
             const std::string chosenKind = ChooseKindFromActiveConfig();
-            const std::string kind = NormalizeKey(chosenKind);
+            const std::string resolvedKind = ResolveKindKey(chosenKind);
+            const std::string kind = NormalizeKey(resolvedKind);
             if (kind.empty())
             {
                 break;
+            }
+
+            if (kind != chosenKind)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Normalized spawn kind '" << chosenKind
+                    << "' -> resolved='" << resolvedKind
+                    << "' normalized='" << kind << "'.\n";
+                DebugTrace(oss.str());
             }
 
             m_spawnQueue.push_back(kind);
@@ -3331,7 +3350,8 @@ namespace SweetsSpace
         {
             m_burstTimer -= m_activeBurstInterval;
             const std::string requestedKind = m_spawnQueue.front();
-            const std::string kind = NormalizeKey(requestedKind);
+            const std::string resolvedKind = ResolveKindKey(requestedKind);
+            const std::string kind = NormalizeKey(resolvedKind);
             m_spawnQueue.pop_front();
 
             if (m_currentBurstRemaining > 0)
