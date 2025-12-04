@@ -30,6 +30,7 @@
 #include <vector>
 #include <limits>
 #include <deque>
+#include <string>
 
 struct CameraPrototypeSettings
 {
