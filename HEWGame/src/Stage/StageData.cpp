@@ -10,26 +10,12 @@
 #include <sstream>
 #include <stdexcept>
 
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
-
 namespace
 {
-#if defined(_WIN32) && defined(_DEBUG)
-    void DebugTrace(const std::string& message)
-    {
-        ::OutputDebugStringA(message.c_str());
-    }
-#else
     void DebugTrace(const std::string& message)
     {
         (void)message;
     }
-#endif
 
     constexpr const char* kLogPrefix = "[StageData] ";
     constexpr float kDefaultPlaneZ = -5.0f;
