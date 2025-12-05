@@ -42,6 +42,8 @@ namespace Entities
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);
+        void SetBaseMoveSpeed(float horizontal, float vertical);
+        void SetSpeedMultiplier(float multiplier);
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
@@ -50,6 +52,7 @@ namespace Entities
         bool HasMinimumY() const;
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
         void SetPickupBox(float width, float height);
+        void SetPickupArea(float width, float height, float forwardOffset);
 
     private:
         std::shared_ptr<Render::Model> m_fairyModel;
@@ -59,11 +62,13 @@ namespace Entities
         int m_maxCarry;
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
+        float m_pickupForwardOffset;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
-        float m_horizontalMoveSpeed;
-        float m_verticalMoveSpeed;
+        float m_baseHorizontalMoveSpeed;
+        float m_baseVerticalMoveSpeed;
+        float m_speedMultiplier;
         bool m_hasMinimumY;
         float m_minimumY;
         bool m_missingModelWarned;

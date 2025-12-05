@@ -1185,6 +1185,7 @@ SceneGame::SceneGame()
     m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
+    m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
         if (std::isfinite(value) && value > 0.0f)
@@ -1204,6 +1205,7 @@ SceneGame::SceneGame()
     const float pickupFallback = std::max(m_stageData.GetCellSizeWorld(), 1.0f);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
+    m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
         std::ostringstream oss;
@@ -1215,6 +1217,7 @@ SceneGame::SceneGame()
             << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
+            << " pickupOffset=" << m_playerPickupForwardOffset
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -1784,10 +1787,9 @@ SceneGame::SceneGame()
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
-        player->SetMoveSpeeds(
-            m_playerBaseHorizontalSpeed * m_playerSpeedMultiplier,
-            m_playerBaseVerticalSpeed * m_playerSpeedMultiplier);
-        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
+        player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+        player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         RegisterPhysicsBody(*player);
         RefreshContactSolverBodies("spawn");
         {
@@ -2065,7 +2067,7 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
-        ResetPlaySession();
+        SetStageState(StageState::Playing);
 }
 
 void SceneGame::Update(Core::UpdateContext& ctx)
@@ -2156,79 +2158,137 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_cachedPlayerBoundsValid = true;
     }
 
-
-if (m_timeUp)
-{
-    ProcessPostGameInput(ctx);
-    return;
-}
-
-    Core::Input& input = ctx.input;
-    if (player)
+    switch (m_stageState)
     {
-        const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
+    case StageState::Intro:
+        break;
+    case StageState::Playing:
+    {
+        Core::Input& input = ctx.input;
+        if (player)
         {
-            if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
+            const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
             {
+                if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[SpeedBoost] " << reason
+                        << " ignored; base speeds invalid (" << m_playerBaseHorizontalSpeed
+                        << ',' << m_playerBaseVerticalSpeed << ").\n";
+                    ::DebugTrace(oss.str());
+                    return;
+                }
+
+                const float currentMultiplier = m_playerSpeedMultiplier;
+                const float clampedMultiplier = std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
+                const bool clamped = std::fabs(clampedMultiplier - requestedMultiplier) > std::numeric_limits<float>::epsilon();
+                if (std::fabs(currentMultiplier - clampedMultiplier) <= std::numeric_limits<float>::epsilon())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[SpeedBoost] " << reason
+                        << " requestedMultiplier=" << requestedMultiplier
+                        << " has no effect (current=" << currentMultiplier << ").\n";
+                    ::DebugTrace(oss.str());
+                    return;
+                }
+
+                const float beforeSpeed = player->GetMoveSpeed();
+                const float newMultiplier = clampedMultiplier;
+                const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
+                const float newVerticalSpeed = m_playerBaseVerticalSpeed * newMultiplier;
+                m_playerSpeedMultiplier = newMultiplier;
+                player->SetMoveSpeeds(newHorizontalSpeed, newVerticalSpeed);
+
                 std::ostringstream oss;
                 oss << kLogPrefix << "[SpeedBoost] " << reason
-                    << " ignored; base speeds invalid (" << m_playerBaseHorizontalSpeed
-                    << ',' << m_playerBaseVerticalSpeed << ").\n";
+                    << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
+                    << " prevMultiplier=" << currentMultiplier
+                    << " newMultiplier=" << newMultiplier
+                    << " prevSpeed=" << beforeSpeed
+                    << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
+                    << " clamped=" << std::boolalpha << clamped << "\n";
                 ::DebugTrace(oss.str());
-                return;
+            };
+
+            if (input.IsTrigger(Core::ActionId::SpeedBoost))
+            {
+                adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
             }
 
-            const float currentMultiplier = m_playerSpeedMultiplier;
-            const float clampedMultiplier = std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
-            const bool clamped = std::fabs(clampedMultiplier - requestedMultiplier) > std::numeric_limits<float>::epsilon();
-            if (std::fabs(currentMultiplier - clampedMultiplier) <= std::numeric_limits<float>::epsilon())
+        if (player)
+        {
+            const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
             {
+                if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[SpeedBoost] " << reason
+                        << " ignored; base speeds invalid ("
+                        << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ").\n";
+                    ::DebugTrace(oss.str());
+                    return;
+                }
+
+                const float currentMultiplier = m_playerSpeedMultiplier;
+                const float clampedMultiplier =
+                    std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
+                const bool clamped =
+                    std::fabs(clampedMultiplier - requestedMultiplier)
+                    > std::numeric_limits<float>::epsilon();
+
+                if (std::fabs(currentMultiplier - clampedMultiplier)
+                    <= std::numeric_limits<float>::epsilon())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[SpeedBoost] " << reason
+                        << " requestedMultiplier=" << requestedMultiplier
+                        << " has no effect (current=" << currentMultiplier << ").\n";
+                    ::DebugTrace(oss.str());
+                    return;
+                }
+
+                const float previousHorizontal = m_playerBaseHorizontalSpeed * currentMultiplier;
+                const float previousVertical   = m_playerBaseVerticalSpeed * currentMultiplier;
+
+                const float newMultiplier = clampedMultiplier;
+                m_playerSpeedMultiplier = newMultiplier;
+                player->SetSpeedMultiplier(newMultiplier);
+
+                const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
+                const float newVerticalSpeed   = m_playerBaseVerticalSpeed * newMultiplier;
+
                 std::ostringstream oss;
                 oss << kLogPrefix << "[SpeedBoost] " << reason
-                    << " requestedMultiplier=" << requestedMultiplier
-                    << " has no effect (current=" << currentMultiplier << ").\n";
+                    << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
+                    << " prevMultiplier=" << currentMultiplier
+                    << " newMultiplier=" << newMultiplier
+                    << " prevSpeedXY=(" << previousHorizontal << ',' << previousVertical << ')'
+                    << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
+                    << " clamped=" << std::boolalpha << clamped << "\n";
                 ::DebugTrace(oss.str());
-                return;
+            };
+
+            if (input.IsTrigger(Core::ActionId::SpeedBoost))
+            {
+                adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
             }
 
-            const float beforeSpeed = player->GetMoveSpeed();
-            const float newMultiplier = clampedMultiplier;
-            const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
-            const float newVerticalSpeed = m_playerBaseVerticalSpeed * newMultiplier;
-            m_playerSpeedMultiplier = newMultiplier;
-            player->SetMoveSpeeds(newHorizontalSpeed, newVerticalSpeed);
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[SpeedBoost] " << reason
-                << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
-                << " prevMultiplier=" << currentMultiplier
-                << " newMultiplier=" << newMultiplier
-                << " prevSpeed=" << beforeSpeed
-                << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
-                << " clamped=" << std::boolalpha << clamped << "\n";
-            ::DebugTrace(oss.str());
-        };
-
-        if (input.IsTrigger(Core::ActionId::SpeedBoost))
-        {
-            adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
+            if (input.IsTrigger(Core::ActionId::SpeedReset))
+            {
+                adjustMoveSpeed(1.0f, "Reset key '2'");
+            }
         }
 
-        if (input.IsTrigger(Core::ActionId::SpeedReset))
-        {
-            adjustMoveSpeed(1.0f, "Reset key '2'");
-        }
-    }
 
-HandleManualRetryInput(ctx);
+        HandleManualRetryInput(ctx);
         fRads.z += 0.001f * RAD;
 
         if (m_cameraAnchor && !m_pObjects.empty())
         {
-                auto& anchorTransform = m_cameraAnchor->GetTransform();
-                anchorTransform.position = m_pObjects.front()->GetPosition();
-                anchorTransform.rotation = m_pObjects.front()->GetfRads();
-                anchorTransform.scale = m_pObjects.front()->GetScale();
+            auto& anchorTransform = m_cameraAnchor->GetTransform();
+            anchorTransform.position = m_pObjects.front()->GetPosition();
+            anchorTransform.rotation = m_pObjects.front()->GetfRads();
+            anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
         const float stackedHeight = m_maxTowerHeight;
@@ -2236,6 +2296,20 @@ HandleManualRetryInput(ctx);
         {
             BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
         }
+        break;
+    }
+    case StageState::TimeUp:
+    case StageState::Cleared:
+        SetStageState(StageState::ShowingResult);
+        break;
+    case StageState::ShowingResult:
+        break;
+    }
+
+    if (m_stageState == StageState::ShowingResult)
+    {
+        ProcessPostGameInput(ctx);
+    }
 }
 
 #if defined(_DEBUG)
@@ -2441,7 +2515,9 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                   hudData.currentHeight = m_currentTowerHeight;
                   hudData.peakHeight = m_peakTowerHeight;
                   hudData.score = ComputeScore();
-                  hudData.timeUp = m_timeUp;
+                  hudData.timeUp = (m_stageState == StageState::TimeUp)
+                      || (m_stageState == StageState::Cleared)
+                      || (m_stageState == StageState::ShowingResult);
                   hudData.moveSpeedMultiplier = m_playerSpeedMultiplier;
                   if (player)
                   {
@@ -2773,6 +2849,60 @@ void SceneGame::ValidatePlayerPhysicsRegistration()
     }
 }
 
+void SceneGame::SetStageState(StageState newState)
+{
+    if (m_stageState == newState)
+    {
+        if (newState == StageState::Playing)
+        {
+            OnStageStart();
+        }
+        return;
+    }
+
+    m_stageState = newState;
+
+    switch (newState)
+    {
+    case StageState::Playing:
+        OnStageStart();
+        break;
+    case StageState::Cleared:
+        OnStageClear();
+        break;
+    case StageState::TimeUp:
+        OnStageFail();
+        break;
+    default:
+        break;
+    }
+}
+
+void SceneGame::OnStageStart()
+{
+    ResetPlaySession();
+}
+
+void SceneGame::OnStageClear()
+{
+    ToggleGameplaySystems(false);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Stage] cleared peakTop=" << std::fixed << std::setprecision(2)
+        << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::OnStageFail()
+{
+    ToggleGameplaySystems(false);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
+        << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
+    ::DebugTrace(oss.str());
+}
+
 void SceneGame::UnregisterAllPhysicsBodies()
 {
     if (m_registeredPhysicsBodies.empty())
@@ -2858,10 +2988,11 @@ void SceneGame::ResetPlaySession()
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
-            player->SetMoveSpeeds(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
 
-        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
 
         RefreshContactSolverBodies("reset");
     }
@@ -2887,8 +3018,6 @@ void SceneGame::ResetPlaySession()
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
     m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
-    m_isPlaying = true;
-    m_timeUp = false;
     m_currentTowerHeight = 0.0f;
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
@@ -2913,7 +3042,7 @@ void SceneGame::ResetPlaySession()
 
 void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
 {
-    if (!m_isPlaying)
+    if (m_stageState != StageState::Playing)
     {
         return;
     }
@@ -2972,15 +3101,9 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
         }
     }
 
-    if (m_remainingCountdownSeconds <= 0.0f && !m_timeUp)
+    if (m_remainingCountdownSeconds <= 0.0f && m_stageState == StageState::Playing)
     {
-        m_timeUp = true;
-        m_isPlaying = false;
-        ToggleGameplaySystems(false);
-        std::ostringstream oss;
-        oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
-            << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
-        ::DebugTrace(oss.str());
+        SetStageState(StageState::TimeUp);
     }
 }
 
@@ -3035,7 +3158,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
 
 void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
 {
-    if (!m_timeUp)
+    if (m_stageState != StageState::ShowingResult)
     {
         return;
     }
@@ -3047,7 +3170,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
         ::DebugTrace(oss.str());
-        ResetPlaySession();
+        SetStageState(StageState::Playing);
         return;
     }
 
@@ -3062,7 +3185,7 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
 
 void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
 {
-    if (!m_isPlaying)
+    if (m_stageState != StageState::Playing)
     {
         return;
     }
@@ -3077,7 +3200,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
         << std::fixed << std::setprecision(2) << (m_totalPlaySeconds - m_remainingCountdownSeconds)
         << "s peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
     ::DebugTrace(oss.str());
-    ResetPlaySession();
+    SetStageState(StageState::Playing);
 }
 
 bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const
@@ -3188,9 +3311,28 @@ void SceneGame::RenderRunTelemetryOverlay() const
         std::cout << padded;
     };
 
+    const char* stateLabel = "Intro";
+    switch (m_stageState)
+    {
+    case StageState::Playing:
+        stateLabel = "Playing";
+        break;
+    case StageState::TimeUp:
+        stateLabel = "TimeUp";
+        break;
+    case StageState::Cleared:
+        stateLabel = "Cleared";
+        break;
+    case StageState::ShowingResult:
+        stateLabel = "Result";
+        break;
+    default:
+        break;
+    }
+
     std::ostringstream timerLine;
     timerLine << "[SceneGame] Timer: " << std::fixed << std::setprecision(1)
-        << m_remainingCountdownSeconds << "s (state=" << (m_timeUp ? "Result" : "Playing") << ')';
+        << m_remainingCountdownSeconds << "s (state=" << stateLabel << ')';
     writeLine(kOverlayBaseRow, timerLine.str());
 
     std::ostringstream heightLine;
@@ -3200,7 +3342,7 @@ void SceneGame::RenderRunTelemetryOverlay() const
 
     std::ostringstream scoreLine;
     scoreLine << "[SceneGame] Score: " << ComputeScore() << " | Confirm=Enter Retry=R";
-    if (m_timeUp)
+    if (m_stageState == StageState::ShowingResult)
     {
         scoreLine << " (waiting for confirm)";
     }
