@@ -41,9 +41,6 @@ namespace CameraSpace
         {
                 if (!camera)
                 {
-#if defined(_DEBUG)
-                        DebugTrace(std::string(kLogPrefix) + "Attempted to add null camera.\n");
-#endif
                         return nullptr;
                 }
 
@@ -56,23 +53,11 @@ namespace CameraSpace
                 if (found != m_cameras.end())
                 {
                         ++m_stats.duplicateAdds;
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Duplicate camera registration detected ptr=" << camera.get()
-                                << " duplicates=" << m_stats.duplicateAdds << '\n';
-                        DebugTrace(oss.str());
-#endif
                         return *found;
                 }
 
                 m_cameras.push_back(camera);
                 ++m_stats.registeredCameras;
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kLogPrefix << "Registered camera ptr=" << camera.get()
-                        << " total=" << m_cameras.size() << '\n';
-                DebugTrace(oss.str());
-#endif
                 return camera;
         }
 
@@ -82,9 +67,6 @@ namespace CameraSpace
                 {
                         if (!m_active.expired())
                         {
-#if defined(_DEBUG)
-                                DebugTrace(std::string(kLogPrefix) + "Clearing active camera.\n");
-#endif
                         }
                         m_active.reset();
                         return;
@@ -92,23 +74,12 @@ namespace CameraSpace
 
                 if (!Contains(camera))
                 {
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "SetActive received unmanaged camera ptr=" << camera.get()
-                                << ", auto-registering.\n";
-                        DebugTrace(oss.str());
-#endif
                         m_cameras.push_back(camera);
                         ++m_stats.registeredCameras;
                 }
 
                 m_active = camera;
                 m_warnedAboutMissingCamera = false;
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kLogPrefix << "Active camera set ptr=" << camera.get() << '\n';
-                DebugTrace(oss.str());
-#endif
         }
 
         std::shared_ptr<ICamera> CameraManager::GetActiveCamera() const
