@@ -70,6 +70,15 @@ namespace SweetsSpace
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
+    enum class StageState
+    {
+        Intro,
+        Playing,
+        TimeUp,
+        Cleared,
+        ShowingResult,
+    };
+
     struct PlayerColliderTuning
     {
         float thicknessPadding = 1.0f;
@@ -100,6 +109,10 @@ private:
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
 #endif
+    void SetStageState(StageState newState);
+    void OnStageStart();
+    void OnStageClear();
+    void OnStageFail();
     void RegisterPhysicsBody(Entities::PhysicalEntity& entity);
     void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
     void UnregisterAllPhysicsBodies();
@@ -155,11 +168,10 @@ private:
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
     Core::StepTimer m_countdownTimer;
+    StageState m_stageState = StageState::Intro;
     float m_totalPlaySeconds = 0.0f;
     float m_remainingCountdownSeconds = 0.0f;
     int m_lastAnnouncedCountdownSeconds = 0;
-    bool m_isPlaying = false;
-    bool m_timeUp = false;
     float m_currentTowerHeight = 0.0f;
     float m_peakTowerHeight = 0.0f;
     float m_maxTowerHeight = 0.0f;
