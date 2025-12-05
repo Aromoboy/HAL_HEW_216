@@ -3,27 +3,28 @@
 #include "Main.h"
 #include <stdio.h>
 #include <crtdbg.h>
+#include <string>
 #include "DebugConsole.h"
-#include <iostream>
+#include "Diagnostics/Logger.h"
 
-// timeGetTimeü‚è‚Ìg—p
+// timeGetTimeå‘¨ã‚Šã®ä½¿ç”¨
 #pragma comment(lib, "winmm.lib")
 
-//--- ƒvƒƒgƒ^ƒCƒvéŒ¾
+//--- ãƒ—ãƒ­ãƒˆã‚¿ã‚¤ãƒ—å®£è¨€
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 
-// ƒGƒ“ƒgƒŠƒ|ƒCƒ“ƒg
+// ã‚¨ãƒ³ãƒˆãƒªãƒã‚¤ãƒ³ãƒˆ
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	//--- •Ï”éŒ¾
+	//--- å¤‰æ•°å®£è¨€
 	WNDCLASSEX wcex;
 	HWND hWnd;
 	MSG message;
 
-	// ƒEƒBƒ“ƒhƒNƒ‰ƒXî•ñ‚Ìİ’è
+	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¯ãƒ©ã‚¹æƒ…å ±ã®è¨­å®š
 	ZeroMemory(&wcex, sizeof(wcex));
 	wcex.hInstance = hInstance;
 	wcex.lpszClassName = "Class Name";
@@ -35,14 +36,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 
-	// ƒEƒBƒ“ƒhƒEƒNƒ‰ƒXî•ñ‚Ì“o˜^
+	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚¯ãƒ©ã‚¹æƒ…å ±ã®ç™»éŒ²
 	if (!RegisterClassEx(&wcex))
 	{
 		MessageBox(NULL, "Failed to RegisterClassEx", "Error", MB_OK);
 		return 0;
 	}
 
-	// ƒEƒBƒ“ƒhƒE‚Ìì¬
+	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ä½œæˆ
 	RECT rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	DWORD style = WS_CAPTION | WS_SYSMENU;
 	DWORD exStyle = WS_EX_OVERLAPPEDWINDOW;
@@ -57,7 +58,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	);
 
 
-	// ƒfƒoƒbƒOƒRƒ“ƒ\[ƒ‹‚Ì•\¦
+	// ãƒ‡ãƒãƒƒã‚°ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã®è¡¨ç¤º
 #ifdef _DEBUG
 
 	DebugConsole::InitDebugConsole(hWnd);
@@ -65,11 +66,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #endif
 
 
-	// ƒEƒBƒ“ƒhƒE‚Ì•\¦
+	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤º
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
-	// ‰Šú‰»ˆ—
+	// åˆæœŸåŒ–å‡¦ç†
 	if (FAILED(Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)))
 	{
 		Uninit();
@@ -78,7 +79,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
-	//--- FPS§Œä
+	//--- FPSåˆ¶å¾¡
 	timeBeginPeriod(1);
 	DWORD countStartTime = timeGetTime();
 	DWORD preExecTime = countStartTime;
@@ -86,7 +87,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	float processingTime = 0.0f;
 	int fpsCount = 0;
 
-	//--- ƒEƒBƒ“ƒhƒE‚ÌŠÇ—
+	//--- ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ç®¡ç†
 	while (1)
 	{
 		if (PeekMessage(&message, NULL, 0, 0, PM_NOREMOVE))
@@ -125,8 +126,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			{
 #ifdef _DEBUG
 				DebugConsole::SetDrawPos(1, 2);
-				std::cout << "FPS::" << fpsCount << std::endl;
-				std::cout << "’¼‘O‚Ìˆ—ŠÔ::" << processingTime / 1000 << std::endl;
+				Diagnostics::LogDebug("FPS: " + std::to_string(fpsCount));
+				Diagnostics::LogDebug("Frame time (s): " + std::to_string(processingTime / 1000.0f));
 #endif
 				fpsCount = 0;
 				fpsOldTime = nowTime;
@@ -135,7 +136,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
-	// I—¹
+	// çµ‚äº†æ™‚
 	timeEndPeriod(1);
 	Uninit();
 	UnregisterClass(wcex.lpszClassName, hInstance);
@@ -143,7 +144,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	return 0;
 }
 
-// ƒEƒBƒ“ƒhƒEƒvƒƒV[ƒWƒƒ
+// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)

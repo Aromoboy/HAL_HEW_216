@@ -301,6 +301,9 @@
     <ClInclude Include="include\DebugConsole.h">
       <Filter>Debug</Filter>
     </ClInclude>
+    <ClInclude Include="include\Diagnostics\Logger.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
     <ClInclude Include="include\Defines.h">
       <Filter>Core</Filter>
     </ClInclude>

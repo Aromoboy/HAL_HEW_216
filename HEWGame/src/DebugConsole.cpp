@@ -2,15 +2,17 @@
 
 #include"conioex.h"
 
+#include "Diagnostics/Logger.h"
+
 HWND DebugConsole::m_hConsole = nullptr;
 HWND DebugConsole::m_hMainWindow = nullptr;
 
 void DebugConsole::InitDebugConsole(HWND a_hWindow)
 {
-    AllocConsole(); // ƒRƒ“ƒ\[ƒ‹‚ğV‹Kì¬
+    Diagnostics::LogInfo("Debug console initialized!");
     FILE* fp;
-    freopen_s(&fp, "CONOUT$", "w", stdout); // •W€o—Í‚ğƒRƒ“ƒ\[ƒ‹‚ÉÚ‘±
-    freopen_s(&fp, "CONOUT$", "w", stderr); // •W€ƒGƒ‰[‚à“¯—l‚É
+    freopen_s(&fp, "CONOUT$", "w", stdout); // æ¨™æº–å‡ºåŠ›ã‚’ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã«æ¥ç¶š
+    freopen_s(&fp, "CONOUT$", "w", stderr); // æ¨™æº–ã‚¨ãƒ©ãƒ¼ã‚‚åŒæ§˜ã«
 
     std::cout << "Debug console initialized!" << std::endl;
 
@@ -42,5 +44,5 @@ void DebugConsole::ToggleConsole()
 
     SetForegroundWindow(m_hMainWindow);
 
-    visible ^= true; // ƒtƒ‰ƒO”½“]
+    visible ^= true; // ãƒ•ãƒ©ã‚°åè»¢
 }
