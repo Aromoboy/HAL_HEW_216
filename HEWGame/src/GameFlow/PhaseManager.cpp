@@ -2,31 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
-
-namespace
-{
-#if defined(_WIN32) && defined(_DEBUG)
-    void DebugTrace(const std::string& message)
-    {
-        ::OutputDebugStringA(message.c_str());
-    }
-#else
-    void DebugTrace(const std::string& message)
-    {
-        (void)message;
-    }
-#endif
-
-    constexpr const char* kLogPrefix = "[PhaseManager] ";
-}
 
 namespace GameFlow
 {
@@ -70,18 +45,6 @@ namespace GameFlow
         m_currentPhase = 0;
         m_initialized = true;
         m_lastReportedHeight = 0.0f;
-        m_startTime = std::chrono::steady_clock::now();
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "Initialized with " << m_thresholds.size() << " thresholds"
-            << " and " << m_rewardMultipliers.size() << " multipliers.";
-        if (!m_thresholds.empty())
-        {
-            oss << " nextThreshold=" << m_thresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-        DebugTrace(oss.str());
     }
 
     void PhaseManager::Reset()
@@ -94,18 +57,6 @@ namespace GameFlow
         m_nextThresholdIndex = 0;
         m_currentPhase = 0;
         m_lastReportedHeight = 0.0f;
-        m_startTime = std::chrono::steady_clock::now();
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "Reset. thresholdCount=" << m_thresholds.size()
-            << " multiplierCount=" << m_rewardMultipliers.size();
-        if (!m_thresholds.empty())
-        {
-            oss << " nextThreshold=" << m_thresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-        DebugTrace(oss.str());
     }
 
 
@@ -131,7 +82,6 @@ namespace GameFlow
             ++m_nextThresholdIndex;
             ++m_currentPhase;
             advanced = true;
-            LogPhaseAdvance(threshold, m_lastReportedHeight);
         }
 
         return advanced;
@@ -145,20 +95,6 @@ namespace GameFlow
     float PhaseManager::GetRewardMultiplier() const noexcept
     {
         return GetRewardMultiplierForPhase(m_currentPhase);
-    }
-
-    void PhaseManager::LogPhaseAdvance(float threshold, float currentHeight) const
-    {
-        const auto now = std::chrono::steady_clock::now();
-        const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_startTime).count();
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "{\"phase\":" << m_currentPhase
-            << ",\"threshold\":" << threshold
-            << ",\"height\":" << currentHeight
-            << ",\"multiplier\":" << GetRewardMultiplier()
-            << ",\"timeMs\":" << elapsedMs << "}\n";
-        DebugTrace(oss.str());
     }
 
     float PhaseManager::GetRewardMultiplierForPhase(int phaseIndex) const noexcept
