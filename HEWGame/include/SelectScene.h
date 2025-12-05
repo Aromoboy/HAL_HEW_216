@@ -19,9 +19,6 @@ protected:
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) override;
     void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) override;
-
-private:
-    void LogLifecycle(const char* label) const;
 };
 
 #endif // __SELECT_SCENE_H__
