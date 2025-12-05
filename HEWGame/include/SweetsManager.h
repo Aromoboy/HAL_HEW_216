@@ -158,6 +158,7 @@ namespace SweetsSpace
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);
+        void SetGeneratedColliderMinThickness(float thickness);
 
     private:
         struct SweetsStateHash
@@ -230,6 +231,7 @@ namespace SweetsSpace
         float m_maxHorizontalBound;
         float m_horizontalBoundsMargin;
         float m_generatedColliderThicknessPadding;
+        float m_generatedColliderMinThickness;
         bool m_forceGeneratedColliders;
         bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
