@@ -40,7 +40,8 @@ namespace GameFlow
     {
     }
 
-    void PhaseManager::Initialize(const std::vector<float>& thresholds, const std::vector<float>& rewardMultipliers)
+    void PhaseManager::Initialize(const std::vector<float>& thresholds, const std::vector<float>& minithresholds,
+        const std::vector<float>& rewardMultipliers, const std::vector<float>& rewardMiniMultipliers)
     {
         m_thresholds = thresholds;
         std::sort(m_thresholds.begin(), m_thresholds.end());
@@ -95,6 +96,9 @@ namespace GameFlow
 
         m_nextThresholdIndex = 0;
         m_currentPhase = 0;
+        //ミニフェーズ
+        m_nextMiniThresholdIndex = 0;
+        m_currentMiniPhase = 0;
         m_lastReportedHeight = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
 

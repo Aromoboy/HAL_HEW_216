@@ -10,7 +10,8 @@ namespace GameFlow
     public:
         PhaseManager();
 
-        void Initialize(const std::vector<float>& thresholds, const std::vector<float>& rewardMultipliers);
+        void Initialize(const std::vector<float>& thresholds, const std::vector<float>& minithresholds, 
+            const std::vector<float>& rewardMultipliers, const std::vector<float>& rewardMiniMultipliers);
         void Reset();
         // 現在のフェーズが増加した場合に true を返す
         bool UpdateHeight(float currentMaxHeight);
