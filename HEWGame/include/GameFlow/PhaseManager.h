@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <vector>
 
 namespace GameFlow
@@ -19,7 +18,6 @@ namespace GameFlow
 
     private:
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
-        void LogPhaseAdvance(float threshold, float currentHeight) const;
 
         std::vector<float> m_thresholds;
         std::vector<float> m_rewardMultipliers;
@@ -27,6 +25,5 @@ namespace GameFlow
         int m_currentPhase;
         bool m_initialized;
         float m_lastReportedHeight;
-        std::chrono::steady_clock::time_point m_startTime;
     };
 }
