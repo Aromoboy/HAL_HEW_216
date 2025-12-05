@@ -76,16 +76,5 @@ namespace Systems
         float m_minTangentialSpeed;
         bool m_includeKinematicBodies;
         bool m_allowKinematicPlayerCollision;
-        bool m_loggedMissingBodyList;
-        bool m_loggedBodySnapshot;
-        bool m_loggedPlayerPresence;
-        bool m_loggedPlayerAbsence;
-        bool m_loggedKinematicFilter;
-        bool m_loggedKinematicPlayerFilter;
-        bool m_loggedPlayerPlatformContact;
-        bool m_loggedPlayerSweetsContact;
-        bool m_loggedSuppressedSweetsFloor;
-        bool m_loggedPlanarZSeparation;
-        bool m_loggedPlanarZIgnore;
     };
 }
