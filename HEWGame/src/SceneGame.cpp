@@ -65,7 +65,6 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
-        constexpr bool kEnablePhysicsIntegrationLogging = true;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
@@ -1317,10 +1316,6 @@ SceneGame::SceneGame()
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-    if (m_integrateSystem)
-    {
-        m_integrateSystem->SetVerboseLoggingEnabled(kEnablePhysicsIntegrationLogging);
-    }
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
