@@ -2,31 +2,14 @@
 #include "Entities/Entity.h"
 // カメラの追従や回転計算がしやすくなった
 
-#include <sstream>
 #include <utility>
 
 #include <DirectXMath.h>
-
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
 
 #include "Entity.h"
 
 namespace
 {
-        void DebugTrace(const std::string& message)
-        {
-#if defined(_WIN32) && defined(_DEBUG)
-                ::OutputDebugStringA(message.c_str());
-#else
-                (void)message;
-#endif
-        }
-
         DirectX::XMVECTOR LoadFloat3(const float3& value)
         {
                 return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
@@ -68,7 +51,6 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_yaw(0.0f)
         , m_pitch(0.0f)
         , m_followSpeed(5.0f)
-        , m_warnedAboutExpiredTarget(false)
         , m_lockTranslation(false)
         , m_lockYawPitch(false)
 {
@@ -130,16 +112,11 @@ float CameraRig::GetFollowSpeed() const
 
 void CameraRig::SetTranslationLocked(bool locked)
 {
-	if (m_lockTranslation == locked)
-	{
-		return;
-	}
-	m_lockTranslation = locked;
-	auto target = m_target.lock();
-	std::ostringstream oss;
-	oss << "[CameraRig] Translation lock " << (locked ? "enabled" : "disabled")
-	    << ". target=" << target.get() << " followSpeed=" << m_followSpeed << "\n";
-	DebugTrace(oss.str());
+        if (m_lockTranslation == locked)
+        {
+                return;
+        }
+        m_lockTranslation = locked;
 }
 
 bool CameraRig::IsTranslationLocked() const
@@ -149,16 +126,11 @@ bool CameraRig::IsTranslationLocked() const
 
 void CameraRig::SetYawPitchLocked(bool locked)
 {
-	if (m_lockYawPitch == locked)
-	{
-		return;
-	}
-	m_lockYawPitch = locked;
-	auto target = m_target.lock();
-	std::ostringstream oss;
-	oss << "[CameraRig] Yaw/Pitch lock " << (locked ? "enabled" : "disabled")
-	    << ". target=" << target.get() << " followSpeed=" << m_followSpeed << "\n";
-	DebugTrace(oss.str());
+        if (m_lockYawPitch == locked)
+        {
+                return;
+        }
+        m_lockYawPitch = locked;
 }
 
 bool CameraRig::IsYawPitchLocked() const
@@ -169,36 +141,20 @@ bool CameraRig::IsYawPitchLocked() const
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
-        m_warnedAboutExpiredTarget = false;
-
-        std::ostringstream oss;
-        oss << "[CameraRig] Attach called. target=" << target.get()
-            << " camera=" << m_camera.get() << "\n";
-        DebugTrace(oss.str());
 }
 
 void CameraRig::OnUpdate(Core::UpdateContext& ctx)
 {
         if (!m_camera)
         {
-                DebugTrace("[CameraRig] Update skipped because camera is null.\n");
                 return;
         }
 
         auto target = m_target.lock();
         if (!target)
         {
-                if (!m_warnedAboutExpiredTarget)
-                {
-                        std::ostringstream oss;
-                        oss << "[CameraRig] Target expired. Freezing camera update. camera=" << m_camera.get() << "\n";
-                        DebugTrace(oss.str());
-                        m_warnedAboutExpiredTarget = true;
-                }
                 return;
         }
-
-        m_warnedAboutExpiredTarget = false;
 
         const auto& targetTransform = target->GetTransform();
         const float3 targetRotation = targetTransform.rotation;

@@ -4,38 +4,12 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <iterator>
-#include <map>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <unordered_map>
-#include <utility>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
-
-#include "Debug.h"
 
 namespace
 {
     constexpr float kEpsilon = 1e-5f;
-
-#if defined(_WIN32) && defined(_DEBUG)
-    void DebugTrace(const std::string& message)
-    {
-        ::OutputDebugStringA(message.c_str());
-    }
-#else
-    void DebugTrace(const std::string& message)
-    {
-        (void)message;
-    }
-#endif
 
     float Cross(const float2& a, const float2& b, const float2& c)
     {
@@ -438,9 +412,6 @@ namespace Collision
         Mesh2DExtraction extraction{};
         if (!desc.pVtx || desc.vtxSize < sizeof(float) * 3 || desc.vtxCount == 0)
         {
-#if defined(_DEBUG)
-            DebugTrace("[ConvexHullBuilder] Invalid mesh description; skipping polygon extraction.\n");
-#endif
             return extraction;
         }
 
@@ -501,13 +472,6 @@ namespace Collision
             }
         }
 
-#if defined(_DEBUG)
-        std::ostringstream oss;
-        oss << "[ConvexHullBuilder] Extracted " << extraction.polygons.size() << " convex polygon parts from "
-            << contours.size() << " contour(s); boundary vertex count=" << extraction.boundary.size() << "\n";
-        DebugTrace(oss.str());
-#endif
-
         return extraction;
     }
 
@@ -523,9 +487,6 @@ namespace Collision
         {
             if (!desc.pVtx || desc.vtxCount == 0)
             {
-#if defined(_DEBUG)
-                DebugTrace("[ConvexHullBuilder] Invalid mesh description; skipping hull extraction.\n");
-#endif
                 return extracted;
             }
 
@@ -546,9 +507,6 @@ namespace Collision
 
         if (extracted.empty())
         {
-#if defined(_DEBUG)
-            DebugTrace("[ConvexHullBuilder] No finite projected vertices found in mesh; hull cannot be built.\n");
-#endif
             return extracted;
         }
 
@@ -574,15 +532,6 @@ namespace Collision
             p.x -= centroid.x;
             p.y -= centroid.y;
         }
-
-#if defined(_DEBUG)
-        std::ostringstream oss;
-        oss << "[ConvexHullBuilder] Hull generated with " << hull.size() << " points from "
-            << uniquePoints.size() << " unique projected vertices (" << extracted.size()
-            << " raw, " << meshExtraction.polygons.size() << " polygon parts). Centroid shifted to ("
-            << centroid.x << ", " << centroid.y << ")\n";
-        DebugTrace(oss.str());
-#endif
 
         return hull;
     }

@@ -159,16 +159,7 @@ namespace SweetsSpace
             if (m_lookup.find(normalized) == m_lookup.end())
             {
                 m_lookup[normalized] = type;
-                std::ostringstream oss;
-                oss << kLogPrefix << "Lookup map restored for type '" << ToString(type) << "' key='"
-                    << m_byType[type].key << "'.\n";
-                ManifestDebugTrace(oss.str());
             }
-        }
-
-        if (!loaded)
-        {
-            LogActiveAliases();
         }
 
         return loaded;
@@ -184,10 +175,6 @@ namespace SweetsSpace
             ManifestDebugTrace(oss.str());
             return false;
         }
-
-        std::ostringstream banner;
-        banner << kLogPrefix << "Loading sweets manifest overrides from '" << csvPath << "'.\n";
-        ManifestDebugTrace(banner.str());
 
         std::unordered_set<SweetsType, SweetsTypeHash> touched;
         std::string line;
@@ -234,7 +221,6 @@ namespace SweetsSpace
             const std::string normalizedModelHeader = NormalizeKey(modelPath);
             if (normalizedKey == "key" && normalizedModelHeader == "modelpath")
             {
-                ManifestDebugTrace(std::string(kLogPrefix) + "CSV header detected; skipping line.\n");
                 continue;
             }
             std::optional<SweetsType> mappedType;
@@ -280,15 +266,6 @@ namespace SweetsSpace
             }
             touched.insert(*mappedType);
 
-            std::ostringstream info;
-            info << kLogPrefix << "Registered/overrode type '" << ToString(*mappedType)
-                << "' with key='" << registerKey << "' path='" << resolvedPath;
-            if (isPlayerAlias && registerKey != key)
-            {
-                info << "' (alias from '" << key << "')";
-            }
-            info << "'.\n";
-            ManifestDebugTrace(info.str());
         }
 
         for (auto type : touched)
@@ -302,59 +279,7 @@ namespace SweetsSpace
             m_lookup[normalized] = type;
         }
 
-        for (SweetsType type : { SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Strawberry, SweetsType::Fairy })
-        {
-            if (touched.find(type) == touched.end())
-            {
-                std::ostringstream warn;
-                warn << kLogPrefix << "No CSV override for type '" << ToString(type)
-                    << "'; using built-in descriptor path='" << m_byType[type].modelPath << "'.\n";
-                ManifestDebugTrace(warn.str());
-            }
-        }
-
-        LogActiveAliases();
-
         return true;
-    }
-
-    void SweetsPrototypeManifest::LogActiveAliases() const
-    {
-        for (const auto& pair : m_byType)
-        {
-            const auto* descriptor = Find(pair.first);
-            if (!descriptor)
-            {
-                continue;
-            }
-
-            const std::string canonical = NormalizeKey(descriptor->key);
-            std::vector<std::string> aliases;
-            for (const auto& lookup : m_lookup)
-            {
-                if (lookup.second != pair.first)
-                {
-                    continue;
-                }
-                if (lookup.first == canonical)
-                {
-                    continue;
-                }
-                aliases.push_back(lookup.first);
-            }
-
-            if (!aliases.empty())
-            {
-                std::ostringstream aliasLog;
-                aliasLog << kLogPrefix << "Aliases for '" << descriptor->key << "' -> ";
-                for (std::size_t i = 0; i < aliases.size(); ++i)
-                {
-                    aliasLog << (i == 0 ? '[' : ',') << aliases[i];
-                }
-                aliasLog << "]\n";
-                ManifestDebugTrace(aliasLog.str());
-            }
-        }
     }
 
     const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(SweetsType type) const

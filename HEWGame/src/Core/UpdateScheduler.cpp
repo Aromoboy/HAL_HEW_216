@@ -1,7 +1,6 @@
 #include "Core/UpdateScheduler.h"
 
 #include <algorithm>
-#include <functional>
 #include <limits>
 #include <queue>
 #include <sstream>
@@ -844,35 +843,6 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                         {
                                 m_executionLogListener(executionLog);
                         }
-#if defined(_DEBUG) && defined(_WIN32)
-                        if (!executionLog.empty())
-                        {
-                                std::ostringstream oss;
-                                oss << "[UpdateScheduler] phase/priority plan (phase, priority, order):\n";
-                                for (const auto& record : phasePriorityPlan)
-                                {
-                                        oss << "  node=" << record.node
-                                            << " phase=" << static_cast<int>(record.phase)
-                                            << " priority=" << record.priority
-                                            << " order=" << record.registrationOrder
-                                            << " sortedIndex=" << record.sortedIndex
-                                            << '\n';
-                                }
-
-                                oss << "[UpdateScheduler] execution order (phase, priority, order, invoked):\n";
-                                for (const auto& record : executionLog)
-                                {
-                                        oss << "  node=" << record.node
-                                            << " phase=" << static_cast<int>(record.phase)
-                                            << " priority=" << record.priority
-                                            << " order=" << record.registrationOrder
-                                            << " sortedIndex=" << record.sortedIndex
-                                            << " execIndex=" << record.executionIndex
-                                            << " invoked=" << (record.invoked ? 1 : 0) << '\n';
-                                }
-                                ::OutputDebugStringA(oss.str().c_str());
-                        }
-#endif
                 }
 
                 m_isTicking = false;

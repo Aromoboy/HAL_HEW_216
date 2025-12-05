@@ -5,35 +5,8 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 
-#include <algorithm>
-#include <array>
 #include <memory>
-#include <sstream>
-#include <typeinfo>
 #include <utility>
-#include <vector>
-
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
-
-namespace
-{
-#if defined(_WIN32) && defined(_DEBUG)
-void DebugTrace(const std::string& message)
-{
-::OutputDebugStringA(message.c_str());
-}
-#else
-void DebugTrace(const std::string& message)
-{
-(void)message;
-}
-#endif
-}
 
 namespace SceneSpace
 {
@@ -76,18 +49,9 @@ private:
 Scene::Scene()
 : m_isConfigured(false)
 , m_input(nullptr)
-, m_warnedAboutMissingCameraForDraw(false)
-, m_loggedExecutionPlan(false)
-, m_lastExecutionLogSize(0)
 , m_sceneUpdateRegistered(false)
 , m_cameraUpdateRegistered(false)
 {
-#if defined(_DEBUG)
-        m_scheduler.SetExecutionLogListener([this](const Core::UpdateScheduler::ExecutionLog& log)
-        {
-                LogExecutionPlan(log);
-        });
-#endif
 }
 
         Scene::~Scene()
@@ -120,22 +84,6 @@ Scene::Scene()
 void Scene::RootDraw()
 {
         auto activeCamera = m_cameraManager.GetActiveCamera();
-        if (!activeCamera)
-        {
-#if defined(_DEBUG)
-                if (!m_warnedAboutMissingCameraForDraw)
-                {
-                        std::ostringstream oss;
-                        oss << "[Scene] RootDraw detected missing active camera in scene ptr=" << this << '\n';
-                        DebugTrace(oss.str());
-                        m_warnedAboutMissingCameraForDraw = true;
-                }
-#endif
-        }
-        else
-        {
-                m_warnedAboutMissingCameraForDraw = false;
-        }
 
         Draw(activeCamera);
 }
@@ -220,128 +168,13 @@ void Scene::RootDraw()
                 return m_cameraUpdateNode.get();
         }
 
-        void Scene::LogExecutionPlan(const Core::UpdateScheduler::ExecutionLog& log)
-        {
-#if defined(_DEBUG)
-                if (log.empty())
-                {
-                        return;
-                }
-
-                const bool sizeChanged = log.size() != m_lastExecutionLogSize;
-                if (m_loggedExecutionPlan && !sizeChanged)
-                {
-                        return;
-                }
-
-                m_lastExecutionLogSize = log.size();
-                m_loggedExecutionPlan = true;
-
-                constexpr std::size_t kPhaseCount = static_cast<std::size_t>(Core::UpdatePhase::Late) + 1;
-                std::array<bool, kPhaseCount> phaseSeen{};
-
-                auto ordered = log;
-                std::sort(ordered.begin(), ordered.end(),
-                        [](const Core::UpdateScheduler::ExecutionRecord& lhs, const Core::UpdateScheduler::ExecutionRecord& rhs)
-                        {
-                                if (lhs.phase != rhs.phase)
-                                {
-                                        return lhs.phase < rhs.phase;
-                                }
-                                if (lhs.priority != rhs.priority)
-                                {
-                                        return lhs.priority < rhs.priority;
-                                }
-                                if (lhs.registrationOrder != rhs.registrationOrder)
-                                {
-                                        return lhs.registrationOrder < rhs.registrationOrder;
-                                }
-                                return lhs.executionIndex < rhs.executionIndex;
-                        });
-
-                std::ostringstream oss;
-                oss << "[Scene] UpdateScheduler execution plan scene=" << this
-                        << " nodeCount=" << ordered.size() << "\n";
-
-                for (const auto& record : ordered)
-                {
-                        const std::size_t phaseIndex = static_cast<std::size_t>(record.phase);
-                        if (phaseIndex < phaseSeen.size())
-                        {
-                                phaseSeen[phaseIndex] = true;
-                        }
-
-                        oss << "  phase=" << Core::ToString(record.phase)
-                                << '(' << static_cast<int>(record.phase) << ')'
-                                << " priority=" << record.priority
-                                << " order=" << record.registrationOrder
-                                << " execIndex=" << record.executionIndex
-                                << " invoked=" << (record.invoked ? 1 : 0)
-                                << " node=" << record.node;
-
-#if defined(_CPPRTTI)
-                        if (record.node)
-                        {
-                                oss << " type=" << typeid(*record.node).name();
-                        }
-#endif
-
-                        oss << '\n';
-                }
-
-                std::vector<Core::UpdatePhase> missing;
-                for (std::size_t i = 0; i < phaseSeen.size(); ++i)
-                {
-                        if (!phaseSeen[i])
-                        {
-                                missing.emplace_back(static_cast<Core::UpdatePhase>(i));
-                        }
-                }
-
-                if (!missing.empty())
-                {
-                        oss << "  missing phases:";
-                        for (Core::UpdatePhase phase : missing)
-                        {
-                                oss << ' ' << Core::ToString(phase)
-                                        << '(' << static_cast<int>(phase) << ')';
-                        }
-                        oss << '\n';
-                }
-
-                DebugTrace(oss.str());
-#else
-                (void)log;
-#endif
-        }
-
         void Scene::Register(Core::IUpdatable& node)
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[Scene] Register requested scene=" << this
-                        << " node=" << &node
-                        << " phase=" << Core::ToString(node.GetPhase())
-                        << '(' << static_cast<int>(node.GetPhase()) << ')'
-                        << " priority=" << node.GetPriority() << '\n';
-                DebugTrace(oss.str());
-#endif
-                m_loggedExecutionPlan = false;
                 m_scheduler.Register(node);
         }
 
         void Scene::Unregister(Core::IUpdatable& node)
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[Scene] Unregister requested scene=" << this
-                        << " node=" << &node
-                        << " phase=" << Core::ToString(node.GetPhase())
-                        << '(' << static_cast<int>(node.GetPhase()) << ')'
-                        << " priority=" << node.GetPriority() << '\n';
-                DebugTrace(oss.str());
-#endif
-                m_loggedExecutionPlan = false;
                 m_scheduler.Unregister(node);
         }
 

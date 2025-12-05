@@ -7,7 +7,6 @@
 #include "Vector.h"
 #include "ShaderList.h"
 #include "Defines.h"
-#include "DebugConsole.h"
 #include "AssimpModelLorder.h"
 #include "MeshBuffer.h"
 #include "Core/Input.h"
@@ -34,7 +33,6 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <optional>
 #include <sstream>
@@ -65,7 +63,6 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
-        constexpr bool kEnablePhysicsIntegrationLogging = true;
         constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
@@ -1317,10 +1314,6 @@ SceneGame::SceneGame()
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-    if (m_integrateSystem)
-    {
-        m_integrateSystem->SetVerboseLoggingEnabled(kEnablePhysicsIntegrationLogging);
-    }
     if (m_physicsMachine)
     {
         m_physicsMachine->SetSystem(m_gravitySystem);
@@ -2484,9 +2477,6 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
                 m_hudRenderer->Draw(hudData);
         }
 
-#if defined(_DEBUG)
-        RenderRunTelemetryOverlay();
-#endif
 }
 
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
@@ -3244,82 +3234,6 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
         player->Enable(enabled);
     }
 }
-
-#if defined(_DEBUG)
-void SceneGame::RenderRunTelemetryOverlay() const
-{
-#if defined(_WIN32)
-    constexpr int kOverlayBaseRow = 4;
-    const auto writeLine = [](int row, const std::string& text)
-    {
-        DebugConsole::SetDrawPos(1, row);
-        std::string padded = text;
-        if (padded.size() < 80)
-        {
-            padded.append(80 - padded.size(), ' ');
-        }
-        std::cout << padded;
-    };
-
-    const char* stateLabel = "Intro";
-    switch (m_stageState)
-    {
-    case StageState::Playing:
-        stateLabel = "Playing";
-        break;
-    case StageState::TimeUp:
-        stateLabel = "TimeUp";
-        break;
-    case StageState::Cleared:
-        stateLabel = "Cleared";
-        break;
-    case StageState::ShowingResult:
-        stateLabel = "Result";
-        break;
-    default:
-        break;
-    }
-
-    std::ostringstream timerLine;
-    timerLine << "[SceneGame] Timer: " << std::fixed << std::setprecision(1)
-        << m_remainingCountdownSeconds << "s (state=" << stateLabel << ')';
-    writeLine(kOverlayBaseRow, timerLine.str());
-
-    std::ostringstream heightLine;
-    heightLine << "[SceneGame] Tower height: live=" << std::fixed << std::setprecision(2)
-        << m_currentTowerHeight << "m peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m";
-    writeLine(kOverlayBaseRow + 1, heightLine.str());
-
-    std::ostringstream scoreLine;
-    scoreLine << "[SceneGame] Score: " << ComputeScore() << " | Confirm=Enter Retry=R";
-    if (m_stageState == StageState::ShowingResult)
-    {
-        scoreLine << " (waiting for confirm)";
-    }
-    writeLine(kOverlayBaseRow + 2, scoreLine.str());
-
-    std::ostringstream carryLine;
-    carryLine << "[SceneGame] Player carry: ";
-    if (player)
-    {
-        for (auto it : player->GetCarriedSweets())
-        {
-            const auto carried = it;
-            carryLine << (carried ? carried->GetTag() : "<unknown>");
-        }
-    }
-    else
-    {
-        carryLine << "empty";
-    }
-    writeLine(kOverlayBaseRow + 3, carryLine.str());
-
-    std::cout.flush();
-#else
-    (void)this;
-#endif
-}
-#endif
 
 int SceneGame::ComputeScore() const
 {

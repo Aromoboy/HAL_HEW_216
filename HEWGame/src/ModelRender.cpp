@@ -6,33 +6,6 @@
 #include "Vector.h"
 #include "DirectX.h"
 
-#include <sstream>
-#include <string>
-
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
-
-namespace
-{
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
-
-        constexpr const char* kLogPrefix = "[ModelRender] ";
-}
-
 ModelRender::ModelRender() = default;
 
 ModelRender::~ModelRender() = default;
@@ -41,7 +14,6 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 {
     if (!camera)
     {
-        DebugTrace(std::string(kLogPrefix) + "Draw aborted: camera pointer was null.\n");
         return;
     }
 
@@ -66,24 +38,16 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
         if (!mesh)
         {
-            DebugTrace(std::string(kLogPrefix) + "Skipped mesh draw: mesh resource expired.\n");
             continue;
         }
 
         std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
         if (material)
         {
-#if defined(_WIN32) && defined(_DEBUG)
-            if (ID3D11ShaderResourceView* texView = material->GetTexture())
-            {
-                OutputDebugStringA("[ModelRender] Texture bound.\n");
-            }
-#endif
             ShaderList::SetMaterial(*material);
         }
         else
         {
-            DebugTrace(std::string(kLogPrefix) + "Material missing for mesh, default material used.\n");
             if (context)
             {
                 ID3D11ShaderResourceView* nullView = nullptr;

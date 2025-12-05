@@ -1,18 +1,13 @@
 
 
-#include "Debug.h"
-#ifdef _DEBUG
-#include "Geometory.h"
-#include <string>
-#include "math.h"
-#endif
-
 #include "AssimpModelLorder.h"
+
 #include <DirectXMath.h>
 #include "TextureCache.h"
 #include "TextureDX.h"
-#include <locale>
-#include <codecvt>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 
 AssimpModelLorder::AssimpModelLorder()

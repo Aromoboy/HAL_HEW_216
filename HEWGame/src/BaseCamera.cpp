@@ -4,31 +4,9 @@
 #include "DrawMatrix.h"
 
 #include <cmath>
-#include <cstdlib>
-#include <sstream>
-#include <string>
-
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
 
 namespace
 {
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
-
         constexpr float kMaxCoordinateMagnitude = 100000.0f;
         constexpr float kMaxRotationMagnitude = DirectX::XM_PI * 16.0f;
         constexpr int kMaxPriorityMagnitude = 1000;
@@ -45,40 +23,21 @@ namespace
                         && AreFloat3Equal(lhs.scale, rhs.scale);
         }
 
-        bool ValidateFloat(const char* label, float value, float maxMagnitude)
+        bool ValidateFloat(const char* /*label*/, float value, float maxMagnitude)
         {
                 if (std::isfinite(value) && std::fabs(value) <= maxMagnitude)
                 {
                         return true;
                 }
-
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[Camera] " << label << " invalid value=" << value
-                        << " (|value| must be <= " << maxMagnitude << ")\n";
-                DebugTrace(oss.str());
-#else
-                (void)label;
-                (void)value;
-                (void)maxMagnitude;
-#endif
                 return false;
         }
 
-        bool ValidatePerspectiveValue(const char* label, float value)
+        bool ValidatePerspectiveValue(const char* /*label*/, float value)
         {
                 if (std::isfinite(value) && value > 0.0f)
                 {
                         return true;
                 }
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[Camera] invalid " << label << "=" << value << " (must be > 0)\n";
-                DebugTrace(oss.str());
-#else
-                (void)label;
-                (void)value;
-#endif
                 return false;
         }
 }
@@ -164,11 +123,6 @@ namespace CameraSpace
         {
                 if (!ValidatePosition(transform.position) || !ValidateRotation(transform.rotation))
                 {
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << "[Camera] SetTransform rejected invalid input. camera=" << this << "\n";
-                        DebugTrace(oss.str());
-#endif
                         return;
                 }
 
@@ -311,14 +265,6 @@ namespace CameraSpace
                 {
                         return true;
                 }
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[Camera] priority out of range value=" << priority
-                        << " (|value| must be <= " << kMaxPriorityMagnitude << ")\n";
-                DebugTrace(oss.str());
-#else
-                (void)priority;
-#endif
                 return false;
         }
 
@@ -336,12 +282,6 @@ namespace CameraSpace
 
                 if (farPlane <= nearPlane)
                 {
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << "[Camera] invalid frustum far=" << farPlane
-                                << " must be greater than near=" << nearPlane << "\n";
-                        DebugTrace(oss.str());
-#endif
                         return false;
                 }
 
@@ -358,15 +298,6 @@ namespace CameraSpace
 
                 if (!m_viewDirty && !AreTransformsEqual(m_transform, m_debugLastTransformSnapshot))
                 {
-                        std::ostringstream oss;
-                        oss << "[Camera] Transform mutated without marking dirty. caller="
-                                << (caller ? caller : "unknown")
-                                << " camera=" << this
-                                << " viewDirty=" << m_viewDirty
-                                << " projectionDirty=" << m_projectionDirty
-                                << "\n";
-                        DebugTrace(oss.str());
-
                         auto* self = const_cast<BaseCamera*>(this);
                         self->MarkViewDirty();
                         self->MarkProjectionDirty();
