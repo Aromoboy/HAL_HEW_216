@@ -19,6 +19,8 @@ namespace GameFlow
 
     private:
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
+        //ミニフェーズ
+        float GetRewardMiniMultiplierForPhase(int phaseminiIndex) const noexcept;
         void LogPhaseAdvance(float threshold, float currentHeight) const;
 
         std::vector<float> m_thresholds;
