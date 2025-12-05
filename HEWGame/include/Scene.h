@@ -5,7 +5,6 @@
 #include "Core/UpdateScheduler.h"
 
 #include <memory>
-#include <cstddef>
 
 namespace Core
 {
@@ -52,15 +51,10 @@ void SetActiveCamera(const std::shared_ptr<CameraSpace::ICamera>& camera);
 std::shared_ptr<CameraSpace::ICamera> GetActiveCamera() const;
 
 private:
-void LogExecutionPlan(const Core::UpdateScheduler::ExecutionLog& log);
-
 Core::UpdateScheduler m_scheduler;
 bool m_isConfigured;
 Core::Input* m_input;
 CameraSpace::CameraManager m_cameraManager;
-bool m_warnedAboutMissingCameraForDraw;
-bool m_loggedExecutionPlan;
-std::size_t m_lastExecutionLogSize;
 class SceneUpdateNode;
 std::unique_ptr<SceneUpdateNode> m_sceneUpdateNode;
 bool m_sceneUpdateRegistered;
