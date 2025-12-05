@@ -3,32 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <sstream>
-#include <string>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
 
 namespace
 {
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
-
-        constexpr const char* kCircleLogPrefix = "[CircleCollider2D] ";
-
         float2 Add(const float2& a, const float2& b)
         {
                 return float2{ a.x + b.x, a.y + b.y };
@@ -113,11 +90,6 @@ namespace Collision
                 const float radiusScale = std::max(transform.scale.x, transform.scale.y);
                 if (std::abs(radiusScale - m_radiusScale) > 1e-4f)
                 {
-                        std::ostringstream oss;
-                        oss << "[CircleCollider2D] radius scale updated from " << m_radiusScale << " to " << radiusScale
-                                << " (base radius: " << m_radius << ", scaled radius: " << (m_radius * radiusScale) << ", offset: ("
-                                << m_offset.x << ", " << m_offset.y << ") )\n";
-                        DebugTrace(oss.str());
                         m_radiusScale = radiusScale;
                 }
                 m_scaledRadius = m_radius * m_radiusScale;
@@ -169,10 +141,6 @@ namespace Collision
                         if (hit)
                         {
                                 manifold = best;
-                                std::ostringstream oss;
-                                oss << kCircleLogPrefix << "Compound contact selected child index=" << bestIndex
-                                    << " penetration=" << best.penetration << '\n';
-                                DebugTrace(oss.str());
                         }
                         return hit;
                 }
