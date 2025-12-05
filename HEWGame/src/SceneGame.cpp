@@ -1362,11 +1362,6 @@ SceneGame::SceneGame()
         ::DebugTrace(oss.str());
     }
 
-    if (m_drawSystem)
-    {
-        m_drawSystem->SetDebugLoggingEnabled(kEnableDrawSystemVerboseLogging);
-    }
-
     if (m_sweetsManager)
     {
         m_sweetsManager->SetDrawSystem(m_drawSystem.get());
