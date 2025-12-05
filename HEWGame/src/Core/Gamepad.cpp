@@ -32,13 +32,6 @@ else
 m_connected = false;
 ZeroMemory(&m_state, sizeof(XINPUT_STATE));
 }
-
-if (m_connected != wasConnected)
-{
-OutputDebugStringA(m_connected
-? "[Core::Gamepad] コントローラを検出しました（状態を更新）。推奨: そのまま入力テストを継続してください。\n"
-: "[Core::Gamepad] コントローラが切断されました（状態を初期化）。推奨: ケーブル/電源を確認し、再接続後に挙動を確認してください。\n");
-}
 }
 
 bool Gamepad::IsConnected() const
