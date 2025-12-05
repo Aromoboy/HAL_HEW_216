@@ -2,10 +2,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <string>
+#include <sstream>
 #include <type_traits>
 #include <vector>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 #include "AABB.h"
 #include "AABBCollider.h"
@@ -18,6 +24,16 @@ static_assert(std::is_class_v<Systems::ContactLiteSystem>, "ContactLiteSystem de
 
 namespace
 {
+        void DebugTrace(const std::string& message)
+        {
+#ifdef _WIN32
+                OutputDebugStringA(message.c_str());
+#else
+                (void)message;
+#endif
+        }
+
+        constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
 
@@ -131,6 +147,36 @@ namespace
                         return (a.max.y + a.min.y) * 0.5f;
                 case 2:
                         return (a.max.z + a.min.z) * 0.5f;
+                default:
+                        return 0.0f;
+                }
+        }
+
+        float GetAxisMin(const AABB& a, int axis)
+        {
+                switch (axis)
+                {
+                case 0:
+                        return a.min.x;
+                case 1:
+                        return a.min.y;
+                case 2:
+                        return a.min.z;
+                default:
+                        return 0.0f;
+                }
+        }
+
+        float GetAxisMax(const AABB& a, int axis)
+        {
+                switch (axis)
+                {
+                case 0:
+                        return a.max.x;
+                case 1:
+                        return a.max.y;
+                case 2:
+                        return a.max.z;
                 default:
                         return 0.0f;
                 }
@@ -350,6 +396,9 @@ namespace Systems
 
                 std::vector<BodyProxy> proxies;
                 proxies.reserve(bodyCount);
+
+                float planarMin[2]{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                float planarMax[2]{ -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };
                 for (Entities::PhysicalEntity* body : activeBodies)
                 {
                         if (!body)
@@ -365,11 +414,20 @@ namespace Systems
 
                         body->SyncColliderBounds();
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
+
+                        for (int axis = 0; axis < 2; ++axis)
+                        {
+                                planarMin[axis] = std::min(planarMin[axis], GetAxisMin(proxies.back().bounds, axis));
+                                planarMax[axis] = std::max(planarMax[axis], GetAxisMax(proxies.back().bounds, axis));
+                        }
                 }
 
-                std::sort(proxies.begin(), proxies.end(), [](const BodyProxy& a, const BodyProxy& b)
+                const int sweepAxis = (planarMax[0] - planarMin[0] >= planarMax[1] - planarMin[1]) ? 0 : 1;
+                const int planarTestAxis = sweepAxis == 0 ? 1 : 0;
+
+                std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
                 {
-                        return a.bounds.min.x < b.bounds.min.x;
+                        return GetAxisMin(a.bounds, sweepAxis) < GetAxisMin(b.bounds, sweepAxis);
                 });
 
                 const size_t proxyCount = proxies.size();
@@ -391,9 +449,15 @@ namespace Systems
                         for (size_t j = i + 1; j < proxyCount; ++j)
                         {
                                 const BodyProxy& proxyB = proxies[j];
-                                if (proxyB.bounds.min.x > proxyA.bounds.max.x)
+                                if (GetAxisMin(proxyB.bounds, sweepAxis) > GetAxisMax(proxyA.bounds, sweepAxis))
                                 {
                                         break;
+                                }
+
+                                const float planarOverlap = GetAxisOverlap(proxyA.bounds, proxyB.bounds, planarTestAxis);
+                                if (planarOverlap <= 0.0f)
+                                {
+                                        continue;
                                 }
 
                                 Entities::PhysicalEntity* bodyB = proxyB.body;
@@ -405,14 +469,21 @@ namespace Systems
                                         continue;
                                 }
 
+                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
+                                if (!pairIs2D)
+                                {
+                                        const float planarOverlapZ = GetAxisOverlap(proxyA.bounds, proxyB.bounds, 2);
+                                        if (planarOverlapZ < -kPlanarZTolerance)
+                                        {
+                                                continue;
+                                        }
+                                }
+
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
                                 {
                                         continue;
                                 }
-
-
-                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
 
                                 const AABB boundsA = proxyA.bounds;
                                 const AABB boundsB = proxyB.bounds;
@@ -881,6 +952,14 @@ namespace Systems
 
                                 ++resolvedPairs;
                         }
+                }
+
+                if (testedPairs > 0 || resolvedPairs > 0)
+                {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Broadphase tested=" << testedPairs
+                                << " accepted=" << resolvedPairs << "\n";
+                        DebugTrace(oss.str());
                 }
 
         }
