@@ -28,8 +28,6 @@ protected:
     void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) override;
 
 private:
-    void LogLifecycle(const char* label) const;
-
     SceneSpace::SceneManager* m_manager;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
 };
