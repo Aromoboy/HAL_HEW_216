@@ -126,9 +126,6 @@ private:
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
     void RefreshContactSolverBodies(const char* reason);
-#if defined(_DEBUG)
-    void RenderRunTelemetryOverlay() const;
-#endif
     int ComputeScore() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
