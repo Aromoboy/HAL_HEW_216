@@ -3,7 +3,6 @@
 #define __GRAVITYDAMPINGSYSTEM_H__
 
 #include "Systems/PhysicsMachine.h"
-#include <unordered_set>
 
 namespace Systems
 {
@@ -13,8 +12,6 @@ namespace Systems
         GravityDampingSystem(float gravity = 9.8f, float damping = 0.98f);
         virtual ~GravityDampingSystem() = default;
 
-        std::unordered_set<const Entities::PhysicalEntity*> m_loggedKinematicSkips;
-        std::unordered_set<const Entities::PhysicalEntity*> m_loggedPlanarViolations;
         // IPhysicsSystemのApply関数をオーバーライド
         void Apply(Entities::PhysicalEntity& entity, float dt) override;
 
