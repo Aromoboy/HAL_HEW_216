@@ -2180,56 +2180,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
                 }
 
                 const float currentMultiplier = m_playerSpeedMultiplier;
-                const float clampedMultiplier = std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
-                const bool clamped = std::fabs(clampedMultiplier - requestedMultiplier) > std::numeric_limits<float>::epsilon();
-                if (std::fabs(currentMultiplier - clampedMultiplier) <= std::numeric_limits<float>::epsilon())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[SpeedBoost] " << reason
-                        << " requestedMultiplier=" << requestedMultiplier
-                        << " has no effect (current=" << currentMultiplier << ").\n";
-                    ::DebugTrace(oss.str());
-                    return;
-                }
-
-                const float beforeSpeed = player->GetMoveSpeed();
-                const float newMultiplier = clampedMultiplier;
-                const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
-                const float newVerticalSpeed = m_playerBaseVerticalSpeed * newMultiplier;
-                m_playerSpeedMultiplier = newMultiplier;
-                player->SetMoveSpeeds(newHorizontalSpeed, newVerticalSpeed);
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "[SpeedBoost] " << reason
-                    << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
-                    << " prevMultiplier=" << currentMultiplier
-                    << " newMultiplier=" << newMultiplier
-                    << " prevSpeed=" << beforeSpeed
-                    << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
-                    << " clamped=" << std::boolalpha << clamped << "\n";
-                ::DebugTrace(oss.str());
-            };
-
-            if (input.IsTrigger(Core::ActionId::SpeedBoost))
-            {
-                adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
-            }
-
-        if (player)
-        {
-            const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
-            {
-                if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[SpeedBoost] " << reason
-                        << " ignored; base speeds invalid ("
-                        << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ").\n";
-                    ::DebugTrace(oss.str());
-                    return;
-                }
-
-                const float currentMultiplier = m_playerSpeedMultiplier;
                 const float clampedMultiplier =
                     std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
                 const bool clamped =
