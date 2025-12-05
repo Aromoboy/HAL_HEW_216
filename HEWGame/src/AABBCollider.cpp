@@ -1,30 +1,10 @@
 #include "AABBCollider.h"
 
-#include <sstream>
-#include <string>
 #include <algorithm>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
 
 namespace
 {
         constexpr float kPlanarZTolerance = 1e-3f;
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
 }
 
 Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float3 a_expand, float3 a_offset, CollisionLayer layer)
@@ -55,30 +35,8 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
         const float planarZOverlap = std::min(thisAABB.max.z, otherAABB.max.z) - std::max(thisAABB.min.z, otherAABB.min.z);
         if (planarZOverlap < -kPlanarZTolerance)
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[AABBCollider] Rejecting collision due to Z separation. this=" << this
-                        << " other=" << &other
-                        << " zOverlap=" << planarZOverlap
-                        << " tolerance=" << kPlanarZTolerance
-                        << " thisZ=[" << thisAABB.min.z << ',' << thisAABB.max.z
-                        << "] otherZ=[" << otherAABB.min.z << ',' << otherAABB.max.z << "]\n";
-                DebugTrace(oss.str());
-#endif
                 return false;
         }
-
-#if defined(_DEBUG)
-        if (planarZOverlap < kPlanarZTolerance)
-        {
-                std::ostringstream oss;
-                oss << "[AABBCollider] Treating marginal Z overlap (" << planarZOverlap
-                        << ") as planar contact. tolerance=" << kPlanarZTolerance
-                        << " boundsZ this=[" << thisAABB.min.z << ',' << thisAABB.max.z
-                        << "] other=[" << otherAABB.min.z << ',' << otherAABB.max.z << "]\n";
-                DebugTrace(oss.str());
-        }
-#endif
 
         return true;
 
@@ -105,14 +63,6 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
         min.z = transform.position.z + offset.z - colliderScale.z;
 
         aabb = AABB(max, min);
-
-#if defined(_DEBUG)
-        std::ostringstream oss;
-        oss << "[AABBCollider] UpdateBounds this=" << this
-                << " min=(" << min.x << ',' << min.y << ',' << min.z << ')'
-                << " max=(" << max.x << ',' << max.y << ',' << max.z << ")\n";
-        DebugTrace(oss.str());
-#endif
 }
 
 bool Collision::AABBCollider::IsTrriger()
