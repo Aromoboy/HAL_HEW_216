@@ -3,16 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <sstream>
-#include <string>
 #include <DirectXMath.h>
-
-#if defined(_WIN32)
-#       ifndef NOMINMAX
-#               define NOMINMAX
-#       endif
-#       include <windows.h>
-#endif
 
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
@@ -24,17 +15,6 @@
 
 namespace
 {
-        void DebugTrace(const std::string& message)
-        {
-#if defined(_WIN32) && defined(_DEBUG)
-                ::OutputDebugStringA(message.c_str());
-#else
-                (void)message;
-#endif
-        }
-
-        constexpr const char* kLogPrefix = "[DrawSystem] ";
-
         bool IsFiniteFloat(float value)
         {
                 return std::isfinite(value) != 0;
@@ -121,10 +101,6 @@ namespace Systems
                 , m_renderables()
                 , m_commands()
                 , m_colliderCommands()
-                , m_missingModelEntities()
-                , m_debugLoggingEnabled(false)
-                , m_warnedMissingRenderer(false)
-                , m_warnedMissingCamera(false)
         {
         }
 
@@ -136,7 +112,6 @@ namespace Systems
                 }
 
                 m_renderer = renderer;
-                m_warnedMissingRenderer = false;
         }
 
         void DrawSystem::RegisterRenderable(Entities::Entity& entity)
@@ -144,11 +119,6 @@ namespace Systems
                 Entities::Entity* entityPtr = &entity;
                 if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
                 {
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Duplicate renderable registration ignored entity=" << entityPtr << "\n";
-                        DebugTrace(oss.str());
-#endif
                         return;
                 }
 
@@ -161,11 +131,6 @@ namespace Systems
                 auto it = std::remove(m_renderables.begin(), m_renderables.end(), entityPtr);
                 if (it == m_renderables.end())
                 {
-#if defined(_DEBUG)
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Unregister requested for unknown renderable entity=" << entityPtr << "\n";
-                        DebugTrace(oss.str());
-#endif
                         return;
                 }
 
@@ -178,7 +143,6 @@ namespace Systems
                     m_colliderRenderables.erase(colIt);
                 }
 
-                m_missingModelEntities.erase(entityPtr);
         }
 
         void DrawSystem::RegisterRenderable(Entities::CollisionEntity& entity)
@@ -186,11 +150,6 @@ namespace Systems
             Entities::CollisionEntity* entityPtr = &entity;
             if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
             {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kLogPrefix << "Duplicate renderable registration ignored entity=" << entityPtr << "\n";
-                DebugTrace(oss.str());
-#endif
                 return;
             }
 
@@ -205,12 +164,6 @@ namespace Systems
                 m_colliderRenderables.clear();
                 m_commands.clear();
                 m_colliderCommands.clear();
-                m_missingModelEntities.clear();
-        }
-
-        void DrawSystem::SetDebugLoggingEnabled(bool enabled)
-        {
-                m_debugLoggingEnabled = enabled;
         }
 
         void DrawSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -234,7 +187,6 @@ namespace Systems
                         Render::Model* model = entity->GetRenderableModel();
                         if (!model)
                         {
-                                LogMissingModel(entity);
                                 continue;
                         }
 
@@ -245,16 +197,6 @@ namespace Systems
                         }
 
                         m_commands.push_back(DrawCommand{ entity, model, transform });
-
-                        if (m_debugLoggingEnabled)
-                        {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Queued render for entity=" << entity
-                                    << " pos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ')'
-                                    << " rot=(" << transform.rotation.x << ',' << transform.rotation.y << ',' << transform.rotation.z << ')'
-                                    << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ")\n";
-                                DebugTrace(oss.str());
-                        }
                 }
 
                 for (auto it : m_colliderRenderables)
@@ -266,19 +208,10 @@ namespace Systems
 
         void DrawSystem::RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
-                if (!m_renderer)
+                if (!m_renderer || !camera)
                 {
-                        LogMissingRendererOnce();
                         return;
                 }
-
-                if (!camera)
-                {
-                        LogMissingCameraOnce();
-                        return;
-                }
-
-                m_warnedMissingCamera = false;
 
                 RenderEntity(camera);
 
@@ -293,64 +226,17 @@ namespace Systems
 
         bool DrawSystem::ValidateTransform(const Transform& transform, const Entities::Entity* source) const
         {
+                (void)source;
                 if (IsFiniteVector(transform.position) && IsFiniteVector(transform.rotation) && IsFiniteVector(transform.scale))
                 {
                         return true;
                 }
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "Invalid transform detected for entity=" << source
-                    << " pos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ')'
-                    << " rot=(" << transform.rotation.x << ',' << transform.rotation.y << ',' << transform.rotation.z << ')'
-                    << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ")\n";
-                DebugTrace(oss.str());
                 return false;
-        }
-
-        void DrawSystem::LogMissingRendererOnce()
-        {
-                if (m_warnedMissingRenderer)
-                {
-                        return;
-                }
-
-                DebugTrace(std::string(kLogPrefix) + "RenderQueued skipped: renderer not configured.\n");
-                m_warnedMissingRenderer = true;
-        }
-
-        void DrawSystem::LogMissingCameraOnce()
-        {
-                if (m_warnedMissingCamera)
-                {
-                        return;
-                }
-
-                DebugTrace(std::string(kLogPrefix) + "RenderQueued skipped: active camera missing.\n");
-                m_warnedMissingCamera = true;
-        }
-
-        void DrawSystem::LogMissingModel(Entities::Entity* entity)
-        {
-                if (!entity)
-                {
-                        return;
-                }
-
-                if (m_missingModelEntities.insert(entity).second)
-                {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Renderable entity=" << entity << " has no model assigned.\n";
-                        DebugTrace(oss.str());
-                }
         }
         void DrawSystem::RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
             if (m_commands.empty())
             {
-                if (m_debugLoggingEnabled)
-                {
-                    DebugTrace(std::string(kLogPrefix) + "RenderQueued called with no commands.\n");
-                }
                 return;
             }
 
@@ -364,15 +250,6 @@ namespace Systems
                 m_renderer->Draw(*command.model, command.transform, camera.get());
             }
 
-            if (m_debugLoggingEnabled)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Submitted " << m_commands.size() << " draw commands.\n";
-                DebugTrace(oss.str());
-            }
-
-
-
 
             m_commands.clear();
         }
@@ -381,15 +258,9 @@ namespace Systems
         {
             if (m_colliderCommands.empty())
             {
-                if (m_debugLoggingEnabled)
-                {
-                    DebugTrace(std::string(kLogPrefix) + "RenderQueued called with no commands.\n");
-                }
                 return;
             }
 
-            size_t compoundChildDrawCount = 0;
-            size_t aabbFallbackCount = 0;
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
                 if (!command.source)
@@ -428,7 +299,6 @@ namespace Systems
                         }
 
                         ++childIndex;
-                        ++compoundChildDrawCount;
                     }
                 }
 
@@ -447,24 +317,7 @@ namespace Systems
                 else
                 {
                     DrawAABB2D(command.aabb, z, kColliderOutlineColor);
-                    ++aabbFallbackCount;
                 }
-            }
-
-            if (m_debugLoggingEnabled)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Submitted " << m_colliderCommands.size() << " draw commands.";
-                if (compoundChildDrawCount > 0)
-                {
-                        oss << " Rendered " << compoundChildDrawCount << " compound child shapes.";
-                }
-                if (aabbFallbackCount > 0)
-                {
-                        oss << " Used AABB fallback for " << aabbFallbackCount << " collider(s).";
-                }
-                oss << "\n";
-                DebugTrace(oss.str());
             }
 
             m_colliderCommands.clear();
