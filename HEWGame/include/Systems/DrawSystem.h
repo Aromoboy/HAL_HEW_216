@@ -3,7 +3,6 @@
 #include "Core/UpdateNode.h"
 
 #include <memory>
-#include <unordered_set>
 #include <vector>
 #include <unordered_map>
 #include "AABBCollider.h"
@@ -32,8 +31,6 @@ namespace Systems
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
 
-                void SetDebugLoggingEnabled(bool enabled);
-
                 void OnUpdate(Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
 
@@ -55,9 +52,6 @@ namespace Systems
                 };
 
                 bool ValidateTransform(const Transform& transform, const Entities::Entity* source) const;
-                void LogMissingRendererOnce();
-                void LogMissingCameraOnce();
-                void LogMissingModel(Entities::Entity* entity);
                 void RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera);
 
@@ -67,9 +61,5 @@ namespace Systems
                 std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
-                std::unordered_set<const Entities::Entity*> m_missingModelEntities;
-                bool m_debugLoggingEnabled;
-                bool m_warnedMissingRenderer;
-                bool m_warnedMissingCamera;
         };
 }
