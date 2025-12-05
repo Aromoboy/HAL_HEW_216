@@ -1,7 +1,5 @@
 #include "Core/Input.h"
 
-#include <sstream>
-
 namespace
 {
         constexpr BYTE kKeyPressedMask = 0x80;
@@ -45,11 +43,6 @@ namespace Core
 
         void Input::OnUpdate(UpdateContext& ctx)
         {
-                if (&ctx.input != this)
-                {
-                        OutputDebugStringA("[Core::Input] UpdateContext.input が別インスタンスを指しています。推奨: Input の生成/登録順を確認してください。\n");
-                }
-
                 if (!m_initialized)
                 {
                         // OnUpdate 経由での遅延初期化。ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする。
@@ -57,7 +50,6 @@ namespace Core
                         m_previousKeys = m_currentKeys;
                         PollPadState();
                         m_initialized = true;
-                        OutputDebugStringA("[Core::Input] Initialize をスキップしたため OnUpdate で初期化しました。推奨: 明示的に Initialize を呼び出してください。\n");
                 }
                 else
                 {
@@ -159,7 +151,6 @@ namespace Core
                 if (!::GetKeyboardState(m_currentKeys.data()))
                 {
                         m_currentKeys.fill(0);
-                        OutputDebugStringA("[Core::Input] GetKeyboardState に失敗したためキーボード状態を初期化しました。推奨: フォーカス/アクセス権限を確認してください。\n");
                 }
         }
 

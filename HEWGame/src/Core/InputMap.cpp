@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
 
 #ifndef VK_A
 #define VK_A 0x41
@@ -169,10 +168,6 @@ namespace Core
         const auto state = GetState(action, input, gamepad);
         if (state.current && !state.previous)
         {
-            std::ostringstream oss;
-            oss << "[Core::InputMap] Trigger state resolved for action " << ToString(action)
-                << " (" << static_cast<int>(action) << ")\n";
-            OutputDebugStringA(oss.str().c_str());
         }
         return state.current && !state.previous;
     }
@@ -180,14 +175,6 @@ namespace Core
     void InputMap::Rebind(ActionId action, const Binding& binding)
     {
         m_bindings[action] = binding;
-
-        std::ostringstream oss;
-        oss << "[Core::InputMap] Rebound action " << static_cast<int>(action)
-            << " key=" << binding.key
-            << " btn=" << binding.btn
-            << " axis=" << binding.axis
-            << " sign=" << binding.sign << "\n";
-        OutputDebugStringA(oss.str().c_str());
     }
 
     const Binding* InputMap::FindBinding(ActionId action) const
@@ -229,26 +216,5 @@ namespace Core
         return value * sign;
     }
 
-    const char* InputMap::ToString(ActionId action)
-    {
-        switch (action)
-        {
-        case ActionId::MoveX: return "MoveX";
-        case ActionId::RotateYaw: return "RotateYaw";
-        case ActionId::Drop: return "Drop";
-        case ActionId::Confirm: return "Confirm";
-        case ActionId::Cancel: return "Cancel";
-        case ActionId::Pause: return "Pause";
-        case ActionId::Retry: return "Retry";
-        case ActionId::DebugConsole: return "DebugConsole";
-        case ActionId::CameraToggle: return "CameraToggle";
-        case ActionId::CameraHeightToggle: return "CameraHeightToggle";
-        case ActionId::SpeedBoost: return "SpeedBoost";
-        case ActionId::SpeedReset: return "SpeedReset";
-        case ActionId::ColliderNudgeUp: return "ColliderNudgeUp";
-        case ActionId::ColliderNudgeDown: return "ColliderNudgeDown";
-        default: return "Unknown";
-        }
-    }
 }
 

@@ -44,8 +44,6 @@ namespace Core
         float GetAxisValue(int axis, const Gamepad& gamepad, float sign) const;
         float GetAxisValue(int axis, const XINPUT_STATE& state, float sign) const;
 
-        static const char* ToString(ActionId action);
-
         std::map<ActionId, Binding> m_bindings;
         std::map<ActionId, std::pair<unsigned char, unsigned char>> m_axisKeys;
         std::map<ActionId, std::vector<unsigned char>> m_actionKeys;
