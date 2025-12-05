@@ -1181,15 +1181,29 @@ SceneGame::SceneGame()
 
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
     m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
-    m_playerBaseMoveSpeed = m_stageData.GetPlayerMoveSpeed();
-    if (!std::isfinite(m_playerBaseMoveSpeed) || m_playerBaseMoveSpeed <= 0.0f)
+    m_playerBaseHorizontalSpeed = m_stageData.GetPlayerHorizontalSpeedWorld();
+    m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
+    m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
+    m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
+    const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
+        if (std::isfinite(value) && value > 0.0f)
+        {
+            return value;
+        }
+
         std::ostringstream oss;
-        oss << kLogPrefix << "Player move speed " << m_playerBaseMoveSpeed
-            << " invalid; using fallback " << kFallbackPlayerMoveSpeed << "\n";
+        oss << kLogPrefix << label << " " << value
+            << " invalid; using fallback " << fallback << "\n";
         ::DebugTrace(oss.str());
-        m_playerBaseMoveSpeed = kFallbackPlayerMoveSpeed;
-    }
+        return fallback;
+    };
+
+    m_playerBaseHorizontalSpeed = sanitizePositive(m_playerBaseHorizontalSpeed, kFallbackPlayerMoveSpeed, "Player horizontal speed");
+    m_playerBaseVerticalSpeed = sanitizePositive(m_playerBaseVerticalSpeed, m_playerBaseHorizontalSpeed, "Player vertical speed");
+    const float pickupFallback = std::max(m_stageData.GetCellSizeWorld(), 1.0f);
+    m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
+    m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
     m_playerSpeedMultiplier = 1.0f;
     {
         std::ostringstream oss;
@@ -1199,7 +1213,8 @@ SceneGame::SceneGame()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
             << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
             << " platforms=" << m_stageData.GetPlatformCount()
-            << " playerSpeed=" << m_playerBaseMoveSpeed
+            << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
+            << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -1769,7 +1784,10 @@ SceneGame::SceneGame()
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
-        player->SetMoveSpeed(m_playerBaseMoveSpeed);
+        player->SetMoveSpeeds(
+            m_playerBaseHorizontalSpeed * m_playerSpeedMultiplier,
+            m_playerBaseVerticalSpeed * m_playerSpeedMultiplier);
+        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
         RegisterPhysicsBody(*player);
         RefreshContactSolverBodies("spawn");
         {
@@ -2150,11 +2168,12 @@ if (m_timeUp)
     {
         const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
         {
-            if (!(m_playerBaseMoveSpeed > 0.0f))
+            if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[SpeedBoost] " << reason
-                    << " ignored; base speed invalid (" << m_playerBaseMoveSpeed << ").\n";
+                    << " ignored; base speeds invalid (" << m_playerBaseHorizontalSpeed
+                    << ',' << m_playerBaseVerticalSpeed << ").\n";
                 ::DebugTrace(oss.str());
                 return;
             }
@@ -2174,17 +2193,18 @@ if (m_timeUp)
 
             const float beforeSpeed = player->GetMoveSpeed();
             const float newMultiplier = clampedMultiplier;
-            const float newSpeed = m_playerBaseMoveSpeed * newMultiplier;
+            const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
+            const float newVerticalSpeed = m_playerBaseVerticalSpeed * newMultiplier;
             m_playerSpeedMultiplier = newMultiplier;
-            player->SetMoveSpeed(newSpeed);
+            player->SetMoveSpeeds(newHorizontalSpeed, newVerticalSpeed);
 
             std::ostringstream oss;
             oss << kLogPrefix << "[SpeedBoost] " << reason
-                << " base=" << m_playerBaseMoveSpeed
+                << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
                 << " prevMultiplier=" << currentMultiplier
                 << " newMultiplier=" << newMultiplier
                 << " prevSpeed=" << beforeSpeed
-                << " newSpeed=" << newSpeed
+                << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
                 << " clamped=" << std::boolalpha << clamped << "\n";
             ::DebugTrace(oss.str());
         };
@@ -2835,11 +2855,13 @@ void SceneGame::ResetPlaySession()
     if (player)
     {
         player->ClearCarriedSweets();
-        if (m_playerBaseMoveSpeed > 0.0f)
+        if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
-            player->SetMoveSpeed(m_playerBaseMoveSpeed);
+            player->SetMoveSpeeds(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         }
+
+        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
 
         RefreshContactSolverBodies("reset");
     }

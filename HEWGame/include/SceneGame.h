@@ -171,7 +171,10 @@ private:
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     bool m_heightBonusArmed = false;
-    float m_playerBaseMoveSpeed = 0.0f;
+    float m_playerBaseHorizontalSpeed = 0.0f;
+    float m_playerBaseVerticalSpeed = 0.0f;
+    float m_playerPickupBoxWidth = 0.0f;
+    float m_playerPickupBoxHeight = 0.0f;
     float m_playerSpeedMultiplier = 1.0f;
     struct PendingTimeBonus
     {

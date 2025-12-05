@@ -39,10 +39,8 @@ namespace
     constexpr const char* kPlayerLogPrefix = "[Player] ";
     constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
 
-    constexpr float kDefaultPickupRadius = 2.5f;
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
-    constexpr float kDefaultPlayerMoveSpeed = 15.0f;
 
     constexpr int kDefaultMaxCarry = 3;
 
@@ -165,11 +163,13 @@ namespace Entities
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
         , m_maxCarry(kDefaultMaxCarry)
-        , m_pickupRadius(kDefaultPickupRadius)
+        , m_pickupHalfWidth(0.0f)
+        , m_pickupHalfHeight(0.0f)
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
-        , m_moveSpeed(kDefaultPlayerMoveSpeed)
+        , m_horizontalMoveSpeed(0.0f)
+        , m_verticalMoveSpeed(0.0f)
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
         , m_missingModelWarned(false)
@@ -246,12 +246,12 @@ namespace Entities
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
         const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
 
-        const bool canMove = (ctx.dt > 0.0f && m_moveSpeed > 0.0f);
+        const bool canMove = (ctx.dt > 0.0f && (m_horizontalMoveSpeed > 0.0f || m_verticalMoveSpeed > 0.0f));
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
         {
             float3 translation{ 0.0f, 0.0f, 0.0f };
-            translation.x = horizontal * m_moveSpeed * ctx.dt;
-            translation.y = vertical * m_moveSpeed * ctx.dt;
+            translation.x = horizontal * m_horizontalMoveSpeed * ctx.dt;
+            translation.y = vertical * m_verticalMoveSpeed * ctx.dt;
 
             ApplyTranslation(translation);
 
@@ -259,7 +259,7 @@ namespace Entities
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "Move input hx=" << horizontal
                 << " vy=" << vertical
-                << " speed=" << m_moveSpeed
+                << " speedXY=(" << m_horizontalMoveSpeed << ',' << m_verticalMoveSpeed << ')'
                 << " dt=" << ctx.dt
                 << " delta=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
             PlayerDebugTrace(oss.str());
@@ -330,36 +330,57 @@ namespace Entities
 
     void Player::SetMoveSpeed(float speed)
     {
-        if (!std::isfinite(speed))
+        SetMoveSpeeds(speed, speed);
+    }
+
+    void Player::SetMoveSpeeds(float horizontal, float vertical)
+    {
+        if (!std::isfinite(horizontal) || !std::isfinite(vertical))
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite move speed assignment.\n");
             return;
         }
 
-        const float sanitized = std::max(0.0f, speed);
-        if (sanitized != speed)
+        const float sanitizedHorizontal = std::max(0.0f, horizontal);
+        const float sanitizedVertical = std::max(0.0f, vertical);
+
+        if (sanitizedHorizontal != horizontal || sanitizedVertical != vertical)
         {
             std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Move speed sanitized from " << speed
-                << " to " << sanitized << " (negative disallowed).\n";
+            oss << kPlayerLogPrefix << "Move speeds sanitized from (" << horizontal << ',' << vertical
+                << ") to (" << sanitizedHorizontal << ',' << sanitizedVertical << ") (negative disallowed).\n";
             PlayerDebugTrace(oss.str());
         }
 
-        if (std::fabs(m_moveSpeed - sanitized) < std::numeric_limits<float>::epsilon())
+        const bool unchanged = std::fabs(m_horizontalMoveSpeed - sanitizedHorizontal) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_verticalMoveSpeed - sanitizedVertical) < std::numeric_limits<float>::epsilon();
+        if (unchanged)
         {
             return;
         }
 
-        m_moveSpeed = sanitized;
+        m_horizontalMoveSpeed = sanitizedHorizontal;
+        m_verticalMoveSpeed = sanitizedVertical;
 
         std::ostringstream oss;
-        oss << kPlayerLogPrefix << "Move speed set to " << m_moveSpeed << " units/sec.\n";
+        oss << kPlayerLogPrefix << "Move speeds set to (" << m_horizontalMoveSpeed
+            << ", " << m_verticalMoveSpeed << ") units/sec.\n";
         PlayerDebugTrace(oss.str());
     }
 
     float Player::GetMoveSpeed() const
     {
-        return m_moveSpeed;
+        return m_horizontalMoveSpeed;
+    }
+
+    float Player::GetHorizontalMoveSpeed() const
+    {
+        return m_horizontalMoveSpeed;
+    }
+
+    float Player::GetVerticalMoveSpeed() const
+    {
+        return m_verticalMoveSpeed;
     }
 
     void Player::SetMinimumY(float minY)
@@ -437,6 +458,36 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void Player::SetPickupBox(float width, float height)
+    {
+        if (!std::isfinite(width) || !std::isfinite(height))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Ignored non-finite pickup box assignment.\n");
+            return;
+        }
+
+        const float sanitizedWidth = std::max(0.0f, width);
+        const float sanitizedHeight = std::max(0.0f, height);
+        const float halfWidth = sanitizedWidth * 0.5f;
+        const float halfHeight = sanitizedHeight * 0.5f;
+
+        const bool unchanged = std::fabs(m_pickupHalfWidth - halfWidth) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_pickupHalfHeight - halfHeight) < std::numeric_limits<float>::epsilon();
+        if (unchanged)
+        {
+            return;
+        }
+
+        m_pickupHalfWidth = halfWidth;
+        m_pickupHalfHeight = halfHeight;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "Pickup box set to width=" << sanitizedWidth
+            << " height=" << sanitizedHeight << " (half=" << m_pickupHalfWidth
+            << ',' << m_pickupHalfHeight << ").\n";
+        PlayerDebugTrace(oss.str());
+    }
+
     float3 Player::ComputeCarryAnchor() const
     {
         return float3{
@@ -491,10 +542,16 @@ namespace Entities
             return;
         }
 
-        auto candidate = m_sweetsManager->FindNearestCarryable(m_transform.position, m_pickupRadius);
+        if (!(m_pickupHalfWidth > 0.0f) || !(m_pickupHalfHeight > 0.0f))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: pickup box not configured.\n");
+            return;
+        }
+
+        auto candidate = m_sweetsManager->FindNearestCarryable(m_transform.position, m_pickupHalfWidth, m_pickupHalfHeight);
         if (!candidate)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within radius.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within pickup box.\n");
             return;
         }
 
@@ -526,7 +583,7 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Pickup success tag='" << candidate->GetTag()
-            << "' radius=" << m_pickupRadius << "\n";
+            << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight << ")\n";
         PlayerDebugTrace(oss.str());
     }
 

@@ -41,11 +41,15 @@ namespace Entities
         void ClearCarriedSweets();
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
+        void SetMoveSpeeds(float horizontal, float vertical);
         float GetMoveSpeed() const;
+        float GetHorizontalMoveSpeed() const;
+        float GetVerticalMoveSpeed() const;
         void SetMinimumY(float minY);
         float GetMinimumY() const;
         bool HasMinimumY() const;
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
+        void SetPickupBox(float width, float height);
 
     private:
         std::shared_ptr<Render::Model> m_fairyModel;
@@ -53,11 +57,13 @@ namespace Entities
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         int m_maxCarry;
-        float m_pickupRadius;
+        float m_pickupHalfWidth;
+        float m_pickupHalfHeight;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
-        float m_moveSpeed;
+        float m_horizontalMoveSpeed;
+        float m_verticalMoveSpeed;
         bool m_hasMinimumY;
         float m_minimumY;
         bool m_missingModelWarned;
