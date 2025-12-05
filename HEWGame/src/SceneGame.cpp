@@ -1185,6 +1185,7 @@ SceneGame::SceneGame()
     m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
+    m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
         if (std::isfinite(value) && value > 0.0f)
@@ -1204,6 +1205,7 @@ SceneGame::SceneGame()
     const float pickupFallback = std::max(m_stageData.GetCellSizeWorld(), 1.0f);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
+    m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
         std::ostringstream oss;
@@ -1215,6 +1217,7 @@ SceneGame::SceneGame()
             << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
+            << " pickupOffset=" << m_playerPickupForwardOffset
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -1784,10 +1787,9 @@ SceneGame::SceneGame()
             platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
         }
         player->SetMinimumY(platformTopY);
-        player->SetMoveSpeeds(
-            m_playerBaseHorizontalSpeed * m_playerSpeedMultiplier,
-            m_playerBaseVerticalSpeed * m_playerSpeedMultiplier);
-        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
+        player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+        player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         RegisterPhysicsBody(*player);
         RefreshContactSolverBodies("spawn");
         {
@@ -2191,19 +2193,20 @@ if (m_timeUp)
                 return;
             }
 
-            const float beforeSpeed = player->GetMoveSpeed();
+            const float previousHorizontal = m_playerBaseHorizontalSpeed * currentMultiplier;
+            const float previousVertical = m_playerBaseVerticalSpeed * currentMultiplier;
             const float newMultiplier = clampedMultiplier;
+            m_playerSpeedMultiplier = newMultiplier;
+            player->SetSpeedMultiplier(newMultiplier);
             const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
             const float newVerticalSpeed = m_playerBaseVerticalSpeed * newMultiplier;
-            m_playerSpeedMultiplier = newMultiplier;
-            player->SetMoveSpeeds(newHorizontalSpeed, newVerticalSpeed);
 
             std::ostringstream oss;
             oss << kLogPrefix << "[SpeedBoost] " << reason
                 << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
                 << " prevMultiplier=" << currentMultiplier
                 << " newMultiplier=" << newMultiplier
-                << " prevSpeed=" << beforeSpeed
+                << " prevSpeedXY=(" << previousHorizontal << ',' << previousVertical << ')'
                 << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
                 << " clamped=" << std::boolalpha << clamped << "\n";
             ::DebugTrace(oss.str());
@@ -2858,10 +2861,11 @@ void SceneGame::ResetPlaySession()
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
-            player->SetMoveSpeeds(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
 
-        player->SetPickupBox(m_playerPickupBoxWidth, m_playerPickupBoxHeight);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
 
         RefreshContactSolverBodies("reset");
     }

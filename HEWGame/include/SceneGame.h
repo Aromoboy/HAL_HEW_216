@@ -175,6 +175,7 @@ private:
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;
     float m_playerPickupBoxHeight = 0.0f;
+    float m_playerPickupForwardOffset = 0.0f;
     float m_playerSpeedMultiplier = 1.0f;
     struct PendingTimeBonus
     {
