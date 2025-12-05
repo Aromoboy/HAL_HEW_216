@@ -3,27 +3,6 @@
 #include "Entities/PhysicalEntity.h"
 #include <algorithm>
 #include <cmath>
-#include <sstream>
-#include <string>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
-
-namespace
-{
-    void DebugTrace(const std::string& message)
-    {
-#if defined(_WIN32) && defined(_DEBUG)
-        ::OutputDebugStringA(message.c_str());
-#else
-        (void)message;
-#endif
-    }
-}
 
 using namespace Systems;
 
@@ -40,43 +19,18 @@ void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
 
     if (!(physical.weight > 0.0f))
     {
-#if defined(_DEBUG)
-        if (m_loggedKinematicSkips.insert(&entity).second)
-        {
-            std::ostringstream oss;
-            oss << "[GravityDampingSystem] Skipping kinematic entity tag='" << entity.GetTag()
-                << "' weight=" << physical.weight << "\n";
-            DebugTrace(oss.str());
-        }
-#endif
         physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
         physical.force = float3{ 0.0f, 0.0f, 0.0f };
         return;
     }
-
-    m_loggedKinematicSkips.erase(&entity);
 
     constexpr float kPlanarEpsilon = 1e-6f;
     const bool hasZInput = (std::fabs(physical.velocity.z) > kPlanarEpsilon)
         || (std::fabs(physical.force.z) > kPlanarEpsilon);
     if (hasZInput)
     {
-#if defined(_DEBUG)
-        if (m_loggedPlanarViolations.insert(&entity).second)
-        {
-            std::ostringstream oss;
-            oss << "[GravityDampingSystem] Planar assumption violated by entity '" << entity.GetTag()
-                << "': velocity.z=" << physical.velocity.z
-                << " force.z=" << physical.force.z << "\n";
-            DebugTrace(oss.str());
-        }
-#endif
         physical.velocity.z = 0.0f;
         physical.force.z = 0.0f;
-    }
-    else
-    {
-        m_loggedPlanarViolations.erase(&entity);
     }
 
     // 重力加速度を速度に加算（-y方向）
