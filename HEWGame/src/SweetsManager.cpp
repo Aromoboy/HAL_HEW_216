@@ -2152,11 +2152,15 @@ namespace SweetsSpace
         return sweets;
     }
 
-    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(const float3& position, float radius) const
+    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(const float3& position, float halfWidth, float halfHeight) const
     {
-        const float radiusSq = radius * radius;
+        if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
+        {
+            return nullptr;
+        }
+
         std::shared_ptr<ActiveSweets> best;
-        float bestDistanceSq = radiusSq;
+        float bestDistanceSq = std::numeric_limits<float>::max();
 
         const auto scanState = [&](SweetsState state)
         {
@@ -2176,6 +2180,11 @@ namespace SweetsSpace
                 const auto& sweetsPos = sweets->GetTransform().position;
                 const float dx = sweetsPos.x - position.x;
                 const float dy = sweetsPos.y - position.y;
+                if (std::fabs(dx) > halfWidth || std::fabs(dy) > halfHeight)
+                {
+                    continue;
+                }
+
                 const float dz = sweetsPos.z - position.z;
                 const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
                 if (distanceSq <= bestDistanceSq)

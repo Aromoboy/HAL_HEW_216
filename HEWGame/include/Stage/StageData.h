@@ -36,6 +36,11 @@ namespace Stage
         std::size_t GetPlatformCount() const noexcept;
         const std::string& GetSourcePath() const noexcept;
         float GetPlayerMoveSpeed() const noexcept;
+        float GetPlayerHorizontalSpeedWorld() const noexcept;
+        float GetPlayerVerticalSpeedWorld() const noexcept;
+        float GetCellSizeWorld() const noexcept;
+        float GetPickupBoxWidthWorld() const noexcept;
+        float GetPickupBoxHeightWorld() const noexcept;
         float GetGuidelineHeight() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
@@ -54,6 +59,15 @@ namespace Stage
         std::vector<float3> m_spawnPoints;
         std::string m_sourcePath;
         bool m_loadedFromFile;
+        float m_cellSizeWorld;
+        float m_playerHorizontalSpeedCellsPerSec;
+        float m_playerVerticalSpeedCellsPerSec;
+        float m_playerHorizontalSpeedWorld;
+        float m_playerVerticalSpeedWorld;
+        float m_pickupBoxWidthCells;
+        float m_pickupBoxHeightCells;
+        float m_pickupBoxWidthWorld;
+        float m_pickupBoxHeightWorld;
         float m_playerMoveSpeed;
         float m_guidelineHeight;
         std::string m_backgroundTexturePath;

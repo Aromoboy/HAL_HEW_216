@@ -40,7 +40,12 @@ namespace
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
-    constexpr float kDefaultPlayerMoveSpeed = 15.0f;
+    constexpr float kDefaultCellSizeWorld = 1.0f;
+    constexpr float kDefaultHorizontalSpeedCellsPerSec = 15.0f;
+    constexpr float kDefaultVerticalSpeedCellsPerSec = 15.0f;
+    constexpr float kDefaultPickupBoxWidthCells = 5.0f;
+    constexpr float kDefaultPickupBoxHeightCells = 5.0f;
+    constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 20.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
@@ -225,6 +230,15 @@ namespace Stage
     StageData::StageData()
         : m_planeZ(kDefaultPlaneZ)
         , m_loadedFromFile(false)
+        , m_cellSizeWorld(kDefaultCellSizeWorld)
+        , m_playerHorizontalSpeedCellsPerSec(kDefaultHorizontalSpeedCellsPerSec)
+        , m_playerVerticalSpeedCellsPerSec(kDefaultVerticalSpeedCellsPerSec)
+        , m_playerHorizontalSpeedWorld(kDefaultPlayerMoveSpeed)
+        , m_playerVerticalSpeedWorld(kDefaultVerticalSpeedCellsPerSec * kDefaultCellSizeWorld)
+        , m_pickupBoxWidthCells(kDefaultPickupBoxWidthCells)
+        , m_pickupBoxHeightCells(kDefaultPickupBoxHeightCells)
+        , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
+        , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
@@ -264,6 +278,16 @@ namespace Stage
         bool platformDepthSet = false;
         float3 platformScale = kDefaultPlatformScale;
         bool platformScaleSet = false;
+        float cellSizeWorld = kDefaultCellSizeWorld;
+        bool cellSizeWorldSet = false;
+        float horizontalSpeedCellsPerSec = kDefaultHorizontalSpeedCellsPerSec;
+        bool horizontalSpeedSet = false;
+        float verticalSpeedCellsPerSec = kDefaultVerticalSpeedCellsPerSec;
+        bool verticalSpeedSet = false;
+        float pickupBoxWidthCells = kDefaultPickupBoxWidthCells;
+        bool pickupBoxWidthSet = false;
+        float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
+        bool pickupBoxHeightSet = false;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
@@ -620,6 +644,86 @@ namespace Stage
                     platformScaleSet = true;
                 }
             }
+            else if (key == "cellSizeWorld")
+            {
+                try
+                {
+                    cellSizeWorld = std::stof(rawValue);
+                    cellSizeWorldSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse cellSizeWorld on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "horizontalSpeedCellsPerSec")
+            {
+                try
+                {
+                    horizontalSpeedCellsPerSec = std::stof(rawValue);
+                    horizontalSpeedSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse horizontalSpeedCellsPerSec on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "verticalSpeedCellsPerSec")
+            {
+                try
+                {
+                    verticalSpeedCellsPerSec = std::stof(rawValue);
+                    verticalSpeedSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse verticalSpeedCellsPerSec on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupBoxWidthCells")
+            {
+                try
+                {
+                    pickupBoxWidthCells = std::stof(rawValue);
+                    pickupBoxWidthSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupBoxWidthCells on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupBoxHeightCells")
+            {
+                try
+                {
+                    pickupBoxHeightCells = std::stof(rawValue);
+                    pickupBoxHeightSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupBoxHeightCells on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "playerMoveSpeed")
             {
                 try
@@ -734,11 +838,12 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
-        if (!playerMoveSpeedSet)
+        if (!playerMoveSpeedSet && !horizontalSpeedSet)
         {
             playerMoveSpeed = kDefaultPlayerMoveSpeed;
             std::ostringstream oss;
-            oss << kLogPrefix << "playerMoveSpeed not specified; defaulting to " << playerMoveSpeed << "\n";
+            oss << kLogPrefix << "playerMoveSpeed not specified; defaulting to " << playerMoveSpeed
+                << " (legacy fallback).\n";
             DebugTrace(oss.str());
         }
 
@@ -1016,14 +1121,65 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
-        if (!std::isfinite(playerMoveSpeed) || playerMoveSpeed <= 0.0f)
+        auto sanitizePositive = [](float value, float fallback, const char* label)
         {
+            if (std::isfinite(value) && value > 0.0f)
+            {
+                return value;
+            }
+
             std::ostringstream oss;
-            oss << kLogPrefix << "playerMoveSpeed value " << playerMoveSpeed
-                << " invalid; falling back to default " << kDefaultPlayerMoveSpeed << "\n";
+            oss << kLogPrefix << label << " value " << value
+                << " invalid; using fallback " << fallback << "\n";
             DebugTrace(oss.str());
-            playerMoveSpeed = kDefaultPlayerMoveSpeed;
+            return fallback;
+        };
+
+        cellSizeWorld = sanitizePositive(cellSizeWorld, kDefaultCellSizeWorld, "cellSizeWorld");
+
+        if (!horizontalSpeedSet && playerMoveSpeedSet)
+        {
+            horizontalSpeedCellsPerSec = playerMoveSpeed / cellSizeWorld;
+            horizontalSpeedSet = true;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Derived horizontalSpeedCellsPerSec=" << horizontalSpeedCellsPerSec
+                << " from legacy playerMoveSpeed=" << playerMoveSpeed
+                << " and cellSizeWorld=" << cellSizeWorld << "\n";
+            DebugTrace(oss.str());
         }
+
+        horizontalSpeedCellsPerSec = sanitizePositive(
+            horizontalSpeedCellsPerSec,
+            kDefaultHorizontalSpeedCellsPerSec,
+            "horizontalSpeedCellsPerSec");
+
+        if (!verticalSpeedSet)
+        {
+            verticalSpeedCellsPerSec = horizontalSpeedCellsPerSec;
+            verticalSpeedSet = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "verticalSpeedCellsPerSec not specified; mirroring horizontal speed ("
+                << verticalSpeedCellsPerSec << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        verticalSpeedCellsPerSec = sanitizePositive(
+            verticalSpeedCellsPerSec,
+            kDefaultVerticalSpeedCellsPerSec,
+            "verticalSpeedCellsPerSec");
+
+        pickupBoxWidthCells = sanitizePositive(
+            pickupBoxWidthCells,
+            kDefaultPickupBoxWidthCells,
+            "pickupBoxWidthCells");
+
+        pickupBoxHeightCells = sanitizePositive(
+            pickupBoxHeightCells,
+            kDefaultPickupBoxHeightCells,
+            "pickupBoxHeightCells");
+
+        const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
         if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
         {
@@ -1067,7 +1223,16 @@ namespace Stage
         m_phaseRewardMultipliers = rewardMultipliers;
         m_spawnPoints = spawnPoints;
         m_platforms = std::move(platformDescriptors);
-        m_playerMoveSpeed = playerMoveSpeed;
+        m_cellSizeWorld = cellSizeWorld;
+        m_playerHorizontalSpeedCellsPerSec = horizontalSpeedCellsPerSec;
+        m_playerVerticalSpeedCellsPerSec = verticalSpeedCellsPerSec;
+        m_playerHorizontalSpeedWorld = playerMoveSpeedWorld;
+        m_playerVerticalSpeedWorld = verticalSpeedCellsPerSec * cellSizeWorld;
+        m_pickupBoxWidthCells = pickupBoxWidthCells;
+        m_pickupBoxHeightCells = pickupBoxHeightCells;
+        m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
+        m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
+        m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
         m_heightBonusThreshold = heightBonusThreshold;
         m_heightBonusSeconds = heightBonusSeconds;
@@ -1081,7 +1246,11 @@ namespace Stage
             << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", spawnPoints=" << m_spawnPoints.size()
             << ", platforms=" << m_platforms.size()
-            << ", playerMoveSpeed=" << m_playerMoveSpeed
+            << ", cellSizeWorld=" << m_cellSizeWorld
+            << ", playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
+            << ", playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
+            << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
+            << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << ", guidelineHeight=" << m_guidelineHeight
             << ", heightBonusThreshold=" << m_heightBonusThreshold
             << ", heightBonusSeconds=" << m_heightBonusSeconds
@@ -1153,6 +1322,31 @@ namespace Stage
         return m_playerMoveSpeed;
     }
 
+    float StageData::GetPlayerHorizontalSpeedWorld() const noexcept
+    {
+        return m_playerHorizontalSpeedWorld;
+    }
+
+    float StageData::GetPlayerVerticalSpeedWorld() const noexcept
+    {
+        return m_playerVerticalSpeedWorld;
+    }
+
+    float StageData::GetCellSizeWorld() const noexcept
+    {
+        return m_cellSizeWorld;
+    }
+
+    float StageData::GetPickupBoxWidthWorld() const noexcept
+    {
+        return m_pickupBoxWidthWorld;
+    }
+
+    float StageData::GetPickupBoxHeightWorld() const noexcept
+    {
+        return m_pickupBoxHeightWorld;
+    }
+
     float StageData::GetGuidelineHeight() const noexcept
     {
         return m_guidelineHeight;
@@ -1189,7 +1383,16 @@ namespace Stage
         descriptor.heightFraction = kDefaultPlatformHeightFraction;
         descriptor.color = kDefaultPlatformPrimaryColor;
         m_platforms.push_back(descriptor);
-        m_playerMoveSpeed = kDefaultPlayerMoveSpeed;
+        m_cellSizeWorld = kDefaultCellSizeWorld;
+        m_playerHorizontalSpeedCellsPerSec = kDefaultHorizontalSpeedCellsPerSec;
+        m_playerVerticalSpeedCellsPerSec = kDefaultVerticalSpeedCellsPerSec;
+        m_playerHorizontalSpeedWorld = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
+        m_playerVerticalSpeedWorld = kDefaultVerticalSpeedCellsPerSec * kDefaultCellSizeWorld;
+        m_pickupBoxWidthCells = kDefaultPickupBoxWidthCells;
+        m_pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
+        m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
+        m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
+        m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
         m_heightBonusThreshold = kDefaultHeightBonusThreshold;
@@ -1207,7 +1410,11 @@ namespace Stage
             << " multipliers=" << m_phaseRewardMultipliers.size()
             << " spawnPoints=" << m_spawnPoints.size()
             << " platforms=" << m_platforms.size()
-            << " playerMoveSpeed=" << m_playerMoveSpeed
+            << " cellSizeWorld=" << m_cellSizeWorld
+            << " playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
+            << " playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
+            << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
+            << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << " guidelineHeight=" << m_guidelineHeight
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
