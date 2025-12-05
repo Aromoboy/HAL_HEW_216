@@ -1,28 +1,6 @@
 #include "DrawMatrix.h"
 #include "Defines.h"
 
-#include <sstream>
-#include <string>
-
-#if defined(_WIN32)
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   include <windows.h>
-#endif
-
-namespace
-{
-	void DebugTrace(const std::string& message)
-	{
-#if defined(_WIN32) && defined(_DEBUG)
-		::OutputDebugStringA(message.c_str());
-#else
-		(void)message;
-#endif
-	}
-}
-
 void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4 &a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, bool a_bTranspose)
 {
 	// 各トランスフォームの行列を作成
@@ -77,27 +55,12 @@ void DrawMatrix::CreateViewMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_f
         float forwardLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(DirectX::XMVectorSubtract(focus, eye)));
         if (!(forwardLengthSq > kEpsilon))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateViewMatrix invalid focus vector. eye="
-                        << a_fEyePosition.x << ',' << a_fEyePosition.y << ',' << a_fEyePosition.z
-                        << " focus=" << a_fFocusPosition.x << ',' << a_fFocusPosition.y << ',' << a_fFocusPosition.z
-                        << " fallback to +Z\n";
-                DebugTrace(oss.str());
-#endif
                 focus = DirectX::XMVectorAdd(eye, DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
         }
 
         float upLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(up));
         if (!(upLengthSq > kEpsilon))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateViewMatrix invalid up vector="
-                        << a_fUpDirection.x << ',' << a_fUpDirection.y << ',' << a_fUpDirection.z
-                        << " fallback to world up\n";
-                DebugTrace(oss.str());
-#endif
                 up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         }
 
@@ -118,45 +81,21 @@ void DrawMatrix::CreateProjectionMatrix(DirectX::XMFLOAT4X4& a_fMat, const float
 
         if (!(fov > 0.0f && fov < DirectX::XM_PI))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateProjectionMatrix invalid fov value=" << fov
-                        << " fallback=XM_PIDIV4\n";
-                DebugTrace(oss.str());
-#endif
                 fov = DirectX::XM_PIDIV4;
         }
 
         if (!(aspect > 0.0f))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateProjectionMatrix invalid aspect ratio value=" << aspect
-                        << " fallback=1.0\n";
-                DebugTrace(oss.str());
-#endif
                 aspect = 1.0f;
         }
 
         if (!(nearPlane > 0.0f))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateProjectionMatrix invalid near plane value=" << nearPlane
-                        << " fallback=0.1\n";
-                DebugTrace(oss.str());
-#endif
                 nearPlane = 0.1f;
         }
 
         if (!(farPlane > nearPlane))
         {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[DrawMatrix] CreateProjectionMatrix invalid far plane value=" << farPlane
-                        << " (must be greater than near plane=" << nearPlane << ") fallback=" << (nearPlane + 1.0f) << "\n";
-                DebugTrace(oss.str());
-#endif
                 farPlane = nearPlane + 1.0f;
         }
 

@@ -2,19 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#if defined(_WIN32)
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   include <windows.h>
-#endif
 
 #include "AABB.h"
 #include "AABBCollider.h"
@@ -27,16 +18,6 @@ static_assert(std::is_class_v<Systems::ContactLiteSystem>, "ContactLiteSystem de
 
 namespace
 {
-        void DebugTrace(const std::string& message)
-        {
-#if defined(_WIN32) && defined(_DEBUG)
-                ::OutputDebugStringA(message.c_str());
-#else
-                (void)message;
-#endif
-        }
-
-        constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
 
@@ -77,16 +58,6 @@ namespace
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
                         normal.z = 0.0f;
                         classification.isVerticalSnapped = true;
-#if defined(_DEBUG)
-                        if (std::fabs(originalX) > 1e-4f || std::fabs(originalZ) > 1e-4f)
-                        {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Snapped near-vertical normal to Y axis for stability."
-                                        << " verticalSnapCos=" << snapThreshold
-                                        << " verticalComponent=" << verticalComponent << '\n';
-                                DebugTrace(oss.str());
-                        }
-#endif
                 }
 
                 classification.normal = normal;
@@ -242,44 +213,12 @@ namespace Systems
                 , m_minTangentialSpeed(0.01f)
                 , m_includeKinematicBodies(true)
                 , m_allowKinematicPlayerCollision(true)
-                , m_loggedMissingBodyList(false)
-                , m_loggedBodySnapshot(false)
-                , m_loggedPlayerPresence(false)
-                , m_loggedPlayerAbsence(false)
-                , m_loggedKinematicFilter(false)
-                , m_loggedKinematicPlayerFilter(false)
-                , m_loggedPlayerPlatformContact(false)
-                , m_loggedPlayerSweetsContact(false)
-                , m_loggedSuppressedSweetsFloor(false)
-                , m_loggedPlanarZSeparation(false)
-                , m_loggedPlanarZIgnore(false)
         {
         }
 
         void ContactLiteSystem::SetBodySource(const std::vector<Entities::PhysicalEntity*>* bodies)
         {
                 m_bodies = bodies;
-                m_loggedMissingBodyList = false;
-                m_loggedBodySnapshot = false;
-                m_loggedPlayerPresence = false;
-                m_loggedPlayerAbsence = false;
-                m_loggedKinematicFilter = false;
-                m_loggedKinematicPlayerFilter = false;
-                m_loggedPlayerPlatformContact = false;
-                m_loggedPlayerSweetsContact = false;
-                m_loggedSuppressedSweetsFloor = false;
-                m_loggedPlanarZSeparation = false;
-                m_loggedPlanarZIgnore = false;
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
-                if (m_bodies)
-                {
-                        oss << " count=" << m_bodies->size();
-                }
-                oss << "\n";
-                DebugTrace(oss.str());
-#endif
         }
 
         void ContactLiteSystem::SetPenetrationTolerance(float tolerance)
@@ -372,11 +311,6 @@ namespace Systems
         {
                 if (!m_bodies)
                 {
-                        if (!m_loggedMissingBodyList)
-                        {
-                                DebugTrace(std::string(kLogPrefix) + "No body list available. Contact resolution skipped.\n");
-                                m_loggedMissingBodyList = true;
-                        }
                         return;
                 }
 
@@ -394,24 +328,6 @@ namespace Systems
                         const bool kinematic = !(body->GetPhysical().weight > 0.0f);
                         if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
                         {
-#if defined(_DEBUG)
-                                if (isPlayer && !m_loggedKinematicPlayerFilter)
-                                {
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Skipping kinematic player body due to filter; set AllowKinematicPlayerCollision(true) to opt in. tag='"
-                                                << body->GetTag() << "'\n";
-                                        DebugTrace(oss.str());
-                                        m_loggedKinematicPlayerFilter = true;
-                                }
-                                else if (!isPlayer && !m_loggedKinematicFilter)
-                                {
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Kinematic body filtered from contact pass. tag='" << body->GetTag()
-                                                << "' weight=" << body->GetPhysical().weight << "\n";
-                                        DebugTrace(oss.str());
-                                        m_loggedKinematicFilter = true;
-                                }
-#endif
                                 continue;
                         }
 
@@ -419,55 +335,6 @@ namespace Systems
                 }
 
                 const size_t bodyCount = activeBodies.size();
-#if defined(_DEBUG)
-                if (!m_loggedBodySnapshot)
-                {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "OnUpdate body list snapshot count=" << bodyCount << " source=" << sourceBodyCount << " tags=[";
-                        for (size_t i = 0; i < bodyCount; ++i)
-                        {
-                                if (i > 0)
-                                {
-                                        oss << ", ";
-                                }
-                                const auto* body = activeBodies[i];
-                                if (body)
-                                {
-                                        oss << '\"' << body->GetTag() << '\"';
-                                }
-                                else
-                                {
-                                        oss << "<null>";
-                                }
-                        }
-                        oss << "]\n";
-                        DebugTrace(oss.str());
-                        m_loggedBodySnapshot = true;
-                }
-#endif
-                const bool playerPresent = std::any_of(activeBodies.begin(), activeBodies.end(), [](Entities::PhysicalEntity* body)
-                {
-                        return IsPlayerBody(body);
-                });
-                if (playerPresent)
-                {
-                        if (!m_loggedPlayerPresence)
-                        {
-                                DebugTrace(std::string(kLogPrefix) + "Player body detected in contact solver input. Collisions with avatar will be evaluated.\n");
-                                m_loggedPlayerPresence = true;
-                        }
-                        m_loggedPlayerAbsence = false;
-                }
-                else
-                {
-                        if (!m_loggedPlayerAbsence)
-                        {
-                                DebugTrace(std::string(kLogPrefix) + "Player body missing from contact solver input; avatar collisions disabled.\n");
-                                m_loggedPlayerAbsence = true;
-                        }
-                        m_loggedPlayerPresence = false;
-                }
-
                 if (bodyCount < 2)
                 {
                         return;
@@ -535,19 +402,6 @@ namespace Systems
 
                                 if (!CanCollide(layerA, layerB))
                                 {
-#if defined(_DEBUG)
-                                        if (!m_loggedSuppressedSweetsFloor &&
-                                                ((layerA == Collision::CollisionLayer::Sweets && layerB == Collision::CollisionLayer::Floor)
-                                                        || (layerA == Collision::CollisionLayer::Floor && layerB == Collision::CollisionLayer::Sweets)))
-                                        {
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Collision suppressed for layers "
-                                                        << ToString(layerA) << " vs " << ToString(layerB)
-                                                        << " (bodies '" << bodyA->GetTag() << "' and '" << bodyB->GetTag() << "').\n";
-                                                DebugTrace(oss.str());
-                                                m_loggedSuppressedSweetsFloor = true;
-                                        }
-#endif
                                         continue;
                                 }
 
@@ -557,31 +411,6 @@ namespace Systems
                                         continue;
                                 }
 
-                                const bool playerPair = IsPlayerBody(bodyA) || IsPlayerBody(bodyB);
-                                if (playerPair)
-                                {
-                                        Entities::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
-                                        if (other)
-                                        {
-                                                const std::string& otherTag = other->GetTag();
-                                                const auto otherSweets = ResolveSweetsTag(otherTag);
-                                                if (otherTag == "StageFoundation" && !m_loggedPlayerPlatformContact)
-                                                {
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "Player contact confirmed with stage platform via body tag='" << otherTag << "'.\n";
-                                                        DebugTrace(oss.str());
-                                                        m_loggedPlayerPlatformContact = true;
-                                                }
-                                                else if (otherSweets && !m_loggedPlayerSweetsContact)
-                                                {
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag
-                                                                << "' type='" << SweetsSpace::ToString(*otherSweets) << "'.\n";
-                                                        DebugTrace(oss.str());
-                                                        m_loggedPlayerSweetsContact = true;
-                                                }
-                                        }
-                                }
 
                                 const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
 
@@ -599,45 +428,8 @@ namespace Systems
 
                                 if (!pairIs2D && planarOverlapZ < -kPlanarZTolerance)
                                 {
-#if defined(_DEBUG)
-                                        if (!m_loggedPlanarZSeparation)
-                                        {
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Skipping collision resolution due to Z separation exceeding planar tolerance. tags='"
-                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
-                                                        << " overlapZ=" << planarOverlapZ
-                                                        << " tolerance=" << kPlanarZTolerance << "\n";
-                                                DebugTrace(oss.str());
-                                                m_loggedPlanarZSeparation = true;
-                                        }
-#endif
                                         continue;
                                 }
-
-                                const bool ignoringZPenetration = pairIs2D || planarOverlapZ < kPlanarZTolerance;
-#if defined(_DEBUG)
-                                if (ignoringZPenetration && !m_loggedPlanarZIgnore)
-                                {
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix;
-                                        if (pairIs2D)
-                                        {
-                                                oss << "Ignoring Z overlap for 2D collider pair '" << bodyA->GetTag()
-                                                        << "' vs '" << bodyB->GetTag() << "'"
-                                                        << " overlapZ=" << planarOverlapZ
-                                                        << " (planar evaluation only).\n";
-                                        }
-                                        else
-                                        {
-                                                oss << "Proceeding with planar collision despite marginal Z overlap. tags='"
-                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
-                                                        << " overlapZ=" << planarOverlapZ
-                                                        << " tolerance=" << kPlanarZTolerance << "\n";
-                                        }
-                                        DebugTrace(oss.str());
-                                        m_loggedPlanarZIgnore = true;
-                                }
-#endif
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
@@ -672,21 +464,6 @@ namespace Systems
                                         fallbackAABB = true;
                                         contactMethod = "foundation_aabb";
                                         usedSAT = false;
-#if defined(_DEBUG)
-                                        {
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Bypassing SAT for shallow foundation contact between '"
-                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
-                                                        << "' penetration=" << contactPenetration
-                                                        << " tolerance=" << m_penetrationTolerance
-                                                        << " layerA=" << ToString(colliderA->GetLayer())
-                                                        << " layerB=" << ToString(colliderB->GetLayer())
-                                                        << " staticA=" << (bodyAStatic ? "yes" : "no")
-                                                        << " staticB=" << (bodyBStatic ? "yes" : "no")
-                                                        << " forcedNormal=(0," << axisDir << ",0)\n";
-                                                DebugTrace(oss.str());
-                                        }
-#endif
                                 }
                                 else
                                 {
@@ -719,18 +496,6 @@ namespace Systems
                                                 {
                                                         contactMethod = "sat_proxy_aabb";
                                                 }
-#if defined(_DEBUG)
-                                                else if (attemptedSAT)
-                                                {
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "SAT failed for sweets pair; skipping AABB fallback. tags='"
-                                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
-                                                                << " foundationPair=" << (foundationPair ? "yes" : "no")
-                                                                << " overlapX=" << planarOverlapX << " overlapY=" << planarOverlapY
-                                                                << " overlapZ=" << planarOverlapZ << "\n";
-                                                        DebugTrace(oss.str());
-                                                }
-#endif
                                         }
 
                                         if (usedSAT)
@@ -815,10 +580,6 @@ namespace Systems
                                 }
 
                                 const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
-                                const bool snappedToVertical = classification.isVerticalSnapped;
-#if !defined(_DEBUG)
-                                (void)snappedToVertical;
-#endif
                                 contactNormal = classification.normal;
                                 if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
                                 {
@@ -827,19 +588,6 @@ namespace Systems
                                 const float absContactNormalY = std::fabs(contactNormal.y);
                                 const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
                                 bool isGroundContact = classification.isGround && slopeAllowsSupport;
-#if defined(_DEBUG)
-                                if (classification.isGround && !isGroundContact)
-                                {
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Ground contact demoted due to slope for '" << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                << "' |n.y|=" << absContactNormalY
-                                                << " slopeCosLimit=" << m_maxSlopeCos
-                                                << " groundMinCos=" << m_groundMinCos
-                                                << " snappedVertical=" << (snappedToVertical ? "yes" : "no")
-                                                << " normal=(" << contactNormal.x << ',' << contactNormal.y << ',' << contactNormal.z << ")\n";
-                                        DebugTrace(oss.str());
-                                }
-#endif
 
                                 const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
                                 float pushDistance = std::min(m_baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
@@ -886,43 +634,12 @@ namespace Systems
                                                 const float topCenterX = GetAxisCenter(topBounds, 0);
                                                 slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
 
-#if defined(_DEBUG)
-                                                {
-                                                        const std::string baseTag = topIsA
-                                                                ? DescribeSweetsTag(bodyB->GetTag())
-                                                                : DescribeSweetsTag(bodyA->GetTag());
-                                                        const std::string topTag = topIsA
-                                                                ? DescribeSweetsTag(bodyA->GetTag())
-                                                                : DescribeSweetsTag(bodyB->GetTag());
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "Support analysis: top='" << topTag << "' base='"
-                                                                << baseTag << "' overlapFraction=" << supportOverlapFraction
-                                                                << " threshold=" << m_stableSupportThreshold
-                                                                << " status=" << (unstableSupport ? "UNSTABLE" : "stable")
-                                                                << " slideDir=" << slideDir
-                                                                << " resolutionScale=" << verticalResolutionScale
-                                                                << " usingSAT=" << (usedSAT ? "yes" : "no") << "\n";
-                                                        DebugTrace(oss.str());
-                                                }
-#endif
-
                                                 if (unstableSupport)
                                                 {
                                                         Physics::Physical& topPhys = topIsA ? physA : physB;
                                                         if (topPhys.weight > 0.0f)
                                                         {
                                                                 topPhys.velocity.x += slideDir * m_edgeSlideBoost;
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Unstable support slide boost: top='"
-                                                                        << (topIsA ? DescribeSweetsTag(bodyA->GetTag()) : DescribeSweetsTag(bodyB->GetTag()))
-                                                                        << "' base='" << (topIsA ? DescribeSweetsTag(bodyB->GetTag()) : DescribeSweetsTag(bodyA->GetTag()))
-                                                                        << "' overlapFraction=" << supportOverlapFraction
-                                                                        << " boost=" << m_edgeSlideBoost
-                                                                        << " dir=" << slideDir
-                                                                        << " velocityX=" << topPhys.velocity.x << "\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                 }
                                         }
@@ -956,24 +673,10 @@ namespace Systems
 
                                 if (translationA.z != 0.0f)
                                 {
-#if defined(_DEBUG)
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
-                                            << "' requested Z translation " << translationA.z
-                                            << "; overriding to maintain planar constraint.\n";
-                                        DebugTrace(oss.str());
-#endif
                                         translationA.z = 0.0f;
                                 }
                                 if (translationB.z != 0.0f)
                                 {
-#if defined(_DEBUG)
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
-                                            << "' requested Z translation " << translationB.z
-                                            << "; overriding to maintain planar constraint.\n";
-                                        DebugTrace(oss.str());
-#endif
                                         translationB.z = 0.0f;
                                 }
 
@@ -1039,23 +742,6 @@ namespace Systems
                                                 }
                                         }
 
-#if defined(_DEBUG)
-                                        if (clampedLinear || clampedNormal || clampedTangent)
-                                        {
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Velocity clamped for '" << tag
-                                                        << "' ground=" << (groundContact ? "yes" : "no")
-                                                        << " support=" << (supportContact ? "yes" : "no")
-                                                        << " thresholds(linear=" << m_minLinearSpeed
-                                                        << ", vertical=" << m_minVerticalSpeed
-                                                        << ", tangential=" << m_minTangentialSpeed << ")"
-                                                        << " components(linear=" << (clampedLinear ? "yes" : "no")
-                                                        << ", normal=" << (clampedNormal ? "yes" : "no")
-                                                        << ", tangent=" << (clampedTangent ? "yes" : "no")
-                                                        << ") newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
-                                                DebugTrace(oss.str());
-                                        }
-#endif
                                 };
 
                                 const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
@@ -1082,32 +768,9 @@ namespace Systems
                                                         ? std::clamp(relativeSpeed / m_maxRestitutionVelocity, 0.0f, 1.0f)
                                                         : 1.0f;
                                                 float impulse = -(1.0f + m_restitution * restitutionScale) * relativeVelocity / activeBodyCount;
-#if defined(_DEBUG)
-                                                if (restitutionScale < 1.0f)
-                                                {
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "Restitution scaled for low-speed pair '" << bodyA->GetTag()
-                                                                << "' vs '" << bodyB->GetTag()
-                                                                << "' relativeSpeed=" << relativeSpeed
-                                                                << " threshold=" << m_maxRestitutionVelocity
-                                                                << " scale=" << restitutionScale
-                                                                << " impulse=" << impulse << "\n";
-                                                        DebugTrace(oss.str());
-                                                }
-#endif
                                                 if (treatedAsSupport && sweetsSupportPair && unstableSupport)
                                                 {
-                                                        const float previousImpulse = impulse;
                                                         impulse = 0.0f;
-#if defined(_DEBUG)
-                                                        std::ostringstream oss;
-                                                        oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support pair '"
-                                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                                << "' previousImpulse=" << previousImpulse
-                                                                << " overlapFraction=" << supportOverlapFraction
-                                                                << " threshold=" << m_stableSupportThreshold << "\n";
-                                                        DebugTrace(oss.str());
-#endif
                                                 }
                                                 if (!bodyAStatic)
                                                 {
@@ -1134,26 +797,10 @@ namespace Systems
                                                                 const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
                                                                 const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
                                                                 ApplyComponent(physA, contactNormal, adjustedVelocity);
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Unstable support damping applied to body '"
-                                                                        << bodyA->GetTag() << "' (supported by '" << bodyB->GetTag()
-                                                                        << "') velocityN " << previousVelocity
-                                                                        << " -> " << adjustedVelocity
-                                                                        << " (fraction=" << supportOverlapFraction
-                                                                        << " scale=" << verticalResolutionScale << ")\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                         else
                                                         {
                                                                 ApplyComponent(physA, contactNormal, 0.0f);
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Normal velocity clamped for body '" << bodyA->GetTag()
-                                                                        << "' from " << previousVelocity << " due to static contact.\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                 }
                                         }
@@ -1167,26 +814,10 @@ namespace Systems
                                                                 const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
                                                                 const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
                                                                 ApplyComponent(physB, contactNormal, adjustedVelocity);
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Unstable support damping applied to body '"
-                                                                        << bodyB->GetTag() << "' (supported by '" << bodyA->GetTag()
-                                                                        << "') velocityN " << previousVelocity
-                                                                        << " -> " << adjustedVelocity
-                                                                        << " (fraction=" << supportOverlapFraction
-                                                                        << " scale=" << verticalResolutionScale << ")\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                         else
                                                         {
                                                                 ApplyComponent(physB, contactNormal, 0.0f);
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Normal velocity clamped for body '" << bodyB->GetTag()
-                                                                        << "' from " << previousVelocity << " due to static contact.\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                 }
                                         }
@@ -1211,44 +842,14 @@ namespace Systems
                                                         {
                                                                 ApplyComponent(physB, tangent, sharedVelocity);
                                                         }
-#if defined(_DEBUG)
-                                                        {
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Static friction applied to pair '"
-                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                                        << "' relativeTangentialVelocity=" << relativeTangentialVelocity
-                                                                        << " threshold=" << m_minTangentialSpeed
-                                                                        << " sharedVelocity=" << sharedVelocity << "\n";
-                                                                DebugTrace(oss.str());
-                                                        }
-#endif
                                                 }
                                                 else
                                                 {
                                                         if (!allowStaticFriction && withinStaticThreshold)
                                                         {
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Static friction suppressed for steep or non-ground contact between '"
-                                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
-                                                                        << "' ground=" << (isGroundContact ? "yes" : "no")
-                                                                        << " |n.y|=" << absContactNormalY
-                                                                        << " slopeLimit=" << m_maxSlopeCos
-                                                                        << " relativeTangentialVelocity=" << relativeTangentialVelocity
-                                                                        << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                         else if (allowStaticFriction && !withinStaticThreshold)
                                                         {
-#if defined(_DEBUG)
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Static friction bypassed due to tangential speed for pair '"
-                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                                        << "' tangentialSpeed=" << absRelativeTangentialVelocity
-                                                                        << " threshold=" << m_minTangentialSpeed << "\n";
-                                                                DebugTrace(oss.str());
-#endif
                                                         }
                                                         const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
                                                         if (!bodyAStatic)
@@ -1261,19 +862,6 @@ namespace Systems
                                                                 const float current = Project(physB.velocity, tangent);
                                                                 ApplyComponent(physB, tangent, current * frictionScale);
                                                         }
-#if defined(_DEBUG)
-                                                        {
-                                                                std::ostringstream oss;
-                                                                oss << kLogPrefix << "Dynamic friction applied to pair '"
-                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                                        << "' scale=" << frictionScale
-                                                                        << " static=" << bodyAStatic << '/' << bodyBStatic
-                                                                        << " tangentVelocityA=" << Project(physA.velocity, tangent)
-                                                                        << " tangentVelocityB=" << Project(physB.velocity, tangent)
-                                                                        << "\n";
-                                                                DebugTrace(oss.str());
-                                                        }
-#endif
                                                 }
                                         }
 
@@ -1282,48 +870,12 @@ namespace Systems
                                 ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyA->GetTag());
                                 ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyB->GetTag());
 
-#if defined(_DEBUG)
-                                {
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Resolved contact for '" << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
-                                                << "' normal=(" << contactNormal.x << "," << contactNormal.y << ",0)"
-                                                << " penetration=" << contactPenetration
-                                                << " pushDistance=" << pushDistance
-                                                << " usedSAT=" << (usedSAT ? "yes" : "no")
-                                                << " fallback=" << (fallbackAABB ? "yes" : "no")
-                                                << " proxySAT=" << (usedProxySAT ? "yes" : "no")
-                                                << " method=" << contactMethod;
-                                        if (usedSAT)
-                                        {
-                                                oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
-                                                        << ")";
-                                        }
-                                        oss << " ground=" << (isGroundContact ? "yes" : "no");
-                                        oss << " snappedVertical=" << (snappedToVertical ? "yes" : "no");
-                                        oss << "\n";
-                                        DebugTrace(oss.str());
-                                }
-#endif
                                 if (physA.velocity.z != 0.0f)
                                 {
-#if defined(_DEBUG)
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
-                                            << "' velocity.z=" << physA.velocity.z
-                                            << " reset to zero post-contact.\n";
-                                        DebugTrace(oss.str());
-#endif
                                         physA.velocity.z = 0.0f;
                                 }
                                 if (physB.velocity.z != 0.0f)
                                 {
-#if defined(_DEBUG)
-                                        std::ostringstream oss;
-                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
-                                            << "' velocity.z=" << physB.velocity.z
-                                            << " reset to zero post-contact.\n";
-                                        DebugTrace(oss.str());
-#endif
                                         physB.velocity.z = 0.0f;
                                 }
 
@@ -1331,25 +883,5 @@ namespace Systems
                         }
                 }
 
-#if defined(_DEBUG)
-                if (resolvedPairs > 0)
-                {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Resolved " << resolvedPairs << " overlaps out of "
-                            << testedPairs << " tested pairs. tolerance=" << m_penetrationTolerance
-                            << ", restitution=" << m_restitution
-                            << ", staticFriction=" << m_staticFriction
-                            << ", dynamicFriction=" << m_dynamicFriction
-                            << ", slopeCosLimit=" << m_maxSlopeCos
-                            << ", verticalSnapCos=" << m_verticalSnapCos
-                            << ", groundMinCos=" << m_groundMinCos
-                            << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
-                            << ", minLinearSpeed=" << m_minLinearSpeed
-                            << ", minVerticalSpeed=" << m_minVerticalSpeed
-                            << ", minTangentialSpeed=" << m_minTangentialSpeed
-                            << "\n";
-                        DebugTrace(oss.str());
-                }
-#endif
         }
 }
