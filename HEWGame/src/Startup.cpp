@@ -1,7 +1,6 @@
 #include <windows.h>
 #include "Defines.h"
 #include "Main.h"
-#include <stdio.h>
 #include <crtdbg.h>
 #include <string>
 #include "DebugConsole.h"

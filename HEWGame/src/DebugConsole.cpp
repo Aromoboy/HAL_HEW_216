@@ -1,20 +1,17 @@
 #include "DebugConsole.h"
 
-#include"conioex.h"
+#include "conioex.h"
 
-#include "Diagnostics/Logger.h"
+#include <cstdio>
 
 HWND DebugConsole::m_hConsole = nullptr;
 HWND DebugConsole::m_hMainWindow = nullptr;
 
 void DebugConsole::InitDebugConsole(HWND a_hWindow)
 {
-    Diagnostics::LogInfo("Debug console initialized!");
     FILE* fp;
     freopen_s(&fp, "CONOUT$", "w", stdout); // 標準出力をコンソールに接続
     freopen_s(&fp, "CONOUT$", "w", stderr); // 標準エラーも同様に
-
-    std::cout << "Debug console initialized!" << std::endl;
 
     DebugConsole::m_hConsole = GetConsoleWindow();
     DebugConsole::m_hMainWindow = a_hWindow;
