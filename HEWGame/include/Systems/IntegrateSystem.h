@@ -13,6 +13,6 @@ namespace Systems
         float3 Integrate(Entities::PhysicalEntity& entity, float dt);
 
     private:
-        float m_translationEpsilon;
+        float m_velocityThreshold;
     };
 }
