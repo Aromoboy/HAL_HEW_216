@@ -3,8 +3,6 @@
 #include "BaseCamera.h"
 #include "Defines.h"
 
-#include <string>
-
 namespace CameraSpace
 {
         class PerspectiveCamera : public BaseCamera
@@ -41,7 +39,6 @@ namespace CameraSpace
                 float NormalizeAspect(float aspect, const char* contextLabel) const;
                 float NormalizeNearPlane(float nearPlane, const char* contextLabel) const;
                 float NormalizeFarPlane(float farPlane, float nearPlane, const char* contextLabel) const;
-                void LogInvalidParameter(const char* label, float value, const std::string& detail) const;
 
         private:
                 float m_fovY;

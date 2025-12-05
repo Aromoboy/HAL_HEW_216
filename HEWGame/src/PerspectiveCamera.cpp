@@ -5,23 +5,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <sstream>
-#include <string>
 
 namespace
 {
-#if defined(_WIN32) && defined(_DEBUG)
-        void DebugTrace(const std::string& message)
-        {
-                ::OutputDebugStringA(message.c_str());
-        }
-#else
-        void DebugTrace(const std::string& message)
-        {
-                (void)message;
-        }
-#endif
-
         constexpr float kDefaultFovDegrees = 60.0f;
         constexpr float kMinFovDegrees = 1.0f;
         constexpr float kMaxFovDegrees = 170.0f;
@@ -50,13 +36,6 @@ namespace CameraSpace
                 , m_nearZ(NormalizeNearPlane(nearPlane, "ctor"))
                 , m_farZ(NormalizeFarPlane(farPlane, m_nearZ, "ctor"))
         {
-                std::ostringstream oss;
-                oss << "[PerspectiveCamera] ctor fov(deg)=" << GetFieldOfViewDegrees()
-                        << " aspect=" << m_aspect
-                        << " nearZ=" << m_nearZ
-                        << " farZ=" << m_farZ << "\n";
-                DebugTrace(oss.str());
-
                 MarkProjectionDirty();
         }
 
@@ -64,20 +43,12 @@ namespace CameraSpace
         {
                 if (!IsFinitePositive(width) || !IsFinitePositive(height))
                 {
-                        std::ostringstream oss;
-                        oss << "[PerspectiveCamera] OnViewportChanged rejected width=" << width
-                                << " height=" << height << " (must be positive finite)\n";
-                        DebugTrace(oss.str());
                         return;
                 }
 
                 const float newAspect = width / height;
                 if (!std::isfinite(newAspect) || newAspect <= 0.0f)
                 {
-                        std::ostringstream oss;
-                        oss << "[PerspectiveCamera] OnViewportChanged produced invalid aspect=" << newAspect
-                                << " from width=" << width << " height=" << height << "\n";
-                        DebugTrace(oss.str());
                         return;
                 }
 
@@ -86,15 +57,9 @@ namespace CameraSpace
                         return;
                 }
 
-                const float previous = m_aspect;
                 m_aspect = newAspect;
                 MarkProjectionDirty();
                 UpdateProjection();
-
-                std::ostringstream oss;
-                oss << "[PerspectiveCamera] viewport updated aspect=" << m_aspect
-                        << " (prev=" << previous << ") width=" << width << " height=" << height << "\n";
-                DebugTrace(oss.str());
         }
 
         void PerspectiveCamera::SetFieldOfViewDegrees(float fovYDegrees)
@@ -125,13 +90,7 @@ namespace CameraSpace
                 m_nearZ = normalized;
                 if (m_farZ <= m_nearZ + kMinFarSeparation)
                 {
-                        const float previousFar = m_farZ;
                         m_farZ = m_nearZ + kMinFarSeparation;
-
-                        std::ostringstream oss;
-                        oss << "[PerspectiveCamera] SetNearPlane adjusted farZ from " << previousFar
-                                << " to maintain separation (now " << m_farZ << ")\n";
-                        DebugTrace(oss.str());
                 }
 
                 MarkProjectionDirty();
@@ -219,16 +178,6 @@ namespace CameraSpace
                         return;
                 }
 
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PerspectiveCamera] SetPerspective normalized fov(deg)=" << GetFieldOfViewDegrees()
-                        << " aspect=" << m_aspect
-                        << " nearZ=" << m_nearZ
-                        << " farZ=" << m_farZ
-                        << " -> dispatching to BaseCamera::SetPerspective" << "\n";
-                DebugTrace(oss.str());
-#endif
-
                 BaseCamera::SetPerspective(DirectX::XMConvertToDegrees(m_fovY), m_aspect, m_nearZ, m_farZ);
 
                 MarkProjectionDirty();
@@ -241,87 +190,51 @@ namespace CameraSpace
                 m_projectionDirty = false;
         }
 
-        float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char* contextLabel) const
+        float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char* /*contextLabel*/) const
         {
                 if (!std::isfinite(degrees))
                 {
-                        std::ostringstream detail;
-                        detail << contextLabel << " provided non-finite value; reverting to default " << kDefaultFovDegrees;
-                        LogInvalidParameter("fovYDegrees", degrees, detail.str());
                         return DirectX::XMConvertToRadians(kDefaultFovDegrees);
                 }
 
                 const float clamped = std::clamp(degrees, kMinFovDegrees, kMaxFovDegrees);
-                if (clamped != degrees)
-                {
-                        std::ostringstream detail;
-                        detail << contextLabel << " clamped to range [" << kMinFovDegrees << ", " << kMaxFovDegrees << "]";
-                        LogInvalidParameter("fovYDegrees", degrees, detail.str());
-                }
-
                 return DirectX::XMConvertToRadians(clamped);
         }
 
-        float PerspectiveCamera::NormalizeAspect(float aspect, const char* contextLabel) const
+        float PerspectiveCamera::NormalizeAspect(float aspect, const char* /*contextLabel*/) const
         {
                 if (!std::isfinite(aspect) || aspect <= kMinAspectRatio)
                 {
                         const float fallback = DefaultAspectRatio();
-                        std::ostringstream detail;
-                        detail << contextLabel << " provided invalid aspect; using fallback " << fallback;
-                        LogInvalidParameter("aspect", aspect, detail.str());
                         return fallback;
                 }
 
                 return aspect;
         }
 
-        float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char* contextLabel) const
+        float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char* /*contextLabel*/) const
         {
                 if (!std::isfinite(nearPlane) || nearPlane <= 0.0f)
                 {
-                        std::ostringstream detail;
-                        detail << contextLabel << " provided invalid near plane; using default " << kDefaultNearPlane;
-                        LogInvalidParameter("nearPlane", nearPlane, detail.str());
                         return kDefaultNearPlane;
                 }
 
                 return std::max(nearPlane, kDefaultNearPlane);
         }
 
-        float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char* contextLabel) const
+        float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char* /*contextLabel*/) const
         {
                 if (!std::isfinite(farPlane))
                 {
-                        std::ostringstream detail;
-                        detail << contextLabel << " provided non-finite far plane; using default " << kDefaultFarPlane;
-                        LogInvalidParameter("farPlane", farPlane, detail.str());
                         return std::max(kDefaultFarPlane, nearPlane + kMinFarSeparation);
                 }
 
                 if (farPlane <= nearPlane + kMinFarSeparation)
                 {
                         const float adjusted = nearPlane + kMinFarSeparation;
-                        std::ostringstream detail;
-                        detail << contextLabel << " far plane <= near plane; adjusted to " << adjusted;
-                        LogInvalidParameter("farPlane", farPlane, detail.str());
                         return adjusted;
                 }
 
                 return farPlane;
-        }
-
-        void PerspectiveCamera::LogInvalidParameter(const char* label, float value, const std::string& detail) const
-        {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PerspectiveCamera] invalid " << label << " value=" << value
-                        << " -> " << detail << "\n";
-                DebugTrace(oss.str());
-#else
-                (void)label;
-                (void)value;
-                (void)detail;
-#endif
         }
 }
