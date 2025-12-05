@@ -2073,7 +2073,7 @@ void SceneGame::ConfigureUpdates()
 void SceneGame::Update(Core::UpdateContext& ctx)
 {
 #if defined(_DEBUG)
-        HandleColliderDebugCommands(ctx);
+    HandleColliderDebugCommands(ctx);
 #endif
     ValidatePlayerPhysicsRegistration();
     RefreshPlatformAnchor(false);
@@ -2100,8 +2100,8 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     }
 
     // =========================================
-// SIMPLE & CORRECT PLAYER WORLD-BOUNDS
-// =========================================
+    // SIMPLE & CORRECT PLAYER WORLD-BOUNDS
+    // =========================================
 
     if (player && m_gameCamera)
     {
