@@ -46,7 +46,6 @@ private:
         float m_yaw;
         float m_pitch;
         float m_followSpeed;
-        bool m_warnedAboutExpiredTarget;
         bool m_lockTranslation;
         bool m_lockYawPitch;
 };
