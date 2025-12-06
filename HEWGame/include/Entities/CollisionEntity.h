@@ -44,12 +44,20 @@ namespace Entities
 
         void ApplyTranslation(const float3& delta);
 
+        void UpdateSleepState(const float3& velocity);
+        void Wake();
+        bool IsSleeping() const { return m_isSleeping; }
+
         Systems::ContactLiteSystem* GetContactSystem() const;
 
     protected:
         std::shared_ptr<Collision::ICollider> m_collider;
         Collision::CollisionLayer m_collisionLayer;
         Systems::ContactLiteSystem* m_contactSystem;
+        Transform m_lastTransform;
+        float3 m_lastVelocity;
+        int m_stationaryFrameCount{ 0 };
+        bool m_isSleeping{ false };
     };
 }
 
