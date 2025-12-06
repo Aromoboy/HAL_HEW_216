@@ -903,54 +903,53 @@ namespace Systems
                                         phys.velocity.z += dir.z * delta;
                                 };
 
-                                const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
-                                        bool allowTangentialImpulse, bool groundContact, bool supportContact, const std::string& tag, bool allowModification)
+                                const auto ClampVelocity = [&](Physics::Physical& phys,
+                                        const float3& normal,
+                                        const float3& tangent,
+                                        bool hasTangent,
+                                        bool groundContact,
+                                        bool penetrationResolved,
+                                        const std::string& tag,
+                                        bool allowModification)
                                 {
-                                        if (phys.weight <= 0.0f || !allowModification)
+                                        if (!groundContact || !penetrationResolved)
+                                        {
+                                                return;
+                                        }
+                                        if (!allowModification || phys.weight <= 0.0f)
+                                        {
+                                                return;
+                                        }
+                                        if (IsSweetsTag(tag) && !groundContact)
+                                        {
+                                                return;
+                                        }
+                                        if (tag == "player")
                                         {
                                                 return;
                                         }
 
-                                        const auto clampComponent = [](float& component, float minSpeed)
+                                        const float normalComponent = std::fabs(Project(phys.velocity, normal));
+                                        if (normalComponent >= m_minVerticalSpeed)
                                         {
-                                                if (std::fabs(component) < minSpeed)
-                                                {
-                                                        component = 0.0f;
-                                                        return true;
-                                                }
-                                                return false;
-                                        };
-
-                                        const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
-                                        const float planarSpeed = std::sqrt(planarSpeedSq);
-                                        const float settleSpeed = m_restingSpeedThreshold;
-                                        if (planarSpeed < settleSpeed)
-                                        {
-                                                phys.velocity.x = 0.0f;
-                                                phys.velocity.y = 0.0f;
-                                        }
-                                        clampComponent(phys.velocity.x, m_minLinearSpeed);
-                                        clampComponent(phys.velocity.y, m_minLinearSpeed);
-                                        clampComponent(phys.velocity.z, m_minLinearSpeed);
-
-                                        if (groundContact)
-                                        {
-                                                const float normalComponent = Project(phys.velocity, normal);
-                                                if (std::fabs(normalComponent) < m_minVerticalSpeed)
-                                                {
-                                                        ApplyComponent(phys, normal, 0.0f);
-                                                }
-
-                                                if (allowTangentialImpulse)
-                                                {
-                                                        const float tangentialComponent = Project(phys.velocity, tangent);
-                                                        if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
-                                                        {
-                                                                ApplyComponent(phys, tangent, 0.0f);
-                                                        }
-                                                }
+                                                return;
                                         }
 
+                                        float tangentialComponent = 0.0f;
+                                        if (hasTangent)
+                                        {
+                                                tangentialComponent = std::fabs(Project(phys.velocity, tangent));
+                                        }
+                                        if (tangentialComponent >= m_minTangentialSpeed)
+                                        {
+                                                return;
+                                        }
+
+                                        ApplyComponent(phys, normal, 0.0f);
+                                        if (hasTangent)
+                                        {
+                                                ApplyComponent(phys, tangent, 0.0f);
+                                        }
                                 };
 
                                 const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
@@ -1086,8 +1085,12 @@ namespace Systems
                                         physB.velocity.z = 0.0f;
                                 }
 
-                                ClampVelocity(physA, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyA->GetTag(), allowImpulseA);
-                                ClampVelocity(physB, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyB->GetTag(), allowImpulseB);
+                                const bool penetrationResolved = pushDistance > 0.0f;
+                                const bool allowClampA = allowImpulseA && !IsPlayerBody(bodyA);
+                                const bool allowClampB = allowImpulseB && !IsPlayerBody(bodyB);
+
+                                ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyA->GetTag(), allowClampA);
+                                ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyB->GetTag(), allowClampB);
 
                                 ++resolvedPairs;
                         }
