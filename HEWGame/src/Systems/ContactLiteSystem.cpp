@@ -269,8 +269,9 @@ namespace Systems
                 , m_minVerticalSpeed(0.02f)
                 , m_minTangentialSpeed(0.01f)
                 , m_restingFrames{}
-                , m_restingFrameThreshold(8)
-                , m_restingSpeedThreshold(0.025f)
+                , m_restingFrameThreshold(12)
+                , m_restingSpeedThreshold(0.03f)
+                , m_wakeSpeedThreshold(0.06f)
                 , m_includeKinematicBodies(true)
                 , m_allowKinematicPlayerCollision(true)
         {
@@ -375,6 +376,8 @@ namespace Systems
                 }
 
                 const size_t sourceBodyCount = m_bodies->size();
+                std::unordered_set<Entities::PhysicalEntity*> observedBodies;
+                observedBodies.reserve(sourceBodyCount);
                 std::vector<Entities::PhysicalEntity*> activeBodies;
                 activeBodies.reserve(sourceBodyCount);
                 for (Entities::PhysicalEntity* body : *m_bodies)
@@ -384,14 +387,44 @@ namespace Systems
                                 continue;
                         }
 
+                        observedBodies.insert(body);
+
                         body->UpdateSleepState(body->GetPhysical().velocity);
                         if (body->IsSleeping())
                         {
                                 continue;
                         }
 
+                        const Physics::Physical& phys = body->GetPhysical();
+                        const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
+                        const float planarSpeed = std::sqrt(planarSpeedSq);
+
+                        RestingState& resting = m_restingFrames[body];
+                        if (planarSpeed > m_wakeSpeedThreshold)
+                        {
+                                resting.frames = 0;
+                                resting.resting = false;
+                        }
+                        else if (planarSpeed < m_restingSpeedThreshold)
+                        {
+                                resting.frames += 1;
+                                if (resting.frames >= m_restingFrameThreshold)
+                                {
+                                        resting.resting = true;
+                                }
+                        }
+                        else
+                        {
+                                resting.frames = 0;
+                        }
+
+                        if (resting.resting)
+                        {
+                                continue;
+                        }
+
                         const bool isPlayer = IsPlayerBody(body);
-                        const bool kinematic = !(body->GetPhysical().weight > 0.0f);
+                        const bool kinematic = !(phys.weight > 0.0f);
                         if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
                         {
                                 continue;
@@ -406,33 +439,9 @@ namespace Systems
                         return;
                 }
 
-                std::unordered_set<Entities::PhysicalEntity*> activeSet;
-                activeSet.reserve(bodyCount);
-                for (Entities::PhysicalEntity* body : activeBodies)
-                {
-                        if (!body)
-                        {
-                                continue;
-                        }
-
-                        activeSet.insert(body);
-                        const Physics::Physical& phys = body->GetPhysical();
-                        const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
-                        const float speedSq = planarSpeedSq + phys.velocity.z * phys.velocity.z;
-                        const float speed = std::sqrt(speedSq);
-                        if (speed < m_restingSpeedThreshold)
-                        {
-                                m_restingFrames[body] += 1;
-                        }
-                        else
-                        {
-                                m_restingFrames[body] = 0;
-                        }
-                }
-
                 for (auto it = m_restingFrames.begin(); it != m_restingFrames.end();)
                 {
-                        if (activeSet.find(it->first) == activeSet.end())
+                        if (observedBodies.find(it->first) == observedBodies.end())
                         {
                                 it = m_restingFrames.erase(it);
                         }
@@ -490,7 +499,7 @@ namespace Systems
                 const auto IsResting = [&](Entities::PhysicalEntity* body)
                 {
                         const auto it = m_restingFrames.find(body);
-                        return it != m_restingFrames.end() && it->second >= m_restingFrameThreshold;
+                        return it != m_restingFrames.end() && it->second.resting;
                 };
 
                 size_t testedPairs = 0;

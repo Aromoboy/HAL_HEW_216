@@ -75,9 +75,16 @@ namespace Systems
         float m_minLinearSpeed;
         float m_minVerticalSpeed;
         float m_minTangentialSpeed;
-        std::unordered_map<Entities::PhysicalEntity*, int> m_restingFrames;
+        struct RestingState
+        {
+                int frames = 0;
+                bool resting = false;
+        };
+
+        std::unordered_map<Entities::PhysicalEntity*, RestingState> m_restingFrames;
         int m_restingFrameThreshold;
         float m_restingSpeedThreshold;
+        float m_wakeSpeedThreshold;
         bool m_includeKinematicBodies;
         bool m_allowKinematicPlayerCollision;
     };
