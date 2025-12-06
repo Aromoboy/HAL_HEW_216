@@ -478,8 +478,28 @@ namespace Systems
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
                 }
 
-                const int sweepAxis = 0;
-                const int planarTestAxis = 1;
+                float globalMinX = std::numeric_limits<float>::infinity();
+                float globalMaxX = -std::numeric_limits<float>::infinity();
+                float globalMinY = std::numeric_limits<float>::infinity();
+                float globalMaxY = -std::numeric_limits<float>::infinity();
+
+                for (const BodyProxy& proxy : proxies)
+                {
+                        globalMinX = std::min(globalMinX, proxy.bounds.min.x);
+                        globalMaxX = std::max(globalMaxX, proxy.bounds.max.x);
+                        globalMinY = std::min(globalMinY, proxy.bounds.min.y);
+                        globalMaxY = std::max(globalMaxY, proxy.bounds.max.y);
+                }
+
+                int sweepAxis = 0;
+                int secondaryPlanarAxis = 1;
+                if (!proxies.empty())
+                {
+                        const float spanX = globalMaxX - globalMinX;
+                        const float spanY = globalMaxY - globalMinY;
+                        sweepAxis = (spanY > spanX) ? 1 : 0;
+                        secondaryPlanarAxis = (sweepAxis == 0) ? 1 : 0;
+                }
 
                 std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
                 {
@@ -521,19 +541,17 @@ namespace Systems
                                 const AABB& boundsA = proxyA.bounds;
                                 const AABB& boundsB = proxyB.bounds;
 
-                                if (boundsA.max.x < boundsB.min.x)
+                                if (GetAxisMin(boundsB, sweepAxis) > GetAxisMax(boundsA, sweepAxis))
                                 {
                                         break;
                                 }
-                                if (boundsA.min.x > boundsB.max.x)
-                                {
-                                        continue;
-                                }
-                                if (boundsA.max.y < boundsB.min.y)
-                                {
-                                        continue;
-                                }
-                                if (boundsA.min.y > boundsB.max.y)
+
+                                float overlaps[3];
+                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
+                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
+
+                                if (overlaps[sweepAxis] <= 0.0f || overlaps[secondaryPlanarAxis] <= 0.0f)
                                 {
                                         continue;
                                 }
@@ -549,19 +567,14 @@ namespace Systems
 
                                 const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
                                 const bool playerPlatformPair = (IsPlayerBody(bodyA) && layerB == Collision::CollisionLayer::Floor)
-                                        || (IsPlayerBody(bodyB) && layerA == Collision::CollisionLayer::Floor);
+                                                || (IsPlayerBody(bodyB) && layerA == Collision::CollisionLayer::Floor);
 
-                                float overlaps[3];
-                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
-                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
-                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
-
-                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f)
+                                if (!pairIs2D && !playerPlatformPair && overlaps[2] < -kPlanarZTolerance)
                                 {
                                         continue;
                                 }
 
-                                if (playerPlatformPair && !pairIs2D && overlaps[2] < -kPlanarZTolerance)
+                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f)
                                 {
                                         continue;
                                 }
@@ -1200,6 +1213,5 @@ namespace Systems
                                 << "\n";
                         DebugTrace(oss.str());
                 }
-
         }
 }
