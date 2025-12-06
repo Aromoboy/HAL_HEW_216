@@ -41,6 +41,14 @@ namespace
         constexpr float kSatPlanarOverlapThreshold = 0.05f;
         constexpr float kMinResolutionPush = 1e-4f;
 
+        struct FrameContactInfo
+        {
+                bool supported = false;
+                bool unsupportedContact = false;
+                bool translated = false;
+                bool transformChanged = false;
+        };
+
         struct ContactNormalClassification
         {
                 float3 normal{ 0.0f, 0.0f, 0.0f };
@@ -380,6 +388,8 @@ namespace Systems
                 observedBodies.reserve(sourceBodyCount);
                 std::vector<Entities::PhysicalEntity*> activeBodies;
                 activeBodies.reserve(sourceBodyCount);
+                std::unordered_map<Entities::PhysicalEntity*, FrameContactInfo> frameContactInfo;
+                frameContactInfo.reserve(sourceBodyCount);
                 for (Entities::PhysicalEntity* body : *m_bodies)
                 {
                         if (!body)
@@ -396,33 +406,6 @@ namespace Systems
                         }
 
                         const Physics::Physical& phys = body->GetPhysical();
-                        const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
-                        const float planarSpeed = std::sqrt(planarSpeedSq);
-
-                        RestingState& resting = m_restingFrames[body];
-                        if (planarSpeed > m_wakeSpeedThreshold)
-                        {
-                                resting.frames = 0;
-                                resting.resting = false;
-                        }
-                        else if (planarSpeed < m_restingSpeedThreshold)
-                        {
-                                resting.frames += 1;
-                                if (resting.frames >= m_restingFrameThreshold)
-                                {
-                                        resting.resting = true;
-                                }
-                        }
-                        else
-                        {
-                                resting.frames = 0;
-                        }
-
-                        if (resting.resting)
-                        {
-                                continue;
-                        }
-
                         const bool isPlayer = IsPlayerBody(body);
                         const bool kinematic = !(phys.weight > 0.0f);
                         if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
@@ -430,14 +413,13 @@ namespace Systems
                                 continue;
                         }
 
+                        FrameContactInfo info{};
+                        info.transformChanged = body->IsTransformDirty();
+                        frameContactInfo[body] = info;
                         activeBodies.push_back(body);
                 }
 
                 const size_t bodyCount = activeBodies.size();
-                if (bodyCount < 2)
-                {
-                        return;
-                }
 
                 for (auto it = m_restingFrames.begin(); it != m_restingFrames.end();)
                 {
@@ -493,10 +475,10 @@ namespace Systems
                 const size_t proxyCount = proxies.size();
                 if (proxyCount < 2)
                 {
-                        return;
+                        // No contact pairs to evaluate this frame, but continue to resting detection.
                 }
 
-                const auto IsResting = [&](Entities::PhysicalEntity* body)
+                const auto IsBodyResting = [&](Entities::PhysicalEntity* body)
                 {
                         const auto it = m_restingFrames.find(body);
                         return it != m_restingFrames.end() && it->second.resting;
@@ -732,54 +714,65 @@ namespace Systems
                                 const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
                                 bool isGroundContact = classification.isGround && slopeAllowsSupport;
 
-                const bool bodyAResting = IsResting(bodyA);
-                const bool bodyBResting = IsResting(bodyB);
-                const float restPenetrationThreshold = m_penetrationTolerance * 2.0f;
+                                const bool bodyAResting = IsBodyResting(bodyA);
+                                const bool bodyBResting = IsBodyResting(bodyB);
 
-                const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
-                const bool belowBaumgarteThreshold = contactPenetration <= restPenetrationThreshold;
-                float baumgarteFactor = m_baumgarteFactor;
-                if (!bodyAStatic && !bodyBStatic)
-                {
-                        const float relativeSpeedSq = (physA.velocity.x - physB.velocity.x) * (physA.velocity.x - physB.velocity.x)
-                                + (physA.velocity.y - physB.velocity.y) * (physA.velocity.y - physB.velocity.y);
-                        const float relativeSpeed = std::sqrt(relativeSpeedSq);
-                        if (relativeSpeed < m_minVerticalSpeed)
-                        {
-                                baumgarteFactor *= 0.4f;
-                        }
-                        else if (relativeSpeed < m_minVerticalSpeed * 2.0f)
-                        {
-                                baumgarteFactor *= 0.65f;
-                        }
-                }
+                                const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
+                                const float restPenetrationThreshold = m_penetrationTolerance * 2.0f;
+                                const bool belowBaumgarteThreshold = contactPenetration <= restPenetrationThreshold;
+                                float baumgarteFactor = m_baumgarteFactor;
+                                if (!bodyAStatic && !bodyBStatic)
+                                {
+                                        const float relativeSpeedSq = (physA.velocity.x - physB.velocity.x) * (physA.velocity.x - physB.velocity.x)
+                                                + (physA.velocity.y - physB.velocity.y) * (physA.velocity.y - physB.velocity.y);
+                                        const float relativeSpeed = std::sqrt(relativeSpeedSq);
+                                        if (relativeSpeed < m_minVerticalSpeed)
+                                        {
+                                                baumgarteFactor *= 0.4f;
+                                        }
+                                        else if (relativeSpeed < m_minVerticalSpeed * 2.0f)
+                                        {
+                                                baumgarteFactor *= 0.65f;
+                                        }
+                                }
 
-                const bool pseudo2DStack = fallbackAABB && slopeAllowsSupport;
-                const bool staticOrResting = bodyAStatic || bodyBStatic || (bodyAResting && bodyBResting);
-                if (pseudo2DStack)
-                {
-                        const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
-                        const float pseudoStackDampen = staticOrResting ? 0.25f : 0.45f;
-                        baumgarteFactor *= pseudoStackDampen * (0.55f + 0.45f * penetrationScale);
-                }
+                                const bool pseudo2DStack = fallbackAABB && slopeAllowsSupport;
+                                const bool staticPair = bodyAStatic || bodyBStatic;
+                                if (pseudo2DStack)
+                                {
+                                        const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
+                                        const float pseudoStackDampen = staticPair ? 0.25f : 0.45f;
+                                        baumgarteFactor *= pseudoStackDampen * (0.55f + 0.45f * penetrationScale);
+                                }
 
-                float pushDistance = belowBaumgarteThreshold
-                        ? 0.0f
-                        : std::min(baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
-                if (pseudo2DStack && pushDistance > 0.0f)
-                {
-                        const float overCorrectionCap = penetrationError * 0.35f;
-                        const float pseudo2DMax = m_penetrationTolerance * 3.0f;
-                        if (overCorrectionCap > 0.0f)
-                        {
-                                pushDistance = std::min(pushDistance, overCorrectionCap);
-                        }
-                        pushDistance = std::min(pushDistance, pseudo2DMax);
-                }
-                if (pushDistance <= 0.0f)
-                {
-                        continue;
-                }
+                                float pushDistance = belowBaumgarteThreshold
+                                        ? 0.0f
+                                        : std::min(baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
+                                if (pseudo2DStack && pushDistance > 0.0f)
+                                {
+                                        const float overCorrectionCap = penetrationError * 0.35f;
+                                        const float pseudo2DMax = m_penetrationTolerance * 3.0f;
+                                        if (overCorrectionCap > 0.0f)
+                                        {
+                                                pushDistance = std::min(pushDistance, overCorrectionCap);
+                                        }
+                                        pushDistance = std::min(pushDistance, pseudo2DMax);
+                                }
+                                if (pushDistance <= 0.0f)
+                                {
+                                        continue;
+                                }
+
+                                if (isGroundContact)
+                                {
+                                        frameContactInfo[bodyA].supported = true;
+                                        frameContactInfo[bodyB].supported = true;
+                                }
+                                else
+                                {
+                                        frameContactInfo[bodyA].unsupportedContact = true;
+                                        frameContactInfo[bodyB].unsupportedContact = true;
+                                }
 
                                 bool sweetsSupportPair = false;
                                 bool unstableSupport = false;
@@ -888,11 +881,20 @@ namespace Systems
                                         translationB.z = 0.0f;
                                 }
 
+                                if (translationA.x != 0.0f || translationA.y != 0.0f || translationA.z != 0.0f)
+                                {
+                                        frameContactInfo[bodyA].translated = true;
+                                }
+                                if (translationB.x != 0.0f || translationB.y != 0.0f || translationB.z != 0.0f)
+                                {
+                                        frameContactInfo[bodyB].translated = true;
+                                }
+
                                 Entities::TranslatePhysicalEntity(*bodyA, translationA);
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
-                                const bool allowImpulseA = !bodyAStatic && (!bodyAResting || contactPenetration > restPenetrationThreshold);
-                                const bool allowImpulseB = !bodyBStatic && (!bodyBResting || contactPenetration > restPenetrationThreshold);
+                                const bool allowImpulseA = !bodyAStatic;
+                                const bool allowImpulseB = !bodyBStatic;
 
                                 const auto Project = [](const float3& v, const float3& dir)
                                 {
@@ -1095,6 +1097,72 @@ namespace Systems
                                 ClampVelocity(physB, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyB->GetTag(), allowImpulseB);
 
                                 ++resolvedPairs;
+                        }
+                }
+
+                const auto IsResting = [&](const Entities::PhysicalEntity& body, bool supportedThisFrame)
+                {
+                        if (!supportedThisFrame)
+                        {
+                                return false;
+                        }
+
+                        const Physics::Physical& phys = body.GetPhysical();
+                        if (!(phys.weight > 0.0f))
+                        {
+                                return false;
+                        }
+
+                        const float speedSq = phys.velocity.x * phys.velocity.x
+                                + phys.velocity.y * phys.velocity.y
+                                + phys.velocity.z * phys.velocity.z;
+                        const float restingSpeedSq = m_restingSpeedThreshold * m_restingSpeedThreshold;
+                        if (speedSq >= restingSpeedSq)
+                        {
+                                return false;
+                        }
+
+                        const float externalSpeedSq = phys.force.x * phys.force.x
+                                + phys.force.y * phys.force.y
+                                + phys.force.z * phys.force.z;
+                        if (externalSpeedSq > 0.0f)
+                        {
+                                return false;
+                        }
+
+                        const auto infoIt = frameContactInfo.find(const_cast<Entities::PhysicalEntity*>(&body));
+                        const bool translated = (infoIt != frameContactInfo.end()) && infoIt->second.translated;
+                        const bool transformChanged = (infoIt != frameContactInfo.end()) && infoIt->second.transformChanged;
+                        const bool unsupportedContact = (infoIt != frameContactInfo.end()) && infoIt->second.unsupportedContact;
+
+                        if (translated || transformChanged || unsupportedContact)
+                        {
+                                return false;
+                        }
+
+                        if (body.IsTransformDirty())
+                        {
+                                return false;
+                        }
+
+                        return true;
+                };
+
+                for (Entities::PhysicalEntity* body : activeBodies)
+                {
+                        const auto infoIt = frameContactInfo.find(body);
+                        const bool supported = (infoIt != frameContactInfo.end()) && infoIt->second.supported;
+
+                        RestingState& resting = m_restingFrames[body];
+                        if (IsResting(*body, supported))
+                        {
+                                resting.frames += 1;
+                                resting.resting = resting.frames >= m_restingFrameThreshold;
+                        }
+                        else
+                        {
+                                resting.frames = 0;
+                                resting.resting = false;
                         }
                 }
 
