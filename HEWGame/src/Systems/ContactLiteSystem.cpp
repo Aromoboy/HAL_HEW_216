@@ -588,130 +588,76 @@ namespace Systems
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
-                                const bool sweetsPair = IsSweetsTag(bodyA->GetTag()) || IsSweetsTag(bodyB->GetTag());
                                 bool usedSAT = false;
                                 bool attemptedSAT = false;
-                                const float minPlanarOverlap = std::min(planarOverlapX, planarOverlapY);
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
 
-                                const bool foundationPair = colliderA->GetLayer() == Collision::CollisionLayer::Floor
-                                        || colliderB->GetLayer() == Collision::CollisionLayer::Floor;
-                                const bool staticFoundationPair = foundationPair && (bodyAStatic || bodyBStatic);
-                                const float verticalOverlap = planarOverlapY;
-                                const bool shallowFoundationContact = staticFoundationPair
-                                        && verticalOverlap > m_penetrationTolerance
-                                        && verticalOverlap <= (m_penetrationTolerance * kFoundationSatBypassScale);
+                                const bool colliderAIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA) != nullptr;
+                                const bool colliderBIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB) != nullptr;
+                                const bool contactPairHasAABB = colliderAIsAABB || colliderBIsAABB;
 
-                                if (shallowFoundationContact)
+                                bool contactComputed = false;
+
+                                if (pairIs2D)
                                 {
-                                        const float axisDir = (centerA.y < centerB.y) ? -1.0f : 1.0f;
-                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
-                                        contactPenetration = verticalOverlap;
-                                        fallbackAABB = true;
-                                        contactMethod = "foundation_aabb";
-                                        usedSAT = false;
+                                        attemptedSAT = true;
+                                        ++satAttempts;
+                                        usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
+
+                                        if (usedSAT)
+                                        {
+                                                ++satSuccesses;
+                                                contactMethod = "sat_2d";
+                                                contactNormal.x = contact2D.normal.x;
+                                                contactNormal.y = contact2D.normal.y;
+                                                const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
+                                                if (lenSq > 1e-6f)
+                                                {
+                                                        const float invLen = 1.0f / std::sqrt(lenSq);
+                                                        contactNormal.x *= invLen;
+                                                        contactNormal.y *= invLen;
+                                                        contactPenetration = contact2D.penetration;
+                                                        contactComputed = true;
+                                                }
+                                                else
+                                                {
+                                                        usedSAT = false;
+                                                }
+                                        }
                                 }
-                                else
+                                else if (contactPairHasAABB)
                                 {
-                                        int axis = -1;
-                                        float minOverlapAxis = std::numeric_limits<float>::max();
-                                        const int axisLimit = 2;
-                                        for (int ax = 0; ax < axisLimit; ++ax)
+                                        const bool colliderAIs2D = Is2DCollider(colliderA);
+                                        const bool colliderBIs2D = Is2DCollider(colliderB);
+                                        const bool mixed2DPair = (colliderAIs2D || colliderBIs2D) && contactPairHasAABB;
+
+                                        int axis = (planarOverlapX < planarOverlapY) ? 0 : 1;
+                                        const float axisCenterA = GetAxisCenter(boundsA, axis);
+                                        const float axisCenterB = GetAxisCenter(boundsB, axis);
+                                        const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
+                                        contactPenetration = (axis == 0) ? planarOverlapX : planarOverlapY;
+
+                                        if (mixed2DPair)
                                         {
-                                                if (overlaps[ax] > m_penetrationTolerance && overlaps[ax] < minOverlapAxis)
-                                                {
-                                                        minOverlapAxis = overlaps[ax];
-                                                        axis = ax;
-                                                }
+                                                contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
+                                                contactMethod = "aabb_planar_mixed";
+                                                contactComputed = true;
                                         }
-
-                                        const bool hasFallbackAxis = axis >= 0;
-                                        const bool foundationContact = foundationPair && sweetsPair;
-                                        const bool sweetsShallowOverlap = sweetsPair && minPlanarOverlap < 0.03f;
-                                        const bool allowStandardSAT = pairIs2D && minPlanarOverlap >= 0.03f;
-
-                                        const bool colliderAIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA) != nullptr;
-                                        const bool colliderBIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB) != nullptr;
-                                        const bool mixedAABBPair = colliderAIsAABB != colliderBIsAABB;
-                                        const auto* proxyAABB = colliderAIsAABB
-                                                ? dynamic_cast<const Collision::AABBCollider*>(colliderA)
-                                                : dynamic_cast<const Collision::AABBCollider*>(colliderB);
-                                        const auto* proxyCollider2D = colliderAIsAABB
-                                                ? dynamic_cast<const Collision::ICollider2D*>(colliderB)
-                                                : dynamic_cast<const Collision::ICollider2D*>(colliderA);
-                                        Entities::PhysicalEntity* proxyOwner = colliderAIsAABB ? bodyA : bodyB;
-                                        const bool allowProxySAT = mixedAABBPair
-                                                && proxyAABB
-                                                && proxyCollider2D
-                                                && IsPlayerBody(proxyOwner)
-                                                && minPlanarOverlap >= 0.05f;
-
-                                        const bool shouldAttemptSAT = !hasFallbackAxis
-                                                && !foundationContact
-                                                && !sweetsShallowOverlap
-                                                && (allowStandardSAT || allowProxySAT);
-
-                                        if (hasFallbackAxis)
+                                        else if (colliderAIsAABB && colliderBIsAABB)
                                         {
-                                                const float axisCenterA = GetAxisCenter(boundsA, axis);
-                                                const float axisCenterB = GetAxisCenter(boundsB, axis);
-                                                const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-
-                                                contactPenetration = minOverlapAxis;
-
-                                                switch (axis)
-                                                {
-                                                case 0:
-                                                        contactNormal = float3{ axisDir, 0.0f, 0.0f };
-                                                        break;
-                                                default:
-                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
-                                                        break;
-                                                }
-                                                fallbackAABB = true;
-                                                contactMethod = "aabb_overlap";
+                                                contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
+                                                contactMethod = "aabb_planar";
+                                                contactComputed = true;
                                         }
-                                        else if (shouldAttemptSAT)
-                                        {
-                                                attemptedSAT = true;
-                                                ++satAttempts;
-                                                if (allowStandardSAT)
-                                                {
-                                                        usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
-                                                }
-                                                else if (allowProxySAT && proxyCollider2D && proxyAABB)
-                                                {
-                                                        usedSAT = Compute2DContactWithAABBProxy(*proxyCollider2D, *proxyAABB, contact2D);
-                                                }
+                                }
 
-                                                if (usedSAT)
-                                                {
-                                                        ++satSuccesses;
-                                                        contactMethod = "sat_2d";
+                                fallbackAABB = false;
 
-                                                        contactNormal.x = contact2D.normal.x;
-                                                        contactNormal.y = contact2D.normal.y;
-                                                        const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
-                                                        if (lenSq > 1e-6f)
-                                                        {
-                                                                const float invLen = 1.0f / std::sqrt(lenSq);
-                                                                contactNormal.x *= invLen;
-                                                                contactNormal.y *= invLen;
-                                                                contactPenetration = contact2D.penetration;
-                                                        }
-                                                        else
-                                                        {
-                                                                usedSAT = false;
-                                                        }
-                                                }
-                                        }
-
-                                        if (!usedSAT && !fallbackAABB)
-                                        {
-                                                continue;
-                                        }
+                                if (!usedSAT && !contactComputed)
+                                {
+                                        continue;
                                 }
 
                                 const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, 0.0f };
