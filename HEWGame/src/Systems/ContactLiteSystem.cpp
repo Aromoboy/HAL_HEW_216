@@ -686,51 +686,33 @@ namespace Systems
                                 const bool bodyBResting = IsBodyResting(bodyB);
 
                                 const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
-                                const float restPenetrationThreshold = m_penetrationTolerance * 2.0f;
-                                const bool belowBaumgarteThreshold = contactPenetration <= restPenetrationThreshold;
-                                float baumgarteFactor = m_baumgarteFactor;
-                                if (!bodyAStatic && !bodyBStatic)
+                                if (penetrationError <= 0.0f)
                                 {
-                                        const float relativeSpeedSq = (physA.velocity.x - physB.velocity.x) * (physA.velocity.x - physB.velocity.x)
-                                                + (physA.velocity.y - physB.velocity.y) * (physA.velocity.y - physB.velocity.y);
-                                        const float relativeSpeed = std::sqrt(relativeSpeedSq);
-                                        if (relativeSpeed < m_minVerticalSpeed)
-                                        {
-                                                baumgarteFactor *= 0.4f;
-                                        }
-                                        else if (relativeSpeed < m_minVerticalSpeed * 2.0f)
-                                        {
-                                                baumgarteFactor *= 0.65f;
-                                        }
+                                        continue;
                                 }
 
-                                const bool pseudo2DStack = fallbackAABB && slopeAllowsSupport;
-                                const bool staticPair = bodyAStatic || bodyBStatic;
-                                if (pseudo2DStack)
-                                {
-                                        const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
-                                        const float pseudoStackDampen = staticPair ? 0.25f : 0.45f;
-                                        baumgarteFactor *= pseudoStackDampen * (0.55f + 0.45f * penetrationScale);
-                                }
-
-                                float pushDistance = belowBaumgarteThreshold
-                                        ? 0.0f
-                                        : std::min(baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
-                                if (pseudo2DStack && pushDistance > 0.0f)
-                                {
-                                        const float overCorrectionCap = penetrationError * 0.35f;
-                                        const float pseudo2DMax = m_penetrationTolerance * 3.0f;
-                                        if (overCorrectionCap > 0.0f)
-                                        {
-                                                pushDistance = std::min(pushDistance, overCorrectionCap);
-                                        }
-                                        pushDistance = std::min(pushDistance, pseudo2DMax);
-                                }
+                                const float pushDistance = std::clamp(
+                                        m_baumgarteFactor * penetrationError,
+                                        0.0f,
+                                        m_maxPenetrationCorrection);
                                 if (pushDistance <= 0.0f)
                                 {
                                         continue;
                                 }
 
+                                float3 resolutionNormal = contactNormal;
+                                resolutionNormal.z = 0.0f;
+                                const float resolutionLenSq = resolutionNormal.x * resolutionNormal.x + resolutionNormal.y * resolutionNormal.y;
+                                if (resolutionLenSq <= 1e-6f)
+                                {
+                                        continue;
+                                }
+                                const float invResolutionLen = 1.0f / std::sqrt(resolutionLenSq);
+                                resolutionNormal.x *= invResolutionLen;
+                                resolutionNormal.y *= invResolutionLen;
+                                contactNormal = resolutionNormal;
+
+                                const bool treatedAsSupport = isGroundContact;
                                 if (isGroundContact)
                                 {
                                         frameContactInfo[bodyA].supported = true;
@@ -742,112 +724,33 @@ namespace Systems
                                         frameContactInfo[bodyB].unsupportedContact = true;
                                 }
 
-                                bool sweetsSupportPair = false;
-                                bool unstableSupport = false;
-                                bool topIsA = centerA.y > centerB.y;
-                                float supportOverlapFraction = 1.0f;
-                                float slideDir = 0.0f;
-                                float verticalResolutionScale = 1.0f;
-
-                                const bool treatedAsSupport = isGroundContact;
-                                if (treatedAsSupport)
-                                {
-                                        const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
-                                        const auto sweetsTypeB = ResolveSweetsTag(bodyB->GetTag());
-                                        const bool sweetsTagA = sweetsTypeA.has_value();
-                                        const bool sweetsTagB = sweetsTypeB.has_value();
-                                        const bool foundationA = bodyA->GetTag() == "StageFoundation";
-                                        const bool foundationB = bodyB->GetTag() == "StageFoundation";
-                                        sweetsSupportPair = (sweetsTagA && sweetsTagB)
-                                                || (sweetsTagA && foundationB)
-                                                || (foundationA && sweetsTagB);
-
-                                        if (sweetsSupportPair)
-                                        {
-                                                const float widthA = boundsA.max.x - boundsA.min.x;
-                                                const float widthB = boundsB.max.x - boundsB.min.x;
-                                                const float minWidth = std::max(std::min(widthA, widthB), 1e-3f);
-                                                supportOverlapFraction = std::clamp(planarOverlapX / minWidth, 0.0f, 1.0f);
-                                                unstableSupport = supportOverlapFraction < m_stableSupportThreshold;
-                                                const float stableDenominator = std::max(m_stableSupportThreshold, 1e-3f);
-                                                verticalResolutionScale = unstableSupport
-                                                        ? std::clamp(supportOverlapFraction / stableDenominator, 0.0f, 1.0f)
-                                                        : 1.0f;
-
-                                                const AABB& baseBounds = topIsA ? boundsB : boundsA;
-                                                const AABB& topBounds = topIsA ? boundsA : boundsB;
-                                                const float baseCenterX = GetAxisCenter(baseBounds, 0);
-                                                const float topCenterX = GetAxisCenter(topBounds, 0);
-                                                slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
-
-                                                if (unstableSupport)
-                                                {
-                                                        Physics::Physical& topPhys = topIsA ? physA : physB;
-                                                        if (topPhys.weight > 0.0f)
-                                                        {
-                                                                const bool topResting = topIsA ? bodyAResting : bodyBResting;
-                                                                const float planarSpeedSq = topPhys.velocity.x * topPhys.velocity.x + topPhys.velocity.y * topPhys.velocity.y;
-                                                                const float planarSpeed = std::sqrt(planarSpeedSq);
-                                                                const float nearStopThreshold = m_restingSpeedThreshold * 2.0f;
-                                                                const float slideThreshold = std::max(m_restingSpeedThreshold * 4.0f, m_minTangentialSpeed * 2.0f);
-                                                                if (!topResting && planarSpeed > nearStopThreshold && planarSpeed >= slideThreshold)
-                                                                {
-                                                                        const float slowFactor = std::clamp((planarSpeed - slideThreshold) / (slideThreshold * 4.0f), 0.0f, 1.0f);
-                                                                        if (slowFactor > 0.0f)
-                                                                        {
-                                                                                const float boostScale = std::clamp(supportOverlapFraction, 0.0f, 1.0f)
-                                                                                        * slowFactor;
-                                                                                if (boostScale > 0.0f)
-                                                                                {
-                                                                                        const float boosted = m_edgeSlideBoost * boostScale * 0.35f;
-                                                                                        topPhys.velocity.x += slideDir * boosted;
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
-                                                }
-                                        }
-                                        pushDistance *= verticalResolutionScale;
-                                }
-
-                                if (pushDistance < kMinResolutionPush)
-                                {
-                                        continue;
-                                }
-
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
                                 if (!bodyAStatic && !bodyBStatic)
                                 {
                                         const float halfPush = pushDistance * 0.5f;
-                                        translationA.x += contactNormal.x * halfPush;
-                                        translationA.y += contactNormal.y * halfPush;
-                                        translationB.x -= contactNormal.x * halfPush;
-                                        translationB.y -= contactNormal.y * halfPush;
+                                        translationA.x += resolutionNormal.x * halfPush;
+                                        translationA.y += resolutionNormal.y * halfPush;
+                                        translationB.x -= resolutionNormal.x * halfPush;
+                                        translationB.y -= resolutionNormal.y * halfPush;
                                 }
                                 else if (!bodyAStatic && bodyBStatic)
                                 {
-                                        translationA.x += contactNormal.x * pushDistance;
-                                        translationA.y += contactNormal.y * pushDistance;
+                                        translationA.x += resolutionNormal.x * pushDistance;
+                                        translationA.y += resolutionNormal.y * pushDistance;
                                 }
                                 else if (bodyAStatic && !bodyBStatic)
                                 {
-                                        translationB.x -= contactNormal.x * pushDistance;
-                                        translationB.y -= contactNormal.y * pushDistance;
+                                        translationB.x -= resolutionNormal.x * pushDistance;
+                                        translationB.y -= resolutionNormal.y * pushDistance;
                                 }
                                 else
                                 {
                                         continue;
                                 }
 
-                                if (translationA.z != 0.0f)
-                                {
-                                        translationA.z = 0.0f;
-                                }
-                                if (translationB.z != 0.0f)
-                                {
-                                        translationB.z = 0.0f;
-                                }
+                                translationA.z = 0.0f;
+                                translationB.z = 0.0f;
 
                                 if (translationA.x != 0.0f || translationA.y != 0.0f || translationA.z != 0.0f)
                                 {
@@ -953,10 +856,6 @@ namespace Systems
                                                         ? std::clamp(relativeSpeed / m_maxRestitutionVelocity, 0.0f, 1.0f)
                                                         : 1.0f;
                                                 float impulse = -(1.0f + m_restitution * restitutionScale) * relativeVelocity / activeBodyCount;
-                                                if (treatedAsSupport && sweetsSupportPair && unstableSupport)
-                                                {
-                                                        impulse = 0.0f;
-                                                }
                                                 if (allowImpulseA)
                                                 {
                                                         physA.velocity.x += contactNormal.x * impulse;
@@ -977,16 +876,7 @@ namespace Systems
                                                 const float previousVelocity = Project(physA.velocity, contactNormal);
                                                 if (previousVelocity < 0.0f)
                                                 {
-                                                        if (unstableSupport && topIsA)
-                                                        {
-                                                                const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
-                                                                const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
-                                                                ApplyComponent(physA, contactNormal, adjustedVelocity);
-                                                        }
-                                                        else
-                                                        {
-                                                                ApplyComponent(physA, contactNormal, 0.0f);
-                                                        }
+                                                        ApplyComponent(physA, contactNormal, 0.0f);
                                                 }
                                         }
                                         if (bodyAStatic && !bodyBStatic && allowImpulseB)
@@ -994,16 +884,7 @@ namespace Systems
                                                 const float previousVelocity = Project(physB.velocity, contactNormal);
                                                 if (previousVelocity > 0.0f)
                                                 {
-                                                        if (unstableSupport && !topIsA)
-                                                        {
-                                                                const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
-                                                                const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
-                                                                ApplyComponent(physB, contactNormal, adjustedVelocity);
-                                                        }
-                                                        else
-                                                        {
-                                                                ApplyComponent(physB, contactNormal, 0.0f);
-                                                        }
+                                                        ApplyComponent(physB, contactNormal, 0.0f);
                                                 }
                                         }
 
