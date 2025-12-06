@@ -543,15 +543,57 @@ namespace
 
     std::vector<float2> SimplifyHull(const std::vector<float2>& hull, std::size_t targetMin, std::size_t targetMax)
     {
-        if (hull.size() <= targetMax)
+        if (hull.empty())
         {
             return hull;
         }
 
         std::vector<float2> simplified = hull;
-        const std::size_t minimum = std::min(targetMin, targetMax);
+        const std::size_t minimum = std::max<std::size_t>(3, std::min(targetMin, targetMax));
 
-        while (simplified.size() > targetMax && simplified.size() > 3)
+        auto ensureCCW = [](std::vector<float2>& polygon) {
+            float signedAreaSum = 0.0f;
+            for (std::size_t i = 0; i < polygon.size(); ++i)
+            {
+                const std::size_t next = (i + 1) % polygon.size();
+                signedAreaSum += (polygon[i].x * polygon[next].y) - (polygon[next].x * polygon[i].y);
+            }
+
+            if (signedAreaSum < 0.0f)
+            {
+                std::reverse(polygon.begin(), polygon.end());
+            }
+        };
+
+        ensureCCW(simplified);
+
+        while (simplified.size() < minimum)
+        {
+            float largestLenSq = -1.0f;
+            std::size_t insertEdge = 0;
+
+            for (std::size_t i = 0; i < simplified.size(); ++i)
+            {
+                const std::size_t next = (i + 1) % simplified.size();
+                const float dx = simplified[next].x - simplified[i].x;
+                const float dy = simplified[next].y - simplified[i].y;
+                const float lenSq = (dx * dx) + (dy * dy);
+
+                if (lenSq > largestLenSq)
+                {
+                    largestLenSq = lenSq;
+                    insertEdge = i;
+                }
+            }
+
+            const std::size_t next = (insertEdge + 1) % simplified.size();
+            const float2 midpoint{ (simplified[insertEdge].x + simplified[next].x) * 0.5f,
+                                   (simplified[insertEdge].y + simplified[next].y) * 0.5f };
+
+            simplified.insert(simplified.begin() + static_cast<std::ptrdiff_t>(next), midpoint);
+        }
+
+        while (simplified.size() > targetMax && simplified.size() > minimum)
         {
             float smallestMagnitude = std::numeric_limits<float>::max();
             std::size_t removeIndex = 0;
@@ -571,13 +613,9 @@ namespace
             }
 
             simplified.erase(simplified.begin() + static_cast<std::ptrdiff_t>(removeIndex));
-
-            if (simplified.size() <= minimum)
-            {
-                break;
-            }
         }
 
+        ensureCCW(simplified);
         return simplified;
     }
 
