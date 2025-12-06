@@ -183,6 +183,7 @@ namespace SweetsSpace
             std::vector<float2> hull;
             std::vector<std::vector<float2>> polygons;
             float thickness = 1.0f;
+            float2 centroidOffset{ 0.0f, 0.0f };
         };
         std::map<std::string, GeneratedCollider> m_generatedColliders;
 
