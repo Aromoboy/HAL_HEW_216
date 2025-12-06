@@ -511,16 +511,23 @@ namespace
 
         bounds.min = float3{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -thickness * 0.5f };
         bounds.max = float3{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), thickness * 0.5f };
+        bool anyValid = false;
 
         for (const auto& pt : hull)
         {
+            if (!std::isfinite(pt.x) || !std::isfinite(pt.y))
+            {
+                continue;
+            }
+
+            anyValid = true;
             bounds.min.x = std::min(bounds.min.x, pt.x);
             bounds.min.y = std::min(bounds.min.y, pt.y);
             bounds.max.x = std::max(bounds.max.x, pt.x);
             bounds.max.y = std::max(bounds.max.y, pt.y);
         }
 
-        bounds.valid = true;
+        bounds.valid = anyValid;
         return bounds;
     }
 
@@ -577,7 +584,6 @@ namespace
     {
         MeshHullSummary summary{};
         const float sanitizedPadding = SanitizeThicknessPadding(thicknessPadding);
-        (void)minThickness;
         summary.paddingFactor = sanitizedPadding;
 
         struct PositionOnly
@@ -659,8 +665,8 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         summary.hull = SimplifyHull(rawHull, kMinHullPoints, kMaxHullPoints);
-        summary.rawThickness = kDefaultGeneratedThicknessEpsilon;
-        summary.thickness = ApplyThicknessEpsilon(0.01f, minThickness);
+        summary.rawThickness = kDefaultGeneratedThicknessEpsilon * sanitizedPadding;
+        summary.thickness = ApplyThicknessEpsilon(summary.rawThickness, minThickness);
         summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);
 
         std::ostringstream oss;
