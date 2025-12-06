@@ -218,7 +218,6 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
-        float2 centroidOffset{ 0.0f, 0.0f };
         float rawThickness{ 0.0f };
         float thickness{ 1.0f };
         float paddingFactor{ 1.0f };
@@ -723,18 +722,22 @@ namespace
             return summary;
         }
 
-        float3 centroid{ 0.0f, 0.0f, 0.0f };
+        float2 centroid{ 0.0f, 0.0f };
         for (const auto& pos : positions)
         {
             centroid.x += pos.x;
             centroid.y += pos.y;
-            centroid.z += pos.z;
         }
+
         const float invCount = 1.0f / static_cast<float>(positions.size());
         centroid.x *= invCount;
         centroid.y *= invCount;
-        centroid.z *= invCount;
-        summary.centroidOffset = centroid;
+
+        for (auto& pos : positions)
+        {
+            pos.x -= centroid.x;
+            pos.y -= centroid.y;
+        }
 
         MeshBuffer::Description desc{};
         desc.pVtx = positions.data();
@@ -745,21 +748,6 @@ namespace
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        if (!positions.empty())
-        {
-            float2 centroid{ 0.0f, 0.0f };
-            for (const auto& pos : positions)
-            {
-                centroid.x += pos.x;
-                centroid.y += pos.y;
-            }
-
-            const float invCount = 1.0f / static_cast<float>(positions.size());
-            centroid.x *= invCount;
-            centroid.y *= invCount;
-            summary.centroidOffset = centroid;
-        }
-
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
@@ -769,9 +757,10 @@ namespace
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
 
         summary.rawThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{1.0f, 1.0f, 1.0f}, minThickness);
-        summary.thickness = summary.rawThickness;
+        const float paddedThickness = summary.rawThickness * sanitizedPadding;
+        summary.thickness = paddedThickness;
 
-        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);  
+        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);
 
 
         std::ostringstream oss;
@@ -1298,15 +1287,7 @@ namespace SweetsSpace
 
             const float adaptiveThickness = geometry.thickness;
 
-            GeneratedCollider generatedCollider{ geometry.hull, {}, adaptiveThickness };
-
-            
-            GeneratedCollider(
-                const std::vector<float2>& hull,
-                Something bounds,
-                float thickness,
-                float2 centroidOffset
-            );
+            GeneratedCollider generatedCollider{ geometry.hull, adaptiveThickness };
 
             m_generatedColliders[normalizedKind] = generatedCollider;
 
@@ -1355,7 +1336,7 @@ namespace SweetsSpace
 
             const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, generatedCollider,
+            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, geometry, generatedCollider,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
@@ -1451,13 +1432,14 @@ namespace SweetsSpace
                     colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
                 }
 
-                const float colliderThickness = geometry.bounds.valid
+                const float baseThickness = geometry.bounds.valid
                     ? ComputeAdaptiveThickness(generatedCollider.hull, scaledTransform.scale, m_generatedColliderMinThickness)
                     : ComputeAdaptiveThicknessFromExtents(
                         bounds.max.x - bounds.min.x,
                         bounds.max.y - bounds.min.y,
                         scaledTransform.scale,
                         m_generatedColliderMinThickness);
+                const float colliderThickness = baseThickness * geometry.paddingFactor;
                 ModelBounds colliderBounds = bounds;
                 colliderBounds.min.z = -colliderThickness * 0.5f;
                 colliderBounds.max.z = colliderThickness * 0.5f;
