@@ -828,9 +828,16 @@ namespace Systems
                                 const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
                                 const float relativeNormalSpeed = relativeVelocity.x * normal2.x + relativeVelocity.y * normal2.y;
 
-                                float jn = -(1.0f + m_restitution) * relativeNormalSpeed;
-                                if (jn >= 0.0f)
+                                const float invMassA = std::isinf(massA) ? 0.0f : (1.0f / massA);
+                                const float invMassB = std::isinf(massB) ? 0.0f : (1.0f / massB);
+                                const float invMassSum = invMassA + invMassB;
+
+                                float vn = relativeNormalSpeed;
+                                if (vn < 0.0f && invMassSum > 0.0f)
                                 {
+                                        vn = std::clamp(vn, -m_maxRestitutionVelocity, 0.0f);
+                                        float jn = -(1.0f + m_restitution) * vn / invMassSum;
+
                                         const auto [jnA, jnB] = SplitImpulse(jn);
                                         const float2 normalImpulseA{ normal2.x * jnA, normal2.y * jnA };
                                         const float2 normalImpulseB{ normal2.x * jnB, normal2.y * jnB };
@@ -858,9 +865,6 @@ namespace Systems
                                                 const float tangentialSpeed = std::sqrt(tangentialSpeedSq);
                                                 const float2 tangentDir{ tangentialVelocity.x / tangentialSpeed, tangentialVelocity.y / tangentialSpeed };
 
-                                                const float invMassA = std::isinf(massA) ? 0.0f : (1.0f / massA);
-                                                const float invMassB = std::isinf(massB) ? 0.0f : (1.0f / massB);
-                                                const float invMassSum = invMassA + invMassB;
                                                 if (invMassSum > 0.0f)
                                                 {
                                                         const float relTangentSpeed = relativeVelocity.x * tangentDir.x + relativeVelocity.y * tangentDir.y;
