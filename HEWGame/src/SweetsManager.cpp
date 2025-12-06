@@ -506,7 +506,7 @@ namespace
     {
         MeshHullSummary summary{};
         const float sanitizedPadding = SanitizeThicknessPadding(thicknessPadding);
-        const float flattenedThickness = SanitizeMinThickness(minThickness);
+        (void)minThickness;
         summary.paddingFactor = sanitizedPadding;
 
         struct PositionOnly
@@ -549,15 +549,16 @@ namespace
             for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
             {
                 const aiVector3D pos = mesh->mVertices[v];
-                positions.push_back(PositionOnly{ pos.x, pos.y, 0.0f });
+                const float flattenedZ = 0.0f;
+                positions.push_back(PositionOnly{ pos.x, pos.y, flattenedZ });
 
                 rawBounds.min.x = std::min(rawBounds.min.x, pos.x);
                 rawBounds.min.y = std::min(rawBounds.min.y, pos.y);
-                rawBounds.min.z = std::min(rawBounds.min.z, pos.z);
+                rawBounds.min.z = std::min(rawBounds.min.z, flattenedZ);
 
                 rawBounds.max.x = std::max(rawBounds.max.x, pos.x);
                 rawBounds.max.y = std::max(rawBounds.max.y, pos.y);
-                rawBounds.max.z = std::max(rawBounds.max.z, pos.z);
+                rawBounds.max.z = std::max(rawBounds.max.z, flattenedZ);
                 rawBounds.valid = true;
             }
 
@@ -580,9 +581,8 @@ namespace
         if (rawBounds.valid)
         {
             summary.bounds = rawBounds;
-            const float modelThickness = std::max(rawBounds.max.z - rawBounds.min.z, 0.0f);
-            summary.rawThickness = ApplyThicknessEpsilon(modelThickness, flattenedThickness);
-            summary.thickness = ApplyThicknessEpsilon(summary.rawThickness * summary.paddingFactor, flattenedThickness);
+            summary.rawThickness = kDefaultGeneratedThicknessEpsilon;
+            summary.thickness = kDefaultGeneratedThicknessEpsilon;
         }
         else
         {
@@ -606,18 +606,18 @@ namespace
             summary.hull = Collision::BuildConvexHullFromMesh(desc);
             summary.polygons = meshExtraction.polygons;
             std::ostringstream oss;
-            oss << kLogPrefix << "Analyzed geometry path='" << path
-                << "' format=" << format
-                << " vertices=" << positions.size()
-                << " indices=" << indices.size()
-                << " hullPoints=" << summary.hull.size() << " polygonParts=" << summary.polygons.size()
-                << " rawThickness=" << summary.rawThickness
-                << " paddedThickness=" << summary.thickness
-                << " paddingFactor=" << summary.paddingFactor
-                << " flattenedEpsilon=" << flattenedThickness << "\n";
-            DebugTrace(oss.str());
-        }
-        else
+                oss << kLogPrefix << "Analyzed geometry path='" << path
+                    << "' format=" << format
+                    << " vertices=" << positions.size()
+                    << " indices=" << indices.size()
+                    << " hullPoints=" << summary.hull.size() << " polygonParts=" << summary.polygons.size()
+                    << " rawThickness=" << summary.rawThickness
+                    << " paddedThickness=" << summary.thickness
+                    << " paddingFactor=" << summary.paddingFactor
+                    << " flattenedEpsilon=" << kDefaultGeneratedThicknessEpsilon << "\n";
+                DebugTrace(oss.str());
+            }
+            else
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Geometry analysis found no positions for '" << path << "'.\n";
@@ -1134,8 +1134,6 @@ namespace SweetsSpace
             DebugTrace(presetLog.str());
 
             MeshHullSummary geometry = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
-            const float baseFallbackThickness = fallbackBounds.max.z - fallbackBounds.min.z;
-            const float fallbackThickness = ApplyThicknessEpsilon(baseFallbackThickness * m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
             if (geometry.hull.empty() && geometry.bounds.valid)
             {
                 std::ostringstream warn;
@@ -1154,10 +1152,8 @@ namespace SweetsSpace
             }
             const float resolvedRawThickness = geometry.bounds.valid
                 ? geometry.rawThickness
-                : ApplyThicknessEpsilon(baseFallbackThickness, m_generatedColliderMinThickness);
-            const float paddedThickness = ApplyThicknessEpsilon(
-                std::max(resolvedRawThickness * m_generatedColliderThicknessPadding, fallbackThickness),
-                m_generatedColliderMinThickness);
+                : kDefaultGeneratedThicknessEpsilon;
+            const float paddedThickness = kDefaultGeneratedThicknessEpsilon;
             GeneratedCollider generatedCollider{ geometry.hull, geometry.polygons, paddedThickness };
             
             m_generatedColliders[normalizedKind] = generatedCollider;
