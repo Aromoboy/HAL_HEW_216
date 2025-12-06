@@ -123,11 +123,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 			if (nowTime - fpsOldTime >= 1000)
 			{
-#ifdef _DEBUG
-				DebugConsole::SetDrawPos(1, 2);
-				Diagnostics::LogDebug("FPS: " + std::to_string(fpsCount));
-				Diagnostics::LogDebug("Frame time (s): " + std::to_string(processingTime / 1000.0f));
-#endif
 				fpsCount = 0;
 				fpsOldTime = nowTime;
 			}

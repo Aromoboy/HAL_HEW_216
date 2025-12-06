@@ -1,209 +1,168 @@
-
-
 #include "AssimpModelLorder.h"
 
 #include <DirectXMath.h>
+#include <memory>
+#include <string>
+#include <vector>
 #include "TextureCache.h"
 #include "TextureDX.h"
+#include "ModelDX.h"
+#include "MeshDX.h"
+#include "MaterialDX.h"
+
 #if defined(_WIN32)
-#include <windows.h>
+#    include <windows.h>
 #endif
 
+AssimpModelLorder::AssimpModelLorder() = default;
 
-AssimpModelLorder::AssimpModelLorder()
+// モデル読み込み
+std::shared_ptr<ModelDX> AssimpModelLorder::Load(
+    const std::string& path,
+    ID3D11Device* device,
+    TextureCache& textureCache)
 {
+    Assimp::Importer importer;
+    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs;
+    const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
+    if (!pScene)
+        return nullptr;
+
+    // ディレクトリ抽出
+    std::string directory = path;
+    for (auto& c : directory)
+        if (c == '/')
+            c = '\\';
+    directory = directory.substr(0, directory.find_last_of('\\') + 1);
+
+    // メッシュ作成
+    auto meshes = MakeMesh(pScene);
+
+    // マテリアル作成
+    auto materials = MakeMaterial(pScene, directory, device, textureCache);
+
+    // モデル生成
+    return std::make_shared<ModelDX>(meshes, materials);
 }
 
-// [h
-std::shared_ptr<Render::Model> AssimpModelLorder::Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache)
+// メッシュ作成
+std::vector<std::shared_ptr<MeshDX>>
+AssimpModelLorder::MakeMesh(const aiScene* ptr)
 {
-#ifdef _DEBUG
-	std::string errorStr = "";
-#endif
+    const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+    std::vector<std::shared_ptr<MeshDX>> meshes;
+    meshes.resize(pScene->mNumMeshes);
 
-	// assimp̐ݒ
-	Assimp::Importer importer;
-	int flag = 0;
-	flag |= aiProcess_Triangulate;
-	flag |= aiProcess_FlipUVs;
-	//flag |= aiProcess_MakeLeftHanded;
+    for (unsigned int i = 0; i < meshes.size(); ++i)
+    {
+        std::vector<MeshDX::Vertex> vertices;
+        std::vector<unsigned long> indices;
 
-	// assimpœǂݍ
-	const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
-	if (!pScene) {
-#ifdef _DEBUG
-		errorStr = importer.GetErrorString();
-#endif
-		return nullptr;
-	}
+        // 頂点
+        vertices.resize(pScene->mMeshes[i]->mNumVertices);
+        for (unsigned int j = 0; j < vertices.size(); ++j)
+        {
+            aiVector3D pos = pScene->mMeshes[i]->mVertices[j];
+            aiVector3D normal = pScene->mMeshes[i]->HasNormals()
+                ? pScene->mMeshes[i]->mNormals[j]
+                : aiVector3D(0, 0, 0);
+            aiVector3D uv = pScene->mMeshes[i]->HasTextureCoords(0)
+                ? pScene->mMeshes[i]->mTextureCoords[0][j]
+                : aiVector3D(0, 0, 0);
+            aiColor4D col = pScene->mMeshes[i]->HasVertexColors(0)
+                ? pScene->mMeshes[i]->mColors[0][j]
+                : aiColor4D(1, 1, 1, 1);
 
-	// ǂݍݎ̐ݒۑ
-	
+            vertices[j] = {
+                DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
+                DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
+                DirectX::XMFLOAT2(uv.x, uv.y),
+                DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
+            };
+        }
 
-	// fBNg̓ǂݎ
-	std::string directory = path;
-	auto strIt = directory.begin();
-	while (strIt != directory.end()) {
-		if (*strIt == '/')
-			*strIt = '\\';
-		++strIt;
-	}
-	directory = directory.substr(0, directory.find_last_of('\\') + 1);
+        // インデックス
+        indices.resize(pScene->mMeshes[i]->mNumFaces * 3);
+        for (unsigned int j = 0; j < pScene->mMeshes[i]->mNumFaces; ++j)
+        {
+            aiFace face = pScene->mMeshes[i]->mFaces[j];
+            int idx = j * 3;
+            indices[idx + 0] = face.mIndices[0];
+            indices[idx + 1] = face.mIndices[1];
+            indices[idx + 2] = face.mIndices[2];
+        }
 
-	// bV쐬
-	std::vector<std::shared_ptr<MeshDX>> meshes = MakeMesh(pScene);
-	// }eA̍쐬
-	        std::vector<std::shared_ptr<MaterialDX>> materials = MakeMaterial(pScene, directory, device, textureCache);
+        // マテリアル番号
+        unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
 
+        // 説明構造体
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = static_cast<unsigned int>(vertices.size());
+        desc.pIdx = indices.data();
+        desc.idxSize = sizeof(unsigned long);
+        desc.idxCount = static_cast<unsigned int>(indices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	return make_shared<ModelDX>(meshes, materials);
+        meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+    }
+
+    return meshes;
 }
 
-// bV̍쐬
-std::vector<std::shared_ptr<MeshDX>> AssimpModelLorder::MakeMesh(const aiScene* ptr)
+// マテリアル作成
+std::vector<std::shared_ptr<MaterialDX>>
+AssimpModelLorder::MakeMaterial(
+    const aiScene* ptr,
+    const std::string& directory,
+    ID3D11Device* device,
+    TextureCache& textureCache)
 {
-	// O
-	aiVector3D zero3(0.0f, 0.0f, 0.0f);
-	aiColor4D one4(1.0f, 1.0f, 1.0f, 1.0f);
-	const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+    const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+    std::vector<std::shared_ptr<MaterialDX>> materials;
+    materials.resize(pScene->mNumMaterials);
 
+    for (unsigned int i = 0; i < materials.size(); ++i)
+    {
+        DirectX::XMFLOAT4 diffuse;
+        DirectX::XMFLOAT4 ambient;
+        DirectX::XMFLOAT4 specular;
 
-	std::vector<std::shared_ptr<MeshDX>> meshes;
+        aiColor3D col;
+        float shininess = 0.0f;
 
-	std::vector<MeshDX::Vertex> vertices;
+        if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, col) == AI_SUCCESS)
+            diffuse = { col.r, col.g, col.b, 1.0f };
+        else
+            diffuse = { 1, 1, 1, 1 };
 
+        if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, col) == AI_SUCCESS)
+            ambient = { col.r, col.g, col.b, 1.0f };
+        else
+            ambient = { 0.3f, 0.3f, 0.3f, 1.0f };
 
-	// bV̍쐬
-	meshes.resize(pScene->mNumMeshes);
-	for (unsigned int i = 0; i < meshes.size(); ++i)
-	{
-		Vertices vertices;
-		Indices indices;
+        if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_SPECULAR, col) == AI_SUCCESS)
+            specular = { col.r, col.g, col.b, 0.0f };
+        else
+            specular = { 0, 0, 0, 0 };
 
-		// _ݐ̗̈p
-		vertices.resize(pScene->mMeshes[i]->mNumVertices);
+        if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
+            specular.w = shininess;
 
-		// _f[^̏
-		for (unsigned int j = 0; j < vertices.size(); ++j) {
-			// ff[^l̎擾
-			aiVector3D pos = pScene->mMeshes[i]->mVertices[j]; // Positioñf[^͕K݂
-			aiVector3D normal = pScene->mMeshes[i]->HasNormals() ? // K݂킯ł͂Ȃ̂ő݂邩mF
-				pScene->mMeshes[i]->mNormals[j] : zero3;
-			aiVector3D uv = pScene->mMeshes[i]->HasTextureCoords(0) ?
-				pScene->mMeshes[i]->mTextureCoords[0][j] : zero3;
-			aiColor4D color = pScene->mMeshes[i]->HasVertexColors(0) ?
-				pScene->mMeshes[i]->mColors[0][j] : one4;
+        // テクスチャ
+        std::shared_ptr<Texture2D> texture = nullptr;
+        aiString texPath;
+        if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+        {
+            std::string texFile = texPath.C_Str();
+            std::string full = directory + texFile;
+            std::wstring wfull(full.begin(), full.end());
+            texture = textureCache.Load(full, device, wfull);
+        }
 
-			// lݒ
-			vertices[j] = {
-				DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
-				DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
-				DirectX::XMFLOAT2(uv.x, uv.y),
-				DirectX::XMFLOAT4(color.r, color.g, color.b, color.a)
-			};
-		}
+        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+    }
 
-		// CfbNX̏ݐ̗p
-		// mNumFaces̓|S̐\(P|S3CfbNX
-		indices.resize(pScene->mMeshes[i]->mNumFaces * 3);
-
-		// CfbNX̏
-		for (unsigned int j = 0; j < pScene->mMeshes[i]->mNumFaces; ++j) {
-			// ff[^l̎擾
-			aiFace face = pScene->mMeshes[i]->mFaces[j];
-			// l̐ݒ
-			int idx = j * 3;
-			indices[idx + 0] = face.mIndices[0];
-			indices[idx + 1] = face.mIndices[1];
-			indices[idx + 2] = face.mIndices[2];
-		}
-
-		// }eAԍ
-		unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
-		
-		// _obt@ɕKvȃf[^ݒ
-		MeshDX::Description desc = {};
-		desc.pVtx = vertices.data();
-		desc.vtxSize = sizeof(MeshDX::Vertex);
-		desc.vtxCount = vertices.size();
-		desc.pIdx = indices.data();
-		desc.idxSize = sizeof(unsigned long);
-		desc.idxCount = indices.size();
-		desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-		// _obt@쐬
-		meshes[i] = make_shared<MeshDX>(desc, materialIndex);
-	}
-
-	return meshes;
-}
-
-// }eA̍쐬
-std::vector<std::shared_ptr<MaterialDX>> AssimpModelLorder::MakeMaterial(const aiScene* ptr, const std::string& directory, ID3D11Device* device, TextureCache& textureCache)
-{
-	// O
-	aiColor3D color(0.0f, 0.0f, 0.0f);
-	float shininess = 0.0f;
-	const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
-
-	std::vector<std::shared_ptr<MaterialDX>> materials;
-	DirectX::XMFLOAT4 diffuse;
-	DirectX::XMFLOAT4 ambient;
-	DirectX::XMFLOAT4 specular;
-
-
-
-	// }eA̍쐬
-	materials.resize(pScene->mNumMaterials);
-	for (unsigned int i = 0; i < materials.size(); ++i)
-	{
-		//--- e}eAp[^[̓ǂݎ
-		// gU̓ǂݎ
-		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
-			diffuse = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
-		else
-			diffuse = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		// ̓ǂݎ
-		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, color) == AI_SUCCESS)
-			ambient = DirectX::XMFLOAT4(color.r, color.g, color.b, 1.0f);
-		else
-			ambient = DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-		// ˌ̓ǂݎ
-		if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS)
-			specular = DirectX::XMFLOAT4(color.r, color.g, color.b, 0.0f);
-		else
-			specular = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-		// ˌ̋ǂݎ
-		if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
-			specular.w = shininess;
-
-		// テクスチャの読み込み
-		std::shared_ptr<Texture2D> texture = nullptr;
-
-		aiString texturePath;
-		if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
-		{
-			std::string textureFile = texturePath.C_Str();
-			std::string fullPath = directory + textureFile;
-
-			// Convert string to wstring for TextureCache::Load
-			std::wstring wPath(fullPath.begin(), fullPath.end());
-
-			// Try to load texture
-			texture = textureCache.Load(fullPath, device, wPath);
-
-			// Only show error if loading failed
-			if (!texture)
-			{
-				OutputDebugStringA(("[AssimpLoader] テクスチャロード失敗: " + fullPath + "\n").c_str());
-				// Don't popup - just continue without texture
-			}
-		}
-
-		materials[i] = make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-	}
-
-
-
-	return materials;
+    return materials;
 }
