@@ -793,10 +793,36 @@ namespace Systems
                                 Entities::TranslatePhysicalEntity(*bodyA, translationA);
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
+
                                 const bool allowImpulseA = !bodyAStatic;
                                 const bool allowImpulseB = !bodyBStatic;
                                 const bool modifyVelocityA = allowImpulseA && !IsPlayerBody(bodyA);
                                 const bool modifyVelocityB = allowImpulseB && !IsPlayerBody(bodyB);
+                                const float massA = bodyAStatic ? std::numeric_limits<float>::infinity() : physA.weight;
+                                const float massB = bodyBStatic ? std::numeric_limits<float>::infinity() : physB.weight;
+                                const auto SplitImpulse = [&](float impulse)
+                                {
+                                        float impulseA = 0.0f;
+                                        float impulseB = 0.0f;
+                                        if (std::isinf(massA))
+                                        {
+                                                impulseB = -impulse;
+                                        }
+                                        else if (std::isinf(massB))
+                                        {
+                                                impulseA = impulse;
+                                        }
+                                        else
+                                        {
+                                                const float massSum = massA + massB;
+                                                if (massSum > 0.0f)
+                                                {
+                                                        impulseA = impulse * (massB / massSum);
+                                                        impulseB = -impulse * (massA / massSum);
+                                                }
+                                        }
+                                        return std::pair<float, float>{ impulseA, impulseB };
+                                };
 
                                 const float2 normal2{ contactNormal.x, contactNormal.y };
                                 const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
@@ -805,25 +831,19 @@ namespace Systems
                                 float jn = -(1.0f + m_restitution) * relativeNormalSpeed;
                                 if (jn >= 0.0f)
                                 {
-                                        const float2 normalImpulse{ normal2.x * jn, normal2.y * jn };
+                                        const auto [jnA, jnB] = SplitImpulse(jn);
+                                        const float2 normalImpulseA{ normal2.x * jnA, normal2.y * jnA };
+                                        const float2 normalImpulseB{ normal2.x * jnB, normal2.y * jnB };
 
-                                        if (modifyVelocityA && modifyVelocityB)
+                                        if (modifyVelocityA)
                                         {
-                                                const float half = 0.5f;
-                                                physA.velocity.x += normalImpulse.x * half;
-                                                physA.velocity.y += normalImpulse.y * half;
-                                                physB.velocity.x -= normalImpulse.x * half;
-                                                physB.velocity.y -= normalImpulse.y * half;
+                                                physA.velocity.x += normalImpulseA.x;
+                                                physA.velocity.y += normalImpulseA.y;
                                         }
-                                        else if (modifyVelocityA)
+                                        if (modifyVelocityB)
                                         {
-                                                physA.velocity.x += normalImpulse.x;
-                                                physA.velocity.y += normalImpulse.y;
-                                        }
-                                        else if (modifyVelocityB)
-                                        {
-                                                physB.velocity.x -= normalImpulse.x;
-                                                physB.velocity.y -= normalImpulse.y;
+                                                physB.velocity.x += normalImpulseB.x;
+                                                physB.velocity.y += normalImpulseB.y;
                                         }
 
                                         float2 tangentialVelocity
@@ -832,51 +852,40 @@ namespace Systems
                                                 relativeVelocity.y - relativeNormalSpeed * normal2.y
                                         };
 
-                                        const float tangentialSpeed = std::sqrt(tangentialVelocity.x * tangentialVelocity.x + tangentialVelocity.y * tangentialVelocity.y);
-                                        constexpr float kTangentEpsilon = 1e-5f;
-
-                                        if (tangentialSpeed < kTangentEpsilon)
+                                        const float tangentialSpeedSq = tangentialVelocity.x * tangentialVelocity.x + tangentialVelocity.y * tangentialVelocity.y;
+                                        if (tangentialSpeedSq > 1e-6f)
                                         {
-                                                const float2 tangentDir{ -normal2.y, normal2.x };
-
-                                                if (modifyVelocityA)
-                                                {
-                                                        const float component = physA.velocity.x * tangentDir.x + physA.velocity.y * tangentDir.y;
-                                                        physA.velocity.x -= component * tangentDir.x;
-                                                        physA.velocity.y -= component * tangentDir.y;
-                                                }
-                                                if (modifyVelocityB)
-                                                {
-                                                        const float component = physB.velocity.x * tangentDir.x + physB.velocity.y * tangentDir.y;
-                                                        physB.velocity.x -= component * tangentDir.x;
-                                                        physB.velocity.y -= component * tangentDir.y;
-                                                }
-                                        }
-                                        else
-                                        {
+                                                const float tangentialSpeed = std::sqrt(tangentialSpeedSq);
                                                 const float2 tangentDir{ tangentialVelocity.x / tangentialSpeed, tangentialVelocity.y / tangentialSpeed };
-                                                float jt = -m_dynamicFriction * std::fabs(jn);
-                                                const float maxFriction = m_staticFriction * std::fabs(jn);
-                                                jt = std::clamp(jt, -maxFriction, maxFriction);
-                                                const float2 tangentImpulse{ tangentDir.x * jt, tangentDir.y * jt };
 
-                                                if (modifyVelocityA && modifyVelocityB)
+                                                const float invMassA = std::isinf(massA) ? 0.0f : (1.0f / massA);
+                                                const float invMassB = std::isinf(massB) ? 0.0f : (1.0f / massB);
+                                                const float invMassSum = invMassA + invMassB;
+                                                if (invMassSum > 0.0f)
                                                 {
-                                                        const float half = 0.5f;
-                                                        physA.velocity.x += tangentImpulse.x * half;
-                                                        physA.velocity.y += tangentImpulse.y * half;
-                                                        physB.velocity.x -= tangentImpulse.x * half;
-                                                        physB.velocity.y -= tangentImpulse.y * half;
-                                                }
-                                                else if (modifyVelocityA)
-                                                {
-                                                        physA.velocity.x += tangentImpulse.x;
-                                                        physA.velocity.y += tangentImpulse.y;
-                                                }
-                                                else if (modifyVelocityB)
-                                                {
-                                                        physB.velocity.x -= tangentImpulse.x;
-                                                        physB.velocity.y -= tangentImpulse.y;
+                                                        const float relTangentSpeed = relativeVelocity.x * tangentDir.x + relativeVelocity.y * tangentDir.y;
+                                                        float jt = -relTangentSpeed / invMassSum;
+                                                        const float maxStatic = m_staticFriction * std::fabs(jn);
+                                                        if (std::fabs(jt) > maxStatic)
+                                                        {
+                                                                const float sign = (relTangentSpeed >= 0.0f) ? 1.0f : -1.0f;
+                                                                jt = -sign * m_dynamicFriction * std::fabs(jn);
+                                                        }
+
+                                                        const auto [jtA, jtB] = SplitImpulse(jt);
+                                                        const float2 tangentImpulseA{ tangentDir.x * jtA, tangentDir.y * jtA };
+                                                        const float2 tangentImpulseB{ tangentDir.x * jtB, tangentDir.y * jtB };
+
+                                                        if (modifyVelocityA)
+                                                        {
+                                                                physA.velocity.x += tangentImpulseA.x;
+                                                                physA.velocity.y += tangentImpulseA.y;
+                                                        }
+                                                        if (modifyVelocityB)
+                                                        {
+                                                                physB.velocity.x += tangentImpulseB.x;
+                                                                physB.velocity.y += tangentImpulseB.y;
+                                                        }
                                                 }
                                         }
                                 }
