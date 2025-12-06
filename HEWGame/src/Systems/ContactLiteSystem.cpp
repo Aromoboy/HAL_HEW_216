@@ -36,7 +36,6 @@ namespace
         }
 
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
-        constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
         constexpr float kSatPlanarOverlapThreshold = 0.05f;
         constexpr float kMinResolutionPush = 1e-4f;
@@ -552,10 +551,9 @@ namespace Systems
                                         break;
                                 }
 
-                                float overlaps[3];
+                                float overlaps[2];
                                 overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
-                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
                                 if (overlaps[sweepAxis] <= 0.0f || overlaps[secondaryPlanarAxis] <= 0.0f)
                                 {
@@ -579,11 +577,6 @@ namespace Systems
                                 const bool sweetsB = layerB == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyB->GetTag());
                                 const bool sweetsPair = sweetsA || sweetsB;
 
-                                if (!pairIs2D && !playerPlatformPair && !sweetsPair && overlaps[2] < -kPlanarZTolerance)
-                                {
-                                        continue;
-                                }
-
                                 if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f)
                                 {
                                         continue;
@@ -597,7 +590,6 @@ namespace Systems
 
                                 const float planarOverlapX = overlaps[0];
                                 const float planarOverlapY = overlaps[1];
-                                const float planarOverlapZ = overlaps[2];
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };

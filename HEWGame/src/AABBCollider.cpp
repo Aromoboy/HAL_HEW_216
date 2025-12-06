@@ -4,7 +4,6 @@
 
 namespace
 {
-        constexpr float kPlanarZTolerance = 1e-3f;
 }
 
 Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float3 a_expand, float3 a_offset, CollisionLayer layer)
@@ -31,12 +30,6 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
         // Y軸方向で重なっているかを確認
         if (thisAABB.max.y < otherAABB.min.y ||           // Y軸方向で分離している
                 thisAABB.min.y > otherAABB.max.y) return false;
-
-        const float planarZOverlap = std::min(thisAABB.max.z, otherAABB.max.z) - std::max(thisAABB.min.z, otherAABB.min.z);
-        if (planarZOverlap < -kPlanarZTolerance)
-        {
-                return false;
-        }
 
         return true;
 
