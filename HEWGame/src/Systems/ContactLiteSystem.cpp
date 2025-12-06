@@ -398,8 +398,6 @@ namespace Systems
                 std::vector<BodyProxy> proxies;
                 proxies.reserve(bodyCount);
 
-                float planarMin[2]{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-                float planarMax[2]{ -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };
                 for (Entities::PhysicalEntity* body : activeBodies)
                 {
                         if (!body)
@@ -415,16 +413,10 @@ namespace Systems
 
                         body->SyncColliderBounds();
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
-
-                        for (int axis = 0; axis < 2; ++axis)
-                        {
-                                planarMin[axis] = std::min(planarMin[axis], GetAxisMin(proxies.back().bounds, axis));
-                                planarMax[axis] = std::max(planarMax[axis], GetAxisMax(proxies.back().bounds, axis));
-                        }
                 }
 
-                const int sweepAxis = (planarMax[0] - planarMin[0] >= planarMax[1] - planarMin[1]) ? 0 : 1;
-                const int planarTestAxis = sweepAxis == 0 ? 1 : 0;
+                const int sweepAxis = 0;
+                const int planarTestAxis = 1;
 
                 std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
                 {
@@ -453,13 +445,14 @@ namespace Systems
                         for (size_t j = i + 1; j < proxyCount; ++j)
                         {
                                 const BodyProxy& proxyB = proxies[j];
-                                if (GetAxisMin(proxyB.bounds, sweepAxis) > GetAxisMax(proxyA.bounds, sweepAxis))
+                                const float sweepOverlapX = GetAxisOverlap(proxyA.bounds, proxyB.bounds, sweepAxis);
+                                if (sweepOverlapX <= 0.0f)
                                 {
                                         break;
                                 }
 
-                                const float planarOverlap = GetAxisOverlap(proxyA.bounds, proxyB.bounds, planarTestAxis);
-                                if (planarOverlap <= 0.0f)
+                                const float sweepOverlapY = GetAxisOverlap(proxyA.bounds, proxyB.bounds, planarTestAxis);
+                                if (sweepOverlapY <= 0.0f)
                                 {
                                         continue;
                                 }
@@ -493,8 +486,8 @@ namespace Systems
                                 const AABB boundsB = proxyB.bounds;
 
                                 float overlaps[3];
-                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
-                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[0] = sweepOverlapX;
+                                overlaps[1] = sweepOverlapY;
                                 overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
                                 const float planarOverlapX = overlaps[0];
