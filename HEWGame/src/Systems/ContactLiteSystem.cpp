@@ -371,6 +371,12 @@ namespace Systems
                                 continue;
                         }
 
+                        body->UpdateSleepState(body->GetPhysical().velocity);
+                        if (body->IsSleeping())
+                        {
+                                continue;
+                        }
+
                         const bool isPlayer = IsPlayerBody(body);
                         const bool kinematic = !(body->GetPhysical().weight > 0.0f);
                         if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))

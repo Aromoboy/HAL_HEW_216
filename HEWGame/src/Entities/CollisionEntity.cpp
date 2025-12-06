@@ -1,5 +1,6 @@
 #include "Entities/CollisionEntity.h"
 
+#include <cmath>
 #include <sstream>
 #include <utility>
 
@@ -23,6 +24,9 @@ namespace
         (void)message;
     }
 #endif
+
+    constexpr float kSleepVelocityEpsilon = 0.01f;
+    constexpr int kSleepFrameThreshold = 10;
 }
 
 namespace Entities
@@ -32,6 +36,8 @@ namespace Entities
         , m_collider(std::move(collider))
         , m_collisionLayer(layer)
         , m_contactSystem(contactSystem)
+        , m_lastTransform(transform)
+        , m_lastVelocity{ 0.0f, 0.0f, 0.0f }
     {
         if (m_collider)
         {
@@ -92,10 +98,50 @@ namespace Entities
             return;
         }
 
+        Wake();
         m_transform.position.x += delta.x;
         m_transform.position.y += delta.y;
         m_transform.position.z += delta.z;
         SyncColliderBounds();
+    }
+
+    void CollisionEntity::UpdateSleepState(const float3& velocity)
+    {
+        const float dx = m_transform.position.x - m_lastTransform.position.x;
+        const float dy = m_transform.position.y - m_lastTransform.position.y;
+        const float dz = m_transform.position.z - m_lastTransform.position.z;
+        const float displacementSq = dx * dx + dy * dy + dz * dz;
+
+        const float vx = velocity.x;
+        const float vy = velocity.y;
+        const float vz = velocity.z;
+        const float velocitySq = vx * vx + vy * vy + vz * vz;
+
+        const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
+        const bool moved = displacementSq > sleepThresholdSq;
+        const bool velocityAwake = velocitySq > sleepThresholdSq;
+
+        if (moved || velocityAwake)
+        {
+            Wake();
+        }
+        else if (m_stationaryFrameCount < kSleepFrameThreshold)
+        {
+            ++m_stationaryFrameCount;
+            if (m_stationaryFrameCount >= kSleepFrameThreshold)
+            {
+                m_isSleeping = true;
+            }
+        }
+
+        m_lastTransform = m_transform;
+        m_lastVelocity = velocity;
+    }
+
+    void CollisionEntity::Wake()
+    {
+        m_isSleeping = false;
+        m_stationaryFrameCount = 0;
     }
 
     Systems::ContactLiteSystem* CollisionEntity::GetContactSystem() const
