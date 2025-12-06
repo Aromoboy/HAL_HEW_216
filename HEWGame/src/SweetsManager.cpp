@@ -3523,6 +3523,11 @@ namespace SweetsSpace
     {
         Transform transform{};
         transform.position = origin;
+        static bool s_flipSpawnSign = false;
+        s_flipSpawnSign = !s_flipSpawnSign;
+        std::uniform_real_distribution<float> xJitterDist(1.0f, 1.5f);
+        const float xJitter = (s_flipSpawnSign ? 1.0f : -1.0f) * xJitterDist(m_random);
+        transform.position.x += xJitter;
         transform.position.y += m_spawnHeightOffset;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
