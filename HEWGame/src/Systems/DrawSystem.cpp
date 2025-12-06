@@ -1,7 +1,6 @@
 #include "Systems/DrawSystem.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <DirectXMath.h>
 
@@ -12,6 +11,8 @@
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
+
+bool g_DrawColliders = false;
 
 namespace
 {
@@ -81,16 +82,26 @@ namespace
                 }
         }
 
-        constexpr std::array<DirectX::XMFLOAT4, 6> kCompoundChildColors{
-                DirectX::XMFLOAT4{ 1.0f, 0.3f, 0.3f, 1.0f },
-                DirectX::XMFLOAT4{ 0.3f, 1.0f, 0.3f, 1.0f },
-                DirectX::XMFLOAT4{ 0.3f, 0.6f, 1.0f, 1.0f },
-                DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.3f, 1.0f },
-                DirectX::XMFLOAT4{ 0.8f, 0.3f, 1.0f, 1.0f },
-                DirectX::XMFLOAT4{ 0.3f, 1.0f, 1.0f, 1.0f },
-        };
+        DirectX::XMFLOAT4 GetLayerColor(const Collision::ICollider* collider)
+        {
+                if (!collider)
+                {
+                        return DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
+                }
 
-        constexpr DirectX::XMFLOAT4 kColliderOutlineColor{ 1.0f, 0.0f, 0.0f, 1.0f };
+                switch (collider->GetLayer())
+                {
+                case Collision::CollisionLayer::Player:
+                        return DirectX::XMFLOAT4{ 0.0f, 1.0f, 1.0f, 1.0f }; // Cyan
+                case Collision::CollisionLayer::Floor:
+                        return DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 1.0f }; // White
+                case Collision::CollisionLayer::Sweets:
+                        return DirectX::XMFLOAT4{ 1.0f, 1.0f, 0.0f, 1.0f }; // Yellow
+                case Collision::CollisionLayer::Default:
+                default:
+                        return DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
+                }
+        }
 }
 
 namespace Systems
@@ -214,9 +225,28 @@ namespace Systems
                 }
 
                 RenderEntity(camera);
+        }
+
+        void DrawSystem::DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera)
+        {
+                if (m_colliderCommands.empty())
+                {
+                        return;
+                }
+
+                if (!g_DrawColliders)
+                {
+                        m_colliderCommands.clear();
+                        return;
+                }
+
+                if (!camera)
+                {
+                        m_colliderCommands.clear();
+                        return;
+                }
 
                 RenderCollision(camera);
-
         }
 
         size_t DrawSystem::GetRenderCommandCount() const
@@ -256,6 +286,7 @@ namespace Systems
 
         void DrawSystem::RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
+            (void)camera;
             if (m_colliderCommands.empty())
             {
                 return;
@@ -271,6 +302,7 @@ namespace Systems
                 const Transform transform = command.source->GetTransform();
                 const float z = transform.position.z;
                 const auto* collider2D = dynamic_cast<const Collision::ICollider2D*>(command.collider);
+                const DirectX::XMFLOAT4 layerColor = GetLayerColor(command.collider);
 
                 if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(collider2D))
                 {
@@ -284,7 +316,7 @@ namespace Systems
                             continue;
                         }
 
-                        const DirectX::XMFLOAT4 color = kCompoundChildColors[childIndex % kCompoundChildColors.size()];
+                        const DirectX::XMFLOAT4 color = layerColor;
                         if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(child2D))
                         {
                             DrawCircleOutline(*circle, z, color);
@@ -304,22 +336,23 @@ namespace Systems
 
                 if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(collider2D))
                 {
-                    DrawCircleOutline(*circle, z, kColliderOutlineColor);
+                    DrawCircleOutline(*circle, z, layerColor);
                 }
                 else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(collider2D))
                 {
-                    DrawHullOutline(*hull, z, kColliderOutlineColor);
+                    DrawHullOutline(*hull, z, layerColor);
                 }
                 else if (collider2D)
                 {
-                    DrawAABB2D(collider2D->GetAABB(), z, kColliderOutlineColor);
+                    DrawAABB2D(collider2D->GetAABB(), z, layerColor);
                 }
                 else
                 {
-                    DrawAABB2D(command.aabb, z, kColliderOutlineColor);
+                    DrawAABB2D(command.aabb, z, layerColor);
                 }
             }
 
             m_colliderCommands.clear();
+            Geometory::DrawLines();
         }
 }

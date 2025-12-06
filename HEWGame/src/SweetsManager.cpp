@@ -218,6 +218,7 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
+        float2 centroidOffset{ 0.0f, 0.0f };
         float rawThickness{ 0.0f };
         float thickness{ 1.0f };
         float paddingFactor{ 1.0f };
@@ -574,15 +575,57 @@ namespace
 
     std::vector<float2> SimplifyHull(const std::vector<float2>& hull, std::size_t targetMin, std::size_t targetMax)
     {
-        if (hull.size() <= targetMax)
+        if (hull.empty())
         {
             return hull;
         }
 
         std::vector<float2> simplified = hull;
-        const std::size_t minimum = std::min(targetMin, targetMax);
+        const std::size_t minimum = std::max<std::size_t>(3, std::min(targetMin, targetMax));
 
-        while (simplified.size() > targetMax && simplified.size() > 3)
+        auto ensureCCW = [](std::vector<float2>& polygon) {
+            float signedAreaSum = 0.0f;
+            for (std::size_t i = 0; i < polygon.size(); ++i)
+            {
+                const std::size_t next = (i + 1) % polygon.size();
+                signedAreaSum += (polygon[i].x * polygon[next].y) - (polygon[next].x * polygon[i].y);
+            }
+
+            if (signedAreaSum < 0.0f)
+            {
+                std::reverse(polygon.begin(), polygon.end());
+            }
+        };
+
+        ensureCCW(simplified);
+
+        while (simplified.size() < minimum)
+        {
+            float largestLenSq = -1.0f;
+            std::size_t insertEdge = 0;
+
+            for (std::size_t i = 0; i < simplified.size(); ++i)
+            {
+                const std::size_t next = (i + 1) % simplified.size();
+                const float dx = simplified[next].x - simplified[i].x;
+                const float dy = simplified[next].y - simplified[i].y;
+                const float lenSq = (dx * dx) + (dy * dy);
+
+                if (lenSq > largestLenSq)
+                {
+                    largestLenSq = lenSq;
+                    insertEdge = i;
+                }
+            }
+
+            const std::size_t next = (insertEdge + 1) % simplified.size();
+            const float2 midpoint{ (simplified[insertEdge].x + simplified[next].x) * 0.5f,
+                                   (simplified[insertEdge].y + simplified[next].y) * 0.5f };
+
+            simplified.insert(simplified.begin() + static_cast<std::ptrdiff_t>(next), midpoint);
+        }
+
+        while (simplified.size() > targetMax && simplified.size() > minimum)
         {
             float smallestMagnitude = std::numeric_limits<float>::max();
             std::size_t removeIndex = 0;
@@ -602,13 +645,9 @@ namespace
             }
 
             simplified.erase(simplified.begin() + static_cast<std::ptrdiff_t>(removeIndex));
-
-            if (simplified.size() <= minimum)
-            {
-                break;
-            }
         }
 
+        ensureCCW(simplified);
         return simplified;
     }
 
@@ -684,6 +723,19 @@ namespace
             return summary;
         }
 
+        float3 centroid{ 0.0f, 0.0f, 0.0f };
+        for (const auto& pos : positions)
+        {
+            centroid.x += pos.x;
+            centroid.y += pos.y;
+            centroid.z += pos.z;
+        }
+        const float invCount = 1.0f / static_cast<float>(positions.size());
+        centroid.x *= invCount;
+        centroid.y *= invCount;
+        centroid.z *= invCount;
+        summary.centroidOffset = centroid;
+
         MeshBuffer::Description desc{};
         desc.pVtx = positions.data();
         desc.vtxSize = sizeof(PositionOnly);
@@ -693,16 +745,34 @@ namespace
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+        if (!positions.empty())
+        {
+            float2 centroid{ 0.0f, 0.0f };
+            for (const auto& pos : positions)
+            {
+                centroid.x += pos.x;
+                centroid.y += pos.y;
+            }
+
+            const float invCount = 1.0f / static_cast<float>(positions.size());
+            centroid.x *= invCount;
+            centroid.y *= invCount;
+            summary.centroidOffset = centroid;
+        }
+
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         summary.hull = SimplifyHull(rawHull, kMinHullPoints, kMaxHullPoints);
         const HullExtents extents = ComputeHullExtents(summary.hull);
-        const float width = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
+        const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
-        summary.rawThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{ 1.0f, 1.0f, 1.0f }, minThickness);
+
+        summary.rawThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{1.0f, 1.0f, 1.0f}, minThickness);
         summary.thickness = summary.rawThickness;
-        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);
+
+        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);  
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "Analyzed geometry path='" << path
@@ -1220,14 +1290,24 @@ namespace SweetsSpace
             }
             const float resolvedRawThickness = geometry.bounds.valid
                 ? geometry.rawThickness
-                : ComputeAdaptiveThicknessFromExtents(
+            : ComputeAdaptiveThicknessFromExtents(
                     bounds.max.x - bounds.min.x,
                     bounds.max.y - bounds.min.y,
                     float3{ 1.0f, 1.0f, 1.0f },
                     m_generatedColliderMinThickness);
+
             const float adaptiveThickness = geometry.thickness;
+
             GeneratedCollider generatedCollider{ geometry.hull, {}, adaptiveThickness };
+
             
+            GeneratedCollider(
+                const std::vector<float2>& hull,
+                Something bounds,
+                float thickness,
+                float2 centroidOffset
+            );
+
             m_generatedColliders[normalizedKind] = generatedCollider;
 
 
@@ -1343,6 +1423,7 @@ namespace SweetsSpace
                 scaledTransform.scale.z *= sampledScale.z;
                 std::shared_ptr<Collision::ICollider> collider;
                 const bool hasGeneratedHull = !generatedCollider.hull.empty();
+                ModelBounds generatedBounds{};
                 bool usedGeneratedHull = false;
                 bool colliderDefinitionFound = false;
                 bool colliderDefinitionFailed = false;

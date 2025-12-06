@@ -2259,6 +2259,14 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         }
 
         Core::Input& input = ctx.input;
+        if (input.IsTrigger(VK_F4))
+        {
+                g_DrawColliders = !g_DrawColliders;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ColliderDebug] Collider rendering "
+                        << (g_DrawColliders ? "enabled" : "disabled") << " (F4).\n";
+                DebugTrace(oss.str());
+        }
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
@@ -2445,6 +2453,8 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         }
 
         m_drawSystem->RenderQueued(activeCamera);
+
+        m_drawSystem->DebugDrawQueued(activeCamera);
 
         if (m_hudRenderer)
         {
