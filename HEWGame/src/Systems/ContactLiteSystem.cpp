@@ -766,187 +766,91 @@ namespace Systems
 
                                 const bool allowImpulseA = !bodyAStatic;
                                 const bool allowImpulseB = !bodyBStatic;
+                                const bool modifyVelocityA = allowImpulseA && !IsPlayerBody(bodyA);
+                                const bool modifyVelocityB = allowImpulseB && !IsPlayerBody(bodyB);
 
-                                const auto Project = [](const float3& v, const float3& dir)
+                                const float2 normal2{ contactNormal.x, contactNormal.y };
+                                const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
+                                const float relativeNormalSpeed = relativeVelocity.x * normal2.x + relativeVelocity.y * normal2.y;
+
+                                float jn = -(1.0f + m_restitution) * relativeNormalSpeed;
+                                if (jn >= 0.0f)
                                 {
-                                        return v.x * dir.x + v.y * dir.y + v.z * dir.z;
-                                };
+                                        const float2 normalImpulse{ normal2.x * jn, normal2.y * jn };
 
-                                const auto ApplyComponent = [&Project](Physics::Physical& phys, const float3& dir, float target)
-                                {
-                                        const float current = Project(phys.velocity, dir);
-                                        const float delta = target - current;
-                                        phys.velocity.x += dir.x * delta;
-                                        phys.velocity.y += dir.y * delta;
-                                        phys.velocity.z += dir.z * delta;
-                                };
-
-                                const auto ClampVelocity = [&](Physics::Physical& phys,
-                                        const float3& normal,
-                                        const float3& tangent,
-                                        bool hasTangent,
-                                        bool groundContact,
-                                        bool penetrationResolved,
-                                        const std::string& tag,
-                                        bool allowModification)
-                                {
-                                        if (!groundContact || !penetrationResolved)
+                                        if (modifyVelocityA && modifyVelocityB)
                                         {
-                                                return;
+                                                const float half = 0.5f;
+                                                physA.velocity.x += normalImpulse.x * half;
+                                                physA.velocity.y += normalImpulse.y * half;
+                                                physB.velocity.x -= normalImpulse.x * half;
+                                                physB.velocity.y -= normalImpulse.y * half;
                                         }
-                                        if (!allowModification || phys.weight <= 0.0f)
+                                        else if (modifyVelocityA)
                                         {
-                                                return;
+                                                physA.velocity.x += normalImpulse.x;
+                                                physA.velocity.y += normalImpulse.y;
                                         }
-                                        if (IsSweetsTag(tag) && !groundContact)
+                                        else if (modifyVelocityB)
                                         {
-                                                return;
-                                        }
-                                        if (tag == "player")
-                                        {
-                                                return;
+                                                physB.velocity.x -= normalImpulse.x;
+                                                physB.velocity.y -= normalImpulse.y;
                                         }
 
-                                        const float normalComponent = std::fabs(Project(phys.velocity, normal));
-                                        if (normalComponent >= m_minVerticalSpeed)
+                                        float2 tangentialVelocity
                                         {
-                                                return;
-                                        }
+                                                relativeVelocity.x - relativeNormalSpeed * normal2.x,
+                                                relativeVelocity.y - relativeNormalSpeed * normal2.y
+                                        };
 
-                                        float tangentialComponent = 0.0f;
-                                        if (hasTangent)
-                                        {
-                                                tangentialComponent = std::fabs(Project(phys.velocity, tangent));
-                                        }
-                                        if (tangentialComponent >= m_minTangentialSpeed)
-                                        {
-                                                return;
-                                        }
+                                        const float tangentialSpeed = std::sqrt(tangentialVelocity.x * tangentialVelocity.x + tangentialVelocity.y * tangentialVelocity.y);
+                                        constexpr float kTangentEpsilon = 1e-5f;
 
-                                        ApplyComponent(phys, normal, 0.0f);
-                                        if (hasTangent)
+                                        if (tangentialSpeed < kTangentEpsilon)
                                         {
-                                                ApplyComponent(phys, tangent, 0.0f);
-                                        }
-                                };
+                                                const float2 tangentDir{ -normal2.y, normal2.x };
 
-                                const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
-                                const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
-                                const bool hasTangent = tangentLenSq > 1e-6f;
-                                float absRelativeTangentialVelocity = 0.0f;
-                                bool allowTangentImpulse = false;
-
-                                const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
-                                if (std::fabs(relativeVelocity) > m_minVerticalSpeed)
-                                {
-                                        float activeBodyCount = 0.0f;
-                                        if (allowImpulseA)
-                                        {
-                                                activeBodyCount += 1.0f;
-                                        }
-                                        if (allowImpulseB)
-                                        {
-                                                activeBodyCount += 1.0f;
-                                        }
-
-                                        if (activeBodyCount > 0.0f)
-                                        {
-                                                const float relativeSpeed = std::fabs(relativeVelocity);
-                                                const float restitutionScale = (m_maxRestitutionVelocity > 0.0f)
-                                                        ? std::clamp(relativeSpeed / m_maxRestitutionVelocity, 0.0f, 1.0f)
-                                                        : 1.0f;
-                                                float impulse = -(1.0f + m_restitution * restitutionScale) * relativeVelocity / activeBodyCount;
-                                                if (allowImpulseA)
+                                                if (modifyVelocityA)
                                                 {
-                                                        physA.velocity.x += contactNormal.x * impulse;
-                                                        physA.velocity.y += contactNormal.y * impulse;
+                                                        const float component = physA.velocity.x * tangentDir.x + physA.velocity.y * tangentDir.y;
+                                                        physA.velocity.x -= component * tangentDir.x;
+                                                        physA.velocity.y -= component * tangentDir.y;
                                                 }
-                                                if (allowImpulseB)
+                                                if (modifyVelocityB)
                                                 {
-                                                        physB.velocity.x -= contactNormal.x * impulse;
-                                                        physB.velocity.y -= contactNormal.y * impulse;
+                                                        const float component = physB.velocity.x * tangentDir.x + physB.velocity.y * tangentDir.y;
+                                                        physB.velocity.x -= component * tangentDir.x;
+                                                        physB.velocity.y -= component * tangentDir.y;
+                                                }
+                                        }
+                                        else
+                                        {
+                                                const float2 tangentDir{ tangentialVelocity.x / tangentialSpeed, tangentialVelocity.y / tangentialSpeed };
+                                                float jt = -m_dynamicFriction * std::fabs(jn);
+                                                const float maxFriction = m_staticFriction * std::fabs(jn);
+                                                jt = std::clamp(jt, -maxFriction, maxFriction);
+                                                const float2 tangentImpulse{ tangentDir.x * jt, tangentDir.y * jt };
+
+                                                if (modifyVelocityA && modifyVelocityB)
+                                                {
+                                                        const float half = 0.5f;
+                                                        physA.velocity.x += tangentImpulse.x * half;
+                                                        physA.velocity.y += tangentImpulse.y * half;
+                                                        physB.velocity.x -= tangentImpulse.x * half;
+                                                        physB.velocity.y -= tangentImpulse.y * half;
+                                                }
+                                                else if (modifyVelocityA)
+                                                {
+                                                        physA.velocity.x += tangentImpulse.x;
+                                                        physA.velocity.y += tangentImpulse.y;
+                                                }
+                                                else if (modifyVelocityB)
+                                                {
+                                                        physB.velocity.x -= tangentImpulse.x;
+                                                        physB.velocity.y -= tangentImpulse.y;
                                                 }
                                         }
                                 }
-
-                                if (treatedAsSupport)
-                                {
-                                        if (!bodyAStatic && bodyBStatic && allowImpulseA)
-                                        {
-                                                const float previousVelocity = Project(physA.velocity, contactNormal);
-                                                if (previousVelocity < 0.0f)
-                                                {
-                                                        ApplyComponent(physA, contactNormal, 0.0f);
-                                                }
-                                        }
-                                        if (bodyAStatic && !bodyBStatic && allowImpulseB)
-                                        {
-                                                const float previousVelocity = Project(physB.velocity, contactNormal);
-                                                if (previousVelocity > 0.0f)
-                                                {
-                                                        ApplyComponent(physB, contactNormal, 0.0f);
-                                                }
-                                        }
-
-                                        if (hasTangent)
-                                        {
-                                                const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                                absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
-                                                allowTangentImpulse = absRelativeTangentialVelocity > m_minTangentialSpeed;
-                                                if (allowTangentImpulse)
-                                                {
-                                                        const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
-                                                        const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
-                                                        const float staticThreshold = m_minTangentialSpeed * 2.0f;
-                                                        const bool withinStaticThreshold = absRelativeTangentialVelocity < staticThreshold;
-                                                        if (allowStaticFriction && withinStaticThreshold)
-                                                        {
-                                                                const float sharedVelocity = (bodyAStatic && bodyBStatic)
-                                                                        ? 0.0f
-                                                                        : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
-                                                                if (allowImpulseA)
-                                                                {
-                                                                        ApplyComponent(physA, tangent, sharedVelocity);
-                                                                }
-                                                                if (allowImpulseB)
-                                                                {
-                                                                        ApplyComponent(physB, tangent, sharedVelocity);
-                                                                }
-                                                        }
-                                                        else
-                                                        {
-                                                                const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
-                                                                if (allowImpulseA)
-                                                                {
-                                                                        const float current = Project(physA.velocity, tangent);
-                                                                        ApplyComponent(physA, tangent, current * frictionScale);
-                                                                }
-                                                                if (allowImpulseB)
-                                                                {
-                                                                        const float current = Project(physB.velocity, tangent);
-                                                                        ApplyComponent(physB, tangent, current * frictionScale);
-                                                                }
-                                                        }
-                                                }
-                                        }
-
-                                }
-
-                                if (physA.velocity.z != 0.0f)
-                                {
-                                        physA.velocity.z = 0.0f;
-                                }
-                                if (physB.velocity.z != 0.0f)
-                                {
-                                        physB.velocity.z = 0.0f;
-                                }
-
-                                const bool penetrationResolved = pushDistance > 0.0f;
-                                const bool allowClampA = allowImpulseA && !IsPlayerBody(bodyA);
-                                const bool allowClampB = allowImpulseB && !IsPlayerBody(bodyB);
-
-                                ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyA->GetTag(), allowClampA);
-                                ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyB->GetTag(), allowClampB);
 
                                 ++resolvedPairs;
                         }
