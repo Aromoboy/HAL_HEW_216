@@ -67,11 +67,16 @@ namespace
                 const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
                 const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
-        constexpr float kMinSnapVerticalComponent = 0.9999f;
+                constexpr float kMinSnapVerticalComponent = 0.99995f;
+                constexpr float kMaxPlanarForSnap = 1e-4f;
 
                 classification.verticalComponent = verticalComponent;
                 classification.isGround = verticalComponent >= groundThreshold;
-                if (verticalComponent >= snapThreshold && verticalComponent >= kMinSnapVerticalComponent)
+                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
+                const bool allowSnap = verticalComponent >= snapThreshold
+                        && verticalComponent >= kMinSnapVerticalComponent
+                        && planarLenSq <= kMaxPlanarForSnap;
+                if (allowSnap)
                 {
                         const float originalX = normal.x;
                         const float originalZ = normal.z;
@@ -714,10 +719,12 @@ namespace Systems
                 const bool pseudo2DStack = fallbackAABB && slopeAllowsSupport;
                 if (pseudo2DStack)
                 {
-                        baumgarteFactor *= 0.65f;
-                        if (bodyAResting && bodyBResting)
+                        const bool staticOrResting = bodyAStatic || bodyBStatic || (bodyAResting && bodyBResting);
+                        baumgarteFactor *= staticOrResting ? 0.5f : 0.65f;
+                        if (staticOrResting && penetrationError > 0.0f)
                         {
-                                baumgarteFactor *= 0.5f;
+                                const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
+                                baumgarteFactor *= 0.75f + 0.25f * penetrationScale;
                         }
                 }
 
@@ -779,11 +786,15 @@ namespace Systems
                                                   if (!topResting && planarSpeedSq >= slideThresholdSq)
                                                   {
                                                           const float planarSpeed = std::sqrt(planarSpeedSq);
-                                                          const float boostScale = std::clamp(supportOverlapFraction, 0.0f, 1.0f)
-                                                                  * std::clamp(planarSpeed / (slideThreshold * 2.0f), 0.0f, 1.0f);
-                                                          if (boostScale > 0.0f)
+                                                          const float slowFactor = std::clamp((planarSpeed - slideThreshold) / (slideThreshold * 2.0f), 0.0f, 1.0f);
+                                                          if (slowFactor > 0.0f)
                                                           {
-                                                                  topPhys.velocity.x += slideDir * (m_edgeSlideBoost * boostScale);
+                                                                  const float boostScale = std::clamp(supportOverlapFraction, 0.0f, 1.0f)
+                                                                          * slowFactor;
+                                                                  if (boostScale > 0.0f)
+                                                                  {
+                                                                          topPhys.velocity.x += slideDir * (m_edgeSlideBoost * boostScale);
+                                                                  }
                                                           }
                                                   }
                                           }
@@ -851,16 +862,16 @@ namespace Systems
                                         phys.velocity.z += dir.z * delta;
                                 };
 
-                                const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
-                                        bool hasTangent, bool groundContact, bool supportContact, const std::string& tag, bool allowModification)
-                                {
-                                        if (phys.weight <= 0.0f || !allowModification)
+                                        const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
+                                                bool hasTangent, bool groundContact, bool supportContact, const std::string& tag, bool allowModification)
                                         {
-                                                return;
-                                        }
+                                                if (phys.weight <= 0.0f || !allowModification)
+                                                {
+                                                        return;
+                                                }
 
-                                        const auto clampComponent = [](float& component, float minSpeed)
-                                        {
+                                                const auto clampComponent = [](float& component, float minSpeed)
+                                                {
                                                 if (std::fabs(component) < minSpeed)
                                                 {
                                                         component = 0.0f;
@@ -869,14 +880,21 @@ namespace Systems
                                                 return false;
                                         };
 
-                                          bool clampedLinear = false;
-                                          const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
-                                          const float planarSpeed = std::sqrt(planarSpeedSq);
-                                          if (planarSpeed < m_minLinearSpeed)
-                                          {
-                                                  phys.velocity.x = 0.0f;
-                                                  phys.velocity.y = 0.0f;
-                                                  clampedLinear = true;
+                                                          bool clampedLinear = false;
+                                                          const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
+                                                          const float planarSpeed = std::sqrt(planarSpeedSq);
+                                                          const float settleSpeed = m_restingSpeedThreshold * 0.5f;
+                                                          if (planarSpeed < settleSpeed)
+                                                          {
+                                                                  phys.velocity.x = 0.0f;
+                                                                  phys.velocity.y = 0.0f;
+                                                                  clampedLinear = true;
+                                                          }
+                                                          if (planarSpeed < m_minLinearSpeed)
+                                                          {
+                                                                  phys.velocity.x = 0.0f;
+                                                                  phys.velocity.y = 0.0f;
+                                                                  clampedLinear = true;
                                           }
                                           clampedLinear |= clampComponent(phys.velocity.x, m_minLinearSpeed);
                                           clampedLinear |= clampComponent(phys.velocity.y, m_minLinearSpeed);
@@ -986,52 +1004,43 @@ namespace Systems
 
                                         if (hasTangent)
                                         {
-                                        const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
-                                        const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
-                                        if (absRelativeTangentialVelocity < m_minTangentialSpeed)
-                                        {
-                                                // Deadzone to prevent jitter
-                                        }
-                                        else
-                                        {
-                                        const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
-                                        const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
-                                        const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
-                                        if (allowStaticFriction && withinStaticThreshold)
-                                        {
-                                                        const float sharedVelocity = (bodyAStatic && bodyBStatic)
-                                                                ? 0.0f
-                                                                : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
-                                                        if (allowImpulseA)
-                                                        {
-                                                                ApplyComponent(physA, tangent, sharedVelocity);
-                                                        }
-                                                        if (allowImpulseB)
-                                                        {
-                                                                ApplyComponent(physB, tangent, sharedVelocity);
-                                                        }
-                                                }
-                                                else
+                                                const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
+                                                const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
+                                                if (absRelativeTangentialVelocity >= m_minTangentialSpeed)
                                                 {
-                                                        if (!allowStaticFriction && withinStaticThreshold)
+                                                        const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
+                                                        const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
+                                                        const float staticThreshold = m_minTangentialSpeed * 2.0f;
+                                                        const bool withinStaticThreshold = absRelativeTangentialVelocity < staticThreshold;
+                                                        if (allowStaticFriction && withinStaticThreshold)
                                                         {
+                                                                const float sharedVelocity = (bodyAStatic && bodyBStatic)
+                                                                        ? 0.0f
+                                                                        : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
+                                                                if (allowImpulseA)
+                                                                {
+                                                                        ApplyComponent(physA, tangent, sharedVelocity);
+                                                                }
+                                                                if (allowImpulseB)
+                                                                {
+                                                                        ApplyComponent(physB, tangent, sharedVelocity);
+                                                                }
                                                         }
-                                                        else if (allowStaticFriction && !withinStaticThreshold)
+                                                        else
                                                         {
-                                                        }
-                                                        const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
-                                                        if (allowImpulseA)
-                                                        {
-                                                                const float current = Project(physA.velocity, tangent);
-                                                                ApplyComponent(physA, tangent, current * frictionScale);
-                                                        }
-                                                        if (allowImpulseB)
-                                                        {
-                                                                const float current = Project(physB.velocity, tangent);
-                                                                ApplyComponent(physB, tangent, current * frictionScale);
+                                                                const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
+                                                                if (allowImpulseA)
+                                                                {
+                                                                        const float current = Project(physA.velocity, tangent);
+                                                                        ApplyComponent(physA, tangent, current * frictionScale);
+                                                                }
+                                                                if (allowImpulseB)
+                                                                {
+                                                                        const float current = Project(physB.velocity, tangent);
+                                                                        ApplyComponent(physB, tangent, current * frictionScale);
+                                                                }
                                                         }
                                                 }
-                                        }
                                         }
 
                                 }
