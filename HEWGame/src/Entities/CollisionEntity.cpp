@@ -137,6 +137,8 @@ namespace Entities
 
     void CollisionEntity::UpdateSleepState(const float3& velocity)
     {
+        const bool isPlayer = m_tag == "player";
+
         const float dx = m_transform.position.x - m_lastTransform.position.x;
         const float dy = m_transform.position.y - m_lastTransform.position.y;
         const float dz = m_transform.position.z - m_lastTransform.position.z;
@@ -147,11 +149,21 @@ namespace Entities
         const float vz = velocity.z;
         const float velocitySq = vx * vx + vy * vy + vz * vz;
 
-        const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
-        const bool moved = displacementSq > sleepThresholdSq;
-        const bool velocityAwake = velocitySq > sleepThresholdSq;
+        const float dvx = velocity.x - m_lastVelocity.x;
+        const float dvy = velocity.y - m_lastVelocity.y;
+        const float dvz = velocity.z - m_lastVelocity.z;
+        const float velocityDeltaSq = dvx * dvx + dvy * dvy + dvz * dvz;
 
-        if (moved || velocityAwake)
+        const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
+        const bool positionChanged = displacementSq > sleepThresholdSq || !TransformApproxEqual(m_transform, m_lastTransform, kSleepVelocityEpsilon);
+        const bool velocityAwake = velocitySq > sleepThresholdSq;
+        const bool impulseAwake = velocityDeltaSq > sleepThresholdSq;
+
+        if (isPlayer)
+        {
+            Wake();
+        }
+        else if (positionChanged || velocityAwake || impulseAwake)
         {
             Wake();
         }

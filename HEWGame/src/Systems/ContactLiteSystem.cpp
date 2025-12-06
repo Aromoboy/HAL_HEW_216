@@ -44,9 +44,11 @@ namespace
         struct FrameContactInfo
         {
                 bool supported = false;
+                bool stableSupport = false;
                 bool unsupportedContact = false;
                 bool translated = false;
                 bool transformChanged = false;
+                bool impulseApplied = false;
         };
 
         struct ContactNormalClassification
@@ -744,13 +746,18 @@ namespace Systems
                                 const bool treatedAsSupport = isGroundContact;
                                 if (isGroundContact)
                                 {
+                                        const bool stableSupport = classification.verticalComponent >= m_stableSupportThreshold;
                                         frameContactInfo[bodyA].supported = true;
                                         frameContactInfo[bodyB].supported = true;
+                                        frameContactInfo[bodyA].stableSupport = frameContactInfo[bodyA].stableSupport || stableSupport;
+                                        frameContactInfo[bodyB].stableSupport = frameContactInfo[bodyB].stableSupport || stableSupport;
                                 }
                                 else
                                 {
                                         frameContactInfo[bodyA].unsupportedContact = true;
                                         frameContactInfo[bodyB].unsupportedContact = true;
+                                        bodyA->Wake();
+                                        bodyB->Wake();
                                 }
 
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
@@ -833,6 +840,10 @@ namespace Systems
                                 const float invMassSum = invMassA + invMassB;
 
                                 float vn = relativeNormalSpeed;
+                                float appliedNormalImpulseA = 0.0f;
+                                float appliedNormalImpulseB = 0.0f;
+                                float appliedTangentImpulseA = 0.0f;
+                                float appliedTangentImpulseB = 0.0f;
                                 if (vn < 0.0f && invMassSum > 0.0f)
                                 {
                                         vn = std::clamp(vn, -m_maxRestitutionVelocity, 0.0f);
@@ -846,11 +857,13 @@ namespace Systems
                                         {
                                                 physA.velocity.x += normalImpulseA.x;
                                                 physA.velocity.y += normalImpulseA.y;
+                                                appliedNormalImpulseA = jnA;
                                         }
                                         if (modifyVelocityB)
                                         {
                                                 physB.velocity.x += normalImpulseB.x;
                                                 physB.velocity.y += normalImpulseB.y;
+                                                appliedNormalImpulseB = jnB;
                                         }
 
                                         float2 tangentialVelocity
@@ -884,22 +897,59 @@ namespace Systems
                                                         {
                                                                 physA.velocity.x += tangentImpulseA.x;
                                                                 physA.velocity.y += tangentImpulseA.y;
+                                                                appliedTangentImpulseA = jtA;
                                                         }
                                                         if (modifyVelocityB)
                                                         {
                                                                 physB.velocity.x += tangentImpulseB.x;
                                                                 physB.velocity.y += tangentImpulseB.y;
+                                                                appliedTangentImpulseB = jtB;
                                                         }
                                                 }
                                         }
+                                }
+
+                                if (std::fabs(appliedNormalImpulseA) > 0.0f || std::fabs(appliedTangentImpulseA) > 0.0f)
+                                {
+                                        frameContactInfo[bodyA].impulseApplied = true;
+                                        bodyA->Wake();
+                                }
+                                if (std::fabs(appliedNormalImpulseB) > 0.0f || std::fabs(appliedTangentImpulseB) > 0.0f)
+                                {
+                                        frameContactInfo[bodyB].impulseApplied = true;
+                                        bodyB->Wake();
                                 }
 
                                 ++resolvedPairs;
                         }
                 }
 
+                for (auto& [body, info] : frameContactInfo)
+                {
+                        if (!body)
+                        {
+                                continue;
+                        }
+
+                        if (info.transformChanged || info.translated || info.unsupportedContact || info.impulseApplied)
+                        {
+                                body->Wake();
+                                auto restingIt = m_restingFrames.find(body);
+                                if (restingIt != m_restingFrames.end())
+                                {
+                                        restingIt->second.frames = 0;
+                                        restingIt->second.resting = false;
+                                }
+                        }
+                }
+
                 const auto IsResting = [&](const Entities::PhysicalEntity& body, bool supportedThisFrame)
                 {
+                        if (IsPlayerBody(&body))
+                        {
+                                return false;
+                        }
+
                         if (!supportedThisFrame)
                         {
                                 return false;
@@ -932,8 +982,15 @@ namespace Systems
                         const bool translated = (infoIt != frameContactInfo.end()) && infoIt->second.translated;
                         const bool transformChanged = (infoIt != frameContactInfo.end()) && infoIt->second.transformChanged;
                         const bool unsupportedContact = (infoIt != frameContactInfo.end()) && infoIt->second.unsupportedContact;
+                        const bool impulseApplied = (infoIt != frameContactInfo.end()) && infoIt->second.impulseApplied;
+                        const bool stableSupport = (infoIt != frameContactInfo.end()) && infoIt->second.stableSupport;
 
-                        if (translated || transformChanged || unsupportedContact)
+                        if (!stableSupport)
+                        {
+                                return false;
+                        }
+
+                        if (translated || transformChanged || unsupportedContact || impulseApplied)
                         {
                                 return false;
                         }
