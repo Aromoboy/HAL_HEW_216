@@ -508,14 +508,22 @@ namespace Systems
                         for (size_t j = i + 1; j < proxyCount; ++j)
                         {
                                 const BodyProxy& proxyB = proxies[j];
-                                const float sweepOverlapX = GetAxisOverlap(proxyA.bounds, proxyB.bounds, sweepAxis);
-                                if (sweepOverlapX <= 0.0f)
+                                const AABB& boundsA = proxyA.bounds;
+                                const AABB& boundsB = proxyB.bounds;
+
+                                if (boundsA.max.x < boundsB.min.x)
                                 {
                                         break;
                                 }
-
-                                const float sweepOverlapY = GetAxisOverlap(proxyA.bounds, proxyB.bounds, planarTestAxis);
-                                if (sweepOverlapY <= 0.0f)
+                                if (boundsA.min.x > boundsB.max.x)
+                                {
+                                        continue;
+                                }
+                                if (boundsA.max.y < boundsB.min.y)
+                                {
+                                        continue;
+                                }
+                                if (boundsA.min.y > boundsB.max.y)
                                 {
                                         continue;
                                 }
@@ -530,13 +538,22 @@ namespace Systems
                                 }
 
                                 const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
-                                if (!pairIs2D)
+                                const bool playerPlatformPair = (IsPlayerBody(bodyA) && layerB == Collision::CollisionLayer::Floor)
+                                        || (IsPlayerBody(bodyB) && layerA == Collision::CollisionLayer::Floor);
+
+                                float overlaps[3];
+                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
+                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
+
+                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f)
                                 {
-                                        const float planarOverlapZ = GetAxisOverlap(proxyA.bounds, proxyB.bounds, 2);
-                                        if (planarOverlapZ < -kPlanarZTolerance)
-                                        {
-                                                continue;
-                                        }
+                                        continue;
+                                }
+
+                                if (playerPlatformPair && !pairIs2D && overlaps[2] < -kPlanarZTolerance)
+                                {
+                                        continue;
                                 }
 
                                 ++testedPairs;
@@ -545,27 +562,9 @@ namespace Systems
                                         continue;
                                 }
 
-                                const AABB boundsA = proxyA.bounds;
-                                const AABB boundsB = proxyB.bounds;
-
-                                float overlaps[3];
-                                overlaps[0] = sweepOverlapX;
-                                overlaps[1] = sweepOverlapY;
-                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
-
                                 const float planarOverlapX = overlaps[0];
                                 const float planarOverlapY = overlaps[1];
                                 const float planarOverlapZ = overlaps[2];
-
-                                if (planarOverlapX <= 0.0f || planarOverlapY <= 0.0f)
-                                {
-                                        continue;
-                                }
-
-                                if (!pairIs2D && planarOverlapZ < -kPlanarZTolerance)
-                                {
-                                        continue;
-                                }
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
@@ -580,7 +579,7 @@ namespace Systems
                                 bool usedSAT = false;
                                 bool attemptedSAT = false;
                                 const float minPlanarOverlap = std::min(planarOverlapX, planarOverlapY);
-                                const bool planarPairForSAT = pairIs2D || (planarOverlapZ <= kPlanarZTolerance);
+                                const bool planarPairForSAT = pairIs2D || (playerPlatformPair && (planarOverlapZ <= kPlanarZTolerance));
                                 const bool allowSAT = pairIs2D && planarPairForSAT && (minPlanarOverlap > kSatPlanarOverlapThreshold);
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
