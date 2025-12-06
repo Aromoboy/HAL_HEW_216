@@ -211,17 +211,23 @@ namespace
                 }
         }
 
+        struct LayerPairHash
+        {
+                size_t operator()(const std::pair<Collision::CollisionLayer, Collision::CollisionLayer>& value) const noexcept
+                {
+                        const size_t first = static_cast<size_t>(value.first);
+                        const size_t second = static_cast<size_t>(value.second);
+                        return (first << 16) ^ second;
+                }
+        };
+
         bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
         {
-                const bool sweetsFloorPair =
-                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
-                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
-                if (sweetsFloorPair)
-                {
-                        return false;
-                }
+                const auto ordered = std::minmax(a, b);
+                static const std::unordered_set<std::pair<Collision::CollisionLayer, Collision::CollisionLayer>, LayerPairHash>
+                        kDisabledPairs{};
 
-                return true;
+                return kDisabledPairs.find(ordered) == kDisabledPairs.end();
         }
 
         std::optional<SweetsSpace::SweetsType> ResolveSweetsTag(const std::string& tag)
@@ -398,7 +404,13 @@ namespace Systems
                         const float planarSpeed = std::sqrt(planarSpeedSq);
 
                         RestingState& resting = m_restingFrames[body];
-                        if (planarSpeed > m_wakeSpeedThreshold)
+                        const bool isPlayer = IsPlayerBody(body);
+                        if (isPlayer)
+                        {
+                                resting.frames = 0;
+                                resting.resting = false;
+                        }
+                        else if (planarSpeed > m_wakeSpeedThreshold)
                         {
                                 resting.frames = 0;
                                 resting.resting = false;
@@ -421,9 +433,8 @@ namespace Systems
                                 continue;
                         }
 
-                        const bool isPlayer = IsPlayerBody(body);
                         const bool kinematic = !(phys.weight > 0.0f);
-                        if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
+                        if (kinematic && !m_includeKinematicBodies && !isPlayer)
                         {
                                 continue;
                         }
@@ -493,6 +504,11 @@ namespace Systems
 
                 const auto IsResting = [&](Entities::PhysicalEntity* body)
                 {
+                        if (IsPlayerBody(body))
+                        {
+                                return false;
+                        }
+
                         const auto it = m_restingFrames.find(body);
                         return it != m_restingFrames.end() && it->second.resting;
                 };
@@ -574,8 +590,10 @@ namespace Systems
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
-                                const bool bodyAStatic = !(physA.weight > 0.0f);
-                                const bool bodyBStatic = !(physB.weight > 0.0f);
+                                const bool isPlayerA = IsPlayerBody(bodyA);
+                                const bool isPlayerB = IsPlayerBody(bodyB);
+                                const bool bodyAStatic = !(physA.weight > 0.0f) && !isPlayerA;
+                                const bool bodyBStatic = !(physB.weight > 0.0f) && !isPlayerB;
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
