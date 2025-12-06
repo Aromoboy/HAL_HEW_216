@@ -2,10 +2,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <string>
+#include <sstream>
 #include <type_traits>
 #include <vector>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 #include "AABB.h"
 #include "AABBCollider.h"
@@ -18,8 +24,19 @@ static_assert(std::is_class_v<Systems::ContactLiteSystem>, "ContactLiteSystem de
 
 namespace
 {
+        void DebugTrace(const std::string& message)
+        {
+#ifdef _WIN32
+                OutputDebugStringA(message.c_str());
+#else
+                (void)message;
+#endif
+        }
+
+        constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
+        constexpr float kSweetsSatOverlapThreshold = 1e-3f;
 
         struct ContactNormalClassification
         {
@@ -131,6 +148,36 @@ namespace
                         return (a.max.y + a.min.y) * 0.5f;
                 case 2:
                         return (a.max.z + a.min.z) * 0.5f;
+                default:
+                        return 0.0f;
+                }
+        }
+
+        float GetAxisMin(const AABB& a, int axis)
+        {
+                switch (axis)
+                {
+                case 0:
+                        return a.min.x;
+                case 1:
+                        return a.min.y;
+                case 2:
+                        return a.min.z;
+                default:
+                        return 0.0f;
+                }
+        }
+
+        float GetAxisMax(const AABB& a, int axis)
+        {
+                switch (axis)
+                {
+                case 0:
+                        return a.max.x;
+                case 1:
+                        return a.max.y;
+                case 2:
+                        return a.max.z;
                 default:
                         return 0.0f;
                 }
@@ -350,6 +397,9 @@ namespace Systems
 
                 std::vector<BodyProxy> proxies;
                 proxies.reserve(bodyCount);
+
+                float planarMin[2]{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                float planarMax[2]{ -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };
                 for (Entities::PhysicalEntity* body : activeBodies)
                 {
                         if (!body)
@@ -365,11 +415,20 @@ namespace Systems
 
                         body->SyncColliderBounds();
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
+
+                        for (int axis = 0; axis < 2; ++axis)
+                        {
+                                planarMin[axis] = std::min(planarMin[axis], GetAxisMin(proxies.back().bounds, axis));
+                                planarMax[axis] = std::max(planarMax[axis], GetAxisMax(proxies.back().bounds, axis));
+                        }
                 }
 
-                std::sort(proxies.begin(), proxies.end(), [](const BodyProxy& a, const BodyProxy& b)
+                const int sweepAxis = (planarMax[0] - planarMin[0] >= planarMax[1] - planarMin[1]) ? 0 : 1;
+                const int planarTestAxis = sweepAxis == 0 ? 1 : 0;
+
+                std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
                 {
-                        return a.bounds.min.x < b.bounds.min.x;
+                        return GetAxisMin(a.bounds, sweepAxis) < GetAxisMin(b.bounds, sweepAxis);
                 });
 
                 const size_t proxyCount = proxies.size();
@@ -380,6 +439,9 @@ namespace Systems
 
                 size_t testedPairs = 0;
                 size_t resolvedPairs = 0;
+                size_t satAttempts = 0;
+                size_t satSuccesses = 0;
+                size_t satProxySuccesses = 0;
 
                 for (size_t i = 0; i < proxyCount; ++i)
                 {
@@ -391,9 +453,15 @@ namespace Systems
                         for (size_t j = i + 1; j < proxyCount; ++j)
                         {
                                 const BodyProxy& proxyB = proxies[j];
-                                if (proxyB.bounds.min.x > proxyA.bounds.max.x)
+                                if (GetAxisMin(proxyB.bounds, sweepAxis) > GetAxisMax(proxyA.bounds, sweepAxis))
                                 {
                                         break;
+                                }
+
+                                const float planarOverlap = GetAxisOverlap(proxyA.bounds, proxyB.bounds, planarTestAxis);
+                                if (planarOverlap <= 0.0f)
+                                {
+                                        continue;
                                 }
 
                                 Entities::PhysicalEntity* bodyB = proxyB.body;
@@ -405,14 +473,21 @@ namespace Systems
                                         continue;
                                 }
 
+                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
+                                if (!pairIs2D)
+                                {
+                                        const float planarOverlapZ = GetAxisOverlap(proxyA.bounds, proxyB.bounds, 2);
+                                        if (planarOverlapZ < -kPlanarZTolerance)
+                                        {
+                                                continue;
+                                        }
+                                }
+
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
                                 {
                                         continue;
                                 }
-
-
-                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
 
                                 const AABB boundsA = proxyA.bounds;
                                 const AABB boundsB = proxyB.bounds;
@@ -425,6 +500,11 @@ namespace Systems
                                 const float planarOverlapX = overlaps[0];
                                 const float planarOverlapY = overlaps[1];
                                 const float planarOverlapZ = overlaps[2];
+
+                                if (planarOverlapX <= 0.0f || planarOverlapY <= 0.0f)
+                                {
+                                        continue;
+                                }
 
                                 if (!pairIs2D && planarOverlapZ < -kPlanarZTolerance)
                                 {
@@ -444,6 +524,10 @@ namespace Systems
                                 bool usedSAT = false;
                                 bool attemptedSAT = false;
                                 bool usedProxySAT = false;
+                                const float minPlanarOverlap = std::min(planarOverlapX, planarOverlapY);
+                                const bool planarPairForSAT = pairIs2D || (planarOverlapZ <= kPlanarZTolerance);
+                                const bool allowDirectSAT = pairIs2D
+                                        && (!sweetsPair || (planarPairForSAT && (minPlanarOverlap > kSweetsSatOverlapThreshold)));
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
@@ -467,11 +551,21 @@ namespace Systems
                                 }
                                 else
                                 {
-                                        attemptedSAT = pairIs2D;
-                                        usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                        attemptedSAT = allowDirectSAT;
+                                        if (attemptedSAT)
+                                        {
+                                                ++satAttempts;
+                                        }
+                                        usedSAT = allowDirectSAT && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                        if (usedSAT)
+                                        {
+                                                ++satSuccesses;
+                                        }
                                         contactMethod = usedSAT ? "sat_2d" : contactMethod;
 
-                                        const bool preferSAT = sweetsPair && !foundationPair;
+                                        const bool preferSAT = sweetsPair && !foundationPair
+                                                && planarPairForSAT
+                                                && (minPlanarOverlap > kSweetsSatOverlapThreshold);
                                         if (!usedSAT && preferSAT)
                                         {
                                                 const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
@@ -479,17 +573,35 @@ namespace Systems
                                                 const auto* aabbA = dynamic_cast<const Collision::AABBCollider*>(colliderA);
                                                 const auto* aabbB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
 
-                                                if (colliderA2D && aabbB)
+                                                const bool proxySeparated = (planarOverlapX <= 0.0f)
+                                                        || (planarOverlapY <= 0.0f)
+                                                        || (!pairIs2D && planarOverlapZ <= 0.0f);
+                                                if (!proxySeparated)
                                                 {
-                                                        attemptedSAT = true;
-                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *aabbB, contact2D);
-                                                        usedProxySAT = usedSAT;
-                                                }
-                                                if (!usedSAT && colliderB2D && aabbA)
-                                                {
-                                                        attemptedSAT = true;
-                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *aabbA, contact2D);
-                                                        usedProxySAT = usedSAT;
+                                                        if (colliderA2D && aabbB)
+                                                        {
+                                                                attemptedSAT = true;
+                                                                ++satAttempts;
+                                                                usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *aabbB, contact2D);
+                                                                usedProxySAT = usedSAT;
+                                                                if (usedSAT)
+                                                                {
+                                                                        ++satSuccesses;
+                                                                        ++satProxySuccesses;
+                                                                }
+                                                        }
+                                                        if (!usedSAT && colliderB2D && aabbA)
+                                                        {
+                                                                attemptedSAT = true;
+                                                                ++satAttempts;
+                                                                usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *aabbA, contact2D);
+                                                                usedProxySAT = usedSAT;
+                                                                if (usedSAT)
+                                                                {
+                                                                        ++satSuccesses;
+                                                                        ++satProxySuccesses;
+                                                                }
+                                                        }
                                                 }
 
                                                 if (usedSAT)
@@ -516,21 +628,21 @@ namespace Systems
                                                 }
                                         }
 
-                                        const bool allowFallback = !sweetsPair || foundationPair || !attemptedSAT;
+                                        const bool allowFallback = !sweetsPair || foundationPair || !attemptedSAT || !usedSAT;
                                         if (!usedSAT && allowFallback)
                                         {
-                                                int axis = 0;
-                                                float minOverlap = planarOverlapX;
-                                                const int axisLimit = pairIs2D ? 2 : 3;
-                                                for (int ax = 1; ax < axisLimit; ++ax)
+                                                int axis = -1;
+                                                float minOverlap = std::numeric_limits<float>::max();
+                                                const int axisLimit = 2;
+                                                for (int ax = 0; ax < axisLimit; ++ax)
                                                 {
-                                                        if (overlaps[ax] < minOverlap)
+                                                        if (overlaps[ax] > m_penetrationTolerance && overlaps[ax] < minOverlap)
                                                         {
                                                                 minOverlap = overlaps[ax];
                                                                 axis = ax;
                                                         }
                                                 }
-                                                if (minOverlap <= 0.0f)
+                                                if (axis < 0)
                                                 {
                                                         continue;
                                                 }
@@ -538,24 +650,16 @@ namespace Systems
                                                 const float axisCenterA = GetAxisCenter(boundsA, axis);
                                                 const float axisCenterB = GetAxisCenter(boundsB, axis);
                                                 const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-                                                const float rawOverlap = minOverlap;
-                                                if (rawOverlap <= m_penetrationTolerance)
-                                                {
-                                                        continue;
-                                                }
 
-                                                contactPenetration = rawOverlap;
+                                                contactPenetration = minOverlap;
 
                                                 switch (axis)
                                                 {
                                                 case 0:
                                                         contactNormal = float3{ axisDir, 0.0f, 0.0f };
                                                         break;
-                                                case 1:
-                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
-                                                        break;
                                                 default:
-                                                        contactNormal = float3{ 0.0f, 0.0f, axisDir };
+                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
                                                         break;
                                                 }
                                                 fallbackAABB = true;
@@ -881,6 +985,18 @@ namespace Systems
 
                                 ++resolvedPairs;
                         }
+                }
+
+                if (testedPairs > 0 || resolvedPairs > 0)
+                {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Broadphase tested=" << testedPairs
+                                << " accepted=" << resolvedPairs
+                                << " satAttempted=" << satAttempts
+                                << " satSucceeded=" << satSuccesses
+                                << " satProxy=" << satProxySuccesses
+                                << "\n";
+                        DebugTrace(oss.str());
                 }
 
         }
