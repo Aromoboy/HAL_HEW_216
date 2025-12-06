@@ -410,24 +410,12 @@ namespace Systems
                         }
 
                         const Physics::Physical& phys = body->GetPhysical();
-                        const Physics::Physical& phys = body->GetPhysical();
                         const bool isPlayer = IsPlayerBody(body);
 
                         const bool kinematic = !(phys.weight > 0.0f);
                         if (kinematic && !m_includeKinematicBodies && !isPlayer)
                         {
                             continue;
-                        }
-
-                        FrameContactInfo info{};
-                        info.transformChanged = body->IsTransformDirty();
-                        frameContactInfo[body] = info;
-                        activeBodies.push_back(body);
-
-                        const bool kinematic = !(phys.weight > 0.0f);
-                        if (kinematic && !m_includeKinematicBodies && !isPlayer)
-                        {
-                                continue;
                         }
 
                         FrameContactInfo info{};
