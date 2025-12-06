@@ -36,7 +36,7 @@ namespace
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
-        constexpr float kSweetsSatOverlapThreshold = 1e-3f;
+        constexpr float kSatPlanarOverlapThreshold = 0.05f;
 
         struct ContactNormalClassification
         {
@@ -433,7 +433,6 @@ namespace Systems
                 size_t resolvedPairs = 0;
                 size_t satAttempts = 0;
                 size_t satSuccesses = 0;
-                size_t satProxySuccesses = 0;
 
                 for (size_t i = 0; i < proxyCount; ++i)
                 {
@@ -516,11 +515,9 @@ namespace Systems
                                 const bool sweetsPair = IsSweetsTag(bodyA->GetTag()) || IsSweetsTag(bodyB->GetTag());
                                 bool usedSAT = false;
                                 bool attemptedSAT = false;
-                                bool usedProxySAT = false;
                                 const float minPlanarOverlap = std::min(planarOverlapX, planarOverlapY);
                                 const bool planarPairForSAT = pairIs2D || (planarOverlapZ <= kPlanarZTolerance);
-                                const bool allowDirectSAT = pairIs2D
-                                        && (!sweetsPair || (planarPairForSAT && (minPlanarOverlap > kSweetsSatOverlapThreshold)));
+                                const bool allowSAT = pairIs2D && planarPairForSAT && (minPlanarOverlap > kSatPlanarOverlapThreshold);
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
@@ -544,64 +541,17 @@ namespace Systems
                                 }
                                 else
                                 {
-                                        attemptedSAT = allowDirectSAT;
+                                        attemptedSAT = allowSAT;
                                         if (attemptedSAT)
                                         {
                                                 ++satAttempts;
+                                                usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
                                         }
-                                        usedSAT = allowDirectSAT && Compute2DContact(*colliderA, *colliderB, contact2D);
                                         if (usedSAT)
                                         {
                                                 ++satSuccesses;
                                         }
                                         contactMethod = usedSAT ? "sat_2d" : contactMethod;
-
-                                        const bool preferSAT = sweetsPair && !foundationPair
-                                                && planarPairForSAT
-                                                && (minPlanarOverlap > kSweetsSatOverlapThreshold);
-                                        if (!usedSAT && preferSAT)
-                                        {
-                                                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
-                                                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
-                                                const auto* aabbA = dynamic_cast<const Collision::AABBCollider*>(colliderA);
-                                                const auto* aabbB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
-
-                                                const bool proxySeparated = (planarOverlapX <= 0.0f)
-                                                        || (planarOverlapY <= 0.0f)
-                                                        || (!pairIs2D && planarOverlapZ <= 0.0f);
-                                                if (!proxySeparated)
-                                                {
-                                                        if (colliderA2D && aabbB)
-                                                        {
-                                                                attemptedSAT = true;
-                                                                ++satAttempts;
-                                                                usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *aabbB, contact2D);
-                                                                usedProxySAT = usedSAT;
-                                                                if (usedSAT)
-                                                                {
-                                                                        ++satSuccesses;
-                                                                        ++satProxySuccesses;
-                                                                }
-                                                        }
-                                                        if (!usedSAT && colliderB2D && aabbA)
-                                                        {
-                                                                attemptedSAT = true;
-                                                                ++satAttempts;
-                                                                usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *aabbA, contact2D);
-                                                                usedProxySAT = usedSAT;
-                                                                if (usedSAT)
-                                                                {
-                                                                        ++satSuccesses;
-                                                                        ++satProxySuccesses;
-                                                                }
-                                                        }
-                                                }
-
-                                                if (usedSAT)
-                                                {
-                                                        contactMethod = "sat_proxy_aabb";
-                                                }
-                                        }
 
                                         if (usedSAT)
                                         {
@@ -987,7 +937,6 @@ namespace Systems
                                 << " accepted=" << resolvedPairs
                                 << " satAttempted=" << satAttempts
                                 << " satSucceeded=" << satSuccesses
-                                << " satProxy=" << satProxySuccesses
                                 << "\n";
                         DebugTrace(oss.str());
                 }
