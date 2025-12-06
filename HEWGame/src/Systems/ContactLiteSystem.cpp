@@ -417,7 +417,10 @@ namespace Systems
                                 continue;
                         }
 
-                        body->SyncColliderBounds();
+                        if (body->IsTransformDirty())
+                        {
+                                body->SyncColliderBounds();
+                        }
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
                 }
 
