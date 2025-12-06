@@ -28,17 +28,22 @@ namespace
     constexpr float kSleepVelocityEpsilon = 0.01f;
     constexpr int kSleepFrameThreshold = 10;
 
-    bool AreTransformsEqual(const Transform& a, const Transform& b)
+    bool TransformApproxEqual(const Transform& a, const Transform& b, float epsilon = 1e-6f)
     {
-        const bool positionEqual = (a.position.x == b.position.x)
-            && (a.position.y == b.position.y)
-            && (a.position.z == b.position.z);
-        const bool rotationEqual = (a.rotation.x == b.rotation.x)
-            && (a.rotation.y == b.rotation.y)
-            && (a.rotation.z == b.rotation.z);
-        const bool scaleEqual = (a.scale.x == b.scale.x)
-            && (a.scale.y == b.scale.y)
-            && (a.scale.z == b.scale.z);
+        const auto AlmostEqual = [epsilon](float lhs, float rhs)
+        {
+            return std::fabs(lhs - rhs) <= epsilon;
+        };
+
+        const bool positionEqual = AlmostEqual(a.position.x, b.position.x)
+            && AlmostEqual(a.position.y, b.position.y)
+            && AlmostEqual(a.position.z, b.position.z);
+        const bool rotationEqual = AlmostEqual(a.rotation.x, b.rotation.x)
+            && AlmostEqual(a.rotation.y, b.rotation.y)
+            && AlmostEqual(a.rotation.z, b.rotation.z);
+        const bool scaleEqual = AlmostEqual(a.scale.x, b.scale.x)
+            && AlmostEqual(a.scale.y, b.scale.y)
+            && AlmostEqual(a.scale.z, b.scale.z);
 
         return positionEqual && rotationEqual && scaleEqual;
     }
@@ -91,7 +96,7 @@ namespace Entities
         }
     }
 
-    void CollisionEntity::SyncColliderBounds()
+    void CollisionEntity::SyncColliderBounds(bool force)
     {
         if (!m_collider)
         {
@@ -104,11 +109,7 @@ namespace Entities
             return;
         }
 
-        if (!IsTransformDirty())
-        {
-            return;
-        }
-
+        (void)force;
         m_collider->UpdateBounds(m_transform);
         m_lastBoundsTransform = m_transform;
         m_transformDirty = false;
@@ -116,7 +117,7 @@ namespace Entities
 
     bool CollisionEntity::IsTransformDirty() const
     {
-        return m_transformDirty || !AreTransformsEqual(m_transform, m_lastBoundsTransform);
+        return m_transformDirty || !TransformApproxEqual(m_transform, m_lastBoundsTransform);
     }
 
     void CollisionEntity::ApplyTranslation(const float3& delta)

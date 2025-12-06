@@ -1,6 +1,8 @@
 #include "Entities/Player.h"
 
+#include "AABB.h"
 #include "Core/Input.h"
+#include "ICollider.h"
 #include "ModelCache.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
@@ -590,13 +592,23 @@ namespace Entities
             return;
         }
 
-        const float3 areaCenter{
-            m_transform.position.x,
-            m_transform.position.y,
-            m_transform.position.z + m_pickupForwardOffset
-        };
+        SyncColliderBounds();
+        Collision::ICollider* collider = GetCollider();
+        if (!collider)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: collider missing.\n");
+            return;
+        }
 
-        auto candidate = m_sweetsManager->FindNearestCarryable(areaCenter, m_pickupHalfWidth, m_pickupHalfHeight);
+        const AABB playerBounds = collider->GetAABB();
+        const float3 boundsCenter{
+            (playerBounds.min.x + playerBounds.max.x) * 0.5f,
+            (playerBounds.min.y + playerBounds.max.y) * 0.5f,
+            (playerBounds.min.z + playerBounds.max.z) * 0.5f + m_pickupForwardOffset
+        };
+        const float pickupHalfDepth = std::max((playerBounds.max.z - playerBounds.min.z) * 0.5f, 0.0f);
+
+        auto candidate = m_sweetsManager->FindNearestCarryable(boundsCenter, m_pickupHalfWidth, m_pickupHalfHeight);
         if (!candidate)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within pickup box.\n");
@@ -617,6 +629,31 @@ namespace Entities
             return;
         }
 
+        candidate->SyncColliderBounds();
+        Collision::ICollider* sweetsCollider = candidate->GetCollider();
+        if (!sweetsCollider)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets collider missing.\n");
+            return;
+        }
+
+        const AABB sweetsBounds = sweetsCollider->GetAABB();
+        const float pickupMinX = boundsCenter.x - m_pickupHalfWidth;
+        const float pickupMaxX = boundsCenter.x + m_pickupHalfWidth;
+        const float pickupMinY = boundsCenter.y - m_pickupHalfHeight;
+        const float pickupMaxY = boundsCenter.y + m_pickupHalfHeight;
+        const float pickupMinZ = boundsCenter.z - pickupHalfDepth;
+        const float pickupMaxZ = boundsCenter.z + pickupHalfDepth;
+
+        const bool overlapsPickup =
+            sweetsBounds.max.x >= pickupMinX && sweetsBounds.min.x <= pickupMaxX &&
+            sweetsBounds.max.y >= pickupMinY && sweetsBounds.min.y <= pickupMaxY &&
+            sweetsBounds.max.z >= pickupMinZ && sweetsBounds.min.z <= pickupMaxZ;
+        if (!overlapsPickup)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets outside pickup bounds.\n");
+            return;
+        }
 
         auto& sweetsTransform = candidate->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();

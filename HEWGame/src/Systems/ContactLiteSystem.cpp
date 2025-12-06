@@ -72,23 +72,21 @@ namespace
                 normal.y *= invLen;
                 normal.z *= invLen;
 
-                const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
-                const float verticalSnapThreshold = std::max(snapThreshold, 0.9999f);
+                const float verticalSnapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
                 const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
-                constexpr float kMinSnapVerticalComponent = 0.999995f;
-                constexpr float kMaxPlanarForSnap = 1e-8f;
+                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
+                const float planarLen = std::sqrt(planarLenSq);
 
                 classification.verticalComponent = verticalComponent;
                 classification.isGround = verticalComponent >= groundThreshold;
-                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
-                const bool allowSnap = verticalComponent >= verticalSnapThreshold
-                        && verticalComponent >= kMinSnapVerticalComponent
-                        && planarLenSq <= kMaxPlanarForSnap;
+
+                const bool allowSnap = classification.isGround
+                        && verticalComponent >= verticalSnapThreshold
+                        && planarLen <= 1e-3f;
+
                 if (allowSnap)
                 {
-                        const float originalX = normal.x;
-                        const float originalZ = normal.z;
                         normal.x = 0.0f;
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
                         normal.z = 0.0f;
@@ -221,17 +219,23 @@ namespace
                 }
         }
 
+        struct LayerPairHash
+        {
+                size_t operator()(const std::pair<Collision::CollisionLayer, Collision::CollisionLayer>& value) const noexcept
+                {
+                        const size_t first = static_cast<size_t>(value.first);
+                        const size_t second = static_cast<size_t>(value.second);
+                        return (first << 16) ^ second;
+                }
+        };
+
         bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
         {
-                const bool sweetsFloorPair =
-                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
-                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
-                if (sweetsFloorPair)
-                {
-                        return false;
-                }
+                const auto ordered = std::minmax(a, b);
+                static const std::unordered_set<std::pair<Collision::CollisionLayer, Collision::CollisionLayer>, LayerPairHash>
+                        kDisabledPairs{};
 
-                return true;
+                return kDisabledPairs.find(ordered) == kDisabledPairs.end();
         }
 
         std::optional<SweetsSpace::SweetsType> ResolveSweetsTag(const std::string& tag)
@@ -406,9 +410,22 @@ namespace Systems
                         }
 
                         const Physics::Physical& phys = body->GetPhysical();
+                        const Physics::Physical& phys = body->GetPhysical();
                         const bool isPlayer = IsPlayerBody(body);
+
                         const bool kinematic = !(phys.weight > 0.0f);
-                        if (kinematic && !m_includeKinematicBodies && !(isPlayer && m_allowKinematicPlayerCollision))
+                        if (kinematic && !m_includeKinematicBodies && !isPlayer)
+                        {
+                            continue;
+                        }
+
+                        FrameContactInfo info{};
+                        info.transformChanged = body->IsTransformDirty();
+                        frameContactInfo[body] = info;
+                        activeBodies.push_back(body);
+
+                        const bool kinematic = !(phys.weight > 0.0f);
+                        if (kinematic && !m_includeKinematicBodies && !isPlayer)
                         {
                                 continue;
                         }
@@ -457,10 +474,7 @@ namespace Systems
                                 continue;
                         }
 
-                        if (body->IsTransformDirty())
-                        {
-                                body->SyncColliderBounds();
-                        }
+                        body->SyncColliderBounds();
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
                 }
 
@@ -480,6 +494,11 @@ namespace Systems
 
                 const auto IsBodyResting = [&](Entities::PhysicalEntity* body)
                 {
+                        if (IsPlayerBody(body))
+                        {
+                                return false;
+                        }
+
                         const auto it = m_restingFrames.find(body);
                         return it != m_restingFrames.end() && it->second.resting;
                 };
@@ -561,8 +580,10 @@ namespace Systems
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
-                                const bool bodyAStatic = !(physA.weight > 0.0f);
-                                const bool bodyBStatic = !(physB.weight > 0.0f);
+                                const bool isPlayerA = IsPlayerBody(bodyA);
+                                const bool isPlayerB = IsPlayerBody(bodyB);
+                                const bool bodyAStatic = !(physA.weight > 0.0f) && !isPlayerA;
+                                const bool bodyBStatic = !(physB.weight > 0.0f) && !isPlayerB;
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
@@ -910,54 +931,53 @@ namespace Systems
                                         phys.velocity.z += dir.z * delta;
                                 };
 
-                                const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
-                                        bool allowTangentialImpulse, bool groundContact, bool supportContact, const std::string& tag, bool allowModification)
+                                const auto ClampVelocity = [&](Physics::Physical& phys,
+                                        const float3& normal,
+                                        const float3& tangent,
+                                        bool hasTangent,
+                                        bool groundContact,
+                                        bool penetrationResolved,
+                                        const std::string& tag,
+                                        bool allowModification)
                                 {
-                                        if (phys.weight <= 0.0f || !allowModification)
+                                        if (!groundContact || !penetrationResolved)
+                                        {
+                                                return;
+                                        }
+                                        if (!allowModification || phys.weight <= 0.0f)
+                                        {
+                                                return;
+                                        }
+                                        if (IsSweetsTag(tag) && !groundContact)
+                                        {
+                                                return;
+                                        }
+                                        if (tag == "player")
                                         {
                                                 return;
                                         }
 
-                                        const auto clampComponent = [](float& component, float minSpeed)
+                                        const float normalComponent = std::fabs(Project(phys.velocity, normal));
+                                        if (normalComponent >= m_minVerticalSpeed)
                                         {
-                                                if (std::fabs(component) < minSpeed)
-                                                {
-                                                        component = 0.0f;
-                                                        return true;
-                                                }
-                                                return false;
-                                        };
-
-                                        const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
-                                        const float planarSpeed = std::sqrt(planarSpeedSq);
-                                        const float settleSpeed = m_restingSpeedThreshold;
-                                        if (planarSpeed < settleSpeed)
-                                        {
-                                                phys.velocity.x = 0.0f;
-                                                phys.velocity.y = 0.0f;
-                                        }
-                                        clampComponent(phys.velocity.x, m_minLinearSpeed);
-                                        clampComponent(phys.velocity.y, m_minLinearSpeed);
-                                        clampComponent(phys.velocity.z, m_minLinearSpeed);
-
-                                        if (groundContact)
-                                        {
-                                                const float normalComponent = Project(phys.velocity, normal);
-                                                if (std::fabs(normalComponent) < m_minVerticalSpeed)
-                                                {
-                                                        ApplyComponent(phys, normal, 0.0f);
-                                                }
-
-                                                if (allowTangentialImpulse)
-                                                {
-                                                        const float tangentialComponent = Project(phys.velocity, tangent);
-                                                        if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
-                                                        {
-                                                                ApplyComponent(phys, tangent, 0.0f);
-                                                        }
-                                                }
+                                                return;
                                         }
 
+                                        float tangentialComponent = 0.0f;
+                                        if (hasTangent)
+                                        {
+                                                tangentialComponent = std::fabs(Project(phys.velocity, tangent));
+                                        }
+                                        if (tangentialComponent >= m_minTangentialSpeed)
+                                        {
+                                                return;
+                                        }
+
+                                        ApplyComponent(phys, normal, 0.0f);
+                                        if (hasTangent)
+                                        {
+                                                ApplyComponent(phys, tangent, 0.0f);
+                                        }
                                 };
 
                                 const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
@@ -1093,8 +1113,12 @@ namespace Systems
                                         physB.velocity.z = 0.0f;
                                 }
 
-                                ClampVelocity(physA, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyA->GetTag(), allowImpulseA);
-                                ClampVelocity(physB, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyB->GetTag(), allowImpulseB);
+                                const bool penetrationResolved = pushDistance > 0.0f;
+                                const bool allowClampA = allowImpulseA && !IsPlayerBody(bodyA);
+                                const bool allowClampB = allowImpulseB && !IsPlayerBody(bodyB);
+
+                                ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyA->GetTag(), allowClampA);
+                                ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, penetrationResolved, bodyB->GetTag(), allowClampB);
 
                                 ++resolvedPairs;
                         }

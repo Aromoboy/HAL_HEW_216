@@ -40,7 +40,7 @@ namespace Entities
         Collision::CollisionLayer GetCollisionLayer() const;
         void SetCollisionLayer(Collision::CollisionLayer layer);
 
-        void SyncColliderBounds();
+        void SyncColliderBounds(bool force = false);
         bool IsTransformDirty() const;
 
         void ApplyTranslation(const float3& delta);
