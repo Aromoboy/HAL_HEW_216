@@ -65,11 +65,11 @@ namespace
                 normal.z *= invLen;
 
                 const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
-                const float verticalSnapThreshold = std::max(snapThreshold, 0.9995f);
+                const float verticalSnapThreshold = std::max(snapThreshold, 0.9999f);
                 const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
-                constexpr float kMinSnapVerticalComponent = 0.99999f;
-                constexpr float kMaxPlanarForSnap = 1e-6f;
+                constexpr float kMinSnapVerticalComponent = 0.999995f;
+                constexpr float kMaxPlanarForSnap = 1e-8f;
 
                 classification.verticalComponent = verticalComponent;
                 classification.isGround = verticalComponent >= groundThreshold;
@@ -705,29 +705,30 @@ namespace Systems
                 const float restPenetrationThreshold = m_penetrationTolerance * 2.0f;
 
                 const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
-                const bool belowBaumgarteThreshold = contactPenetration < restPenetrationThreshold;
+                const bool belowBaumgarteThreshold = contactPenetration <= restPenetrationThreshold;
                 float baumgarteFactor = m_baumgarteFactor;
-                                if (!bodyAStatic && !bodyBStatic)
-                                {
-                                        const float relativeSpeedSq = (physA.velocity.x - physB.velocity.x) * (physA.velocity.x - physB.velocity.x)
-                                                + (physA.velocity.y - physB.velocity.y) * (physA.velocity.y - physB.velocity.y);
-                                        const float relativeSpeed = std::sqrt(relativeSpeedSq);
-                                        if (relativeSpeed < m_minVerticalSpeed)
-                                        {
-                                                baumgarteFactor *= 0.5f;
-                                        }
-                                }
+                if (!bodyAStatic && !bodyBStatic)
+                {
+                        const float relativeSpeedSq = (physA.velocity.x - physB.velocity.x) * (physA.velocity.x - physB.velocity.x)
+                                + (physA.velocity.y - physB.velocity.y) * (physA.velocity.y - physB.velocity.y);
+                        const float relativeSpeed = std::sqrt(relativeSpeedSq);
+                        if (relativeSpeed < m_minVerticalSpeed)
+                        {
+                                baumgarteFactor *= 0.4f;
+                        }
+                        else if (relativeSpeed < m_minVerticalSpeed * 2.0f)
+                        {
+                                baumgarteFactor *= 0.65f;
+                        }
+                }
 
                 const bool pseudo2DStack = fallbackAABB && slopeAllowsSupport;
                 const bool staticOrResting = bodyAStatic || bodyBStatic || (bodyAResting && bodyBResting);
                 if (pseudo2DStack)
                 {
-                        baumgarteFactor *= staticOrResting ? 0.35f : 0.55f;
-                        if (staticOrResting && penetrationError > 0.0f)
-                        {
-                                const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
-                                baumgarteFactor *= 0.6f + 0.4f * penetrationScale;
-                        }
+                        const float penetrationScale = std::clamp(penetrationError / std::max(restPenetrationThreshold, 1e-4f), 0.0f, 1.0f);
+                        const float pseudoStackDampen = staticOrResting ? 0.25f : 0.45f;
+                        baumgarteFactor *= pseudoStackDampen * (0.55f + 0.45f * penetrationScale);
                 }
 
                 float pushDistance = belowBaumgarteThreshold
@@ -735,11 +736,13 @@ namespace Systems
                         : std::min(baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
                 if (pseudo2DStack && pushDistance > 0.0f)
                 {
-                        const float overCorrectionCap = penetrationError * 0.5f;
+                        const float overCorrectionCap = penetrationError * 0.35f;
+                        const float pseudo2DMax = m_penetrationTolerance * 3.0f;
                         if (overCorrectionCap > 0.0f)
                         {
                                 pushDistance = std::min(pushDistance, overCorrectionCap);
                         }
+                        pushDistance = std::min(pushDistance, pseudo2DMax);
                 }
                 if (pushDistance <= 0.0f)
                 {
@@ -792,18 +795,18 @@ namespace Systems
                                                                 const bool topResting = topIsA ? bodyAResting : bodyBResting;
                                                                 const float planarSpeedSq = topPhys.velocity.x * topPhys.velocity.x + topPhys.velocity.y * topPhys.velocity.y;
                                                                 const float planarSpeed = std::sqrt(planarSpeedSq);
-                                                                const float slideThreshold = m_restingSpeedThreshold * 3.0f;
-                                                                const float nearStopThreshold = m_restingSpeedThreshold * 1.5f;
+                                                                const float nearStopThreshold = m_restingSpeedThreshold * 2.0f;
+                                                                const float slideThreshold = std::max(m_restingSpeedThreshold * 4.0f, m_minTangentialSpeed * 2.0f);
                                                                 if (!topResting && planarSpeed > nearStopThreshold && planarSpeed >= slideThreshold)
                                                                 {
-                                                                        const float slowFactor = std::clamp((planarSpeed - slideThreshold) / (slideThreshold * 3.0f), 0.0f, 1.0f);
+                                                                        const float slowFactor = std::clamp((planarSpeed - slideThreshold) / (slideThreshold * 4.0f), 0.0f, 1.0f);
                                                                         if (slowFactor > 0.0f)
                                                                         {
                                                                                 const float boostScale = std::clamp(supportOverlapFraction, 0.0f, 1.0f)
                                                                                         * slowFactor;
                                                                                 if (boostScale > 0.0f)
                                                                                 {
-                                                                                        const float boosted = m_edgeSlideBoost * boostScale * 0.5f;
+                                                                                        const float boosted = m_edgeSlideBoost * boostScale * 0.35f;
                                                                                         topPhys.velocity.x += slideDir * boosted;
                                                                                 }
                                                                         }
@@ -893,7 +896,7 @@ namespace Systems
 
                                         const float planarSpeedSq = phys.velocity.x * phys.velocity.x + phys.velocity.y * phys.velocity.y;
                                         const float planarSpeed = std::sqrt(planarSpeedSq);
-                                        const float settleSpeed = m_restingSpeedThreshold * 0.75f;
+                                        const float settleSpeed = m_restingSpeedThreshold;
                                         if (planarSpeed < settleSpeed)
                                         {
                                                 phys.velocity.x = 0.0f;
@@ -1007,7 +1010,7 @@ namespace Systems
                                         {
                                                 const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
                                                 absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
-                                                allowTangentImpulse = absRelativeTangentialVelocity >= m_minTangentialSpeed;
+                                                allowTangentImpulse = absRelativeTangentialVelocity > m_minTangentialSpeed;
                                                 if (allowTangentImpulse)
                                                 {
                                                         const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
@@ -1047,9 +1050,6 @@ namespace Systems
 
                                 }
 
-                                ClampVelocity(physA, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyA->GetTag(), allowImpulseA);
-                                ClampVelocity(physB, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyB->GetTag(), allowImpulseB);
-
                                 if (physA.velocity.z != 0.0f)
                                 {
                                         physA.velocity.z = 0.0f;
@@ -1058,6 +1058,9 @@ namespace Systems
                                 {
                                         physB.velocity.z = 0.0f;
                                 }
+
+                                ClampVelocity(physA, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyA->GetTag(), allowImpulseA);
+                                ClampVelocity(physB, contactNormal, tangent, allowTangentImpulse, isGroundContact, treatedAsSupport, bodyB->GetTag(), allowImpulseB);
 
                                 ++resolvedPairs;
                         }
