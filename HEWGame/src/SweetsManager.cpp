@@ -219,6 +219,7 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
+        float2 centroidOffset{ 0.0f, 0.0f };
         float rawThickness{ 0.0f };
         float thickness{ 1.0f };
         float paddingFactor{ 1.0f };
@@ -660,6 +661,21 @@ namespace
         desc.idxSize = indices.empty() ? 0u : sizeof(UINT);
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        if (!positions.empty())
+        {
+            float2 centroid{ 0.0f, 0.0f };
+            for (const auto& pos : positions)
+            {
+                centroid.x += pos.x;
+                centroid.y += pos.y;
+            }
+
+            const float invCount = 1.0f / static_cast<float>(positions.size());
+            centroid.x *= invCount;
+            centroid.y *= invCount;
+            summary.centroidOffset = centroid;
+        }
 
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
         constexpr std::size_t kMinHullPoints = 6;
@@ -1188,7 +1204,8 @@ namespace SweetsSpace
                 : kDefaultGeneratedThicknessEpsilon;
             const float paddedThickness = geometry.thickness;
             GeneratedCollider generatedCollider{ geometry.hull, {}, paddedThickness };
-            
+            generatedCollider.centroidOffset = geometry.centroidOffset;
+
             m_generatedColliders[normalizedKind] = generatedCollider;
 
 
@@ -1304,6 +1321,7 @@ namespace SweetsSpace
                 scaledTransform.scale.z *= sampledScale.z;
                 std::shared_ptr<Collision::ICollider> collider;
                 const bool hasGeneratedHull = !generatedCollider.hull.empty();
+                ModelBounds generatedBounds{};
                 bool usedGeneratedHull = false;
                 bool colliderDefinitionFound = false;
                 bool colliderDefinitionFailed = false;
@@ -1331,9 +1349,32 @@ namespace SweetsSpace
                     colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
                 }
 
-                const float3 halfExtents = ComputeHalfExtents(bounds, scaledTransform.scale, preset.colliderPreset);
-                const float3 colliderOffset = ComputeColliderOffset(bounds, scaledTransform.scale);
-                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
+                if (hasGeneratedHull)
+                {
+                    std::vector<float2> scaledHull;
+                    scaledHull.reserve(generatedCollider.hull.size());
+                    for (const auto& pt : generatedCollider.hull)
+                    {
+                        scaledHull.push_back(float2{
+                            (pt.x + generatedCollider.centroidOffset.x) * scaledTransform.scale.x,
+                            (pt.y + generatedCollider.centroidOffset.y) * scaledTransform.scale.y });
+                    }
+
+                    const float scaledThickness = generatedCollider.thickness * scaledTransform.scale.z;
+                    generatedBounds = ComputeBoundsFromHull(scaledHull, scaledThickness);
+                }
+
+                ModelBounds effectiveBounds = bounds;
+                float3 boundsScale = scaledTransform.scale;
+                if (generatedBounds.valid)
+                {
+                    effectiveBounds = generatedBounds;
+                    boundsScale = float3{ 1.0f, 1.0f, 1.0f };
+                }
+
+                const float3 halfExtents = ComputeHalfExtents(effectiveBounds, boundsScale, preset.colliderPreset);
+                const float3 colliderOffset = ComputeColliderOffset(effectiveBounds, boundsScale);
+                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, boundsScale);
 
                 const bool configDefinitionAvailable = colliderDefinitionFound && !colliderDefinitionEmpty;
                 const bool configOverrideRequested = configDefinitionAvailable
