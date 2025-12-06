@@ -5,7 +5,7 @@
 namespace Systems
 {
     IntegrateSystem::IntegrateSystem()
-        : m_velocityThreshold(1e-4f)
+        : m_velocityThreshold(0.01f)
     {
     }
 
