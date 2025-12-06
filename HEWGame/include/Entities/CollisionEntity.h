@@ -41,6 +41,7 @@ namespace Entities
         void SetCollisionLayer(Collision::CollisionLayer layer);
 
         void SyncColliderBounds();
+        bool IsTransformDirty() const;
 
         void ApplyTranslation(const float3& delta);
 
@@ -55,8 +56,10 @@ namespace Entities
         Collision::CollisionLayer m_collisionLayer;
         Systems::ContactLiteSystem* m_contactSystem;
         Transform m_lastTransform;
+        Transform m_lastBoundsTransform;
         float3 m_lastVelocity;
         int m_stationaryFrameCount{ 0 };
+        bool m_transformDirty{ true };
         bool m_isSleeping{ false };
     };
 }

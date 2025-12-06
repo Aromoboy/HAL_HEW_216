@@ -27,6 +27,21 @@ namespace
 
     constexpr float kSleepVelocityEpsilon = 0.01f;
     constexpr int kSleepFrameThreshold = 10;
+
+    bool AreTransformsEqual(const Transform& a, const Transform& b)
+    {
+        const bool positionEqual = (a.position.x == b.position.x)
+            && (a.position.y == b.position.y)
+            && (a.position.z == b.position.z);
+        const bool rotationEqual = (a.rotation.x == b.rotation.x)
+            && (a.rotation.y == b.rotation.y)
+            && (a.rotation.z == b.rotation.z);
+        const bool scaleEqual = (a.scale.x == b.scale.x)
+            && (a.scale.y == b.scale.y)
+            && (a.scale.z == b.scale.z);
+
+        return positionEqual && rotationEqual && scaleEqual;
+    }
 }
 
 namespace Entities
@@ -37,6 +52,7 @@ namespace Entities
         , m_collisionLayer(layer)
         , m_contactSystem(contactSystem)
         , m_lastTransform(transform)
+        , m_lastBoundsTransform(transform)
         , m_lastVelocity{ 0.0f, 0.0f, 0.0f }
     {
         if (m_collider)
@@ -88,7 +104,19 @@ namespace Entities
             return;
         }
 
+        if (!IsTransformDirty())
+        {
+            return;
+        }
+
         m_collider->UpdateBounds(m_transform);
+        m_lastBoundsTransform = m_transform;
+        m_transformDirty = false;
+    }
+
+    bool CollisionEntity::IsTransformDirty() const
+    {
+        return m_transformDirty || !AreTransformsEqual(m_transform, m_lastBoundsTransform);
     }
 
     void CollisionEntity::ApplyTranslation(const float3& delta)
@@ -102,6 +130,7 @@ namespace Entities
         m_transform.position.x += delta.x;
         m_transform.position.y += delta.y;
         m_transform.position.z += delta.z;
+        m_transformDirty = true;
         SyncColliderBounds();
     }
 
