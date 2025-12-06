@@ -589,8 +589,9 @@ namespace Systems
                                 Physics::Physical& physB = bodyB->GetPhysical();
                                 const bool isPlayerA = IsPlayerBody(bodyA);
                                 const bool isPlayerB = IsPlayerBody(bodyB);
-                                const bool bodyAStatic = !(physA.weight > 0.0f) && !isPlayerA;
-                                const bool bodyBStatic = !(physB.weight > 0.0f) && !isPlayerB;
+                                const bool playerInvolved = isPlayerA || isPlayerB;
+                                const bool bodyAStatic = isPlayerA || !(physA.weight > 0.0f);
+                                const bool bodyBStatic = isPlayerB || !(physB.weight > 0.0f);
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
@@ -801,12 +802,12 @@ namespace Systems
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
 
-                                const bool allowImpulseA = !bodyAStatic;
-                                const bool allowImpulseB = !bodyBStatic;
+                                const bool allowImpulseA = !bodyAStatic && (!playerInvolved || sweetsA);
+                                const bool allowImpulseB = !bodyBStatic && (!playerInvolved || sweetsB);
                                 const bool modifyVelocityA = allowImpulseA && !IsPlayerBody(bodyA);
                                 const bool modifyVelocityB = allowImpulseB && !IsPlayerBody(bodyB);
-                                const float massA = bodyAStatic ? std::numeric_limits<float>::infinity() : physA.weight;
-                                const float massB = bodyBStatic ? std::numeric_limits<float>::infinity() : physB.weight;
+                                const float massA = bodyAStatic || isPlayerA ? std::numeric_limits<float>::infinity() : physA.weight;
+                                const float massB = bodyBStatic || isPlayerB ? std::numeric_limits<float>::infinity() : physB.weight;
                                 const auto SplitImpulse = [&](float impulse)
                                 {
                                         float impulseA = 0.0f;
