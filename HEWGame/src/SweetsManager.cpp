@@ -340,7 +340,7 @@ namespace
     }
 
     bool IsHorizontallyOutOfBounds(
-        const ::SweetsSpace::ActiveSweets& sweets,
+        ::SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
         float margin,
         float fallbackLimit,
@@ -351,6 +351,7 @@ namespace
         const Collision::ICollider* collider = sweets.GetCollider();
         if (collider)
         {
+            sweets.SyncColliderBounds();
             const AABB bounds = collider->GetAABB();
             minX = bounds.min.x;
             maxX = bounds.max.x;
@@ -1969,6 +1970,7 @@ namespace SweetsSpace
             const Collision::ICollider* collider = sweets->GetCollider();
             if (collider)
             {
+                sweets->SyncColliderBounds();
                 const AABB bounds = collider->GetAABB();
                 sweetsTop = bounds.max.y;
             }

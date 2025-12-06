@@ -96,7 +96,7 @@ namespace Entities
         }
     }
 
-    void CollisionEntity::SyncColliderBounds(bool force)
+    void CollisionEntity::SyncColliderBounds()
     {
         if (!m_collider)
         {
@@ -109,7 +109,6 @@ namespace Entities
             return;
         }
 
-        (void)force;
         m_collider->UpdateBounds(m_transform);
         m_lastBoundsTransform = m_transform;
         m_transformDirty = false;
