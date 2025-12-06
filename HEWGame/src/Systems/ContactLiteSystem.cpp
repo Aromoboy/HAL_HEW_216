@@ -451,6 +451,22 @@ namespace Systems
                 std::vector<BodyProxy> proxies;
                 proxies.reserve(bodyCount);
 
+                struct ContactConstraint
+                {
+                        Entities::PhysicalEntity* bodyA;
+                        Entities::PhysicalEntity* bodyB;
+                        Physics::Physical* physA;
+                        Physics::Physical* physB;
+                        float2 normal;
+                        float massA;
+                        float massB;
+                        bool modifyVelocityA;
+                        bool modifyVelocityB;
+                };
+
+                std::vector<ContactConstraint> contactConstraints;
+                contactConstraints.reserve(bodyCount);
+
                 for (Entities::PhysicalEntity* body : activeBodies)
                 {
                         if (!body)
@@ -804,40 +820,63 @@ namespace Systems
 
                                 const bool allowImpulseA = !bodyAStatic && (!playerInvolved || sweetsA);
                                 const bool allowImpulseB = !bodyBStatic && (!playerInvolved || sweetsB);
-                                const bool modifyVelocityA = allowImpulseA && !IsPlayerBody(bodyA);
-                                const bool modifyVelocityB = allowImpulseB && !IsPlayerBody(bodyB);
-                                const float massA = bodyAStatic || isPlayerA ? std::numeric_limits<float>::infinity() : physA.weight;
-                                const float massB = bodyBStatic || isPlayerB ? std::numeric_limits<float>::infinity() : physB.weight;
+
+                                contactConstraints.push_back(ContactConstraint{
+                                        bodyA,
+                                        bodyB,
+                                        &physA,
+                                        &physB,
+                                        float2{ contactNormal.x, contactNormal.y },
+                                        bodyAStatic || isPlayerA ? std::numeric_limits<float>::infinity() : physA.weight,
+                                        bodyBStatic || isPlayerB ? std::numeric_limits<float>::infinity() : physB.weight,
+                                        allowImpulseA && !IsPlayerBody(bodyA),
+                                        allowImpulseB && !IsPlayerBody(bodyB)
+                                });
+
+                                ++resolvedPairs;
+                        }
+                }
+
+                constexpr int kSolverIterations = 4;
+                for (int iteration = 0; iteration < kSolverIterations; ++iteration)
+                {
+                        for (const ContactConstraint& constraint : contactConstraints)
+                        {
+                                Physics::Physical& physA = *constraint.physA;
+                                Physics::Physical& physB = *constraint.physB;
+                                Entities::PhysicalEntity* bodyA = constraint.bodyA;
+                                Entities::PhysicalEntity* bodyB = constraint.bodyB;
+
                                 const auto SplitImpulse = [&](float impulse)
                                 {
                                         float impulseA = 0.0f;
                                         float impulseB = 0.0f;
-                                        if (std::isinf(massA))
+                                        if (std::isinf(constraint.massA))
                                         {
                                                 impulseB = -impulse;
                                         }
-                                        else if (std::isinf(massB))
+                                        else if (std::isinf(constraint.massB))
                                         {
                                                 impulseA = impulse;
                                         }
                                         else
                                         {
-                                                const float massSum = massA + massB;
+                                                const float massSum = constraint.massA + constraint.massB;
                                                 if (massSum > 0.0f)
                                                 {
-                                                        impulseA = impulse * (massB / massSum);
-                                                        impulseB = -impulse * (massA / massSum);
+                                                        impulseA = impulse * (constraint.massB / massSum);
+                                                        impulseB = -impulse * (constraint.massA / massSum);
                                                 }
                                         }
                                         return std::pair<float, float>{ impulseA, impulseB };
                                 };
 
-                                const float2 normal2{ contactNormal.x, contactNormal.y };
+                                const float2 normal2 = constraint.normal;
                                 const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
                                 const float relativeNormalSpeed = relativeVelocity.x * normal2.x + relativeVelocity.y * normal2.y;
 
-                                const float invMassA = std::isinf(massA) ? 0.0f : (1.0f / massA);
-                                const float invMassB = std::isinf(massB) ? 0.0f : (1.0f / massB);
+                                const float invMassA = std::isinf(constraint.massA) ? 0.0f : (1.0f / constraint.massA);
+                                const float invMassB = std::isinf(constraint.massB) ? 0.0f : (1.0f / constraint.massB);
                                 const float invMassSum = invMassA + invMassB;
 
                                 float vn = relativeNormalSpeed;
@@ -854,13 +893,13 @@ namespace Systems
                                         const float2 normalImpulseA{ normal2.x * jnA, normal2.y * jnA };
                                         const float2 normalImpulseB{ normal2.x * jnB, normal2.y * jnB };
 
-                                        if (modifyVelocityA)
+                                        if (constraint.modifyVelocityA)
                                         {
                                                 physA.velocity.x += normalImpulseA.x;
                                                 physA.velocity.y += normalImpulseA.y;
                                                 appliedNormalImpulseA = jnA;
                                         }
-                                        if (modifyVelocityB)
+                                        if (constraint.modifyVelocityB)
                                         {
                                                 physB.velocity.x += normalImpulseB.x;
                                                 physB.velocity.y += normalImpulseB.y;
@@ -894,13 +933,13 @@ namespace Systems
                                                         const float2 tangentImpulseA{ tangentDir.x * jtA, tangentDir.y * jtA };
                                                         const float2 tangentImpulseB{ tangentDir.x * jtB, tangentDir.y * jtB };
 
-                                                        if (modifyVelocityA)
+                                                        if (constraint.modifyVelocityA)
                                                         {
                                                                 physA.velocity.x += tangentImpulseA.x;
                                                                 physA.velocity.y += tangentImpulseA.y;
                                                                 appliedTangentImpulseA = jtA;
                                                         }
-                                                        if (modifyVelocityB)
+                                                        if (constraint.modifyVelocityB)
                                                         {
                                                                 physB.velocity.x += tangentImpulseB.x;
                                                                 physB.velocity.y += tangentImpulseB.y;
@@ -920,8 +959,6 @@ namespace Systems
                                         frameContactInfo[bodyB].impulseApplied = true;
                                         bodyB->Wake();
                                 }
-
-                                ++resolvedPairs;
                         }
                 }
 
