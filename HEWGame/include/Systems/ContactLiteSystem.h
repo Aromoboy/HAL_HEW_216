@@ -3,6 +3,7 @@
 #include "Core/UpdateNode.h"
 
 #include <vector>
+#include <unordered_map>
 
 #include "Entities/PhysicalEntity.h"
 
@@ -74,6 +75,9 @@ namespace Systems
         float m_minLinearSpeed;
         float m_minVerticalSpeed;
         float m_minTangentialSpeed;
+        std::unordered_map<Entities::PhysicalEntity*, int> m_restingFrames;
+        int m_restingFrameThreshold;
+        float m_restingSpeedThreshold;
         bool m_includeKinematicBodies;
         bool m_allowKinematicPlayerCollision;
     };
