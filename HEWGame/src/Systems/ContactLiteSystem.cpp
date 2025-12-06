@@ -607,44 +607,35 @@ namespace Systems
                                 bool attemptedSAT = false;
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
-                                bool fallbackAABB = false;
-
                                 const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
                                 const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
+                                const bool colliderASupportsSAT = colliderA2D != nullptr;
+                                const bool colliderBSupportsSAT = colliderB2D != nullptr;
                                 const auto* colliderAAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA);
                                 const auto* colliderBAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
                                 const bool colliderAIsAABB = colliderAAsAABB != nullptr;
                                 const bool colliderBIsAABB = colliderBAsAABB != nullptr;
-                                const bool contactPairHasAABB = colliderAIsAABB || colliderBIsAABB;
 
                                 bool contactComputed = false;
 
-                                const bool sweetsRequireSAT = sweetsPair && !playerPlatformPair;
-                                const bool attemptSAT = pairIs2D || sweetsRequireSAT;
+                                const bool attemptSAT = colliderASupportsSAT || colliderBSupportsSAT;
 
                                 if (attemptSAT)
                                 {
                                         attemptedSAT = true;
                                         ++satAttempts;
 
-                                        if (pairIs2D)
+                                        if (colliderA2D && colliderB2D)
                                         {
                                                 usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
                                         }
-                                        else if (sweetsRequireSAT)
+                                        else if (colliderA2D && colliderBIsAABB)
                                         {
-                                                if (colliderA2D && colliderBIsAABB)
-                                                {
-                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *colliderBAsAABB, contact2D);
-                                                }
-                                                else if (colliderB2D && colliderAIsAABB)
-                                                {
-                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *colliderAAsAABB, contact2D);
-                                                }
-                                                else if (colliderA2D && colliderB2D)
-                                                {
-                                                        usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
-                                                }
+                                                usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *colliderBAsAABB, contact2D);
+                                        }
+                                        else if (colliderB2D && colliderAIsAABB)
+                                        {
+                                                usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *colliderAAsAABB, contact2D);
                                         }
 
                                         if (usedSAT)
@@ -669,9 +660,9 @@ namespace Systems
                                         }
                                 }
 
-                                if (!contactComputed && contactPairHasAABB)
+                                if (!contactComputed)
                                 {
-                                        const bool mixed2DPair = (colliderA2D || colliderB2D) && contactPairHasAABB;
+                                        const bool mixed2DPair = colliderA2D || colliderB2D;
 
                                         int axis = (planarOverlapX < planarOverlapY) ? 0 : 1;
                                         const float axisCenterA = GetAxisCenter(boundsA, axis);
@@ -679,25 +670,9 @@ namespace Systems
                                         const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
                                         contactPenetration = (axis == 0) ? planarOverlapX : planarOverlapY;
 
-                                        if (mixed2DPair)
-                                        {
-                                                contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
-                                                contactMethod = "aabb_planar_mixed";
-                                                contactComputed = true;
-                                        }
-                                        else if (colliderAIsAABB && colliderBIsAABB)
-                                        {
-                                                contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
-                                                contactMethod = "aabb_planar";
-                                                contactComputed = true;
-                                        }
-                                }
-
-                                fallbackAABB = false;
-
-                                if (!usedSAT && !contactComputed)
-                                {
-                                        continue;
+                                        contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
+                                        contactMethod = mixed2DPair ? "aabb_planar_mixed" : "aabb_planar";
+                                        contactComputed = true;
                                 }
 
                                 const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, 0.0f };
