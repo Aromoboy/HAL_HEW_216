@@ -17,6 +17,8 @@ namespace CameraSpace
 
 class ModelRender;
 
+extern bool g_DrawColliders;
+
 namespace Systems
 {
         class DrawSystem : public Core::UpdateNode
@@ -33,6 +35,7 @@ namespace Systems
 
                 void OnUpdate(Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
+                void DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
 
                 size_t GetRenderCommandCount() const;
 
