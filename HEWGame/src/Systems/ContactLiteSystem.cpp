@@ -64,23 +64,21 @@ namespace
                 normal.y *= invLen;
                 normal.z *= invLen;
 
-                const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
-                const float verticalSnapThreshold = std::max(snapThreshold, 0.9999f);
+                const float verticalSnapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
                 const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
-                constexpr float kMinSnapVerticalComponent = 0.999995f;
-                constexpr float kMaxPlanarForSnap = 1e-8f;
+                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
+                const float planarLen = std::sqrt(planarLenSq);
 
                 classification.verticalComponent = verticalComponent;
                 classification.isGround = verticalComponent >= groundThreshold;
-                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
-                const bool allowSnap = verticalComponent >= verticalSnapThreshold
-                        && verticalComponent >= kMinSnapVerticalComponent
-                        && planarLenSq <= kMaxPlanarForSnap;
+
+                const bool allowSnap = classification.isGround
+                        && verticalComponent >= verticalSnapThreshold
+                        && planarLen <= 1e-3f;
+
                 if (allowSnap)
                 {
-                        const float originalX = normal.x;
-                        const float originalZ = normal.z;
                         normal.x = 0.0f;
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
                         normal.z = 0.0f;
