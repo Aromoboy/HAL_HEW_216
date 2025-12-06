@@ -86,7 +86,6 @@ namespace
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
-    constexpr float kDefaultGeneratedThicknessEpsilon = 0.01f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -225,6 +224,13 @@ namespace
         float paddingFactor{ 1.0f };
     };
 
+    struct HullExtents
+    {
+        float2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+        float2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+        bool valid{ false };
+    };
+
     float SanitizeThicknessPadding(float value)
     {
         if (!std::isfinite(value))
@@ -237,9 +243,9 @@ namespace
 
     float SanitizeMinThickness(float value)
     {
-        if (!std::isfinite(value))
+        if (!std::isfinite(value) || value <= 0.0f)
         {
-            return kDefaultGeneratedThicknessEpsilon;
+            return std::numeric_limits<float>::min();
         }
 
         return std::max(value, std::numeric_limits<float>::min());
@@ -502,17 +508,13 @@ namespace
         return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
     }
 
-    ModelBounds ComputeBoundsFromHull(const std::vector<float2>& hull, float thickness)
+    HullExtents ComputeHullExtents(const std::vector<float2>& hull)
     {
-        ModelBounds bounds{};
+        HullExtents extents{};
         if (hull.empty())
         {
-            return bounds;
+            return extents;
         }
-
-        bounds.min = float3{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -thickness * 0.5f };
-        bounds.max = float3{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), thickness * 0.5f };
-        bool anyValid = false;
 
         for (const auto& pt : hull)
         {
@@ -521,15 +523,45 @@ namespace
                 continue;
             }
 
-            anyValid = true;
-            bounds.min.x = std::min(bounds.min.x, pt.x);
-            bounds.min.y = std::min(bounds.min.y, pt.y);
-            bounds.max.x = std::max(bounds.max.x, pt.x);
-            bounds.max.y = std::max(bounds.max.y, pt.y);
+            extents.valid = true;
+            extents.min.x = std::min(extents.min.x, pt.x);
+            extents.min.y = std::min(extents.min.y, pt.y);
+            extents.max.x = std::max(extents.max.x, pt.x);
+            extents.max.y = std::max(extents.max.y, pt.y);
         }
 
-        bounds.valid = anyValid;
+        return extents;
+    }
+
+    ModelBounds ComputeBoundsFromHull(const std::vector<float2>& hull, float thickness)
+    {
+        ModelBounds bounds{};
+        const HullExtents extents = ComputeHullExtents(hull);
+        if (!extents.valid)
+        {
+            return bounds;
+        }
+
+        bounds.min = float3{ extents.min.x, extents.min.y, -thickness * 0.5f };
+        bounds.max = float3{ extents.max.x, extents.max.y, thickness * 0.5f };
+        bounds.valid = true;
         return bounds;
+    }
+
+    float ComputeAdaptiveThicknessFromExtents(float width, float height, const float3& scale, float minThickness)
+    {
+        const float boundsMaxExtent = std::max(width, height);
+        const float largestScaleComponent = std::max(scale.x, std::max(scale.y, scale.z));
+        const float computed = std::max(boundsMaxExtent * 0.02f, largestScaleComponent * 0.02f);
+        return ApplyThicknessEpsilon(computed, minThickness);
+    }
+
+    float ComputeAdaptiveThickness(const std::vector<float2>& hull, const float3& scale, float minThickness)
+    {
+        const HullExtents extents = ComputeHullExtents(hull);
+        const float width = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
+        const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
+        return ComputeAdaptiveThicknessFromExtents(width, height, scale, minThickness);
     }
 
     float SignedTriangleArea(const float2& a, const float2& b, const float2& c)
@@ -732,21 +764,15 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         summary.hull = SimplifyHull(rawHull, kMinHullPoints, kMaxHullPoints);
-        const float2 centroid2D{ summary.centroidOffset.x, summary.centroidOffset.y };
-        for (auto& pt : summary.hull)
-        {
-            pt.x -= centroid2D.x;
-            pt.y -= centroid2D.y;
-        }
-        summary.rawThickness = kDefaultGeneratedThicknessEpsilon * sanitizedPadding;
-        summary.thickness = ApplyThicknessEpsilon(summary.rawThickness, minThickness);
-        std::vector<float2> hullWithOffset;
-        hullWithOffset.reserve(summary.hull.size());
-        for (const auto& pt : summary.hull)
-        {
-            hullWithOffset.push_back(float2{ pt.x + centroid2D.x, pt.y + centroid2D.y });
-        }
-        summary.bounds = ComputeBoundsFromHull(hullWithOffset, summary.thickness);
+        const HullExtents extents = ComputeHullExtents(summary.hull);
+        const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
+        const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
+
+        summary.rawThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{1.0f, 1.0f, 1.0f}, minThickness);
+        summary.thickness = summary.rawThickness;
+
+        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);  
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "Analyzed geometry path='" << path
@@ -756,9 +782,9 @@ namespace
             << " hullPoints=" << summary.hull.size()
             << " polygonParts=1"
             << " rawThickness=" << summary.rawThickness
-            << " paddedThickness=" << summary.thickness
+            << " adaptiveThickness=" << summary.thickness
             << " paddingFactor=" << summary.paddingFactor
-            << " flattenedEpsilon=" << kDefaultGeneratedThicknessEpsilon << "\n";
+            << " minThickness=" << minThickness << "\n";
         DebugTrace(oss.str());
 
         return summary;
@@ -1144,7 +1170,7 @@ namespace SweetsSpace
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
-        , m_generatedColliderMinThickness(SanitizeMinThickness(kDefaultGeneratedThicknessEpsilon))
+        , m_generatedColliderMinThickness(SanitizeMinThickness(0.0f))
         , m_forceGeneratedColliders(false)
         , m_colliderConfigOverridesEnabled(false)
         , m_warnedMissingHorizontalBounds(false)
@@ -1264,8 +1290,16 @@ namespace SweetsSpace
             }
             const float resolvedRawThickness = geometry.bounds.valid
                 ? geometry.rawThickness
-                : kDefaultGeneratedThicknessEpsilon;
-            const float paddedThickness = geometry.thickness;
+            : ComputeAdaptiveThicknessFromExtents(
+                    bounds.max.x - bounds.min.x,
+                    bounds.max.y - bounds.min.y,
+                    float3{ 1.0f, 1.0f, 1.0f },
+                    m_generatedColliderMinThickness);
+
+            const float adaptiveThickness = geometry.thickness;
+
+            GeneratedCollider generatedCollider{ geometry.hull, {}, adaptiveThickness };
+
             
             GeneratedCollider(
                 const std::vector<float2>& hull,
@@ -1285,10 +1319,10 @@ namespace SweetsSpace
             if (!colliderDefinitionFound || colliderDefinitionEmpty)
             {
                 std::ostringstream padLog;
-                padLog << kLogPrefix << "Using padded thickness for kind '" << resolvedKind << "'" << aliasSuffix
+                padLog << kLogPrefix << "Using adaptive thickness for kind '" << resolvedKind << "'" << aliasSuffix
                     << " baseThickness=" << resolvedRawThickness
                     << " paddingFactor=" << m_generatedColliderThicknessPadding
-                    << " paddedThickness=" << paddedThickness
+                    << " adaptiveThickness=" << adaptiveThickness
                     << (colliderDefinitionFound ? " because collider config was empty.\n"
                         : " because collider config was missing.\n");
                 DebugTrace(padLog.str());
@@ -1417,32 +1451,20 @@ namespace SweetsSpace
                     colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
                 }
 
-                if (hasGeneratedHull)
-                {
-                    std::vector<float2> scaledHull;
-                    scaledHull.reserve(generatedCollider.hull.size());
-                    for (const auto& pt : generatedCollider.hull)
-                    {
-                        scaledHull.push_back(float2{
-                            (pt.x + generatedCollider.centroidOffset.x) * scaledTransform.scale.x,
-                            (pt.y + generatedCollider.centroidOffset.y) * scaledTransform.scale.y });
-                    }
+                const float colliderThickness = geometry.bounds.valid
+                    ? ComputeAdaptiveThickness(generatedCollider.hull, scaledTransform.scale, m_generatedColliderMinThickness)
+                    : ComputeAdaptiveThicknessFromExtents(
+                        bounds.max.x - bounds.min.x,
+                        bounds.max.y - bounds.min.y,
+                        scaledTransform.scale,
+                        m_generatedColliderMinThickness);
+                ModelBounds colliderBounds = bounds;
+                colliderBounds.min.z = -colliderThickness * 0.5f;
+                colliderBounds.max.z = colliderThickness * 0.5f;
 
-                    const float scaledThickness = generatedCollider.thickness * scaledTransform.scale.z;
-                    generatedBounds = ComputeBoundsFromHull(scaledHull, scaledThickness);
-                }
-
-                ModelBounds effectiveBounds = bounds;
-                float3 boundsScale = scaledTransform.scale;
-                if (generatedBounds.valid)
-                {
-                    effectiveBounds = generatedBounds;
-                    boundsScale = float3{ 1.0f, 1.0f, 1.0f };
-                }
-
-                const float3 halfExtents = ComputeHalfExtents(effectiveBounds, boundsScale, preset.colliderPreset);
-                const float3 colliderOffset = ComputeColliderOffset(effectiveBounds, boundsScale);
-                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, boundsScale);
+                const float3 halfExtents = ComputeHalfExtents(colliderBounds, scaledTransform.scale, preset.colliderPreset);
+                const float3 colliderOffset = ComputeColliderOffset(colliderBounds, scaledTransform.scale);
+                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
 
                 const bool configDefinitionAvailable = colliderDefinitionFound && !colliderDefinitionEmpty;
                 const bool configOverrideRequested = configDefinitionAvailable
@@ -1475,11 +1497,7 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
-                            generatedCollider.hull,
-                            generatedCollider.centroidOffset,
-                            generatedCollider.thickness,
-                            Collision::CollisionLayer::Sweets);
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, colliderThickness, Collision::CollisionLayer::Sweets);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
                         {
@@ -1488,7 +1506,7 @@ namespace SweetsSpace
                                 << " had no usable points; using auto-generated hull points=" << generatedCollider.hull.size()
                                 << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
                                 << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
-                                << " thickness=" << generatedCollider.thickness
+                                << " thickness=" << colliderThickness
                                 << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
                             DebugTrace(warn.str());
                         }
@@ -1497,7 +1515,7 @@ namespace SweetsSpace
                             std::ostringstream warn;
                             warn << kLogPrefix << "Collider definition for '" << resolvedKind << "'" << aliasSuffix
                                 << " failed or was empty; using generated hull points=" << generatedCollider.hull.size()
-                                << " thickness=" << generatedCollider.thickness << "\n";
+                                << " thickness=" << colliderThickness << "\n";
                             DebugTrace(warn.str());
                         }
                         else if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
@@ -1508,7 +1526,7 @@ namespace SweetsSpace
                                 << " points=" << generatedCollider.hull.size()
                                 << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
                                 << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
-                                << " thickness=" << generatedCollider.thickness
+                                << " thickness=" << colliderThickness
                                 << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
                             DebugTrace(warn.str());
                             m_warnedMissingColliderDefinitionKinds.insert(resolvedKind);
