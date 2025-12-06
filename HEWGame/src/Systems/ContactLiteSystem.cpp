@@ -557,7 +557,11 @@ namespace Systems
                                 const bool playerPlatformPair = (IsPlayerBody(bodyA) && layerB == Collision::CollisionLayer::Floor)
                                                 || (IsPlayerBody(bodyB) && layerA == Collision::CollisionLayer::Floor);
 
-                                if (!pairIs2D && !playerPlatformPair && overlaps[2] < -kPlanarZTolerance)
+                                const bool sweetsA = layerA == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyA->GetTag());
+                                const bool sweetsB = layerB == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyB->GetTag());
+                                const bool sweetsPair = sweetsA || sweetsB;
+
+                                if (!pairIs2D && !playerPlatformPair && !sweetsPair && overlaps[2] < -kPlanarZTolerance)
                                 {
                                         continue;
                                 }
@@ -594,17 +598,43 @@ namespace Systems
                                 float contactPenetration = 0.0f;
                                 bool fallbackAABB = false;
 
-                                const bool colliderAIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA) != nullptr;
-                                const bool colliderBIsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB) != nullptr;
+                                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
+                                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
+                                const auto* colliderAAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA);
+                                const auto* colliderBAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
+                                const bool colliderAIsAABB = colliderAAsAABB != nullptr;
+                                const bool colliderBIsAABB = colliderBAsAABB != nullptr;
                                 const bool contactPairHasAABB = colliderAIsAABB || colliderBIsAABB;
 
                                 bool contactComputed = false;
 
-                                if (pairIs2D)
+                                const bool sweetsRequireSAT = sweetsPair && !playerPlatformPair;
+                                const bool attemptSAT = pairIs2D || sweetsRequireSAT;
+
+                                if (attemptSAT)
                                 {
                                         attemptedSAT = true;
                                         ++satAttempts;
-                                        usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
+
+                                        if (pairIs2D)
+                                        {
+                                                usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
+                                        }
+                                        else if (sweetsRequireSAT)
+                                        {
+                                                if (colliderA2D && colliderBIsAABB)
+                                                {
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *colliderBAsAABB, contact2D);
+                                                }
+                                                else if (colliderB2D && colliderAIsAABB)
+                                                {
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *colliderAAsAABB, contact2D);
+                                                }
+                                                else if (colliderA2D && colliderB2D)
+                                                {
+                                                        usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
+                                                }
+                                        }
 
                                         if (usedSAT)
                                         {
@@ -627,11 +657,10 @@ namespace Systems
                                                 }
                                         }
                                 }
-                                else if (contactPairHasAABB)
+
+                                if (!contactComputed && contactPairHasAABB)
                                 {
-                                        const bool colliderAIs2D = Is2DCollider(colliderA);
-                                        const bool colliderBIs2D = Is2DCollider(colliderB);
-                                        const bool mixed2DPair = (colliderAIs2D || colliderBIs2D) && contactPairHasAABB;
+                                        const bool mixed2DPair = (colliderA2D || colliderB2D) && contactPairHasAABB;
 
                                         int axis = (planarOverlapX < planarOverlapY) ? 0 : 1;
                                         const float axisCenterA = GetAxisCenter(boundsA, axis);
