@@ -37,6 +37,7 @@ namespace
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
         constexpr float kSatPlanarOverlapThreshold = 0.05f;
+        constexpr float kMinResolutionPush = 1e-4f;
 
         struct ContactNormalClassification
         {
@@ -702,6 +703,11 @@ namespace Systems
                                         pushDistance *= verticalResolutionScale;
                                 }
 
+                                if (pushDistance < kMinResolutionPush)
+                                {
+                                        continue;
+                                }
+
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
                                 if (!bodyAStatic && !bodyBStatic)
@@ -805,7 +811,7 @@ namespace Systems
                                 const bool hasTangent = tangentLenSq > 1e-6f;
 
                                 const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
-                                if (std::fabs(relativeVelocity) > 1e-5f)
+                                if (std::fabs(relativeVelocity) > m_minVerticalSpeed)
                                 {
                                         float activeBodyCount = 0.0f;
                                         if (!bodyAStatic)
