@@ -1,6 +1,5 @@
 #include "Entities/CollisionEntity.h"
 
-#include <cmath>
 #include <sstream>
 #include <utility>
 
@@ -10,17 +9,6 @@
 #    endif
 #    include <windows.h>
 #endif
-
-#if __has_include("CapsuleCollider2D.h")
-#    include "CapsuleCollider2D.h"
-#    define HAS_CAPSULE_COLLIDER2D 1
-#else
-#    define HAS_CAPSULE_COLLIDER2D 0
-#endif
-
-#include "Collision2D.h"
-#include "DebugColliderRenderer.h"
-#include "Systems/ContactLiteSystem.h"
 
 namespace
 {
@@ -35,99 +23,6 @@ namespace
         (void)message;
     }
 #endif
-
-    constexpr float kSleepVelocityEpsilon = 0.01f;
-    constexpr int kSleepFrameThreshold = 10;
-
-    constexpr Color kAABBColor{ 1.0f, 1.0f, 1.0f, 0.4f };
-
-    Color GetLayerColor(Collision::CollisionLayer layer)
-    {
-        switch (layer)
-        {
-        case Collision::CollisionLayer::Player:
-            return Color{ 0.0f, 1.0f, 1.0f, 1.0f };
-        case Collision::CollisionLayer::Sweets:
-            return Color{ 1.0f, 1.0f, 0.0f, 1.0f };
-        case Collision::CollisionLayer::Floor:
-            return Color{ 1.0f, 0.0f, 1.0f, 1.0f };
-        default:
-            return Color{ 1.0f, 1.0f, 1.0f, 1.0f };
-        }
-    }
-
-    float ComputeZMid(const AABB& bounds)
-    {
-        return (bounds.min.z + bounds.max.z) * 0.5f;
-    }
-
-    void DrawColliderShape(const Collision::ICollider& collider, const Transform& transform, const Color& shapeColor)
-    {
-        (void)transform;
-
-        const AABB bounds = collider.GetAABB();
-        DebugColliderRenderer::DrawAABB(bounds, kAABBColor);
-        const float z = ComputeZMid(bounds);
-
-        if (const auto* collider2D = dynamic_cast<const Collision::ICollider2D*>(&collider))
-        {
-            if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(collider2D))
-            {
-                for (const auto& child : compound->GetChildren())
-                {
-                    if (!child)
-                    {
-                        continue;
-                    }
-
-                    DrawColliderShape(*child, transform, shapeColor);
-                }
-                return;
-            }
-
-#if HAS_CAPSULE_COLLIDER2D
-            if (const auto* capsule = dynamic_cast<const Collision::CapsuleCollider2D*>(collider2D))
-            {
-                DebugColliderRenderer::DrawCapsule(capsule->GetP0(), capsule->GetP1(), capsule->GetRadius(), z, shapeColor);
-                return;
-            }
-#endif
-
-            if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(collider2D))
-            {
-                DebugColliderRenderer::DrawCircle(circle->GetCenter(), circle->GetRadius(), z, shapeColor);
-                return;
-            }
-
-            if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(collider2D))
-            {
-                DebugColliderRenderer::DrawHull(hull->GetWorldPoints(), z, shapeColor);
-                return;
-            }
-        }
-
-        DebugColliderRenderer::DrawAABB(bounds, shapeColor);
-    }
-
-    bool TransformApproxEqual(const Transform& a, const Transform& b, float epsilon = 1e-6f)
-    {
-        const auto AlmostEqual = [epsilon](float lhs, float rhs)
-        {
-            return std::fabs(lhs - rhs) <= epsilon;
-        };
-
-        const bool positionEqual = AlmostEqual(a.position.x, b.position.x)
-            && AlmostEqual(a.position.y, b.position.y)
-            && AlmostEqual(a.position.z, b.position.z);
-        const bool rotationEqual = AlmostEqual(a.rotation.x, b.rotation.x)
-            && AlmostEqual(a.rotation.y, b.rotation.y)
-            && AlmostEqual(a.rotation.z, b.rotation.z);
-        const bool scaleEqual = AlmostEqual(a.scale.x, b.scale.x)
-            && AlmostEqual(a.scale.y, b.scale.y)
-            && AlmostEqual(a.scale.z, b.scale.z);
-
-        return positionEqual && rotationEqual && scaleEqual;
-    }
 }
 
 namespace Entities
@@ -137,9 +32,6 @@ namespace Entities
         , m_collider(std::move(collider))
         , m_collisionLayer(layer)
         , m_contactSystem(contactSystem)
-        , m_lastTransform(transform)
-        , m_lastBoundsTransform(transform)
-        , m_lastVelocity{ 0.0f, 0.0f, 0.0f }
     {
         if (m_collider)
         {
@@ -179,24 +71,18 @@ namespace Entities
 
     void CollisionEntity::SyncColliderBounds()
     {
-        if (m_collider)
+        if (!m_collider)
         {
-            m_collider->UpdateBounds(m_transform);
-            m_aabb = m_collider->GetAABB();
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[CollisionEntity] SyncColliderBounds skipped for entity '" << m_tag
+                << "' because collider is null.\n";
+            DebugTrace(oss.str());
+#endif
+            return;
         }
 
-        m_lastBoundsTransform = m_transform;
-        m_transformDirty = false;
-    }
-
-    void CollisionEntity::MarkTransformDirty()
-    {
-        m_transformDirty = true;
-    }
-
-    bool CollisionEntity::IsTransformDirty() const
-    {
-        return m_transformDirty || !TransformApproxEqual(m_transform, m_lastBoundsTransform);
+        m_collider->UpdateBounds(m_transform);
     }
 
     void CollisionEntity::ApplyTranslation(const float3& delta)
@@ -206,98 +92,10 @@ namespace Entities
             return;
         }
 
-        Wake();
         m_transform.position.x += delta.x;
         m_transform.position.y += delta.y;
         m_transform.position.z += delta.z;
-        m_transformDirty = true;
         SyncColliderBounds();
-    }
-
-    void CollisionEntity::DebugDraw()
-    {
-        if (!m_collider)
-        {
-            return;
-        }
-
-        if (IsTransformDirty())
-        {
-            SyncColliderBounds();
-        }
-
-        const Color layerColor = GetLayerColor(m_collisionLayer);
-        DrawColliderShape(*m_collider, m_transform, layerColor);
-    }
-
-    void CollisionEntity::UpdateSleepState(const float3& velocity)
-    {
-        const bool isPlayer = m_tag == "player";
-
-        const float dx = m_transform.position.x - m_lastTransform.position.x;
-        const float dy = m_transform.position.y - m_lastTransform.position.y;
-        const float dz = m_transform.position.z - m_lastTransform.position.z;
-        const float displacementSq = dx * dx + dy * dy + dz * dz;
-
-        const float vx = velocity.x;
-        const float vy = velocity.y;
-        const float vz = velocity.z;
-        const float velocitySq = vx * vx + vy * vy + vz * vz;
-
-        const float dvx = velocity.x - m_lastVelocity.x;
-        const float dvy = velocity.y - m_lastVelocity.y;
-        const float dvz = velocity.z - m_lastVelocity.z;
-        const float velocityDeltaSq = dvx * dvx + dvy * dvy + dvz * dvz;
-
-        const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
-        const bool positionChanged = displacementSq > sleepThresholdSq || !TransformApproxEqual(m_transform, m_lastTransform, kSleepVelocityEpsilon);
-        const bool velocityAwake = velocitySq > sleepThresholdSq;
-        const bool impulseAwake = velocityDeltaSq > sleepThresholdSq;
-
-        const bool hasContactSystem = m_contactSystem != nullptr;
-        const bool hadContact = hasContactSystem && m_contactSystem->HadAnyContactThisFrame(this);
-        const bool hasSupportOverlap = !hasContactSystem || m_contactSystem->HasZOverlapWithAnyCollider(this);
-        const bool impulseAppliedThisFrame = hasContactSystem && m_contactSystem->HadImpulseAppliedThisFrame(this);
-
-        if (isPlayer)
-        {
-            Wake();
-        }
-        else if (m_contactSystem && m_contactSystem->IsBodyActive(this))
-        {
-            Wake();
-        }
-        else if (hadContact || !hasSupportOverlap)
-        {
-            Wake();
-        }
-        else if (positionChanged || velocityAwake || impulseAwake || impulseAppliedThisFrame)
-        {
-            Wake();
-        }
-        else if (!hadContact && !velocityAwake && !positionChanged && !impulseAwake && !impulseAppliedThisFrame && hasSupportOverlap)
-        {
-            if (m_stationaryFrameCount < kSleepFrameThreshold)
-            {
-                ++m_stationaryFrameCount;
-            }
-
-            m_isSleeping = m_stationaryFrameCount >= kSleepFrameThreshold;
-        }
-        else
-        {
-            m_isSleeping = false;
-            m_stationaryFrameCount = 0;
-        }
-
-        m_lastTransform = m_transform;
-        m_lastVelocity = velocity;
-    }
-
-    void CollisionEntity::Wake()
-    {
-        m_isSleeping = false;
-        m_stationaryFrameCount = 0;
     }
 
     Systems::ContactLiteSystem* CollisionEntity::GetContactSystem() const

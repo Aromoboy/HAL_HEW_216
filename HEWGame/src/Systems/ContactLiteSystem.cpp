@@ -4,15 +4,16 @@
 #include <cmath>
 #include <limits>
 #include <optional>
-#include <string>
 #include <sstream>
+#include <string>
 #include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
-#ifdef _WIN32
-#include <Windows.h>
+#if defined(_WIN32)
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <windows.h>
 #endif
 
 #include "AABB.h"
@@ -28,29 +29,16 @@ namespace
 {
         void DebugTrace(const std::string& message)
         {
-#ifdef _WIN32
-                OutputDebugStringA(message.c_str());
+#if defined(_WIN32) && defined(_DEBUG)
+                ::OutputDebugStringA(message.c_str());
 #else
                 (void)message;
 #endif
         }
 
         constexpr const char* kLogPrefix = "[ContactLiteSystem] ";
+        constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
-        constexpr float kSatPlanarOverlapThreshold = 0.05f;
-        constexpr float kMinResolutionPush = 1e-4f;
-        constexpr float kPlayerPseudoMass = 50.0f;
-        constexpr float kPlayerImpulseFactor = 0.05f;
-
-        struct FrameContactInfo
-        {
-                bool supported = false;
-                bool stableSupport = false;
-                bool unsupportedContact = false;
-                bool translated = false;
-                bool transformChanged = false;
-                bool impulseApplied = false;
-        };
 
         struct ContactNormalClassification
         {
@@ -75,29 +63,39 @@ namespace
                 normal.y *= invLen;
                 normal.z *= invLen;
 
-                const float verticalSnapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
+                const float snapThreshold = std::clamp(verticalSnapCos, 0.0f, 1.0f);
                 const float groundThreshold = std::clamp(groundMinCos, 0.0f, 1.0f);
                 const float verticalComponent = std::clamp(std::fabs(normal.y), 0.0f, 1.0f);
-                const float planarLenSq = (normal.x * normal.x) + (normal.z * normal.z);
-                const float planarLen = std::sqrt(planarLenSq);
 
                 classification.verticalComponent = verticalComponent;
                 classification.isGround = verticalComponent >= groundThreshold;
-
-                const bool allowSnap = classification.isGround
-                        && verticalComponent >= verticalSnapThreshold
-                        && planarLen <= 1e-3f;
-
-                if (allowSnap)
+                if (verticalComponent >= snapThreshold)
                 {
+                        const float originalX = normal.x;
+                        const float originalZ = normal.z;
                         normal.x = 0.0f;
                         normal.y = (normal.y >= 0.0f) ? 1.0f : -1.0f;
                         normal.z = 0.0f;
                         classification.isVerticalSnapped = true;
+#if defined(_DEBUG)
+                        if (std::fabs(originalX) > 1e-4f || std::fabs(originalZ) > 1e-4f)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Snapped near-vertical normal to Y axis for stability."
+                                        << " verticalSnapCos=" << snapThreshold
+                                        << " verticalComponent=" << verticalComponent << '\n';
+                                DebugTrace(oss.str());
+                        }
+#endif
                 }
 
                 classification.normal = normal;
                 return classification;
+        }
+
+        bool Is2DCollider(const Collision::ICollider* collider)
+        {
+                return dynamic_cast<const Collision::ICollider2D*>(collider) != nullptr;
         }
 
         bool Compute2DContact(const Collision::ICollider& a, const Collision::ICollider& b, Collision::ContactManifold2D& out)
@@ -167,36 +165,6 @@ namespace
                 }
         }
 
-        float GetAxisMin(const AABB& a, int axis)
-        {
-                switch (axis)
-                {
-                case 0:
-                        return a.min.x;
-                case 1:
-                        return a.min.y;
-                case 2:
-                        return a.min.z;
-                default:
-                        return 0.0f;
-                }
-        }
-
-        float GetAxisMax(const AABB& a, int axis)
-        {
-                switch (axis)
-                {
-                case 0:
-                        return a.max.x;
-                case 1:
-                        return a.max.y;
-                case 2:
-                        return a.max.z;
-                default:
-                        return 0.0f;
-                }
-        }
-
         bool IsPlayerBody(const Entities::PhysicalEntity* body)
         {
                 return body && body->GetTag() == "player";
@@ -217,23 +185,17 @@ namespace
                 }
         }
 
-        struct LayerPairHash
-        {
-                size_t operator()(const std::pair<Collision::CollisionLayer, Collision::CollisionLayer>& value) const noexcept
-                {
-                        const size_t first = static_cast<size_t>(value.first);
-                        const size_t second = static_cast<size_t>(value.second);
-                        return (first << 16) ^ second;
-                }
-        };
-
         bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
         {
-                const auto ordered = std::minmax(a, b);
-                static const std::unordered_set<std::pair<Collision::CollisionLayer, Collision::CollisionLayer>, LayerPairHash>
-                        kDisabledPairs{};
+                const bool sweetsFloorPair =
+                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
+                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
+                if (sweetsFloorPair)
+                {
+                        return false;
+                }
 
-                return kDisabledPairs.find(ordered) == kDisabledPairs.end();
+                return true;
         }
 
         std::optional<SweetsSpace::SweetsType> ResolveSweetsTag(const std::string& tag)
@@ -278,18 +240,40 @@ namespace Systems
                 , m_minLinearSpeed(0.05f)
                 , m_minVerticalSpeed(0.02f)
                 , m_minTangentialSpeed(0.01f)
-                , m_restingFrames{}
-                , m_restingFrameThreshold(12)
-                , m_restingSpeedThreshold(0.03f)
-                , m_wakeSpeedThreshold(0.06f)
-                , m_includeKinematicBodies(true)
-                , m_allowKinematicPlayerCollision(true)
+                , m_loggedMissingBodyList(false)
+                , m_loggedBodySnapshot(false)
+                , m_loggedPlayerPresence(false)
+                , m_loggedPlayerAbsence(false)
+                , m_loggedPlayerPlatformContact(false)
+                , m_loggedPlayerSweetsContact(false)
+                , m_loggedSuppressedSweetsFloor(false)
+                , m_loggedPlanarZSeparation(false)
+                , m_loggedPlanarZIgnore(false)
         {
         }
 
         void ContactLiteSystem::SetBodySource(const std::vector<Entities::PhysicalEntity*>* bodies)
         {
                 m_bodies = bodies;
+                m_loggedMissingBodyList = false;
+                m_loggedBodySnapshot = false;
+                m_loggedPlayerPresence = false;
+                m_loggedPlayerAbsence = false;
+                m_loggedPlayerPlatformContact = false;
+                m_loggedPlayerSweetsContact = false;
+                m_loggedSuppressedSweetsFloor = false;
+                m_loggedPlanarZSeparation = false;
+                m_loggedPlanarZIgnore = false;
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Body source set. pointer=" << m_bodies;
+                if (m_bodies)
+                {
+                        oss << " count=" << m_bodies->size();
+                }
+                oss << "\n";
+                DebugTrace(oss.str());
+#endif
         }
 
         void ContactLiteSystem::SetPenetrationTolerance(float tolerance)
@@ -368,255 +352,127 @@ namespace Systems
                 m_minTangentialSpeed = std::max(0.0f, minSpeed);
         }
 
-        bool ContactLiteSystem::HadAnyContactThisFrame(const Entities::CollisionEntity* body) const
-        {
-                const auto it = m_bodyActivityInfo.find(body);
-                return it != m_bodyActivityInfo.end() && it->second.hadContact;
-        }
-
-        bool ContactLiteSystem::HadImpulseAppliedThisFrame(const Entities::CollisionEntity* body) const
-        {
-                const auto it = m_bodyActivityInfo.find(body);
-                return it != m_bodyActivityInfo.end() && it->second.impulseApplied;
-        }
-
-        bool ContactLiteSystem::HasZOverlapWithAnyCollider(const Entities::CollisionEntity* body) const
-        {
-                const auto it = m_bodyActivityInfo.find(body);
-                return it != m_bodyActivityInfo.end() && it->second.hasZOverlap;
-        }
-
-        bool ContactLiteSystem::IsBodyActive(const Entities::CollisionEntity* body) const
-        {
-                const auto it = m_bodyActivityInfo.find(body);
-                return it != m_bodyActivityInfo.end() && it->second.isActive;
-        }
-
-        void ContactLiteSystem::SetIncludeKinematicBodies(bool include)
-        {
-                m_includeKinematicBodies = include;
-        }
-
-        void ContactLiteSystem::SetAllowKinematicPlayerCollision(bool allow)
-        {
-                m_allowKinematicPlayerCollision = allow;
-        }
-
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
         {
                 if (!m_bodies)
                 {
+                        if (!m_loggedMissingBodyList)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "No body list available. Contact resolution skipped.\n");
+                                m_loggedMissingBodyList = true;
+                        }
                         return;
                 }
 
-                const size_t sourceBodyCount = m_bodies->size();
-                std::unordered_set<Entities::PhysicalEntity*> observedBodies;
-                observedBodies.reserve(sourceBodyCount);
-                std::vector<Entities::PhysicalEntity*> activeBodies;
-                activeBodies.reserve(sourceBodyCount);
-                std::unordered_map<Entities::PhysicalEntity*, FrameContactInfo> frameContactInfo;
-                frameContactInfo.reserve(sourceBodyCount);
-                std::unordered_map<const Entities::CollisionEntity*, BodyActivityInfo> currentActivity;
-                currentActivity.reserve(sourceBodyCount);
-                for (Entities::PhysicalEntity* body : *m_bodies)
+                const size_t bodyCount = m_bodies->size();
+#if defined(_DEBUG)
+                if (!m_loggedBodySnapshot)
                 {
-                        if (!body)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "OnUpdate body list snapshot count=" << bodyCount << " tags=[";
+                        for (size_t i = 0; i < bodyCount; ++i)
                         {
-                                continue;
+                                if (i > 0)
+                                {
+                                        oss << ", ";
+                                }
+                                const auto* body = (*m_bodies)[i];
+                                if (body)
+                                {
+                                        oss << '\"' << body->GetTag() << '\"';
+                                }
+                                else
+                                {
+                                        oss << "<null>";
+                                }
                         }
-
-                        observedBodies.insert(body);
-
-                        body->UpdateSleepState(body->GetPhysical().velocity);
-                        if (body->IsSleeping())
-                        {
-                                continue;
-                        }
-
-                        const Physics::Physical& phys = body->GetPhysical();
-                        const bool isPlayer = IsPlayerBody(body);
-
-                        const bool kinematic = !(phys.weight > 0.0f);
-                        if (kinematic && !m_includeKinematicBodies && !isPlayer)
-                        {
-                            continue;
-                        }
-
-                        FrameContactInfo info{};
-                        info.transformChanged = body->IsTransformDirty();
-                        frameContactInfo[body] = info;
-                        activeBodies.push_back(body);
-                        currentActivity[body].isActive = true;
+                        oss << "]\n";
+                        DebugTrace(oss.str());
+                        m_loggedBodySnapshot = true;
                 }
-
-                const size_t bodyCount = activeBodies.size();
-
-                for (auto it = m_restingFrames.begin(); it != m_restingFrames.end();)
+#endif
+                const bool playerPresent = std::any_of(m_bodies->begin(), m_bodies->end(), [](Entities::PhysicalEntity* body)
                 {
-                        if (observedBodies.find(it->first) == observedBodies.end())
-                        {
-                                it = m_restingFrames.erase(it);
-                        }
-                        else
-                        {
-                                ++it;
-                        }
-                }
-
-                struct BodyProxy
-                {
-                        Entities::PhysicalEntity* body;
-                        Collision::ICollider* collider;
-                        Collision::CollisionLayer layer;
-                        AABB bounds;
-                };
-
-                std::vector<BodyProxy> proxies;
-                proxies.reserve(bodyCount);
-
-                struct ContactConstraint
-                {
-                        Entities::PhysicalEntity* bodyA;
-                        Entities::PhysicalEntity* bodyB;
-                        Physics::Physical* physA;
-                        Physics::Physical* physB;
-                        float2 normal;
-                        float massA;
-                        float massB;
-                        bool modifyVelocityA;
-                        bool modifyVelocityB;
-                        bool isPlayerA;
-                        bool isPlayerB;
-                        bool isPlayerKinematicA;
-                        bool isPlayerKinematicB;
-                        bool isStaticA;
-                        bool isStaticB;
-                };
-
-                std::vector<ContactConstraint> contactConstraints;
-                contactConstraints.reserve(bodyCount);
-
-                for (Entities::PhysicalEntity* body : activeBodies)
-                {
-                        if (!body)
-                        {
-                                continue;
-                        }
-
-                        Collision::ICollider* collider = body->GetCollider();
-                        if (!collider)
-                        {
-                                continue;
-                        }
-
-                        body->SyncColliderBounds();
-                        proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
-                }
-
-                float globalMin[3]{
-                        std::numeric_limits<float>::infinity(),
-                        std::numeric_limits<float>::infinity(),
-                        std::numeric_limits<float>::infinity() };
-                float globalMax[3]{
-                        -std::numeric_limits<float>::infinity(),
-                        -std::numeric_limits<float>::infinity(),
-                        -std::numeric_limits<float>::infinity() };
-
-                for (const BodyProxy& proxy : proxies)
-                {
-                        globalMin[0] = std::min(globalMin[0], proxy.bounds.min.x);
-                        globalMax[0] = std::max(globalMax[0], proxy.bounds.max.x);
-                        globalMin[1] = std::min(globalMin[1], proxy.bounds.min.y);
-                        globalMax[1] = std::max(globalMax[1], proxy.bounds.max.y);
-                        globalMin[2] = std::min(globalMin[2], proxy.bounds.min.z);
-                        globalMax[2] = std::max(globalMax[2], proxy.bounds.max.z);
-                }
-
-                int sweepAxis = 0;
-                int secondaryPlanarAxis = 1;
-                if (!proxies.empty())
-                {
-                        float spans[3]
-                        {
-                                globalMax[0] - globalMin[0],
-                                globalMax[1] - globalMin[1],
-                                globalMax[2] - globalMin[2]
-                        };
-
-                        sweepAxis = std::distance(std::begin(spans), std::max_element(std::begin(spans), std::end(spans)));
-
-                        int remainingAxisA = (sweepAxis + 1) % 3;
-                        int remainingAxisB = (sweepAxis + 2) % 3;
-                        secondaryPlanarAxis = spans[remainingAxisA] >= spans[remainingAxisB] ? remainingAxisA : remainingAxisB;
-                }
-
-                std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
-                {
-                        return GetAxisMin(a.bounds, sweepAxis) < GetAxisMin(b.bounds, sweepAxis);
+                        return IsPlayerBody(body);
                 });
-
-                const size_t proxyCount = proxies.size();
-                if (proxyCount < 2)
+                if (playerPresent)
                 {
-                        // No contact pairs to evaluate this frame, but continue to resting detection.
+                        if (!m_loggedPlayerPresence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body detected in contact solver input. Collisions with avatar will be evaluated.\n");
+                                m_loggedPlayerPresence = true;
+                        }
+                        m_loggedPlayerAbsence = false;
+                }
+                else
+                {
+                        if (!m_loggedPlayerAbsence)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "Player body missing from contact solver input; avatar collisions disabled.\n");
+                                m_loggedPlayerAbsence = true;
+                        }
+                        m_loggedPlayerPresence = false;
                 }
 
-                const auto IsBodyResting = [&](Entities::PhysicalEntity* body)
+                if (bodyCount < 2)
                 {
-                        if (IsPlayerBody(body))
-                        {
-                                return false;
-                        }
-
-                        const auto it = m_restingFrames.find(body);
-                        return it != m_restingFrames.end() && it->second.resting;
-                };
+                        return;
+                }
 
                 size_t testedPairs = 0;
                 size_t resolvedPairs = 0;
-                size_t satAttempts = 0;
-                size_t satSuccesses = 0;
 
-                for (size_t i = 0; i < proxyCount; ++i)
+                for (size_t i = 0; i < bodyCount; ++i)
                 {
-                        const BodyProxy& proxyA = proxies[i];
-                        Entities::PhysicalEntity* bodyA = proxyA.body;
-                        Collision::ICollider* colliderA = proxyA.collider;
-                        const Collision::CollisionLayer layerA = proxyA.layer;
-
-                        for (size_t j = i + 1; j < proxyCount; ++j)
+                        Entities::PhysicalEntity* bodyA = (*m_bodies)[i];
+                        if (!bodyA)
                         {
-                                const BodyProxy& proxyB = proxies[j];
-                                const AABB& boundsA = proxyA.bounds;
-                                const AABB& boundsB = proxyB.bounds;
+                                continue;
+                        }
 
-                                if (GetAxisMin(boundsB, sweepAxis) > GetAxisMax(boundsA, sweepAxis))
-                                {
-                                        break;
-                                }
+                        Collision::ICollider* colliderA = bodyA->GetCollider();
+                        if (!colliderA)
+                        {
+                                continue;
+                        }
 
-                                float overlaps[3];
-                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
-                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
-                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
+                        const Collision::CollisionLayer layerA = bodyA->GetCollisionLayer();
 
-                                const bool hasRequiredSweepOverlap = overlaps[sweepAxis] > m_penetrationTolerance;
-                                const bool hasRequiredSecondaryOverlap = overlaps[secondaryPlanarAxis] > m_penetrationTolerance;
-                                const bool hasFullAxisOverlap = overlaps[0] > m_penetrationTolerance
-                                        && overlaps[1] > m_penetrationTolerance
-                                        && overlaps[2] > m_penetrationTolerance;
+                        bodyA->SyncColliderBounds();
 
-                                if (!hasRequiredSweepOverlap || !hasRequiredSecondaryOverlap || !hasFullAxisOverlap)
+                        for (size_t j = i + 1; j < bodyCount; ++j)
+                        {
+                                Entities::PhysicalEntity* bodyB = (*m_bodies)[j];
+                                if (!bodyB)
                                 {
                                         continue;
                                 }
 
-                                Entities::PhysicalEntity* bodyB = proxyB.body;
-                                Collision::ICollider* colliderB = proxyB.collider;
-                                const Collision::CollisionLayer layerB = proxyB.layer;
+                                Collision::ICollider* colliderB = bodyB->GetCollider();
+                                if (!colliderB)
+                                {
+                                        continue;
+                                }
+
+                                const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
+
+                                bodyB->SyncColliderBounds();
 
                                 if (!CanCollide(layerA, layerB))
                                 {
+#if defined(_DEBUG)
+                                        if (!m_loggedSuppressedSweetsFloor &&
+                                                ((layerA == Collision::CollisionLayer::Sweets && layerB == Collision::CollisionLayer::Floor)
+                                                        || (layerA == Collision::CollisionLayer::Floor && layerB == Collision::CollisionLayer::Sweets)))
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Collision suppressed for layers "
+                                                        << ToString(layerA) << " vs " << ToString(layerB)
+                                                        << " (bodies '" << bodyA->GetTag() << "' and '" << bodyB->GetTag() << "').\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedSuppressedSweetsFloor = true;
+                                        }
+#endif
                                         continue;
                                 }
 
@@ -626,491 +482,799 @@ namespace Systems
                                         continue;
                                 }
 
-                                const float penetrationX = std::max(overlaps[0], 0.0f);
-                                const float penetrationY = std::max(overlaps[1], 0.0f);
-                                const float penetrationZ = std::max(overlaps[2], 0.0f);
-                                const float overlapZ = penetrationZ;
-                                const bool hasZOverlap = overlapZ > 0.0f;
-                                if (!hasZOverlap)
+                                const bool playerPair = IsPlayerBody(bodyA) || IsPlayerBody(bodyB);
+                                if (playerPair)
                                 {
+                                        Entities::PhysicalEntity* other = IsPlayerBody(bodyA) ? bodyB : bodyA;
+                                        if (other)
+                                        {
+                                                const std::string& otherTag = other->GetTag();
+                                                const auto otherSweets = ResolveSweetsTag(otherTag);
+                                                if (otherTag == "StageFoundation" && !m_loggedPlayerPlatformContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with stage platform via body tag='" << otherTag << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerPlatformContact = true;
+                                                }
+                                                else if (otherSweets && !m_loggedPlayerSweetsContact)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Player contact confirmed with sweets tag='" << otherTag
+                                                                << "' type='" << SweetsSpace::ToString(*otherSweets) << "'.\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedPlayerSweetsContact = true;
+                                                }
+                                        }
+                                }
+
+                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
+
+                                const AABB boundsA = colliderA->GetAABB();
+                                const AABB boundsB = colliderB->GetAABB();
+
+                                float overlaps[3];
+                                overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
+                                overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
+
+                                const float planarOverlapX = overlaps[0];
+                                const float planarOverlapY = overlaps[1];
+                                const float planarOverlapZ = overlaps[2];
+
+                                if (!pairIs2D && planarOverlapZ < -kPlanarZTolerance)
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedPlanarZSeparation)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Skipping collision resolution due to Z separation exceeding planar tolerance. tags='"
+                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " tolerance=" << kPlanarZTolerance << "\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedPlanarZSeparation = true;
+                                        }
+#endif
                                         continue;
                                 }
+
+                                const bool ignoringZPenetration = pairIs2D || planarOverlapZ < kPlanarZTolerance;
+#if defined(_DEBUG)
+                                if (ignoringZPenetration && !m_loggedPlanarZIgnore)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix;
+                                        if (pairIs2D)
+                                        {
+                                                oss << "Ignoring Z overlap for 2D collider pair '" << bodyA->GetTag()
+                                                        << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " (planar evaluation only).\n";
+                                        }
+                                        else
+                                        {
+                                                oss << "Proceeding with planar collision despite marginal Z overlap. tags='"
+                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                        << " overlapZ=" << planarOverlapZ
+                                                        << " tolerance=" << kPlanarZTolerance << "\n";
+                                        }
+                                        DebugTrace(oss.str());
+                                        m_loggedPlanarZIgnore = true;
+                                }
+#endif
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
-                                const bool isPlayerA = IsPlayerBody(bodyA);
-                                const bool isPlayerB = IsPlayerBody(bodyB);
-                                const bool isPlayerKinematicA = isPlayerA && physA.weight == 0.0f;
-                                const bool isPlayerKinematicB = isPlayerB && physB.weight == 0.0f;
-                                const bool isStaticA = !(physA.weight > 0.0f) && !isPlayerA;
-                                const bool isStaticB = !(physB.weight > 0.0f) && !isPlayerB;
+                                const bool bodyAStatic = !(physA.weight > 0.0f);
+                                const bool bodyBStatic = !(physB.weight > 0.0f);
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
+                                const bool sweetsPair = IsSweetsTag(bodyA->GetTag()) || IsSweetsTag(bodyB->GetTag());
                                 bool usedSAT = false;
                                 bool attemptedSAT = false;
+                                bool usedProxySAT = false;
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
-                                const auto* hullA = dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderA);
-                                const auto* hullB = dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderB);
-                                const bool colliderAIs2D = dynamic_cast<const Collision::ICollider2D*>(colliderA) != nullptr;
-                                const bool colliderBIs2D = dynamic_cast<const Collision::ICollider2D*>(colliderB) != nullptr;
+                                bool fallbackAABB = false;
 
-                                bool contactComputed = false;
+                                const bool foundationPair = colliderA->GetLayer() == Collision::CollisionLayer::Floor
+                                        || colliderB->GetLayer() == Collision::CollisionLayer::Floor;
+                                const bool staticFoundationPair = foundationPair && (bodyAStatic || bodyBStatic);
+                                const float verticalOverlap = planarOverlapY;
+                                const bool shallowFoundationContact = staticFoundationPair
+                                        && verticalOverlap > m_penetrationTolerance
+                                        && verticalOverlap <= (m_penetrationTolerance * kFoundationSatBypassScale);
 
-                                const bool attemptSAT = hullA && hullB;
-
-                                if (attemptSAT)
+                                if (shallowFoundationContact)
                                 {
-                                        attemptedSAT = true;
-                                        ++satAttempts;
-
-                                        const auto& hullPointsA = hullA->GetWorldPoints();
-                                        const auto& hullPointsB = hullB->GetWorldPoints();
-                                        if (!hullPointsA.empty() && !hullPointsB.empty())
+                                        const float axisDir = (centerA.y < centerB.y) ? -1.0f : 1.0f;
+                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
+                                        contactPenetration = verticalOverlap;
+                                        fallbackAABB = true;
+                                        contactMethod = "foundation_aabb";
+                                        usedSAT = false;
+#if defined(_DEBUG)
                                         {
-                                                usedSAT = hullA->ComputeContact(*hullB, contact2D);
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Bypassing SAT for shallow foundation contact between '"
+                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
+                                                        << "' penetration=" << contactPenetration
+                                                        << " tolerance=" << m_penetrationTolerance
+                                                        << " layerA=" << ToString(colliderA->GetLayer())
+                                                        << " layerB=" << ToString(colliderB->GetLayer())
+                                                        << " staticA=" << (bodyAStatic ? "yes" : "no")
+                                                        << " staticB=" << (bodyBStatic ? "yes" : "no")
+                                                        << " forcedNormal=(0," << axisDir << ",0)\n";
+                                                DebugTrace(oss.str());
+                                        }
+#endif
+                                }
+                                else
+                                {
+                                        attemptedSAT = pairIs2D;
+                                        usedSAT = pairIs2D && Compute2DContact(*colliderA, *colliderB, contact2D);
+                                        contactMethod = usedSAT ? "sat_2d" : contactMethod;
+
+                                        const bool preferSAT = sweetsPair && !foundationPair;
+                                        if (!usedSAT && preferSAT)
+                                        {
+                                                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
+                                                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
+                                                const auto* aabbA = dynamic_cast<const Collision::AABBCollider*>(colliderA);
+                                                const auto* aabbB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
+
+                                                if (colliderA2D && aabbB)
+                                                {
+                                                        attemptedSAT = true;
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *aabbB, contact2D);
+                                                        usedProxySAT = usedSAT;
+                                                }
+                                                if (!usedSAT && colliderB2D && aabbA)
+                                                {
+                                                        attemptedSAT = true;
+                                                        usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *aabbA, contact2D);
+                                                        usedProxySAT = usedSAT;
+                                                }
+
+                                                if (usedSAT)
+                                                {
+                                                        contactMethod = "sat_proxy_aabb";
+                                                }
+#if defined(_DEBUG)
+                                                else if (attemptedSAT)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "SAT failed for sweets pair; skipping AABB fallback. tags='"
+                                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag() << "'"
+                                                                << " foundationPair=" << (foundationPair ? "yes" : "no")
+                                                                << " overlapX=" << planarOverlapX << " overlapY=" << planarOverlapY
+                                                                << " overlapZ=" << planarOverlapZ << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
                                         }
 
                                         if (usedSAT)
                                         {
-                                                ++satSuccesses;
-                                                contactMethod = "sat_hull";
-                                                const float planarPenetration = contact2D.penetration;
-                                                const float hullPenetrationZ = std::max(overlapZ, 0.0f);
-
-                                                if (hullPenetrationZ < planarPenetration)
+                                                contactNormal.x = contact2D.normal.x;
+                                                contactNormal.y = contact2D.normal.y;
+                                                const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
+                                                if (lenSq > 1e-6f)
                                                 {
-                                                        contactNormal = float3{ 0.0f, 0.0f, (centerA.z < centerB.z) ? -1.0f : 1.0f };
-                                                        contactPenetration = hullPenetrationZ;
-                                                        contactComputed = hullPenetrationZ > 0.0f;
+                                                        const float invLen = 1.0f / std::sqrt(lenSq);
+                                                        contactNormal.x *= invLen;
+                                                        contactNormal.y *= invLen;
+                                                        contactPenetration = contact2D.penetration;
                                                 }
                                                 else
                                                 {
-                                                        contactNormal.x = contact2D.normal.x;
-                                                        contactNormal.y = contact2D.normal.y;
-                                                        contactNormal.z = 0.0f;
-                                                        const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
-                                                        if (lenSq > 1e-6f)
-                                                        {
-                                                                const float invLen = 1.0f / std::sqrt(lenSq);
-                                                                contactNormal.x *= invLen;
-                                                                contactNormal.y *= invLen;
-                                                                contactPenetration = planarPenetration;
-                                                                contactComputed = true;
-                                                        }
-                                                        else
-                                                        {
-                                                                usedSAT = false;
-                                                        }
+                                                        usedSAT = false;
                                                 }
                                         }
-                                }
 
-                                if (usedSAT && overlapZ <= 0.0f)
-                                {
-                                        usedSAT = false;
-                                        contactComputed = false;
-                                }
-
-                                if (!contactComputed)
-                                {
-                                        const bool mixed2DPair = colliderAIs2D || colliderBIs2D;
-
-                                        float penetrations[3]{ penetrationX, penetrationY, penetrationZ };
-                                        int axis = 0;
-                                        for (int k = 1; k < 3; ++k)
+                                        const bool allowFallback = !sweetsPair || foundationPair || !attemptedSAT;
+                                        if (!usedSAT && allowFallback)
                                         {
-                                                if (penetrations[k] < penetrations[axis])
+                                                int axis = 0;
+                                                float minOverlap = planarOverlapX;
+                                                const int axisLimit = pairIs2D ? 2 : 3;
+                                                for (int ax = 1; ax < axisLimit; ++ax)
                                                 {
-                                                        axis = k;
+                                                        if (overlaps[ax] < minOverlap)
+                                                        {
+                                                                minOverlap = overlaps[ax];
+                                                                axis = ax;
+                                                        }
                                                 }
-                                        }
-                                        const float axisCenterA = GetAxisCenter(boundsA, axis);
-                                        const float axisCenterB = GetAxisCenter(boundsB, axis);
-                                        const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-                                        contactPenetration = penetrations[axis];
+                                                if (minOverlap <= 0.0f)
+                                                {
+                                                        continue;
+                                                }
 
-                                        contactNormal = float3{ 0.0f, 0.0f, 0.0f };
-                                        if (axis == 0)
-                                        {
-                                                contactNormal.x = axisDir;
+                                                const float axisCenterA = GetAxisCenter(boundsA, axis);
+                                                const float axisCenterB = GetAxisCenter(boundsB, axis);
+                                                const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
+                                                const float rawOverlap = minOverlap;
+                                                if (rawOverlap <= m_penetrationTolerance)
+                                                {
+                                                        continue;
+                                                }
+
+                                                contactPenetration = rawOverlap;
+
+                                                switch (axis)
+                                                {
+                                                case 0:
+                                                        contactNormal = float3{ axisDir, 0.0f, 0.0f };
+                                                        break;
+                                                case 1:
+                                                        contactNormal = float3{ 0.0f, axisDir, 0.0f };
+                                                        break;
+                                                default:
+                                                        contactNormal = float3{ 0.0f, 0.0f, axisDir };
+                                                        break;
+                                                }
+                                                fallbackAABB = true;
+                                                contactMethod = "aabb_overlap";
                                         }
-                                        else if (axis == 1)
+                                        else if (!usedSAT)
                                         {
-                                                contactNormal.y = axisDir;
+                                                continue;
                                         }
-                                        else
-                                        {
-                                                contactNormal.z = axisDir;
-                                        }
-                                        contactMethod = mixed2DPair ? "aabb_planar_mixed" : "aabb_planar";
-                                        contactComputed = true;
                                 }
 
-                                const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, centerA.z - centerB.z };
-                                const float contactNormalLenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y + contactNormal.z * contactNormal.z;
-                                if (contactNormalLenSq <= 1e-6f)
+                                const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, 0.0f };
+                                if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
                                 {
                                         continue;
                                 }
-                                const float orientDot = contactNormal.x * separationVec.x + contactNormal.y * separationVec.y + contactNormal.z * separationVec.z;
+                                const float orientDot = contactNormal.x * separationVec.x + contactNormal.y * separationVec.y;
                                 if (orientDot < 0.0f)
                                 {
                                         contactNormal.x = -contactNormal.x;
                                         contactNormal.y = -contactNormal.y;
-                                        contactNormal.z = -contactNormal.z;
                                 }
 
-                                const float invContactLen = 1.0f / std::sqrt(contactNormalLenSq);
-                                float3 normalizedContact
-                                {
-                                        contactNormal.x * invContactLen,
-                                        contactNormal.y * invContactLen,
-                                        contactNormal.z * invContactLen
-                                };
-
-                                const ContactNormalClassification classification = ClassifyContactNormal(normalizedContact, m_verticalSnapCos, m_groundMinCos);
-                                contactNormal = normalizedContact;
-                                const float classifiedLenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y + contactNormal.z * contactNormal.z;
-                                if (classifiedLenSq <= 1e-6f)
+                                const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
+                                const bool snappedToVertical = classification.isVerticalSnapped;
+#if !defined(_DEBUG)
+                                (void)snappedToVertical;
+#endif
+                                contactNormal = classification.normal;
+                                if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
                                 {
                                         continue;
                                 }
                                 const float absContactNormalY = std::fabs(contactNormal.y);
                                 const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
-                                bool isGroundContact = classification.isGround && slopeAllowsSupport && (overlapZ > m_penetrationTolerance);
-
-                                const bool bodyAResting = IsBodyResting(bodyA);
-                                const bool bodyBResting = IsBodyResting(bodyB);
+                                bool isGroundContact = classification.isGround && slopeAllowsSupport;
+#if defined(_DEBUG)
+                                if (classification.isGround && !isGroundContact)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Ground contact demoted due to slope for '" << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                << "' |n.y|=" << absContactNormalY
+                                                << " slopeCosLimit=" << m_maxSlopeCos
+                                                << " groundMinCos=" << m_groundMinCos
+                                                << " snappedVertical=" << (snappedToVertical ? "yes" : "no")
+                                                << " normal=(" << contactNormal.x << ',' << contactNormal.y << ',' << contactNormal.z << ")\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
 
                                 const float penetrationError = std::max(contactPenetration - m_penetrationTolerance, 0.0f);
-                                if (penetrationError <= 0.0f)
-                                {
-                                        continue;
-                                }
-
-                                const float pushDistance = std::clamp(
-                                        m_baumgarteFactor * penetrationError,
-                                        0.0f,
-                                        m_maxPenetrationCorrection);
+                                float pushDistance = std::min(m_baumgarteFactor * penetrationError, m_maxPenetrationCorrection);
                                 if (pushDistance <= 0.0f)
                                 {
                                         continue;
                                 }
 
-                                float3 resolutionNormal = contactNormal;
-                                const float resolutionLenSq = resolutionNormal.x * resolutionNormal.x + resolutionNormal.y * resolutionNormal.y + resolutionNormal.z * resolutionNormal.z;
-                                if (resolutionLenSq <= 1e-6f)
-                                {
-                                        continue;
-                                }
-                                const float invResolutionLen = 1.0f / std::sqrt(resolutionLenSq);
-                                resolutionNormal.x *= invResolutionLen;
-                                resolutionNormal.y *= invResolutionLen;
-                                resolutionNormal.z *= invResolutionLen;
-                                contactNormal = resolutionNormal;
+                                bool sweetsSupportPair = false;
+                                bool unstableSupport = false;
+                                bool topIsA = centerA.y > centerB.y;
+                                float supportOverlapFraction = 1.0f;
+                                float slideDir = 0.0f;
+                                float verticalResolutionScale = 1.0f;
 
                                 const bool treatedAsSupport = isGroundContact;
-                                if (isGroundContact)
+                                if (treatedAsSupport)
                                 {
-                                        const bool stableSupport = classification.verticalComponent >= m_stableSupportThreshold;
-                                        frameContactInfo[bodyA].supported = true;
-                                        frameContactInfo[bodyB].supported = true;
-                                        frameContactInfo[bodyA].stableSupport = frameContactInfo[bodyA].stableSupport || stableSupport;
-                                        frameContactInfo[bodyB].stableSupport = frameContactInfo[bodyB].stableSupport || stableSupport;
-                                }
-                                else
-                                {
-                                        frameContactInfo[bodyA].unsupportedContact = true;
-                                        frameContactInfo[bodyB].unsupportedContact = true;
-                                        bodyA->Wake();
-                                        bodyB->Wake();
+                                        const auto sweetsTypeA = ResolveSweetsTag(bodyA->GetTag());
+                                        const auto sweetsTypeB = ResolveSweetsTag(bodyB->GetTag());
+                                        const bool sweetsTagA = sweetsTypeA.has_value();
+                                        const bool sweetsTagB = sweetsTypeB.has_value();
+                                        const bool foundationA = bodyA->GetTag() == "StageFoundation";
+                                        const bool foundationB = bodyB->GetTag() == "StageFoundation";
+                                        sweetsSupportPair = (sweetsTagA && sweetsTagB)
+                                                || (sweetsTagA && foundationB)
+                                                || (foundationA && sweetsTagB);
+
+                                        if (sweetsSupportPair)
+                                        {
+                                                const float widthA = boundsA.max.x - boundsA.min.x;
+                                                const float widthB = boundsB.max.x - boundsB.min.x;
+                                                const float minWidth = std::max(std::min(widthA, widthB), 1e-3f);
+                                                supportOverlapFraction = std::clamp(planarOverlapX / minWidth, 0.0f, 1.0f);
+                                                unstableSupport = supportOverlapFraction < m_stableSupportThreshold;
+                                                const float stableDenominator = std::max(m_stableSupportThreshold, 1e-3f);
+                                                verticalResolutionScale = unstableSupport
+                                                        ? std::clamp(supportOverlapFraction / stableDenominator, 0.0f, 1.0f)
+                                                        : 1.0f;
+
+                                                const AABB& baseBounds = topIsA ? boundsB : boundsA;
+                                                const AABB& topBounds = topIsA ? boundsA : boundsB;
+                                                const float baseCenterX = GetAxisCenter(baseBounds, 0);
+                                                const float topCenterX = GetAxisCenter(topBounds, 0);
+                                                slideDir = (topCenterX >= baseCenterX) ? 1.0f : -1.0f;
+
+#if defined(_DEBUG)
+                                                {
+                                                        const std::string baseTag = topIsA
+                                                                ? DescribeSweetsTag(bodyB->GetTag())
+                                                                : DescribeSweetsTag(bodyA->GetTag());
+                                                        const std::string topTag = topIsA
+                                                                ? DescribeSweetsTag(bodyA->GetTag())
+                                                                : DescribeSweetsTag(bodyB->GetTag());
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Support analysis: top='" << topTag << "' base='"
+                                                                << baseTag << "' overlapFraction=" << supportOverlapFraction
+                                                                << " threshold=" << m_stableSupportThreshold
+                                                                << " status=" << (unstableSupport ? "UNSTABLE" : "stable")
+                                                                << " slideDir=" << slideDir
+                                                                << " resolutionScale=" << verticalResolutionScale
+                                                                << " usingSAT=" << (usedSAT ? "yes" : "no") << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+
+                                                if (unstableSupport)
+                                                {
+                                                        Physics::Physical& topPhys = topIsA ? physA : physB;
+                                                        if (topPhys.weight > 0.0f)
+                                                        {
+                                                                topPhys.velocity.x += slideDir * m_edgeSlideBoost;
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Unstable support slide boost: top='"
+                                                                        << (topIsA ? DescribeSweetsTag(bodyA->GetTag()) : DescribeSweetsTag(bodyB->GetTag()))
+                                                                        << "' base='" << (topIsA ? DescribeSweetsTag(bodyB->GetTag()) : DescribeSweetsTag(bodyA->GetTag()))
+                                                                        << "' overlapFraction=" << supportOverlapFraction
+                                                                        << " boost=" << m_edgeSlideBoost
+                                                                        << " dir=" << slideDir
+                                                                        << " velocityX=" << topPhys.velocity.x << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                }
+                                        }
+                                        pushDistance *= verticalResolutionScale;
                                 }
 
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
-                                if (!isStaticA && !isStaticB)
+                                if (!bodyAStatic && !bodyBStatic)
                                 {
                                         const float halfPush = pushDistance * 0.5f;
-                                        translationA.x += resolutionNormal.x * halfPush;
-                                        translationA.y += resolutionNormal.y * halfPush;
-                                        translationA.z += resolutionNormal.z * halfPush;
-                                        translationB.x -= resolutionNormal.x * halfPush;
-                                        translationB.y -= resolutionNormal.y * halfPush;
-                                        translationB.z -= resolutionNormal.z * halfPush;
+                                        translationA.x += contactNormal.x * halfPush;
+                                        translationA.y += contactNormal.y * halfPush;
+                                        translationB.x -= contactNormal.x * halfPush;
+                                        translationB.y -= contactNormal.y * halfPush;
                                 }
-                                else if (!isStaticA && isStaticB)
+                                else if (!bodyAStatic && bodyBStatic)
                                 {
-                                        translationA.x += resolutionNormal.x * pushDistance;
-                                        translationA.y += resolutionNormal.y * pushDistance;
-                                        translationA.z += resolutionNormal.z * pushDistance;
+                                        translationA.x += contactNormal.x * pushDistance;
+                                        translationA.y += contactNormal.y * pushDistance;
                                 }
-                                else if (isStaticA && !isStaticB)
+                                else if (bodyAStatic && !bodyBStatic)
                                 {
-                                        translationB.x -= resolutionNormal.x * pushDistance;
-                                        translationB.y -= resolutionNormal.y * pushDistance;
-                                        translationB.z -= resolutionNormal.z * pushDistance;
+                                        translationB.x -= contactNormal.x * pushDistance;
+                                        translationB.y -= contactNormal.y * pushDistance;
                                 }
                                 else
                                 {
                                         continue;
                                 }
 
-                                if (translationA.x != 0.0f || translationA.y != 0.0f || translationA.z != 0.0f)
+                                if (translationA.z != 0.0f)
                                 {
-                                        frameContactInfo[bodyA].translated = true;
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' requested Z translation " << translationA.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationA.z = 0.0f;
                                 }
-                                if (translationB.x != 0.0f || translationB.y != 0.0f || translationB.z != 0.0f)
+                                if (translationB.z != 0.0f)
                                 {
-                                        frameContactInfo[bodyB].translated = true;
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' requested Z translation " << translationB.z
+                                            << "; overriding to maintain planar constraint.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        translationB.z = 0.0f;
                                 }
 
                                 Entities::TranslatePhysicalEntity(*bodyA, translationA);
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
+                                const auto Project = [](const float3& v, const float3& dir)
+                                {
+                                        return v.x * dir.x + v.y * dir.y + v.z * dir.z;
+                                };
 
-                                const bool allowImpulseA = !isStaticA;
-                                const bool allowImpulseB = !isStaticB;
+                                const auto ApplyComponent = [&Project](Physics::Physical& phys, const float3& dir, float target)
+                                {
+                                        const float current = Project(phys.velocity, dir);
+                                        const float delta = target - current;
+                                        phys.velocity.x += dir.x * delta;
+                                        phys.velocity.y += dir.y * delta;
+                                        phys.velocity.z += dir.z * delta;
+                                };
 
-                                contactConstraints.push_back(ContactConstraint{
-                                        bodyA,
-                                        bodyB,
-                                        &physA,
-                                        &physB,
-                                        float2{ contactNormal.x, contactNormal.y },
-                                        isStaticA ? std::numeric_limits<float>::infinity() : (isPlayerKinematicA ? kPlayerPseudoMass : physA.weight),
-                                        isStaticB ? std::numeric_limits<float>::infinity() : (isPlayerKinematicB ? kPlayerPseudoMass : physB.weight),
-                                        allowImpulseA,
-                                        allowImpulseB,
-                                        isPlayerA,
-                                        isPlayerB,
-                                        isPlayerKinematicA,
-                                        isPlayerKinematicB,
-                                        isStaticA,
-                                        isStaticB
-                                });
+                                const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
+                                        bool hasTangent, bool groundContact, bool supportContact, const std::string& tag)
+                                {
+                                        if (phys.weight <= 0.0f)
+                                        {
+                                                return;
+                                        }
+
+                                        const auto clampComponent = [](float& component, float minSpeed)
+                                        {
+                                                if (std::fabs(component) < minSpeed)
+                                                {
+                                                        component = 0.0f;
+                                                        return true;
+                                                }
+                                                return false;
+                                        };
+
+                                        bool clampedLinear = false;
+                                        clampedLinear |= clampComponent(phys.velocity.x, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(phys.velocity.y, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(phys.velocity.z, m_minLinearSpeed);
+
+                                        bool clampedNormal = false;
+                                        bool clampedTangent = false;
+                                        if (groundContact)
+                                        {
+                                                const float normalComponent = Project(phys.velocity, normal);
+                                                if (std::fabs(normalComponent) < m_minVerticalSpeed)
+                                                {
+                                                        ApplyComponent(phys, normal, 0.0f);
+                                                        clampedNormal = true;
+                                                }
+
+                                                if (hasTangent)
+                                                {
+                                                        const float tangentialComponent = Project(phys.velocity, tangent);
+                                                        if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
+                                                        {
+                                                                ApplyComponent(phys, tangent, 0.0f);
+                                                                clampedTangent = true;
+                                                        }
+                                                }
+                                        }
+
+#if defined(_DEBUG)
+                                        if (clampedLinear || clampedNormal || clampedTangent)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Velocity clamped for '" << tag
+                                                        << "' ground=" << (groundContact ? "yes" : "no")
+                                                        << " support=" << (supportContact ? "yes" : "no")
+                                                        << " thresholds(linear=" << m_minLinearSpeed
+                                                        << ", vertical=" << m_minVerticalSpeed
+                                                        << ", tangential=" << m_minTangentialSpeed << ")"
+                                                        << " components(linear=" << (clampedLinear ? "yes" : "no")
+                                                        << ", normal=" << (clampedNormal ? "yes" : "no")
+                                                        << ", tangent=" << (clampedTangent ? "yes" : "no")
+                                                        << ") newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
+                                                DebugTrace(oss.str());
+                                        }
+#endif
+                                };
+
+                                const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
+                                const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
+                                const bool hasTangent = tangentLenSq > 1e-6f;
+
+                                const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
+                                if (std::fabs(relativeVelocity) > 1e-5f)
+                                {
+                                        float activeBodyCount = 0.0f;
+                                        if (!bodyAStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+                                        if (!bodyBStatic)
+                                        {
+                                                activeBodyCount += 1.0f;
+                                        }
+
+                                        if (activeBodyCount > 0.0f)
+                                        {
+                                                const float relativeSpeed = std::fabs(relativeVelocity);
+                                                const float restitutionScale = (m_maxRestitutionVelocity > 0.0f)
+                                                        ? std::clamp(relativeSpeed / m_maxRestitutionVelocity, 0.0f, 1.0f)
+                                                        : 1.0f;
+                                                float impulse = -(1.0f + m_restitution * restitutionScale) * relativeVelocity / activeBodyCount;
+#if defined(_DEBUG)
+                                                if (restitutionScale < 1.0f)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Restitution scaled for low-speed pair '" << bodyA->GetTag()
+                                                                << "' vs '" << bodyB->GetTag()
+                                                                << "' relativeSpeed=" << relativeSpeed
+                                                                << " threshold=" << m_maxRestitutionVelocity
+                                                                << " scale=" << restitutionScale
+                                                                << " impulse=" << impulse << "\n";
+                                                        DebugTrace(oss.str());
+                                                }
+#endif
+                                                if (treatedAsSupport && sweetsSupportPair && unstableSupport)
+                                                {
+                                                        const float previousImpulse = impulse;
+                                                        impulse = 0.0f;
+#if defined(_DEBUG)
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Restitution impulse bypassed for unstable sweets support pair '"
+                                                                << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                << "' previousImpulse=" << previousImpulse
+                                                                << " overlapFraction=" << supportOverlapFraction
+                                                                << " threshold=" << m_stableSupportThreshold << "\n";
+                                                        DebugTrace(oss.str());
+#endif
+                                                }
+                                                if (!bodyAStatic)
+                                                {
+                                                        physA.velocity.x += contactNormal.x * impulse;
+                                                        physA.velocity.y += contactNormal.y * impulse;
+                                                }
+                                                if (!bodyBStatic)
+                                                {
+                                                        physB.velocity.x -= contactNormal.x * impulse;
+                                                        physB.velocity.y -= contactNormal.y * impulse;
+                                                }
+                                        }
+                                }
+
+                                if (treatedAsSupport)
+                                {
+                                        if (!bodyAStatic && bodyBStatic)
+                                        {
+                                                const float previousVelocity = Project(physA.velocity, contactNormal);
+                                                if (previousVelocity < 0.0f)
+                                                {
+                                                        if (unstableSupport && topIsA)
+                                                        {
+                                                                const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
+                                                                const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+                                                                ApplyComponent(physA, contactNormal, adjustedVelocity);
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                        << bodyA->GetTag() << "' (supported by '" << bodyB->GetTag()
+                                                                        << "') velocityN " << previousVelocity
+                                                                        << " -> " << adjustedVelocity
+                                                                        << " (fraction=" << supportOverlapFraction
+                                                                        << " scale=" << verticalResolutionScale << ")\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                        else
+                                                        {
+                                                                ApplyComponent(physA, contactNormal, 0.0f);
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Normal velocity clamped for body '" << bodyA->GetTag()
+                                                                        << "' from " << previousVelocity << " due to static contact.\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                }
+                                        }
+                                        if (bodyAStatic && !bodyBStatic)
+                                        {
+                                                const float previousVelocity = Project(physB.velocity, contactNormal);
+                                                if (previousVelocity > 0.0f)
+                                                {
+                                                        if (unstableSupport && !topIsA)
+                                                        {
+                                                                const float dampedVelocity = previousVelocity * m_unstableVerticalDamping;
+                                                                const float adjustedVelocity = previousVelocity + (dampedVelocity - previousVelocity) * verticalResolutionScale;
+                                                                ApplyComponent(physB, contactNormal, adjustedVelocity);
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Unstable support damping applied to body '"
+                                                                        << bodyB->GetTag() << "' (supported by '" << bodyA->GetTag()
+                                                                        << "') velocityN " << previousVelocity
+                                                                        << " -> " << adjustedVelocity
+                                                                        << " (fraction=" << supportOverlapFraction
+                                                                        << " scale=" << verticalResolutionScale << ")\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                        else
+                                                        {
+                                                                ApplyComponent(physB, contactNormal, 0.0f);
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Normal velocity clamped for body '" << bodyB->GetTag()
+                                                                        << "' from " << previousVelocity << " due to static contact.\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                }
+                                        }
+
+                                        if (hasTangent)
+                                        {
+                                        const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
+                                        const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
+                                        const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
+                                        const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
+                                        const bool withinStaticThreshold = absRelativeTangentialVelocity < m_minTangentialSpeed;
+                                        if (allowStaticFriction && withinStaticThreshold)
+                                        {
+                                                        const float sharedVelocity = (bodyAStatic && bodyBStatic)
+                                                                ? 0.0f
+                                                                : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
+                                                        if (!bodyAStatic)
+                                                        {
+                                                                ApplyComponent(physA, tangent, sharedVelocity);
+                                                        }
+                                                        if (!bodyBStatic)
+                                                        {
+                                                                ApplyComponent(physB, tangent, sharedVelocity);
+                                                        }
+#if defined(_DEBUG)
+                                                        {
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction applied to pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' relativeTangentialVelocity=" << relativeTangentialVelocity
+                                                                        << " threshold=" << m_minTangentialSpeed
+                                                                        << " sharedVelocity=" << sharedVelocity << "\n";
+                                                                DebugTrace(oss.str());
+                                                        }
+#endif
+                                                }
+                                                else
+                                                {
+                                                        if (!allowStaticFriction && withinStaticThreshold)
+                                                        {
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction suppressed for steep or non-ground contact between '"
+                                                                        << bodyA->GetTag() << "' and '" << bodyB->GetTag()
+                                                                        << "' ground=" << (isGroundContact ? "yes" : "no")
+                                                                        << " |n.y|=" << absContactNormalY
+                                                                        << " slopeLimit=" << m_maxSlopeCos
+                                                                        << " relativeTangentialVelocity=" << relativeTangentialVelocity
+                                                                        << " minTangentialSpeed=" << m_minTangentialSpeed << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                        else if (allowStaticFriction && !withinStaticThreshold)
+                                                        {
+#if defined(_DEBUG)
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Static friction bypassed due to tangential speed for pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' tangentialSpeed=" << absRelativeTangentialVelocity
+                                                                        << " threshold=" << m_minTangentialSpeed << "\n";
+                                                                DebugTrace(oss.str());
+#endif
+                                                        }
+                                                        const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
+                                                        if (!bodyAStatic)
+                                                        {
+                                                                const float current = Project(physA.velocity, tangent);
+                                                                ApplyComponent(physA, tangent, current * frictionScale);
+                                                        }
+                                                        if (!bodyBStatic)
+                                                        {
+                                                                const float current = Project(physB.velocity, tangent);
+                                                                ApplyComponent(physB, tangent, current * frictionScale);
+                                                        }
+#if defined(_DEBUG)
+                                                        {
+                                                                std::ostringstream oss;
+                                                                oss << kLogPrefix << "Dynamic friction applied to pair '"
+                                                                        << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                                        << "' scale=" << frictionScale
+                                                                        << " static=" << bodyAStatic << '/' << bodyBStatic
+                                                                        << " tangentVelocityA=" << Project(physA.velocity, tangent)
+                                                                        << " tangentVelocityB=" << Project(physB.velocity, tangent)
+                                                                        << "\n";
+                                                                DebugTrace(oss.str());
+                                                        }
+#endif
+                                                }
+                                        }
+
+                                }
+
+                                ClampVelocity(physA, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyA->GetTag());
+                                ClampVelocity(physB, contactNormal, tangent, hasTangent, isGroundContact, treatedAsSupport, bodyB->GetTag());
+
+#if defined(_DEBUG)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Resolved contact for '" << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
+                                                << "' normal=(" << contactNormal.x << "," << contactNormal.y << ",0)"
+                                                << " penetration=" << contactPenetration
+                                                << " pushDistance=" << pushDistance
+                                                << " usedSAT=" << (usedSAT ? "yes" : "no")
+                                                << " fallback=" << (fallbackAABB ? "yes" : "no")
+                                                << " proxySAT=" << (usedProxySAT ? "yes" : "no")
+                                                << " method=" << contactMethod;
+                                        if (usedSAT)
+                                        {
+                                                oss << " contactPoint=(" << contact2D.contactPoint.x << "," << contact2D.contactPoint.y
+                                                        << ")";
+                                        }
+                                        oss << " ground=" << (isGroundContact ? "yes" : "no");
+                                        oss << " snappedVertical=" << (snappedToVertical ? "yes" : "no");
+                                        oss << "\n";
+                                        DebugTrace(oss.str());
+                                }
+#endif
+                                if (physA.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyA->GetTag()
+                                            << "' velocity.z=" << physA.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physA.velocity.z = 0.0f;
+                                }
+                                if (physB.velocity.z != 0.0f)
+                                {
+#if defined(_DEBUG)
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Body '" << bodyB->GetTag()
+                                            << "' velocity.z=" << physB.velocity.z
+                                            << " reset to zero post-contact.\n";
+                                        DebugTrace(oss.str());
+#endif
+                                        physB.velocity.z = 0.0f;
+                                }
 
                                 ++resolvedPairs;
                         }
                 }
 
-                constexpr int kSolverIterations = 4;
-                for (int iteration = 0; iteration < kSolverIterations; ++iteration)
-                {
-                        for (const ContactConstraint& constraint : contactConstraints)
-                        {
-                                Physics::Physical& physA = *constraint.physA;
-                                Physics::Physical& physB = *constraint.physB;
-                                Entities::PhysicalEntity* bodyA = constraint.bodyA;
-                                Entities::PhysicalEntity* bodyB = constraint.bodyB;
-
-                                const float2 normal2 = constraint.normal;
-                                const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
-                                const float relativeNormalSpeed = relativeVelocity.x * normal2.x + relativeVelocity.y * normal2.y;
-
-                                const float invMassA = std::isinf(constraint.massA) ? 0.0f : (1.0f / constraint.massA);
-                                const float invMassB = std::isinf(constraint.massB) ? 0.0f : (1.0f / constraint.massB);
-                                const float invMassSum = invMassA + invMassB;
-
-                                const float normalImpulseFactorA = constraint.isPlayerA ? invMassA * kPlayerImpulseFactor : invMassA;
-                                const float normalImpulseFactorB = constraint.isPlayerB ? invMassB * kPlayerImpulseFactor : invMassB;
-
-                                float vn = relativeNormalSpeed;
-                                float appliedNormalImpulseA = 0.0f;
-                                float appliedNormalImpulseB = 0.0f;
-                                float appliedTangentImpulseA = 0.0f;
-                                float appliedTangentImpulseB = 0.0f;
-                                if (vn < 0.0f && invMassSum > 0.0f)
-                                {
-                                        vn = std::clamp(vn, -m_maxRestitutionVelocity, 0.0f);
-                                        const float jn = -(1.0f + m_restitution) * vn / invMassSum;
-
-                                        const float2 normalImpulseA{ normal2.x * jn * normalImpulseFactorA, normal2.y * jn * normalImpulseFactorA };
-                                        const float2 normalImpulseB{ normal2.x * jn * normalImpulseFactorB, normal2.y * jn * normalImpulseFactorB };
-
-                                        if (constraint.modifyVelocityA)
-                                        {
-                                                physA.velocity.x += normalImpulseA.x;
-                                                physA.velocity.y += normalImpulseA.y;
-                                                appliedNormalImpulseA = jn * normalImpulseFactorA;
-                                        }
-                                        if (constraint.modifyVelocityB)
-                                        {
-                                                physB.velocity.x += normalImpulseB.x;
-                                                physB.velocity.y += normalImpulseB.y;
-                                                appliedNormalImpulseB = jn * normalImpulseFactorB;
-                                        }
-
-                                        float2 tangentialVelocity
-                                        {
-                                                relativeVelocity.x - relativeNormalSpeed * normal2.x,
-                                                relativeVelocity.y - relativeNormalSpeed * normal2.y
-                                        };
-
-                                        const float tangentialSpeedSq = tangentialVelocity.x * tangentialVelocity.x + tangentialVelocity.y * tangentialVelocity.y;
-                                        if (tangentialSpeedSq > 1e-6f)
-                                        {
-                                                const float tangentialSpeed = std::sqrt(tangentialSpeedSq);
-                                                const float2 tangentDir{ tangentialVelocity.x / tangentialSpeed, tangentialVelocity.y / tangentialSpeed };
-
-                                                const float relTangentSpeed = relativeVelocity.x * tangentDir.x + relativeVelocity.y * tangentDir.y;
-                                                float jt = -relTangentSpeed / invMassSum;
-                                                const float maxStatic = m_staticFriction * std::fabs(jn);
-                                                if (std::fabs(jt) > maxStatic)
-                                                {
-                                                        const float sign = (relTangentSpeed >= 0.0f) ? 1.0f : -1.0f;
-                                                        jt = -sign * m_dynamicFriction * std::fabs(jn);
-                                                }
-
-                                                const float frictionImpulseFactorA = constraint.isPlayerA ? normalImpulseFactorA : invMassA;
-                                                const float frictionImpulseFactorB = constraint.isPlayerB ? normalImpulseFactorB : invMassB;
-                                                const float2 tangentImpulseA{ tangentDir.x * jt * frictionImpulseFactorA, tangentDir.y * jt * frictionImpulseFactorA };
-                                                const float2 tangentImpulseB{ tangentDir.x * jt * frictionImpulseFactorB, tangentDir.y * jt * frictionImpulseFactorB };
-
-                                                if (constraint.modifyVelocityA)
-                                                {
-                                                        physA.velocity.x += tangentImpulseA.x;
-                                                        physA.velocity.y += tangentImpulseA.y;
-                                                        appliedTangentImpulseA = jt * frictionImpulseFactorA;
-                                                }
-                                                if (constraint.modifyVelocityB)
-                                                {
-                                                        physB.velocity.x += tangentImpulseB.x;
-                                                        physB.velocity.y += tangentImpulseB.y;
-                                                        appliedTangentImpulseB = jt * frictionImpulseFactorB;
-                                                }
-                                        }
-                                }
-
-                                if (std::fabs(appliedNormalImpulseA) > 0.0f || std::fabs(appliedTangentImpulseA) > 0.0f)
-                                {
-                                        frameContactInfo[bodyA].impulseApplied = true;
-                                        bodyA->Wake();
-                                }
-                                if (std::fabs(appliedNormalImpulseB) > 0.0f || std::fabs(appliedTangentImpulseB) > 0.0f)
-                                {
-                                        frameContactInfo[bodyB].impulseApplied = true;
-                                        bodyB->Wake();
-                                }
-                        }
-                }
-
-                for (auto& [body, info] : frameContactInfo)
-                {
-                        if (!body)
-                        {
-                                continue;
-                        }
-
-                        if (info.transformChanged || info.translated || info.unsupportedContact || info.impulseApplied)
-                        {
-                                body->Wake();
-                                auto restingIt = m_restingFrames.find(body);
-                                if (restingIt != m_restingFrames.end())
-                                {
-                                        restingIt->second.frames = 0;
-                                        restingIt->second.resting = false;
-                                }
-                        }
-
-                        BodyActivityInfo& activity = currentActivity[body];
-                        activity.hadContact = info.transformChanged || info.translated || info.impulseApplied;
-                        activity.impulseApplied = info.impulseApplied;
-                        activity.hasZOverlap = info.supported;
-                }
-
-                m_bodyActivityInfo = std::move(currentActivity);
-
-                const auto IsResting = [&](const Entities::PhysicalEntity& body, bool supportedThisFrame)
-                {
-                        if (IsPlayerBody(&body))
-                        {
-                                return false;
-                        }
-
-                        if (!supportedThisFrame)
-                        {
-                                return false;
-                        }
-
-                        const Physics::Physical& phys = body.GetPhysical();
-                        if (!(phys.weight > 0.0f))
-                        {
-                                return false;
-                        }
-
-                        const float speedSq = phys.velocity.x * phys.velocity.x
-                                + phys.velocity.y * phys.velocity.y
-                                + phys.velocity.z * phys.velocity.z;
-                        const float restingSpeedSq = m_restingSpeedThreshold * m_restingSpeedThreshold;
-                        if (speedSq >= restingSpeedSq)
-                        {
-                                return false;
-                        }
-
-                        const float externalSpeedSq = phys.force.x * phys.force.x
-                                + phys.force.y * phys.force.y
-                                + phys.force.z * phys.force.z;
-                        if (externalSpeedSq > 0.0f)
-                        {
-                                return false;
-                        }
-
-                        const auto infoIt = frameContactInfo.find(const_cast<Entities::PhysicalEntity*>(&body));
-                        const bool translated = (infoIt != frameContactInfo.end()) && infoIt->second.translated;
-                        const bool transformChanged = (infoIt != frameContactInfo.end()) && infoIt->second.transformChanged;
-                        const bool unsupportedContact = (infoIt != frameContactInfo.end()) && infoIt->second.unsupportedContact;
-                        const bool impulseApplied = (infoIt != frameContactInfo.end()) && infoIt->second.impulseApplied;
-                        const bool stableSupport = (infoIt != frameContactInfo.end()) && infoIt->second.stableSupport;
-
-                        if (!stableSupport)
-                        {
-                                return false;
-                        }
-
-                        if (translated || transformChanged || unsupportedContact || impulseApplied)
-                        {
-                                return false;
-                        }
-
-                        if (body.IsTransformDirty())
-                        {
-                                return false;
-                        }
-
-                        return true;
-                };
-
-                for (Entities::PhysicalEntity* body : activeBodies)
-                {
-                        const auto infoIt = frameContactInfo.find(body);
-                        const bool supported = (infoIt != frameContactInfo.end()) && infoIt->second.supported;
-
-                        RestingState& resting = m_restingFrames[body];
-                        if (IsResting(*body, supported))
-                        {
-                                resting.frames += 1;
-                                resting.resting = resting.frames >= m_restingFrameThreshold;
-                        }
-                        else
-                        {
-                                resting.frames = 0;
-                                resting.resting = false;
-                        }
-                }
-
-                if (testedPairs > 0 || resolvedPairs > 0)
+#if defined(_DEBUG)
+                if (resolvedPairs > 0)
                 {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Broadphase tested=" << testedPairs
-                                << " accepted=" << resolvedPairs
-                                << " satAttempted=" << satAttempts
-                                << " satSucceeded=" << satSuccesses
-                                << "\n";
+                        oss << kLogPrefix << "Resolved " << resolvedPairs << " overlaps out of "
+                            << testedPairs << " tested pairs. tolerance=" << m_penetrationTolerance
+                            << ", restitution=" << m_restitution
+                            << ", staticFriction=" << m_staticFriction
+                            << ", dynamicFriction=" << m_dynamicFriction
+                            << ", slopeCosLimit=" << m_maxSlopeCos
+                            << ", verticalSnapCos=" << m_verticalSnapCos
+                            << ", groundMinCos=" << m_groundMinCos
+                            << ", maxRestitutionVelocity=" << m_maxRestitutionVelocity
+                            << ", minLinearSpeed=" << m_minLinearSpeed
+                            << ", minVerticalSpeed=" << m_minVerticalSpeed
+                            << ", minTangentialSpeed=" << m_minTangentialSpeed
+                            << "\n";
                         DebugTrace(oss.str());
                 }
+#endif
         }
 }

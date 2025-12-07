@@ -3,9 +3,32 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kCircleLogPrefix = "[CircleCollider2D] ";
+
         float2 Add(const float2& a, const float2& b)
         {
                 return float2{ a.x + b.x, a.y + b.y };
@@ -90,6 +113,11 @@ namespace Collision
                 const float radiusScale = std::max(transform.scale.x, transform.scale.y);
                 if (std::abs(radiusScale - m_radiusScale) > 1e-4f)
                 {
+                        std::ostringstream oss;
+                        oss << "[CircleCollider2D] radius scale updated from " << m_radiusScale << " to " << radiusScale
+                                << " (base radius: " << m_radius << ", scaled radius: " << (m_radius * radiusScale) << ", offset: ("
+                                << m_offset.x << ", " << m_offset.y << ") )\n";
+                        DebugTrace(oss.str());
                         m_radiusScale = radiusScale;
                 }
                 m_scaledRadius = m_radius * m_radiusScale;
@@ -141,6 +169,10 @@ namespace Collision
                         if (hit)
                         {
                                 manifold = best;
+                                std::ostringstream oss;
+                                oss << kCircleLogPrefix << "Compound contact selected child index=" << bestIndex
+                                    << " penetration=" << best.penetration << '\n';
+                                DebugTrace(oss.str());
                         }
                         return hit;
                 }
@@ -177,12 +209,11 @@ namespace Collision
                 return hull.ComputeContact(*this, outContact);
         }
 
-        ConvexHullCollider2D::ConvexHullCollider2D(std::vector<float2> points, float2 offset, float thickness, CollisionLayer layer, float2 centroidOffset)
+        ConvexHullCollider2D::ConvexHullCollider2D(std::vector<float2> points, float2 offset, float thickness, CollisionLayer layer)
                 : Collider2DBase(thickness)
                 , m_points(std::move(points))
                 , m_worldPoints(m_points)
                 , m_offset(offset)
-                , m_centroidOffset(centroidOffset)
                 , m_rotation(0.0f)
         {
                 SetLayer(layer);
@@ -197,38 +228,27 @@ namespace Collision
 
         void ConvexHullCollider2D::UpdateBounds(const Transform& transform)
         {
-                const float2 worldOrigin{ transform.position.x, transform.position.y };
-                const float2 scale{ transform.scale.x, transform.scale.y };
                 m_rotation = transform.rotation.z;
-
-                const float2 pivotOffset = Add(m_centroidOffset, m_offset);
-                const float2 scaledPivot{ pivotOffset.x * scale.x, pivotOffset.y * scale.y };
-                const float2 rotatedPivot = Rotate(scaledPivot, m_rotation);
-                const float2 worldCentroid = Add(worldOrigin, rotatedPivot);
+                const float2 offsetScaled{ m_offset.x * transform.scale.x, m_offset.y * transform.scale.y };
+                const float2 center{ transform.position.x + offsetScaled.x, transform.position.y + offsetScaled.y };
 
                 float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
                 float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-
+                bool hasChildBounds = false;
                 m_worldPoints.clear();
                 m_worldPoints.reserve(m_points.size());
 
                 for (const float2& p : m_points)
                 {
-                        const float2 scaled{ p.x * scale.x, p.y * scale.y };
+                        const float2 scaled{ p.x * transform.scale.x, p.y * transform.scale.y };
                         const float2 rotated = Rotate(scaled, m_rotation);
-                        const float2 world = Add(worldCentroid, rotated);
+                        const float2 world = Add(center, rotated);
                         m_worldPoints.push_back(world);
 
                         minBounds.x = std::min(minBounds.x, world.x);
                         minBounds.y = std::min(minBounds.y, world.y);
                         maxBounds.x = std::max(maxBounds.x, world.x);
                         maxBounds.y = std::max(maxBounds.y, world.y);
-                }
-
-                if (m_worldPoints.empty())
-                {
-                        minBounds = float3{ worldCentroid.x, worldCentroid.y, transform.position.z };
-                        maxBounds = minBounds;
                 }
 
                 m_aabb.min = minBounds;
