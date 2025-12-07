@@ -592,7 +592,6 @@ namespace Entities
             return;
         }
 
-        SyncColliderBounds();
         Collision::ICollider* collider = GetCollider();
         if (!collider)
         {
@@ -600,28 +599,86 @@ namespace Entities
             return;
         }
 
-        const AABB playerBounds = collider->GetAABB();
-        const float3 boundsCenter{
-            (playerBounds.min.x + playerBounds.max.x) * 0.5f,
-            (playerBounds.min.y + playerBounds.max.y) * 0.5f,
-            (playerBounds.min.z + playerBounds.max.z) * 0.5f + m_pickupForwardOffset
-        };
-        const float pickupHalfDepth = std::max((playerBounds.max.z - playerBounds.min.z) * 0.5f, 0.0f);
+        collider->UpdateBounds(m_transform);
+        AABB pickupBounds = collider->GetAABB();
+        if (m_pickupForwardOffset >= 0.0f)
+        {
+            pickupBounds.max.z += m_pickupForwardOffset;
+        }
+        else
+        {
+            pickupBounds.min.z += m_pickupForwardOffset;
+        }
 
-        auto candidate = m_sweetsManager->FindNearestCarryable(boundsCenter, m_pickupHalfWidth, m_pickupHalfHeight);
+        const float boundsCenterX = (pickupBounds.min.x + pickupBounds.max.x) * 0.5f;
+        const float boundsCenterY = (pickupBounds.min.y + pickupBounds.max.y) * 0.5f;
+        const float boundsCenterZ = (pickupBounds.min.z + pickupBounds.max.z) * 0.5f;
+        const float clampedHalfWidth = std::min((pickupBounds.max.x - pickupBounds.min.x) * 0.5f, m_pickupHalfWidth);
+        const float clampedHalfHeight = std::min((pickupBounds.max.y - pickupBounds.min.y) * 0.5f, m_pickupHalfHeight);
+
+        pickupBounds.min.x = boundsCenterX - clampedHalfWidth;
+        pickupBounds.max.x = boundsCenterX + clampedHalfWidth;
+        pickupBounds.min.y = boundsCenterY - clampedHalfHeight;
+        pickupBounds.max.y = boundsCenterY + clampedHalfHeight;
+
+        const float3 pickupCenter{ boundsCenterX, boundsCenterY, boundsCenterZ };
+
+        std::shared_ptr<SweetsSpace::ActiveSweets> candidate;
+        float bestDistanceSq = std::numeric_limits<float>::max();
+
+        const auto considerState = [&](SweetsSpace::SweetsState state)
+            {
+                const auto& sweetsList = m_sweetsManager->GetByState(state);
+                for (const auto& sweets : sweetsList)
+                {
+                    if (!sweets || sweets->IsPendingDestroy())
+                    {
+                        continue;
+                    }
+
+                    if (std::find(m_carrieds.begin(), m_carrieds.end(), sweets) != m_carrieds.end())
+                    {
+                        continue;
+                    }
+
+                    sweets->SyncColliderBounds();
+                    Collision::ICollider* sweetsCollider = sweets->GetCollider();
+                    if (!sweetsCollider)
+                    {
+                        continue;
+                    }
+
+                    const AABB sweetsBounds = sweetsCollider->GetAABB();
+                    if (!sweetsBounds.Intersects(pickupBounds))
+                    {
+                        continue;
+                    }
+
+                    const float sweetsCenterX = (sweetsBounds.min.x + sweetsBounds.max.x) * 0.5f;
+                    const float sweetsCenterY = (sweetsBounds.min.y + sweetsBounds.max.y) * 0.5f;
+                    const float sweetsCenterZ = (sweetsBounds.min.z + sweetsBounds.max.z) * 0.5f;
+
+                    const float dx = sweetsCenterX - pickupCenter.x;
+                    const float dy = sweetsCenterY - pickupCenter.y;
+                    const float dz = sweetsCenterZ - pickupCenter.z;
+                    const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+
+                    if (distanceSq <= bestDistanceSq)
+                    {
+                        bestDistanceSq = distanceSq;
+                        candidate = sweets;
+                    }
+                }
+            };
+
+        considerState(SweetsSpace::SweetsState::Ground);
+        considerState(SweetsSpace::SweetsState::Active);
+
         if (!candidate)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: no sweets within pickup box.\n");
             return;
         }
-
-
-        if (std::find(m_carrieds.begin(), m_carrieds.end(), candidate) != m_carrieds.end())
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets already carried.\n");
-            return;
-        }
-
 
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
@@ -634,24 +691,6 @@ namespace Entities
         if (!sweetsCollider)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets collider missing.\n");
-            return;
-        }
-
-        const AABB sweetsBounds = sweetsCollider->GetAABB();
-        const float pickupMinX = boundsCenter.x - m_pickupHalfWidth;
-        const float pickupMaxX = boundsCenter.x + m_pickupHalfWidth;
-        const float pickupMinY = boundsCenter.y - m_pickupHalfHeight;
-        const float pickupMaxY = boundsCenter.y + m_pickupHalfHeight;
-        const float pickupMinZ = boundsCenter.z - pickupHalfDepth;
-        const float pickupMaxZ = boundsCenter.z + pickupHalfDepth;
-
-        const bool overlapsPickup =
-            sweetsBounds.max.x >= pickupMinX && sweetsBounds.min.x <= pickupMaxX &&
-            sweetsBounds.max.y >= pickupMinY && sweetsBounds.min.y <= pickupMaxY &&
-            sweetsBounds.max.z >= pickupMinZ && sweetsBounds.min.z <= pickupMaxZ;
-        if (!overlapsPickup)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets outside pickup bounds.\n");
             return;
         }
 
