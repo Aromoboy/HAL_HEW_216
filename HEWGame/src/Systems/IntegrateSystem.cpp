@@ -58,16 +58,6 @@ float3 IntegrateSystem::Integrate(Entities::PhysicalEntity& entity, float dt)
         Physics::Physical& physical = entity.GetPhysical();
         if (physical.velocity.z != 0.0f)
         {
-#if defined(_DEBUG)
-            if (m_verboseLogging)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Entity '" << entity.GetTag()
-                    << "' velocity.z=" << physical.velocity.z
-                    << " reset before integration to enforce planar motion.\n";
-                DebugTrace(oss.str());
-            }
-#endif
             physical.velocity.z = 0.0f;
         }
         const float safeDt = std::max(dt, 0.0f);
@@ -86,20 +76,6 @@ float3 IntegrateSystem::Integrate(Entities::PhysicalEntity& entity, float dt)
         }
 
         Entities::TranslatePhysicalEntity(entity, translation);
-
-#if defined(_DEBUG)
-        if (m_verboseLogging)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Entity '" << entity.GetTag()
-                << "' velocity=(" << physical.velocity.x << ',' << physical.velocity.y << ',' << physical.velocity.z << ')'
-                << " dt=" << safeDt
-                << " damping=" << damping
-                << " weight=" << physical.weight
-                << " translation=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
-            DebugTrace(oss.str());
-        }
-#endif
 
         return translation;
     }

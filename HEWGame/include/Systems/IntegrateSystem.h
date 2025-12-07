@@ -2,6 +2,8 @@
 
 #include "Entities/PhysicalEntity.h"
 
+#include <cstddef>
+
 namespace Systems
 {
     class IntegrateSystem
@@ -10,9 +12,13 @@ namespace Systems
         IntegrateSystem();
         ~IntegrateSystem() = default;
 
+        void SetVerboseLoggingEnabled(bool enabled);
+        bool IsVerboseLoggingEnabled() const;
+
         float3 Integrate(Entities::PhysicalEntity& entity, float dt);
 
     private:
-        float m_velocityThreshold;
+        float m_translationEpsilon;
+        bool m_verboseLogging;
     };
 }
