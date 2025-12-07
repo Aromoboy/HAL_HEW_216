@@ -683,6 +683,8 @@ namespace
 
         std::vector<PositionOnly> positions;
         std::vector<UINT> indices;
+        float minZ = std::numeric_limits<float>::max();
+        float maxZ = std::numeric_limits<float>::lowest();
 
         Assimp::Importer importer;
         const unsigned int flags = aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices;
@@ -712,8 +714,9 @@ namespace
             for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
             {
                 const aiVector3D pos = mesh->mVertices[v];
-                const float flattenedZ = 0.0f;
-                positions.push_back(PositionOnly{ pos.x, pos.y, flattenedZ });
+                positions.push_back(PositionOnly{ pos.x, pos.y, pos.z });
+                minZ = std::min(minZ, pos.z);
+                maxZ = std::max(maxZ, pos.z);
             }
 
             const unsigned int numFaces = mesh->mNumFaces;
@@ -753,17 +756,17 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
-        summary.centroidOffset = float2{ -rawHull.centroidOffset.x, -rawHull.centroidOffset.y };
-        summary.hull.reserve(simplified.size());
-        for (const auto& p : simplified)
-        {
-            summary.hull.push_back(float2{ p.x + rawHull.centroidOffset.x, p.y + rawHull.centroidOffset.y });
-        }
+        summary.centroidOffset = float2{ rawHull.centroidOffset.x, rawHull.centroidOffset.y };
+        summary.hull = simplified;
         const HullExtents extents = ComputeHullExtents(summary.hull);
         const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
 
-        summary.rawThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{1.0f, 1.0f, 1.0f}, minThickness);
+        const float geometryThickness = (maxZ >= minZ)
+            ? std::max(maxZ - minZ, 0.0f)
+            : 0.0f;
+        const float adaptiveThickness = ComputeAdaptiveThicknessFromExtents(width, height, float3{1.0f, 1.0f, 1.0f}, minThickness);
+        summary.rawThickness = std::max(ApplyThicknessEpsilon(geometryThickness, minThickness), adaptiveThickness);
         const float paddedThickness = summary.rawThickness * sanitizedPadding;
         summary.thickness = paddedThickness;
 
@@ -777,11 +780,27 @@ namespace
             << " indices=" << indices.size()
             << " hullPoints=" << summary.hull.size()
             << " polygonParts=1"
+            << " centroidOffset=(" << summary.centroidOffset.x << ',' << summary.centroidOffset.y << ')'
             << " rawThickness=" << summary.rawThickness
             << " adaptiveThickness=" << summary.thickness
             << " paddingFactor=" << summary.paddingFactor
             << " minThickness=" << minThickness << "\n";
         DebugTrace(oss.str());
+
+#if defined(_DEBUG)
+        if (!summary.hull.empty() && summary.bounds.valid)
+        {
+            std::ostringstream debugHull;
+            debugHull << kLogPrefix << "Hull points (centroid-relative)=";
+            for (const auto& p : summary.hull)
+            {
+                debugHull << '(' << p.x << ',' << p.y << ") ";
+            }
+            debugHull << " boundsMin=(" << summary.bounds.min.x << ',' << summary.bounds.min.y << ',' << summary.bounds.min.z
+                << ") boundsMax=(" << summary.bounds.max.x << ',' << summary.bounds.max.y << ',' << summary.bounds.max.z << ")\n";
+            DebugTrace(debugHull.str());
+        }
+#endif
 
         return summary;
     }
@@ -1486,14 +1505,12 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        std::vector<float2> hullPointsRelativeToPivot;
-                        hullPointsRelativeToPivot.reserve(generatedCollider.hull.size());
-                        for (const auto& p : generatedCollider.hull)
-                        {
-                            hullPointsRelativeToPivot.push_back(float2{ p.x - generatedCollider.centroidOffset.x, p.y - generatedCollider.centroidOffset.y });
-                        }
-
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, generatedCollider.centroidOffset, colliderThickness, Collision::CollisionLayer::Sweets, generatedCollider.centroidOffset);
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
+                            generatedCollider.hull,
+                            float2{ 0.0f, 0.0f },
+                            colliderThickness,
+                            Collision::CollisionLayer::Sweets,
+                            generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
                         {
