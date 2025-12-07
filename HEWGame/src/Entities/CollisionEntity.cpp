@@ -189,6 +189,11 @@ namespace Entities
             return;
         }
 
+        if (!IsTransformDirty())
+        {
+            return;
+        }
+
         m_collider->UpdateBounds(m_transform);
         m_lastBoundsTransform = m_transform;
         m_transformDirty = false;

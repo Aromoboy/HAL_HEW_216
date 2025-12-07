@@ -198,8 +198,8 @@ namespace Collision
         void ConvexHullCollider2D::UpdateBounds(const Transform& transform)
         {
                 m_rotation = transform.rotation.z;
-                const float2 offsetScaled{ m_offset.x * transform.scale.x, m_offset.y * transform.scale.y };
-                const float2 center{ transform.position.x + offsetScaled.x, transform.position.y + offsetScaled.y };
+                const float2 worldOrigin{ transform.position.x, transform.position.y };
+                const float2 pivotOffset = Add(m_centroidOffset, m_offset);
 
                 float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
                 float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
@@ -209,9 +209,12 @@ namespace Collision
 
                 for (const float2& p : m_points)
                 {
-                        const float2 scaled{ (p.x + m_centroidOffset.x) * transform.scale.x, (p.y + m_centroidOffset.y) * transform.scale.y };
+                        const float2 scaled{
+                                (p.x + pivotOffset.x) * transform.scale.x,
+                                (p.y + pivotOffset.y) * transform.scale.y
+                        };
                         const float2 rotated = Rotate(scaled, m_rotation);
-                        const float2 world = Add(center, rotated);
+                        const float2 world = Add(worldOrigin, rotated);
                         m_worldPoints.push_back(world);
 
                         minBounds.x = std::min(minBounds.x, world.x);
