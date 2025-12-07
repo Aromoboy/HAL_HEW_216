@@ -100,11 +100,6 @@ namespace
                 return classification;
         }
 
-        bool Is2DCollider(const Collision::ICollider* collider)
-        {
-                return dynamic_cast<const Collision::ICollider2D*>(collider) != nullptr;
-        }
-
         bool Compute2DContact(const Collision::ICollider& a, const Collision::ICollider& b, Collision::ContactManifold2D& out)
         {
                 const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(&a);
@@ -491,27 +486,41 @@ namespace Systems
                         proxies.push_back(BodyProxy{ body, collider, body->GetCollisionLayer(), collider->GetAABB() });
                 }
 
-                float globalMinX = std::numeric_limits<float>::infinity();
-                float globalMaxX = -std::numeric_limits<float>::infinity();
-                float globalMinY = std::numeric_limits<float>::infinity();
-                float globalMaxY = -std::numeric_limits<float>::infinity();
+                float globalMin[3]{
+                        std::numeric_limits<float>::infinity(),
+                        std::numeric_limits<float>::infinity(),
+                        std::numeric_limits<float>::infinity() };
+                float globalMax[3]{
+                        -std::numeric_limits<float>::infinity(),
+                        -std::numeric_limits<float>::infinity(),
+                        -std::numeric_limits<float>::infinity() };
 
                 for (const BodyProxy& proxy : proxies)
                 {
-                        globalMinX = std::min(globalMinX, proxy.bounds.min.x);
-                        globalMaxX = std::max(globalMaxX, proxy.bounds.max.x);
-                        globalMinY = std::min(globalMinY, proxy.bounds.min.y);
-                        globalMaxY = std::max(globalMaxY, proxy.bounds.max.y);
+                        globalMin[0] = std::min(globalMin[0], proxy.bounds.min.x);
+                        globalMax[0] = std::max(globalMax[0], proxy.bounds.max.x);
+                        globalMin[1] = std::min(globalMin[1], proxy.bounds.min.y);
+                        globalMax[1] = std::max(globalMax[1], proxy.bounds.max.y);
+                        globalMin[2] = std::min(globalMin[2], proxy.bounds.min.z);
+                        globalMax[2] = std::max(globalMax[2], proxy.bounds.max.z);
                 }
 
                 int sweepAxis = 0;
                 int secondaryPlanarAxis = 1;
                 if (!proxies.empty())
                 {
-                        const float spanX = globalMaxX - globalMinX;
-                        const float spanY = globalMaxY - globalMinY;
-                        sweepAxis = (spanY > spanX) ? 1 : 0;
-                        secondaryPlanarAxis = (sweepAxis == 0) ? 1 : 0;
+                        float spans[3]
+                        {
+                                globalMax[0] - globalMin[0],
+                                globalMax[1] - globalMin[1],
+                                globalMax[2] - globalMin[2]
+                        };
+
+                        sweepAxis = std::distance(std::begin(spans), std::max_element(std::begin(spans), std::end(spans)));
+
+                        int remainingAxisA = (sweepAxis + 1) % 3;
+                        int remainingAxisB = (sweepAxis + 2) % 3;
+                        secondaryPlanarAxis = spans[remainingAxisA] >= spans[remainingAxisB] ? remainingAxisA : remainingAxisB;
                 }
 
                 std::sort(proxies.begin(), proxies.end(), [sweepAxis](const BodyProxy& a, const BodyProxy& b)
@@ -578,14 +587,6 @@ namespace Systems
                                         continue;
                                 }
 
-                                const bool pairIs2D = Is2DCollider(colliderA) && Is2DCollider(colliderB);
-                                const bool playerPlatformPair = (IsPlayerBody(bodyA) && layerB == Collision::CollisionLayer::Floor)
-                                                || (IsPlayerBody(bodyB) && layerA == Collision::CollisionLayer::Floor);
-
-                                const bool sweetsA = layerA == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyA->GetTag());
-                                const bool sweetsB = layerB == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyB->GetTag());
-                                const bool sweetsPair = sweetsA || sweetsB;
-
                                 if (overlaps[0] <= m_penetrationTolerance || overlaps[1] <= m_penetrationTolerance || overlaps[2] <= m_penetrationTolerance)
                                 {
                                         continue;
@@ -598,7 +599,9 @@ namespace Systems
                                 }
 
                                 const float overlapZ = overlaps[2];
-                                if (overlapZ <= 0.0f)
+                                const bool hasZOverlap = overlapZ > 0.0f;
+                                const bool strongZOverlap = overlapZ > m_penetrationTolerance;
+                                if (!hasZOverlap)
                                 {
                                         continue;
                                 }
@@ -742,7 +745,7 @@ namespace Systems
                                 }
                                 const float absContactNormalY = std::fabs(contactNormal.y);
                                 const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
-                                bool isGroundContact = classification.isGround && slopeAllowsSupport;
+                                bool isGroundContact = classification.isGround && slopeAllowsSupport && strongZOverlap;
 
                                 const bool bodyAResting = IsBodyResting(bodyA);
                                 const bool bodyBResting = IsBodyResting(bodyB);
@@ -945,9 +948,6 @@ namespace Systems
                                                 }
                                         }
                                 }
-
-                                physA.velocity.z = 0.0f;
-                                physB.velocity.z = 0.0f;
 
                                 if (std::fabs(appliedNormalImpulseA) > 0.0f || std::fabs(appliedTangentImpulseA) > 0.0f)
                                 {

@@ -757,6 +757,10 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
+        if (simplified.empty())
+        {
+            simplified = rawHull.hullPointsCentered;
+        }
         summary.centroidOffset = rawHull.centroidOffset;
         summary.hull = simplified;
         const HullExtents extents = ComputeHullExtents(summary.hull);

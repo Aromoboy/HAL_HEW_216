@@ -255,6 +255,7 @@ namespace Entities
         const float velocityDeltaSq = dvx * dvx + dvy * dvy + dvz * dvz;
 
         const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
+        const bool allowSleeping = (m_contactSystem == nullptr);
         const bool positionChanged = displacementSq > sleepThresholdSq || !TransformApproxEqual(m_transform, m_lastTransform, kSleepVelocityEpsilon);
         const bool velocityAwake = velocitySq > sleepThresholdSq;
         const bool impulseAwake = velocityDeltaSq > sleepThresholdSq;
@@ -267,13 +268,18 @@ namespace Entities
         {
             Wake();
         }
-        else if (m_stationaryFrameCount < kSleepFrameThreshold)
+        else if (allowSleeping && m_stationaryFrameCount < kSleepFrameThreshold)
         {
             ++m_stationaryFrameCount;
             if (m_stationaryFrameCount >= kSleepFrameThreshold)
             {
                 m_isSleeping = true;
             }
+        }
+        else
+        {
+            m_isSleeping = false;
+            m_stationaryFrameCount = 0;
         }
 
         m_lastTransform = m_transform;

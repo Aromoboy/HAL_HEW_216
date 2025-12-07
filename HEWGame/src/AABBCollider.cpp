@@ -6,7 +6,7 @@ namespace
 {
 }
 
-Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, float3 a_expand, float3 a_offset, CollisionLayer layer, float3 a_centroidOffset)
+Collision::AABBCollider::AABBCollider(Transform a_transform, bool a_isTrigger, float3 a_expand, float3 a_offset, CollisionLayer layer, float3 a_centroidOffset)
 {
         isTrigger = a_isTrigger;
         expand = a_expand;
@@ -19,17 +19,17 @@ Collision::AABBCollider::AABBCollider(Transform a_transform ,bool a_isTrigger, f
 
 bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 {
-constexpr float kPenetrationTolerance = 1e-4f;
-return aabb.Intersects(other.GetAABB(), kPenetrationTolerance);
+        constexpr float kPenetrationTolerance = 1e-4f;
+        return aabb.Intersects(other.GetAABB(), kPenetrationTolerance);
 
 }
 
 void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 {
-        const float3 colliderScale{
-                transform.scale.x * 0.5f * expand.x,
-                transform.scale.y * 0.5f * expand.y,
-                transform.scale.z * 0.5f * expand.z
+        const float3 halfExtents{
+                0.5f * expand.x * transform.scale.x,
+                0.5f * expand.y * transform.scale.y,
+                0.5f * expand.z * transform.scale.z
         };
 
         const float3 scaledOffset{
@@ -38,24 +38,38 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
                 (offset.z + centroidOffset.z) * transform.scale.z
         };
 
-        const float3 center{
+        const float3 worldCentroid{
                 transform.position.x + scaledOffset.x,
                 transform.position.y + scaledOffset.y,
                 transform.position.z + scaledOffset.z
         };
 
-        const float3 max{
-                center.x + colliderScale.x,
-                center.y + colliderScale.y,
-                center.z + colliderScale.z
+        const float3 scaledHullMin{ -halfExtents.x, -halfExtents.y, -halfExtents.z };
+        const float3 scaledHullMax{ halfExtents.x, halfExtents.y, halfExtents.z };
+
+        const float3 rawWorldMin{
+                worldCentroid.x + scaledHullMin.x,
+                worldCentroid.y + scaledHullMin.y,
+                worldCentroid.z + scaledHullMin.z
         };
-        const float3 min{
-                center.x - colliderScale.x,
-                center.y - colliderScale.y,
-                center.z - colliderScale.z
+        const float3 rawWorldMax{
+                worldCentroid.x + scaledHullMax.x,
+                worldCentroid.y + scaledHullMax.y,
+                worldCentroid.z + scaledHullMax.z
         };
 
-        aabb = AABB(max, min);
+        const float3 worldMin{
+                std::min(rawWorldMin.x, rawWorldMax.x),
+                std::min(rawWorldMin.y, rawWorldMax.y),
+                std::min(rawWorldMin.z, rawWorldMax.z)
+        };
+        const float3 worldMax{
+                std::max(rawWorldMin.x, rawWorldMax.x),
+                std::max(rawWorldMin.y, rawWorldMax.y),
+                std::max(rawWorldMin.z, rawWorldMax.z)
+        };
+
+        aabb = AABB(worldMax, worldMin);
 }
 
 bool Collision::AABBCollider::IsTrriger()

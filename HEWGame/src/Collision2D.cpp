@@ -201,26 +201,32 @@ namespace Collision
                 const float2 worldOrigin{ transform.position.x, transform.position.y };
                 const float2 pivotOffset = Add(m_centroidOffset, m_offset);
 
+                const float2 scaledPivot{ pivotOffset.x * transform.scale.x, pivotOffset.y * transform.scale.y };
+                const float2 rotatedPivot = Rotate(scaledPivot, m_rotation);
+                const float2 worldCentroid = Add(worldOrigin, rotatedPivot);
+
                 float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
                 float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-                bool hasChildBounds = false;
                 m_worldPoints.clear();
                 m_worldPoints.reserve(m_points.size());
 
                 for (const float2& p : m_points)
                 {
-                        const float2 scaled{
-                                (p.x + pivotOffset.x) * transform.scale.x,
-                                (p.y + pivotOffset.y) * transform.scale.y
-                        };
+                        const float2 scaled{ p.x * transform.scale.x, p.y * transform.scale.y };
                         const float2 rotated = Rotate(scaled, m_rotation);
-                        const float2 world = Add(worldOrigin, rotated);
+                        const float2 world = Add(worldCentroid, rotated);
                         m_worldPoints.push_back(world);
 
                         minBounds.x = std::min(minBounds.x, world.x);
                         minBounds.y = std::min(minBounds.y, world.y);
                         maxBounds.x = std::max(maxBounds.x, world.x);
                         maxBounds.y = std::max(maxBounds.y, world.y);
+                }
+
+                if (m_worldPoints.empty())
+                {
+                        minBounds = float3{ worldCentroid.x, worldCentroid.y, transform.position.z };
+                        maxBounds = minBounds;
                 }
 
                 m_aabb.min = minBounds;
