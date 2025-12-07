@@ -11,6 +11,16 @@
 #    include <windows.h>
 #endif
 
+#if __has_include("CapsuleCollider2D.h")
+#    include "CapsuleCollider2D.h"
+#    define HAS_CAPSULE_COLLIDER2D 1
+#else
+#    define HAS_CAPSULE_COLLIDER2D 0
+#endif
+
+#include "Collision2D.h"
+#include "DebugColliderRenderer.h"
+
 namespace
 {
 #if defined(_WIN32) && defined(_DEBUG)
@@ -27,6 +37,76 @@ namespace
 
     constexpr float kSleepVelocityEpsilon = 0.01f;
     constexpr int kSleepFrameThreshold = 10;
+
+    constexpr Color kAABBColor{ 1.0f, 1.0f, 1.0f, 0.4f };
+
+    Color GetLayerColor(Collision::CollisionLayer layer)
+    {
+        switch (layer)
+        {
+        case Collision::CollisionLayer::Player:
+            return Color{ 0.0f, 1.0f, 1.0f, 1.0f };
+        case Collision::CollisionLayer::Sweets:
+            return Color{ 1.0f, 1.0f, 0.0f, 1.0f };
+        case Collision::CollisionLayer::Floor:
+            return Color{ 1.0f, 0.0f, 1.0f, 1.0f };
+        default:
+            return Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+        }
+    }
+
+    float ComputeZMid(const AABB& bounds)
+    {
+        return (bounds.min.z + bounds.max.z) * 0.5f;
+    }
+
+    void DrawColliderShape(const Collision::ICollider& collider, const Transform& transform, const Color& shapeColor)
+    {
+        (void)transform;
+
+        const AABB bounds = collider.GetAABB();
+        DebugColliderRenderer::DrawAABB(bounds, kAABBColor);
+        const float z = ComputeZMid(bounds);
+
+        if (const auto* collider2D = dynamic_cast<const Collision::ICollider2D*>(&collider))
+        {
+            if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(collider2D))
+            {
+                for (const auto& child : compound->GetChildren())
+                {
+                    if (!child)
+                    {
+                        continue;
+                    }
+
+                    DrawColliderShape(*child, transform, shapeColor);
+                }
+                return;
+            }
+
+#if HAS_CAPSULE_COLLIDER2D
+            if (const auto* capsule = dynamic_cast<const Collision::CapsuleCollider2D*>(collider2D))
+            {
+                DebugColliderRenderer::DrawCapsule(capsule->GetP0(), capsule->GetP1(), capsule->GetRadius(), z, shapeColor);
+                return;
+            }
+#endif
+
+            if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(collider2D))
+            {
+                DebugColliderRenderer::DrawCircle(circle->GetCenter(), circle->GetRadius(), z, shapeColor);
+                return;
+            }
+
+            if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(collider2D))
+            {
+                DebugColliderRenderer::DrawHull(hull->GetWorldPoints(), z, shapeColor);
+                return;
+            }
+        }
+
+        DebugColliderRenderer::DrawAABB(bounds, shapeColor);
+    }
 
     bool TransformApproxEqual(const Transform& a, const Transform& b, float epsilon = 1e-6f)
     {
@@ -132,6 +212,22 @@ namespace Entities
         m_transform.position.z += delta.z;
         m_transformDirty = true;
         SyncColliderBounds();
+    }
+
+    void CollisionEntity::DebugDraw()
+    {
+        if (!m_collider)
+        {
+            return;
+        }
+
+        if (IsTransformDirty())
+        {
+            SyncColliderBounds();
+        }
+
+        const Color layerColor = GetLayerColor(m_collisionLayer);
+        DrawColliderShape(*m_collider, m_transform, layerColor);
     }
 
     void CollisionEntity::UpdateSleepState(const float3& velocity)

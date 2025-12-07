@@ -182,6 +182,7 @@
     <ClCompile Include="src\Core\IndexBuffer.cpp" />
     <ClCompile Include="src\Core\VertexBuffer.cpp" />
     <ClCompile Include="src\Debug.cpp" />
+    <ClCompile Include="src\DebugColliderRenderer.cpp" />
     <ClCompile Include="src\DebugConsole.cpp" />
     <ClCompile Include="src\DirectX.cpp" />
     <ClCompile Include="src\DrawMatrix.cpp" />
@@ -259,6 +260,7 @@
     <ClInclude Include="include\Core\IndexBuffer.h" />
     <ClInclude Include="include\Core\VertexBuffer.h" />
     <ClInclude Include="include\Debug.h" />
+    <ClInclude Include="include\DebugColliderRenderer.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />

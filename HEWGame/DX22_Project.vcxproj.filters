@@ -73,6 +73,9 @@
     <ClCompile Include="src\Debug.cpp">
       <Filter>Debug</Filter>
     </ClCompile>
+    <ClCompile Include="src\DebugColliderRenderer.cpp">
+      <Filter>Debug</Filter>
+    </ClCompile>
     <ClCompile Include="src\DebugConsole.cpp">
       <Filter>Debug</Filter>
     </ClCompile>
@@ -296,6 +299,9 @@
       <Filter>Core\DirectX</Filter>
     </ClInclude>
     <ClInclude Include="include\Debug.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DebugColliderRenderer.h">
       <Filter>Debug</Filter>
     </ClInclude>
     <ClInclude Include="include\DebugConsole.h">
