@@ -140,6 +140,7 @@ namespace Stage
         m_anchorTransform = transform;
         auto& current = GetTransform();
         current = m_anchorTransform;
+        MarkTransformDirty();
         SyncColliderBounds();
 
 #if defined(_DEBUG)
@@ -173,6 +174,7 @@ namespace Stage
             || current.scale.z != m_anchorTransform.scale.z)
         {
             current = m_anchorTransform;
+            MarkTransformDirty();
             SyncColliderBounds();
         }
     }
