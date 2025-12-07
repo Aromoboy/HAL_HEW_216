@@ -12,8 +12,10 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
+#include <utility>
 #include <vector>
 #include <DirectXMath.h>
 

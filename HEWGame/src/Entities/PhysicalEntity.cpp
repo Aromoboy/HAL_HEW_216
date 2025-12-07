@@ -1,5 +1,8 @@
 #include "Entities/PhysicalEntity.h"
 
+#include <memory>
+#include <utility>
+
 namespace Entities
 {
     PhysicalEntity::PhysicalEntity(const Transform& transform, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, Physics::Physical physical, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Systems::ContactLiteSystem* contactSystem, Core::UpdatePhase phase, int priority, std::string tag)

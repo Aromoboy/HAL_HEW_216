@@ -1,5 +1,8 @@
 #include "Sweets/BaseSweets.h"
 
+#include <memory>
+#include <utility>
+
 namespace SweetsSpace
 {
     BaseSweets::BaseSweets(const std::string& tag,
