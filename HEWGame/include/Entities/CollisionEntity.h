@@ -6,16 +6,12 @@
 #include "AABB.h"
 #include "CollisionLayer.h"
 #include "Entities/Entity.h"
+#include "ModelDX.h"
 #include "Transform.h"
 
 namespace Collision
 {
     class ICollider;
-}
-
-namespace Render
-{
-    class Model;
 }
 
 namespace Systems
