@@ -44,6 +44,7 @@ namespace GameFlow
         const std::vector<float>& rewardMultipliers, const std::vector<float>& rewardMiniMultipliers)
     {
         m_thresholds = thresholds;
+        m_minithresholds = minithresholds; //ミニ
         std::sort(m_thresholds.begin(), m_thresholds.end());
         m_thresholds.erase(
             std::remove_if(m_thresholds.begin(), m_thresholds.end(), [](float value)
@@ -69,6 +70,32 @@ namespace GameFlow
             m_rewardMultipliers.resize(requiredMultiplierCount);
         }
 
+        //ミニフェーズ
+        std::sort(m_minithresholds.begin(), m_minithresholds.end());
+        m_minithresholds.erase(
+            std::remove_if(m_minithresholds.begin(), m_minithresholds.end(), [](float value)
+                {
+                    return !std::isfinite(value) || value <= 0.0f;
+                }),
+            m_minithresholds.end());
+        m_minithresholds.erase(std::unique(m_minithresholds.begin(), m_minithresholds.end()), m_minithresholds.end());
+
+        m_minirewardMultipliers = rewardMiniMultipliers;
+        if (m_minirewardMultipliers.empty())
+        {
+            m_minirewardMultipliers.push_back(1.0f);
+        }
+        const std::size_t requiredMultiplierCount = m_minithresholds.size() + 1;
+        if (m_minirewardMultipliers.size() < requiredMultiplierCount)
+        {
+            const float fillValue = m_minirewardMultipliers.back();
+            m_minirewardMultipliers.resize(requiredMultiplierCount, fillValue);
+        }
+        else if (m_minirewardMultipliers.size() > requiredMultiplierCount)
+        {
+            m_minirewardMultipliers.resize(requiredMultiplierCount);
+        }
+
         m_nextThresholdIndex = 0;
         m_nextMiniThresholdIndex = 0; //ミニフェーズ
         m_currentPhase = 0;
@@ -83,6 +110,15 @@ namespace GameFlow
         if (!m_thresholds.empty())
         {
             oss << " nextThreshold=" << m_thresholds.front();
+        }
+        oss << " currentMultiplier=" << GetRewardMultiplier();
+        oss << "\n";
+        //ミニフェーズ
+        oss << kLogPrefix << "Initialized with " << m_minithresholds.size() << " minithresholds"
+            << " and " << m_minirewardMultipliers.size() << " minimultipliers.";
+        if (!m_minithresholds.empty())
+        {
+            oss << " nextminiThreshold=" << m_minithresholds.front();
         }
         oss << " currentMultiplier=" << GetRewardMultiplier();
         oss << "\n";
