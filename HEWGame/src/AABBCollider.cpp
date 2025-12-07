@@ -22,16 +22,16 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
         const AABB thisAABB = aabb;
         const AABB otherAABB = other.GetAABB();
 
+        constexpr float kPenetrationTolerance = 1e-4f;
 
-        // X軸方向で重なっているかを確認
-        if (thisAABB.max.x < otherAABB.min.x ||           // X軸方向で分離している
-                thisAABB.min.x > otherAABB.max.x) return false;
+        const float overlapX = std::min(thisAABB.max.x, otherAABB.max.x)
+                - std::max(thisAABB.min.x, otherAABB.min.x) - kPenetrationTolerance;
+        const float overlapY = std::min(thisAABB.max.y, otherAABB.max.y)
+                - std::max(thisAABB.min.y, otherAABB.min.y) - kPenetrationTolerance;
+        const float overlapZ = std::min(thisAABB.max.z, otherAABB.max.z)
+                - std::max(thisAABB.min.z, otherAABB.min.z) - kPenetrationTolerance;
 
-        // Y軸方向で重なっているかを確認
-        if (thisAABB.max.y < otherAABB.min.y ||           // Y軸方向で分離している
-                thisAABB.min.y > otherAABB.max.y) return false;
-
-        return true;
+        return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
 
 }
 
