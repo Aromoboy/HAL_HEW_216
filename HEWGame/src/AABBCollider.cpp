@@ -1,7 +1,5 @@
 #include "AABBCollider.h"
 
-#include <algorithm>
-
 namespace
 {
 }
@@ -26,7 +24,7 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 
 void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 {
-        const float3 halfExtents{
+        const float3 halfExt{
                 0.5f * expand.x * transform.scale.x,
                 0.5f * expand.y * transform.scale.y,
                 0.5f * expand.z * transform.scale.z
@@ -38,35 +36,21 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
                 (offset.z + centroidOffset.z) * transform.scale.z
         };
 
-        const float3 worldCentroid{
+        const float3 worldCenter{
                 transform.position.x + scaledOffset.x,
                 transform.position.y + scaledOffset.y,
                 transform.position.z + scaledOffset.z
         };
 
-        const float3 scaledHullMin{ -halfExtents.x, -halfExtents.y, -halfExtents.z };
-        const float3 scaledHullMax{ halfExtents.x, halfExtents.y, halfExtents.z };
-
-        const float3 rawWorldMin{
-                worldCentroid.x + scaledHullMin.x,
-                worldCentroid.y + scaledHullMin.y,
-                worldCentroid.z + scaledHullMin.z
-        };
-        const float3 rawWorldMax{
-                worldCentroid.x + scaledHullMax.x,
-                worldCentroid.y + scaledHullMax.y,
-                worldCentroid.z + scaledHullMax.z
-        };
-
         const float3 worldMin{
-                std::min(rawWorldMin.x, rawWorldMax.x),
-                std::min(rawWorldMin.y, rawWorldMax.y),
-                std::min(rawWorldMin.z, rawWorldMax.z)
+                worldCenter.x - halfExt.x,
+                worldCenter.y - halfExt.y,
+                worldCenter.z - halfExt.z
         };
         const float3 worldMax{
-                std::max(rawWorldMin.x, rawWorldMax.x),
-                std::max(rawWorldMin.y, rawWorldMax.y),
-                std::max(rawWorldMin.z, rawWorldMax.z)
+                worldCenter.x + halfExt.x,
+                worldCenter.y + halfExt.y,
+                worldCenter.z + halfExt.z
         };
 
         aabb = AABB(worldMax, worldMin);
