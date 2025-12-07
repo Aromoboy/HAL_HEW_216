@@ -533,6 +533,8 @@ namespace Systems
                 size_t satAttempts = 0;
                 size_t satSuccesses = 0;
 
+                const float planarZTolerance = m_penetrationTolerance;
+
                 for (size_t i = 0; i < proxyCount; ++i)
                 {
                         const BodyProxy& proxyA = proxies[i];
@@ -551,11 +553,17 @@ namespace Systems
                                         break;
                                 }
 
-                                float overlaps[2];
+                                float overlaps[3];
                                 overlaps[0] = GetAxisOverlap(boundsA, boundsB, 0);
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
+                                overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
                                 if (overlaps[sweepAxis] <= 0.0f || overlaps[secondaryPlanarAxis] <= 0.0f)
+                                {
+                                        continue;
+                                }
+
+                                if (overlaps[2] <= -planarZTolerance)
                                 {
                                         continue;
                                 }
@@ -577,7 +585,7 @@ namespace Systems
                                 const bool sweetsB = layerB == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyB->GetTag());
                                 const bool sweetsPair = sweetsA || sweetsB;
 
-                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f)
+                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f || overlaps[2] <= -planarZTolerance)
                                 {
                                         continue;
                                 }
@@ -588,8 +596,15 @@ namespace Systems
                                         continue;
                                 }
 
-                                const float planarOverlapX = overlaps[0];
-                                const float planarOverlapY = overlaps[1];
+                                const float overlapZ = overlaps[2];
+                                if (overlapZ <= 0.0f)
+                                {
+                                        continue;
+                                }
+
+                                const float penetrationX = std::max(overlaps[0], 0.0f);
+                                const float penetrationY = std::max(overlaps[1], 0.0f);
+                                const float penetrationZ = std::max(overlapZ, 0.0f);
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
@@ -644,13 +659,14 @@ namespace Systems
                                                 contactMethod = "sat_2d";
                                                 contactNormal.x = contact2D.normal.x;
                                                 contactNormal.y = contact2D.normal.y;
+                                                contactNormal.z = 0.0f;
                                                 const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
                                                 if (lenSq > 1e-6f)
                                                 {
                                                         const float invLen = 1.0f / std::sqrt(lenSq);
                                                         contactNormal.x *= invLen;
                                                         contactNormal.y *= invLen;
-                                                        contactPenetration = contact2D.penetration;
+                                                        contactPenetration = std::min(contact2D.penetration, penetrationZ);
                                                         contactComputed = true;
                                                 }
                                                 else
@@ -660,36 +676,65 @@ namespace Systems
                                         }
                                 }
 
+                                if (usedSAT && overlapZ <= 0.0f)
+                                {
+                                        usedSAT = false;
+                                        contactComputed = false;
+                                }
+
                                 if (!contactComputed)
                                 {
                                         const bool mixed2DPair = colliderA2D || colliderB2D;
 
-                                        int axis = (planarOverlapX < planarOverlapY) ? 0 : 1;
+                                        float penetrations[3]{ penetrationX, penetrationY, penetrationZ };
+                                        int axis = 0;
+                                        for (int k = 1; k < 3; ++k)
+                                        {
+                                                if (penetrations[k] < penetrations[axis])
+                                                {
+                                                        axis = k;
+                                                }
+                                        }
                                         const float axisCenterA = GetAxisCenter(boundsA, axis);
                                         const float axisCenterB = GetAxisCenter(boundsB, axis);
                                         const float axisDir = (axisCenterA < axisCenterB) ? -1.0f : 1.0f;
-                                        contactPenetration = (axis == 0) ? planarOverlapX : planarOverlapY;
+                                        contactPenetration = penetrations[axis];
 
-                                        contactNormal = (axis == 0) ? float3{ axisDir, 0.0f, 0.0f } : float3{ 0.0f, axisDir, 0.0f };
+                                        contactNormal = float3{ 0.0f, 0.0f, 0.0f };
+                                        if (axis == 0)
+                                        {
+                                                contactNormal.x = axisDir;
+                                        }
+                                        else if (axis == 1)
+                                        {
+                                                contactNormal.y = axisDir;
+                                        }
+                                        else
+                                        {
+                                                contactNormal.z = axisDir;
+                                        }
                                         contactMethod = mixed2DPair ? "aabb_planar_mixed" : "aabb_planar";
                                         contactComputed = true;
                                 }
 
-                                const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, 0.0f };
-                                if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
+                                const float3 separationVec{ centerA.x - centerB.x, centerA.y - centerB.y, centerA.z - centerB.z };
+                                const float contactNormalLenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y + contactNormal.z * contactNormal.z;
+                                if (contactNormalLenSq <= 1e-6f)
                                 {
                                         continue;
                                 }
-                                const float orientDot = contactNormal.x * separationVec.x + contactNormal.y * separationVec.y;
+                                const float orientDot = contactNormal.x * separationVec.x + contactNormal.y * separationVec.y + contactNormal.z * separationVec.z;
                                 if (orientDot < 0.0f)
                                 {
                                         contactNormal.x = -contactNormal.x;
                                         contactNormal.y = -contactNormal.y;
+                                        contactNormal.z = -contactNormal.z;
                                 }
 
                                 const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
                                 contactNormal = classification.normal;
-                                if (contactNormal.x == 0.0f && contactNormal.y == 0.0f)
+                                const float classifiedLenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y + contactNormal.z * contactNormal.z;
+                                if (classifiedLenSq <= 1e-6f)
                                 {
                                         continue;
                                 }
@@ -716,8 +761,7 @@ namespace Systems
                                 }
 
                                 float3 resolutionNormal = contactNormal;
-                                resolutionNormal.z = 0.0f;
-                                const float resolutionLenSq = resolutionNormal.x * resolutionNormal.x + resolutionNormal.y * resolutionNormal.y;
+                                const float resolutionLenSq = resolutionNormal.x * resolutionNormal.x + resolutionNormal.y * resolutionNormal.y + resolutionNormal.z * resolutionNormal.z;
                                 if (resolutionLenSq <= 1e-6f)
                                 {
                                         continue;
@@ -725,6 +769,7 @@ namespace Systems
                                 const float invResolutionLen = 1.0f / std::sqrt(resolutionLenSq);
                                 resolutionNormal.x *= invResolutionLen;
                                 resolutionNormal.y *= invResolutionLen;
+                                resolutionNormal.z *= invResolutionLen;
                                 contactNormal = resolutionNormal;
 
                                 const bool treatedAsSupport = isGroundContact;
@@ -751,26 +796,27 @@ namespace Systems
                                         const float halfPush = pushDistance * 0.5f;
                                         translationA.x += resolutionNormal.x * halfPush;
                                         translationA.y += resolutionNormal.y * halfPush;
+                                        translationA.z += resolutionNormal.z * halfPush;
                                         translationB.x -= resolutionNormal.x * halfPush;
                                         translationB.y -= resolutionNormal.y * halfPush;
+                                        translationB.z -= resolutionNormal.z * halfPush;
                                 }
                                 else if (!bodyAStatic && bodyBStatic)
                                 {
                                         translationA.x += resolutionNormal.x * pushDistance;
                                         translationA.y += resolutionNormal.y * pushDistance;
+                                        translationA.z += resolutionNormal.z * pushDistance;
                                 }
                                 else if (bodyAStatic && !bodyBStatic)
                                 {
                                         translationB.x -= resolutionNormal.x * pushDistance;
                                         translationB.y -= resolutionNormal.y * pushDistance;
+                                        translationB.z -= resolutionNormal.z * pushDistance;
                                 }
                                 else
                                 {
                                         continue;
                                 }
-
-                                translationA.z = 0.0f;
-                                translationB.z = 0.0f;
 
                                 if (translationA.x != 0.0f || translationA.y != 0.0f || translationA.z != 0.0f)
                                 {
