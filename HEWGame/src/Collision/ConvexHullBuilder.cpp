@@ -526,12 +526,18 @@ namespace Collision
             }), uniquePoints.end());
 
         const auto hull = ComputeConvexHull(uniquePoints);
+        if (hull.empty())
+        {
+            return result;
+        }
 
-        result.centroidOffset = ComputeCentroid(hull);
+        const float2 centroid = ComputeCentroid(hull);
+        result.centroidOffset = centroid;
+
         result.hullPointsCentered.reserve(hull.size());
         for (const auto& p : hull)
         {
-            result.hullPointsCentered.push_back(float2{ p.x - result.centroidOffset.x, p.y - result.centroidOffset.y });
+            result.hullPointsCentered.push_back(float2{ p.x - centroid.x, p.y - centroid.y });
         }
 
         return result;
