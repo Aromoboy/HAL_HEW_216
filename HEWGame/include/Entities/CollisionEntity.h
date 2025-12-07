@@ -51,6 +51,8 @@ namespace Entities
         void Wake();
         bool IsSleeping() const { return m_isSleeping; }
 
+        const AABB& GetAABB() const { return m_aabb; }
+
         Systems::ContactLiteSystem* GetContactSystem() const;
 
     protected:
@@ -60,6 +62,7 @@ namespace Entities
         Transform m_lastTransform;
         Transform m_lastBoundsTransform;
         float3 m_lastVelocity;
+        AABB m_aabb{};
         int m_stationaryFrameCount{ 0 };
         bool m_transformDirty{ true };
         bool m_isSleeping{ false };
