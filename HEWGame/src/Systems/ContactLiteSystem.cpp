@@ -240,12 +240,16 @@ namespace Systems
                 , m_minLinearSpeed(0.05f)
                 , m_minVerticalSpeed(0.02f)
                 , m_minTangentialSpeed(0.01f)
+                , m_includeKinematicBodies(true)
+                , m_allowKinematicPlayerCollision(true)
                 , m_loggedMissingBodyList(false)
                 , m_loggedBodySnapshot(false)
                 , m_loggedPlayerPresence(false)
                 , m_loggedPlayerAbsence(false)
                 , m_loggedPlayerPlatformContact(false)
                 , m_loggedPlayerSweetsContact(false)
+                , m_loggedKinematicPlayerFilter(false)
+                , m_loggedKinematicFilter(false)
                 , m_loggedSuppressedSweetsFloor(false)
                 , m_loggedPlanarZSeparation(false)
                 , m_loggedPlanarZIgnore(false)
@@ -261,6 +265,8 @@ namespace Systems
                 m_loggedPlayerAbsence = false;
                 m_loggedPlayerPlatformContact = false;
                 m_loggedPlayerSweetsContact = false;
+                m_loggedKinematicPlayerFilter = false;
+                m_loggedKinematicFilter = false;
                 m_loggedSuppressedSweetsFloor = false;
                 m_loggedPlanarZSeparation = false;
                 m_loggedPlanarZIgnore = false;
@@ -352,8 +358,22 @@ namespace Systems
                 m_minTangentialSpeed = std::max(0.0f, minSpeed);
         }
 
+        void ContactLiteSystem::SetIncludeKinematicBodies(bool include)
+        {
+                m_includeKinematicBodies = include;
+                m_loggedKinematicFilter = false;
+        }
+
+        void ContactLiteSystem::SetAllowKinematicPlayerCollision(bool allow)
+        {
+                m_allowKinematicPlayerCollision = allow;
+                m_loggedKinematicPlayerFilter = false;
+        }
+
         void ContactLiteSystem::OnUpdate(Core::UpdateContext& ctx)
         {
+                m_contactedBodies.clear();
+
                 if (!m_bodies)
                 {
                         if (!m_loggedMissingBodyList)
@@ -436,6 +456,55 @@ namespace Systems
                                 continue;
                         }
 
+                        const auto isKinematicBody = [](const Entities::PhysicalEntity* body, const Collision::ICollider* collider)
+                        {
+                                if (!body || !collider)
+                                {
+                                        return false;
+                                }
+
+                                if (collider->GetLayer() == Collision::CollisionLayer::Floor)
+                                {
+                                        return false;
+                                }
+
+                                return !(body->GetPhysical().weight > 0.0f);
+                        };
+
+                        const bool bodyAKinematic = isKinematicBody(bodyA, colliderA);
+                        if (bodyAKinematic)
+                        {
+                                if (IsPlayerBody(bodyA) && !m_allowKinematicPlayerCollision)
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedKinematicPlayerFilter)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Kinematic player body filtered from contact pass. tag='"
+                                                        << bodyA->GetTag() << "' allowKinematicPlayerCollision=false\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedKinematicPlayerFilter = true;
+                                        }
+#endif
+                                        continue;
+                                }
+
+                                if (!m_includeKinematicBodies)
+                                {
+#if defined(_DEBUG)
+                                        if (!m_loggedKinematicFilter)
+                                        {
+                                                std::ostringstream oss;
+                                                oss << kLogPrefix << "Kinematic non-player body filtered from contact pass. tag='"
+                                                        << bodyA->GetTag() << "' includeKinematicBodies=false\n";
+                                                DebugTrace(oss.str());
+                                                m_loggedKinematicFilter = true;
+                                        }
+#endif
+                                        continue;
+                                }
+                        }
+
                         const Collision::CollisionLayer layerA = bodyA->GetCollisionLayer();
 
                         bodyA->SyncColliderBounds();
@@ -452,6 +521,40 @@ namespace Systems
                                 if (!colliderB)
                                 {
                                         continue;
+                                }
+
+                                const bool bodyBKinematic = isKinematicBody(bodyB, colliderB);
+                                if (bodyBKinematic)
+                                {
+                                        if (IsPlayerBody(bodyB) && !m_allowKinematicPlayerCollision)
+                                        {
+#if defined(_DEBUG)
+                                                if (!m_loggedKinematicPlayerFilter)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Kinematic player body filtered from contact pass. tag='"
+                                                                << bodyB->GetTag() << "' allowKinematicPlayerCollision=false\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedKinematicPlayerFilter = true;
+                                                }
+#endif
+                                                continue;
+                                        }
+
+                                        if (!m_includeKinematicBodies)
+                                        {
+#if defined(_DEBUG)
+                                                if (!m_loggedKinematicFilter)
+                                                {
+                                                        std::ostringstream oss;
+                                                        oss << kLogPrefix << "Kinematic non-player body filtered from contact pass. tag='"
+                                                                << bodyB->GetTag() << "' includeKinematicBodies=false\n";
+                                                        DebugTrace(oss.str());
+                                                        m_loggedKinematicFilter = true;
+                                                }
+#endif
+                                                continue;
+                                        }
                                 }
 
                                 const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
@@ -905,6 +1008,9 @@ namespace Systems
                                 Entities::TranslatePhysicalEntity(*bodyA, translationA);
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
+                                m_contactedBodies.insert(bodyA);
+                                m_contactedBodies.insert(bodyB);
+
                                 const auto Project = [](const float3& v, const float3& dir)
                                 {
                                         return v.x * dir.x + v.y * dir.y + v.z * dir.z;
@@ -1276,5 +1382,89 @@ namespace Systems
                         DebugTrace(oss.str());
                 }
 #endif
+        }
+
+        bool ContactLiteSystem::HadAnyContactThisFrame(const Entities::PhysicalEntity* body) const
+        {
+                if (!body)
+                {
+                        return false;
+                }
+
+                return m_contactedBodies.find(body) != m_contactedBodies.end();
+        }
+
+        bool ContactLiteSystem::HasZOverlapWithAnyCollider(const Entities::PhysicalEntity* body) const
+        {
+                if (!body || !m_bodies)
+                {
+                        return false;
+                }
+
+                const Collision::ICollider* targetCollider = body->GetCollider();
+                if (!targetCollider)
+                {
+                        return false;
+                }
+
+                const auto isKinematicBody = [](const Entities::PhysicalEntity* candidate, const Collision::ICollider* collider)
+                {
+                        if (!candidate || !collider)
+                        {
+                                return false;
+                        }
+
+                        if (collider->GetLayer() == Collision::CollisionLayer::Floor)
+                        {
+                                return false;
+                        }
+
+                        return !(candidate->GetPhysical().weight > 0.0f);
+                };
+
+                const bool targetKinematic = isKinematicBody(body, targetCollider);
+                if (targetKinematic && IsPlayerBody(body) && !m_allowKinematicPlayerCollision)
+                {
+                        return false;
+                }
+
+                if (targetKinematic && !IsPlayerBody(body) && !m_includeKinematicBodies)
+                {
+                        return false;
+                }
+
+                const AABB targetBounds = targetCollider->GetAABB();
+
+                for (const auto* other : *m_bodies)
+                {
+                        if (!other || other == body)
+                        {
+                                continue;
+                        }
+
+                        const Collision::ICollider* otherCollider = other->GetCollider();
+                        if (!otherCollider)
+                        {
+                                continue;
+                        }
+
+                        const bool otherKinematic = isKinematicBody(other, otherCollider);
+                        if (otherKinematic && !m_includeKinematicBodies)
+                        {
+                                continue;
+                        }
+
+                        const AABB otherBounds = otherCollider->GetAABB();
+                        const float overlapX = GetAxisOverlap(targetBounds, otherBounds, 0);
+                        const float overlapY = GetAxisOverlap(targetBounds, otherBounds, 1);
+                        const float overlapZ = GetAxisOverlap(targetBounds, otherBounds, 2);
+
+                        if (overlapX > 0.0f && overlapY > 0.0f && overlapZ >= -kPlanarZTolerance)
+                        {
+                                return true;
+                        }
+                }
+
+                return false;
         }
 }
