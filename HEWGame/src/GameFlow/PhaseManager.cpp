@@ -70,7 +70,9 @@ namespace GameFlow
         }
 
         m_nextThresholdIndex = 0;
+        m_nextMiniThresholdIndex = 0; //ミニフェーズ
         m_currentPhase = 0;
+        m_currentMiniPhase = 0; //ミニフェーズ
         m_initialized = true;
         m_lastReportedHeight = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
@@ -111,6 +113,17 @@ namespace GameFlow
         }
         oss << " currentMultiplier=" << GetRewardMultiplier();
         oss << "\n";
+
+        //ミニフェーズ
+        oss << kLogPrefix << "Reset. minithresholdCount=" << m_minithresholds.size()
+            << " minimultiplierCount=" << m_minirewardMultipliers.size();
+        if (!m_minithresholds.empty())
+        {
+            oss << " nextThreshold=" << m_minithresholds.front();
+        }
+        oss << " currentMultiplier=" << GetRewardMultiplier();
+        oss << "\n";
+
         DebugTrace(oss.str());
     }
 
