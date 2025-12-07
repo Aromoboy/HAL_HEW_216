@@ -143,6 +143,11 @@ namespace
             return normalized;
         }
 
+        float3 ScaleVector(const float3& value, const float3& scale)
+        {
+            return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
+        }
+
         PlayerColliderGeometry AnalyzePlayerModelGeometry(const std::string& path, float thicknessPadding)
         {
             PlayerColliderGeometry summary{};
@@ -246,7 +251,6 @@ namespace
                     << " vertices=" << positions.size()
                     << " indices=" << indices.size()
                     << " hullPoints=" << summary.hull.size()
-                    << " centroidOffset=(" << summary.centroidOffset.x << ',' << summary.centroidOffset.y << ')'
                     << " rawThickness=" << summary.rawThickness
                     << " paddedThickness=" << summary.paddedThickness
                     << " paddingFactor=" << sanitizedPadding << "\n";
@@ -339,15 +343,17 @@ namespace
             return tuning;
         }
 
-        std::vector<float2> BuildPaddedHull(const PlayerColliderGeometry& geometry, const SceneGame::PlayerColliderTuning& tuning)
+        std::vector<float2> BuildPaddedHull(const PlayerColliderGeometry& geometry, const SceneGame::PlayerColliderTuning& tuning, const float3& scale)
         {
             std::vector<float2> hull;
             hull.reserve(geometry.hull.empty() ? 4u : geometry.hull.size());
 
             if (geometry.hull.empty())
             {
-                const float halfWidth = ((geometry.bounds.max.x - geometry.bounds.min.x) * 0.5f) + tuning.padding.x;
-                const float halfHeight = ((geometry.bounds.max.y - geometry.bounds.min.y) * 0.5f) + tuning.padding.y;
+                const float3 scaledMin = ScaleVector(geometry.bounds.min, scale);
+                const float3 scaledMax = ScaleVector(geometry.bounds.max, scale);
+                const float halfWidth = ((scaledMax.x - scaledMin.x) * 0.5f) + tuning.padding.x;
+                const float halfHeight = ((scaledMax.y - scaledMin.y) * 0.5f) + tuning.padding.y;
                 hull.push_back(float2{ -halfWidth, -halfHeight });
                 hull.push_back(float2{ halfWidth, -halfHeight });
                 hull.push_back(float2{ halfWidth, halfHeight });
@@ -357,24 +363,24 @@ namespace
             {
                 for (auto p : geometry.hull)
                 {
-                    float2 padded = p;
-                    if (padded.x >= 0.0f)
+                    float2 scaled{ p.x * scale.x, p.y * scale.y };
+                    if (scaled.x >= 0.0f)
                     {
-                        padded.x += tuning.padding.x;
+                        scaled.x += tuning.padding.x;
                     }
                     else
                     {
-                        padded.x -= tuning.padding.x;
+                        scaled.x -= tuning.padding.x;
                     }
-                    if (padded.y >= 0.0f)
+                    if (scaled.y >= 0.0f)
                     {
-                        padded.y += tuning.padding.y;
+                        scaled.y += tuning.padding.y;
                     }
                     else
                     {
-                        padded.y -= tuning.padding.y;
+                        scaled.y -= tuning.padding.y;
                     }
-                    hull.push_back(padded);
+                    hull.push_back(scaled);
                 }
             }
 
@@ -481,24 +487,12 @@ namespace
             const float clampedThickness = std::max(geometry.paddedThickness * transform.scale.z, kMinGeneratedThickness);
             const float2 offset2D{ tuning.offset.x, tuning.offset.y };
             const float2 centroid2D{ geometry.centroidOffset.x, geometry.centroidOffset.y };
-            auto hull = BuildPaddedHull(geometry, tuning);
+            auto hull = BuildPaddedHull(geometry, tuning, transform.scale);
 
             std::vector<float2> hullPointsRelativeToPivot = hull;
 
             auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, offset2D, clampedThickness, Collision::CollisionLayer::Player, centroid2D);
             collider->UpdateBounds(transform);
-
-            {
-                std::ostringstream oss;
-                const AABB aabb = collider->GetAABB();
-                oss << kLogPrefix << "[PlayerCollider] Generated hull points=" << hullPointsRelativeToPivot.size()
-                    << " centroidOffset=(" << centroid2D.x << ',' << centroid2D.y << ')'
-                    << " offset=(" << offset2D.x << ',' << offset2D.y << ')'
-                    << " clampedThickness=" << clampedThickness
-                    << " aabbMin=(" << aabb.min.x << ',' << aabb.min.y << ',' << aabb.min.z << ')'
-                    << " aabbMax=(" << aabb.max.x << ',' << aabb.max.y << ',' << aabb.max.z << ")\n";
-                DebugTrace(oss.str());
-            }
             return collider;
         }
 
@@ -1755,11 +1749,6 @@ SceneGame::SceneGame()
         colliderSource = "aabb_fallback";
         colliderDecisionReason = "no_config_and_generated_failed";
     }
-
-    if (collider)
-    {
-        collider->UpdateBounds(trans);
-    }
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
@@ -1805,8 +1794,6 @@ SceneGame::SceneGame()
             {
                 const AABB bounds = colliderPtr->GetAABB();
                 const float aabbThickness = bounds.max.z - bounds.min.z;
-                const auto* hullCollider = dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr);
-                const std::size_t hullPointCount = hullCollider ? hullCollider->GetWorldPoints().size() : 0u;
 
                 const char* colliderType = "Unknown";
                 if (dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr))
@@ -1825,8 +1812,6 @@ SceneGame::SceneGame()
                     << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
                     << " aabbThickness=" << aabbThickness
                     << " colliderType=" << colliderType
-                    << " hullPoints=" << hullPointCount
-                    << " centroidOffset=(" << playerGeometry.centroidOffset.x << ',' << playerGeometry.centroidOffset.y << ')'
                     << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
                     << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
                     << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
