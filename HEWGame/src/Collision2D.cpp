@@ -197,25 +197,25 @@ namespace Collision
 
         void ConvexHullCollider2D::UpdateBounds(const Transform& transform)
         {
-                const float2 pos{ transform.position.x, transform.position.y };
+                const float2 worldOrigin{ transform.position.x, transform.position.y };
                 const float2 scale{ transform.scale.x, transform.scale.y };
-                const float rotation = transform.rotation.z;
-                m_rotation = rotation;
+                m_rotation = transform.rotation.z;
 
-                const float2 pivot = Add(m_centroidOffset, m_offset);
-                const float2 scaledPivot{ pivot.x * scale.x, pivot.y * scale.y };
-                const float2 rotatedPivot = Rotate(scaledPivot, rotation);
-                const float2 worldCentroid = Add(pos, rotatedPivot);
+                const float2 pivotOffset = Add(m_centroidOffset, m_offset);
+                const float2 scaledPivot{ pivotOffset.x * scale.x, pivotOffset.y * scale.y };
+                const float2 rotatedPivot = Rotate(scaledPivot, m_rotation);
+                const float2 worldCentroid = Add(worldOrigin, rotatedPivot);
 
                 float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
                 float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+
                 m_worldPoints.clear();
                 m_worldPoints.reserve(m_points.size());
 
                 for (const float2& p : m_points)
                 {
                         const float2 scaled{ p.x * scale.x, p.y * scale.y };
-                        const float2 rotated = Rotate(scaled, rotation);
+                        const float2 rotated = Rotate(scaled, m_rotation);
                         const float2 world = Add(worldCentroid, rotated);
                         m_worldPoints.push_back(world);
 
