@@ -756,7 +756,7 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
-        summary.centroidOffset = float2{ rawHull.centroidOffset.x, rawHull.centroidOffset.y };
+        summary.centroidOffset = rawHull.centroidOffset;
         summary.hull = simplified;
         const HullExtents extents = ComputeHullExtents(summary.hull);
         const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
@@ -1505,11 +1505,11 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
+                        collider = std::make_shared<ConvexHullCollider2D>(
                             generatedCollider.hull,
-                            float2{ 0.0f, 0.0f },
+                            float2{0.0f, 0.0f},
                             colliderThickness,
-                            Collision::CollisionLayer::Sweets,
+                            CollisionLayer::Sweets,
                             generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
