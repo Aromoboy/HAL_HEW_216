@@ -27,6 +27,7 @@
 #include <vector>
 #include "AABBCollider.h"
 #include "ColliderConfigLoader.h"
+#include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
@@ -1505,11 +1506,11 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        collider = std::make_shared<ConvexHullCollider2D>(
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
                             generatedCollider.hull,
                             float2{0.0f, 0.0f},
                             colliderThickness,
-                            CollisionLayer::Sweets,
+                            Collision::CollisionLayer::Sweets,
                             generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
