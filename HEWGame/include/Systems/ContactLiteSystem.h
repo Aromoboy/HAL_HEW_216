@@ -9,6 +9,14 @@
 
 namespace Systems
 {
+    struct BodyActivityInfo
+    {
+        bool hadContact = false;
+        bool impulseApplied = false;
+        bool hasZOverlap = false;
+        bool isActive = false;
+    };
+
     class ContactLiteSystem : public Core::UpdateNode
     {
     public:
@@ -55,6 +63,11 @@ namespace Systems
         float GetMinVerticalSpeed() const { return m_minVerticalSpeed; }
         float GetMinTangentialSpeed() const { return m_minTangentialSpeed; }
 
+        bool HadAnyContactThisFrame(const Entities::CollisionEntity* body) const;
+        bool HadImpulseAppliedThisFrame(const Entities::CollisionEntity* body) const;
+        bool HasZOverlapWithAnyCollider(const Entities::CollisionEntity* body) const;
+        bool IsBodyActive(const Entities::CollisionEntity* body) const;
+
         void OnUpdate(Core::UpdateContext& ctx) override;
 
     private:
@@ -75,6 +88,7 @@ namespace Systems
         float m_minLinearSpeed;
         float m_minVerticalSpeed;
         float m_minTangentialSpeed;
+        std::unordered_map<const Entities::CollisionEntity*, BodyActivityInfo> m_bodyActivityInfo;
         struct RestingState
         {
                 int frames = 0;

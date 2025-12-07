@@ -20,6 +20,7 @@
 
 #include "Collision2D.h"
 #include "DebugColliderRenderer.h"
+#include "Systems/ContactLiteSystem.h"
 
 namespace
 {
@@ -239,26 +240,39 @@ namespace Entities
         const float velocityDeltaSq = dvx * dvx + dvy * dvy + dvz * dvz;
 
         const float sleepThresholdSq = kSleepVelocityEpsilon * kSleepVelocityEpsilon;
-        const bool allowSleeping = (m_contactSystem == nullptr);
         const bool positionChanged = displacementSq > sleepThresholdSq || !TransformApproxEqual(m_transform, m_lastTransform, kSleepVelocityEpsilon);
         const bool velocityAwake = velocitySq > sleepThresholdSq;
         const bool impulseAwake = velocityDeltaSq > sleepThresholdSq;
+
+        const bool hasContactSystem = m_contactSystem != nullptr;
+        const bool hadContact = hasContactSystem && m_contactSystem->HadAnyContactThisFrame(this);
+        const bool hasSupportOverlap = !hasContactSystem || m_contactSystem->HasZOverlapWithAnyCollider(this);
+        const bool impulseAppliedThisFrame = hasContactSystem && m_contactSystem->HadImpulseAppliedThisFrame(this);
 
         if (isPlayer)
         {
             Wake();
         }
-        else if (positionChanged || velocityAwake || impulseAwake)
+        else if (m_contactSystem && m_contactSystem->IsBodyActive(this))
         {
             Wake();
         }
-        else if (allowSleeping && m_stationaryFrameCount < kSleepFrameThreshold)
+        else if (hadContact || !hasSupportOverlap)
         {
-            ++m_stationaryFrameCount;
-            if (m_stationaryFrameCount >= kSleepFrameThreshold)
+            Wake();
+        }
+        else if (positionChanged || velocityAwake || impulseAwake || impulseAppliedThisFrame)
+        {
+            Wake();
+        }
+        else if (!hadContact && !velocityAwake && !positionChanged && !impulseAwake && !impulseAppliedThisFrame && hasSupportOverlap)
+        {
+            if (m_stationaryFrameCount < kSleepFrameThreshold)
             {
-                m_isSleeping = true;
+                ++m_stationaryFrameCount;
             }
+
+            m_isSleeping = m_stationaryFrameCount >= kSleepFrameThreshold;
         }
         else
         {
