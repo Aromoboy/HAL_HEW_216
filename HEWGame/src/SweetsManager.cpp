@@ -537,14 +537,30 @@ namespace
     ModelBounds ComputeBoundsFromHull(const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
     {
         ModelBounds bounds{};
-        const HullExtents extents = ComputeHullExtents(hull);
+        HullExtents extents{};
+
+        for (const auto& pt : hull)
+        {
+            const float2 shifted{ pt.x + centroidOffset.x, pt.y + centroidOffset.y };
+            if (!std::isfinite(shifted.x) || !std::isfinite(shifted.y))
+            {
+                continue;
+            }
+
+            extents.valid = true;
+            extents.min.x = std::min(extents.min.x, shifted.x);
+            extents.min.y = std::min(extents.min.y, shifted.y);
+            extents.max.x = std::max(extents.max.x, shifted.x);
+            extents.max.y = std::max(extents.max.y, shifted.y);
+        }
+
         if (!extents.valid)
         {
             return bounds;
         }
 
-        bounds.min = float3{ extents.min.x + centroidOffset.x, extents.min.y + centroidOffset.y, -thickness * 0.5f };
-        bounds.max = float3{ extents.max.x + centroidOffset.x, extents.max.y + centroidOffset.y, thickness * 0.5f };
+        bounds.min = float3{ extents.min.x, extents.min.y, -thickness * 0.5f };
+        bounds.max = float3{ extents.max.x, extents.max.y, thickness * 0.5f };
         bounds.valid = true;
         return bounds;
     }
@@ -736,8 +752,13 @@ namespace
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
-        summary.hull = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
-        summary.centroidOffset = rawHull.centroidOffset;
+        std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
+        summary.centroidOffset = float2{ -rawHull.centroidOffset.x, -rawHull.centroidOffset.y };
+        summary.hull.reserve(simplified.size());
+        for (const auto& p : simplified)
+        {
+            summary.hull.push_back(float2{ p.x + rawHull.centroidOffset.x, p.y + rawHull.centroidOffset.y });
+        }
         const HullExtents extents = ComputeHullExtents(summary.hull);
         const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
@@ -1465,7 +1486,14 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, colliderThickness, Collision::CollisionLayer::Sweets, generatedCollider.centroidOffset);
+                        std::vector<float2> hullPointsRelativeToPivot;
+                        hullPointsRelativeToPivot.reserve(generatedCollider.hull.size());
+                        for (const auto& p : generatedCollider.hull)
+                        {
+                            hullPointsRelativeToPivot.push_back(float2{ p.x - generatedCollider.centroidOffset.x, p.y - generatedCollider.centroidOffset.y });
+                        }
+
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, generatedCollider.centroidOffset, colliderThickness, Collision::CollisionLayer::Sweets, generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
                         {
