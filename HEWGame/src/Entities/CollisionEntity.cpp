@@ -178,25 +178,9 @@ namespace Entities
 
     void CollisionEntity::SyncColliderBounds()
     {
-        if (!m_collider)
-        {
-#if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << "[CollisionEntity] SyncColliderBounds skipped for entity '" << m_tag
-                << "' because collider is null.\n";
-            DebugTrace(oss.str());
-#endif
-            return;
-        }
-
-        if (!IsTransformDirty())
-        {
-            return;
-        }
-
+        if (!m_collider) return;
         m_collider->UpdateBounds(m_transform);
-        m_lastBoundsTransform = m_transform;
-        m_transformDirty = false;
+        m_aabb = m_collider->GetAABB();
     }
 
     bool CollisionEntity::IsTransformDirty() const
