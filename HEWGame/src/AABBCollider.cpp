@@ -24,12 +24,11 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 
 void Collision::AABBCollider::UpdateBounds(const Transform& transform)
 {
-        const float3 halfExt{
+        const float3 halfExtents{
                 0.5f * expand.x * transform.scale.x,
                 0.5f * expand.y * transform.scale.y,
+                0.5f * expand.z * transform.scale.z,
         };
-
-        const float halfZ = 0.5f * expand.z * transform.scale.z;
 
         const float3 scaledOffset{
                 (offset.x + centroidOffset.x) * transform.scale.x,
@@ -44,14 +43,14 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
         };
 
         const float3 worldMin{
-                worldCenter.x - halfExt.x,
-                worldCenter.y - halfExt.y,
-                worldCenter.z - halfZ
+                worldCenter.x - halfExtents.x,
+                worldCenter.y - halfExtents.y,
+                worldCenter.z - halfExtents.z
         };
         const float3 worldMax{
-                worldCenter.x + halfExt.x,
-                worldCenter.y + halfExt.y,
-                worldCenter.z + halfZ
+                worldCenter.x + halfExtents.x,
+                worldCenter.y + halfExtents.y,
+                worldCenter.z + halfExtents.z
         };
 
         aabb = AABB(worldMax, worldMin);
