@@ -22,6 +22,12 @@ namespace Systems
 
         const float safeDt = std::max(dt, 0.0f);
         const float weight = std::max(physical.weight, 0.0f);
+        if (!(weight > 0.0f))
+        {
+            physical.force = float3{ 0.0f, 0.0f, 0.0f };
+            return translation;
+        }
+
         const float inverseWeight = (weight > 0.0f) ? 1.0f / weight : 0.0f;
         const float3 gravity
         {

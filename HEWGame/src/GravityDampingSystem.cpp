@@ -24,12 +24,16 @@ void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
         return;
     }
 
-    // 重力加速度を速度に加算（-y方向）
-    physical.velocity.y -= m_gravity * dt;
+    const float clampedSystemDamping = std::clamp(m_damping, 0.0f, 0.999f);
+    if (physical.damping > 0.0f)
+    {
+        physical.damping = std::clamp(physical.damping, 0.0f, 0.999f);
+    }
+    else
+    {
+        physical.damping = clampedSystemDamping;
+    }
 
-    // 速度に減衰を適用（フレームレート独立）
-    const float dampingFactor = std::pow(m_damping, dt);
-    physical.velocity.x *= dampingFactor;
-    physical.velocity.y *= dampingFactor;
-    physical.velocity.z *= dampingFactor;
+    // 重力加速度を力として加算（-y方向）。質量が0の場合はApplyで早期リターンしている。
+    physical.force.y -= m_gravity * physical.weight;
 }
