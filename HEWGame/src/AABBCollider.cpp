@@ -4,7 +4,12 @@ namespace
 {
 }
 
-Collision::AABBCollider::AABBCollider(Transform a_transform, bool a_isTrigger, float3 a_expand, float3 a_offset, CollisionLayer layer, float3 a_centroidOffset)
+Collision::AABBCollider::AABBCollider(Transform a_transform,
+                                      bool a_isTrigger,
+                                      float3 a_expand,
+                                      float3 a_offset,
+                                      CollisionLayer layer,
+                                      float3 a_centroidOffset)
 {
         isTrigger = a_isTrigger;
         expand = a_expand;
@@ -19,7 +24,6 @@ bool Collision::AABBCollider::CheckCollision(const Collision::ICollider& other)
 {
         constexpr float kPenetrationTolerance = 1e-4f;
         return aabb.Intersects(other.GetAABB(), kPenetrationTolerance);
-
 }
 
 void Collision::AABBCollider::UpdateBounds(const Transform& transform)
@@ -47,6 +51,7 @@ void Collision::AABBCollider::UpdateBounds(const Transform& transform)
                 worldCenter.y - halfExtents.y,
                 worldCenter.z - halfExtents.z
         };
+
         const float3 worldMax{
                 worldCenter.x + halfExtents.x,
                 worldCenter.y + halfExtents.y,
