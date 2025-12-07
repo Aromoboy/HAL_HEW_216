@@ -600,7 +600,6 @@ namespace Systems
 
                                 const float overlapZ = overlaps[2];
                                 const bool hasZOverlap = overlapZ > 0.0f;
-                                const bool strongZOverlap = overlapZ > m_penetrationTolerance;
                                 if (!hasZOverlap)
                                 {
                                         continue;
@@ -627,56 +626,58 @@ namespace Systems
                                 bool attemptedSAT = false;
                                 float3 contactNormal{ 0.0f, 0.0f, 0.0f };
                                 float contactPenetration = 0.0f;
-                                const auto* colliderA2D = dynamic_cast<const Collision::ICollider2D*>(colliderA);
-                                const auto* colliderB2D = dynamic_cast<const Collision::ICollider2D*>(colliderB);
-                                const bool colliderASupportsSAT = colliderA2D != nullptr;
-                                const bool colliderBSupportsSAT = colliderB2D != nullptr;
-                                const auto* colliderAAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderA);
-                                const auto* colliderBAsAABB = dynamic_cast<const Collision::AABBCollider*>(colliderB);
-                                const bool colliderAIsAABB = colliderAAsAABB != nullptr;
-                                const bool colliderBIsAABB = colliderBAsAABB != nullptr;
+                                const auto* hullA = dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderA);
+                                const auto* hullB = dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderB);
+                                const bool colliderAIs2D = dynamic_cast<const Collision::ICollider2D*>(colliderA) != nullptr;
+                                const bool colliderBIs2D = dynamic_cast<const Collision::ICollider2D*>(colliderB) != nullptr;
 
                                 bool contactComputed = false;
 
-                                const bool attemptSAT = colliderASupportsSAT || colliderBSupportsSAT;
+                                const bool attemptSAT = hullA && hullB;
 
                                 if (attemptSAT)
                                 {
                                         attemptedSAT = true;
                                         ++satAttempts;
 
-                                        if (colliderA2D && colliderB2D)
+                                        const auto& hullPointsA = hullA->GetWorldPoints();
+                                        const auto& hullPointsB = hullB->GetWorldPoints();
+                                        if (!hullPointsA.empty() && !hullPointsB.empty())
                                         {
-                                                usedSAT = Compute2DContact(*colliderA, *colliderB, contact2D);
-                                        }
-                                        else if (colliderA2D && colliderBIsAABB)
-                                        {
-                                                usedSAT = Compute2DContactWithAABBProxy(*colliderA2D, *colliderBAsAABB, contact2D);
-                                        }
-                                        else if (colliderB2D && colliderAIsAABB)
-                                        {
-                                                usedSAT = Compute2DContactWithAABBProxy(*colliderB2D, *colliderAAsAABB, contact2D);
+                                                usedSAT = hullA->ComputeContact(*hullB, contact2D);
                                         }
 
                                         if (usedSAT)
                                         {
                                                 ++satSuccesses;
-                                                contactMethod = "sat_2d";
-                                                contactNormal.x = contact2D.normal.x;
-                                                contactNormal.y = contact2D.normal.y;
-                                                contactNormal.z = 0.0f;
-                                                const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
-                                                if (lenSq > 1e-6f)
+                                                contactMethod = "sat_hull";
+                                                const float planarPenetration = contact2D.penetration;
+                                                const float hullPenetrationZ = std::max(overlapZ, 0.0f);
+
+                                                if (hullPenetrationZ < planarPenetration)
                                                 {
-                                                        const float invLen = 1.0f / std::sqrt(lenSq);
-                                                        contactNormal.x *= invLen;
-                                                        contactNormal.y *= invLen;
-                                                        contactPenetration = std::min(contact2D.penetration, penetrationZ);
-                                                        contactComputed = true;
+                                                        contactNormal = float3{ 0.0f, 0.0f, (centerA.z < centerB.z) ? -1.0f : 1.0f };
+                                                        contactPenetration = hullPenetrationZ;
+                                                        contactComputed = hullPenetrationZ > 0.0f;
                                                 }
                                                 else
                                                 {
-                                                        usedSAT = false;
+                                                        contactNormal.x = contact2D.normal.x;
+                                                        contactNormal.y = contact2D.normal.y;
+                                                        contactNormal.z = 0.0f;
+                                                        const float lenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y;
+                                                        if (lenSq > 1e-6f)
+                                                        {
+                                                                const float invLen = 1.0f / std::sqrt(lenSq);
+                                                                contactNormal.x *= invLen;
+                                                                contactNormal.y *= invLen;
+                                                                contactPenetration = planarPenetration;
+                                                                contactComputed = true;
+                                                        }
+                                                        else
+                                                        {
+                                                                usedSAT = false;
+                                                        }
                                                 }
                                         }
                                 }
@@ -689,7 +690,7 @@ namespace Systems
 
                                 if (!contactComputed)
                                 {
-                                        const bool mixed2DPair = colliderA2D || colliderB2D;
+                                        const bool mixed2DPair = colliderAIs2D || colliderBIs2D;
 
                                         float penetrations[3]{ penetrationX, penetrationY, penetrationZ };
                                         int axis = 0;
@@ -736,8 +737,16 @@ namespace Systems
                                         contactNormal.z = -contactNormal.z;
                                 }
 
-                                const ContactNormalClassification classification = ClassifyContactNormal(contactNormal, m_verticalSnapCos, m_groundMinCos);
-                                contactNormal = classification.normal;
+                                const float invContactLen = 1.0f / std::sqrt(contactNormalLenSq);
+                                float3 normalizedContact
+                                {
+                                        contactNormal.x * invContactLen,
+                                        contactNormal.y * invContactLen,
+                                        contactNormal.z * invContactLen
+                                };
+
+                                const ContactNormalClassification classification = ClassifyContactNormal(normalizedContact, m_verticalSnapCos, m_groundMinCos);
+                                contactNormal = normalizedContact;
                                 const float classifiedLenSq = contactNormal.x * contactNormal.x + contactNormal.y * contactNormal.y + contactNormal.z * contactNormal.z;
                                 if (classifiedLenSq <= 1e-6f)
                                 {
@@ -745,7 +754,7 @@ namespace Systems
                                 }
                                 const float absContactNormalY = std::fabs(contactNormal.y);
                                 const bool slopeAllowsSupport = absContactNormalY >= m_maxSlopeCos;
-                                bool isGroundContact = classification.isGround && slopeAllowsSupport && strongZOverlap;
+                                bool isGroundContact = classification.isGround && slopeAllowsSupport && (overlapZ > m_penetrationTolerance);
 
                                 const bool bodyAResting = IsBodyResting(bodyA);
                                 const bool bodyBResting = IsBodyResting(bodyB);
