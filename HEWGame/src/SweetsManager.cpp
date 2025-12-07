@@ -36,6 +36,7 @@
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
+#include "Systems/ContactLiteSystem.h"
 #include <DirectXMath.h>
 
 namespace SweetsSpace
@@ -326,14 +327,30 @@ namespace
         }
 
         const float speedSq = ComputeSpeedSq(sweets.GetPhysical());
-        const float height = sweets.GetTransform().position.y;
-
-        if (height <= kGroundHeightThreshold && speedSq <= kRestVelocityThresholdSq)
+        if (speedSq > kRestVelocityThresholdSq)
         {
-            return ::SweetsSpace::SweetsState::Stacked;
+            return ::SweetsSpace::SweetsState::Active;
         }
 
-        if (speedSq <= kRestVelocityThresholdSq)
+        const auto* contactSystem = sweets.GetContactSystem();
+        const bool hadContact = contactSystem && contactSystem->HadAnyContactThisFrame(&sweets);
+        const bool hasSupportOverlap = contactSystem && contactSystem->HasZOverlapWithAnyCollider(&sweets);
+
+        AABB bounds{};
+        Collision::ICollider* collider = sweets.GetCollider();
+        if (collider)
+        {
+            sweets.SyncColliderBounds();
+            bounds = collider->GetAABB();
+        }
+
+        const Transform& transform = sweets.GetTransform();
+        const float minHeight = collider
+            ? bounds.min.y
+            : transform.position.y - std::max(0.0f, transform.scale.y * 0.5f);
+        const bool nearGround = minHeight <= kGroundHeightThreshold;
+
+        if (hadContact || hasSupportOverlap || nearGround)
         {
             return ::SweetsSpace::SweetsState::Stacked;
         }
