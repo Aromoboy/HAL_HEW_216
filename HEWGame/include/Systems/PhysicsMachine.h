@@ -47,5 +47,7 @@ namespace Systems
         SystemPtr m_system;
         IntegratorPtr m_integrator;
         std::vector<Entities::PhysicalEntity*> m_bodies;
+        bool m_loggedMissingSystem = false;
+        bool m_loggedMissingIntegrator = false;
     };
 }
