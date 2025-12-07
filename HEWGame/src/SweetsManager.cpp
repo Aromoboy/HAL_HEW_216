@@ -756,12 +756,13 @@ namespace
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
+        const std::vector<float2> originalHull = rawHull.hullPointsCentered;
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
-        std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
+        std::vector<float2> simplified = SimplifyHull(originalHull, kMinHullPoints, kMaxHullPoints);
         if (simplified.empty())
         {
-            simplified = rawHull.hullPointsCentered;
+            simplified = originalHull;
         }
         summary.centroidOffset = rawHull.centroidOffset;
         summary.hull = simplified;
