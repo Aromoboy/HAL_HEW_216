@@ -197,6 +197,9 @@
     <ClCompile Include="src\UpdatableTimer.cpp" />
     <ClCompile Include="src\CameraTarget.cpp" />
     <ClCompile Include="include\PowerUpTarget.cpp" />
+    <ClCompile Include="include\PowerUpRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <!-- ==================== -->
   <!-- All .h with filters  -->
@@ -407,6 +410,9 @@
     <ClInclude Include="include\PowerUpCursor.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\PowerUpTarget.h" />
+    <ClInclude Include="include\PowerUpRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <!-- =================== -->
   <!-- Filter definitions  -->

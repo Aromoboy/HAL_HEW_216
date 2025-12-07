@@ -36,9 +36,9 @@ void PowerUpManager::SetFormat(const NodeFormat& a_format)
 	m_format = a_format;
 }
 
-void PowerUpManager::AddNode(std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification)
+void PowerUpManager::AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification)
 {
-	PowerUpNode::Textures textures(m_cache.Get("BackFrame"), m_cache.Get("Frame"), m_cache.Get("BackFrame"), m_cache.Get(key));
+	std::shared_ptr<Texture2D> texture = m_cache.Get(key);
 
 	int indexX = m_nodes.size() / m_format.y;
 	int indexY = m_nodes.size() % m_format.y;
@@ -46,17 +46,17 @@ void PowerUpManager::AddNode(std::string key, int a_level, int a_maxLevel, int a
 	float2 drawPos{ kUnitDistanse.x / m_format.x * indexX  - 0.5f, kUnitDistanse.y / m_format.y * indexY + 0.1f };
 	float2 drawScale{ 1.0 / m_format.x, 1.0f / m_format.x };
 
-	std::pair<std::string, std::unique_ptr<PowerUpNode>> node(key, std::make_unique<PowerUpNode>(textures, drawPos, drawScale, a_level, a_maxLevel, a_defaultLevelUpCost, a_costAdditional, a_costMagnification));
+	std::pair<std::string, std::unique_ptr<PowerUpNode>> node(key, std::make_unique<PowerUpNode>(texture, name, infomation, drawPos, drawScale, a_level, a_maxLevel, a_defaultLevelUpCost, a_costAdditional, a_costMagnification));
 	m_nodes.push_back(std::move(node));
 	m_scheduler.Register(*m_nodes.back().second);
 	
 }
 
-void PowerUpManager::DrawAll(SpriteRenderer& render, const CameraSpace::ICamera& camera)
+void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& camera)
 {
 	for (auto& it : m_nodes)
 	{
-		it.second->Draw(render, camera);
+		it.second->Draw(powerUpRenderer, camera);
 	}
 }
 

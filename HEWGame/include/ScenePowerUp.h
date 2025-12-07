@@ -8,6 +8,7 @@
 #include "PowerUpCursor.h"
 #include "CameraRig.h"
 #include "PowerUpTarget.h"
+#include "PowerUpRenderer.h"
 
 class PowerUpManager;
 
@@ -25,7 +26,7 @@ namespace SceneSpace
 
 	private:
 		std::unique_ptr<PowerUpManager> m_powerUpManager;
-		std::unique_ptr<SpriteRenderer> m_spriteRenderer;
+		std::unique_ptr<PowerUpRenderer> m_powerUpRenderer;
 		std::shared_ptr<CameraSpace::BaseCamera> m_camera;
 		std::unique_ptr<PowerUpCursor> m_cursor;
 		std::unique_ptr<CameraRig> m_rig;

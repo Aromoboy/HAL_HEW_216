@@ -3,8 +3,10 @@
 #include "TextureDX.h"
 #include "Transform.h"
 #include <memory>
+#include "PowerUpRenderer.h"
 
 class SpriteRenderer;
+
 
 namespace CameraSpace
 {
@@ -15,29 +17,14 @@ class PowerUpNode : public Core::UpdateNode
 {
 public:
 
-	struct Textures
-	{
-		std::shared_ptr<Texture2D> backFrame;
-		std::shared_ptr<Texture2D> frame;
-		std::shared_ptr<Texture2D> cost;
-		std::shared_ptr<Texture2D> icon;
 
-		Textures(std::shared_ptr<Texture2D> a_backFrame, std::shared_ptr<Texture2D> a_frame, std::shared_ptr<Texture2D> a_cost, std::shared_ptr<Texture2D> a_icon)
-			: backFrame(a_backFrame)
-			, frame(a_frame)
-			, cost(a_cost)
-			, icon(a_icon)
-		{
-		}
-	};
-
-	PowerUpNode(Textures a_texture, float2 a_drawPos, float2 a_drawScale, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
+	PowerUpNode(std::shared_ptr<Texture2D> a_texture, std::string a_nameText, std::string a_infomationText, float2 a_drawPos, float2 a_drawScale, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
 	~PowerUpNode() = default;
 
 
 	
 	void OnUpdate(Core::UpdateContext& ctx) final;
-	void Draw(SpriteRenderer& render, const CameraSpace::ICamera& camera);
+	void Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera);
 	bool LevelUp();
 	int GetCost();
 	int GetLevel();
@@ -46,6 +33,16 @@ public:
 	
 
 private:
+
+	// テクスチャ
+	std::shared_ptr<Texture2D> m_texture;
+	std::shared_ptr<PowerUpStringTexture> m_stringTexture;
+	bool m_dirty = true;
+
+	// テキスト
+	std::string m_nameText;
+	std::string m_infomationText;
+
 	// レベル
 	int m_level;
 	int m_maxLevel;
@@ -61,7 +58,7 @@ private:
 	float2 m_drawPos;
 	float2 m_drawScale;
 
-	Textures m_texture;
+	
 
 	// コストの更新
 	void UpdateCost();

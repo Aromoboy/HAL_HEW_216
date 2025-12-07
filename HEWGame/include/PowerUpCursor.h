@@ -26,6 +26,7 @@ private:
 	PowerUpManager::NodeFormat m_format;
 	std::shared_ptr<Texture2D> m_texture;
 	float m_moveTimer;
+	float m_keyTimer;
 	int& m_cost;
 
 	void MoveInput(Core::UpdateContext& ctx);

@@ -44,7 +44,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         ShaderList::Init();
 
         // シーン
-        g_pScene = new SceneGame();
+        g_pScene = new SceneSpace::ScenePowerUp;
 
         return hr;
 }

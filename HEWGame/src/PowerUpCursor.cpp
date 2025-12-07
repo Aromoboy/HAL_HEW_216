@@ -5,14 +5,17 @@
 
 
 constexpr float maxMoveSecond = 0.10f;
+constexpr float maxPowerUpSecond = 0.10f;
+
 
 PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost)
 	:m_powerUpManager(a_powerUpManager)
-	,m_index(0)
-	,m_format(a_format)
-	,m_cost(a_cost)
-	,m_texture(a_texture)
-	,m_moveTimer(0.0f)
+	, m_index(0)
+	, m_format(a_format)
+	, m_cost(a_cost)
+	, m_texture(a_texture)
+	, m_moveTimer(0.0f)
+	, m_keyTimer(0.0f)
 {
 }
 
@@ -21,6 +24,8 @@ void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
 	(void)ctx;
 
 	m_moveTimer -= ctx.dt;
+	m_keyTimer -= ctx.dt;
+
 
 	if (m_moveTimer <= 0.0f)
 	{
@@ -29,8 +34,9 @@ void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
 	}
 	
 	
-	if (ctx.input.GetAxis(Core::ActionId::Confirm))
+	if (m_keyTimer <= 0.0f && ctx.input.GetAxis(Core::ActionId::Confirm))
 	{
+		m_keyTimer = maxPowerUpSecond;
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
 		if (result != std::nullopt && result <= m_cost)
 		{

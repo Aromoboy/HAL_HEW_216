@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include "PowerUpRenderer.h"
 
 namespace
 {
@@ -162,6 +163,8 @@ void HudRenderer::DestroyTextResources()
 #endif
 }
 
+
+
 void HudRenderer::Draw(const HudDisplayData& data)
 {
     if (!m_ready)
@@ -272,6 +275,7 @@ void HudRenderer::RenderGuideline(const HudDisplayData& data)
     const float repeatCount = std::max(1.0f, viewportWidth / repeatSpacing);
     const float clampedY = std::clamp(data.guidelineClipY, -0.98f, 0.98f);
 
+    
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 

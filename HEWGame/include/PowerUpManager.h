@@ -10,6 +10,7 @@
 #include <optional>
 #include "TextureCache.h"
 #include "Vector.h"
+#include "PowerUpRenderer.h"
 
 namespace Core
 {
@@ -67,10 +68,10 @@ public:
 	void SetFormat(const NodeFormat&);
 
 	// Nodeを追加する
-	void AddNode(std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
+	void AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
 
 	// 全てのノードを描画
-	void DrawAll(SpriteRenderer& render, const CameraSpace::ICamera& Camera);
+	void DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& Camera);
 
 	// ゲッタ
 	int GetLevel(int num); // Level
@@ -87,10 +88,6 @@ public:
 	// オブジェクト管理オブジェクトを取得
 	void SetUpdateScheduler(Core::UpdateScheduler& scheduler);
 
-	
-
-
-
 	bool LevelUp(int);
 
 private:
@@ -100,6 +97,8 @@ private:
 	Core::UpdateScheduler& m_scheduler;
 
 	NodeFormat m_format;
+
+	
 
 	TextureCache& m_cache;
 };
