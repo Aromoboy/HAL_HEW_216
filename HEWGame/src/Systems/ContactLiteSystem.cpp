@@ -600,7 +600,13 @@ namespace Systems
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
                                 overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
-                                if (overlaps[sweepAxis] <= m_penetrationTolerance || overlaps[secondaryPlanarAxis] <= m_penetrationTolerance)
+                                const bool hasRequiredSweepOverlap = overlaps[sweepAxis] > m_penetrationTolerance;
+                                const bool hasRequiredSecondaryOverlap = overlaps[secondaryPlanarAxis] > m_penetrationTolerance;
+                                const bool hasFullAxisOverlap = overlaps[0] > m_penetrationTolerance
+                                        && overlaps[1] > m_penetrationTolerance
+                                        && overlaps[2] > m_penetrationTolerance;
+
+                                if (!hasRequiredSweepOverlap || !hasRequiredSecondaryOverlap || !hasFullAxisOverlap)
                                 {
                                         continue;
                                 }
@@ -614,27 +620,21 @@ namespace Systems
                                         continue;
                                 }
 
-                                if (overlaps[0] <= m_penetrationTolerance || overlaps[1] <= m_penetrationTolerance || overlaps[2] <= m_penetrationTolerance)
-                                {
-                                        continue;
-                                }
-
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
                                 {
                                         continue;
                                 }
 
-                                const float overlapZ = overlaps[2];
+                                const float penetrationX = std::max(overlaps[0], 0.0f);
+                                const float penetrationY = std::max(overlaps[1], 0.0f);
+                                const float penetrationZ = std::max(overlaps[2], 0.0f);
+                                const float overlapZ = penetrationZ;
                                 const bool hasZOverlap = overlapZ > 0.0f;
                                 if (!hasZOverlap)
                                 {
                                         continue;
                                 }
-
-                                const float penetrationX = std::max(overlaps[0], 0.0f);
-                                const float penetrationY = std::max(overlaps[1], 0.0f);
-                                const float penetrationZ = std::max(overlapZ, 0.0f);
 
                                 const float3 centerA{ GetAxisCenter(boundsA, 0), GetAxisCenter(boundsA, 1), GetAxisCenter(boundsA, 2) };
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
