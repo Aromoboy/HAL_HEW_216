@@ -1,6 +1,7 @@
 // GravityDampingSystem.cpp
 #include "GravityDampingSystem.h"
 #include "Entities/PhysicalEntity.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -12,14 +13,17 @@ GravityDampingSystem::GravityDampingSystem(float gravity, float damping)
 {
 }
 
-void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
+void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float /*dt*/)
 {
-    // Physicalコンポーネントを取得
-    auto& physical = entity.GetPhysical();
-
+    Physics::Physical& physical = entity.GetPhysical();
     if (!(physical.weight > 0.0f))
     {
-        physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
+        physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        return;
+    }
+
+    if (entity.IsSleeping())
+    {
         physical.force = float3{ 0.0f, 0.0f, 0.0f };
         return;
     }
@@ -34,6 +38,5 @@ void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
         physical.damping = clampedSystemDamping;
     }
 
-    // 重力加速度を力として加算（-y方向）。質量が0の場合はApplyで早期リターンしている。
     physical.force.y -= m_gravity * physical.weight;
 }
