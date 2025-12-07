@@ -71,7 +71,6 @@ namespace
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kRestVelocityThresholdSq = 0.05f * 0.05f;
-    constexpr float kGroundHeightThreshold = 0.05f;
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
     constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
@@ -336,21 +335,7 @@ namespace
         const bool hadContact = contactSystem && contactSystem->HadAnyContactThisFrame(&sweets);
         const bool hasSupportOverlap = contactSystem && contactSystem->HasZOverlapWithAnyCollider(&sweets);
 
-        AABB bounds{};
-        Collision::ICollider* collider = sweets.GetCollider();
-        if (collider)
-        {
-            sweets.SyncColliderBounds();
-            bounds = collider->GetAABB();
-        }
-
-        const Transform& transform = sweets.GetTransform();
-        const float minHeight = collider
-            ? bounds.min.y
-            : transform.position.y - std::max(0.0f, transform.scale.y * 0.5f);
-        const bool nearGround = minHeight <= kGroundHeightThreshold;
-
-        if (hadContact || hasSupportOverlap || nearGround)
+        if (hadContact || hasSupportOverlap)
         {
             return ::SweetsSpace::SweetsState::Stacked;
         }
