@@ -753,12 +753,8 @@ namespace
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
         std::vector<float2> simplified = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
-        summary.centroidOffset = float2{ -rawHull.centroidOffset.x, -rawHull.centroidOffset.y };
-        summary.hull.reserve(simplified.size());
-        for (const auto& p : simplified)
-        {
-            summary.hull.push_back(float2{ p.x + rawHull.centroidOffset.x, p.y + rawHull.centroidOffset.y });
-        }
+        summary.centroidOffset = rawHull.centroidOffset;
+        summary.hull = simplified;
         const HullExtents extents = ComputeHullExtents(summary.hull);
         const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
@@ -1486,14 +1482,14 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        std::vector<float2> hullPointsRelativeToPivot;
-                        hullPointsRelativeToPivot.reserve(generatedCollider.hull.size());
-                        for (const auto& p : generatedCollider.hull)
-                        {
-                            hullPointsRelativeToPivot.push_back(float2{ p.x - generatedCollider.centroidOffset.x, p.y - generatedCollider.centroidOffset.y });
-                        }
+                        std::vector<float2> hullPointsRelativeToPivot = generatedCollider.hull;
 
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, generatedCollider.centroidOffset, colliderThickness, Collision::CollisionLayer::Sweets, generatedCollider.centroidOffset);
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
+                            hullPointsRelativeToPivot,
+                            float2{ 0.0f, 0.0f },
+                            colliderThickness,
+                            Collision::CollisionLayer::Sweets,
+                            generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
                         {

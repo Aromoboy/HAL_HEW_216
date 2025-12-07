@@ -541,8 +541,6 @@ namespace Systems
                 size_t satAttempts = 0;
                 size_t satSuccesses = 0;
 
-                const float planarZTolerance = m_penetrationTolerance;
-
                 for (size_t i = 0; i < proxyCount; ++i)
                 {
                         const BodyProxy& proxyA = proxies[i];
@@ -566,12 +564,7 @@ namespace Systems
                                 overlaps[1] = GetAxisOverlap(boundsA, boundsB, 1);
                                 overlaps[2] = GetAxisOverlap(boundsA, boundsB, 2);
 
-                                if (overlaps[sweepAxis] <= 0.0f || overlaps[secondaryPlanarAxis] <= 0.0f)
-                                {
-                                        continue;
-                                }
-
-                                if (overlaps[2] <= -planarZTolerance)
+                                if (overlaps[sweepAxis] <= m_penetrationTolerance || overlaps[secondaryPlanarAxis] <= m_penetrationTolerance)
                                 {
                                         continue;
                                 }
@@ -593,7 +586,7 @@ namespace Systems
                                 const bool sweetsB = layerB == Collision::CollisionLayer::Sweets || IsSweetsTag(bodyB->GetTag());
                                 const bool sweetsPair = sweetsA || sweetsB;
 
-                                if (overlaps[0] <= 0.0f || overlaps[1] <= 0.0f || overlaps[2] <= -planarZTolerance)
+                                if (overlaps[0] <= m_penetrationTolerance || overlaps[1] <= m_penetrationTolerance || overlaps[2] <= m_penetrationTolerance)
                                 {
                                         continue;
                                 }
