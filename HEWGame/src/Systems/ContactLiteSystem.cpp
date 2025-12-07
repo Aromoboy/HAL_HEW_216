@@ -368,6 +368,30 @@ namespace Systems
                 m_minTangentialSpeed = std::max(0.0f, minSpeed);
         }
 
+        bool ContactLiteSystem::HadAnyContactThisFrame(const Entities::CollisionEntity* body) const
+        {
+                const auto it = m_bodyActivityInfo.find(body);
+                return it != m_bodyActivityInfo.end() && it->second.hadContact;
+        }
+
+        bool ContactLiteSystem::HadImpulseAppliedThisFrame(const Entities::CollisionEntity* body) const
+        {
+                const auto it = m_bodyActivityInfo.find(body);
+                return it != m_bodyActivityInfo.end() && it->second.impulseApplied;
+        }
+
+        bool ContactLiteSystem::HasZOverlapWithAnyCollider(const Entities::CollisionEntity* body) const
+        {
+                const auto it = m_bodyActivityInfo.find(body);
+                return it != m_bodyActivityInfo.end() && it->second.hasZOverlap;
+        }
+
+        bool ContactLiteSystem::IsBodyActive(const Entities::CollisionEntity* body) const
+        {
+                const auto it = m_bodyActivityInfo.find(body);
+                return it != m_bodyActivityInfo.end() && it->second.isActive;
+        }
+
         void ContactLiteSystem::SetIncludeKinematicBodies(bool include)
         {
                 m_includeKinematicBodies = include;
@@ -392,6 +416,8 @@ namespace Systems
                 activeBodies.reserve(sourceBodyCount);
                 std::unordered_map<Entities::PhysicalEntity*, FrameContactInfo> frameContactInfo;
                 frameContactInfo.reserve(sourceBodyCount);
+                std::unordered_map<const Entities::CollisionEntity*, BodyActivityInfo> currentActivity;
+                currentActivity.reserve(sourceBodyCount);
                 for (Entities::PhysicalEntity* body : *m_bodies)
                 {
                         if (!body)
@@ -420,6 +446,7 @@ namespace Systems
                         info.transformChanged = body->IsTransformDirty();
                         frameContactInfo[body] = info;
                         activeBodies.push_back(body);
+                        currentActivity[body].isActive = true;
                 }
 
                 const size_t bodyCount = activeBodies.size();
@@ -988,7 +1015,14 @@ namespace Systems
                                         restingIt->second.resting = false;
                                 }
                         }
+
+                        BodyActivityInfo& activity = currentActivity[body];
+                        activity.hadContact = info.transformChanged || info.translated || info.impulseApplied;
+                        activity.impulseApplied = info.impulseApplied;
+                        activity.hasZOverlap = info.supported;
                 }
+
+                m_bodyActivityInfo = std::move(currentActivity);
 
                 const auto IsResting = [&](const Entities::PhysicalEntity& body, bool supportedThisFrame)
                 {
