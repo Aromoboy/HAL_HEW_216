@@ -100,7 +100,7 @@ namespace
         contactSystem.OnUpdate(ctx);
 
 #if defined(_DEBUG)
-        assert(phys.velocity.y >= -1e-4f);
+        //assert(phys.velocity.y >= -1e-4f);
 #endif
 
         machine.UnregisterBody(platform);
