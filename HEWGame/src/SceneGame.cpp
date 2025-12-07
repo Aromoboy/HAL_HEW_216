@@ -243,12 +243,8 @@ namespace
                 desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
                 const auto hullResult = Collision::BuildConvexHullFromMesh(desc);
-                summary.centroidOffset = float2{ -hullResult.centroidOffset.x, -hullResult.centroidOffset.y };
-                summary.hull.reserve(hullResult.hullPointsCentered.size());
-                for (const auto& p : hullResult.hullPointsCentered)
-                {
-                    summary.hull.push_back(float2{ p.x + hullResult.centroidOffset.x, p.y + hullResult.centroidOffset.y });
-                }
+                summary.centroidOffset = hullResult.centroidOffset;
+                summary.hull = hullResult.hullPointsCentered;
                 std::ostringstream oss;
                 oss << kLogPrefix << "[PlayerCollider] Geometry analyzed path='" << path
                     << "' format=" << format
@@ -493,12 +489,7 @@ namespace
             const float2 centroid2D{ geometry.centroidOffset.x, geometry.centroidOffset.y };
             auto hull = BuildPaddedHull(geometry, tuning, transform.scale);
 
-            std::vector<float2> hullPointsRelativeToPivot;
-            hullPointsRelativeToPivot.reserve(hull.size());
-            for (const auto& p : hull)
-            {
-                hullPointsRelativeToPivot.push_back(float2{ p.x - centroid2D.x, p.y - centroid2D.y });
-            }
+            std::vector<float2> hullPointsRelativeToPivot = hull;
 
             auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, offset2D, clampedThickness, Collision::CollisionLayer::Player, centroid2D);
             collider->UpdateBounds(transform);
