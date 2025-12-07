@@ -39,6 +39,8 @@ namespace
         constexpr float kFoundationSatBypassScale = 2.0f;
         constexpr float kSatPlanarOverlapThreshold = 0.05f;
         constexpr float kMinResolutionPush = 1e-4f;
+        constexpr float kPlayerPseudoMass = 50.0f;
+        constexpr float kPlayerImpulseFactor = 0.05f;
 
         struct FrameContactInfo
         {
@@ -461,6 +463,12 @@ namespace Systems
                         float massB;
                         bool modifyVelocityA;
                         bool modifyVelocityB;
+                        bool isPlayerA;
+                        bool isPlayerB;
+                        bool isPlayerKinematicA;
+                        bool isPlayerKinematicB;
+                        bool isStaticA;
+                        bool isStaticB;
                 };
 
                 std::vector<ContactConstraint> contactConstraints;
@@ -612,9 +620,10 @@ namespace Systems
                                 Physics::Physical& physB = bodyB->GetPhysical();
                                 const bool isPlayerA = IsPlayerBody(bodyA);
                                 const bool isPlayerB = IsPlayerBody(bodyB);
-                                const bool playerInvolved = isPlayerA || isPlayerB;
-                                const bool bodyAStatic = isPlayerA || !(physA.weight > 0.0f);
-                                const bool bodyBStatic = isPlayerB || !(physB.weight > 0.0f);
+                                const bool isPlayerKinematicA = isPlayerA && physA.weight == 0.0f;
+                                const bool isPlayerKinematicB = isPlayerB && physB.weight == 0.0f;
+                                const bool isStaticA = !(physA.weight > 0.0f) && !isPlayerA;
+                                const bool isStaticB = !(physB.weight > 0.0f) && !isPlayerB;
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
@@ -791,7 +800,7 @@ namespace Systems
 
                                 float3 translationA{ 0.0f, 0.0f, 0.0f };
                                 float3 translationB{ 0.0f, 0.0f, 0.0f };
-                                if (!bodyAStatic && !bodyBStatic)
+                                if (!isStaticA && !isStaticB)
                                 {
                                         const float halfPush = pushDistance * 0.5f;
                                         translationA.x += resolutionNormal.x * halfPush;
@@ -801,13 +810,13 @@ namespace Systems
                                         translationB.y -= resolutionNormal.y * halfPush;
                                         translationB.z -= resolutionNormal.z * halfPush;
                                 }
-                                else if (!bodyAStatic && bodyBStatic)
+                                else if (!isStaticA && isStaticB)
                                 {
                                         translationA.x += resolutionNormal.x * pushDistance;
                                         translationA.y += resolutionNormal.y * pushDistance;
                                         translationA.z += resolutionNormal.z * pushDistance;
                                 }
-                                else if (bodyAStatic && !bodyBStatic)
+                                else if (isStaticA && !isStaticB)
                                 {
                                         translationB.x -= resolutionNormal.x * pushDistance;
                                         translationB.y -= resolutionNormal.y * pushDistance;
@@ -831,8 +840,8 @@ namespace Systems
                                 Entities::TranslatePhysicalEntity(*bodyB, translationB);
 
 
-                                const bool allowImpulseA = !bodyAStatic && (!playerInvolved || sweetsA);
-                                const bool allowImpulseB = !bodyBStatic && (!playerInvolved || sweetsB);
+                                const bool allowImpulseA = !isStaticA;
+                                const bool allowImpulseB = !isStaticB;
 
                                 contactConstraints.push_back(ContactConstraint{
                                         bodyA,
@@ -840,10 +849,16 @@ namespace Systems
                                         &physA,
                                         &physB,
                                         float2{ contactNormal.x, contactNormal.y },
-                                        bodyAStatic || isPlayerA ? std::numeric_limits<float>::infinity() : physA.weight,
-                                        bodyBStatic || isPlayerB ? std::numeric_limits<float>::infinity() : physB.weight,
-                                        allowImpulseA && !IsPlayerBody(bodyA),
-                                        allowImpulseB && !IsPlayerBody(bodyB)
+                                        isStaticA ? std::numeric_limits<float>::infinity() : (isPlayerKinematicA ? kPlayerPseudoMass : physA.weight),
+                                        isStaticB ? std::numeric_limits<float>::infinity() : (isPlayerKinematicB ? kPlayerPseudoMass : physB.weight),
+                                        allowImpulseA,
+                                        allowImpulseB,
+                                        isPlayerA,
+                                        isPlayerB,
+                                        isPlayerKinematicA,
+                                        isPlayerKinematicB,
+                                        isStaticA,
+                                        isStaticB
                                 });
 
                                 ++resolvedPairs;
@@ -860,30 +875,6 @@ namespace Systems
                                 Entities::PhysicalEntity* bodyA = constraint.bodyA;
                                 Entities::PhysicalEntity* bodyB = constraint.bodyB;
 
-                                const auto SplitImpulse = [&](float impulse)
-                                {
-                                        float impulseA = 0.0f;
-                                        float impulseB = 0.0f;
-                                        if (std::isinf(constraint.massA))
-                                        {
-                                                impulseB = -impulse;
-                                        }
-                                        else if (std::isinf(constraint.massB))
-                                        {
-                                                impulseA = impulse;
-                                        }
-                                        else
-                                        {
-                                                const float massSum = constraint.massA + constraint.massB;
-                                                if (massSum > 0.0f)
-                                                {
-                                                        impulseA = impulse * (constraint.massB / massSum);
-                                                        impulseB = -impulse * (constraint.massA / massSum);
-                                                }
-                                        }
-                                        return std::pair<float, float>{ impulseA, impulseB };
-                                };
-
                                 const float2 normal2 = constraint.normal;
                                 const float2 relativeVelocity{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y };
                                 const float relativeNormalSpeed = relativeVelocity.x * normal2.x + relativeVelocity.y * normal2.y;
@@ -891,6 +882,9 @@ namespace Systems
                                 const float invMassA = std::isinf(constraint.massA) ? 0.0f : (1.0f / constraint.massA);
                                 const float invMassB = std::isinf(constraint.massB) ? 0.0f : (1.0f / constraint.massB);
                                 const float invMassSum = invMassA + invMassB;
+
+                                const float normalImpulseFactorA = constraint.isPlayerA ? invMassA * kPlayerImpulseFactor : invMassA;
+                                const float normalImpulseFactorB = constraint.isPlayerB ? invMassB * kPlayerImpulseFactor : invMassB;
 
                                 float vn = relativeNormalSpeed;
                                 float appliedNormalImpulseA = 0.0f;
@@ -900,23 +894,22 @@ namespace Systems
                                 if (vn < 0.0f && invMassSum > 0.0f)
                                 {
                                         vn = std::clamp(vn, -m_maxRestitutionVelocity, 0.0f);
-                                        float jn = -(1.0f + m_restitution) * vn / invMassSum;
+                                        const float jn = -(1.0f + m_restitution) * vn / invMassSum;
 
-                                        const auto [jnA, jnB] = SplitImpulse(jn);
-                                        const float2 normalImpulseA{ normal2.x * jnA, normal2.y * jnA };
-                                        const float2 normalImpulseB{ normal2.x * jnB, normal2.y * jnB };
+                                        const float2 normalImpulseA{ normal2.x * jn * normalImpulseFactorA, normal2.y * jn * normalImpulseFactorA };
+                                        const float2 normalImpulseB{ normal2.x * jn * normalImpulseFactorB, normal2.y * jn * normalImpulseFactorB };
 
                                         if (constraint.modifyVelocityA)
                                         {
                                                 physA.velocity.x += normalImpulseA.x;
                                                 physA.velocity.y += normalImpulseA.y;
-                                                appliedNormalImpulseA = jnA;
+                                                appliedNormalImpulseA = jn * normalImpulseFactorA;
                                         }
                                         if (constraint.modifyVelocityB)
                                         {
                                                 physB.velocity.x += normalImpulseB.x;
                                                 physB.velocity.y += normalImpulseB.y;
-                                                appliedNormalImpulseB = jnB;
+                                                appliedNormalImpulseB = jn * normalImpulseFactorB;
                                         }
 
                                         float2 tangentialVelocity
@@ -931,36 +924,37 @@ namespace Systems
                                                 const float tangentialSpeed = std::sqrt(tangentialSpeedSq);
                                                 const float2 tangentDir{ tangentialVelocity.x / tangentialSpeed, tangentialVelocity.y / tangentialSpeed };
 
-                                                if (invMassSum > 0.0f)
+                                                const float relTangentSpeed = relativeVelocity.x * tangentDir.x + relativeVelocity.y * tangentDir.y;
+                                                float jt = -relTangentSpeed / invMassSum;
+                                                const float maxStatic = m_staticFriction * std::fabs(jn);
+                                                if (std::fabs(jt) > maxStatic)
                                                 {
-                                                        const float relTangentSpeed = relativeVelocity.x * tangentDir.x + relativeVelocity.y * tangentDir.y;
-                                                        float jt = -relTangentSpeed / invMassSum;
-                                                        const float maxStatic = m_staticFriction * std::fabs(jn);
-                                                        if (std::fabs(jt) > maxStatic)
-                                                        {
-                                                                const float sign = (relTangentSpeed >= 0.0f) ? 1.0f : -1.0f;
-                                                                jt = -sign * m_dynamicFriction * std::fabs(jn);
-                                                        }
+                                                        const float sign = (relTangentSpeed >= 0.0f) ? 1.0f : -1.0f;
+                                                        jt = -sign * m_dynamicFriction * std::fabs(jn);
+                                                }
 
-                                                        const auto [jtA, jtB] = SplitImpulse(jt);
-                                                        const float2 tangentImpulseA{ tangentDir.x * jtA, tangentDir.y * jtA };
-                                                        const float2 tangentImpulseB{ tangentDir.x * jtB, tangentDir.y * jtB };
+                                                const float frictionImpulseFactorA = constraint.isPlayerA ? normalImpulseFactorA : invMassA;
+                                                const float frictionImpulseFactorB = constraint.isPlayerB ? normalImpulseFactorB : invMassB;
+                                                const float2 tangentImpulseA{ tangentDir.x * jt * frictionImpulseFactorA, tangentDir.y * jt * frictionImpulseFactorA };
+                                                const float2 tangentImpulseB{ tangentDir.x * jt * frictionImpulseFactorB, tangentDir.y * jt * frictionImpulseFactorB };
 
-                                                        if (constraint.modifyVelocityA)
-                                                        {
-                                                                physA.velocity.x += tangentImpulseA.x;
-                                                                physA.velocity.y += tangentImpulseA.y;
-                                                                appliedTangentImpulseA = jtA;
-                                                        }
-                                                        if (constraint.modifyVelocityB)
-                                                        {
-                                                                physB.velocity.x += tangentImpulseB.x;
-                                                                physB.velocity.y += tangentImpulseB.y;
-                                                                appliedTangentImpulseB = jtB;
-                                                        }
+                                                if (constraint.modifyVelocityA)
+                                                {
+                                                        physA.velocity.x += tangentImpulseA.x;
+                                                        physA.velocity.y += tangentImpulseA.y;
+                                                        appliedTangentImpulseA = jt * frictionImpulseFactorA;
+                                                }
+                                                if (constraint.modifyVelocityB)
+                                                {
+                                                        physB.velocity.x += tangentImpulseB.x;
+                                                        physB.velocity.y += tangentImpulseB.y;
+                                                        appliedTangentImpulseB = jt * frictionImpulseFactorB;
                                                 }
                                         }
                                 }
+
+                                physA.velocity.z = 0.0f;
+                                physB.velocity.z = 0.0f;
 
                                 if (std::fabs(appliedNormalImpulseA) > 0.0f || std::fabs(appliedTangentImpulseA) > 0.0f)
                                 {
