@@ -24,15 +24,6 @@ void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
         return;
     }
 
-    constexpr float kPlanarEpsilon = 1e-6f;
-    const bool hasZInput = (std::fabs(physical.velocity.z) > kPlanarEpsilon)
-        || (std::fabs(physical.force.z) > kPlanarEpsilon);
-    if (hasZInput)
-    {
-        physical.velocity.z = 0.0f;
-        physical.force.z = 0.0f;
-    }
-
     // 重力加速度を速度に加算（-y方向）
     physical.velocity.y -= m_gravity * dt;
 
@@ -40,4 +31,5 @@ void GravityDampingSystem::Apply(Entities::PhysicalEntity& entity, float dt)
     const float dampingFactor = std::pow(m_damping, dt);
     physical.velocity.x *= dampingFactor;
     physical.velocity.y *= dampingFactor;
+    physical.velocity.z *= dampingFactor;
 }
