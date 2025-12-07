@@ -179,9 +179,19 @@ namespace Entities
 
     void CollisionEntity::SyncColliderBounds()
     {
-        if (!m_collider) return;
-        m_collider->UpdateBounds(m_transform);
-        m_aabb = m_collider->GetAABB();
+        if (m_collider)
+        {
+            m_collider->UpdateBounds(m_transform);
+            m_aabb = m_collider->GetAABB();
+        }
+
+        m_lastBoundsTransform = m_transform;
+        m_transformDirty = false;
+    }
+
+    void CollisionEntity::MarkTransformDirty()
+    {
+        m_transformDirty = true;
     }
 
     bool CollisionEntity::IsTransformDirty() const

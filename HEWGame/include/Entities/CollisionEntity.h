@@ -41,6 +41,7 @@ namespace Entities
         void SetCollisionLayer(Collision::CollisionLayer layer);
 
         void SyncColliderBounds();
+        void MarkTransformDirty();
         bool IsTransformDirty() const;
 
         void ApplyTranslation(const float3& delta);

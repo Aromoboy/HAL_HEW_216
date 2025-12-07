@@ -553,6 +553,8 @@ namespace Entities
             sweetsTransform.position = ComputeCarryAnchor();
             sweetsTransform.rotation = m_transform.rotation;
 
+            it->MarkTransformDirty();
+
             it->SyncColliderBounds();
 
             Physics::Physical& physical = it->GetPhysical();
@@ -697,6 +699,7 @@ namespace Entities
         auto& sweetsTransform = candidate->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
         sweetsTransform.rotation = m_transform.rotation;
+        candidate->MarkTransformDirty();
         candidate->SyncColliderBounds();
 
         auto& physical = candidate->GetPhysical();
@@ -722,6 +725,7 @@ namespace Entities
         auto sweets = m_carrieds.back();
         auto& sweetsTransform = sweets->GetTransform();
         sweetsTransform.position = ComputeCarryAnchor();
+        sweets->MarkTransformDirty();
         sweets->SyncColliderBounds();
 
         auto& sweetsPhysical = sweets->GetPhysical();
@@ -764,6 +768,7 @@ namespace Entities
 
         const float previousY = position.y;
         position.y = m_minimumY;
+        MarkTransformDirty();
         SyncColliderBounds();
 
         std::ostringstream oss;
@@ -797,6 +802,7 @@ namespace Entities
 
         position.x = clampedX;
         position.y = clampedY;
+        MarkTransformDirty();
         SyncColliderBounds();
 
         std::ostringstream oss;
