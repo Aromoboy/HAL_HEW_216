@@ -181,6 +181,7 @@ namespace SweetsSpace
         struct GeneratedCollider
         {
             std::vector<float2> hull;
+            float2 centroidOffset{ 0.0f, 0.0f };
             float thickness = 1.0f;
         };
         std::map<std::string, GeneratedCollider> m_generatedColliders;

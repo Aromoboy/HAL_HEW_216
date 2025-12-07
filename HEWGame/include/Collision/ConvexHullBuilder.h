@@ -7,6 +7,12 @@
 
 namespace Collision
 {
+    struct HullBuildResult
+    {
+        std::vector<float2> hullPointsCentered;
+        float2 centroidOffset{ 0.0f, 0.0f };
+    };
+
     struct Mesh2DExtraction
     {
         std::vector<float2> boundary;
@@ -21,6 +27,6 @@ namespace Collision
 
     // Extracts XY positions from a mesh description and computes a
     // normalized convex hull centered around its centroid for collider use.
-    std::vector<float2> BuildConvexHullFromMesh(const MeshBuffer::Description& desc);
+    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc);
 }
 

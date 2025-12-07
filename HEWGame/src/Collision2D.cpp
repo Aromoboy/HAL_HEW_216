@@ -177,11 +177,12 @@ namespace Collision
                 return hull.ComputeContact(*this, outContact);
         }
 
-        ConvexHullCollider2D::ConvexHullCollider2D(std::vector<float2> points, float2 offset, float thickness, CollisionLayer layer)
+        ConvexHullCollider2D::ConvexHullCollider2D(std::vector<float2> points, float2 offset, float thickness, CollisionLayer layer, float2 centroidOffset)
                 : Collider2DBase(thickness)
                 , m_points(std::move(points))
                 , m_worldPoints(m_points)
                 , m_offset(offset)
+                , m_centroidOffset(centroidOffset)
                 , m_rotation(0.0f)
         {
                 SetLayer(layer);
@@ -208,7 +209,7 @@ namespace Collision
 
                 for (const float2& p : m_points)
                 {
-                        const float2 scaled{ p.x * transform.scale.x, p.y * transform.scale.y };
+                        const float2 scaled{ (p.x + m_centroidOffset.x) * transform.scale.x, (p.y + m_centroidOffset.y) * transform.scale.y };
                         const float2 rotated = Rotate(scaled, m_rotation);
                         const float2 world = Add(center, rotated);
                         m_worldPoints.push_back(world);

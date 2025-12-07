@@ -475,8 +475,9 @@ namespace Collision
         return extraction;
     }
 
-    std::vector<float2> BuildConvexHullFromMesh(const MeshBuffer::Description& desc)
+    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc)
     {
+        HullBuildResult result{};
         std::vector<float2> extracted;
         Mesh2DExtraction meshExtraction = ExtractProjectedPolygons(desc);
         if (!meshExtraction.boundary.empty())
@@ -487,7 +488,7 @@ namespace Collision
         {
             if (!desc.pVtx || desc.vtxCount == 0)
             {
-                return extracted;
+                return result;
             }
 
             const auto* base = static_cast<const std::byte*>(desc.pVtx);
@@ -507,7 +508,7 @@ namespace Collision
 
         if (extracted.empty())
         {
-            return extracted;
+            return result;
         }
 
         auto uniquePoints = extracted;
@@ -524,16 +525,16 @@ namespace Collision
                 return AlmostEqual(a, b);
             }), uniquePoints.end());
 
-        auto hull = ComputeConvexHull(uniquePoints);
+        const auto hull = ComputeConvexHull(uniquePoints);
 
-        const float2 centroid = ComputeCentroid(hull);
-        for (auto& p : hull)
+        result.centroidOffset = ComputeCentroid(hull);
+        result.hullPointsCentered.reserve(hull.size());
+        for (const auto& p : hull)
         {
-            p.x -= centroid.x;
-            p.y -= centroid.y;
+            result.hullPointsCentered.push_back(float2{ p.x - result.centroidOffset.x, p.y - result.centroidOffset.y });
         }
 
-        return hull;
+        return result;
     }
 }
 
