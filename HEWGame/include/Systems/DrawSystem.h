@@ -49,9 +49,7 @@ namespace Systems
 
                 struct DrawColliderCommand
                 {
-                    Entities::Entity* source;
-                    Collision::ICollider* collider;
-                    AABB aabb;
+                    Entities::CollisionEntity* source;
                 };
 
                 bool ValidateTransform(const Transform& transform, const Entities::Entity* source) const;

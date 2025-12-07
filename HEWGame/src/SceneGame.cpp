@@ -2263,8 +2263,8 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         {
                 g_DrawColliders = !g_DrawColliders;
                 std::ostringstream oss;
-                oss << kLogPrefix << "[ColliderDebug] Collider rendering "
-                        << (g_DrawColliders ? "enabled" : "disabled") << " (F4).\n";
+                oss << kLogPrefix << "[ColliderDebug] r.DebugColliders="
+                        << (g_DrawColliders ? 1 : 0) << " (F4).\n";
                 DebugTrace(oss.str());
         }
         constexpr float kDebugNudge = 0.25f;

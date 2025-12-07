@@ -45,6 +45,8 @@ namespace Entities
 
         void ApplyTranslation(const float3& delta);
 
+        void DebugDraw();
+
         void UpdateSleepState(const float3& velocity);
         void Wake();
         bool IsSleeping() const { return m_isSleeping; }

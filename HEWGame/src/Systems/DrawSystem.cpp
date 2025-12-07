@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <DirectXMath.h>
+#include <cstdlib>
 
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
@@ -11,8 +11,6 @@
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
-
-bool g_DrawColliders = false;
 
 namespace
 {
@@ -26,83 +24,19 @@ namespace
                 return IsFiniteFloat(vec.x) && IsFiniteFloat(vec.y) && IsFiniteFloat(vec.z);
         }
 
-        DirectX::XMFLOAT3 ToFloat3(const float2& point, float z)
+        bool ReadDebugColliderCvar()
         {
-                return DirectX::XMFLOAT3{ point.x, point.y, z };
-        }
-
-        void DrawAABB2D(const AABB& bounds, float z, const DirectX::XMFLOAT4& color)
-        {
-                DirectX::XMFLOAT3 leftUp{ bounds.min.x, bounds.max.y, z };
-                DirectX::XMFLOAT3 rightUp{ bounds.max.x, bounds.max.y, z };
-                DirectX::XMFLOAT3 leftDown{ bounds.min.x, bounds.min.y, z };
-                DirectX::XMFLOAT3 rightDown{ bounds.max.x, bounds.min.y, z };
-
-                Geometory::AddLine(leftUp, leftDown, color);
-                Geometory::AddLine(leftUp, rightUp, color);
-                Geometory::AddLine(rightDown, leftDown, color);
-                Geometory::AddLine(rightDown, rightUp, color);
-        }
-
-        void DrawCircleOutline(const Collision::CircleCollider2D& circle, float z, const DirectX::XMFLOAT4& color)
-        {
-                constexpr int kSegments = 24;
-                const float2 center = circle.GetCenter();
-                const float radius = circle.GetRadius();
-                const float step = DirectX::XM_2PI / static_cast<float>(kSegments);
-
-                for (int i = 0; i < kSegments; ++i)
+                const char* value = std::getenv("r.DebugColliders");
+                if (!value)
                 {
-                        const float startAngle = step * static_cast<float>(i);
-                        const float endAngle = step * static_cast<float>(i + 1);
-                        const DirectX::XMFLOAT3 start{
-                                center.x + std::cos(startAngle) * radius,
-                                center.y + std::sin(startAngle) * radius,
-                                z };
-                        const DirectX::XMFLOAT3 end{
-                                center.x + std::cos(endAngle) * radius,
-                                center.y + std::sin(endAngle) * radius,
-                                z };
-                        Geometory::AddLine(start, end, color);
-                }
-        }
-
-        void DrawHullOutline(const Collision::ConvexHullCollider2D& hull, float z, const DirectX::XMFLOAT4& color)
-        {
-                const auto& points = hull.GetWorldPoints();
-                if (points.size() < 2)
-                {
-                        return;
+                        return true;
                 }
 
-                for (size_t i = 0; i < points.size(); ++i)
-                {
-                        const size_t next = (i + 1) % points.size();
-                        Geometory::AddLine(ToFloat3(points[i], z), ToFloat3(points[next], z), color);
-                }
-        }
-
-        DirectX::XMFLOAT4 GetLayerColor(const Collision::ICollider* collider)
-        {
-                if (!collider)
-                {
-                        return DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
-                }
-
-                switch (collider->GetLayer())
-                {
-                case Collision::CollisionLayer::Player:
-                        return DirectX::XMFLOAT4{ 0.0f, 1.0f, 1.0f, 1.0f }; // Cyan
-                case Collision::CollisionLayer::Floor:
-                        return DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 1.0f }; // White
-                case Collision::CollisionLayer::Sweets:
-                        return DirectX::XMFLOAT4{ 1.0f, 1.0f, 0.0f, 1.0f }; // Yellow
-                case Collision::CollisionLayer::Default:
-                default:
-                        return DirectX::XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
-                }
+                return std::atoi(value) != 0;
         }
 }
+
+bool g_DrawColliders = ReadDebugColliderCvar();
 
 namespace Systems
 {
@@ -212,7 +146,13 @@ namespace Systems
 
                 for (auto it : m_colliderRenderables)
                 {
-                    m_colliderCommands.push_back(DrawColliderCommand{ it.first, it.second, it.second->GetAABB() });
+                    auto* collisionEntity = dynamic_cast<Entities::CollisionEntity*>(it.first);
+                    if (!collisionEntity || !it.second)
+                    {
+                        continue;
+                    }
+
+                    m_colliderCommands.push_back(DrawColliderCommand{ collisionEntity });
 
                 }
         }
@@ -299,57 +239,7 @@ namespace Systems
                     continue;
                 }
 
-                const Transform transform = command.source->GetTransform();
-                const float z = transform.position.z;
-                const auto* collider2D = dynamic_cast<const Collision::ICollider2D*>(command.collider);
-                const DirectX::XMFLOAT4 layerColor = GetLayerColor(command.collider);
-
-                if (const auto* compound = dynamic_cast<const Collision::CompoundCollider2D*>(collider2D))
-                {
-                    size_t childIndex = 0;
-                    for (const auto& child : compound->GetChildren())
-                    {
-                        const auto* child2D = dynamic_cast<const Collision::ICollider2D*>(child.get());
-                        if (!child2D)
-                        {
-                            ++childIndex;
-                            continue;
-                        }
-
-                        const DirectX::XMFLOAT4 color = layerColor;
-                        if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(child2D))
-                        {
-                            DrawCircleOutline(*circle, z, color);
-                        }
-                        else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(child2D))
-                        {
-                            DrawHullOutline(*hull, z, color);
-                        }
-                        else
-                        {
-                            DrawAABB2D(child2D->GetAABB(), z, color);
-                        }
-
-                        ++childIndex;
-                    }
-                }
-
-                if (const auto* circle = dynamic_cast<const Collision::CircleCollider2D*>(collider2D))
-                {
-                    DrawCircleOutline(*circle, z, layerColor);
-                }
-                else if (const auto* hull = dynamic_cast<const Collision::ConvexHullCollider2D*>(collider2D))
-                {
-                    DrawHullOutline(*hull, z, layerColor);
-                }
-                else if (collider2D)
-                {
-                    DrawAABB2D(collider2D->GetAABB(), z, layerColor);
-                }
-                else
-                {
-                    DrawAABB2D(command.aabb, z, layerColor);
-                }
+                command.source->DebugDraw();
             }
 
             m_colliderCommands.clear();
