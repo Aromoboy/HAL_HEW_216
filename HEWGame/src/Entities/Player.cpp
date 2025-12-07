@@ -602,28 +602,21 @@ namespace Entities
         }
 
         collider->UpdateBounds(m_transform);
-        AABB pickupBounds = collider->GetAABB();
-        if (m_pickupForwardOffset >= 0.0f)
-        {
-            pickupBounds.max.z += m_pickupForwardOffset;
-        }
-        else
-        {
-            pickupBounds.min.z += m_pickupForwardOffset;
-        }
+        const AABB colliderBounds = collider->GetAABB();
+        const float boundsCenterX = (colliderBounds.min.x + colliderBounds.max.x) * 0.5f;
+        const float boundsCenterY = (colliderBounds.min.y + colliderBounds.max.y) * 0.5f;
+        const float boundsCenterZ = (colliderBounds.min.z + colliderBounds.max.z) * 0.5f;
+        const float halfDepth = ((colliderBounds.max.z - colliderBounds.min.z) * 0.5f) + 0.05f;
 
-        const float boundsCenterX = (pickupBounds.min.x + pickupBounds.max.x) * 0.5f;
-        const float boundsCenterY = (pickupBounds.min.y + pickupBounds.max.y) * 0.5f;
-        const float boundsCenterZ = (pickupBounds.min.z + pickupBounds.max.z) * 0.5f;
-        const float clampedHalfWidth = std::min((pickupBounds.max.x - pickupBounds.min.x) * 0.5f, m_pickupHalfWidth);
-        const float clampedHalfHeight = std::min((pickupBounds.max.y - pickupBounds.min.y) * 0.5f, m_pickupHalfHeight);
+        const float3 pickupCenter{ boundsCenterX + m_pickupForwardOffset, boundsCenterY, boundsCenterZ };
 
-        pickupBounds.min.x = boundsCenterX - clampedHalfWidth;
-        pickupBounds.max.x = boundsCenterX + clampedHalfWidth;
-        pickupBounds.min.y = boundsCenterY - clampedHalfHeight;
-        pickupBounds.max.y = boundsCenterY + clampedHalfHeight;
-
-        const float3 pickupCenter{ boundsCenterX, boundsCenterY, boundsCenterZ };
+        AABB pickupBounds{};
+        pickupBounds.min.x = pickupCenter.x - m_pickupHalfWidth;
+        pickupBounds.max.x = pickupCenter.x + m_pickupHalfWidth;
+        pickupBounds.min.y = pickupCenter.y - m_pickupHalfHeight;
+        pickupBounds.max.y = pickupCenter.y + m_pickupHalfHeight;
+        pickupBounds.min.z = pickupCenter.z - halfDepth;
+        pickupBounds.max.z = pickupCenter.z + halfDepth;
 
         std::shared_ptr<SweetsSpace::ActiveSweets> candidate;
         float bestDistanceSq = std::numeric_limits<float>::max();
