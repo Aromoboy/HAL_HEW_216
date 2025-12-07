@@ -34,9 +34,11 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <iterator>
 #include <DirectXMath.h>
 #if defined(_WIN32)
