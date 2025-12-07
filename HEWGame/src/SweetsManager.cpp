@@ -218,6 +218,7 @@ namespace
     {
         ModelBounds bounds{};
         std::vector<float2> hull{};
+        float2 centroidOffset{ 0.0f, 0.0f };
         float rawThickness{ 0.0f };
         float thickness{ 1.0f };
         float paddingFactor{ 1.0f };
@@ -533,7 +534,7 @@ namespace
         return extents;
     }
 
-    ModelBounds ComputeBoundsFromHull(const std::vector<float2>& hull, float thickness)
+    ModelBounds ComputeBoundsFromHull(const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
     {
         ModelBounds bounds{};
         const HullExtents extents = ComputeHullExtents(hull);
@@ -542,8 +543,8 @@ namespace
             return bounds;
         }
 
-        bounds.min = float3{ extents.min.x, extents.min.y, -thickness * 0.5f };
-        bounds.max = float3{ extents.max.x, extents.max.y, thickness * 0.5f };
+        bounds.min = float3{ extents.min.x + centroidOffset.x, extents.min.y + centroidOffset.y, -thickness * 0.5f };
+        bounds.max = float3{ extents.max.x + centroidOffset.x, extents.max.y + centroidOffset.y, thickness * 0.5f };
         bounds.valid = true;
         return bounds;
     }
@@ -723,23 +724,6 @@ namespace
             return summary;
         }
 
-        float2 centroid{ 0.0f, 0.0f };
-        for (const auto& pos : positions)
-        {
-            centroid.x += pos.x;
-            centroid.y += pos.y;
-        }
-
-        const float invCount = 1.0f / static_cast<float>(positions.size());
-        centroid.x *= invCount;
-        centroid.y *= invCount;
-
-        for (auto& pos : positions)
-        {
-            pos.x -= centroid.x;
-            pos.y -= centroid.y;
-        }
-
         MeshBuffer::Description desc{};
         desc.pVtx = positions.data();
         desc.vtxSize = sizeof(PositionOnly);
@@ -752,7 +736,8 @@ namespace
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
-        summary.hull = SimplifyHull(rawHull, kMinHullPoints, kMaxHullPoints);
+        summary.hull = SimplifyHull(rawHull.hullPointsCentered, kMinHullPoints, kMaxHullPoints);
+        summary.centroidOffset = rawHull.centroidOffset;
         const HullExtents extents = ComputeHullExtents(summary.hull);
         const float width  = extents.valid ? (extents.max.x - extents.min.x) : 0.0f;
         const float height = extents.valid ? (extents.max.y - extents.min.y) : 0.0f;
@@ -761,7 +746,7 @@ namespace
         const float paddedThickness = summary.rawThickness * sanitizedPadding;
         summary.thickness = paddedThickness;
 
-        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.thickness);
+        summary.bounds = ComputeBoundsFromHull(summary.hull, summary.centroidOffset, summary.thickness);
 
 
         std::ostringstream oss;
@@ -1288,7 +1273,7 @@ namespace SweetsSpace
 
             const float adaptiveThickness = geometry.thickness;
 
-            GeneratedCollider generatedCollider{ geometry.hull, adaptiveThickness };
+            GeneratedCollider generatedCollider{ geometry.hull, geometry.centroidOffset, adaptiveThickness };
 
             m_generatedColliders[normalizedKind] = generatedCollider;
 
@@ -1480,7 +1465,7 @@ namespace SweetsSpace
 
                     if (!collider && hasGeneratedHull)
                     {
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, colliderThickness, Collision::CollisionLayer::Sweets);
+                        collider = std::make_shared<Collision::ConvexHullCollider2D>(generatedCollider.hull, float2{ 0.0f, 0.0f }, colliderThickness, Collision::CollisionLayer::Sweets, generatedCollider.centroidOffset);
                         usedGeneratedHull = true;
                         if (colliderDefinitionHullMissingPoints)
                         {
@@ -2269,15 +2254,31 @@ namespace SweetsSpace
                     continue;
                 }
 
-                const auto& sweetsPos = sweets->GetTransform().position;
-                const float dx = sweetsPos.x - position.x;
-                const float dy = sweetsPos.y - position.y;
-                if (std::fabs(dx) > halfWidth || std::fabs(dy) > halfHeight)
+                const Collision::ICollider* collider = sweets->GetCollider();
+                if (!collider)
                 {
                     continue;
                 }
 
-                const float dz = sweetsPos.z - position.z;
+                sweets->SyncColliderBounds();
+                const AABB bounds = collider->GetAABB();
+                const float minX = position.x - halfWidth;
+                const float maxX = position.x + halfWidth;
+                const float minY = position.y - halfHeight;
+                const float maxY = position.y + halfHeight;
+
+                const bool overlaps = !(bounds.max.x < minX || bounds.min.x > maxX || bounds.max.y < minY || bounds.min.y > maxY);
+                if (!overlaps)
+                {
+                    continue;
+                }
+
+                const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
+                const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
+                const float centerZ = (bounds.min.z + bounds.max.z) * 0.5f;
+                const float dx = centerX - position.x;
+                const float dy = centerY - position.y;
+                const float dz = centerZ - position.z;
                 const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
                 if (distanceSq <= bestDistanceSq)
                 {

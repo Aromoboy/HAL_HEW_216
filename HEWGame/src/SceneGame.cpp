@@ -107,6 +107,7 @@ namespace
         {
             ModelBounds bounds{};
             std::vector<float2> hull;
+            float2 centroidOffset{ 0.0f, 0.0f };
             float rawThickness{ 0.0f };
             float paddedThickness{ 0.0f };
         };
@@ -145,13 +146,6 @@ namespace
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
-        }
-
-        float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
-        {
-            const float3 scaledMin = ScaleVector(bounds.min, scale);
-            const float3 scaledMax = ScaleVector(bounds.max, scale);
-            return float3{ (scaledMax.x + scaledMin.x) * 0.5f, (scaledMax.y + scaledMin.y) * 0.5f, (scaledMax.z + scaledMin.z) * 0.5f };
         }
 
         PlayerColliderGeometry AnalyzePlayerModelGeometry(const std::string& path, float thicknessPadding)
@@ -248,7 +242,9 @@ namespace
                 desc.idxCount = static_cast<UINT>(indices.size());
                 desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-                summary.hull = Collision::BuildConvexHullFromMesh(desc);
+                const auto hullResult = Collision::BuildConvexHullFromMesh(desc);
+                summary.hull = hullResult.hullPointsCentered;
+                summary.centroidOffset = hullResult.centroidOffset;
                 std::ostringstream oss;
                 oss << kLogPrefix << "[PlayerCollider] Geometry analyzed path='" << path
                     << "' format=" << format
@@ -489,11 +485,11 @@ namespace
             }
 
             const float clampedThickness = std::max(geometry.paddedThickness * transform.scale.z, kMinGeneratedThickness);
-            const float3 colliderOffset = ComputeColliderOffset(geometry.bounds, transform.scale);
-            const float2 offset2D{ colliderOffset.x + tuning.offset.x, colliderOffset.y + tuning.offset.y };
+            const float2 offset2D{ tuning.offset.x, tuning.offset.y };
+            const float2 centroid2D{ geometry.centroidOffset.x, geometry.centroidOffset.y };
             auto hull = BuildPaddedHull(geometry, tuning, transform.scale);
 
-            auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hull, offset2D, clampedThickness, Collision::CollisionLayer::Player);
+            auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hull, offset2D, clampedThickness, Collision::CollisionLayer::Player, centroid2D);
             collider->UpdateBounds(transform);
             return collider;
         }

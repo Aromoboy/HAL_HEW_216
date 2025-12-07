@@ -76,7 +76,7 @@ namespace Collision
         {
         public:
                 explicit ConvexHullCollider2D(std::vector<float2> points, float2 offset = float2{ 0.0f, 0.0f }, float thickness = 0.1f,
-                        CollisionLayer layer = CollisionLayer::Default);
+                        CollisionLayer layer = CollisionLayer::Default, float2 centroidOffset = float2{ 0.0f, 0.0f });
 
                 bool CheckCollision(const Collision::ICollider& other) override;
                 void UpdateBounds(const Transform& transform) override;
@@ -92,6 +92,7 @@ namespace Collision
                 std::vector<float2> m_points;
                 std::vector<float2> m_worldPoints;
                 float2 m_offset;
+                float2 m_centroidOffset;
                 float m_rotation;
         };
 
