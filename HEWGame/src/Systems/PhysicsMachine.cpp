@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <box2d/box2d.h>
+#include <box2d/collision.h>
 #include <box2d/math_functions.h>
 
 #if defined(_WIN32)
@@ -206,6 +208,8 @@ namespace Systems
                         const float dt = std::max(0.0f, ctx.dt);
                         b2World_Step(m_worldId, dt, kSubStepCount);
 
+                        LogMeshContacts();
+
                         for (Entities::PhysicalEntity* body : m_bodies)
                         {
                                 if (!body)
@@ -314,6 +318,10 @@ namespace Systems
                 const float halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
                 const float halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
 
+                const auto& meshPolygons = body.GetBox2DPolygons();
+                const auto& meshBoundary = body.GetBox2DBoundary();
+                const bool hasMeshFixtures = !meshPolygons.empty();
+
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = b2Vec2{ transform.position.x, transform.position.y };
                 bodyDef.linearVelocity = b2Vec2{ body.GetPhysical().velocity.x, body.GetPhysical().velocity.y };
@@ -334,6 +342,67 @@ namespace Systems
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
                 shapeDef.density = bodyDef.type == b2_dynamicBody ? std::max(0.01f, body.GetPhysical().weight) : 0.0f;
                 shapeDef.material.friction = 0.6f;
+
+                int meshShapes = 0;
+                if (hasMeshFixtures)
+                {
+                        for (const auto& polygon : meshPolygons)
+                        {
+                                if (polygon.size() < 3)
+                                {
+                                        continue;
+                                }
+
+                                std::vector<b2Vec2> scaled = polygon;
+                                for (auto& v : scaled)
+                                {
+                                        v.x *= transform.scale.x;
+                                        v.y *= transform.scale.y;
+                                }
+
+                                const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
+                                if (!b2ValidateHull(&hull))
+                                {
+                                        continue;
+                                }
+
+                                const b2Polygon shape = b2MakePolygon(&hull, b2_polygonRadius);
+                                b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                                ++meshShapes;
+                        }
+
+                        if (meshBoundary.size() >= 2)
+                        {
+                                std::vector<b2Vec2> scaledBoundary = meshBoundary;
+                                for (auto& v : scaledBoundary)
+                                {
+                                        v.x *= transform.scale.x;
+                                        v.y *= transform.scale.y;
+                                }
+
+                                b2ChainDef chainDef = b2DefaultChainDef();
+                                chainDef.points = scaledBoundary.data();
+                                chainDef.count = static_cast<int>(scaledBoundary.size());
+                                chainDef.loop = true;
+
+                                b2ShapeDef chainShapeDef = shapeDef;
+                                chainShapeDef.density = 0.0f;
+                                b2CreateChainShape(bodyId, &chainShapeDef, &chainDef);
+                                ++meshShapes;
+                        }
+
+                        if (meshShapes > 0)
+                        {
+#if defined(_DEBUG)
+                                std::ostringstream oss;
+                                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag()
+                                    << "' polygons=" << meshPolygons.size()
+                                    << " boundaryPoints=" << meshBoundary.size() << "\n";
+                                DebugTrace(oss.str());
+#endif
+                                return bodyId;
+                        }
+                }
 
                 const b2Polygon box = b2MakeBox(halfWidth, halfHeight);
                 b2CreatePolygonShape(bodyId, &shapeDef, &box);
@@ -363,6 +432,52 @@ namespace Systems
                 {
                         b2DestroyWorld(m_worldId);
                         m_worldId = b2_nullWorldId;
+                }
+        }
+
+        void PhysicsMachine::LogMeshContacts()
+        {
+                if (!m_logMeshContacts || !b2World_IsValid(m_worldId))
+                {
+                        return;
+                }
+
+                const b2ContactEvents events = b2World_GetContactEvents(m_worldId);
+                constexpr int kMaxLogsPerFrame = 4;
+                int logged = 0;
+
+                for (int i = 0; i < events.beginCount && logged < kMaxLogsPerFrame; ++i)
+                {
+                        const b2ContactBeginTouchEvent& evt = events.beginEvents[i];
+                        Entities::PhysicalEntity* bodyA = static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(evt.bodyIdA));
+                        Entities::PhysicalEntity* bodyB = static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(evt.bodyIdB));
+
+                        const bool meshContact = (bodyA && bodyA->HasBox2DMesh()) || (bodyB && bodyB->HasBox2DMesh());
+                        if (!meshContact)
+                        {
+                                continue;
+                        }
+
+                        const char* tagA = bodyA ? bodyA->GetTag().c_str() : "<null>";
+                        const char* tagB = bodyB ? bodyB->GetTag().c_str() : "<null>";
+
+                        std::ostringstream oss;
+                        oss << "[PhysicsMachine] Mesh contact begin between '" << tagA << "' and '" << tagB << "'\n";
+                        DebugTrace(oss.str());
+                        ++logged;
+                }
+
+                if (events.beginEvents)
+                {
+                        b2Free(events.beginEvents);
+                }
+                if (events.endEvents)
+                {
+                        b2Free(events.endEvents);
+                }
+                if (events.hitEvents)
+                {
+                        b2Free(events.hitEvents);
                 }
         }
 }

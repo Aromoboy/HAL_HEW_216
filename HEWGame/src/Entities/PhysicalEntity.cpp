@@ -34,6 +34,27 @@ namespace Entities
     {
         return m_physicsMachine;
     }
+
+    void PhysicalEntity::SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary)
+    {
+        m_box2dPolygons = polygons;
+        m_box2dBoundary = boundary;
+    }
+
+    bool PhysicalEntity::HasBox2DMesh() const
+    {
+        return !m_box2dPolygons.empty();
+    }
+
+    const std::vector<std::vector<b2Vec2>>& PhysicalEntity::GetBox2DPolygons() const
+    {
+        return m_box2dPolygons;
+    }
+
+    const std::vector<b2Vec2>& PhysicalEntity::GetBox2DBoundary() const
+    {
+        return m_box2dBoundary;
+    }
 }
 
 namespace Entities

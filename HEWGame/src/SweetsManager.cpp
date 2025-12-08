@@ -1325,6 +1325,26 @@ namespace SweetsSpace
 
             m_generatedColliders[normalizedKind] = generatedCollider;
 
+            if (prototype.type == SweetsType::Cake)
+            {
+                auto meshFixtures = Systems::Box2DMeshBuilder::Instance().BuildFromModel(modelPath);
+                if (meshFixtures)
+                {
+                    m_box2dFixtures[normalizedKind] = *meshFixtures;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Cached Box2D mesh fixtures for kind '" << resolvedKind
+                        << "' polygons=" << meshFixtures->polygons.size()
+                        << " boundaryPoints=" << meshFixtures->boundary.size() << "\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to build Box2D mesh fixtures for kind '" << resolvedKind << "'.\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
 
             const auto colliderDefinitionIt = FindColliderDefinition(resolvedKind);
             const bool colliderDefinitionFound = colliderDefinitionIt != m_colliderDefinitions.end();
@@ -1737,8 +1757,19 @@ namespace SweetsSpace
                     DebugTrace(oss.str());
                 }
 
-                return MakeSweets<ActiveSweets>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
                     Core::UpdatePhase::Physics, 0);
+
+                if (sweets)
+                {
+                    auto fixtureIt = m_box2dFixtures.find(normalizedKind);
+                    if (fixtureIt != m_box2dFixtures.end())
+                    {
+                        sweets->SetBox2DMesh(fixtureIt->second.polygons, fixtureIt->second.boundary);
+                    }
+                }
+
+                return sweets;
             };
 
             auto [_, inserted] = m_spawner.emplace(normalizedKind, std::move(factory));

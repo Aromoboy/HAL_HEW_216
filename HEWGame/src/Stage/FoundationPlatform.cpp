@@ -13,6 +13,8 @@
 #include "MeshDX.h"
 #include "ModelCache.h"
 #include "ModelDX.h"
+#include "SweetsPrototypeManifest.h"
+#include "Systems/Box2DMeshBuilder.h"
 
 namespace
 {
@@ -196,6 +198,22 @@ namespace Stage
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
         SetAnchorTransform(transform);
+
+        if (const auto* descriptor = SweetsSpace::SweetsPrototypeManifest::Instance().Find(SweetsSpace::SweetsType::Cake))
+        {
+            auto fixtures = Systems::Box2DMeshBuilder::Instance().BuildFromModel(descriptor->modelPath);
+            if (fixtures)
+            {
+                SetBox2DMesh(fixtures->polygons, fixtures->boundary);
+
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << kLogPrefix << "Applied Box2D mesh fixtures to foundation platform polygons="
+                    << fixtures->polygons.size() << " boundaryPoints=" << fixtures->boundary.size() << "\n";
+                DebugTrace(oss.str());
+#endif
+            }
+        }
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 

@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+
+#include <box2d/box2d.h>
+
 #include "Entities/CollisionEntity.h"
 #include "Physical.h"
 
@@ -42,9 +46,17 @@ namespace Entities
 
         Systems::PhysicsMachine* GetPhysicsMachine() const;
 
+        void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary);
+        bool HasBox2DMesh() const;
+        const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
+        const std::vector<b2Vec2>& GetBox2DBoundary() const;
+
     protected:
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine;
+
+        std::vector<std::vector<b2Vec2>> m_box2dPolygons;
+        std::vector<b2Vec2> m_box2dBoundary;
     };
 }
 
