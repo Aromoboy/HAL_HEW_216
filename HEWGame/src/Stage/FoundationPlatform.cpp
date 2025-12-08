@@ -188,10 +188,7 @@ namespace Stage
     void FoundationPlatform::SetAnchorTransform(const Transform& transform)
     {
         m_anchorTransform = transform;
-        auto& current = GetTransform();
-        current = m_anchorTransform;
-        MarkTransformDirty();
-        SyncColliderBounds();
+        SetTransform(m_anchorTransform);
 
 #if defined(_DEBUG)
         std::ostringstream oss;
@@ -212,21 +209,7 @@ namespace Stage
         physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
         physical.force = float3{ 0.0f, 0.0f, 0.0f };
 
-        auto& current = GetTransform();
-        if (current.position.x != m_anchorTransform.position.x
-            || current.position.y != m_anchorTransform.position.y
-            || current.position.z != m_anchorTransform.position.z
-            || current.rotation.x != m_anchorTransform.rotation.x
-            || current.rotation.y != m_anchorTransform.rotation.y
-            || current.rotation.z != m_anchorTransform.rotation.z
-            || current.scale.x != m_anchorTransform.scale.x
-            || current.scale.y != m_anchorTransform.scale.y
-            || current.scale.z != m_anchorTransform.scale.z)
-        {
-            current = m_anchorTransform;
-            MarkTransformDirty();
-            SyncColliderBounds();
-        }
+        SetTransform(m_anchorTransform);
     }
 
     Render::Model* FoundationPlatform::GetRenderableModel()

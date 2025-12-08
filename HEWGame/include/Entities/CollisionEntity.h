@@ -48,10 +48,17 @@ namespace Entities
         Collision::CollisionLayer GetCollisionLayer() const;
         void SetCollisionLayer(Collision::CollisionLayer layer);
 
+        void SetTransform(const Transform& transform);
+        void SetPosition(const float3& position);
+        void SetRotation(const float3& rotation);
+        void SetScale(const float3& scale);
+
         void SyncColliderBounds();
         void MarkTransformDirty();
         bool IsTransformDirty() const;
         void ApplyTranslation(const float3& delta);
+
+        void OnUpdate(Core::UpdateContext& ctx) override;
 
         void DebugDraw();
 
