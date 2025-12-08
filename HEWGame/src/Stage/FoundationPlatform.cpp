@@ -160,6 +160,8 @@ namespace Stage
     FoundationPlatform::FoundationPlatform(const std::string& tag,
         const Transform& transform,
         std::shared_ptr<Collision::ICollider> collider,
+        std::optional<Physics::BoxColliderComponent> boxCollider,
+        Systems::PhysicsMachine* physicsMachine,
         const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
         int priority)
@@ -178,7 +180,12 @@ namespace Stage
     {
         LoadPlatformModel();
 
-        Physics::BoxColliderComponent colliderComponent;
+        Physics::BoxColliderComponent colliderComponent = boxCollider.value_or(Physics::BoxColliderComponent{});
+        if (!boxCollider)
+        {
+            colliderComponent.shapeDef.material.friction = 0.8f;
+        }
+        colliderComponent.shapeDef.density = 0.0f;
 
         const bool modelHasBounds = m_model && m_model->HasLocalBounds();
         if (modelHasBounds)
@@ -234,6 +241,8 @@ namespace Stage
 
         SetBox2DShapeConfig(shapeConfig);
         SetBoxColliderComponent(std::move(colliderComponent));
+        AttachPhysicsMachine(physicsMachine);
+        SetGravityScale(0.0f);
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
