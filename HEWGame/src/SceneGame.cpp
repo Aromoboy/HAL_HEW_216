@@ -1684,6 +1684,7 @@ SceneGame::SceneGame()
 
     const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
     std::shared_ptr<Collision::ICollider> collider;
+    std::optional<Physics::BoxColliderComponent> boxColliderComponent;
     Transform trans = m_playerSpawnTransform.transform;
     trans.position.z += platePlaneZ;
     {
@@ -1715,6 +1716,9 @@ SceneGame::SceneGame()
     float3 expectedAabbCenter{ 0.0f, 0.0f, 0.0f };
     float3 expectedCenterOffset{ 0.0f, 0.0f, 0.0f };
     bool expectedAabbComputed = false;
+    float3 fallbackColliderSize{ 0.0f, 0.0f, 0.0f };
+    float3 fallbackColliderOffset{ 0.0f, 0.0f, 0.0f };
+    bool hasFallbackComponent = false;
 
     const auto tryGenerated = [&]()
     {
@@ -1804,29 +1808,34 @@ SceneGame::SceneGame()
             return std::max(value, 1e-3f);
         };
 
-        const float3 safeScaleVec{ safeScale(trans.scale.x), safeScale(trans.scale.y), safeScale(trans.scale.z) };
-        const float3 expand
-        {
-            colliderSize.x / safeScaleVec.x,
-            colliderSize.y / safeScaleVec.y,
-            colliderSize.z / safeScaleVec.z
-        };
+        const float halfWidth  = std::max(0.01f, colliderSize.x * 0.5f);
+        const float halfHeight = std::max(0.01f, colliderSize.y * 0.5f);
 
-        const float2 offset2D{ colliderOffset.x / safeScaleVec.x, colliderOffset.y / safeScaleVec.y };
-        const float halfX = 0.5f * expand.x;
-        const float halfY = 0.5f * expand.y;
-        std::vector<float2> points
-        {
-            float2{ -halfX, -halfY },
-            float2{ halfX, -halfY },
-            float2{ halfX, halfY },
-            float2{ -halfX, halfY },
-        };
+      
+        Physics::BoxColliderComponent component;
+        component.shapeDef.material.friction     = 0.6f;
+        component.shapeDef.material.restitution  = 0.05f;
 
-        collider = std::make_shared<Collision::ConvexHullCollider2D>(points, offset2D, expand.z, Collision::CollisionLayer::Player);
-        collider->UpdateBounds(trans);
+      
+        component.AddBox(
+            halfWidth  / safeScale(trans.scale.x),
+            halfHeight / safeScale(trans.scale.y),
+            b2Vec2{ colliderOffset.x, colliderOffset.y }
+        );
+
+     
+        boxColliderComponent = component;
+        fallbackColliderSize = colliderSize;
+        fallbackColliderOffset = colliderOffset;
+        hasFallbackComponent = true;
+
+      
         colliderSource = "aabb_fallback";
-        colliderDecisionReason = geometryValid ? "generated_and_config_failed_geometry_sized" : "generated_and_config_failed_default_sized";
+        colliderDecisionReason =
+            geometryValid
+                ? "generated_and_config_failed_geometry_sized"
+                : "generated_and_config_failed_default_sized";
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "[PlayerCollider] Applied fallback AABB size=(" << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z << ')'
@@ -1866,6 +1875,33 @@ SceneGame::SceneGame()
             << "\n";
         ::DebugTrace(oss.str());
     }
+    else if (hasFallbackComponent)
+    {
+        expectedAabbSize = fallbackColliderSize;
+        expectedAabbCenter = float3
+        {
+            trans.position.x + fallbackColliderOffset.x,
+            trans.position.y + fallbackColliderOffset.y,
+            trans.position.z + fallbackColliderOffset.z,
+        };
+        expectedCenterOffset = float3
+        {
+            fallbackColliderOffset.x,
+            fallbackColliderOffset.y,
+            fallbackColliderOffset.z,
+        };
+        expectedAabbComputed = true;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] Footprint pre-contact source=" << colliderSource
+            << " size=(" << expectedAabbSize.x << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ')'
+            << " center=(" << expectedAabbCenter.x << ',' << expectedAabbCenter.y << ',' << expectedAabbCenter.z << ')'
+            << " centerOffsetFromSpawn=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ')'
+            << " spawnPos=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
+            << " decision=" << colliderDecisionReason
+            << "\n";
+        ::DebugTrace(oss.str());
+    }
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
@@ -1882,6 +1918,10 @@ SceneGame::SceneGame()
 
     if (player)
     {
+        if (boxColliderComponent)
+        {
+            player->SetBoxColliderComponent(boxColliderComponent);
+        }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
         float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
         if (m_platePlatform)

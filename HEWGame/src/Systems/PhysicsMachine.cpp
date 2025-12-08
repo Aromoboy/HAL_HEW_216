@@ -351,6 +351,8 @@ namespace Systems
                 body.SyncColliderBounds();
                 const auto& collisionEntity = static_cast<const Entities::CollisionEntity&>(body);
                 const Transform& transform = collisionEntity.GetTransform();
+                const auto colliderComponent = body.GetBoxColliderComponent();
+                const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
                 const auto shapeConfig = body.GetBox2DShapeConfig();
                 const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
                 const AABB bounds = collisionEntity.GetCollider() ? collisionEntity.GetCollider()->GetAABB() : AABB{};
@@ -368,6 +370,7 @@ namespace Systems
                 const bool layerStatic = collisionEntity.GetCollisionLayer() == Collision::CollisionLayer::Floor;
                 bodyDef.type = layerStatic ? b2_staticBody : b2_dynamicBody;
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
+                bodyDef.rotation = b2MakeRot(transform.rotation.z);
 
                 bodyDef.linearDamping = body.GetPhysical().GetLinearDamping();
                 bodyDef.userData = &body;
@@ -380,7 +383,11 @@ namespace Systems
                 }
 
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
-                const Collision::CollisionLayer layer = collisionEntity.GetCollisionLayer();
+                if (hasColliderComponent)
+                {
+                        shapeDef = colliderComponent->shapeDef;
+                }
+
                 const float configuredDensity = hasShapeConfig
                         ? std::max(0.0f, shapeConfig->density)
                         : 1.0f;
@@ -391,6 +398,24 @@ namespace Systems
                 shapeDef.enableHitEvents = true;
                 shapeDef.filter.categoryBits = ToCategoryBits(layer);
                 shapeDef.filter.maskBits = ToMaskBits(layer);
+
+                if (hasColliderComponent)
+                {
+                        for (const auto& polygon : colliderComponent->polygons)
+                        {
+                                b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
+                        }
+
+                        for (const auto& circle : colliderComponent->circles)
+                        {
+                                b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                        }
+
+                        if (!colliderComponent->Empty())
+                        {
+                                return bodyId;
+                        }
+                }
 
                 if (hasShapeConfig)
                 {
@@ -516,7 +541,11 @@ namespace Systems
 
                 if (b2Body_IsValid(it->second))
                 {
-                        b2DestroyBody(it->second);
+                        const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
+                        if (b2World_IsValid(bodyWorld))
+                        {
+                                b2DestroyBody(it->second);
+                        }
                 }
 
                 const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);
