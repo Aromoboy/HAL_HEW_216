@@ -14,6 +14,7 @@
 #include <box2d/box2d.h>
 #include <box2d/collision.h>
 #include <box2d/math_functions.h>
+#include <box2d/shape_chain.h>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -636,7 +637,10 @@ namespace Systems
                                 ++meshShapes;
                         }
 
-                        if (meshBoundary.size() >= 4)
+                        // TODO: Re-enable chain shape creation once chain support is needed.
+                        constexpr bool kEnableChainShapes = false;
+
+                        if (kEnableChainShapes && meshBoundary.size() >= 4)
                         {
                                 std::vector<b2Vec2> scaledBoundary = meshBoundary;
                                 for (auto& v : scaledBoundary)
