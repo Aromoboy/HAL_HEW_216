@@ -331,7 +331,7 @@ namespace
                 desc.idxCount = static_cast<UINT>(indices.size());
                 desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-                const auto hullResult = Collision::BuildConvexHullFromMesh(desc);
+                const auto hullResult = Collision::BuildConvexHullFromMesh(desc, "Player", path);
                 summary.centroidOffset = hullResult.centroidOffset;
                 summary.hull = hullResult.hullPointsCentered;
                 std::ostringstream oss;

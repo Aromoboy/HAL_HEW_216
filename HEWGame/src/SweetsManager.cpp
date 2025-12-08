@@ -451,7 +451,7 @@ namespace
         return (kPlatformWidth * 0.5f) + sanitizedMargin;
     }
 
-    ::SweetsSpace::SweetsState EvaluateState(::SweetsSpace::ActiveSweets& sweets, ::SweetsSpace::SweetsState currentState)
+    ::SweetsSpace::SweetsState EvaluateState(::SweetsSpace::ActiveSweets& sweets, ::SweetsSpace::SweetsState currentState, const SweetsSpace::SweetsManager& manager)
     {
         if (currentState == ::SweetsSpace::SweetsState::Carried)
         {
@@ -464,23 +464,26 @@ namespace
             return ::SweetsSpace::SweetsState::Active;
         }
 
-        bool touching = false;
-        if (auto* physicsMachine = sweets.GetPhysicsMachine())
+        bool touching = manager.HasSupportingContact(sweets);
+        if (!touching)
         {
-            const b2BodyId bodyId = physicsMachine->FindBody(sweets);
-            if (b2Body_IsValid(bodyId))
+            if (auto* physicsMachine = sweets.GetPhysicsMachine())
             {
-                const int capacity = b2Body_GetContactCapacity(bodyId);
-                if (capacity > 0)
+                const b2BodyId bodyId = physicsMachine->FindBody(sweets);
+                if (b2Body_IsValid(bodyId))
                 {
-                    std::vector<b2ContactData> contacts(static_cast<std::size_t>(capacity));
-                    const int count = b2Body_GetContactData(bodyId, contacts.data(), capacity);
-                    for (int i = 0; i < count; ++i)
+                    const int capacity = b2Body_GetContactCapacity(bodyId);
+                    if (capacity > 0)
                     {
-                        if (contacts[i].manifold.pointCount > 0)
+                        std::vector<b2ContactData> contacts(static_cast<std::size_t>(capacity));
+                        const int count = b2Body_GetContactData(bodyId, contacts.data(), capacity);
+                        for (int i = 0; i < count; ++i)
                         {
-                            touching = true;
-                            break;
+                            if (contacts[i].manifold.pointCount > 0)
+                            {
+                                touching = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -894,7 +897,7 @@ namespace
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        const auto rawHull = Collision::BuildConvexHullFromMesh(desc);
+        const auto rawHull = Collision::BuildConvexHullFromMesh(desc, normalizedKind, path);
         const std::vector<float2> originalHull = rawHull.hullPointsCentered;
         constexpr std::size_t kMinHullPoints = 6;
         constexpr std::size_t kMaxHullPoints = 12;
@@ -1061,6 +1064,79 @@ namespace SweetsSpace
         default:
             return "Unknown";
         }
+    }
+
+    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets) const
+    {
+        auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
+        if (it == m_contactStates.end())
+        {
+            return false;
+        }
+
+        return (it->second.foundationContacts > 0) || (it->second.sweetsContacts > 0);
+    }
+
+    void SweetsManager::UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other)
+    {
+        if (!sweets || !other)
+        {
+            return;
+        }
+
+        ContactState& state = m_contactStates[sweets];
+        const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
+        if (otherLayer == Collision::CollisionLayer::Floor)
+        {
+            ++state.foundationContacts;
+        }
+        else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
+        {
+            ++state.sweetsContacts;
+        }
+    }
+
+    void SweetsManager::UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other)
+    {
+        if (!sweets || !other)
+        {
+            return;
+        }
+
+        auto it = m_contactStates.find(sweets);
+        if (it == m_contactStates.end())
+        {
+            return;
+        }
+
+        ContactState& state = it->second;
+        const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
+        if (otherLayer == Collision::CollisionLayer::Floor && state.foundationContacts > 0)
+        {
+            --state.foundationContacts;
+        }
+        else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
+        {
+            if (state.sweetsContacts > 0)
+            {
+                --state.sweetsContacts;
+            }
+        }
+
+        if (state.foundationContacts <= 0 && state.sweetsContacts <= 0)
+        {
+            m_contactStates.erase(it);
+        }
+    }
+
+    void SweetsManager::ClearContactState(ActiveSweets* sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        m_contactStates.erase(sweets);
     }
 
     std::optional<SweetsManager::FactoryPreset> SweetsManager::BuildDefaultFactoryPreset(SweetsType type)
@@ -1605,7 +1681,7 @@ namespace SweetsSpace
 
                     sweets->OnUpdate(ctx);
 
-                    const SweetsState desiredState = EvaluateState(*sweets, bucketState);
+                    const SweetsState desiredState = EvaluateState(*sweets, bucketState, *this);
                     if (desiredState != bucketState)
                     {
                         stateChanges.push_back({ sweets, desiredState });
@@ -1824,6 +1900,8 @@ namespace SweetsSpace
     void SweetsManager::ClearAllSweets()
     {
         ForceSpawnRefresh();
+
+        m_contactStates.clear();
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
@@ -2326,6 +2404,7 @@ namespace SweetsSpace
         }
 
         const SweetsState previousState = found->second;
+        ClearContactState(sweets.get());
         sweets->MarkPendingDestroy();
         sweets->Enable(false);
 
@@ -2825,6 +2904,16 @@ namespace SweetsSpace
             return;
         }
 
+        if (sweetsA)
+        {
+            UpdateContactStateBegin(sweetsA, b);
+        }
+
+        if (sweetsB)
+        {
+            UpdateContactStateBegin(sweetsB, a);
+        }
+
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
@@ -2846,6 +2935,16 @@ namespace SweetsSpace
         if (!sweetsA && !sweetsB)
         {
             return;
+        }
+
+        if (sweetsA)
+        {
+            UpdateContactStateEnd(sweetsA, b);
+        }
+
+        if (sweetsB)
+        {
+            UpdateContactStateEnd(sweetsB, a);
         }
 
         if (!m_loggedContactNotification)

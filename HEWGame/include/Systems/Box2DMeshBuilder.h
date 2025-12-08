@@ -36,6 +36,7 @@ namespace Systems
 
     // Shared polygon extraction helper (also used by tests/harnesses).
     std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshBuffer::Description& desc,
-        std::vector<b2Vec2>* outBoundary = nullptr);
+        std::vector<b2Vec2>* outBoundary = nullptr,
+        const std::string& modelPath = {});
 }
 

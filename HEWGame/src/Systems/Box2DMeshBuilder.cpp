@@ -35,7 +35,7 @@ namespace
 
 namespace Systems
 {
-    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshBuffer::Description& desc, std::vector<b2Vec2>* outBoundary)
+    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshBuffer::Description& desc, std::vector<b2Vec2>* outBoundary, const std::string& modelPath)
     {
         std::vector<std::vector<b2Vec2>> polygons;
         Collision::Mesh2DExtraction extraction = Collision::ExtractProjectedPolygons(desc);
@@ -72,7 +72,7 @@ namespace Systems
             return polygons;
         }
 
-        const Collision::HullBuildResult hullResult = Collision::BuildConvexHullFromMesh(desc);
+        const Collision::HullBuildResult hullResult = Collision::BuildConvexHullFromMesh(desc, {}, modelPath);
         if (!hullResult.hullPointsCentered.empty())
         {
             std::vector<b2Vec2> hull;
@@ -186,7 +186,7 @@ namespace Systems
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        fixtures.polygons = BuildPolygonsFromMesh(desc, &fixtures.boundary);
+        fixtures.polygons = BuildPolygonsFromMesh(desc, &fixtures.boundary, modelPath);
 
         std::ostringstream oss;
         oss << kLogPrefix << "Built Box2D fixtures from '" << modelPath << "'"

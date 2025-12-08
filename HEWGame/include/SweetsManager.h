@@ -243,6 +243,12 @@ namespace SweetsSpace
         bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
+        struct ContactState
+        {
+            int foundationContacts{ 0 };
+            int sweetsContacts{ 0 };
+        };
+        std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
@@ -268,6 +274,10 @@ namespace SweetsSpace
             const char* context,
             bool logWarnings,
             DeleteBatchContext* batchContext);
+        bool HasSupportingContact(const ActiveSweets& sweets) const;
+        void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        void ClearContactState(ActiveSweets* sweets);
 
         static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
         static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);
