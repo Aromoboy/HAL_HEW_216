@@ -66,7 +66,7 @@ namespace Systems
 
                 if (m_contactListener)
                 {
-                        m_contactListener->ProcessContacts(m_worldId);
+                        m_contactListener->ProcessContacts();
                 }
         }
 
@@ -105,6 +105,11 @@ namespace Systems
         void Box2DPhysicsSystem::SetContactListener(std::shared_ptr<Box2DContactListener> listener)
         {
                 m_contactListener = std::move(listener);
+
+                if (m_contactListener)
+                {
+                        m_contactListener->SetWorld(m_worldId);
+                }
         }
 
         void Box2DPhysicsSystem::SetPhysicsMachine(PhysicsMachine* physicsMachine)
@@ -123,6 +128,11 @@ namespace Systems
                 {
                         b2DestroyWorld(m_worldId);
                         m_worldId = b2_nullWorldId;
+                }
+
+                if (m_contactListener)
+                {
+                        m_contactListener->SetWorld(b2_nullWorldId);
                 }
         }
 }
