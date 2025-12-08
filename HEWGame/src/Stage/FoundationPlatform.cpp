@@ -1,6 +1,7 @@
 #include "Stage/FoundationPlatform.h"
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -43,8 +44,6 @@ namespace
         unsigned int nullMaterials{ 0 };
     };
 
-    constexpr float3 kFallbackColliderExtents{ 0.5f, 0.85f, 0.5f };
-
     float3 SafeScale(const Transform& transform)
     {
         float3 scale = transform.scale;
@@ -72,6 +71,17 @@ namespace
         const float3 safeScale = SafeScale(transform);
         const float3 expand = CalculateExpandFromExtents(extents, safeScale);
         return std::make_shared<Collision::AABBCollider>(transform, false, expand, center, Collision::CollisionLayer::Floor);
+    }
+
+    AABB BuildDescriptorLocalBounds(const Transform& transform)
+    {
+        const float halfX = std::max(0.0f, std::abs(transform.scale.x) * 0.5f);
+        const float halfY = std::max(0.0f, std::abs(transform.scale.y) * 0.5f);
+        const float halfZ = std::max(0.0f, std::abs(transform.scale.z) * 0.5f);
+
+        return AABB(
+            float3{ halfX, halfY, halfZ },
+            float3{ -halfX, -halfY, -halfZ });
     }
 
     std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
@@ -162,20 +172,24 @@ namespace Stage
         , m_anchorTransform(transform)
         , m_model(nullptr)
         , m_debugColor(SanitizeColor(color))
+        , m_descriptorLocalBounds(BuildDescriptorLocalBounds(transform))
     {
         LoadPlatformModel();
 
         if (!m_collider)
         {
-            if (m_model && m_model->HasLocalBounds())
+            const bool modelHasBounds = m_model && m_model->HasLocalBounds();
+            if (modelHasBounds)
             {
                 m_collider = CreateColliderFromBounds(transform, m_model->GetLocalBounds());
             }
             else
             {
-                const float3 safeScale = SafeScale(transform);
-                const float3 expand = CalculateExpandFromExtents(kFallbackColliderExtents, safeScale);
-                m_collider = std::make_shared<Collision::AABBCollider>(transform, false, expand, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
+                std::ostringstream oss;
+                oss << kLogPrefix << "Platform model is unavailable or missing local bounds; using descriptor dimensions for collider.\n";
+                DebugTrace(oss.str());
+
+                m_collider = CreateColliderFromBounds(transform, m_descriptorLocalBounds);
             }
         }
 
@@ -256,8 +270,35 @@ namespace Stage
             return;
         }
 
+        if (!baseModel->HasLocalBounds())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Render model missing local bounds; will fallback to descriptor dimensions.\n";
+            DebugTrace(oss.str());
+        }
+
         ModelCloneStats cloneStats{};
         m_model = CloneModelWithUniqueMaterials(*baseModel, cloneStats);
+
+        if (!m_model)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Failed to clone platform model for unique materials.\n";
+            DebugTrace(oss.str());
+            return;
+        }
+
+        if (!m_model->HasLocalBounds())
+        {
+            m_model->SetLocalBounds(m_descriptorLocalBounds);
+
+            const float3 extents = m_descriptorLocalBounds.Extents();
+            std::ostringstream oss;
+            oss << kLogPrefix << "Applied descriptor local bounds extents ("
+                << extents.x << ',' << extents.y << ',' << extents.z
+                << ") to platform model due to missing FBX bounds.\n";
+            DebugTrace(oss.str());
+        }
 
         std::ostringstream oss;
         oss << kLogPrefix << "Loaded platform model from '" << kPlatformModelPath
