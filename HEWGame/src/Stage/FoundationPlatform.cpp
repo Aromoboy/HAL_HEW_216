@@ -176,12 +176,6 @@ namespace Stage
         , m_debugColor(SanitizeColor(color))
         , m_descriptorLocalBounds(BuildDescriptorLocalBounds(transform))
     {
-        if (auto* machine = GetPhysicsMachine())
-        {
-            machine->UnregisterBody(*this);
-            machine->RegisterBody(*this);
-        }
-
         LoadPlatformModel();
 
         Physics::BoxColliderComponent colliderComponent;
@@ -231,6 +225,14 @@ namespace Stage
             }
         }
 
+        Physics::Box2DShapeConfig shapeConfig{};
+        shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
+        shapeConfig.bodyType = b2_staticBody;
+        shapeConfig.density = 0.0f;
+        shapeConfig.friction = colliderComponent.shapeDef.material.friction;
+        shapeConfig.restitution = colliderComponent.shapeDef.material.restitution;
+
+        SetBox2DShapeConfig(shapeConfig);
         SetBoxColliderComponent(std::move(colliderComponent));
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
@@ -255,8 +257,6 @@ namespace Stage
     void FoundationPlatform::OnUpdate(Core::UpdateContext& ctx)
     {
         (void)ctx;
-        SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
-
         SetTransform(m_anchorTransform);
     }
 

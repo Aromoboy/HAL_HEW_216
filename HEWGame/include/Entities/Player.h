@@ -53,35 +53,35 @@ namespace Entities
         void SetPickupArea(float width, float height, float forwardOffset);
 
     private:
-        std::shared_ptr<Render::Model> m_fairyModel;
-        SweetsSpace::SweetsManager* m_sweetsManager;
-        std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
-        int m_maxCarry;
-        float m_pickupHalfWidth;
-        float m_pickupHalfHeight;
-        float m_pickupForwardOffset;
-        float3 m_carryOffset;
-        float m_dropUpwardBoost;
-        bool m_isKinematic;
-        float m_baseHorizontalMoveSpeed;
-        float m_baseVerticalMoveSpeed;
-        float m_speedMultiplier;
-        bool m_hasMinimumY;
-        float m_minimumY;
-        bool m_missingModelWarned;
-        bool m_hasScreenBounds;
-        float m_minScreenX;
-        float m_maxScreenX;
-        bool m_hasMaximumY;
-        float m_maximumY;
+    std::shared_ptr<Render::Model> m_fairyModel;
+    SweetsSpace::SweetsManager* m_sweetsManager;
+    std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+    int m_maxCarry;
+    float m_pickupHalfWidth;
+    float m_pickupHalfHeight;
+    float m_pickupForwardOffset;
+    float3 m_carryOffset;
+    float m_dropUpwardBoost;
+    bool m_isKinematic;
+    float m_baseHorizontalMoveSpeed;
+    float m_baseVerticalMoveSpeed;
+    float m_speedMultiplier;
+    bool m_hasMinimumY;
+    float m_minimumY;
+    bool m_missingModelWarned;
+    bool m_hasScreenBounds;
+    float m_minScreenX;
+    float m_maxScreenX;
+    bool m_hasMaximumY;
+    float m_maximumY;
 
-        float3 ComputeCarryAnchor() const;
-        void UpdateCarriedSweets();
-        void HandleCarryInput(Core::UpdateContext& ctx);
-        void TryPickupNearest();
-        void DropCarriedSweets();
-        void ClampVerticalPosition();
-        void ClampScreenBounds();
+    float3 ComputeCarryAnchor() const;
+    void UpdateCarriedSweets();
+    void HandleCarryInput(Core::UpdateContext& ctx);
+    void TryPickupNearest();
+    void DropCarriedSweets();
+    void ClampVerticalPosition();
+    void ClampScreenBounds();
     };
 }
 

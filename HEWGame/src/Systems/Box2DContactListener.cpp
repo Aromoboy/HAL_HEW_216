@@ -33,14 +33,14 @@ namespace
 
 namespace Systems
 {
-        void Box2DContactListener::ProcessContacts(b2WorldId worldId)
+        void Box2DContactListener::ProcessContacts()
         {
-                if (!b2World_IsValid(worldId))
+                if (!b2World_IsValid(m_worldId))
                 {
                         return;
                 }
 
-                const b2ContactEvents events = b2World_GetContactEvents(worldId);
+                const b2ContactEvents events = b2World_GetContactEvents(m_worldId);
 
                 // The event buffers (beginEvents/endEvents/hitEvents) are owned by Box2D and stay
                 // valid until the next world step. They must not be freed by the listener.
@@ -102,6 +102,11 @@ namespace Systems
         void Box2DContactListener::EnableMeshContactLogging(bool enabled)
         {
                 m_logMeshContacts = enabled;
+        }
+
+        void Box2DContactListener::SetWorld(b2WorldId worldId)
+        {
+                m_worldId = worldId;
         }
 
         void Box2DContactListener::SetPhysicsMachine(PhysicsMachine* physicsMachine)

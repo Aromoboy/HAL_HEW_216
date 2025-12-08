@@ -6,17 +6,22 @@
 
 namespace Physics
 {
-    // Simple collider component that pre-builds Box2D shapes for an entity.
+    // Simple collider component that pre-builds Box2D shapes for an entity and stores created bodies/fixtures.
     struct BoxColliderComponent
     {
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
         std::vector<b2Polygon> polygons;
         std::vector<b2Circle> circles;
+        b2BodyId bodyId{ b2_nullBodyId };
+        std::vector<b2ShapeId> fixtures;
 
         void Clear()
         {
             polygons.clear();
             circles.clear();
+            fixtures.clear();
+            bodyId = b2_nullBodyId;
+            shapeDef = b2DefaultShapeDef();
         }
 
         bool Empty() const
@@ -54,6 +59,55 @@ namespace Physics
             }
 
             circles.push_back(b2Circle{ b2Vec2{ 0.0f, 0.0f }, radius });
+        }
+
+        void Destroy(b2WorldId worldId)
+        {
+            if (!b2World_IsValid(worldId))
+            {
+                return;
+            }
+
+            for (const b2ShapeId fixtureId : fixtures)
+            {
+                if (b2Shape_IsValid(fixtureId))
+                {
+                    b2DestroyShape(fixtureId, true);
+                }
+            }
+            fixtures.clear();
+
+            if (b2Body_IsValid(bodyId))
+            {
+                b2DestroyBody(bodyId);
+            }
+
+            bodyId = b2_nullBodyId;
+        }
+
+        void CreateFixtures(b2BodyId body, const b2ShapeDef& baseShapeDef)
+        {
+            bodyId = body;
+            fixtures.clear();
+
+            b2ShapeDef shapeDef = baseShapeDef;
+            for (const auto& polygon : polygons)
+            {
+                const b2ShapeId shapeId = b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
+                if (b2Shape_IsValid(shapeId))
+                {
+                    fixtures.push_back(shapeId);
+                }
+            }
+
+            for (const auto& circle : circles)
+            {
+                const b2ShapeId shapeId = b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                if (b2Shape_IsValid(shapeId))
+                {
+                    fixtures.push_back(shapeId);
+                }
+            }
         }
     };
 }

@@ -2098,7 +2098,10 @@ SceneGame::~SceneGame()
 
         if (m_physicsRegistered && m_physicsMachine)
         {
-                GetUpdateScheduler().Unregister(*m_physicsMachine);
+                if (auto system = m_physicsMachine->GetBox2DSystem())
+                {
+                        GetUpdateScheduler().Unregister(*system);
+                }
                 m_physicsRegistered = false;
         }
 
@@ -2172,8 +2175,11 @@ void SceneGame::ConfigureUpdates()
 
         if (m_physicsMachine && !m_physicsRegistered)
         {
-                GetUpdateScheduler().Register(*m_physicsMachine);
-                m_physicsRegistered = true;
+                if (auto system = m_physicsMachine->GetBox2DSystem())
+                {
+                        GetUpdateScheduler().Register(*system);
+                        m_physicsRegistered = true;
+                }
         }
 
         if (m_drawSystem && !m_drawRegistered)
@@ -3326,6 +3332,10 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     if (m_physicsMachine)
     {
         m_physicsMachine->Enable(enabled);
+        if (auto system = m_physicsMachine->GetBox2DSystem())
+        {
+            system->Enable(enabled);
+        }
     }
     if (m_sweetsManager)
     {

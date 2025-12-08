@@ -86,6 +86,12 @@ namespace Entities
         static float ToWorldAngle(float box2dRadians);
         static float ToBox2DLength(float worldLength);
         static float ToWorldLength(float box2dLength);
+        static void SetWorldToBox2DScale(float scale);
+        static float GetWorldToBox2DScale();
+        static float GetBox2DToWorldScale();
+
+        void SetTransformViaPhysics(const float3& position, const float3& rotation);
+        void SetPositionViaPhysics(const float3& position);
 
         void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons,
                           const std::vector<b2Vec2>& boundary);
@@ -97,6 +103,11 @@ namespace Entities
         void SetBoxColliderComponent(std::optional<Physics::BoxColliderComponent> component)
         {
             m_boxColliderComponent = std::move(component);
+        }
+
+        std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent()
+        {
+            return m_boxColliderComponent;
         }
 
         const std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent() const

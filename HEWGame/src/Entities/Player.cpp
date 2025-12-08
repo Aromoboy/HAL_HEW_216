@@ -4,6 +4,7 @@
 #include "Core/Input.h"
 #include "ICollider.h"
 #include "ModelCache.h"
+#include "Systems/PhysicsMachine.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
@@ -234,7 +235,7 @@ namespace
 namespace Entities
 {
     Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
-        : PhysicalEntity(transform, std::move(collider), collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
+        : PhysicalEntity(transform, std::move(collider), collisionLayer, std::move(model), nullptr, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
@@ -319,6 +320,11 @@ namespace Entities
     {
         SyncTransformFromBox2DBody();
 
+        if (!HasValidBody())
+        {
+            return;
+        }
+
         Core::Input& input = ctx.input;
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
@@ -336,22 +342,14 @@ namespace Entities
                 SetLinearVelocity(desired);
 
 #if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kPlayerLogPrefix << "Move input hx=" << horizontal
-                    << " vy=" << vertical
-                    << " baseXY=(" << m_baseHorizontalMoveSpeed << ',' << m_baseVerticalMoveSpeed << ')'
-                    << " mult=" << m_speedMultiplier
-                    << " velocity=(" << desired.x << ',' << desired.y << ")\n";
-                PlayerDebugTrace(oss.str());
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Move input hx=" << horizontal
+                << " vy=" << vertical
+                << " baseXY=(" << m_baseHorizontalMoveSpeed << ',' << m_baseVerticalMoveSpeed << ')'
+                << " mult=" << m_speedMultiplier
+                << " velocity=(" << desired.x << ',' << desired.y << ")\n";
+            PlayerDebugTrace(oss.str());
 #endif
-            }
-            else
-            {
-                float3 translation{ 0.0f, 0.0f, 0.0f };
-                translation.x = horizontal * effectiveHorizontalSpeed * ctx.dt;
-                translation.y = vertical * effectiveVerticalSpeed * ctx.dt;
-                ApplyTranslation(translation);
-            }
         }
         else if (HasBox2DBody())
         {
@@ -621,6 +619,12 @@ namespace Entities
 
     float3 Player::ComputeCarryAnchor() const
     {
+        if (HasValidBody())
+        {
+            const float3 position = ToWorldPosition(b2Body_GetPosition(m_bodyId));
+            return float3{ position.x + m_carryOffset.x, position.y + m_carryOffset.y, position.z + m_carryOffset.z };
+        }
+
         return float3{
             m_transform.position.x + m_carryOffset.x,
             m_transform.position.y + m_carryOffset.y,
@@ -633,6 +637,8 @@ namespace Entities
         {
             return;
         }
+
+        SyncTransformFromBody();
 
         for (auto& it : m_carrieds)
         {
@@ -685,6 +691,7 @@ namespace Entities
             return;
         }
 
+        SyncTransformFromBody();
         collider->UpdateBounds(m_transform);
         const AABB colliderBounds = collider->GetAABB();
         const float boundsCenterX = (colliderBounds.min.x + colliderBounds.max.x) * 0.5f;
@@ -777,7 +784,7 @@ namespace Entities
         Transform updated = current;
         updated.position = ComputeCarryAnchor();
         updated.rotation = m_transform.rotation;
-        candidate->SetTransform(updated);
+        candidate->SetTransformViaPhysics(updated.position, updated.rotation);
 
         candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
@@ -798,7 +805,7 @@ namespace Entities
         };
 
         auto sweets = m_carrieds.back();
-        sweets->SetPosition(ComputeCarryAnchor());
+        sweets->SetPositionViaPhysics(ComputeCarryAnchor());
 
         const float3 bodyVelocity = GetLinearVelocity();
         float3 releaseVelocity = bodyVelocity;
@@ -834,21 +841,6 @@ namespace Entities
 
         if (!HasBox2DBody())
         {
-            const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
-            float3 position = transform.position;
-            if (position.y >= m_minimumY)
-            {
-                return;
-            }
-
-            const float previousY = position.y;
-            position.y = m_minimumY;
-            SetPosition(position);
-
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
-                << m_minimumY << " (platform boundary, legacy transform).\n";
-            PlayerDebugTrace(oss.str());
             return;
         }
 
@@ -885,39 +877,6 @@ namespace Entities
 
         if (!HasBox2DBody())
         {
-            const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
-            float3 position = transform.position;
-            const float originalX = position.x;
-            const float originalY = position.y;
-
-            const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
-            float clampedY = position.y;
-            if (m_hasMaximumY)
-            {
-                clampedY = std::min(clampedY, m_maximumY);
-            }
-
-            if (clampedX == originalX && clampedY == originalY)
-            {
-                return;
-            }
-
-            position.x = clampedX;
-            position.y = clampedY;
-            SetPosition(position);
-
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
-                << " prevY=" << originalY
-                << " newX=" << position.x
-                << " newY=" << position.y
-                << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
-            if (m_hasMaximumY)
-            {
-                oss << " maxY=" << m_maximumY;
-            }
-            oss << "\n";
-            PlayerDebugTrace(oss.str());
             return;
         }
 
