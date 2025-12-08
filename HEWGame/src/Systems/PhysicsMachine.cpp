@@ -514,7 +514,7 @@ namespace Systems
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
                 bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
-                bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
+                bodyDef.orientation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
                 // 重力スケール（動的ボディのみ適用）
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
                 bodyDef.userData = &body;
