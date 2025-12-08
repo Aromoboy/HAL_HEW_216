@@ -1,9 +1,11 @@
 #include "Systems/Box2DContactListener.h"
 
+#include <cstdint>
 #include <span>
 #include <sstream>
 
 #include <box2d/collision.h>
+#include <box2d/id.h>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -170,10 +172,18 @@ namespace Systems
 
                 if (m_physicsMachine)
                 {
+                        const uint64_t targetKey = b2StoreBodyId(bodyId);
                         const auto& bodies = m_physicsMachine->GetBodies();
                         for (Entities::PhysicalEntity* entity : bodies)
                         {
-                                if (entity && B2_ID_EQUALS(entity->GetBox2DBodyId(), bodyId))
+                                if (!entity)
+                                {
+                                        continue;
+                                }
+
+                                const b2BodyId entityBodyId = entity->GetBox2DBodyId();
+                                if (b2Body_IsValid(entityBodyId)
+                                        && b2StoreBodyId(entityBodyId) == targetKey)
                                 {
                                         return entity;
                                 }
