@@ -329,7 +329,7 @@ namespace Systems
                 const b2BodyId bodyId = mapIt->second;
                 const b2Vec2 position = b2Body_GetPosition(bodyId);
                 const b2Rot rotation = b2Body_GetRotation(bodyId);
-                const float angle = std::atan2(rotation.s, rotation.c); 
+                const float angle = b2Rot_GetAngle(rotation);
 
                 Transform updated = body->GetTransform();
                 updated.position = Entities::PhysicalEntity::ToWorldPosition(position);
