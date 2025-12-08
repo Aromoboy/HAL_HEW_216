@@ -474,7 +474,7 @@ namespace Systems
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
         bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
         bodyDef.rotation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
-        bodyDef.fixedRotation = hasShapeConfig ? shapeConfig->fixedRotation : false;
+        bodyDef.motionLocks.angularZ = hasShapeConfig ? shapeConfig->fixedRotation : false;
         bodyDef.angularDamping = hasShapeConfig ? std::max(0.0f, shapeConfig->angularDamping) : bodyDef.angularDamping;
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
@@ -522,7 +522,7 @@ namespace Systems
     std::ostringstream oss;
     oss << "[PhysicsMachine] Creating body tag='" << body.GetTag() << "'"
         << " bodyType=" << ToString(bodyDef.type)
-        << " fixedRotation=" << std::boolalpha << bodyDef.fixedRotation
+        << " lockAngularZ=" << std::boolalpha << bodyDef.motionLocks.angularZ
         << " angularDamping=" << bodyDef.angularDamping
         << " shapeType=" << ToString(hasShapeConfig ? shapeConfig->type : Physics::Box2DShapeConfig::Type::None)
         << " density=" << shapeDef.density
