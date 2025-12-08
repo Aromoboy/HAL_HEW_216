@@ -48,6 +48,40 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
 
+    std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
+    {
+        if (vertices.empty())
+        {
+            return std::nullopt;
+        }
+
+        float3 min
+        {
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+        };
+        float3 max
+        {
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+        };
+
+        for (const auto& vertex : vertices)
+        {
+            min.x = std::min(min.x, vertex.pos.x);
+            min.y = std::min(min.y, vertex.pos.y);
+            min.z = std::min(min.z, vertex.pos.z);
+
+            max.x = std::max(max.x, vertex.pos.x);
+            max.y = std::max(max.y, vertex.pos.y);
+            max.z = std::max(max.z, vertex.pos.z);
+        }
+
+        return AABB(max, min);
+    }
+
     std::shared_ptr<Render::Model> CreateProceduralFairyModel()
     {
         static std::weak_ptr<Render::Model> cached;
@@ -149,9 +183,16 @@ namespace
             DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
             nullptr);
 
+        const std::optional<AABB> bounds = ComputeBounds(vertices);
+
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
             std::vector<std::shared_ptr<MaterialDX>>{mat});
+
+        if (bounds)
+        {
+            model->SetLocalBounds(*bounds);
+        }
 
         cached = model;
         return model;
