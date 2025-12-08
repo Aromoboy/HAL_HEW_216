@@ -196,7 +196,7 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawSprite(m_cost, world, view, proj);
 }
 
-void PowerUpRenderer::DrawCursor(const CameraSpace::ICamera& camera)
+void PowerUpRenderer::DrawCursor(float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
 {
 	const DirectX::XMFLOAT4X4& view = camera.GetView();
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
@@ -206,19 +206,21 @@ void PowerUpRenderer::DrawCursor(const CameraSpace::ICamera& camera)
 	float3 scale;
 	float2 offset;
 
-	offset.x = kBackFramePositionOffset.x * data.drawScale.x;
-	offset.y = kBackFramePositionOffset.y * data.drawScale.y;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
+	offset.x = kBackFramePositionOffset.x * a_scale.x;
+	offset.y = kBackFramePositionOffset.y * a_scale.y;
+	position.x = a_position.x + offset.x;
+	position.y = a_position.y + offset.y;
 	position.z = 1.0f;
-	scale.x = data.drawScale.x * kBackFrameScaleOffset;
-	scale.y = data.drawScale.y * kBackFrameScaleOffset;
+	scale.x = a_scale.x * kBackFrameScaleOffset;
+	scale.y = a_scale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
 	DrawSprite(m_backFrame, world, view, proj);
 }
+
+
 
 void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::ICamera& camera)
 {

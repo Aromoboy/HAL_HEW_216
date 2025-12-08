@@ -53,23 +53,19 @@ void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
 
 
 
-void PowerUpCursor::Draw(SpriteRenderer& render, const CameraSpace::ICamera& camera)
+void PowerUpCursor::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera)
 {
-	Transform trans;
 
 	std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);
 	
 	float2 drawPosition = result ? result.value() : float2{ 0.0f, 0.0f };
-	trans.position = float3{ drawPosition.x, drawPosition.y, 1.0f };
-
+	
 	result = m_powerUpManager->GetDrawScale(m_index);
 
 	float2 drawScale = result ? result.value() : float2{ 1.0f, 1.0f };
-	trans.scale = float3{ drawScale.x, drawScale.y, 1.0f };
-
-	trans.rotation = float3{ 0.0f,0.0f,0.0f };
-
-	render.Draw(*m_texture, trans, &camera);
+	
+	
+	render.DrawCursor(drawPosition, drawScale, camera);
 }
 
 

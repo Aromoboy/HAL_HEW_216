@@ -84,8 +84,8 @@ namespace SceneSpace
 	ScenePowerUp::~ScenePowerUp()
 	{
 		m_powerUpRenderer->Shutdown();
-		Register(*m_rig);
-		Register(*m_cursor);
+		Unregister(*m_rig);
+		Unregister(*m_cursor);
 		Unregister(*m_powerUpManager);
 	}
 
@@ -120,7 +120,7 @@ namespace SceneSpace
 
 		m_powerUpRenderer->DrawHud(*activeCamera);
 		m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
-		//m_cursor->Draw(*m_spriteRenderer, *activeCamera);
+		m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
 	}
 
 	bool ScenePowerUp::LoadPowerUpFile()

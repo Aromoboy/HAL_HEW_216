@@ -44,7 +44,7 @@ float2 PowerUpNode::GetDrawPos()
 
 float2 PowerUpNode::GetDrawScale()
 {
-	float2 ret{ m_drawScale.x * kBackScale, m_drawScale.y };
+	float2 ret{ m_drawScale.x, m_drawScale.y };
 	return ret;
 }
 

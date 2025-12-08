@@ -3,7 +3,7 @@
 #include "PowerUpCursor.h"
 #include "Core/UpdateNode.h"
 #include "PowerUpManager.h"
-#include "SpriteRenderer.h"
+#include "PowerUpRenderer.h"
 #include "TextureDX.h"
 #include <memory>
 
@@ -16,7 +16,7 @@ public:
 
 	void OnUpdate(Core::UpdateContext& ctx) final;
 
-	void Draw(SpriteRenderer& render, const CameraSpace::ICamera& camera);
+	void Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera);
 
 	float2 GetDrawPos();
 

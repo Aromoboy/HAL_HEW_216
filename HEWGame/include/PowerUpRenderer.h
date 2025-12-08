@@ -156,7 +156,7 @@ public:
 	void Shutdown();
 
 	void DrawHud(const CameraSpace::ICamera& camera);
-	void DrawCursor(const CameraSpace::ICamera&);
+	void DrawCursor(float2 a_position, float2 a_scale, const CameraSpace::ICamera&);
 	void DrawNode(const NodeRenderData& data , const CameraSpace::ICamera&);
 
 
