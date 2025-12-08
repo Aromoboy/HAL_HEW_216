@@ -1846,82 +1846,79 @@ SceneGame::~SceneGame()
         }
     }
 
-        UnregisterAllPhysicsBodies();
-        if (m_inputRegistered)
+    UnregisterAllPhysicsBodies();
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
         {
-                if (auto* input = GetInput())
-                {
-                        Unregister(*input);
-                }
-                m_inputRegistered = false;
+            Unregister(*input);
         }
+        m_inputRegistered = false;
+    }
 
-        if (m_physicsRegistered && m_physicsMachine)
+    if (m_physicsRegistered && m_physicsMachine)
+    {
+        GetUpdateScheduler().Unregister(*m_physicsMachine);
+        m_physicsRegistered = false;
+    }
+
+    if (m_cameraRigRegistered && m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+        m_cameraRigRegistered = false;
+    }
+
+    if (m_drawRegistered && m_drawSystem)
+    {
+        GetUpdateScheduler().Unregister(*m_drawSystem);
+        m_drawRegistered = false;
+    }
+
+    if (m_sweetsLateRegistered && m_sweetsManager)
+    {
+        if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
         {
-            GetUpdateScheduler().Register(*m_physicsMachine);
-                m_physicsRegistered = false;
+            GetUpdateScheduler().Unregister(*lateNode);
         }
+        m_sweetsLateRegistered = false;
+    }
 
-        if (m_cameraRigRegistered && m_cameraRig)
-        {
-                Unregister(*m_cameraRig);
-                m_cameraRigRegistered = false;
-        }
+    if (m_sweetsRegistered && m_sweetsManager)
+    {
+        GetUpdateScheduler().Unregister(*m_sweetsManager);
+        m_sweetsRegistered = false;
+    }
 
-        if (m_drawRegistered && m_drawSystem)
-        {
-                GetUpdateScheduler().Unregister(*m_drawSystem);
-                m_drawRegistered = false;
-        }
-
-        if (m_sweetsLateRegistered && m_sweetsManager)
-        {
-                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
-                {
-                        GetUpdateScheduler().Unregister(*lateNode);
-                }
-                m_sweetsLateRegistered = false;
-        }
-
-        if (m_sweetsRegistered && m_sweetsManager)
-        {
-                GetUpdateScheduler().Unregister(*m_sweetsManager);
-                m_sweetsRegistered = false;
-        }
-
-        if (player)
-        {
-                if (m_drawSystem)
-                {
-                        m_drawSystem->UnregisterRenderable(*player);
-                }
-                Unregister(*player);
-        }
-
+    if (player)
+    {
         if (m_drawSystem)
         {
-                m_drawSystem->ClearRenderables();
-                std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+            m_drawSystem->UnregisterRenderable(*player);
         }
+        Unregister(*player);
+    }
 
-        if (m_sweetsLateRegistered && m_sweetsManager)
-        {
-                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
-                {
-                        GetUpdateScheduler().Unregister(*lateNode);
-                }
-                m_sweetsLateRegistered = false;
-        }
-
-        if (m_sweetsRegistered && m_sweetsManager)
-        {
-                GetUpdateScheduler().Unregister(*m_sweetsManager);
-                m_sweetsRegistered = false;
-        }
+    if (m_drawSystem)
+    {
+        m_drawSystem->ClearRenderables();
+        std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+    }
 }
 
 void SceneGame::ConfigureUpdates()
 {
+        if (m_physicsMachine && !m_physicsRegistered)
+        {
+                GetUpdateScheduler().Register(*m_physicsMachine);
+                m_physicsRegistered = true;
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
+                    << static_cast<int>(m_physicsMachine->GetPhase())
+                    << ", priority=" << m_physicsMachine->GetPriority() << ").\n";
+                ::DebugTrace(oss.str());
+        }
+
         if (auto* input = GetInput())
         {
                 Register(*input);
@@ -1929,14 +1926,6 @@ void SceneGame::ConfigureUpdates()
         }
 
         RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
-
-        if (m_physicsMachine && !m_physicsRegistered)
-        {
-                if (auto system = m_physicsMachine->GetBox2DSystem())
-                {
-                        m_physicsRegistered = true;
-                }
-        }
 
         if (m_drawSystem && !m_drawRegistered)
         {
