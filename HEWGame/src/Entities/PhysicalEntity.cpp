@@ -239,7 +239,7 @@ namespace Entities
             const b2Vec2 deltaPosition = PhysicalEntity::ToBox2DVector(delta);
             const b2Vec2 targetPosition{ currentPosition.x + deltaPosition.x, currentPosition.y + deltaPosition.y };
 
-            b2Body_SetTransform(bodyId, targetPosition, b2Body_GetAngle(bodyId));
+            b2Body_SetTransform(bodyId, targetPosition, b2MakeRot(b2Body_GetAngle(bodyId)));
             entity.SyncTransformFromBox2DBody();
             return;
         }
