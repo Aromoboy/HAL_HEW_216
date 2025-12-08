@@ -512,7 +512,7 @@ namespace Systems
                                 ++meshShapes;
                         }
 
-                        if (meshBoundary.size() >= 2)
+                        if (meshBoundary.size() >= 4)
                         {
                                 std::vector<b2Vec2> scaledBoundary = meshBoundary;
                                 for (auto& v : scaledBoundary)
@@ -524,7 +524,7 @@ namespace Systems
                                 b2ChainDef chainDef = b2DefaultChainDef();
                                 chainDef.points = scaledBoundary.data();
                                 chainDef.count = static_cast<int>(scaledBoundary.size());
-                                chainDef.loop = true;
+                                chainDef.isLoop = true;
 
                                 b2ShapeDef chainShapeDef = shapeDef;
                                 chainShapeDef.density = 0.0f;
