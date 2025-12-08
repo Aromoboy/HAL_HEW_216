@@ -37,7 +37,7 @@ namespace
                         return false;
                 }
 
-                outShape = b2MakePolygon(&hull, b2_defaultPolygonRadius);
+                outShape = b2MakePolygon(&hull, 0.0f);
                 return true;
         }
 }

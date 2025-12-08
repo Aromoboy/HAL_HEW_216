@@ -278,6 +278,8 @@ namespace SweetsSpace
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
+}; 
+
 template<typename T>
 std::shared_ptr<ActiveSweets> MakeSweets(
     const std::string& tag,
@@ -287,6 +289,7 @@ std::shared_ptr<ActiveSweets> MakeSweets(
     Collision::CollisionLayer layer,
     Core::UpdatePhase phase,
     int priority)
+    
 {
   
     // モデルが無ければ生成不可
