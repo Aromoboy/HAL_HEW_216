@@ -276,60 +276,59 @@ namespace SweetsSpace
         std::string ResolveKindKey(const std::string& key) const;
         std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
 
+        template<typename T>
+        std::shared_ptr<ActiveSweets> MakeSweets(
+            const std::string& tag,
+            const std::shared_ptr<Render::Model>& model,
+            const Transform& transform,
+            const std::shared_ptr<Collision::ICollider>& collider,
+            Collision::CollisionLayer layer,
+            Core::UpdatePhase phase,
+            int priority)
+        {
+
+            // モデルが無ければ生成不可
+            if (!model)
+            {
+                return nullptr;
+            }
+
+
+            // Physical はコンストラクタで受け取らなくなったため削除
+            // Box2D ボディの生成は各 Sweets クラス内で行われる
+            auto sweets = std::make_shared<T>(
+                tag,
+                transform,
+                model,
+                collider,
+                layer,
+                this->m_physicsMachine,
+                nullptr,
+                phase,
+                priority
+            );
+
+            // 念のため（std::make_shared が失敗することはほぼないが）
+            if (!sweets)
+            {
+                return nullptr;
+            }
+
+
+            // 古い physical.velocity / force / weight / damping の設定は完全削除
+            // 新しい物理パイプラインでは b2Body に対して行うため不要
+
+            // PhysicsMachine に登録（Transform → Box2D ボディ作成）
+            if (auto* machine = sweets->GetPhysicsMachine())
+            {
+                // 安全のため一旦アンレジスターして再登録する流れを保持
+                machine->UnregisterBody(*sweets);
+                machine->RegisterBody(*sweets);
+            }
+
+            return sweets;
+        }
+
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
-}; 
-
-template<typename T>
-std::shared_ptr<ActiveSweets> MakeSweets(
-    const std::string& tag,
-    const std::shared_ptr<Render::Model>& model,
-    const Transform& transform,
-    const std::shared_ptr<Collision::ICollider>& collider,
-    Collision::CollisionLayer layer,
-    Core::UpdatePhase phase,
-    int priority)
-    
-{
-  
-    // モデルが無ければ生成不可
-    if (!model)
-    {
-        return nullptr;
-    }
-
-
-    // Physical はコンストラクタで受け取らなくなったため削除
-    // Box2D ボディの生成は各 Sweets クラス内で行われる
-    auto sweets = std::make_shared<T>(
-        tag,
-        transform,
-        model,
-        collider,
-        layer,
-        m_physicsMachine,
-        nullptr,
-        phase,
-        priority
-    );
-
-    // 念のため（std::make_shared が失敗することはほぼないが）
-    if (!sweets)
-    {
-        return nullptr;
-    }
-
-
-    // 古い physical.velocity / force / weight / damping の設定は完全削除
-    // 新しい物理パイプラインでは b2Body に対して行うため不要
-
-    // PhysicsMachine に登録（Transform → Box2D ボディ作成）
-    if (auto* machine = sweets->GetPhysicsMachine())
-    {
-        // 安全のため一旦アンレジスターして再登録する流れを保持
-        machine->UnregisterBody(*sweets);
-        machine->RegisterBody(*sweets);
-    }
-
-    return sweets;
-}
+};
