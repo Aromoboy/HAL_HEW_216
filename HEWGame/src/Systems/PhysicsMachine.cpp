@@ -227,14 +227,14 @@ namespace Systems
                 {
                         const b2WorldId worldId = GetWorldId();
                         const b2WorldId existingWorldId = b2Body_GetWorld(existing);
-                        if (existingWorldId.id == worldId.id)
+                        if (existingWorldId.key == worldId.key)
                         {
                                 m_bodies.push_back(bodyPtr);
                                 m_bodyMap.emplace(bodyPtr, existing);
 #if defined(_DEBUG)
                                 std::ostringstream oss;
-                                oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "' id="
-                                    << existing.index << "\n";
+                                oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "'"
+                                    << " worldKey=" << worldId.key << "\n";
                                 DebugTrace(oss.str());
 #endif
                                 return;
@@ -243,8 +243,8 @@ namespace Systems
 #if defined(_DEBUG)
                         std::ostringstream oss;
                         oss << "[PhysicsMachine] Ignored foreign Box2D body for tag='" << body.GetTag()
-                            << "' worldId=" << existingWorldId.id
-                            << " expectedWorld=" << worldId.id << "\n";
+                            << "' worldKey=" << existingWorldId.key
+                            << " expectedWorldKey=" << worldId.key << "\n";
                         DebugTrace(oss.str());
 #endif
                         body.SetBox2DBodyId(b2_nullBodyId);
