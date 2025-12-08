@@ -200,6 +200,35 @@ namespace
         cached = model;
         return model;
     }
+
+    Physics::Box2DShapeConfig BuildPlayerShapeConfig(Collision::ICollider* collider, const Transform& transform, bool isKinematic)
+    {
+        Physics::Box2DShapeConfig config{};
+        config.type = Physics::Box2DShapeConfig::Type::Polygon;
+        config.bodyType = isKinematic ? b2_kinematicBody : b2_dynamicBody;
+        config.density = 0.5f;
+        config.friction = 0.35f;
+        config.restitution = 0.05f;
+
+        float halfWidth = 0.35f;
+        float halfHeight = 0.5f;
+        if (collider)
+        {
+            collider->UpdateBounds(transform);
+            const AABB bounds = collider->GetAABB();
+            halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
+            halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
+        }
+
+        config.vertices = {
+            b2Vec2{ -halfWidth, -halfHeight },
+            b2Vec2{ halfWidth, -halfHeight },
+            b2Vec2{ halfWidth, halfHeight },
+            b2Vec2{ -halfWidth, halfHeight },
+        };
+
+        return config;
+    }
 }
 
 namespace Entities
@@ -227,7 +256,6 @@ namespace Entities
         , m_maxScreenX(0.0f)
         , m_hasMaximumY(false)
         , m_maximumY(0.0f)
-        , m_bodyId(b2_nullBodyId)
     {
         if (model)
         {
@@ -283,93 +311,13 @@ namespace Entities
             m_model = m_fairyModel;
         }
 
-        InitializeBody(m_transform);
-    }
-
-    bool Player::HasValidBody() const
-    {
-        return HasBox2DBody();
-    }
-
-    float3 Player::GetBodyLinearVelocity() const
-    {
-        if (!HasValidBody())
-        {
-            return float3{ 0.0f, 0.0f, 0.0f };
-        }
-
-        return ToWorldVector(b2Body_GetLinearVelocity(m_bodyId));
-    }
-
-    void Player::SetBox2DBodyId(b2BodyId bodyId)
-    {
-        m_bodyId = bodyId;
-        PhysicalEntity::SetBox2DBodyId(bodyId);
-    }
-
-    void Player::SyncTransformFromBody()
-    {
-        SyncTransformFromBox2DBody();
-        m_bodyId = GetBox2DBodyId();
-    }
-
-    void Player::InitializeBody(const Transform& transform)
-    {
-        if (!m_physicsMachine)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Box2D body creation skipped: physics machine missing.\n");
-            return;
-        }
-
-        const b2WorldId worldId = m_physicsMachine->GetWorldId();
-        if (!b2World_IsValid(worldId))
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Box2D body creation skipped: world invalid.\n");
-            return;
-        }
-
-        b2BodyDef bodyDef = b2DefaultBodyDef();
-        bodyDef.type = b2_dynamicBody;
-        bodyDef.position = ToBox2DPosition(transform.position);
-        bodyDef.rotation = b2MakeRot(ToBox2DAngle(transform.rotation.z));
-        bodyDef.linearVelocity = b2Vec2{ 0.0f, 0.0f };
-        bodyDef.gravityScale = m_isKinematic ? 0.0f : 1.0f;
-        bodyDef.linearDamping = 0.0f;
-        bodyDef.userData = this;
-
-        m_bodyId = b2CreateBody(worldId, &bodyDef);
-        if (!b2Body_IsValid(m_bodyId))
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Failed to create Box2D body for player.\n");
-            return;
-        }
-
-        Collision::ICollider* collider = GetCollider();
-        float halfWidth = 0.35f;
-        float halfHeight = 0.5f;
-        if (collider)
-        {
-            collider->UpdateBounds(transform);
-            const AABB bounds = collider->GetAABB();
-            halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
-            halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
-        }
-
-        b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.density = 0.5f;
-        shapeDef.material.friction = 0.35f;
-        shapeDef.material.restitution = 0.05f;
-
-        const b2Polygon box = b2MakeBox(ToBox2DLength(halfWidth), ToBox2DLength(halfHeight));
-        b2CreatePolygonShape(m_bodyId, &shapeDef, &box);
-
-        SetBox2DBodyId(m_bodyId);
-        SyncTransformFromBody();
+        const auto shapeConfig = BuildPlayerShapeConfig(GetCollider(), m_transform, m_isKinematic);
+        SetBox2DShapeConfig(shapeConfig);
     }
 
     void Player::OnUpdate(Core::UpdateContext& ctx)
     {
-        SyncTransformFromBody();
+        SyncTransformFromBox2DBody();
 
         Core::Input& input = ctx.input;
 
@@ -382,10 +330,10 @@ namespace Entities
         const bool canMove = (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f));
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
         {
-            if (HasValidBody())
+            if (HasBox2DBody())
             {
                 const float3 desired{ horizontal * effectiveHorizontalSpeed, vertical * effectiveVerticalSpeed, 0.0f };
-                b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(desired));
+                SetLinearVelocity(desired);
 
 #if defined(_DEBUG)
                 std::ostringstream oss;
@@ -405,9 +353,9 @@ namespace Entities
                 ApplyTranslation(translation);
             }
         }
-        else if (HasValidBody())
+        else if (HasBox2DBody())
         {
-            b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(float3{ 0.0f, 0.0f, 0.0f }));
+            SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
         }
 
         ClampVerticalPosition();
@@ -416,7 +364,7 @@ namespace Entities
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
 
-        SyncTransformFromBody();
+        SyncTransformFromBox2DBody();
     }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -695,9 +643,7 @@ namespace Entities
             updated.rotation = m_transform.rotation;
 
             it->SetTransform(updated);
-
-            Physics::Physical& physical = it->GetPhysical();
-            physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+            it->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
         }
 
     }
@@ -833,8 +779,7 @@ namespace Entities
         updated.rotation = m_transform.rotation;
         candidate->SetTransform(updated);
 
-        auto& physical = candidate->GetPhysical();
-        physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+        candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
         m_carrieds.push_back(candidate);
 
@@ -855,11 +800,10 @@ namespace Entities
         auto sweets = m_carrieds.back();
         sweets->SetPosition(ComputeCarryAnchor());
 
-        auto& sweetsPhysical = sweets->GetPhysical();
-        const float3 bodyVelocity = GetBodyLinearVelocity();
+        const float3 bodyVelocity = GetLinearVelocity();
         float3 releaseVelocity = bodyVelocity;
         releaseVelocity.y = std::max(releaseVelocity.y, m_dropUpwardBoost);
-        sweetsPhysical.SetLinearVelocity(releaseVelocity);
+        sweets->SetLinearVelocity(releaseVelocity);
 
         if (m_sweetsManager)
         {
@@ -875,7 +819,7 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Drop success tag='" << sweets->GetTag()
-            << "' velocityY=" << sweetsPhysical.GetLinearVelocity().y << "\n";
+            << "' velocityY=" << sweets->GetLinearVelocity().y << "\n";
         PlayerDebugTrace(oss.str());
 
         m_carrieds.pop_back();
@@ -888,7 +832,7 @@ namespace Entities
             return;
         }
 
-        if (!HasValidBody())
+        if (!HasBox2DBody())
         {
             const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
             float3 position = transform.position;
@@ -908,22 +852,23 @@ namespace Entities
             return;
         }
 
-        const float3 bodyPosition = ToWorldPosition(b2Body_GetPosition(m_bodyId));
+        const b2BodyId bodyId = GetBox2DBodyId();
+        const float3 bodyPosition = ToWorldPosition(b2Body_GetPosition(bodyId));
         if (bodyPosition.y >= m_minimumY)
         {
             return;
         }
 
         const float previousY = bodyPosition.y;
-        const float3 bodyVelocity = ToWorldVector(b2Body_GetLinearVelocity(m_bodyId));
+        const float3 bodyVelocity = GetLinearVelocity();
         b2Body_SetTransform(
-            m_bodyId,
+            bodyId,
             ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }),
-            b2Body_GetRotation(m_bodyId));
+            b2Body_GetRotation(bodyId));
         float3 clampedVelocity = bodyVelocity;
         clampedVelocity.y = 0.0f;
-        b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(clampedVelocity));
-        SyncTransformFromBody();
+        SetLinearVelocity(clampedVelocity);
+        SyncTransformFromBox2DBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
@@ -938,7 +883,7 @@ namespace Entities
             return;
         }
 
-        if (!HasValidBody())
+        if (!HasBox2DBody())
         {
             const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
             float3 position = transform.position;
@@ -976,7 +921,8 @@ namespace Entities
             return;
         }
 
-        const float3 position = ToWorldPosition(b2Body_GetPosition(m_bodyId));
+        const b2BodyId bodyId = GetBox2DBodyId();
+        const float3 position = ToWorldPosition(b2Body_GetPosition(bodyId));
         const float originalX = position.x;
         const float originalY = position.y;
 
@@ -993,10 +939,10 @@ namespace Entities
         }
 
         b2Body_SetTransform(
-            m_bodyId,
+            bodyId,
             ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
-            b2Body_GetRotation(m_bodyId));
-        SyncTransformFromBody();
+            b2Body_GetRotation(bodyId));
+        SyncTransformFromBox2DBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX

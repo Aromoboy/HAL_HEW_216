@@ -255,8 +255,7 @@ namespace Stage
     void FoundationPlatform::OnUpdate(Core::UpdateContext& ctx)
     {
         (void)ctx;
-        auto& physical = GetPhysical();
-        physical.SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+        SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
 
         SetTransform(m_anchorTransform);
     }

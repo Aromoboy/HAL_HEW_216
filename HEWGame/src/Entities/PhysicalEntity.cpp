@@ -76,6 +76,39 @@ namespace Entities
         return m_physical.HasBody();
     }
 
+    float3 PhysicalEntity::GetLinearVelocity() const
+    {
+        if (!HasBox2DBody())
+        {
+            return float3{ 0.0f, 0.0f, 0.0f };
+        }
+
+        return ToWorldVector(b2Body_GetLinearVelocity(m_physical.bodyId));
+    }
+
+    void PhysicalEntity::SetLinearVelocity(const float3& velocity)
+    {
+        if (!HasBox2DBody())
+        {
+            return;
+        }
+
+        b2Body_SetLinearVelocity(m_physical.bodyId, ToBox2DVector(velocity));
+    }
+
+    float PhysicalEntity::GetGravityScale() const
+    {
+        return HasBox2DBody() ? b2Body_GetGravityScale(m_physical.bodyId) : 0.0f;
+    }
+
+    void PhysicalEntity::SetGravityScale(float scale)
+    {
+        if (HasBox2DBody())
+        {
+            b2Body_SetGravityScale(m_physical.bodyId, scale);
+        }
+    }
+
     void PhysicalEntity::SyncTransformFromBox2DBody()
     {
         if (!HasBox2DBody())
