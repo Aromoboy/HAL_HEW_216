@@ -57,7 +57,7 @@ namespace Entities
     private:
         void SyncTransformFromBody();
         bool HasValidBody() const;
-        void InitializeBody(const Transform& transform);
+        void InitializeBody(const Transform& transform, Systems::PhysicsMachine* physicsMachine);
         float3 GetBodyLinearVelocity() const;
         void SetBox2DBodyId(b2BodyId bodyId) override;
 
