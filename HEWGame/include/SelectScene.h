@@ -4,6 +4,11 @@
 #include "Scene.h"
 #include "SceneManager.h"
 
+namespace CameraSpace
+{
+    class ICamera;
+}
+
 class SelectScene : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
@@ -18,7 +23,7 @@ public:
 protected:
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) override;
-    void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) override;
+    void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
 };
 
 #endif // __SELECT_SCENE_H__

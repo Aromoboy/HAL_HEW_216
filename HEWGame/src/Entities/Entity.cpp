@@ -20,7 +20,7 @@ namespace Entities
         (void)ctx;
     }
 
-    void Entity::Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
+    void Entity::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
         (void)renderer;
         (void)camera;

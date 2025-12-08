@@ -69,7 +69,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
     }
 }
 
-void TitleScene::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
+void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
     (void)activeCamera;
 }

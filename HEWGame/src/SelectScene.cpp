@@ -43,7 +43,7 @@ void SelectScene::Update(Core::UpdateContext& ctx)
     (void)ctx;
 }
 
-void SelectScene::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
+void SelectScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
     (void)activeCamera;
 }
