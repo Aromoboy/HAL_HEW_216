@@ -1,5 +1,6 @@
 #include "Systems/Box2DContactListener.h"
 
+#include <span>
 #include <sstream>
 
 #include <box2d/collision.h>
@@ -40,20 +41,21 @@ namespace Systems
 
                 const b2ContactEvents events = b2World_GetContactEvents(worldId);
 
+                // The event buffers (beginEvents/endEvents/hitEvents) are owned by Box2D and stay
+                // valid until the next world step. They must not be freed by the listener.
+
                 constexpr int kMaxLogsPerFrame = 4;
                 int loggedMeshContacts = 0;
 
-                for (int i = 0; i < events.beginCount; ++i)
+                const std::span<const b2ContactBeginTouchEvent> beginEvents =
+                    (events.beginEvents && events.beginCount > 0)
+                        ? std::span<const b2ContactBeginTouchEvent>(
+                              events.beginEvents, static_cast<size_t>(events.beginCount))
+                        : std::span<const b2ContactBeginTouchEvent>();
+                for (const b2ContactBeginTouchEvent& evt : beginEvents)
                 {
-                        const b2ContactBeginTouchEvent& evt = events.beginEvents[i];
-                        if (!b2Shape_IsValid(evt.shapeIdA) || !b2Shape_IsValid(evt.shapeIdB))
-                        {
-                                continue;
-                        }
-                        const b2BodyId bodyIdA = b2Shape_GetBody(evt.shapeIdA);
-                        const b2BodyId bodyIdB = b2Shape_GetBody(evt.shapeIdB);
-                        Entities::PhysicalEntity* entityA = GetEntityForBody(bodyIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForBody(bodyIdB);
+                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
                         BeginContact(entityA, entityB);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
@@ -68,19 +70,21 @@ namespace Systems
                         }
                 }
 
-                for (int i = 0; i < events.endCount; ++i)
+                const std::span<const b2ContactEndTouchEvent> endEvents =
+                    (events.endEvents && events.endCount > 0)
+                        ? std::span<const b2ContactEndTouchEvent>(
+                              events.endEvents, static_cast<size_t>(events.endCount))
+                        : std::span<const b2ContactEndTouchEvent>();
+                for (const b2ContactEndTouchEvent& evt : endEvents)
                 {
-                        const b2ContactEndTouchEvent& evt = events.endEvents[i];
-                        if (!b2Shape_IsValid(evt.shapeIdA) || !b2Shape_IsValid(evt.shapeIdB))
-                        {
-                                continue;
-                        }
-                        const b2BodyId bodyIdA = b2Shape_GetBody(evt.shapeIdA);
-                        const b2BodyId bodyIdB = b2Shape_GetBody(evt.shapeIdB);
-                        Entities::PhysicalEntity* entityA = GetEntityForBody(bodyIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForBody(bodyIdB);
+                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
                         EndContact(entityA, entityB);
                 }
+
+                // Contact hit events are intentionally ignored for now; Box2D owns the buffer.
+                (void)events.hitEvents;
+                (void)events.hitCount;
 
         }
 
