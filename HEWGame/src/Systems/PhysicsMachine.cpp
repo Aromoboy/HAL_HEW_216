@@ -95,6 +95,10 @@ namespace Systems
         , m_loggedMissingWorld(false)
     {
         SetSubStepCount(subStepCount);
+        if (m_box2dSystem)
+        {
+            m_box2dSystem->SetPhysicsMachine(this);
+        }
     }
 
     PhysicsMachine::~PhysicsMachine()
@@ -125,6 +129,7 @@ namespace Systems
         if (m_box2dSystem)
         {
             m_box2dSystem->SetSubStepCount(m_subStepCount);
+            m_box2dSystem->SetPhysicsMachine(this);
         }
 
         if (m_box2dSystem && m_contactListener)
@@ -180,6 +185,11 @@ namespace Systems
     PhysicsMachine::SystemPtr PhysicsMachine::GetSystem() const
     {
         return m_system;
+    }
+
+    std::shared_ptr<Box2DPhysicsSystem> PhysicsMachine::GetBox2DSystem() const
+    {
+        return m_box2dSystem;
     }
 
     PhysicsMachine::IntegratorPtr PhysicsMachine::GetIntegrator() const
@@ -285,24 +295,12 @@ namespace Systems
         m_bodies.clear();
     }
 
-    void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
+    void PhysicsMachine::SyncBodies(float dt)
     {
         const b2WorldId worldId = GetWorldId();
 
-        if (!m_system)
-        {
-            if (!m_loggedMissingSystem)
-            {
-                DebugTrace("[PhysicsMachine] No physics system configured; skipping step.\n");
-                m_loggedMissingSystem = true;
-            }
-            return;
-        }
-
         if (b2World_IsValid(worldId))
         {
-            m_system->Apply(ctx.dt);
-
             for (Entities::PhysicalEntity* body : m_bodies)
             {
                 if (!body)
@@ -320,23 +318,15 @@ namespace Systems
                     // Box2D body がない場合はレガシー積分で動かす
                     if (m_integrator)
                     {
-                        m_integrator->Integrate(*body, ctx.dt);
+                        m_integrator->Integrate(*body, dt);
                     }
                     body->SyncColliderBounds();
                     continue;
                 }
 
                 const b2BodyId bodyId = mapIt->second;
-                const b2Vec2 position = b2Body_GetPosition(bodyId);
-                const b2Rot rotation = b2Body_GetRotation(bodyId);
-                const float angle = b2Rot_GetAngle(rotation);
-
-                Transform updated = body->GetTransform();
-                updated.position = Entities::PhysicalEntity::ToWorldPosition(position);
-                updated.rotation.z = Entities::PhysicalEntity::ToWorldAngle(angle);
-
-                body->SetTransform(updated);
                 body->SetBox2DBodyId(bodyId);
+                body->SyncTransformFromBox2DBody();
                 body->SyncColliderBounds();
             }
             return;
@@ -367,11 +357,27 @@ namespace Systems
 
             if (m_integrator)
             {
-                m_integrator->Integrate(*body, ctx.dt);
+                m_integrator->Integrate(*body, dt);
             }
 
             body->SyncColliderBounds();
         }
+    }
+
+    void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
+    {
+        if (!m_system)
+        {
+            if (!m_loggedMissingSystem)
+            {
+                DebugTrace("[PhysicsMachine] No physics system configured; skipping step.\n");
+                m_loggedMissingSystem = true;
+            }
+            return;
+        }
+
+        m_system->Apply(ctx.dt);
+        SyncBodies(ctx.dt);
     }
 
     b2BodyId PhysicsMachine::CreateBody(Entities::PhysicalEntity& body)
@@ -390,7 +396,12 @@ namespace Systems
 
         const Transform& transform = body.GetTransform();
         const auto layer = body.GetCollisionLayer();
-        const auto colliderComponent = body.GetBoxColliderComponent();
+        if (!body.GetBoxColliderComponent())
+        {
+            body.SetBoxColliderComponent(Physics::BoxColliderComponent{});
+        }
+
+        auto& colliderComponent = body.GetBoxColliderComponent();
         const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
         const auto shapeConfig = body.GetBox2DShapeConfig();
         const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
@@ -532,9 +543,11 @@ namespace Systems
 
         // ShapeDef 設定
         b2ShapeDef shapeDef = b2DefaultShapeDef();
+        shapeDef.userData = &body;
         if (hasColliderComponent)
         {
             shapeDef = colliderComponent->shapeDef;
+            shapeDef.userData = &body;
         }
 
         const float configuredDensity = hasShapeConfig
@@ -548,20 +561,11 @@ namespace Systems
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
         shapeDef.filter.maskBits = ToMaskBits(layer);
 
-        // 事前に組まれた BoxColliderComponent があればそれを優先
         if (hasColliderComponent)
         {
-            for (const auto& polygon : colliderComponent->polygons)
-            {
-                b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
-            }
-
-            for (const auto& circle : colliderComponent->circles)
-            {
-                b2CreateCircleShape(bodyId, &shapeDef, &circle);
-            }
-
-            if (!colliderComponent->Empty())
+            colliderComponent->Destroy(worldId);
+            colliderComponent->CreateFixtures(bodyId, shapeDef);
+            if (!colliderComponent->fixtures.empty())
             {
                 return bodyId;
             }
@@ -570,6 +574,7 @@ namespace Systems
         // ShapeConfig から形状を作る
         if (hasShapeConfig)
         {
+            colliderComponent->shapeDef = shapeDef;
             switch (shapeConfig->type)
             {
             case Physics::Box2DShapeConfig::Type::Box:
@@ -577,7 +582,10 @@ namespace Systems
                 const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
                 const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
                 const b2Polygon box = b2MakeBox(hx, hy);
-                b2CreatePolygonShape(bodyId, &shapeDef, &box);
+                colliderComponent->Clear();
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->polygons.push_back(box);
+                colliderComponent->CreateFixtures(bodyId, shapeDef);
                 return bodyId;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
@@ -594,9 +602,11 @@ namespace Systems
                     const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
                     if (b2ValidateHull(&hull))
                     {
-                        // 半径は 0 で十分。スキン厚を気にしない簡易設定。
                         const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
-                        b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                        colliderComponent->Clear();
+                        colliderComponent->shapeDef = shapeDef;
+                        colliderComponent->polygons.push_back(shape);
+                        colliderComponent->CreateFixtures(bodyId, shapeDef);
                         return bodyId;
                     }
                 }
@@ -608,7 +618,10 @@ namespace Systems
                 const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
                     radius * std::max(transform.scale.x, transform.scale.y));
                 const b2Circle circle{ b2Vec2{0.0f, 0.0f}, scaledRadius };
-                b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                colliderComponent->Clear();
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->circles.push_back(circle);
+                colliderComponent->CreateFixtures(bodyId, shapeDef);
                 return bodyId;
             }
             default:
@@ -620,6 +633,7 @@ namespace Systems
         int meshShapes = 0;
         if (hasMeshFixtures)
         {
+            colliderComponent->Clear();
             for (const auto& polygon : meshPolygons)
             {
                 if (polygon.size() < 3)
@@ -641,13 +655,15 @@ namespace Systems
                 }
 
                 const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
-                b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                colliderComponent->polygons.push_back(shape);
                 ++meshShapes;
             }
 
             // chain shape は今のところ使わない。必要になったら b2CreateChain を使う実装にする。
             if (meshShapes > 0)
             {
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->CreateFixtures(bodyId, shapeDef);
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag()
@@ -661,7 +677,10 @@ namespace Systems
 
         // ここまで何も作られなかった場合は AABB から box を張る
         const b2Polygon box = b2MakeOffsetBox(halfWidth, halfHeight, localCenter, b2Rot_identity);
-        b2CreatePolygonShape(bodyId, &shapeDef, &box);
+        colliderComponent->Clear();
+        colliderComponent->shapeDef = shapeDef;
+        colliderComponent->polygons.push_back(box);
+        colliderComponent->CreateFixtures(bodyId, shapeDef);
 
         return bodyId;
     }
@@ -679,6 +698,12 @@ namespace Systems
             const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
             if (b2World_IsValid(bodyWorld))
             {
+                auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
+                if (colliderComponent)
+                {
+                    colliderComponent->Destroy(bodyWorld);
+                    colliderComponent->Clear();
+                }
                 b2DestroyBody(it->second);
             }
         }

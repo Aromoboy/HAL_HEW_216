@@ -306,12 +306,6 @@ namespace SweetsSpace
             if (!sweets)
                 return nullptr;
 
-            if (auto* machine = sweets->GetPhysicsMachine())
-            {
-                machine->UnregisterBody(*sweets);
-                machine->RegisterBody(*sweets);
-            }
-
             return sweets;
         }
     };

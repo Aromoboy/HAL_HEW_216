@@ -1,5 +1,6 @@
 #include "Entities/PhysicalEntity.h"
 
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -10,8 +11,8 @@
 
 namespace
 {
-    constexpr float kWorldToBox2DScale = 1.0f;
-    constexpr float kBox2DToWorldScale = 1.0f / kWorldToBox2DScale;
+    float gWorldToBox2DScale = 1.0f;
+    float gBox2DToWorldScale = 1.0f / gWorldToBox2DScale;
 }
 
 namespace Entities
@@ -76,6 +77,39 @@ namespace Entities
         return m_physical.HasBody();
     }
 
+    float3 PhysicalEntity::GetLinearVelocity() const
+    {
+        if (!HasBox2DBody())
+        {
+            return float3{ 0.0f, 0.0f, 0.0f };
+        }
+
+        return ToWorldVector(b2Body_GetLinearVelocity(m_physical.bodyId));
+    }
+
+    void PhysicalEntity::SetLinearVelocity(const float3& velocity)
+    {
+        if (!HasBox2DBody())
+        {
+            return;
+        }
+
+        b2Body_SetLinearVelocity(m_physical.bodyId, ToBox2DVector(velocity));
+    }
+
+    float PhysicalEntity::GetGravityScale() const
+    {
+        return HasBox2DBody() ? b2Body_GetGravityScale(m_physical.bodyId) : 0.0f;
+    }
+
+    void PhysicalEntity::SetGravityScale(float scale)
+    {
+        if (HasBox2DBody())
+        {
+            b2Body_SetGravityScale(m_physical.bodyId, scale);
+        }
+    }
+
     void PhysicalEntity::SyncTransformFromBox2DBody()
     {
         if (!HasBox2DBody())
@@ -107,22 +141,22 @@ namespace Entities
 
     b2Vec2 PhysicalEntity::ToBox2DPosition(const float3& worldPosition)
     {
-        return b2Vec2{ worldPosition.x * kWorldToBox2DScale, worldPosition.y * kWorldToBox2DScale };
+        return b2Vec2{ worldPosition.x * gWorldToBox2DScale, worldPosition.y * gWorldToBox2DScale };
     }
 
     float3 PhysicalEntity::ToWorldPosition(const b2Vec2& box2dPosition)
     {
-        return float3{ box2dPosition.x * kBox2DToWorldScale, box2dPosition.y * kBox2DToWorldScale, 0.0f };
+        return float3{ box2dPosition.x * gBox2DToWorldScale, box2dPosition.y * gBox2DToWorldScale, 0.0f };
     }
 
     b2Vec2 PhysicalEntity::ToBox2DVector(const float3& worldVector)
     {
-        return b2Vec2{ worldVector.x * kWorldToBox2DScale, worldVector.y * kWorldToBox2DScale };
+        return b2Vec2{ worldVector.x * gWorldToBox2DScale, worldVector.y * gWorldToBox2DScale };
     }
 
     float3 PhysicalEntity::ToWorldVector(const b2Vec2& box2dVector)
     {
-        return float3{ box2dVector.x * kBox2DToWorldScale, box2dVector.y * kBox2DToWorldScale, 0.0f };
+        return float3{ box2dVector.x * gBox2DToWorldScale, box2dVector.y * gBox2DToWorldScale, 0.0f };
     }
 
     float PhysicalEntity::ToBox2DAngle(float worldRadians)
@@ -137,12 +171,57 @@ namespace Entities
 
     float PhysicalEntity::ToBox2DLength(float worldLength)
     {
-        return worldLength * kWorldToBox2DScale;
+        return worldLength * gWorldToBox2DScale;
     }
 
     float PhysicalEntity::ToWorldLength(float box2dLength)
     {
-        return box2dLength * kBox2DToWorldScale;
+        return box2dLength * gBox2DToWorldScale;
+    }
+
+    void PhysicalEntity::SetWorldToBox2DScale(float scale)
+    {
+        const float sanitized = (std::isfinite(scale) && (scale > 0.0f)) ? scale : 1.0f;
+        gWorldToBox2DScale = sanitized;
+        gBox2DToWorldScale = 1.0f / gWorldToBox2DScale;
+    }
+
+    float PhysicalEntity::GetWorldToBox2DScale()
+    {
+        return gWorldToBox2DScale;
+    }
+
+    float PhysicalEntity::GetBox2DToWorldScale()
+    {
+        return gBox2DToWorldScale;
+    }
+
+    void PhysicalEntity::SetTransformViaPhysics(const float3& position, const float3& rotation)
+    {
+        if (HasBox2DBody())
+        {
+            b2Body_SetTransform(m_physical.bodyId, ToBox2DPosition(position), b2MakeRot(ToBox2DAngle(rotation.z)));
+            SyncTransformFromBox2DBody();
+            return;
+        }
+
+        Transform updated = GetTransform();
+        updated.position = position;
+        updated.rotation = rotation;
+        SetTransform(updated);
+    }
+
+    void PhysicalEntity::SetPositionViaPhysics(const float3& position)
+    {
+        if (HasBox2DBody())
+        {
+            const float currentAngle = ToBox2DAngle(GetTransform().rotation.z);
+            b2Body_SetTransform(m_physical.bodyId, ToBox2DPosition(position), b2MakeRot(currentAngle));
+            SyncTransformFromBox2DBody();
+            return;
+        }
+
+        SetPosition(position);
     }
 
     void PhysicalEntity::SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary)

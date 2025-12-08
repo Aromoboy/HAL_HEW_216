@@ -32,7 +32,8 @@ namespace
 namespace Systems
 {
         Box2DPhysicsSystem::Box2DPhysicsSystem(float gravity)
-                : m_worldDef(b2DefaultWorldDef())
+                : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
+                , m_worldDef(b2DefaultWorldDef())
         {
                 SetGravity(gravity);
                 m_worldId = b2CreateWorld(&m_worldDef);
@@ -65,7 +66,17 @@ namespace Systems
 
                 if (m_contactListener)
                 {
-                        m_contactListener->ProcessContacts(m_worldId);
+                        m_contactListener->ProcessContacts();
+                }
+        }
+
+        void Box2DPhysicsSystem::OnUpdate(Core::UpdateContext& ctx)
+        {
+                Apply(ctx.dt);
+
+                if (m_physicsMachine)
+                {
+                        m_physicsMachine->SyncBodies(ctx.dt);
                 }
         }
 
@@ -94,6 +105,21 @@ namespace Systems
         void Box2DPhysicsSystem::SetContactListener(std::shared_ptr<Box2DContactListener> listener)
         {
                 m_contactListener = std::move(listener);
+
+                if (m_contactListener)
+                {
+                        m_contactListener->SetWorld(m_worldId);
+                }
+        }
+
+        void Box2DPhysicsSystem::SetPhysicsMachine(PhysicsMachine* physicsMachine)
+        {
+                m_physicsMachine = physicsMachine;
+        }
+
+        PhysicsMachine* Box2DPhysicsSystem::GetPhysicsMachine() const
+        {
+                return m_physicsMachine;
         }
 
         void Box2DPhysicsSystem::DestroyWorld()
@@ -102,6 +128,11 @@ namespace Systems
                 {
                         b2DestroyWorld(m_worldId);
                         m_worldId = b2_nullWorldId;
+                }
+
+                if (m_contactListener)
+                {
+                        m_contactListener->SetWorld(b2_nullWorldId);
                 }
         }
 }

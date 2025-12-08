@@ -26,7 +26,6 @@
 #endif
 #include <d3d11.h>
 #include <vector>
-#include "BoxColliderComponent.h"
 #include "ColliderConfigLoader.h"
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
@@ -298,9 +297,9 @@ namespace
         }
     }
 
-    float ComputeSpeedSq(const Physics::Physical& physical)
+    float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
-        const auto v = physical.GetLinearVelocity();
+        const auto v = entity.GetLinearVelocity();
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
@@ -365,7 +364,7 @@ namespace
             return ::SweetsSpace::SweetsState::Carried;
         }
 
-        const float speedSq = ComputeSpeedSq(sweets.GetPhysical());
+        const float speedSq = ComputeSpeedSq(sweets);
         if (speedSq > kRestVelocityThresholdSq)
         {
             return ::SweetsSpace::SweetsState::Active;
@@ -1415,48 +1414,12 @@ namespace SweetsSpace
                 Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
                 shapeConfig.density *= scaleFactor;
 
-                Physics::BoxColliderComponent colliderComponent;
-                switch (shapeConfig.type)
-                {
-                case Box2DShapeConfig::Type::Box:
-                {
-                    const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(
-                        std::max(0.01f, (0.5f * scaledTransform.scale.x) + preset.colliderPreset.padding.x));
-                    const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(
-                        std::max(0.01f, (0.5f * scaledTransform.scale.y) + preset.colliderPreset.padding.y));
-                    colliderComponent.AddBox(halfWidth, halfHeight);
-                    break;
-                }
-                case Box2DShapeConfig::Type::Polygon:
-                {
-                    std::vector<b2Vec2> scaledVertices = shapeConfig.vertices;
-                    for (auto& vertex : scaledVertices)
-                    {
-                        vertex.x = Entities::PhysicalEntity::ToBox2DLength(vertex.x * scaledTransform.scale.x);
-                        vertex.y = Entities::PhysicalEntity::ToBox2DLength(vertex.y * scaledTransform.scale.y);
-                    }
-                    colliderComponent.AddPolygon(scaledVertices);
-                    break;
-                }
-                case Box2DShapeConfig::Type::Circle:
-                {
-                    const float radius = std::max(0.01f, shapeConfig.radius
-                        * std::max(scaledTransform.scale.x, scaledTransform.scale.y)
-                        + std::max({ preset.colliderPreset.padding.x, preset.colliderPreset.padding.y, preset.colliderPreset.padding.z }));
-                    colliderComponent.AddCircle(Entities::PhysicalEntity::ToBox2DLength(radius));
-                    break;
-                }
-                default:
-                    break;
-                }
-
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
 
                 if (sweets)
                 {
                     sweets->SetBox2DShapeConfig(shapeConfig);
-                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
                 }
 
                 return sweets;
