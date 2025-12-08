@@ -29,6 +29,7 @@ namespace Systems
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
                 void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
                 Entities::PhysicalEntity* GetEntityForBody(b2BodyId bodyId) const;
+                Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
                 void LogMeshContact(const b2ContactBeginTouchEvent& evt) const;
 
                 ContactCallback m_onBeginContact;
