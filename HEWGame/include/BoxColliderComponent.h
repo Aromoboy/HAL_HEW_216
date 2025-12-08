@@ -42,7 +42,8 @@ namespace Physics
                 return;
             }
 
-            polygons.push_back(b2MakePolygon(&hull, b2_defaultPolygonRadius));
+            // Box2D v3 doesn't expose b2_defaultPolygonRadius; use explicit radius instead
+            polygons.push_back(b2MakePolygon(&hull, 0.0f));
         }
 
         void AddCircle(float radius)
