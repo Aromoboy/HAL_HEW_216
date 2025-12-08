@@ -46,8 +46,14 @@ namespace Systems
                 for (int i = 0; i < events.beginCount; ++i)
                 {
                         const b2ContactBeginTouchEvent& evt = events.beginEvents[i];
-                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+                        if (!b2Shape_IsValid(evt.shapeIdA) || !b2Shape_IsValid(evt.shapeIdB))
+                        {
+                                continue;
+                        }
+                        const b2BodyId bodyIdA = b2Shape_GetBody(evt.shapeIdA);
+                        const b2BodyId bodyIdB = b2Shape_GetBody(evt.shapeIdB);
+                        Entities::PhysicalEntity* entityA = GetEntityForBody(bodyIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForBody(bodyIdB);
                         BeginContact(entityA, entityB);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
@@ -65,8 +71,14 @@ namespace Systems
                 for (int i = 0; i < events.endCount; ++i)
                 {
                         const b2ContactEndTouchEvent& evt = events.endEvents[i];
-                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+                        if (!b2Shape_IsValid(evt.shapeIdA) || !b2Shape_IsValid(evt.shapeIdB))
+                        {
+                                continue;
+                        }
+                        const b2BodyId bodyIdA = b2Shape_GetBody(evt.shapeIdA);
+                        const b2BodyId bodyIdB = b2Shape_GetBody(evt.shapeIdB);
+                        Entities::PhysicalEntity* entityA = GetEntityForBody(bodyIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForBody(bodyIdB);
                         EndContact(entityA, entityB);
                 }
 
@@ -111,22 +123,6 @@ namespace Systems
                 {
                         m_onEndContact(*entityA, *entityB);
                 }
-        }
-
-        Entities::PhysicalEntity* Box2DContactListener::GetEntityForShape(b2ShapeId shapeId) const
-        {
-                if (!b2Shape_IsValid(shapeId))
-                {
-                        return nullptr;
-                }
-
-                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                if (!b2Body_IsValid(bodyId))
-                {
-                        return nullptr;
-                }
-
-                return GetEntityForBody(bodyId);
         }
 
         Entities::PhysicalEntity* Box2DContactListener::GetEntityForBody(b2BodyId bodyId) const
