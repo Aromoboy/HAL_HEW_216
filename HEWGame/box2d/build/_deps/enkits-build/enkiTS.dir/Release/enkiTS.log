@@ -1,8 +1,0 @@
-﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-src/CMakeLists.txt
-  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
-  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
-  cl /c /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-src\src" /W1 /WX- /diagnostics:column /O2 /Ob2 /D _MBCS /D WIN32 /D _WINDOWS /D NDEBUG /D ENKITS_TASK_PRIORITIES_NUM=3 /D "CMAKE_INTDIR=\"Release\"" /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"enkiTS.dir\Release\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-build\Release\enkiTS.pdb" /external:W1 /Gd /TP /errorReport:prompt "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-src\src\TaskScheduler.cpp" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-src\src\TaskScheduler_c.cpp"
-  TaskScheduler.cpp
-  TaskScheduler_c.cpp
-  Создание кода...
-  enkiTS.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-build\Release\enkiTS.lib
