@@ -23,6 +23,7 @@
 #include "Physical.h"
 #include "ColliderConfigLoader.h"
 #include "SweetsPrototypeManifest.h"
+#include "Systems/Box2DMeshBuilder.h"
 
 namespace Core
 {
@@ -185,6 +186,7 @@ namespace SweetsSpace
             float thickness = 1.0f;
         };
         std::map<std::string, GeneratedCollider> m_generatedColliders;
+        std::map<std::string, Systems::Box2DMeshFixtures> m_box2dFixtures;
 
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;

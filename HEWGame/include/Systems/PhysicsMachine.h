@@ -55,6 +55,7 @@ namespace Systems
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body);
         void DestroyWorld();
+        void LogMeshContacts();
 
         SystemPtr m_system;
         IntegratorPtr m_integrator;
@@ -65,5 +66,6 @@ namespace Systems
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingIntegrator = false;
         bool m_loggedMissingWorld = false;
+        bool m_logMeshContacts = true;
     };
 }

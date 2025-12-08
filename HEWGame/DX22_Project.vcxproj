@@ -223,6 +223,7 @@
     <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
+    <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystemTests.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
@@ -314,6 +315,7 @@
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
     <ClInclude Include="include\Stage\FoundationPlatform.h" />
+    <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
     <ClInclude Include="include\Systems\IntegrateSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
     <ClInclude Include="include\Shader.h" />
