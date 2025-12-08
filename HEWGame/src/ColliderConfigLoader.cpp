@@ -15,10 +15,8 @@
 #    include <windows.h>
 #endif
 
-namespace
+namespace ColliderConfigLoaderLogging
 {
-        constexpr const char* kLogPrefix = "[ColliderConfig] ";
-
 #if defined(_WIN32) && defined(_DEBUG)
         void DebugTrace(const std::string& message)
         {
@@ -36,6 +34,12 @@ namespace
                 std::cerr << message;
                 DebugTrace(message);
         }
+}
+
+namespace
+{
+        constexpr const char* kLogPrefix = "[ColliderConfig] ";
+        namespace Logging = ColliderConfigLoaderLogging;
 
         std::string Trim(const std::string& value)
         {
@@ -132,7 +136,7 @@ namespace
                                 {
                                         std::ostringstream oss;
                                         oss << kLogPrefix << "Clamped negative scale to " << sanitized << "\n";
-                                        DebugTrace(oss.str());
+                                        Logging::DebugTrace(oss.str());
                                 }
 #endif
                                 outDef.scale = sanitized;
@@ -147,7 +151,7 @@ namespace
 #if defined(_DEBUG)
                         std::ostringstream oss;
                         oss << kLogPrefix << "Failed to parse scalar option '" << key << "' from value '" << value << "'\n";
-                        DebugTrace(oss.str());
+                        Logging::DebugTrace(oss.str());
 #endif
                 }
         }
@@ -160,7 +164,7 @@ namespace
                         std::ostringstream oss;
                         oss << kLogPrefix << "Ignoring malformed child token for collider '" << colliderName
                                 << "': missing ':' in '" << token << "'\n";
-                        LogWarning(oss.str());
+                        Logging::LogWarning(oss.str());
                         return false;
                 }
 
@@ -189,7 +193,7 @@ namespace
                         std::ostringstream oss;
                         oss << kLogPrefix << "Unknown child type for collider '" << colliderName << "': '" << typeToken
                                 << "' in token '" << token << "'\n";
-                        LogWarning(oss.str());
+                        Logging::LogWarning(oss.str());
                         return false;
                 }
 
@@ -220,7 +224,7 @@ namespace
                                         std::ostringstream oss;
                                         oss << kLogPrefix << "Ignoring malformed child option for collider '" << colliderName
                                                 << "': '" << optionToken << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                         continue;
                                 }
 
@@ -241,7 +245,7 @@ namespace
                                 std::ostringstream oss;
                                 oss << kLogPrefix << "Failed to parse circle radius for collider '" << colliderName
                                         << "' from '" << shapeData << "'\n";
-                                LogWarning(oss.str());
+                                Logging::LogWarning(oss.str());
                                 return false;
                         }
                         return true;
@@ -255,7 +259,7 @@ namespace
                                 std::ostringstream oss;
                                 oss << kLogPrefix << "Hull collider '" << colliderName
                                         << "' contained no valid points in token '" << shapeData << "'\n";
-                                LogWarning(oss.str());
+                                Logging::LogWarning(oss.str());
                         }
                         return !outDef.points.empty();
                 }
@@ -271,7 +275,7 @@ namespace Collision
                 std::ifstream file(path);
                 if (!file)
                 {
-                        LogWarning(std::string(kLogPrefix) + "Failed to open config: " + path + "\n");
+                        Logging::LogWarning(std::string(kLogPrefix) + "Failed to open config: " + path + "\n");
                         return false;
                 }
 
@@ -305,7 +309,7 @@ namespace Collision
                                 oss << kLogPrefix << "Ignoring malformed line (missing '=') while parsing collider '"
                                         << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                         << "': " << line << "\n";
-                                LogWarning(oss.str());
+                                Logging::LogWarning(oss.str());
                                 continue;
                         }
 
@@ -334,7 +338,7 @@ namespace Collision
                                         oss << kLogPrefix << "Unknown collider type for '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "': '" << value << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                 }
                         }
                         else if (key == "radius")
@@ -349,7 +353,7 @@ namespace Collision
                                         oss << kLogPrefix << "Failed to parse radius for collider '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "' from '" << value << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                 }
                         }
                         else if (key == "offset")
@@ -364,7 +368,7 @@ namespace Collision
                                         oss << kLogPrefix << "Failed to parse offset for collider '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "' from '" << value << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                 }
                         }
                         else if (key == "points")
@@ -376,7 +380,7 @@ namespace Collision
                                         oss << kLogPrefix << "Collider '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "' contained no valid points in '" << value << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                 }
                         }
                         else if (key == "thickness")
@@ -391,7 +395,7 @@ namespace Collision
                                         oss << kLogPrefix << "Failed to parse thickness for collider '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "' from '" << value << "'\n";
-                                        LogWarning(oss.str());
+                                        Logging::LogWarning(oss.str());
                                 }
                         }
                         else if (key == "scale")
@@ -426,7 +430,7 @@ namespace Collision
                                                 std::ostringstream oss;
                                                 oss << kLogPrefix << "Skipping malformed child token for collider '" << childName
                                                         << "': '" << token << "'\n";
-                                                LogWarning(oss.str());
+                                                Logging::LogWarning(oss.str());
                                         }
                                 }
                         }
@@ -440,7 +444,7 @@ namespace Collision
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Loaded " << outDefinitions.size() << " collider definitions from " << path << "\n";
-                DebugTrace(oss.str());
+                Logging::DebugTrace(oss.str());
 #endif
 
                 return !outDefinitions.empty();
@@ -472,7 +476,7 @@ namespace Collision
                                         << ", effectiveScale=" << effectiveScale << ", margin=" << effectiveMargin
                                         << ", final radius=" << scaledRadius
                                         << ", final offset=(" << scaledOffset.x << ", " << scaledOffset.y << ")\n";
-                                DebugTrace(oss.str());
+                                Logging::DebugTrace(oss.str());
                         }
 #endif
 
@@ -487,7 +491,7 @@ namespace Collision
 #if defined(_DEBUG)
                                 std::ostringstream oss;
                                 oss << kLogPrefix << "Hull collider definition contained no points; skipping creation.\n";
-                                DebugTrace(oss.str());
+                                Logging::DebugTrace(oss.str());
 #endif
                                 return nullptr;
                         }
@@ -525,7 +529,7 @@ namespace Collision
                                         << ", effectiveScale=" << effectiveScale << ", margin=" << effectiveMargin
                                         << ", offset=(" << definition.offset.x << ", " << definition.offset.y << ")"
                                         << ", final offset=(" << scaledOffset.x << ", " << scaledOffset.y << ")\n";
-                                DebugTrace(oss.str());
+                                Logging::DebugTrace(oss.str());
                         }
 #endif
 

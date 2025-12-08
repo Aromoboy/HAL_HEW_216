@@ -943,7 +943,7 @@ namespace Stage
                 DebugTrace(oss.str());
                 sanitized = defaultValue;
             }
-            sanitized = std::max(0.01f, std::fabs(sanitized));
+            sanitized = std::max(0.01f, static_cast<float>(std::fabs(sanitized)));
             return sanitized;
         };
 
@@ -951,7 +951,7 @@ namespace Stage
         {
             auto sanitizeScale = [](float component)
             {
-                return std::max(0.01f, std::fabs(component));
+                return std::max(0.01f, static_cast<float>(std::fabs(component)));
             };
 
             float3 sanitized = value;
