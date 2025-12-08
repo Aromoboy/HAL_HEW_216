@@ -28,7 +28,6 @@ namespace Stage
     public:
         FoundationPlatform(const std::string& tag,
             const Transform& transform,
-            std::shared_ptr<Collision::ICollider> collider = nullptr,
             std::optional<Physics::BoxColliderComponent> boxCollider = std::nullopt,
             Systems::PhysicsMachine* physicsMachine = nullptr,
             const DirectX::XMFLOAT4& color = DirectX::XMFLOAT4{ 0.305f, 0.173f, 0.125f, 1.0f },

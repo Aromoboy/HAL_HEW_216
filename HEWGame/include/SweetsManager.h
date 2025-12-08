@@ -229,8 +229,6 @@ namespace SweetsSpace
         bool m_warnedMissingScheduler;
         bool m_warnedMissingPhaseCallback;
         bool m_warnedMissingSpawnOrigins;
-        mutable bool m_warnedMissingHeightCollider;
-        mutable bool m_warnedMissingBoundsCollider;
         bool m_loggedContactNotification;
         std::unordered_set<std::string> m_warnedMissingColliderDefinitionKinds;
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
@@ -285,7 +283,7 @@ namespace SweetsSpace
             const std::string& tag,
             const std::shared_ptr<Render::Model>& model,
             const Transform& transform,
-            const std::shared_ptr<Collision::ICollider>& collider,
+            const std::optional<Physics::Box2DShapeConfig>& shapeConfig,
             Collision::CollisionLayer layer,
             Core::UpdatePhase phase,
             int priority)
@@ -297,7 +295,7 @@ namespace SweetsSpace
                 tag,
                 transform,
                 model,
-                collider,
+                shapeConfig,
                 layer,
                 m_physicsMachine,
                 phase,
