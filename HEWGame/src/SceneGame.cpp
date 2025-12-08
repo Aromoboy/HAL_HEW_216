@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <initializer_list>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -1209,6 +1210,7 @@ SceneGame::SceneGame()
 
     PlayerColliderGeometry playerGeometry{};
     std::string playerColliderKey = "Player";
+    m_playerColliderMismatchLogged = false;
 
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
     m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
@@ -1723,6 +1725,10 @@ SceneGame::SceneGame()
     }
     const bool configAvailable = colliderDef != m_playerColliderDefinitions.end();
     const bool geometryValid = playerGeometry.bounds.valid;
+    float3 expectedAabbSize{ 0.0f, 0.0f, 0.0f };
+    float3 expectedAabbCenter{ 0.0f, 0.0f, 0.0f };
+    float3 expectedCenterOffset{ 0.0f, 0.0f, 0.0f };
+    bool expectedAabbComputed = false;
 
     const auto tryGenerated = [&]()
     {
@@ -1834,6 +1840,37 @@ SceneGame::SceneGame()
             << " geometryBased=" << std::boolalpha << geometryValid << "\n";
         DebugTrace(oss.str());
     }
+
+    if (collider)
+    {
+        collider->UpdateBounds(trans);
+
+        const AABB colliderAabb = collider->GetAABB();
+        expectedAabbSize = float3
+        {
+            colliderAabb.max.x - colliderAabb.min.x,
+            colliderAabb.max.y - colliderAabb.min.y,
+            colliderAabb.max.z - colliderAabb.min.z,
+        };
+        expectedAabbCenter = colliderAabb.Center();
+        expectedCenterOffset = float3
+        {
+            expectedAabbCenter.x - trans.position.x,
+            expectedAabbCenter.y - trans.position.y,
+            expectedAabbCenter.z - trans.position.z,
+        };
+        expectedAabbComputed = true;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] Footprint pre-contact source=" << colliderSource
+            << " size=(" << expectedAabbSize.x << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ')'
+            << " center=(" << expectedAabbCenter.x << ',' << expectedAabbCenter.y << ',' << expectedAabbCenter.z << ')'
+            << " centerOffsetFromSpawn=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ')'
+            << " spawnPos=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
+            << " decision=" << colliderDecisionReason
+            << "\n";
+        ::DebugTrace(oss.str());
+    }
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
@@ -1861,6 +1898,64 @@ SceneGame::SceneGame()
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SyncColliderBounds();
+
+        Collision::ICollider* playerCollider = player->GetCollider();
+        if (playerCollider)
+        {
+            const AABB syncedAabb = playerCollider->GetAABB();
+            const float3 syncedSize
+            {
+                syncedAabb.max.x - syncedAabb.min.x,
+                syncedAabb.max.y - syncedAabb.min.y,
+                syncedAabb.max.z - syncedAabb.min.z,
+            };
+            const float3 syncedCenter = syncedAabb.Center();
+            const float3 syncedCenterOffset
+            {
+                syncedCenter.x - trans.position.x,
+                syncedCenter.y - trans.position.y,
+                syncedCenter.z - trans.position.z,
+            };
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] Post-sync AABB size=(" << syncedSize.x << ',' << syncedSize.y << ',' << syncedSize.z << ')'
+                << " center=(" << syncedCenter.x << ',' << syncedCenter.y << ',' << syncedCenter.z << ')'
+                << " centerOffsetFromSpawn=(" << syncedCenterOffset.x << ',' << syncedCenterOffset.y << ',' << syncedCenterOffset.z << ')'
+                << " contactUpdatePending\n";
+            ::DebugTrace(oss.str());
+
+            if (expectedAabbComputed && !m_playerColliderMismatchLogged)
+            {
+                const auto maxAbsDiff = [](float3 a, float3 b)
+                {
+                    return std::max({ std::fabs(a.x - b.x), std::fabs(a.y - b.y), std::fabs(a.z - b.z) });
+                };
+
+                const float sizeDelta = maxAbsDiff(expectedAabbSize, syncedSize);
+                const float centerDelta = maxAbsDiff(expectedCenterOffset, syncedCenterOffset);
+                constexpr float kColliderEpsilon = 1e-4f;
+
+                if (sizeDelta > kColliderEpsilon || centerDelta > kColliderEpsilon)
+                {
+                    std::ostringstream mismatch;
+                    mismatch << kLogPrefix << "[PlayerCollider] ContactLite footprint mismatch expectedSize=(" << expectedAabbSize.x
+                        << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ")"
+                        << " expectedCenterOffset=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ")"
+                        << " syncedSize=(" << syncedSize.x << ',' << syncedSize.y << ',' << syncedSize.z << ")"
+                        << " syncedCenterOffset=(" << syncedCenterOffset.x << ',' << syncedCenterOffset.y << ',' << syncedCenterOffset.z << ")"
+                        << " sizeDeltaMax=" << sizeDelta
+                        << " centerDeltaMax=" << centerDelta
+                        << "\n";
+                    ::DebugTrace(mismatch.str());
+                    m_playerColliderMismatchLogged = true;
+                }
+            }
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "[PlayerCollider] Missing collider when synchronizing player bounds.\n");
+        }
         RegisterPhysicsBody(*player);
         RefreshContactSolverBodies("spawn");
         {
