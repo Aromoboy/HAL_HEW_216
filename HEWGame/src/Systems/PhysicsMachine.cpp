@@ -85,15 +85,12 @@ namespace Systems
                 , m_contactListener()
                 , m_bodies()
                 , m_bodyMap()
-                , m_subStepCount(subStepCount)
+                , m_subStepCount(4)
                 , m_loggedMissingSystem(false)
                 , m_loggedMissingIntegrator(false)
                 , m_loggedMissingWorld(false)
         {
-                if (m_box2dSystem)
-                {
-                        m_box2dSystem->SetSubStepCount(subStepCount);
-                }
+                SetSubStepCount(subStepCount);
         }
 
         PhysicsMachine::~PhysicsMachine()
