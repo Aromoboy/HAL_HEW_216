@@ -345,7 +345,8 @@ namespace
                 b2Vec2{ 0.5f, -0.45f },
                 b2Vec2{ 0.0f, 0.55f },
             };
-            config.angularDamping = 0.35f;
+            config.allowRotation = false;
+            config.angularDamping = 0.65f;
             config.density = 0.95f;
             config.friction = 0.6f;
             config.restitution = 0.06f;
@@ -353,14 +354,14 @@ namespace
         case SweetsType::Sherbet:
             config.type = Box2DShapeConfig::Type::Circle;
             config.radius = 0.5f;
-            config.angularDamping = 0.1f;
+            config.angularDamping = 0.75f;
             config.density = 0.75f;
             config.friction = 0.35f;
             config.restitution = 0.28f;
             break;
         default:
             config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.25f;
+            config.angularDamping = 0.9f;
             config.density = 0.9f;
             config.friction = 0.6f;
             config.restitution = 0.05f;
