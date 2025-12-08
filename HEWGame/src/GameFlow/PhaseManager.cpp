@@ -32,8 +32,8 @@ namespace GameFlow
 {
     PhaseManager::PhaseManager()
         : m_nextThresholdIndex(0)
-        , m_nextMiniThresholdIndex(0)
         , m_currentPhase(0)
+        , m_nextMiniThresholdIndex(0)
         , m_currentMiniPhase(0)
         , m_initialized(false)
         , m_lastReportedHeight(0.0f)
@@ -85,17 +85,17 @@ namespace GameFlow
         {
             m_minirewardMultipliers.push_back(1.0f);
         }
-        const std::size_t requiredMultiplierCount = m_minithresholds.size() + 1;
-        if (m_minirewardMultipliers.size() < requiredMultiplierCount)
+        const std::size_t requiredMiniMultiplierCount = m_minithresholds.size() + 1;
+        if (m_minirewardMultipliers.size() < requiredMiniMultiplierCount)
         {
             const float fillValue = m_minirewardMultipliers.back();
-            m_minirewardMultipliers.resize(requiredMultiplierCount, fillValue);
+            m_minirewardMultipliers.resize(requiredMiniMultiplierCount, fillValue);
         }
-        else if (m_minirewardMultipliers.size() > requiredMultiplierCount)
+        else if (m_minirewardMultipliers.size() > requiredMiniMultiplierCount)
         {
-            m_minirewardMultipliers.resize(requiredMultiplierCount);
+            m_minirewardMultipliers.resize(requiredMiniMultiplierCount);
         }
-
+        
         m_nextThresholdIndex = 0;
         m_nextMiniThresholdIndex = 0; //ミニフェーズ
         m_currentPhase = 0;
@@ -212,6 +212,12 @@ namespace GameFlow
     float PhaseManager::GetRewardMultiplier() const noexcept
     {
         return GetRewardMultiplierForPhase(m_currentPhase);
+    }
+
+    //ミニフェーズ
+    float PhaseManager::GetRewardMiniMultiplier() const noexcept
+    {
+        return GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
     }
 
     void PhaseManager::LogPhaseAdvance(float threshold, float currentHeight) const

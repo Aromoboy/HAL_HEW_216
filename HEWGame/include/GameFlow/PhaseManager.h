@@ -17,6 +17,8 @@ namespace GameFlow
         bool UpdateHeight(float currentMaxHeight);
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
+        //ミニフェーズ
+        float GetRewardMiniMultiplier() const noexcept;
 
     private:
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
