@@ -1,5 +1,6 @@
 #include "Systems/Box2DContactListener.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <sstream>
@@ -201,8 +202,15 @@ namespace Systems
                 const char* tagA = entityA ? entityA->GetTag().c_str() : "<null>";
                 const char* tagB = entityB ? entityB->GetTag().c_str() : "<null>";
 
+                const std::size_t polygonCountA = entityA ? entityA->GetBox2DPolygons().size() : 0u;
+                const std::size_t boundaryCountA = entityA ? entityA->GetBox2DBoundary().size() : 0u;
+                const std::size_t polygonCountB = entityB ? entityB->GetBox2DPolygons().size() : 0u;
+                const std::size_t boundaryCountB = entityB ? entityB->GetBox2DBoundary().size() : 0u;
+
                 std::ostringstream oss;
-                oss << "[Box2DContactListener] Mesh contact begin between '" << tagA << "' and '" << tagB << "'\n";
+                oss << "[Box2DContactListener] Mesh contact begin between '" << tagA << "' (polygons="
+                    << polygonCountA << " boundary=" << boundaryCountA << ") and '" << tagB << "' (polygons="
+                    << polygonCountB << " boundary=" << boundaryCountB << ")\n";
                 DebugTrace(oss.str());
         }
 }

@@ -572,7 +572,9 @@ namespace Systems
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
         shapeDef.filter.maskBits = ToMaskBits(layer);
 
-        if (hasColliderComponent)
+        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
+
+        if (useColliderComponent)
         {
             colliderComponent->Destroy(worldId);
             auto originalPolygons = std::move(colliderComponent->polygons);
@@ -626,6 +628,52 @@ namespace Systems
             colliderComponent->circles = std::move(originalCircles);
             if (!colliderComponent->fixtures.empty())
             {
+                return bodyId;
+            }
+        }
+
+        // モデル由来のメッシュポリゴンがあれば優先的に使う
+        int meshShapes = 0;
+        if (hasMeshFixtures)
+        {
+            colliderComponent->Destroy(worldId);
+            colliderComponent->Clear();
+            for (const auto& polygon : meshPolygons)
+            {
+                if (polygon.size() < 3)
+                {
+                    continue;
+                }
+
+                std::vector<b2Vec2> scaled = polygon;
+                for (auto& v : scaled)
+                {
+                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
+                }
+
+                const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
+                if (!b2ValidateHull(&hull))
+                {
+                    continue;
+                }
+
+                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
+                colliderComponent->polygons.push_back(shape);
+                ++meshShapes;
+            }
+
+            if (meshShapes > 0)
+            {
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->CreateFixtures(bodyId, shapeDef);
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag()
+                    << "' polygons=" << meshPolygons.size()
+                    << " boundaryPoints=" << meshBoundary.size() << "\n";
+                DebugTrace(oss.str());
+#endif
                 return bodyId;
             }
         }
@@ -685,52 +733,6 @@ namespace Systems
             }
             default:
                 break;
-            }
-        }
-
-        // モデル由来のメッシュポリゴンがあれば使う
-        int meshShapes = 0;
-        if (hasMeshFixtures)
-        {
-            colliderComponent->Clear();
-            for (const auto& polygon : meshPolygons)
-            {
-                if (polygon.size() < 3)
-                {
-                    continue;
-                }
-
-                std::vector<b2Vec2> scaled = polygon;
-                for (auto& v : scaled)
-                {
-                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                }
-
-                const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
-                if (!b2ValidateHull(&hull))
-                {
-                    continue;
-                }
-
-                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
-                colliderComponent->polygons.push_back(shape);
-                ++meshShapes;
-            }
-
-            // chain shape は今のところ使わない。必要になったら b2CreateChain を使う実装にする。
-            if (meshShapes > 0)
-            {
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->CreateFixtures(bodyId, shapeDef);
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag()
-                    << "' polygons=" << meshPolygons.size()
-                    << " boundaryPoints=" << meshBoundary.size() << "\n";
-                DebugTrace(oss.str());
-#endif
-                return bodyId;
             }
         }
 

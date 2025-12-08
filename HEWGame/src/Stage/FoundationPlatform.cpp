@@ -211,12 +211,6 @@ namespace Stage
             if (fixtures)
             {
                 SetBox2DMesh(fixtures->polygons, fixtures->boundary);
-
-                for (const auto& polygon : fixtures->polygons)
-                {
-                    colliderComponent.AddPolygon(polygon);
-                }
-
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Applied Box2D mesh fixtures to foundation platform polygons="
