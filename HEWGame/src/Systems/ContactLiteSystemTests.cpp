@@ -55,7 +55,7 @@ namespace
                         float2{ 0.0f, 0.0f },
                         foundationTransform.scale.z,
                         Collision::CollisionLayer::Floor);
-                Physics::Physical foundationPhysical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f };
+                Physics::Physical foundationPhysical{};
                 auto foundation = BuildPhysical(
                         foundationTransform,
                         foundationCollider,
@@ -78,7 +78,7 @@ namespace
                         float2{ 0.0f, 0.0f },
                         sweetsTransform.scale.z,
                         Collision::CollisionLayer::Sweets);
-                Physics::Physical sweetsPhysical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f };
+                Physics::Physical sweetsPhysical{};
                 auto sweets = BuildPhysical(
                         sweetsTransform,
                         sweetsCollider,

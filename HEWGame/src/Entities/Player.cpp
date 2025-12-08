@@ -229,15 +229,6 @@ namespace Entities
         , m_maximumY(0.0f)
         , m_bodyId(b2_nullBodyId)
     {
-        if (m_physical.weight <= 0.0f)
-        {
-            m_physical.weight = 1.0f;
-        }
-        else if (m_isKinematic)
-        {
-            m_physical.weight = std::max(0.01f, m_physical.weight);
-        }
-
         if (model)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Using provided player model.\n");
@@ -341,11 +332,9 @@ namespace Entities
         bodyDef.type = b2_dynamicBody;
         bodyDef.position = ToBox2DPosition(transform.position);
         bodyDef.angle = ToBox2DAngle(transform.rotation.z);
-        bodyDef.linearVelocity = ToBox2DVector(m_physical.velocity);
+        bodyDef.linearVelocity = b2Vec2{ 0.0f, 0.0f };
         bodyDef.gravityScale = m_isKinematic ? 0.0f : 1.0f;
-
-        const float damping = std::clamp(m_physical.damping, 0.0f, 1.0f);
-        bodyDef.linearDamping = (damping > 0.0f) ? -std::log(damping) : 0.0f;
+        bodyDef.linearDamping = 0.0f;
         bodyDef.userData = this;
 
         m_bodyId = b2CreateBody(worldId, &bodyDef);
@@ -367,7 +356,7 @@ namespace Entities
         }
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.density = std::max(0.01f, m_physical.weight);
+        shapeDef.density = 1.0f;
         shapeDef.material.friction = 0.6f;
 
         const b2Polygon box = b2MakeBox(ToBox2DLength(halfWidth), ToBox2DLength(halfHeight));
@@ -707,8 +696,7 @@ namespace Entities
             it->SetTransform(updated);
 
             Physics::Physical& physical = it->GetPhysical();
-            physical.velocity = { 0.0f, 0.0f, 0.0f };
-            physical.force = { 0.0f, 0.0f, 0.0f };
+            physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
         }
 
     }
@@ -845,8 +833,7 @@ namespace Entities
         candidate->SetTransform(updated);
 
         auto& physical = candidate->GetPhysical();
-        physical.velocity = { 0.0f, 0.0f, 0.0f };
-        physical.force = { 0.0f, 0.0f, 0.0f };
+        physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
         m_carrieds.push_back(candidate);
 
@@ -868,10 +855,10 @@ namespace Entities
         sweets->SetPosition(ComputeCarryAnchor());
 
         auto& sweetsPhysical = sweets->GetPhysical();
-        sweetsPhysical.force = { 0.0f, 0.0f, 0.0f };
         const float3 bodyVelocity = GetBodyLinearVelocity();
-        sweetsPhysical.velocity = bodyVelocity;
-        sweetsPhysical.velocity.y = std::max(sweetsPhysical.velocity.y, m_dropUpwardBoost);
+        float3 releaseVelocity = bodyVelocity;
+        releaseVelocity.y = std::max(releaseVelocity.y, m_dropUpwardBoost);
+        sweetsPhysical.SetLinearVelocity(releaseVelocity);
 
         if (m_sweetsManager)
         {

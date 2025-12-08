@@ -55,28 +55,17 @@ float3 IntegrateSystem::Integrate(Entities::PhysicalEntity& entity, float dt)
             return translation;
         }
 
-        Physics::Physical& physical = entity.GetPhysical();
-        if (physical.velocity.z != 0.0f)
-        {
-            physical.velocity.z = 0.0f;
-        }
-        const float safeDt = std::max(dt, 0.0f);
-        const float damping = std::clamp(physical.damping, 0.0f, 1.0f);
-        const float translationScale = safeDt * damping;
-        translation.x = physical.velocity.x * translationScale;
-        translation.y = physical.velocity.y * translationScale;
-        translation.z = 0.0f;
+        const float3 before = entity.GetTransform().position;
+        entity.SyncTransformFromBox2DBody();
+        const float3 after = entity.GetTransform().position;
+
+        translation.x = after.x - before.x;
+        translation.y = after.y - before.y;
+        translation.z = after.z - before.z;
 
         const bool hasTranslation = (std::fabs(translation.x) > m_translationEpsilon)
             || (std::fabs(translation.y) > m_translationEpsilon)
             || (std::fabs(translation.z) > m_translationEpsilon);
-        if (!hasTranslation)
-        {
-            return float3{ 0.0f, 0.0f, 0.0f };
-        }
-
-        Entities::TranslatePhysicalEntity(entity, translation);
-
-        return translation;
+        return hasTranslation ? translation : float3{ 0.0f, 0.0f, 0.0f };
     }
 }
