@@ -26,6 +26,7 @@
 #endif
 #include <d3d11.h>
 #include <vector>
+#include "BoxColliderComponent.h"
 #include "ColliderConfigLoader.h"
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
@@ -1435,12 +1436,49 @@ namespace SweetsSpace
                 Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
                 shapeConfig.density = scaledWeight;
 
+                Physics::BoxColliderComponent colliderComponent;
+                colliderComponent.shapeDef.density = shapeConfig.density;
+                colliderComponent.shapeDef.material.friction = shapeConfig.friction;
+                colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
+
+                switch (shapeConfig.type)
+                {
+                case Box2DShapeConfig::Type::Box:
+                {
+                    const float halfWidth = std::max(0.01f, 0.5f * scaledTransform.scale.x);
+                    const float halfHeight = std::max(0.01f, 0.5f * scaledTransform.scale.y);
+                    colliderComponent.AddBox(halfWidth, halfHeight);
+                    break;
+                }
+                case Box2DShapeConfig::Type::Polygon:
+                {
+                    std::vector<b2Vec2> scaledVertices = shapeConfig.vertices;
+                    for (auto& v : scaledVertices)
+                    {
+                        v.x *= scaledTransform.scale.x;
+                        v.y *= scaledTransform.scale.y;
+                    }
+                    colliderComponent.AddPolygon(scaledVertices);
+                    break;
+                }
+                case Box2DShapeConfig::Type::Circle:
+                {
+                    const float radius = std::max(0.01f, shapeConfig.radius);
+                    const float scaledRadius = radius * std::max(scaledTransform.scale.x, scaledTransform.scale.y);
+                    colliderComponent.AddCircle(scaledRadius);
+                    break;
+                }
+                default:
+                    break;
+                }
+
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets, velocity, force, shapeConfig.density, scaledDamping,
                     Core::UpdatePhase::Physics, 0);
 
                 if (sweets)
                 {
                     sweets->SetBox2DShapeConfig(shapeConfig);
+                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
                 }
 
                 return sweets;

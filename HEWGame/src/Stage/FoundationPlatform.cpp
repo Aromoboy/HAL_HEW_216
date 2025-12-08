@@ -13,6 +13,7 @@
 #include "MeshDX.h"
 #include "ModelCache.h"
 #include "ModelDX.h"
+#include "BoxColliderComponent.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Box2DMeshBuilder.h"
 
@@ -55,37 +56,28 @@ namespace
         return scale;
     }
 
-    float3 CalculateExpandFromExtents(const float3& extents, const float3& scale)
+    Physics::BoxColliderComponent CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
     {
-        return float3
-        {
-            (extents.x * 2.0f) / scale.x,
-            (extents.y * 2.0f) / scale.y,
-            (extents.z * 2.0f) / scale.z
-        };
-    }
+        Physics::BoxColliderComponent component;
+        component.shapeDef.density = 0.0f;
+        component.shapeDef.material.friction = 0.8f;
 
-    std::shared_ptr<Collision::ICollider> CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
-    {
         const float3 center = bounds.Center();
         const float3 extents = bounds.Extents();
-
         const float3 safeScale = SafeScale(transform);
-        const float3 expand = CalculateExpandFromExtents(extents, safeScale);
-        const float2 offset2D{ center.x / safeScale.x, center.y / safeScale.y };
-        const float halfX = 0.5f * expand.x;
-        const float halfY = 0.5f * expand.y;
-        std::vector<float2> points
-        {
-            float2{ -halfX, -halfY },
-            float2{ halfX, -halfY },
-            float2{ halfX, halfY },
-            float2{ -halfX, halfY },
-        };
 
-        auto collider = std::make_shared<Collision::ConvexHullCollider2D>(points, offset2D, expand.z, Collision::CollisionLayer::Floor);
-        collider->UpdateBounds(transform);
-        return collider;
+        const float halfWidth  = std::max(0.01f, extents.x / safeScale.x);
+        const float halfHeight = std::max(0.01f, extents.y / safeScale.y);
+
+        component.AddBox(
+            halfWidth,
+            halfHeight,
+            b2Vec2{ center.x, center.y }
+        );
+
+        return component;
+    }
+
     }
 
     AABB BuildDescriptorLocalBounds(const Transform& transform)
@@ -191,21 +183,20 @@ namespace Stage
     {
         LoadPlatformModel();
 
-        if (!m_collider)
-        {
-            const bool modelHasBounds = m_model && m_model->HasLocalBounds();
-            if (modelHasBounds)
-            {
-                m_collider = CreateColliderFromBounds(transform, m_model->GetLocalBounds());
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Platform model is unavailable or missing local bounds; using descriptor dimensions for collider.\n";
-                DebugTrace(oss.str());
+        Physics::BoxColliderComponent colliderComponent;
 
-                m_collider = CreateColliderFromBounds(transform, m_descriptorLocalBounds);
-            }
+        const bool modelHasBounds = m_model && m_model->HasLocalBounds();
+        if (modelHasBounds)
+        {
+            colliderComponent = CreateColliderFromBounds(transform, m_model->GetLocalBounds());
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Platform model is unavailable or missing local bounds; using descriptor dimensions for collider.\n";
+            DebugTrace(oss.str());
+
+            colliderComponent = CreateColliderFromBounds(transform, m_descriptorLocalBounds);
         }
 
         SetCollisionLayer(Collision::CollisionLayer::Floor);
@@ -219,6 +210,17 @@ namespace Stage
             {
                 SetBox2DMesh(fixtures->polygons, fixtures->boundary);
 
+                for (const auto& polygon : fixtures->polygons)
+                {
+                    std::vector<b2Vec2> scaled = polygon;
+                    for (auto& vertex : scaled)
+                    {
+                        vertex.x *= transform.scale.x;
+                        vertex.y *= transform.scale.y;
+                    }
+                    colliderComponent.AddPolygon(scaled);
+                }
+
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << kLogPrefix << "Applied Box2D mesh fixtures to foundation platform polygons="
@@ -227,6 +229,8 @@ namespace Stage
 #endif
             }
         }
+
+        SetBoxColliderComponent(std::move(colliderComponent));
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
