@@ -93,6 +93,7 @@ namespace Systems
         , m_loggedMissingSystem(false)
         , m_loggedMissingIntegrator(false)
         , m_loggedMissingWorld(false)
+        , m_loggedFirstTick(false)
     {
         SetSubStepCount(subStepCount);
         if (m_box2dSystem)
@@ -375,6 +376,17 @@ namespace Systems
             }
             return;
         }
+
+#if defined(_DEBUG)
+        if (!m_loggedFirstTick)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] First tick: dt=" << ctx.dt
+                << " bodies=" << m_bodies.size() << "\n";
+            DebugTrace(oss.str());
+            m_loggedFirstTick = true;
+        }
+#endif
 
         m_system->Apply(ctx.dt);
         SyncBodies(ctx.dt);
