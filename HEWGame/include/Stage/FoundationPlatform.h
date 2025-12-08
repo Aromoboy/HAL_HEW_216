@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <DirectXMath.h>
@@ -15,6 +16,11 @@ namespace Core
     struct UpdateContext;
 }
 
+namespace Systems
+{
+    class PhysicsMachine;
+}
+
 namespace Stage
 {
     class FoundationPlatform : public Entities::PhysicalEntity
@@ -23,6 +29,8 @@ namespace Stage
         FoundationPlatform(const std::string& tag,
             const Transform& transform,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
+            std::optional<Physics::BoxColliderComponent> boxCollider = std::nullopt,
+            Systems::PhysicsMachine* physicsMachine = nullptr,
             const DirectX::XMFLOAT4& color = DirectX::XMFLOAT4{ 0.305f, 0.173f, 0.125f, 1.0f },
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
