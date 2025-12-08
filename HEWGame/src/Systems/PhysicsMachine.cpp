@@ -389,15 +389,8 @@ namespace Systems
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
                 bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
                 bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
-                // 初期速度は shapeConfig が指定していれば使用、無ければ 0
-                bodyDef.linearVelocity =
-                    (hasShapeConfig && shapeConfig->initialVelocity.has_value())
-                        ? Entities::PhysicalEntity::ToBox2DVector(shapeConfig->initialVelocity.value())
-                        : b2Vec2{0.0f, 0.0f};
                 // 重力スケール（動的ボディのみ適用）
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
-                // 減衰（shapeConfig 優先）
-                bodyDef.linearDamping = hasShapeConfig ? shapeConfig->linearDamping : 0.0f;
                 bodyDef.userData = &body;
 
                 b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);
