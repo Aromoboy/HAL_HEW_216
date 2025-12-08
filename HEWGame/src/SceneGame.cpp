@@ -2371,7 +2371,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         m_timerDisplay.Draw(m_remainingCountdownSeconds);
 
 #if defined(_DEBUG)
-        RenderRunTelemetryOverlay();
+        //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
 #endif
 }
 
