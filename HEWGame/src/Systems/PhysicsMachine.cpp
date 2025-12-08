@@ -442,14 +442,25 @@ namespace Systems
                     // 事前生成されたポリゴン
                     for (const auto& polygon : colliderComponent->polygons)
                     {
-                        accumulatePolygon(polygon);
+                        for (int i = 0; i < polygon.count; ++i)
+                        {
+                            const float x = Entities::PhysicalEntity::ToBox2DLength(
+                                polygon.vertices[i].x * transform.scale.x);
+                            const float y = Entities::PhysicalEntity::ToBox2DLength(
+                                polygon.vertices[i].y * transform.scale.y);
+                            accumulatePoint(x, y);
+                        }
                     }
 
                     // 円は AABB で近似
                     for (const auto& circle : colliderComponent->circles)
                     {
-                        accumulatePoint(circle.center.x - circle.radius, circle.center.y - circle.radius);
-                        accumulatePoint(circle.center.x + circle.radius, circle.center.y + circle.radius);
+                        const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
+                            circle.radius * std::max(transform.scale.x, transform.scale.y));
+                        const float centerX = Entities::PhysicalEntity::ToBox2DLength(circle.center.x * transform.scale.x);
+                        const float centerY = Entities::PhysicalEntity::ToBox2DLength(circle.center.y * transform.scale.y);
+                        accumulatePoint(centerX - scaledRadius, centerY - scaledRadius);
+                        accumulatePoint(centerX + scaledRadius, centerY + scaledRadius);
                     }
                 }
 
@@ -566,7 +577,55 @@ namespace Systems
         if (useColliderComponent)
         {
             colliderComponent->Destroy(worldId);
+            auto originalPolygons = std::move(colliderComponent->polygons);
+            auto originalCircles = std::move(colliderComponent->circles);
+
+            std::vector<b2Polygon> scaledPolygons;
+            scaledPolygons.reserve(originalPolygons.size());
+            for (const auto& polygon : originalPolygons)
+            {
+                std::vector<b2Vec2> scaledVertices;
+                scaledVertices.reserve(static_cast<std::size_t>(polygon.count));
+
+                for (int i = 0; i < polygon.count; ++i)
+                {
+                    scaledVertices.push_back(b2Vec2{
+                        Entities::PhysicalEntity::ToBox2DLength(polygon.vertices[i].x * transform.scale.x),
+                        Entities::PhysicalEntity::ToBox2DLength(polygon.vertices[i].y * transform.scale.y),
+                    });
+                }
+
+                if (scaledVertices.size() >= 3)
+                {
+                    const b2Hull hull = b2ComputeHull(scaledVertices.data(), static_cast<int>(scaledVertices.size()));
+                    if (b2ValidateHull(&hull))
+                    {
+                        scaledPolygons.push_back(b2MakePolygon(&hull, polygon.radius));
+                    }
+                }
+            }
+
+            std::vector<b2Circle> scaledCircles;
+            scaledCircles.reserve(originalCircles.size());
+            for (const auto& circle : originalCircles)
+            {
+                const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
+                    circle.radius * std::max(transform.scale.x, transform.scale.y));
+                const b2Vec2 scaledCenter{
+                    Entities::PhysicalEntity::ToBox2DLength(circle.center.x * transform.scale.x),
+                    Entities::PhysicalEntity::ToBox2DLength(circle.center.y * transform.scale.y)
+                };
+                scaledCircles.push_back(b2Circle{ scaledCenter, scaledRadius });
+            }
+
+            colliderComponent->polygons = std::move(scaledPolygons);
+            colliderComponent->circles = std::move(scaledCircles);
+            colliderComponent->shapeDef = shapeDef;
+
             colliderComponent->CreateFixtures(bodyId, shapeDef);
+
+            colliderComponent->polygons = std::move(originalPolygons);
+            colliderComponent->circles = std::move(originalCircles);
             if (!colliderComponent->fixtures.empty())
             {
                 return bodyId;
