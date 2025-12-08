@@ -1088,7 +1088,12 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerColliderMismatchLogged = false;
 
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
-    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
+    m_phaseManager.Initialize(
+        m_stageData.GetPhaseThresholds(),
+        m_stageData.GetPhaseRewardMultipliers(),
+        m_stageData.GetPhaseMiniThresholds(),
+        m_stageData.GetPhaseRewardMiniMultipliers()
+    );
     m_playerBaseHorizontalSpeed = m_stageData.GetPlayerHorizontalSpeedWorld();
     m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
