@@ -903,6 +903,15 @@ SceneGame::SceneGame()
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
     m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
+    // 数字テクスチャをロード
+    m_numberTexture = new Texture();
+    m_numberTexture->Create("Assets/Texture/number.png"); 
+
+    // タイマー表示を初期化
+    m_timerDisplay.Init(m_numberTexture);
+    m_timerDisplay.SetPosition(700.0f, 50.0f);  // 画面右上
+    m_timerDisplay.SetDigitSize(50.0f, 70.0f);   // 数字のサイズ
+
 }
 
 SceneGame::~SceneGame()
@@ -987,6 +996,12 @@ SceneGame::~SceneGame()
         {
                 GetUpdateScheduler().Unregister(*m_sweetsManager);
                 m_sweetsRegistered = false;
+        }
+
+        if (m_numberTexture)
+        {
+            delete m_numberTexture;
+            m_numberTexture = nullptr;
         }
 }
 
@@ -1333,6 +1348,8 @@ void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 
                 m_hudRenderer->Draw(hudData);
         }
+
+        m_timerDisplay.Draw(m_remainingCountdownSeconds);
 
 #if defined(_DEBUG)
         RenderRunTelemetryOverlay();

@@ -18,6 +18,7 @@
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
 #include "HudRenderer.h"
+#include "TimerDisplay.h"
 #include "BackgroundRenderer.h"
 #include <cstddef>
 #include <memory>
@@ -148,6 +149,8 @@ private:
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
     bool m_cachedPlayerBoundsValid = false;
     bool m_playerBoundsFailureLogged = false;
+    TimerDisplay m_timerDisplay;
+    Texture* m_numberTexture;
 };
 
 #endif // __SCENE_GAME_H__

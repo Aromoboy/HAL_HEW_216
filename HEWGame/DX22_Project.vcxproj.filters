@@ -197,6 +197,7 @@
     <ClCompile Include="src\UpdatableTimer.cpp" />
     <ClCompile Include="src\CameraTarget.cpp" />
     <ClCompile Include="include\PowerUpTarget.cpp" />
+    <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <!-- ==================== -->
   <!-- All .h with filters  -->
@@ -407,6 +408,7 @@
     <ClInclude Include="include\PowerUpCursor.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\PowerUpTarget.h" />
+    <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <!-- =================== -->
   <!-- Filter definitions  -->

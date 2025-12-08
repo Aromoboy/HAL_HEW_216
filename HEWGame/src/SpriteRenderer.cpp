@@ -8,6 +8,8 @@
 //#include "DirectXMath.h"
 
 SpriteRenderer::SpriteRenderer()
+	: m_uvPos(0.0f, 0.0f)
+	, m_uvScale(1.0f, 1.0f)
 {
 	const char* VS = R"EOT(
 struct VS_IN {
@@ -86,6 +88,16 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 }
 
+void SpriteRenderer::SetUVPos(DirectX::XMFLOAT2 pos)
+{
+	m_uvPos = pos;
+}
+
+void SpriteRenderer::SetUVScale(DirectX::XMFLOAT2 scale)
+{
+	m_uvScale = scale;
+}
+
 SpriteRenderer::~SpriteRenderer()
 {
 }
@@ -106,7 +118,7 @@ void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const 
 	wvp[2] = camera->GetProjection();
 
 	param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+	param[1] = DirectX::XMFLOAT4(m_uvPos.x, m_uvPos.y, m_uvScale.x, m_uvScale.y);
 	param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	ShaderList::SetWVP(wvp);
