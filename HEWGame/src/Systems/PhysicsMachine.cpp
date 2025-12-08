@@ -1,9 +1,9 @@
 #include "Systems/PhysicsMachine.h"
 #include "Systems/Box2DPhysicsSystem.h"
-#include "Systems/IntegrateSystem.h"
 #include "Systems/Box2DContactListener.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -85,13 +85,11 @@ namespace Systems
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
         , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
         , m_system(m_box2dSystem)
-        , m_integrator(std::make_shared<IntegrateSystem>())
         , m_contactListener()
         , m_bodies()
         , m_bodyMap()
         , m_subStepCount(4)
         , m_loggedMissingSystem(false)
-        , m_loggedMissingIntegrator(false)
         , m_loggedMissingWorld(false)
         , m_loggedFirstTick(false)
     {
@@ -139,26 +137,6 @@ namespace Systems
         }
     }
 
-    void PhysicsMachine::SetIntegrator(IntegratorPtr integrator)
-    {
-        if (m_integrator == integrator)
-        {
-            return;
-        }
-
-#if defined(_DEBUG)
-        {
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] SetIntegrator called. previous=" << m_integrator.get()
-                << " new=" << (integrator ? integrator.get() : nullptr) << "\n";
-            DebugTrace(oss.str());
-        }
-#endif
-
-        m_integrator = std::move(integrator);
-        m_loggedMissingIntegrator = false;
-    }
-
     void PhysicsMachine::SetContactListener(ContactListenerPtr listener)
     {
         m_contactListener = std::move(listener);
@@ -191,11 +169,6 @@ namespace Systems
     std::shared_ptr<Box2DPhysicsSystem> PhysicsMachine::GetBox2DSystem() const
     {
         return m_box2dSystem;
-    }
-
-    PhysicsMachine::IntegratorPtr PhysicsMachine::GetIntegrator() const
-    {
-        return m_integrator;
     }
 
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
@@ -301,52 +274,18 @@ namespace Systems
 
     void PhysicsMachine::SyncBodies(float dt)
     {
+        (void)dt;
         const b2WorldId worldId = GetWorldId();
 
-        if (b2World_IsValid(worldId))
+        if (!b2World_IsValid(worldId))
         {
-            for (Entities::PhysicalEntity* body : m_bodies)
+            if (!m_loggedMissingWorld)
             {
-                if (!body)
-                {
-#if defined(_DEBUG)
-                    DebugTrace("[PhysicsMachine] Encountered null body pointer during update.\n");
-#endif
-                    continue;
-                }
-
-                auto mapIt = m_bodyMap.find(body);
-                const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
-                if (!hasBody)
-                {
-                    // Box2D body がない場合はレガシー積分で動かす
-                    if (m_integrator)
-                    {
-                        m_integrator->Integrate(*body, dt);
-                    }
-                    body->SyncColliderBounds();
-                    continue;
-                }
-
-                const b2BodyId bodyId = mapIt->second;
-                body->SetBox2DBodyId(bodyId);
-                body->SyncTransformFromBox2DBody();
-                body->SyncColliderBounds();
+                DebugTrace("[PhysicsMachine] Box2D world is invalid; skipping sync.\n");
+                m_loggedMissingWorld = true;
             }
+            assert(false && "Box2D world must be valid before syncing bodies.");
             return;
-        }
-
-        // world 無効 → レガシー積分へフォールバック
-        if (!m_loggedMissingWorld)
-        {
-            DebugTrace("[PhysicsMachine] Box2D world is invalid; falling back to legacy integrator.\n");
-            m_loggedMissingWorld = true;
-        }
-
-        if (!m_integrator && !m_loggedMissingIntegrator)
-        {
-            DebugTrace("[PhysicsMachine] No integrator configured; skipping translation step.\n");
-            m_loggedMissingIntegrator = true;
         }
 
         for (Entities::PhysicalEntity* body : m_bodies)
@@ -359,11 +298,21 @@ namespace Systems
                 continue;
             }
 
-            if (m_integrator)
+            auto mapIt = m_bodyMap.find(body);
+            if (mapIt == m_bodyMap.end() || !b2Body_IsValid(mapIt->second))
             {
-                m_integrator->Integrate(*body, dt);
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Missing Box2D body during sync for tag='" << body->GetTag() << "'\n";
+                DebugTrace(oss.str());
+#endif
+                assert(false && "Registered entity is missing a Box2D body.");
+                continue;
             }
 
+            const b2BodyId bodyId = mapIt->second;
+            body->SetBox2DBodyId(bodyId);
+            body->SyncTransformFromBox2DBody();
             body->SyncColliderBounds();
         }
     }
@@ -391,6 +340,49 @@ namespace Systems
         }
 #endif
 
+        const b2WorldId worldId = GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            if (!m_loggedMissingWorld)
+            {
+                DebugTrace("[PhysicsMachine] Box2D world is invalid; skipping step.\n");
+                m_loggedMissingWorld = true;
+            }
+            assert(false && "PhysicsMachine requires a valid Box2D world.");
+            return;
+        }
+
+        for (Entities::PhysicalEntity* body : m_bodies)
+        {
+            if (!body)
+            {
+#if defined(_DEBUG)
+                DebugTrace("[PhysicsMachine] Encountered null body pointer before step.\n");
+#endif
+                continue;
+            }
+
+            auto mapIt = m_bodyMap.find(body);
+            const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
+            if (!hasBody)
+            {
+                const b2BodyId bodyId = CreateBody(*body);
+                if (!b2Body_IsValid(bodyId))
+                {
+#if defined(_DEBUG)
+                    std::ostringstream oss;
+                    oss << "[PhysicsMachine] Unable to create Box2D body before step for tag='" << body->GetTag() << "'\n";
+                    DebugTrace(oss.str());
+#endif
+                    assert(false && "Failed to create Box2D body before physics step.");
+                    continue;
+                }
+
+                body->SetBox2DBodyId(bodyId);
+                m_bodyMap[body] = bodyId;
+            }
+        }
+
         m_system->Apply(ctx.dt);
         SyncBodies(ctx.dt);
     }
@@ -406,6 +398,7 @@ namespace Systems
                 DebugTrace("[PhysicsMachine] Cannot create body; Box2D world is invalid.\n");
                 m_loggedMissingWorld = true;
             }
+            assert(false && "Cannot create Box2D body without a valid world.");
             return b2_nullBodyId;
         }
 
@@ -449,6 +442,7 @@ namespace Systems
         if (!b2Body_IsValid(bodyId))
         {
             DebugTrace("[PhysicsMachine] Failed to create Box2D body.\n");
+            assert(false && "b2CreateBody returned invalid id.");
             return b2_nullBodyId;
         }
 
