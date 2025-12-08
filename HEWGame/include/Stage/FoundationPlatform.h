@@ -5,6 +5,7 @@
 
 #include <DirectXMath.h>
 
+#include "AABB.h"
 #include "Entities/PhysicalEntity.h"
 #include "ModelDX.h"
 #include "Transform.h"
@@ -44,5 +45,6 @@ namespace Stage
         Transform m_anchorTransform;
         std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
+        AABB m_descriptorLocalBounds;
     };
 }
