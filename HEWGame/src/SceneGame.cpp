@@ -39,6 +39,8 @@
 #include <utility>
 #include <iterator>
 #include <DirectXMath.h>
+#include "Physical.h"
+
 #if defined(_WIN32)
 #       ifndef NOMINMAX
 #               define NOMINMAX
