@@ -1261,6 +1261,16 @@ namespace Stage
     {
         return m_phaseRewardMultipliers;
     }
+    //ミニフェーズ
+    const std::vector<float>& StageData::GetPhaseMiniThresholds() const noexcept
+    {
+        return m_phaseMiniThresholds;
+    }
+    //ミニフェーズ
+    const std::vector<float>& StageData::GetPhaseRewardMiniMultipliers() const noexcept
+    {
+        return m_phaseRewardMiniMultipliers;
+    }
 
     const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
     {
