@@ -56,7 +56,7 @@ namespace Systems
                                         || (entityB && entityB->HasBox2DMesh());
                                 if (meshContact)
                                 {
-                                        LogMeshContact(entityA, entityB);
+                                        LogMeshContact(evt);
                                         ++loggedMeshContacts;
                                 }
                         }
@@ -138,11 +138,24 @@ namespace Systems
                         return nullptr;
                 }
 
+                return GetEntityForBody(bodyId);
+        }
+
+        Entities::PhysicalEntity* Box2DContactListener::GetEntityForBody(b2BodyId bodyId) const
+        {
+                if (!b2Body_IsValid(bodyId))
+                {
+                        return nullptr;
+                }
+
                 return static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(bodyId));
         }
 
-        void Box2DContactListener::LogMeshContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
+        void Box2DContactListener::LogMeshContact(const b2ContactBeginTouchEvent& evt) const
         {
+                Entities::PhysicalEntity* entityA = GetEntityForBody(b2Shape_GetBody(evt.shapeIdA));
+                Entities::PhysicalEntity* entityB = GetEntityForBody(b2Shape_GetBody(evt.shapeIdB));
+
                 const char* tagA = entityA ? entityA->GetTag().c_str() : "<null>";
                 const char* tagB = entityB ? entityB->GetTag().c_str() : "<null>";
 
