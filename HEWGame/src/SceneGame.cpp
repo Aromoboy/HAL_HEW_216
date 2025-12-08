@@ -81,6 +81,9 @@ namespace
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
         constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
+        constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
+        constexpr float3 kDefaultPlayerFallbackOffset{ 0.0f, 0.05f, 0.0f };
+        constexpr float3 kDefaultPlayerFallbackSize{ 0.6f, 0.9f, 0.12f };
         const HudLayoutConfig kHudLayoutConfig
         {
             512u,
@@ -274,6 +277,9 @@ namespace
             tuning.thicknessPadding = kDefaultGeneratedThicknessPadding;
             tuning.padding = kDefaultPlayerColliderPadding;
             tuning.offset = kDefaultPlayerColliderOffset;
+            tuning.fallbackPadding = kDefaultPlayerFallbackPadding;
+            tuning.fallbackOffset = kDefaultPlayerFallbackOffset;
+            tuning.fallbackSize = kDefaultPlayerFallbackSize;
 
             std::ifstream file(path);
             if (!file)
@@ -326,6 +332,27 @@ namespace
                     tuning.offset.x = std::stof(tokens[4]);
                     tuning.offset.y = std::stof(tokens[5]);
                     tuning.offset.z = std::stof(tokens[6]);
+
+                    if (tokens.size() >= 10)
+                    {
+                        tuning.fallbackPadding.x = std::stof(tokens[7]);
+                        tuning.fallbackPadding.y = std::stof(tokens[8]);
+                        tuning.fallbackPadding.z = std::stof(tokens[9]);
+                    }
+
+                    if (tokens.size() >= 13)
+                    {
+                        tuning.fallbackOffset.x = std::stof(tokens[10]);
+                        tuning.fallbackOffset.y = std::stof(tokens[11]);
+                        tuning.fallbackOffset.z = std::stof(tokens[12]);
+                    }
+
+                    if (tokens.size() >= 16)
+                    {
+                        tuning.fallbackSize.x = std::stof(tokens[13]);
+                        tuning.fallbackSize.y = std::stof(tokens[14]);
+                        tuning.fallbackSize.z = std::stof(tokens[15]);
+                    }
                 }
                 catch (const std::exception& ex)
                 {
@@ -337,7 +364,11 @@ namespace
 
                 std::ostringstream oss;
                 oss << kLogPrefix << "[PlayerCollider] Tuning applied pad=(" << tuning.padding.x << ',' << tuning.padding.y << ',' << tuning.padding.z
-                    << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
+                    << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z
+                    << ") fallbackPad=(" << tuning.fallbackPadding.x << ',' << tuning.fallbackPadding.y << ',' << tuning.fallbackPadding.z
+                    << ") fallbackOffset=(" << tuning.fallbackOffset.x << ',' << tuning.fallbackOffset.y << ',' << tuning.fallbackOffset.z
+                    << ") fallbackSize=(" << tuning.fallbackSize.x << ',' << tuning.fallbackSize.y << ',' << tuning.fallbackSize.z
+                    << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
                 DebugTrace(oss.str());
                 break;
             }
@@ -1169,7 +1200,10 @@ SceneGame::SceneGame()
             << " definitions=" << m_playerColliderDefinitions.size()
             << " tuningPadding=" << m_playerColliderTuning.thicknessPadding
             << " padXYZ=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
-            << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ")\n";
+            << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
+            << " fallbackPadXYZ=(" << m_playerColliderTuning.fallbackPadding.x << ',' << m_playerColliderTuning.fallbackPadding.y << ',' << m_playerColliderTuning.fallbackPadding.z << ')'
+            << " fallbackOffsetXYZ=(" << m_playerColliderTuning.fallbackOffset.x << ',' << m_playerColliderTuning.fallbackOffset.y << ',' << m_playerColliderTuning.fallbackOffset.z << ')'
+            << " fallbackSizeXYZ=(" << m_playerColliderTuning.fallbackSize.x << ',' << m_playerColliderTuning.fallbackSize.y << ',' << m_playerColliderTuning.fallbackSize.z << ")\n";
         ::DebugTrace(oss.str());
     }
 
@@ -1746,9 +1780,59 @@ SceneGame::SceneGame()
 
     if (!collider)
     {
-        collider = std::make_shared<Collision::AABBCollider>(trans, false, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
+        float3 colliderSize{};
+        float3 colliderOffset{};
+
+        if (geometryValid)
+        {
+            colliderSize = ScaleVector(float3{ playerGeometry.bounds.max.x - playerGeometry.bounds.min.x,
+                playerGeometry.bounds.max.y - playerGeometry.bounds.min.y,
+                playerGeometry.bounds.max.z - playerGeometry.bounds.min.z }, trans.scale);
+
+            colliderOffset = ScaleVector(float3{ (playerGeometry.bounds.min.x + playerGeometry.bounds.max.x) * 0.5f,
+                (playerGeometry.bounds.min.y + playerGeometry.bounds.max.y) * 0.5f,
+                (playerGeometry.bounds.min.z + playerGeometry.bounds.max.z) * 0.5f }, trans.scale);
+        }
+        else
+        {
+            colliderSize = m_playerColliderTuning.fallbackSize;
+            colliderOffset = float3{ 0.0f, m_playerColliderTuning.fallbackSize.y * 0.5f, 0.0f };
+        }
+
+        colliderSize.x += m_playerColliderTuning.fallbackPadding.x * 2.0f;
+        colliderSize.y += m_playerColliderTuning.fallbackPadding.y * 2.0f;
+        colliderSize.z = std::max(colliderSize.z + m_playerColliderTuning.fallbackPadding.z * 2.0f, kMinGeneratedThickness);
+
+        colliderOffset.x += m_playerColliderTuning.fallbackOffset.x;
+        colliderOffset.y += m_playerColliderTuning.fallbackOffset.y;
+        colliderOffset.z += m_playerColliderTuning.fallbackOffset.z;
+
+        trans.position.x += colliderOffset.x;
+        trans.position.y += colliderOffset.y;
+        trans.position.z += colliderOffset.z;
+
+        const auto safeScale = [](float value)
+        {
+            return std::max(value, 1e-3f);
+        };
+
+        const float3 expand
+        {
+            colliderSize.x / safeScale(trans.scale.x),
+            colliderSize.y / safeScale(trans.scale.y),
+            colliderSize.z / safeScale(trans.scale.z)
+        };
+
+        collider = std::make_shared<Collision::AABBCollider>(trans, false, expand, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
         colliderSource = "aabb_fallback";
-        colliderDecisionReason = "no_config_and_generated_failed";
+        colliderDecisionReason = geometryValid ? "generated_and_config_failed_geometry_sized" : "generated_and_config_failed_default_sized";
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] Applied fallback AABB size=(" << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z << ')'
+            << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ')'
+            << " expand=(" << expand.x << ',' << expand.y << ',' << expand.z << ')'
+            << " geometryBased=" << std::boolalpha << geometryValid << "\n";
+        DebugTrace(oss.str());
     }
     player = std::make_unique<Entities::Player>(
         trans,
