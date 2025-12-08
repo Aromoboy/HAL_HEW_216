@@ -43,7 +43,6 @@ namespace Entities
         PhysicalEntity(const Transform& transform,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
-            Physics::Physical physical = Physics::Physical{},
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Systems::ContactLiteSystem* contactSystem = nullptr,
@@ -57,7 +56,6 @@ namespace Entities
             const float3& scl,
             std::shared_ptr<Collision::ICollider> collider,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
-            Physics::Physical physical = Physics::Physical{},
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
 

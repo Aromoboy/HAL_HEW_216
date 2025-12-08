@@ -16,6 +16,7 @@
 #include "BoxColliderComponent.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Box2DMeshBuilder.h"
+#include "Systems/PhysicsMachine.h"
 
 namespace
 {
@@ -170,10 +171,6 @@ namespace Stage
             transform.scale,
             std::move(collider),
             Collision::CollisionLayer::Floor,
-            float3{ 0.0f, 0.0f, 0.0f },
-            float3{ 0.0f, 0.0f, 0.0f },
-            0.0f,
-            1.0f,
             phase,
             priority)
         , m_anchorTransform(transform)
@@ -181,6 +178,18 @@ namespace Stage
         , m_debugColor(SanitizeColor(color))
         , m_descriptorLocalBounds(BuildDescriptorLocalBounds(transform))
     {
+        auto& physical = GetPhysical();
+        physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
+        physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        physical.weight = 0.0f;
+        physical.damping = 1.0f;
+
+        if (auto* machine = GetPhysicsMachine())
+        {
+            machine->UnregisterBody(*this);
+            machine->RegisterBody(*this);
+        }
+
         LoadPlatformModel();
 
         Physics::BoxColliderComponent colliderComponent;
