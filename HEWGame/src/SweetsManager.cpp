@@ -1475,7 +1475,7 @@ namespace SweetsSpace
 
                 const auto colliderBuild = BuildColliderForSweets(type, scaledTransform, model);
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, shapeConfig, Collision::CollisionLayer::Sweets,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
 
                 return sweets;

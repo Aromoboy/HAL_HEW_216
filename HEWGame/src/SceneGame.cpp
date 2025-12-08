@@ -1566,7 +1566,6 @@ SceneGame::SceneGame()
             auto platform = std::make_unique<Stage::FoundationPlatform>(
                 tagStream.str(),
                 platformTransform,
-                nullptr,
                 std::nullopt,
                 m_physicsMachine.get(),
                 descriptor.color,
