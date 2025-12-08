@@ -286,7 +286,6 @@
     <ClInclude Include="include\PowerUpNode.h" />
     <ClInclude Include="include\ScenePowerUp.h" />
     <ClInclude Include="include\SpriteRenderer.h" />
-    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />
     <ClInclude Include="include\Diagnostics\Logger.h" />
