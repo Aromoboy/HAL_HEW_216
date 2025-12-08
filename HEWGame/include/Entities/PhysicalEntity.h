@@ -7,6 +7,7 @@
 
 #include "Entities/CollisionEntity.h"
 #include "Physical.h"
+#include "BoxColliderComponent.h"
 
 namespace Systems
 {
@@ -76,6 +77,13 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
+        void SetBoxColliderComponent(std::optional<Physics::BoxColliderComponent> component)
+        {
+            m_boxColliderComponent = std::move(component);
+        }
+
+        const std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent() const { return m_boxColliderComponent; }
+
         void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config) { m_box2dShapeConfig = std::move(config); }
         const std::optional<Physics::Box2DShapeConfig>& GetBox2DShapeConfig() const { return m_box2dShapeConfig; }
 
@@ -87,6 +95,7 @@ namespace Entities
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;
+        std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
     };
 }

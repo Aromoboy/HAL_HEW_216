@@ -272,6 +272,7 @@ namespace Systems
                                 Transform updatedTransform = collisionEntity.GetTransform();
                                 updatedTransform.position.x = position.x;
                                 updatedTransform.position.y = position.y;
+                                updatedTransform.rotation.z = b2Body_GetAngle(bodyId);
                                 body->SetTransform(updatedTransform);
                         }
                         return;
@@ -325,6 +326,8 @@ namespace Systems
                 body.SyncColliderBounds();
                 const auto& collisionEntity = static_cast<const Entities::CollisionEntity&>(body);
                 const Transform& transform = collisionEntity.GetTransform();
+                const auto colliderComponent = body.GetBoxColliderComponent();
+                const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
                 const auto shapeConfig = body.GetBox2DShapeConfig();
                 const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
                 const AABB bounds = collisionEntity.GetCollider() ? collisionEntity.GetCollider()->GetAABB() : AABB{};
@@ -340,6 +343,7 @@ namespace Systems
                 bodyDef.linearVelocity = b2Vec2{ body.GetPhysical().velocity.x, body.GetPhysical().velocity.y };
                 bodyDef.type = (body.GetPhysical().weight > 0.0f) ? b2_dynamicBody : b2_staticBody;
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
+                bodyDef.rotation = b2MakeRot(transform.rotation.z);
 
                 const float damping = std::clamp(body.GetPhysical().damping, 0.0f, 1.0f);
                 bodyDef.linearDamping = (damping > 0.0f) ? -std::log(damping) : 0.0f;
@@ -353,14 +357,45 @@ namespace Systems
                 }
 
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
+                if (hasColliderComponent)
+                {
+                        shapeDef = colliderComponent->shapeDef;
+                }
+
                 const float configuredDensity = hasShapeConfig
                         ? std::max(0.0f, shapeConfig->density)
                         : std::max(0.01f, body.GetPhysical().weight);
-                shapeDef.density = bodyDef.type == b2_dynamicBody ? configuredDensity : 0.0f;
-                shapeDef.material.friction = hasShapeConfig ? shapeConfig->friction : 0.6f;
-                shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;
+                shapeDef.density = bodyDef.type == b2_dynamicBody ? shapeDef.density : 0.0f;
+                if (shapeDef.density == 0.0f && bodyDef.type == b2_dynamicBody)
+                {
+                        shapeDef.density = configuredDensity;
+                }
+
+                if (!hasColliderComponent)
+                {
+                        shapeDef.material.friction = hasShapeConfig ? shapeConfig->friction : 0.6f;
+                        shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;
+                }
                 shapeDef.enableContactEvents = true;
                 shapeDef.enableHitEvents = true;
+
+                if (hasColliderComponent)
+                {
+                        for (const auto& polygon : colliderComponent->polygons)
+                        {
+                                b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
+                        }
+
+                        for (const auto& circle : colliderComponent->circles)
+                        {
+                                b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                        }
+
+                        if (!colliderComponent->Empty())
+                        {
+                                return bodyId;
+                        }
+                }
 
                 if (hasShapeConfig)
                 {
@@ -486,7 +521,11 @@ namespace Systems
 
                 if (b2Body_IsValid(it->second))
                 {
-                        b2DestroyBody(it->second);
+                        const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
+                        if (b2World_IsValid(bodyWorld))
+                        {
+                                b2DestroyBody(it->second);
+                        }
                 }
 
                 const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);

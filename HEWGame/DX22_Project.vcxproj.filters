@@ -232,6 +232,9 @@
     <ClInclude Include="include\AABBCollider.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\BoxColliderComponent.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\ColliderConfigLoader.h">
       <Filter>Core</Filter>
     </ClInclude>
