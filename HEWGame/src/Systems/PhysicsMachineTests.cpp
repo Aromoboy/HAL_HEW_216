@@ -26,10 +26,7 @@ namespace
             transform.scale,
             collider,
             Collision::CollisionLayer::Default,
-            float3{ 0.0f, 0.0f, 0.0f },
-            float3{ 0.0f, 0.0f, 0.0f },
-            weight,
-            damping,
+            Physics::Physical{},
             Core::UpdatePhase::Physics,
             0);
     }
@@ -51,7 +48,7 @@ namespace
         Core::UpdateContext ctx(0.016f, timer, dummyInput, nullptr);
 
         auto& phys = falling.GetPhysical();
-        phys.velocity = float3{ 0.0f, -4.0f, 0.0f };
+        phys.SetLinearVelocity(float3{ 0.0f, -4.0f, 0.0f });
 
         const float initialY = falling.GetTransform().position.y;
         machine.OnUpdate(ctx);

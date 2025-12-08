@@ -255,8 +255,7 @@ namespace Stage
     {
         (void)ctx;
         auto& physical = GetPhysical();
-        physical.velocity = float3{ 0.0f, 0.0f, 0.0f };
-        physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        physical.SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
 
         SetTransform(m_anchorTransform);
     }
