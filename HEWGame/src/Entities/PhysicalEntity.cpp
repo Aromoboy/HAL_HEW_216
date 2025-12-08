@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 
-#include <box2d/math_functions.h>
+#include <box2d/box2d.h>
 
 namespace
 {
@@ -99,7 +99,7 @@ namespace Entities
 
         const b2Vec2 position = ToBox2DPosition(m_transform.position);
         const float angle = ToBox2DAngle(m_transform.rotation.z);
-        b2Body_SetTransform(m_physical.bodyId, position, angle);
+        b2Body_SetTransform(m_physical.bodyId, position, b2MakeRot(angle));
     }
 
     b2Vec2 PhysicalEntity::ToBox2DPosition(const float3& worldPosition)

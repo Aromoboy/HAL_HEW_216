@@ -29,7 +29,7 @@ namespace SweetsSpace
         (void)ctx;
     }
 
-    void BaseSweets::Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
+    void BaseSweets::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
         (void)renderer;
         (void)camera;

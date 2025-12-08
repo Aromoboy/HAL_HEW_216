@@ -103,7 +103,7 @@ public:
     void OnExit() override;
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) final;
-    void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
+    void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
     void RefreshPlatformAnchor(bool forceRecompute);
@@ -123,7 +123,7 @@ private:
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
-    bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
+    bool TryGetGuidelineClipY(const ::CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
     int ComputeScore() const;

@@ -126,7 +126,7 @@ namespace SweetsSpace
         void OnUpdate(Core::UpdateContext& ctx) override;
         void OnLateUpdate(Core::UpdateContext& ctx);
 
-        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera);
+        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera);
 
         SweetsList& GetByState(SweetsState state);
         const SweetsList& GetByState(SweetsState state) const;
@@ -288,7 +288,11 @@ namespace SweetsSpace
             Collision::CollisionLayer layer,
             Core::UpdatePhase phase,
             int priority);
-};
+    };
+
+    // =====================
+// TEMPLATE IMPLEMENTATION
+// =====================
 
 template<typename T>
 std::shared_ptr<ActiveSweets> SweetsManager::MakeSweets(
@@ -300,14 +304,9 @@ std::shared_ptr<ActiveSweets> SweetsManager::MakeSweets(
     Core::UpdatePhase phase,
     int priority)
 {
-    // モデルが無ければ生成不可
     if (!model)
-    {
         return nullptr;
-    }
 
-    // Physical はコンストラクタで受け取らなくなったため削除
-    // Box2D ボディの生成は各 Sweets クラス内で行われる
     auto sweets = std::make_shared<T>(
         tag,
         transform,
@@ -320,19 +319,11 @@ std::shared_ptr<ActiveSweets> SweetsManager::MakeSweets(
         priority
     );
 
-    // 念のため（std::make_shared が失敗することはほぼないが）
     if (!sweets)
-    {
         return nullptr;
-    }
 
-    // 古い physical.velocity / force / weight / damping の設定は完全削除
-    // 新しい物理パイプラインでは b2Body に対して行うため不要
-
-    // PhysicsMachine に登録（Transform → Box2D ボディ作成）
     if (auto* machine = sweets->GetPhysicsMachine())
     {
-        // 安全のため一旦アンレジスターして再登録する流れを保持
         machine->UnregisterBody(*sweets);
         machine->RegisterBody(*sweets);
     }
@@ -340,4 +331,4 @@ std::shared_ptr<ActiveSweets> SweetsManager::MakeSweets(
     return sweets;
 }
 
-} // namespace SweetsSpace
+}

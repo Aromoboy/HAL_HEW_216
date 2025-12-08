@@ -203,18 +203,18 @@ const CameraSpace::CameraManager& Scene::GetCameraManager() const
 return m_cameraManager;
 }
 
-std::shared_ptr<CameraSpace::ICamera> Scene::AddCamera(std::shared_ptr<CameraSpace::ICamera> camera)
+std::shared_ptr<::CameraSpace::ICamera> Scene::AddCamera(std::shared_ptr<::CameraSpace::ICamera> camera)
 {
-return m_cameraManager.AddCamera(std::move(camera));
+    return m_cameraManager.AddCamera(std::move(camera));
 }
 
-void Scene::SetActiveCamera(const std::shared_ptr<CameraSpace::ICamera>& camera)
+void Scene::SetActiveCamera(const std::shared_ptr<::CameraSpace::ICamera>& camera)
 {
-m_cameraManager.SetActive(camera);
+    m_cameraManager.SetActive(camera);
 }
 
-std::shared_ptr<CameraSpace::ICamera> Scene::GetActiveCamera() const
+std::shared_ptr<::CameraSpace::ICamera> Scene::GetActiveCamera() const
 {
-return m_cameraManager.GetActiveCamera();
+    return m_cameraManager.GetActiveCamera();
 }
 }

@@ -1643,7 +1643,7 @@ namespace SweetsSpace
 #endif
     }
 
-    void SweetsManager::DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera)
+    void SweetsManager::DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera)
     {
         if (!camera)
         {

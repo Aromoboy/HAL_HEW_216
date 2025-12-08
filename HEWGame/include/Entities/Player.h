@@ -33,7 +33,7 @@ namespace Entities
         ~Player() override = default;
 
         void OnUpdate(Core::UpdateContext& ctx) override;
-        void Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera) override;
+        void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;

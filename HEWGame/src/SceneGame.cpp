@@ -2581,7 +2581,7 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
     return true;
 }
 
-void SceneGame::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
+void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
         if (m_backgroundRenderer)
         {
@@ -3240,7 +3240,7 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
     SetStageState(StageState::Playing);
 }
 
-bool SceneGame::TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const
+bool SceneGame::TryGetGuidelineClipY(const ::CameraSpace::ICamera& camera, float& outClipY) const
 {
     if (m_guidelineHeightMeters <= 0.0f)
     {
