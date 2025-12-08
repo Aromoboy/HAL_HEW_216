@@ -40,6 +40,7 @@ namespace Systems
         void SetContactListener(ContactListenerPtr listener);
         void SetSubStepCount(int subStepCount);
         SystemPtr GetSystem() const;
+        std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
         IntegratorPtr GetIntegrator() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
 
@@ -51,6 +52,7 @@ namespace Systems
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
         b2WorldId GetWorldId() const;
 
+        void SyncBodies(float dt);
         void OnUpdate(Core::UpdateContext& ctx) override;
 
     private:
