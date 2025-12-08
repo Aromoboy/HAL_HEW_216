@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "AABB.h"
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
@@ -54,8 +55,8 @@ private:
 	
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
-	// bV쐬
-	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*);
+        // bV쐬
+        std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds);
 	// }eA̍쐬
 	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, ID3D11Device* device, TextureCache& textureCache);
 

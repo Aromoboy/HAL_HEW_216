@@ -1,11 +1,13 @@
 #include "Stage/FoundationPlatform.h"
 
 #include <algorithm>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "AABBCollider.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelCache.h"
@@ -40,6 +42,47 @@ namespace
         unsigned int nullMeshes{ 0 };
         unsigned int nullMaterials{ 0 };
     };
+
+    constexpr float3 kFallbackColliderExtents{ 0.5f, 0.85f, 0.5f };
+
+    float3 SafeScale(const Transform& transform)
+    {
+        float3 scale = transform.scale;
+        scale.x = scale.x == 0.0f ? 1.0f : scale.x;
+        scale.y = scale.y == 0.0f ? 1.0f : scale.y;
+        scale.z = scale.z == 0.0f ? 1.0f : scale.z;
+        return scale;
+    }
+
+    float3 CalculateExpandFromExtents(const float3& extents, const float3& scale)
+    {
+        return float3
+        {
+            (extents.x * 2.0f) / scale.x,
+            (extents.y * 2.0f) / scale.y,
+            (extents.z * 2.0f) / scale.z
+        };
+    }
+
+    std::shared_ptr<Collision::AABBCollider> CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
+    {
+        const float3 center
+        {
+            (bounds.min.x + bounds.max.x) * 0.5f,
+            (bounds.min.y + bounds.max.y) * 0.5f,
+            (bounds.min.z + bounds.max.z) * 0.5f
+        };
+        const float3 extents
+        {
+            (bounds.max.x - bounds.min.x) * 0.5f,
+            (bounds.max.y - bounds.min.y) * 0.5f,
+            (bounds.max.z - bounds.min.z) * 0.5f
+        };
+
+        const float3 safeScale = SafeScale(transform);
+        const float3 expand = CalculateExpandFromExtents(extents, safeScale);
+        return std::make_shared<Collision::AABBCollider>(transform, false, expand, center, Collision::CollisionLayer::Floor);
+    }
 
     std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
     {
@@ -101,7 +144,8 @@ namespace
         std::vector<std::shared_ptr<MaterialDX>> materials = CopyMaterials(source, maxMaterialId + 1, stats.nullMaterials);
         stats.materialCount = static_cast<unsigned int>(materials.size());
 
-        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials));
+        std::optional<AABB> clonedBounds = source.HasLocalBounds() ? std::optional<AABB>(source.GetLocalBounds()) : std::nullopt;
+        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials), clonedBounds);
     }
 }
 
@@ -129,9 +173,25 @@ namespace Stage
         , m_model(nullptr)
         , m_debugColor(SanitizeColor(color))
     {
-        SyncColliderBounds();
         LoadPlatformModel();
+
+        if (!m_collider)
+        {
+            if (m_model && m_model->HasLocalBounds())
+            {
+                m_collider = CreateColliderFromBounds(transform, m_model->GetLocalBounds());
+            }
+            else
+            {
+                const float3 safeScale = SafeScale(transform);
+                const float3 expand = CalculateExpandFromExtents(kFallbackColliderExtents, safeScale);
+                m_collider = std::make_shared<Collision::AABBCollider>(transform, false, expand, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
+            }
+        }
+
+        SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
+        SetAnchorTransform(transform);
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
