@@ -19,7 +19,6 @@
 #include <vector>
 #include <DirectXMath.h>
 
-#include <box2d/b2_math.h>
 #include <box2d/box2d.h>
 
 #if defined(_WIN32)
