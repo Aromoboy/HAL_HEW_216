@@ -251,6 +251,7 @@
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="src\UpdatableTimer.cpp" />
+    <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\BoxColliderComponent.h" />
@@ -347,6 +348,7 @@
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />
+    <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

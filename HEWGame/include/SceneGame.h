@@ -21,6 +21,7 @@
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
 #include "HudRenderer.h"
+#include "TimerDisplay.h"
 #include "BackgroundRenderer.h"
 #include "ColliderConfigLoader.h"
 #include <cstddef>
@@ -204,6 +205,8 @@ private:
     bool m_forceConfigPlayerCollider = false;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
+    TimerDisplay m_timerDisplay;
+    Texture* m_numberTexture;
 };
 
 #endif // __SCENE_GAME_H__

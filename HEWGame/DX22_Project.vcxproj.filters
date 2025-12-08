@@ -236,6 +236,7 @@
     <ClCompile Include="include\PowerUpRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <!-- ==================== -->
   <!-- All .h with filters  -->
@@ -502,6 +503,7 @@
     <ClInclude Include="include\PowerUpRenderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <!-- =================== -->
   <!-- Filter definitions  -->
