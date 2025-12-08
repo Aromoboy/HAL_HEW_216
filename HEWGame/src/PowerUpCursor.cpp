@@ -65,7 +65,7 @@ void PowerUpCursor::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& ca
 	float2 drawScale = result ? result.value() : float2{ 1.0f, 1.0f };
 	
 	
-	render.DrawCursor(drawPosition, drawScale, camera);
+	render.DrawCursor(m_texture, drawPosition, drawScale, camera);
 }
 
 

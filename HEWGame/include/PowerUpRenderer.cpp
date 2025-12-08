@@ -196,7 +196,7 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawSprite(m_cost, world, view, proj);
 }
 
-void PowerUpRenderer::DrawCursor(float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
+void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
 {
 	const DirectX::XMFLOAT4X4& view = camera.GetView();
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
@@ -217,8 +217,10 @@ void PowerUpRenderer::DrawCursor(float2 a_position, float2 a_scale, const Camera
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	DrawSprite(m_backFrame, world, view, proj);
+	DrawSprite(a_texture, world, view, proj);
 }
+
+
 
 
 
