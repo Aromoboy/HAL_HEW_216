@@ -875,7 +875,7 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Drop success tag='" << sweets->GetTag()
-            << "' velocityY=" << sweetsPhysical.velocity.y << "\n";
+            << "' velocityY=" << sweetsPhysical.GetLinearVelocity().y << "\n";
         PlayerDebugTrace(oss.str());
 
         m_carrieds.pop_back();
