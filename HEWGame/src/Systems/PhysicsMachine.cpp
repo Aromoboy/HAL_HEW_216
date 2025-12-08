@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -372,20 +373,124 @@ namespace Systems
                         return b2_nullBodyId;
                 }
 
-                body.SyncColliderBounds();
-                const auto& collisionEntity = static_cast<const Entities::CollisionEntity&>(body);
-                const Transform& transform = collisionEntity.GetTransform();
+                const Transform& transform = body.GetTransform();
+                const auto layer = body.GetCollisionLayer();
                 const auto colliderComponent = body.GetBoxColliderComponent();
                 const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
                 const auto shapeConfig = body.GetBox2DShapeConfig();
                 const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-                const AABB bounds = collisionEntity.GetCollider() ? collisionEntity.GetCollider()->GetAABB() : AABB{};
-                const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f));
-                const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f));
 
                 const auto& meshPolygons = body.GetBox2DPolygons();
                 const auto& meshBoundary = body.GetBox2DBoundary();
                 const bool hasMeshFixtures = !meshPolygons.empty();
+
+                const auto computeHalfExtents = [&]()
+                {
+                        const float kMinHalfExtent = Entities::PhysicalEntity::ToBox2DLength(0.05f);
+                        float minX = std::numeric_limits<float>::max();
+                        float maxX = std::numeric_limits<float>::lowest();
+                        float minY = std::numeric_limits<float>::max();
+                        float maxY = std::numeric_limits<float>::lowest();
+                        bool hasPoints = false;
+
+                        const auto accumulatePoint = [&](float x, float y)
+                        {
+                                minX = std::min(minX, x);
+                                maxX = std::max(maxX, x);
+                                minY = std::min(minY, y);
+                                maxY = std::max(maxY, y);
+                                hasPoints = true;
+                        };
+
+                        const auto accumulatePolygon = [&](const b2Polygon& polygon)
+                        {
+                                for (int i = 0; i < polygon.count; ++i)
+                                {
+                                        accumulatePoint(polygon.vertices[i].x, polygon.vertices[i].y);
+                                }
+                        };
+
+                        if (colliderComponent)
+                        {
+                                for (const auto& polygon : colliderComponent->polygons)
+                                {
+                                        accumulatePolygon(polygon);
+                                }
+
+                                for (const auto& circle : colliderComponent->circles)
+                                {
+                                        accumulatePoint(circle.center.x - circle.radius, circle.center.y - circle.radius);
+                                        accumulatePoint(circle.center.x + circle.radius, circle.center.y + circle.radius);
+                                }
+                        }
+
+                        if (!hasPoints && hasShapeConfig)
+                        {
+                                switch (shapeConfig->type)
+                                {
+                                case Physics::Box2DShapeConfig::Type::Box:
+                                {
+                                        const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
+                                        const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
+                                        return std::make_pair(hx, hy);
+                                }
+                                case Physics::Box2DShapeConfig::Type::Polygon:
+                                {
+                                        std::vector<b2Vec2> scaled = shapeConfig->vertices;
+                                        for (auto& v : scaled)
+                                        {
+                                                v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                                v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
+                                                accumulatePoint(v.x, v.y);
+                                        }
+                                        break;
+                                }
+                                case Physics::Box2DShapeConfig::Type::Circle:
+                                {
+                                        const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
+                                            std::max(0.01f, shapeConfig->radius * std::max(transform.scale.x, transform.scale.y)));
+                                        accumulatePoint(-scaledRadius, -scaledRadius);
+                                        accumulatePoint(scaledRadius, scaledRadius);
+                                        break;
+                                }
+                                default:
+                                        break;
+                                }
+                        }
+
+                        if (!hasPoints && hasMeshFixtures)
+                        {
+                                for (const auto& polygon : meshPolygons)
+                                {
+                                        for (const auto& v : polygon)
+                                        {
+                                                const float x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                                const float y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
+                                                accumulatePoint(x, y);
+                                        }
+                                }
+
+                                for (const auto& v : meshBoundary)
+                                {
+                                        const float x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                        const float y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
+                                        accumulatePoint(x, y);
+                                }
+                        }
+
+                        if (hasPoints)
+                        {
+                                const float halfWidth = std::max(kMinHalfExtent, (maxX - minX) * 0.5f);
+                                const float halfHeight = std::max(kMinHalfExtent, (maxY - minY) * 0.5f);
+                                return std::make_pair(halfWidth, halfHeight);
+                        }
+
+                        const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.x));
+                        const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.y));
+                        return std::make_pair(halfWidth, halfHeight);
+                };
+
+                const auto [halfWidth, halfHeight] = computeHalfExtents();
 
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
