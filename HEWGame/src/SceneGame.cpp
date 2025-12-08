@@ -490,7 +490,8 @@ float3 fRads = { 0.0f, 0.0f, 0.0f };
 SceneGame::SceneGame()
 {
     const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
-    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers());
+    m_phaseManager.Initialize(m_stageData.GetPhaseThresholds(), m_stageData.GetPhaseRewardMultipliers(),
+                              m_stageData.GetPhaseMiniThresholds(),m_stageData.GetPhaseRewardMiniMultipliers());
     m_playerBaseMoveSpeed = m_stageData.GetPlayerMoveSpeed();
     if (!std::isfinite(m_playerBaseMoveSpeed) || m_playerBaseMoveSpeed <= 0.0f)
     {

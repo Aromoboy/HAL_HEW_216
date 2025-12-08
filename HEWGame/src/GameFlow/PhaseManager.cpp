@@ -40,8 +40,8 @@ namespace GameFlow
     {
     }
 
-    void PhaseManager::Initialize(const std::vector<float>& thresholds, const std::vector<float>& minithresholds,
-        const std::vector<float>& rewardMultipliers, const std::vector<float>& rewardMiniMultipliers)
+    void PhaseManager::Initialize(const std::vector<float>& thresholds,const std::vector<float>& rewardMultipliers, 
+                                  const std::vector<float>& minithresholds, const std::vector<float>& rewardMiniMultipliers)
     {
         m_thresholds = thresholds;
         m_minithresholds = minithresholds; //ƒ~ƒj

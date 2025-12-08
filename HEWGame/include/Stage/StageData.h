@@ -29,6 +29,9 @@ namespace Stage
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
+        //ミニフェーズ
+        const std::vector<float>& GetPhaseMiniThresholds() const noexcept;
+        const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
         const std::vector<PlatformDescriptor>& GetPlatforms() const noexcept;
@@ -51,6 +54,8 @@ namespace Stage
         std::vector<PlatformDescriptor> m_platforms;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
+        std::vector<float> m_phaseMiniThresholds;        //ミニフェーズ
+        std::vector<float> m_phaseRewardMiniMultipliers; //ミニフェーズ
         std::vector<float3> m_spawnPoints;
         std::string m_sourcePath;
         bool m_loadedFromFile;
