@@ -23,7 +23,6 @@ namespace Entities
         Player(const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
-            Physics::Physical physical = Physics::Physical{},
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Systems::ContactLiteSystem* contactSystem = nullptr,
             SweetsSpace::SweetsManager* sweetsManager = nullptr,

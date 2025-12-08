@@ -20,21 +20,22 @@ namespace
                 const Transform& transform,
                 std::shared_ptr<Collision::ICollider> collider,
                 Collision::CollisionLayer layer,
-                Physics::Physical physical,
                 ContactLiteSystem& contactSystem,
                 const char* tag)
         {
-                return Entities::PhysicalEntity(
+                Entities::PhysicalEntity entity(
                         transform,
                         std::move(collider),
                         layer,
-                        physical,
                         nullptr,
                         nullptr,
                         &contactSystem,
                         Core::UpdatePhase::PrePhysics,
                         0,
                         tag);
+
+                entity.GetPhysical() = Physics::Physical{};
+                return entity;
         }
 
         void RunSweetsFoundationRestingTest()
@@ -54,14 +55,14 @@ namespace
                         float2{ 0.0f, 0.0f },
                         foundationTransform.scale.z,
                         Collision::CollisionLayer::Floor);
-                Physics::Physical foundationPhysical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f };
+                Physics::Physical foundationPhysical{};
                 auto foundation = BuildPhysical(
                         foundationTransform,
                         foundationCollider,
                         Collision::CollisionLayer::Floor,
-                        foundationPhysical,
                         contactSystem,
                         "StageFoundation");
+                foundation.GetPhysical() = foundationPhysical;
                 foundationCollider->UpdateBounds(foundationTransform);
 
                 Transform sweetsTransform{ float3{ 0.0f, 0.75f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
@@ -77,14 +78,14 @@ namespace
                         float2{ 0.0f, 0.0f },
                         sweetsTransform.scale.z,
                         Collision::CollisionLayer::Sweets);
-                Physics::Physical sweetsPhysical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f };
+                Physics::Physical sweetsPhysical{};
                 auto sweets = BuildPhysical(
                         sweetsTransform,
                         sweetsCollider,
                         Collision::CollisionLayer::Sweets,
-                        sweetsPhysical,
                         contactSystem,
                         "Cake");
+                sweets.GetPhysical() = sweetsPhysical;
                 sweetsCollider->UpdateBounds(sweetsTransform);
 
                 std::vector<Entities::PhysicalEntity*> bodies{ &foundation, &sweets };

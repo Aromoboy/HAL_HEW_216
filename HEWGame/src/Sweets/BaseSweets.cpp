@@ -5,12 +5,11 @@
 
 namespace SweetsSpace
 {
-    BaseSweets::BaseSweets(const std::string& tag,
+        BaseSweets::BaseSweets(const std::string& tag,
         const Transform& transform,
         std::shared_ptr<Render::Model> model,
         std::shared_ptr<Collision::ICollider> collider,
         Collision::CollisionLayer layer,
-        Physics::Physical physical,
         Systems::PhysicsMachine* physicsMachine,
         Systems::ContactLiteSystem* contactSystem,
         Core::UpdatePhase phase,
@@ -18,7 +17,6 @@ namespace SweetsSpace
         : Entities::PhysicalEntity(transform,
             std::move(collider),
             layer,
-            physical,
             std::move(model),
             physicsMachine,
             contactSystem,

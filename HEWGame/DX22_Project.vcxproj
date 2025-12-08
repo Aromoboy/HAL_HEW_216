@@ -248,6 +248,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AABB.h" />
+    <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
     <ClInclude Include="include\Collision2D.h" />

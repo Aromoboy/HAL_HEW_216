@@ -16,7 +16,6 @@ namespace SweetsSpace
             std::shared_ptr<Render::Model> model = nullptr,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
-            Physics::Physical physical = Physics::Physical{},
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Systems::ContactLiteSystem* contactSystem = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,

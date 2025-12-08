@@ -26,6 +26,7 @@
 #endif
 #include <d3d11.h>
 #include <vector>
+#include "BoxColliderComponent.h"
 #include "ColliderConfigLoader.h"
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
@@ -299,7 +300,7 @@ namespace
 
     float ComputeSpeedSq(const Physics::Physical& physical)
     {
-        const auto& v = physical.velocity;
+        const auto v = physical.GetLinearVelocity();
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
@@ -1419,6 +1420,7 @@ namespace SweetsSpace
                 if (sweets)
                 {
                     sweets->SetBox2DShapeConfig(shapeConfig);
+                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
                 }
 
                 return sweets;
