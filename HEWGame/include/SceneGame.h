@@ -210,6 +210,7 @@ private:
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
     bool m_cachedPlayerBoundsValid = false;
     bool m_playerBoundsFailureLogged = false;
+    bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
