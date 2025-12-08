@@ -2157,7 +2157,41 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->RegisterBody(*sweets);
+            const auto shapeConfig = sweets->GetBox2DShapeConfig();
+            const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+            const bool hasMeshFixtures = sweets->HasBox2DMesh() || !sweets->GetBox2DBoundary().empty();
+
+            if (!hasShapeConfig && !hasMeshFixtures)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Skipped physics registration for sweets '" << sweets->GetTag()
+                    << "': missing Box2D shape config and mesh fixtures.\n";
+                DebugTrace(oss.str());
+            }
+            else
+            {
+                const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
+                    || b2Body_IsValid(m_physicsMachine->FindBody(*sweets));
+                if (!alreadyRegistered)
+                {
+                    m_physicsMachine->RegisterBody(*sweets);
+                }
+
+                const auto& colliderComponent = sweets->GetBoxColliderComponent();
+                const int fixtureCount = colliderComponent ? static_cast<int>(colliderComponent->fixtures.size()) : 0;
+                const bool hasBody = sweets->HasBox2DBody();
+
+                if (!hasBody || fixtureCount <= 0)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Physics registration incomplete for sweets '" << sweets->GetTag()
+                        << "' hasBody=" << std::boolalpha << hasBody
+                        << " fixtures=" << fixtureCount << "\n";
+                    DebugTrace(oss.str());
+                }
+
+                m_registeredPhysicsBodies.insert(sweets.get());
+            }
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
@@ -2204,7 +2238,11 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets);
+            const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
+            if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
+            {
+                m_physicsMachine->UnregisterBody(*sweets);
+            }
         }
         else if (logWarnings && !m_warnedMissingPhysicsMachine)
         {

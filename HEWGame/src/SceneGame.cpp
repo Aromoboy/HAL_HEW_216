@@ -2598,11 +2598,16 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
         DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
         return;
     }
-    const bool meshOnly = hasMesh && !hasCollider && !hasBoxColliderComponent && !hasShapeConfig;
+    const bool meshOnly = hasMesh && !hasBoxColliderComponent && !hasShapeConfig;
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Skipping duplicate physics registration for tag='" << entity.GetTag() << "'\n";
+        DebugTrace(oss.str());
         return;
+    }
 
     if (meshOnly)
     {
@@ -2617,9 +2622,12 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 
     {
         const bool hasBody = entity.HasBox2DBody();
+        const int fixtureCount = boxColliderComponent ? static_cast<int>(boxColliderComponent->fixtures.size()) : 0;
         std::ostringstream oss;
         oss << kLogPrefix << "Physics registration complete for tag='" << entity.GetTag()
-            << "' hasBody=" << std::boolalpha << hasBody << (hasBody ? "" : " (unexpected)") << "\n";
+            << "' hasBody=" << std::boolalpha << hasBody
+            << " fixtures=" << fixtureCount
+            << ((hasBody && fixtureCount > 0) ? "" : " (incomplete)") << "\n";
         ::DebugTrace(oss.str());
     }
 }
