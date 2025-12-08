@@ -21,6 +21,7 @@
 
 #include <box2d/b2_math.h>
 #include <box2d/box2d.h>
+#include <box2d/math_functions.h>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -919,7 +920,7 @@ namespace Entities
         b2Body_SetTransform(
             m_bodyId,
             ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }),
-            b2MakeRot(b2Body_GetAngle(m_bodyId)));
+            b2Body_GetRotation(m_bodyId));
         float3 clampedVelocity = bodyVelocity;
         clampedVelocity.y = 0.0f;
         b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(clampedVelocity));
@@ -995,7 +996,7 @@ namespace Entities
         b2Body_SetTransform(
             m_bodyId,
             ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
-            b2MakeRot(b2Body_GetAngle(m_bodyId)));
+            b2Body_GetRotation(m_bodyId));
         SyncTransformFromBody();
 
         std::ostringstream oss;
