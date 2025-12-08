@@ -27,8 +27,8 @@ namespace
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
     constexpr float kDefaultCellSizeWorld = 1.0f;
-    constexpr float kDefaultHorizontalSpeedCellsPerSec = 15.0f;
-    constexpr float kDefaultVerticalSpeedCellsPerSec = 15.0f;
+    constexpr float kDefaultHorizontalSpeedCellsPerSec = 10.0f;
+    constexpr float kDefaultVerticalSpeedCellsPerSec = 12.0f;
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;

@@ -73,9 +73,9 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kPlayerSpeedBoostStep = 1.1f;
-        constexpr float kMaxPlayerSpeedMultiplier = 3.0f;
-        constexpr float kFallbackPlayerMoveSpeed = 15.0f;
+        constexpr float kPlayerSpeedBoostStep = 1.2f;
+        constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
+        constexpr float kFallbackPlayerMoveSpeed = 10.0f;
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
