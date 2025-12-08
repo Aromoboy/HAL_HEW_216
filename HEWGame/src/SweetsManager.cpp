@@ -32,6 +32,7 @@
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
 #include "ModelCache.h"
+#include "BoxColliderComponent.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
@@ -313,7 +314,15 @@ namespace
         return std::fabs(previous - current) > epsilon;
     }
 
-    Box2DShapeConfig BuildShapeConfig(SweetsType type, const float3& /*scale*/)
+    struct ColliderBuildResult
+    {
+        Box2DShapeConfig shapeConfig{};
+        std::optional<Physics::BoxColliderComponent> colliderComponent{};
+        std::vector<std::vector<b2Vec2>> meshPolygons;
+        std::vector<b2Vec2> meshBoundary;
+    };
+
+    Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
     {
         Box2DShapeConfig config{};
 
@@ -345,10 +354,80 @@ namespace
             break;
         default:
             config.type = Box2DShapeConfig::Type::Box;
+            config.density = 1.0f;
+            config.friction = 0.6f;
+            config.restitution = 0.05f;
             break;
         }
 
         return config;
+    }
+
+    void ApplyMaterialToCollider(Physics::BoxColliderComponent& component, const Box2DShapeConfig& shapeConfig)
+    {
+        component.shapeDef.density = shapeConfig.density;
+        component.shapeDef.material.friction = shapeConfig.friction;
+        component.shapeDef.material.restitution = shapeConfig.restitution;
+    }
+
+    ColliderBuildResult BuildColliderForSweets(SweetsType type, const Transform& transform, const std::shared_ptr<Render::Model>& model)
+    {
+        ColliderBuildResult result{};
+        result.shapeConfig = BuildBaseShapeConfig(type);
+
+        Physics::BoxColliderComponent colliderComponent{};
+        ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
+
+        switch (type)
+        {
+        case SweetsType::Cake:
+            colliderComponent.AddBox(0.5f, 0.5f);
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Pudding:
+            colliderComponent.AddPolygon({
+                b2Vec2{ -0.5f, -0.45f },
+                b2Vec2{ 0.5f, -0.45f },
+                b2Vec2{ 0.0f, 0.55f },
+            });
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Sherbet:
+            colliderComponent.AddCircle(0.5f);
+            result.colliderComponent = colliderComponent;
+            break;
+        default:
+            if (model && model->HasLocalBounds())
+            {
+                const AABB& bounds = model->GetLocalBounds();
+                const float minX = std::min(bounds.min.x, bounds.max.x);
+                const float maxX = std::max(bounds.min.x, bounds.max.x);
+                const float minY = std::min(bounds.min.y, bounds.max.y);
+                const float maxY = std::max(bounds.min.y, bounds.max.y);
+
+                std::vector<b2Vec2> polygon = {
+                    b2Vec2{ minX, minY },
+                    b2Vec2{ maxX, minY },
+                    b2Vec2{ maxX, maxY },
+                    b2Vec2{ minX, maxY },
+                };
+
+                result.meshBoundary = polygon;
+                result.meshPolygons.emplace_back(std::move(polygon));
+            }
+            break;
+        }
+
+        const float scaleFactor = transform.scale.x * transform.scale.y * transform.scale.z;
+        result.shapeConfig.density *= scaleFactor;
+        if (result.colliderComponent)
+        {
+            result.colliderComponent->shapeDef.density = result.shapeConfig.density;
+            result.colliderComponent->shapeDef.material.friction = result.shapeConfig.friction;
+            result.colliderComponent->shapeDef.material.restitution = result.shapeConfig.restitution;
+        }
+
+        return result;
     }
 
     float ComputeFallbackHorizontalLimit(float margin)
@@ -1394,10 +1473,7 @@ namespace SweetsSpace
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
 
-                const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
-
-                Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
-                shapeConfig.density *= scaleFactor;
+                const auto colliderBuild = BuildColliderForSweets(type, scaledTransform, model);
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
@@ -2101,41 +2177,42 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
+            const auto& colliderComponent = sweets->GetBoxColliderComponent();
+            const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
             const auto shapeConfig = sweets->GetBox2DShapeConfig();
             const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
             const bool hasMeshFixtures = sweets->HasBox2DMesh() || !sweets->GetBox2DBoundary().empty();
 
-            if (!hasShapeConfig && !hasMeshFixtures)
+            if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Skipped physics registration for sweets '" << sweets->GetTag()
-                    << "': missing Box2D shape config and mesh fixtures.\n";
+                oss << kLogPrefix << "Skipping physics registration for sweets '" << sweets->GetTag()
+                    << "': collider configuration missing.\n";
                 DebugTrace(oss.str());
+                return;
             }
-            else
+
+            const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
+                || b2Body_IsValid(m_physicsMachine->FindBody(*sweets));
+            if (!alreadyRegistered)
             {
-                const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
-                    || b2Body_IsValid(m_physicsMachine->FindBody(*sweets));
-                if (!alreadyRegistered)
-                {
-                    m_physicsMachine->RegisterBody(*sweets);
-                }
-
-                const auto& colliderComponent = sweets->GetBoxColliderComponent();
-                const int fixtureCount = colliderComponent ? static_cast<int>(colliderComponent->fixtures.size()) : 0;
-                const bool hasBody = sweets->HasBox2DBody();
-
-                if (!hasBody || fixtureCount <= 0)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Physics registration incomplete for sweets '" << sweets->GetTag()
-                        << "' hasBody=" << std::boolalpha << hasBody
-                        << " fixtures=" << fixtureCount << "\n";
-                    DebugTrace(oss.str());
-                }
-
-                m_registeredPhysicsBodies.insert(sweets.get());
+                m_physicsMachine->RegisterBody(*sweets);
             }
+
+            const int fixtureCount = colliderComponent ? static_cast<int>(colliderComponent->fixtures.size()) : 0;
+            const bool hasBody = sweets->HasBox2DBody();
+
+            if (!hasBody || fixtureCount <= 0)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Physics registration failed for sweets '" << sweets->GetTag()
+                    << "' hasBody=" << std::boolalpha << hasBody
+                    << " fixtures=" << fixtureCount << "\n";
+                DebugTrace(oss.str());
+                return;
+            }
+
+            m_registeredPhysicsBodies.insert(sweets.get());
         }
         else if (!m_warnedMissingPhysicsMachine)
         {

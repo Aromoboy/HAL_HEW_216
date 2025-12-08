@@ -1,9 +1,9 @@
 #include "Systems/PhysicsMachine.h"
 #include "Systems/Box2DPhysicsSystem.h"
-#include "Systems/IntegrateSystem.h"
 #include "Systems/Box2DContactListener.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -85,13 +85,11 @@ namespace Systems
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
         , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
         , m_system(m_box2dSystem)
-        , m_integrator(std::make_shared<IntegrateSystem>())
         , m_contactListener()
         , m_bodies()
         , m_bodyMap()
         , m_subStepCount(4)
         , m_loggedMissingSystem(false)
-        , m_loggedMissingIntegrator(false)
         , m_loggedMissingWorld(false)
         , m_loggedFirstTick(false)
     {
@@ -139,26 +137,6 @@ namespace Systems
         }
     }
 
-    void PhysicsMachine::SetIntegrator(IntegratorPtr integrator)
-    {
-        if (m_integrator == integrator)
-        {
-            return;
-        }
-
-#if defined(_DEBUG)
-        {
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] SetIntegrator called. previous=" << m_integrator.get()
-                << " new=" << (integrator ? integrator.get() : nullptr) << "\n";
-            DebugTrace(oss.str());
-        }
-#endif
-
-        m_integrator = std::move(integrator);
-        m_loggedMissingIntegrator = false;
-    }
-
     void PhysicsMachine::SetContactListener(ContactListenerPtr listener)
     {
         m_contactListener = std::move(listener);
@@ -191,11 +169,6 @@ namespace Systems
     std::shared_ptr<Box2DPhysicsSystem> PhysicsMachine::GetBox2DSystem() const
     {
         return m_box2dSystem;
-    }
-
-    PhysicsMachine::IntegratorPtr PhysicsMachine::GetIntegrator() const
-    {
-        return m_integrator;
     }
 
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
@@ -261,7 +234,10 @@ namespace Systems
         {
             body.SetBox2DBodyId(bodyId);
             m_bodyMap.emplace(bodyPtr, bodyId);
+            return;
         }
+
+        m_bodies.pop_back();
     }
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
@@ -298,52 +274,18 @@ namespace Systems
 
     void PhysicsMachine::SyncBodies(float dt)
     {
+        (void)dt;
         const b2WorldId worldId = GetWorldId();
 
-        if (b2World_IsValid(worldId))
+        if (!b2World_IsValid(worldId))
         {
-            for (Entities::PhysicalEntity* body : m_bodies)
+            if (!m_loggedMissingWorld)
             {
-                if (!body)
-                {
-#if defined(_DEBUG)
-                    DebugTrace("[PhysicsMachine] Encountered null body pointer during update.\n");
-#endif
-                    continue;
-                }
-
-                auto mapIt = m_bodyMap.find(body);
-                const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
-                if (!hasBody)
-                {
-                    // Box2D body がない場合はレガシー積分で動かす
-                    if (m_integrator)
-                    {
-                        m_integrator->Integrate(*body, dt);
-                    }
-                    body->SyncColliderBounds();
-                    continue;
-                }
-
-                const b2BodyId bodyId = mapIt->second;
-                body->SetBox2DBodyId(bodyId);
-                body->SyncTransformFromBox2DBody();
-                body->SyncColliderBounds();
+                DebugTrace("[PhysicsMachine] Box2D world is invalid; skipping sync.\n");
+                m_loggedMissingWorld = true;
             }
+            assert(false && "Box2D world must be valid before syncing bodies.");
             return;
-        }
-
-        // world 無効 → レガシー積分へフォールバック
-        if (!m_loggedMissingWorld)
-        {
-            DebugTrace("[PhysicsMachine] Box2D world is invalid; falling back to legacy integrator.\n");
-            m_loggedMissingWorld = true;
-        }
-
-        if (!m_integrator && !m_loggedMissingIntegrator)
-        {
-            DebugTrace("[PhysicsMachine] No integrator configured; skipping translation step.\n");
-            m_loggedMissingIntegrator = true;
         }
 
         for (Entities::PhysicalEntity* body : m_bodies)
@@ -356,11 +298,21 @@ namespace Systems
                 continue;
             }
 
-            if (m_integrator)
+            auto mapIt = m_bodyMap.find(body);
+            if (mapIt == m_bodyMap.end() || !b2Body_IsValid(mapIt->second))
             {
-                m_integrator->Integrate(*body, dt);
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Missing Box2D body during sync for tag='" << body->GetTag() << "'\n";
+                DebugTrace(oss.str());
+#endif
+                assert(false && "Registered entity is missing a Box2D body.");
+                continue;
             }
 
+            const b2BodyId bodyId = mapIt->second;
+            body->SetBox2DBodyId(bodyId);
+            body->SyncTransformFromBox2DBody();
             body->SyncColliderBounds();
         }
     }
@@ -388,6 +340,49 @@ namespace Systems
         }
 #endif
 
+        const b2WorldId worldId = GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            if (!m_loggedMissingWorld)
+            {
+                DebugTrace("[PhysicsMachine] Box2D world is invalid; skipping step.\n");
+                m_loggedMissingWorld = true;
+            }
+            assert(false && "PhysicsMachine requires a valid Box2D world.");
+            return;
+        }
+
+        for (Entities::PhysicalEntity* body : m_bodies)
+        {
+            if (!body)
+            {
+#if defined(_DEBUG)
+                DebugTrace("[PhysicsMachine] Encountered null body pointer before step.\n");
+#endif
+                continue;
+            }
+
+            auto mapIt = m_bodyMap.find(body);
+            const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
+            if (!hasBody)
+            {
+                const b2BodyId bodyId = CreateBody(*body);
+                if (!b2Body_IsValid(bodyId))
+                {
+#if defined(_DEBUG)
+                    std::ostringstream oss;
+                    oss << "[PhysicsMachine] Unable to create Box2D body before step for tag='" << body->GetTag() << "'\n";
+                    DebugTrace(oss.str());
+#endif
+                    assert(false && "Failed to create Box2D body before physics step.");
+                    continue;
+                }
+
+                body->SetBox2DBodyId(bodyId);
+                m_bodyMap[body] = bodyId;
+            }
+        }
+
         m_system->Apply(ctx.dt);
         SyncBodies(ctx.dt);
     }
@@ -403,6 +398,7 @@ namespace Systems
                 DebugTrace("[PhysicsMachine] Cannot create body; Box2D world is invalid.\n");
                 m_loggedMissingWorld = true;
             }
+            assert(false && "Cannot create Box2D body without a valid world.");
             return b2_nullBodyId;
         }
 
@@ -421,132 +417,17 @@ namespace Systems
         const auto& meshPolygons = body.GetBox2DPolygons();
         const auto& meshBoundary = body.GetBox2DBoundary();
         const bool hasMeshFixtures = !meshPolygons.empty();
+        const bool hasMeshBoundary = !meshBoundary.empty();
+        const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
 
-        // Box2D 空間上での AABB をざっくり取って fallback 用の box サイズを決める
-        const auto computeBounds = [&]()
-            {
-                const float kMinHalfExtent = Entities::PhysicalEntity::ToBox2DLength(0.05f);
-                float minX = std::numeric_limits<float>::max();
-                float maxX = std::numeric_limits<float>::lowest();
-                float minY = std::numeric_limits<float>::max();
-                float maxY = std::numeric_limits<float>::lowest();
-                bool hasPoints = false;
-
-                const auto accumulatePoint = [&](float x, float y)
-                    {
-                        minX = std::min(minX, x);
-                        maxX = std::max(maxX, x);
-                        minY = std::min(minY, y);
-                        maxY = std::max(maxY, y);
-                        hasPoints = true;
-                    };
-
-                const auto accumulatePolygon = [&](const b2Polygon& polygon)
-                    {
-                        for (int i = 0; i < polygon.count; ++i)
-                        {
-                            accumulatePoint(polygon.vertices[i].x, polygon.vertices[i].y);
-                        }
-                    };
-
-                if (colliderComponent)
-                {
-                    // 事前生成されたポリゴン
-                    for (const auto& polygon : colliderComponent->polygons)
-                    {
-                        for (int i = 0; i < polygon.count; ++i)
-                        {
-                            const float x = Entities::PhysicalEntity::ToBox2DLength(
-                                polygon.vertices[i].x * transform.scale.x);
-                            const float y = Entities::PhysicalEntity::ToBox2DLength(
-                                polygon.vertices[i].y * transform.scale.y);
-                            accumulatePoint(x, y);
-                        }
-                    }
-
-                    // 円は AABB で近似
-                    for (const auto& circle : colliderComponent->circles)
-                    {
-                        const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
-                            circle.radius * std::max(transform.scale.x, transform.scale.y));
-                        const float centerX = Entities::PhysicalEntity::ToBox2DLength(circle.center.x * transform.scale.x);
-                        const float centerY = Entities::PhysicalEntity::ToBox2DLength(circle.center.y * transform.scale.y);
-                        accumulatePoint(centerX - scaledRadius, centerY - scaledRadius);
-                        accumulatePoint(centerX + scaledRadius, centerY + scaledRadius);
-                    }
-                }
-
-                if (!hasPoints && hasShapeConfig)
-                {
-                    switch (shapeConfig->type)
-                    {
-                    case Physics::Box2DShapeConfig::Type::Box:
-                    {
-                        const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
-                        const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
-                        return std::make_tuple(b2Vec2_zero, hx, hy);
-                    }
-                    case Physics::Box2DShapeConfig::Type::Polygon:
-                    {
-                        std::vector<b2Vec2> scaled = shapeConfig->vertices;
-                        for (auto& v : scaled)
-                        {
-                            v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                            v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                            accumulatePoint(v.x, v.y);
-                        }
-                        break;
-                    }
-                    case Physics::Box2DShapeConfig::Type::Circle:
-                    {
-                        const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
-                            std::max(0.01f, shapeConfig->radius * std::max(transform.scale.x, transform.scale.y)));
-                        accumulatePoint(-scaledRadius, -scaledRadius);
-                        accumulatePoint(scaledRadius, scaledRadius);
-                        break;
-                    }
-                    default:
-                        break;
-                    }
-                }
-
-                if (!hasPoints && hasMeshFixtures)
-                {
-                    for (const auto& polygon : meshPolygons)
-                    {
-                        for (const auto& v : polygon)
-                        {
-                            const float x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                            const float y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                            accumulatePoint(x, y);
-                        }
-                    }
-
-                    for (const auto& v : meshBoundary)
-                    {
-                        const float x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                        const float y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                        accumulatePoint(x, y);
-                    }
-                }
-
-                if (hasPoints)
-                {
-                    const b2Vec2 center{
-                        (maxX + minX) * 0.5f,
-                        (maxY + minY) * 0.5f,
-                    };
-                    const float halfWidth = std::max(kMinHalfExtent, (maxX - minX) * 0.5f);
-                    const float halfHeight = std::max(kMinHalfExtent, (maxY - minY) * 0.5f);
-                    return std::make_tuple(center, halfWidth, halfHeight);
-                }
-
-                const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.x));
-                const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.y));
-                return std::make_tuple(b2Vec2_zero, halfWidth, halfHeight);
-            };
-
-        const auto [localCenter, halfWidth, halfHeight] = computeBounds();
+        if (!hasColliderComponent && !hasShapeConfig && !hasMeshData)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Cannot create physics body for tag='" << body.GetTag()
+                << "': collider component, shape config, and mesh data are all missing.\n";
+            DebugTrace(oss.str());
+            return b2_nullBodyId;
+        }
 
         // BodyDef 設定
         b2BodyDef bodyDef = b2DefaultBodyDef();
@@ -561,6 +442,7 @@ namespace Systems
         if (!b2Body_IsValid(bodyId))
         {
             DebugTrace("[PhysicsMachine] Failed to create Box2D body.\n");
+            assert(false && "b2CreateBody returned invalid id.");
             return b2_nullBodyId;
         }
 
@@ -585,6 +467,7 @@ namespace Systems
         shapeDef.filter.maskBits = ToMaskBits(layer);
 
         const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
+        bool createdFixtures = false;
 
         if (useColliderComponent)
         {
@@ -638,10 +521,7 @@ namespace Systems
 
             colliderComponent->polygons = std::move(originalPolygons);
             colliderComponent->circles = std::move(originalCircles);
-            if (!colliderComponent->fixtures.empty())
-            {
-                return bodyId;
-            }
+            createdFixtures = !colliderComponent->fixtures.empty();
         }
 
         // モデル由来のメッシュポリゴンがあれば優先的に使う
@@ -675,6 +555,24 @@ namespace Systems
                 ++meshShapes;
             }
 
+            if (meshShapes == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
+            {
+                std::vector<b2Vec2> scaled = meshBoundary;
+                for (auto& v : scaled)
+                {
+                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
+                }
+
+                const b2Hull boundaryHull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
+                if (b2ValidateHull(&boundaryHull))
+                {
+                    const b2Polygon shape = b2MakePolygon(&boundaryHull, 0.0f);
+                    colliderComponent->polygons.push_back(shape);
+                    ++meshShapes;
+                }
+            }
+
             if (meshShapes > 0)
             {
                 colliderComponent->shapeDef = shapeDef;
@@ -686,8 +584,13 @@ namespace Systems
                     << " boundaryPoints=" << meshBoundary.size() << "\n";
                 DebugTrace(oss.str());
 #endif
-                return bodyId;
+                createdFixtures = !colliderComponent->fixtures.empty();
             }
+        }
+
+        if (createdFixtures)
+        {
+            return bodyId;
         }
 
         // ShapeConfig から形状を作る
@@ -705,7 +608,12 @@ namespace Systems
                 colliderComponent->shapeDef = shapeDef;
                 colliderComponent->polygons.push_back(box);
                 colliderComponent->CreateFixtures(bodyId, shapeDef);
-                return bodyId;
+                createdFixtures = !colliderComponent->fixtures.empty();
+                if (createdFixtures)
+                {
+                    return bodyId;
+                }
+                break;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
@@ -726,7 +634,11 @@ namespace Systems
                         colliderComponent->shapeDef = shapeDef;
                         colliderComponent->polygons.push_back(shape);
                         colliderComponent->CreateFixtures(bodyId, shapeDef);
-                        return bodyId;
+                        createdFixtures = !colliderComponent->fixtures.empty();
+                        if (createdFixtures)
+                        {
+                            return bodyId;
+                        }
                     }
                 }
                 break;
@@ -741,21 +653,27 @@ namespace Systems
                 colliderComponent->shapeDef = shapeDef;
                 colliderComponent->circles.push_back(circle);
                 colliderComponent->CreateFixtures(bodyId, shapeDef);
-                return bodyId;
+                createdFixtures = !colliderComponent->fixtures.empty();
+                if (createdFixtures)
+                {
+                    return bodyId;
+                }
+                break;
             }
             default:
                 break;
             }
         }
 
-        // ここまで何も作られなかった場合は AABB から box を張る
-        const b2Polygon box = b2MakeOffsetBox(halfWidth, halfHeight, localCenter, b2Rot_identity);
-        colliderComponent->Clear();
-        colliderComponent->shapeDef = shapeDef;
-        colliderComponent->polygons.push_back(box);
-        colliderComponent->CreateFixtures(bodyId, shapeDef);
+        std::ostringstream oss;
+        oss << "[PhysicsMachine] Failed to build fixtures for tag='" << body.GetTag() << "'.\n";
+        DebugTrace(oss.str());
 
-        return bodyId;
+        colliderComponent->Destroy(worldId);
+        colliderComponent->Clear();
+        b2DestroyBody(bodyId);
+        body.SetBox2DBodyId(b2_nullBodyId);
+        return b2_nullBodyId;
     }
 
     void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body)

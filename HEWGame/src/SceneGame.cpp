@@ -2588,15 +2588,12 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     const bool hasMeshData = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
     if (!hasBoxColliderComponent && !hasShapeConfig && !hasMeshData)
     {
-        DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
+        std::ostringstream oss;
+        oss << kLogPrefix << "Cannot register physics for tag='" << entity.GetTag()
+            << "': collider component, shape config, and mesh data are all missing.\n";
+        DebugTrace(oss.str());
         return;
     }
-
-    const bool meshOnly =
-        hasMeshData &&
-        !hasBoxColliderComponent &&
-        !hasShapeConfig;
-
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
@@ -2605,15 +2602,6 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
         oss << kLogPrefix << "Skipping duplicate physics registration for tag='" << entity.GetTag() << "'\n";
         DebugTrace(oss.str());
         return;
-    }
-
-    if (meshOnly)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Registering mesh-only physics body tag='" << entity.GetTag()
-            << "' polygons=" << entity.GetBox2DPolygons().size()
-            << " boundaryPoints=" << entity.GetBox2DBoundary().size() << "\\n";
-        DebugTrace(oss.str());
     }
 
     entity.AttachPhysicsMachine(m_physicsMachine.get());
@@ -2627,6 +2615,13 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
             << " fixtures=" << fixtureCount
             << ((hasBody && fixtureCount > 0) ? "" : " (incomplete)") << "\n";
         ::DebugTrace(oss.str());
+
+        if (!hasBody || fixtureCount <= 0)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Physics registration aborted due to missing body or fixtures; detaching.\n");
+            entity.DetachPhysicsMachine();
+            m_registeredPhysicsBodies.erase(&entity);
+        }
     }
 }
 
