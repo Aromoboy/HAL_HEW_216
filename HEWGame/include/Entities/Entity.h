@@ -29,6 +29,7 @@ namespace Entities
         void OnUpdate(Core::UpdateContext& ctx) override;
         virtual void Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera);
 
+        [[deprecated("Use transform mutators that keep transforms and derived data in sync.")]]
         Transform& GetTransform();
         const Transform& GetTransform() const;
 

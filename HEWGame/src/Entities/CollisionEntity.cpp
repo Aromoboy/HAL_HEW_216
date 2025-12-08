@@ -28,6 +28,18 @@ namespace
         (void)message;
     }
 #endif
+
+    bool AreFloat3Equal(const float3& lhs, const float3& rhs)
+    {
+        return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    }
+
+    bool AreTransformsEqual(const Transform& lhs, const Transform& rhs)
+    {
+        return AreFloat3Equal(lhs.position, rhs.position)
+            && AreFloat3Equal(lhs.rotation, rhs.rotation)
+            && AreFloat3Equal(lhs.scale, rhs.scale);
+    }
 }
 
 namespace Entities
@@ -77,6 +89,58 @@ namespace Entities
         }
     }
 
+    void CollisionEntity::SetTransform(const Transform& transform)
+    {
+        const bool positionChanged = !AreFloat3Equal(transform.position, m_transform.position);
+        const bool rotationChanged = !AreFloat3Equal(transform.rotation, m_transform.rotation);
+        const bool scaleChanged = !AreFloat3Equal(transform.scale, m_transform.scale);
+
+        if (!positionChanged && !rotationChanged && !scaleChanged)
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform = transform;
+        SyncColliderBounds();
+    }
+
+    void CollisionEntity::SetPosition(const float3& position)
+    {
+        if (AreFloat3Equal(position, m_transform.position))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.position = position;
+        SyncColliderBounds();
+    }
+
+    void CollisionEntity::SetRotation(const float3& rotation)
+    {
+        if (AreFloat3Equal(rotation, m_transform.rotation))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.rotation = rotation;
+        SyncColliderBounds();
+    }
+
+    void CollisionEntity::SetScale(const float3& scale)
+    {
+        if (AreFloat3Equal(scale, m_transform.scale))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.scale = scale;
+        SyncColliderBounds();
+    }
+
     void CollisionEntity::SyncColliderBounds()
     {
         if (!m_collider)
@@ -114,10 +178,21 @@ namespace Entities
             return;
         }
 
+        MarkTransformDirty();
         m_transform.position.x += delta.x;
         m_transform.position.y += delta.y;
         m_transform.position.z += delta.z;
         SyncColliderBounds();
+    }
+
+    void CollisionEntity::OnUpdate(Core::UpdateContext& ctx)
+    {
+        Entity::OnUpdate(ctx);
+
+        if (m_transformDirty || !AreTransformsEqual(m_transform, m_lastBoundsTransform))
+        {
+            SyncColliderBounds();
+        }
     }
 
     void CollisionEntity::DebugDraw()

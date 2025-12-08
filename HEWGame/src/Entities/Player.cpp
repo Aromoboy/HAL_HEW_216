@@ -592,13 +592,13 @@ namespace Entities
 
         for (auto& it : m_carrieds)
         {
-            auto& sweetsTransform = it->GetTransform();
-            sweetsTransform.position = ComputeCarryAnchor();
-            sweetsTransform.rotation = m_transform.rotation;
+            const auto* sweetsEntity = static_cast<const CollisionEntity*>(it.get());
+            const Transform current = sweetsEntity ? sweetsEntity->GetTransform() : Transform{};
+            Transform updated = current;
+            updated.position = ComputeCarryAnchor();
+            updated.rotation = m_transform.rotation;
 
-            it->MarkTransformDirty();
-
-            it->SyncColliderBounds();
+            it->SetTransform(updated);
 
             Physics::Physical& physical = it->GetPhysical();
             physical.velocity = { 0.0f, 0.0f, 0.0f };
@@ -732,11 +732,11 @@ namespace Entities
             return;
         }
 
-        auto& sweetsTransform = candidate->GetTransform();
-        sweetsTransform.position = ComputeCarryAnchor();
-        sweetsTransform.rotation = m_transform.rotation;
-        candidate->MarkTransformDirty();
-        candidate->SyncColliderBounds();
+        const Transform current = static_cast<const CollisionEntity&>(*candidate).GetTransform();
+        Transform updated = current;
+        updated.position = ComputeCarryAnchor();
+        updated.rotation = m_transform.rotation;
+        candidate->SetTransform(updated);
 
         auto& physical = candidate->GetPhysical();
         physical.velocity = { 0.0f, 0.0f, 0.0f };
@@ -759,10 +759,7 @@ namespace Entities
         };
 
         auto sweets = m_carrieds.back();
-        auto& sweetsTransform = sweets->GetTransform();
-        sweetsTransform.position = ComputeCarryAnchor();
-        sweets->MarkTransformDirty();
-        sweets->SyncColliderBounds();
+        sweets->SetPosition(ComputeCarryAnchor());
 
         auto& sweetsPhysical = sweets->GetPhysical();
         sweetsPhysical.force = { 0.0f, 0.0f, 0.0f };
@@ -796,7 +793,8 @@ namespace Entities
             return;
         }
 
-        auto& position = m_transform.position;
+        const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
+        float3 position = transform.position;
         if (position.y >= m_minimumY)
         {
             return;
@@ -804,8 +802,7 @@ namespace Entities
 
         const float previousY = position.y;
         position.y = m_minimumY;
-        MarkTransformDirty();
-        SyncColliderBounds();
+        SetPosition(position);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
@@ -820,7 +817,8 @@ namespace Entities
             return;
         }
 
-        auto& position = m_transform.position;
+        const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
+        float3 position = transform.position;
         const float originalX = position.x;
         const float originalY = position.y;
 
@@ -838,8 +836,7 @@ namespace Entities
 
         position.x = clampedX;
         position.y = clampedY;
-        MarkTransformDirty();
-        SyncColliderBounds();
+        SetPosition(position);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
