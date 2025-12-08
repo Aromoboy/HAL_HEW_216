@@ -1870,7 +1870,7 @@ SceneGame::SceneGame()
         trans,
         m_playerModel,
         collider,
-        Physics::Physical{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, 1.0f, 0.98f },
+        Physics::Physical{},
         m_physicsMachine.get(),
         m_contactSystem.get(),
         m_sweetsManager.get(),
@@ -1958,7 +1958,7 @@ SceneGame::SceneGame()
             const bool isKinematic = player->IsKinematic();
             oss << kLogPrefix << "Player physics body registered (kinematic="
                 << std::boolalpha << isKinematic
-                << ", weight=" << player->GetPhysical().weight << ").\n";
+                << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
             ::DebugTrace(oss.str());
         }
         if (collider)
@@ -2920,7 +2920,7 @@ void SceneGame::ValidatePlayerPhysicsRegistration()
         std::ostringstream oss;
         oss << kLogPrefix << "Player body missing from PhysicsMachine list; re-registering (kinematic="
             << std::boolalpha << player->IsKinematic()
-            << ", weight=" << player->GetPhysical().weight << ").\n";
+            << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
         ::DebugTrace(oss.str());
         m_loggedPlayerBodyRecovery = true;
     }

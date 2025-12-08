@@ -55,10 +55,7 @@ namespace Entities
             const float3& scl,
             std::shared_ptr<Collision::ICollider> collider,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
-            const float3& velocity = float3{ 0.0f, 0.0f, 0.0f },
-            const float3& force = float3{ 0.0f, 0.0f, 0.0f },
-            float weight = 1.0f,
-            float damping = 0.98f,
+            Physics::Physical physical = Physics::Physical{},
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
         ~PhysicalEntity() override;
@@ -98,8 +95,6 @@ namespace Entities
     protected:
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine;
-
-        b2BodyId m_box2dBodyId{ b2_nullBodyId };
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;

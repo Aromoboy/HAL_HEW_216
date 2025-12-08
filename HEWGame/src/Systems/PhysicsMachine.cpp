@@ -364,12 +364,12 @@ namespace Systems
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
                 bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
-                bodyDef.linearVelocity = Entities::PhysicalEntity::ToBox2DVector(body.GetPhysical().velocity);
-                bodyDef.type = (body.GetPhysical().weight > 0.0f) ? b2_dynamicBody : b2_staticBody;
+                bodyDef.linearVelocity = Entities::PhysicalEntity::ToBox2DVector(body.GetPhysical().GetLinearVelocity());
+                const bool layerStatic = collisionEntity.GetCollisionLayer() == Collision::CollisionLayer::Floor;
+                bodyDef.type = layerStatic ? b2_staticBody : b2_dynamicBody;
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
 
-                const float damping = std::clamp(body.GetPhysical().damping, 0.0f, 1.0f);
-                bodyDef.linearDamping = (damping > 0.0f) ? -std::log(damping) : 0.0f;
+                bodyDef.linearDamping = body.GetPhysical().GetLinearDamping();
                 bodyDef.userData = &body;
 
                 b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);
@@ -383,7 +383,7 @@ namespace Systems
                 const Collision::CollisionLayer layer = collisionEntity.GetCollisionLayer();
                 const float configuredDensity = hasShapeConfig
                         ? std::max(0.0f, shapeConfig->density)
-                        : std::max(0.01f, body.GetPhysical().weight);
+                        : 1.0f;
                 shapeDef.density = bodyDef.type == b2_dynamicBody ? configuredDensity : 0.0f;
                 shapeDef.material.friction = hasShapeConfig ? shapeConfig->friction : 0.6f;
                 shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;

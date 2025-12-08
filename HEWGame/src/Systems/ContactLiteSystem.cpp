@@ -39,6 +39,16 @@ namespace
         constexpr float kPlanarZTolerance = 1e-3f;
         constexpr float kFoundationSatBypassScale = 2.0f;
 
+        float3 GetVelocity(const Physics::Physical& physical)
+        {
+            return physical.GetLinearVelocity();
+        }
+
+        void SetVelocity(Physics::Physical& physical, const float3& velocity)
+        {
+            physical.SetLinearVelocity(velocity);
+        }
+
         struct ContactNormalClassification
         {
                 float3 normal{ 0.0f, 0.0f, 0.0f };
@@ -432,7 +442,7 @@ namespace Systems
                                         return false;
                                 }
 
-                                return !(body->GetPhysical().weight > 0.0f);
+                                return !body->GetPhysical().IsDynamic();
                         };
 
                         const bool bodyAKinematic = isKinematicBody(bodyA, colliderA);
@@ -617,8 +627,8 @@ namespace Systems
                                 const float3 centerB{ GetAxisCenter(boundsB, 0), GetAxisCenter(boundsB, 1), GetAxisCenter(boundsB, 2) };
                                 Physics::Physical& physA = bodyA->GetPhysical();
                                 Physics::Physical& physB = bodyB->GetPhysical();
-                                const bool bodyAStatic = !(physA.weight > 0.0f);
-                                const bool bodyBStatic = !(physB.weight > 0.0f);
+                                const bool bodyAStatic = !physA.IsDynamic();
+                                const bool bodyBStatic = !physB.IsDynamic();
 
                                 Collision::ContactManifold2D contact2D{};
                                 std::string contactMethod = "none";
@@ -844,9 +854,11 @@ namespace Systems
                                                 if (unstableSupport)
                                                 {
                                                         Physics::Physical& topPhys = topIsA ? physA : physB;
-                                                        if (topPhys.weight > 0.0f)
+                                                        if (topPhys.IsDynamic())
                                                         {
-                                                                topPhys.velocity.x += slideDir * m_edgeSlideBoost;
+                                                                float3 velocity = GetVelocity(topPhys);
+                                                                velocity.x += slideDir * m_edgeSlideBoost;
+                                                                SetVelocity(topPhys, velocity);
 #if defined(_DEBUG)
                                                                 std::ostringstream oss;
                                                                 oss << kLogPrefix << "Unstable support slide boost: top='"
@@ -855,7 +867,7 @@ namespace Systems
                                                                         << "' overlapFraction=" << supportOverlapFraction
                                                                         << " boost=" << m_edgeSlideBoost
                                                                         << " dir=" << slideDir
-                                                                        << " velocityX=" << topPhys.velocity.x << "\n";
+                                                                        << " velocityX=" << velocity.x << "\n";
                                                                 DebugTrace(oss.str());
 #endif
                                                         }
@@ -925,20 +937,24 @@ namespace Systems
 
                                 const auto ApplyComponent = [&Project](Physics::Physical& phys, const float3& dir, float target)
                                 {
-                                        const float current = Project(phys.velocity, dir);
+                                        float3 velocity = GetVelocity(phys);
+                                        const float current = Project(velocity, dir);
                                         const float delta = target - current;
-                                        phys.velocity.x += dir.x * delta;
-                                        phys.velocity.y += dir.y * delta;
-                                        phys.velocity.z += dir.z * delta;
+                                        velocity.x += dir.x * delta;
+                                        velocity.y += dir.y * delta;
+                                        velocity.z += dir.z * delta;
+                                        SetVelocity(phys, velocity);
                                 };
 
                                 const auto ClampVelocity = [&](Physics::Physical& phys, const float3& normal, const float3& tangent,
                                         bool hasTangent, bool groundContact, bool supportContact, const std::string& tag)
                                 {
-                                        if (phys.weight <= 0.0f)
+                                        if (!phys.IsDynamic())
                                         {
                                                 return;
                                         }
+
+                                        float3 velocity = GetVelocity(phys);
 
                                         const auto clampComponent = [](float& component, float minSpeed)
                                         {
@@ -951,27 +967,29 @@ namespace Systems
                                         };
 
                                         bool clampedLinear = false;
-                                        clampedLinear |= clampComponent(phys.velocity.x, m_minLinearSpeed);
-                                        clampedLinear |= clampComponent(phys.velocity.y, m_minLinearSpeed);
-                                        clampedLinear |= clampComponent(phys.velocity.z, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(velocity.x, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(velocity.y, m_minLinearSpeed);
+                                        clampedLinear |= clampComponent(velocity.z, m_minLinearSpeed);
 
                                         bool clampedNormal = false;
                                         bool clampedTangent = false;
                                         if (groundContact)
                                         {
-                                                const float normalComponent = Project(phys.velocity, normal);
+                                                const float normalComponent = Project(velocity, normal);
                                                 if (std::fabs(normalComponent) < m_minVerticalSpeed)
                                                 {
                                                         ApplyComponent(phys, normal, 0.0f);
+                                                        velocity = GetVelocity(phys);
                                                         clampedNormal = true;
                                                 }
 
                                                 if (hasTangent)
                                                 {
-                                                        const float tangentialComponent = Project(phys.velocity, tangent);
+                                                        const float tangentialComponent = Project(velocity, tangent);
                                                         if (std::fabs(tangentialComponent) < m_minTangentialSpeed)
                                                         {
                                                                 ApplyComponent(phys, tangent, 0.0f);
+                                                                velocity = GetVelocity(phys);
                                                                 clampedTangent = true;
                                                         }
                                                 }
@@ -990,17 +1008,21 @@ namespace Systems
                                                         << " components(linear=" << (clampedLinear ? "yes" : "no")
                                                         << ", normal=" << (clampedNormal ? "yes" : "no")
                                                         << ", tangent=" << (clampedTangent ? "yes" : "no")
-                                                        << ") newVelocity=(" << phys.velocity.x << ',' << phys.velocity.y << ',' << phys.velocity.z << ")\n";
+                                                        << ") newVelocity=(" << velocity.x << ',' << velocity.y << ',' << velocity.z << ")\n";
                                                 DebugTrace(oss.str());
                                         }
 #endif
+
+                                        SetVelocity(phys, velocity);
                                 };
 
                                 const float3 tangent{ -contactNormal.y, contactNormal.x, 0.0f };
                                 const float tangentLenSq = tangent.x * tangent.x + tangent.y * tangent.y;
                                 const bool hasTangent = tangentLenSq > 1e-6f;
 
-                                const float relativeVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, contactNormal);
+                                const float3 velA = GetVelocity(physA);
+                                const float3 velB = GetVelocity(physB);
+                                const float relativeVelocity = Project(float3{ velA.x - velB.x, velA.y - velB.y, 0.0f }, contactNormal);
                                 if (std::fabs(relativeVelocity) > 1e-5f)
                                 {
                                         float activeBodyCount = 0.0f;
@@ -1049,13 +1071,17 @@ namespace Systems
                                                 }
                                                 if (!bodyAStatic)
                                                 {
-                                                        physA.velocity.x += contactNormal.x * impulse;
-                                                        physA.velocity.y += contactNormal.y * impulse;
+                                                        float3 velocity = GetVelocity(physA);
+                                                        velocity.x += contactNormal.x * impulse;
+                                                        velocity.y += contactNormal.y * impulse;
+                                                        SetVelocity(physA, velocity);
                                                 }
                                                 if (!bodyBStatic)
                                                 {
-                                                        physB.velocity.x -= contactNormal.x * impulse;
-                                                        physB.velocity.y -= contactNormal.y * impulse;
+                                                        float3 velocity = GetVelocity(physB);
+                                                        velocity.x -= contactNormal.x * impulse;
+                                                        velocity.y -= contactNormal.y * impulse;
+                                                        SetVelocity(physB, velocity);
                                                 }
                                         }
                                 }
@@ -1064,7 +1090,7 @@ namespace Systems
                                 {
                                         if (!bodyAStatic && bodyBStatic)
                                         {
-                                                const float previousVelocity = Project(physA.velocity, contactNormal);
+                                                const float previousVelocity = Project(GetVelocity(physA), contactNormal);
                                                 if (previousVelocity < 0.0f)
                                                 {
                                                         if (unstableSupport && topIsA)
@@ -1097,7 +1123,7 @@ namespace Systems
                                         }
                                         if (bodyAStatic && !bodyBStatic)
                                         {
-                                                const float previousVelocity = Project(physB.velocity, contactNormal);
+                                                const float previousVelocity = Project(GetVelocity(physB), contactNormal);
                                                 if (previousVelocity > 0.0f)
                                                 {
                                                         if (unstableSupport && !topIsA)
@@ -1131,7 +1157,9 @@ namespace Systems
 
                                         if (hasTangent)
                                         {
-                                        const float relativeTangentialVelocity = Project(float3{ physA.velocity.x - physB.velocity.x, physA.velocity.y - physB.velocity.y, 0.0f }, tangent);
+                                        const float3 tangentVelA = GetVelocity(physA);
+                                        const float3 tangentVelB = GetVelocity(physB);
+                                        const float relativeTangentialVelocity = Project(float3{ tangentVelA.x - tangentVelB.x, tangentVelA.y - tangentVelB.y, 0.0f }, tangent);
                                         const float absRelativeTangentialVelocity = std::fabs(relativeTangentialVelocity);
                                         const bool slopeAllowsStaticFriction = absContactNormalY >= m_maxSlopeCos;
                                         const bool allowStaticFriction = isGroundContact && slopeAllowsStaticFriction && (m_staticFriction > 0.0f);
@@ -1140,7 +1168,7 @@ namespace Systems
                                         {
                                                         const float sharedVelocity = (bodyAStatic && bodyBStatic)
                                                                 ? 0.0f
-                                                                : (Project(physA.velocity, tangent) + Project(physB.velocity, tangent)) * 0.5f;
+                                                                : (Project(tangentVelA, tangent) + Project(tangentVelB, tangent)) * 0.5f;
                                                         if (!bodyAStatic)
                                                         {
                                                                 ApplyComponent(physA, tangent, sharedVelocity);
@@ -1191,12 +1219,12 @@ namespace Systems
                                                         const float frictionScale = std::clamp(1.0f - m_dynamicFriction * std::max(ctx.dt, 0.0f), 0.0f, 1.0f);
                                                         if (!bodyAStatic)
                                                         {
-                                                                const float current = Project(physA.velocity, tangent);
+                                                                const float current = Project(GetVelocity(physA), tangent);
                                                                 ApplyComponent(physA, tangent, current * frictionScale);
                                                         }
                                                         if (!bodyBStatic)
                                                         {
-                                                                const float current = Project(physB.velocity, tangent);
+                                                                const float current = Project(GetVelocity(physB), tangent);
                                                                 ApplyComponent(physB, tangent, current * frictionScale);
                                                         }
 #if defined(_DEBUG)
@@ -1206,8 +1234,8 @@ namespace Systems
                                                                         << bodyA->GetTag() << "' vs '" << bodyB->GetTag()
                                                                         << "' scale=" << frictionScale
                                                                         << " static=" << bodyAStatic << '/' << bodyBStatic
-                                                                        << " tangentVelocityA=" << Project(physA.velocity, tangent)
-                                                                        << " tangentVelocityB=" << Project(physB.velocity, tangent)
+                                                                        << " tangentVelocityA=" << Project(GetVelocity(physA), tangent)
+                                                                        << " tangentVelocityB=" << Project(GetVelocity(physB), tangent)
                                                                         << "\n";
                                                                 DebugTrace(oss.str());
                                                         }
@@ -1242,27 +1270,31 @@ namespace Systems
                                         DebugTrace(oss.str());
                                 }
 #endif
-                                if (physA.velocity.z != 0.0f)
+                                float3 velocityA = GetVelocity(physA);
+                                if (velocityA.z != 0.0f)
                                 {
 #if defined(_DEBUG)
                                         std::ostringstream oss;
                                         oss << kLogPrefix << "Body '" << bodyA->GetTag()
-                                            << "' velocity.z=" << physA.velocity.z
+                                            << "' velocity.z=" << velocityA.z
                                             << " reset to zero post-contact.\n";
                                         DebugTrace(oss.str());
 #endif
-                                        physA.velocity.z = 0.0f;
+                                        velocityA.z = 0.0f;
+                                        SetVelocity(physA, velocityA);
                                 }
-                                if (physB.velocity.z != 0.0f)
+                                float3 velocityB = GetVelocity(physB);
+                                if (velocityB.z != 0.0f)
                                 {
 #if defined(_DEBUG)
                                         std::ostringstream oss;
                                         oss << kLogPrefix << "Body '" << bodyB->GetTag()
-                                            << "' velocity.z=" << physB.velocity.z
+                                            << "' velocity.z=" << velocityB.z
                                             << " reset to zero post-contact.\n";
                                         DebugTrace(oss.str());
 #endif
-                                        physB.velocity.z = 0.0f;
+                                        velocityB.z = 0.0f;
+                                        SetVelocity(physB, velocityB);
                                 }
 
                                 ++resolvedPairs;
@@ -1326,7 +1358,7 @@ namespace Systems
                                 return false;
                         }
 
-                        return !(candidate->GetPhysical().weight > 0.0f);
+                        return !candidate->GetPhysical().IsDynamic();
                 };
 
                 const bool targetKinematic = isKinematicBody(body, targetCollider);

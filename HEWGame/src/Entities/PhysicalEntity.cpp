@@ -19,9 +19,9 @@ namespace Entities
         AttachPhysicsMachine(m_physicsMachine);
     }
 
-    PhysicalEntity::PhysicalEntity(const std::string& tag, const float3& pos, const float3& rot, const float3& scl, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, const float3& velocity, const float3& force, float weight, float damping, Core::UpdatePhase phase, int priority)
+    PhysicalEntity::PhysicalEntity(const std::string& tag, const float3& pos, const float3& rot, const float3& scl, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, Physics::Physical physical, Core::UpdatePhase phase, int priority)
         : CollisionEntity(Transform{ pos, rot, scl }, std::move(collider), layer, nullptr, nullptr, phase, priority)
-        , m_physical(Physics::Physical{ velocity, force, weight, damping })
+        , m_physical(physical)
         , m_physicsMachine(nullptr)
     {
         m_tag = tag;
@@ -49,17 +49,17 @@ namespace Entities
 
     void PhysicalEntity::SetBox2DBodyId(b2BodyId bodyId)
     {
-        m_box2dBodyId = bodyId;
+        m_physical.bodyId = bodyId;
     }
 
     b2BodyId PhysicalEntity::GetBox2DBodyId() const
     {
-        return m_box2dBodyId;
+        return m_physical.bodyId;
     }
 
     bool PhysicalEntity::HasBox2DBody() const
     {
-        return b2Body_IsValid(m_box2dBodyId);
+        return m_physical.HasBody();
     }
 
     void PhysicalEntity::SyncTransformFromBox2DBody()
@@ -69,17 +69,14 @@ namespace Entities
             return;
         }
 
-        const b2Vec2 position = b2Body_GetPosition(m_box2dBodyId);
-        const float angle = b2Body_GetAngle(m_box2dBodyId);
-        const b2Vec2 velocity = b2Body_GetLinearVelocity(m_box2dBodyId);
+        const b2Vec2 position = b2Body_GetPosition(m_physical.bodyId);
+        const float angle = b2Body_GetAngle(m_physical.bodyId);
 
         Transform updatedTransform = m_transform;
         updatedTransform.position = ToWorldPosition(position);
         updatedTransform.rotation.z = ToWorldAngle(angle);
         SetTransform(updatedTransform);
 
-        m_physical.velocity = ToWorldVector(velocity);
-        m_physical.force = float3{ 0.0f, 0.0f, 0.0f };
     }
 
     void PhysicalEntity::SyncBox2DBodyFromTransform()
@@ -91,7 +88,7 @@ namespace Entities
 
         const b2Vec2 position = ToBox2DPosition(m_transform.position);
         const float angle = ToBox2DAngle(m_transform.rotation.z);
-        b2Body_SetTransform(m_box2dBodyId, position, angle);
+        b2Body_SetTransform(m_physical.bodyId, position, angle);
     }
 
     b2Vec2 PhysicalEntity::ToBox2DPosition(const float3& worldPosition)
@@ -168,7 +165,7 @@ namespace Entities
     {
         if (physicsMachine == m_physicsMachine)
         {
-            if (m_physicsMachine && !b2Body_IsValid(m_box2dBodyId))
+            if (m_physicsMachine && !m_physical.HasBody())
             {
                 m_physicsMachine->RegisterBody(*this);
             }
@@ -178,7 +175,7 @@ namespace Entities
         if (m_physicsMachine)
         {
             m_physicsMachine->UnregisterBody(*this);
-            m_box2dBodyId = b2_nullBodyId;
+            m_physical.Reset();
         }
 
         m_physicsMachine = physicsMachine;
@@ -198,7 +195,7 @@ namespace Entities
 
         m_physicsMachine->UnregisterBody(*this);
         m_physicsMachine = nullptr;
-        m_box2dBodyId = b2_nullBodyId;
+        m_physical.Reset();
     }
 
     void PhysicalEntity::RecreateBox2DBody()
@@ -208,10 +205,10 @@ namespace Entities
             return;
         }
 
-        if (b2Body_IsValid(m_box2dBodyId))
+        if (m_physical.HasBody())
         {
             m_physicsMachine->UnregisterBody(*this);
-            m_box2dBodyId = b2_nullBodyId;
+            m_physical.Reset();
         }
 
         m_physicsMachine->RegisterBody(*this);

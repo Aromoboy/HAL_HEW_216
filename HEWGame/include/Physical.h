@@ -2,34 +2,88 @@
 #ifndef __PHYSICAL_H__
 #define __PHYSICAL_H__
 
+#include <box2d/box2d.h>
+
 #include "Vector.h"
 
 namespace Physics
 {
-    // Default values (weight=1.0f, damping=0.98f) target a pseudo-2D space where
-    // planar velocity is gently reduced each step after external forces are applied.
     struct Physical
     {
-        float3 velocity;  // Planar velocity; Z is zeroed each step to keep motion 2D.
-        float3 force;     // Accumulated external force/impulse consumed during the next integration step.
-        float weight;     // Mass-like scalar; force is divided by this before integrating velocity.
-        float damping;    // Per-step damping multiplier applied to planar velocity after forces.
-
-        Physical()
-            : velocity{ 0.0f, 0.0f, 0.0f }
-            , force{ 0.0f, 0.0f, 0.0f }
-            , weight(1.0f)
-            , damping(0.98f)
+        Physical() = default;
+        explicit Physical(b2BodyId body)
+            : bodyId(body)
         {
         }
 
-        Physical(float3 a_velocity, float3 a_force, float a_weight, float a_damping)
-            : velocity(a_velocity)
-            , force(a_force)
-            , weight(a_weight)
-            , damping(a_damping)
+        [[nodiscard]] bool HasBody() const
         {
+            return b2Body_IsValid(bodyId);
         }
+
+        void Reset()
+        {
+            bodyId = b2_nullBodyId;
+        }
+
+        [[nodiscard]] b2BodyType GetBodyType() const
+        {
+            return HasBody() ? b2Body_GetType(bodyId) : b2_staticBody;
+        }
+
+        [[nodiscard]] bool IsDynamic() const
+        {
+            return GetBodyType() == b2_dynamicBody;
+        }
+
+        [[nodiscard]] float3 GetLinearVelocity() const
+        {
+            if (!HasBody())
+            {
+                return float3{ 0.0f, 0.0f, 0.0f };
+            }
+
+            const b2Vec2 v = b2Body_GetLinearVelocity(bodyId);
+            return float3{ v.x, v.y, 0.0f };
+        }
+
+        void SetLinearVelocity(const float3& velocity)
+        {
+            if (!HasBody())
+            {
+                return;
+            }
+
+            b2Body_SetLinearVelocity(bodyId, b2Vec2{ velocity.x, velocity.y });
+        }
+
+        [[nodiscard]] float GetLinearDamping() const
+        {
+            return HasBody() ? b2Body_GetLinearDamping(bodyId) : 0.0f;
+        }
+
+        void SetLinearDamping(float damping)
+        {
+            if (HasBody())
+            {
+                b2Body_SetLinearDamping(bodyId, damping);
+            }
+        }
+
+        [[nodiscard]] float GetGravityScale() const
+        {
+            return HasBody() ? b2Body_GetGravityScale(bodyId) : 0.0f;
+        }
+
+        void SetGravityScale(float scale)
+        {
+            if (HasBody())
+            {
+                b2Body_SetGravityScale(bodyId, scale);
+            }
+        }
+
+        b2BodyId bodyId{ b2_nullBodyId };
     };
 }
 #endif
