@@ -19,6 +19,8 @@
 #include <vector>
 #include <DirectXMath.h>
 
+#include <box2d/box2d.h>
+
 #if defined(_WIN32)
 #    ifndef NOMINMAX
 #        define NOMINMAX
@@ -225,10 +227,15 @@ namespace Entities
         , m_maxScreenX(0.0f)
         , m_hasMaximumY(false)
         , m_maximumY(0.0f)
+        , m_bodyId(b2_nullBodyId)
     {
-        if (m_isKinematic)
+        if (m_physical.weight <= 0.0f)
         {
-            m_physical.weight = 0.0f;
+            m_physical.weight = 1.0f;
+        }
+        else if (m_isKinematic)
+        {
+            m_physical.weight = std::max(0.01f, m_physical.weight);
         }
 
         if (model)
@@ -284,10 +291,106 @@ namespace Entities
         {
             m_model = m_fairyModel;
         }
+
+        InitializeBody(m_transform);
+    }
+
+    bool Player::HasValidBody() const
+    {
+        return b2Body_IsValid(m_bodyId);
+    }
+
+    b2Vec2 Player::GetBodyLinearVelocity() const
+    {
+        return HasValidBody() ? b2Body_GetLinearVelocity(m_bodyId) : b2Vec2{ 0.0f, 0.0f };
+    }
+
+    void Player::SetBox2DBodyId(b2BodyId bodyId)
+    {
+        m_bodyId = bodyId;
+        PhysicalEntity::SetBox2DBodyId(bodyId);
+    }
+
+    void Player::SyncTransformFromBody()
+    {
+        if (!HasValidBody())
+        {
+            return;
+        }
+
+        const b2Vec2 position = b2Body_GetPosition(m_bodyId);
+        const float angle = b2Body_GetAngle(m_bodyId);
+        const b2Vec2 velocity = b2Body_GetLinearVelocity(m_bodyId);
+
+        Transform updated = m_transform;
+        updated.position.x = position.x;
+        updated.position.y = position.y;
+        updated.rotation.z = angle;
+        SetTransform(updated);
+
+        m_physical.velocity = float3{ velocity.x, velocity.y, 0.0f };
+        m_physical.force = float3{ 0.0f, 0.0f, 0.0f };
+    }
+
+    void Player::InitializeBody(const Transform& transform)
+    {
+        if (!m_physicsMachine)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Box2D body creation skipped: physics machine missing.\n");
+            return;
+        }
+
+        const b2WorldId worldId = m_physicsMachine->GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Box2D body creation skipped: world invalid.\n");
+            return;
+        }
+
+        b2BodyDef bodyDef = b2DefaultBodyDef();
+        bodyDef.type = b2_dynamicBody;
+        bodyDef.position = b2Vec2{ transform.position.x, transform.position.y };
+        bodyDef.angle = transform.rotation.z;
+        bodyDef.linearVelocity = b2Vec2{ m_physical.velocity.x, m_physical.velocity.y };
+        bodyDef.gravityScale = m_isKinematic ? 0.0f : 1.0f;
+
+        const float damping = std::clamp(m_physical.damping, 0.0f, 1.0f);
+        bodyDef.linearDamping = (damping > 0.0f) ? -std::log(damping) : 0.0f;
+        bodyDef.userData = this;
+
+        m_bodyId = b2CreateBody(worldId, &bodyDef);
+        if (!b2Body_IsValid(m_bodyId))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Failed to create Box2D body for player.\n");
+            return;
+        }
+
+        Collision::ICollider* collider = GetCollider();
+        float halfWidth = 0.35f;
+        float halfHeight = 0.5f;
+        if (collider)
+        {
+            collider->UpdateBounds(transform);
+            const AABB bounds = collider->GetAABB();
+            halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
+            halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
+        }
+
+        b2ShapeDef shapeDef = b2DefaultShapeDef();
+        shapeDef.density = std::max(0.01f, m_physical.weight);
+        shapeDef.material.friction = 0.6f;
+
+        const b2Polygon box = b2MakeBox(halfWidth, halfHeight);
+        b2CreatePolygonShape(m_bodyId, &shapeDef, &box);
+
+        SetBox2DBodyId(m_bodyId);
+        SyncTransformFromBody();
     }
 
     void Player::OnUpdate(Core::UpdateContext& ctx)
     {
+        SyncTransformFromBody();
+
         Core::Input& input = ctx.input;
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
@@ -299,22 +402,32 @@ namespace Entities
         const bool canMove = (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f));
         if (canMove && (horizontal != 0.0f || vertical != 0.0f))
         {
-            float3 translation{ 0.0f, 0.0f, 0.0f };
-            translation.x = horizontal * effectiveHorizontalSpeed * ctx.dt;
-            translation.y = vertical * effectiveVerticalSpeed * ctx.dt;
-
-            ApplyTranslation(translation);
+            if (HasValidBody())
+            {
+                const b2Vec2 desired{ horizontal * effectiveHorizontalSpeed, vertical * effectiveVerticalSpeed };
+                b2Body_SetLinearVelocity(m_bodyId, desired);
 
 #if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Move input hx=" << horizontal
-                << " vy=" << vertical
-                << " baseXY=(" << m_baseHorizontalMoveSpeed << ',' << m_baseVerticalMoveSpeed << ')'
-                << " mult=" << m_speedMultiplier
-                << " dt=" << ctx.dt
-                << " delta=(" << translation.x << ',' << translation.y << ',' << translation.z << ")\n";
-            PlayerDebugTrace(oss.str());
+                std::ostringstream oss;
+                oss << kPlayerLogPrefix << "Move input hx=" << horizontal
+                    << " vy=" << vertical
+                    << " baseXY=(" << m_baseHorizontalMoveSpeed << ',' << m_baseVerticalMoveSpeed << ')'
+                    << " mult=" << m_speedMultiplier
+                    << " velocity=(" << desired.x << ',' << desired.y << ")\n";
+                PlayerDebugTrace(oss.str());
 #endif
+            }
+            else
+            {
+                float3 translation{ 0.0f, 0.0f, 0.0f };
+                translation.x = horizontal * effectiveHorizontalSpeed * ctx.dt;
+                translation.y = vertical * effectiveVerticalSpeed * ctx.dt;
+                ApplyTranslation(translation);
+            }
+        }
+        else if (HasValidBody())
+        {
+            b2Body_SetLinearVelocity(m_bodyId, b2Vec2{ 0.0f, 0.0f });
         }
 
         ClampVerticalPosition();
@@ -322,6 +435,8 @@ namespace Entities
 
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
+
+        SyncTransformFromBody();
     }
 
     void Player::Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
@@ -336,6 +451,7 @@ namespace Entities
             return;
         }
 
+        SyncTransformFromBody();
         renderer.Draw(*m_model, m_transform, &camera);
     }
 
@@ -763,7 +879,8 @@ namespace Entities
 
         auto& sweetsPhysical = sweets->GetPhysical();
         sweetsPhysical.force = { 0.0f, 0.0f, 0.0f };
-        sweetsPhysical.velocity = m_physical.velocity;
+        const b2Vec2 bodyVelocity = GetBodyLinearVelocity();
+        sweetsPhysical.velocity = float3{ bodyVelocity.x, bodyVelocity.y, 0.0f };
         sweetsPhysical.velocity.y = std::max(sweetsPhysical.velocity.y, m_dropUpwardBoost);
 
         if (m_sweetsManager)
@@ -793,16 +910,37 @@ namespace Entities
             return;
         }
 
-        const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
-        float3 position = transform.position;
-        if (position.y >= m_minimumY)
+        if (!HasValidBody())
+        {
+            const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
+            float3 position = transform.position;
+            if (position.y >= m_minimumY)
+            {
+                return;
+            }
+
+            const float previousY = position.y;
+            position.y = m_minimumY;
+            SetPosition(position);
+
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
+                << m_minimumY << " (platform boundary, legacy transform).\n";
+            PlayerDebugTrace(oss.str());
+            return;
+        }
+
+        const b2Vec2 bodyPosition = b2Body_GetPosition(m_bodyId);
+        if (bodyPosition.y >= m_minimumY)
         {
             return;
         }
 
-        const float previousY = position.y;
-        position.y = m_minimumY;
-        SetPosition(position);
+        const float previousY = bodyPosition.y;
+        const b2Vec2 bodyVelocity = b2Body_GetLinearVelocity(m_bodyId);
+        b2Body_SetTransform(m_bodyId, b2Vec2{ bodyPosition.x, m_minimumY }, b2Body_GetAngle(m_bodyId));
+        b2Body_SetLinearVelocity(m_bodyId, b2Vec2{ bodyVelocity.x, 0.0f });
+        SyncTransformFromBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
@@ -817,8 +955,45 @@ namespace Entities
             return;
         }
 
-        const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
-        float3 position = transform.position;
+        if (!HasValidBody())
+        {
+            const auto& transform = static_cast<const CollisionEntity&>(*this).GetTransform();
+            float3 position = transform.position;
+            const float originalX = position.x;
+            const float originalY = position.y;
+
+            const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
+            float clampedY = position.y;
+            if (m_hasMaximumY)
+            {
+                clampedY = std::min(clampedY, m_maximumY);
+            }
+
+            if (clampedX == originalX && clampedY == originalY)
+            {
+                return;
+            }
+
+            position.x = clampedX;
+            position.y = clampedY;
+            SetPosition(position);
+
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
+                << " prevY=" << originalY
+                << " newX=" << position.x
+                << " newY=" << position.y
+                << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
+            if (m_hasMaximumY)
+            {
+                oss << " maxY=" << m_maximumY;
+            }
+            oss << "\n";
+            PlayerDebugTrace(oss.str());
+            return;
+        }
+
+        const b2Vec2 position = b2Body_GetPosition(m_bodyId);
         const float originalX = position.x;
         const float originalY = position.y;
 
@@ -829,20 +1004,19 @@ namespace Entities
             clampedY = std::min(clampedY, m_maximumY);
         }
 
-        if (clampedX == originalX && clampedY == originalY)
+        if (clampedX == position.x && clampedY == position.y)
         {
             return;
         }
 
-        position.x = clampedX;
-        position.y = clampedY;
-        SetPosition(position);
+        b2Body_SetTransform(m_bodyId, b2Vec2{ clampedX, clampedY }, b2Body_GetAngle(m_bodyId));
+        SyncTransformFromBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
             << " prevY=" << originalY
-            << " newX=" << position.x
-            << " newY=" << position.y
+            << " newX=" << clampedX
+            << " newY=" << clampedY
             << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
         if (m_hasMaximumY)
         {
