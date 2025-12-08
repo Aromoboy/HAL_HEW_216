@@ -11,13 +11,9 @@
 #include "MeshBuffer.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
-#include "Systems/IntegrateSystem.h"
 #include "Systems/ContactLiteSystem.h"
-#include "GravityDampingSystem.h"
 #include "Systems/DrawSystem.h"
-#include "AABBCollider.h"
 #include "ModelCache.h"
-#include "GravityDampingSystem.h"
 #include "TextureCache.h"
 #include "DirectX.h"
 #include "SweetsManager.h"
@@ -1344,24 +1340,14 @@ SceneGame::SceneGame()
     }
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
-    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>();
-    m_integrateSystem = std::make_shared<Systems::IntegrateSystem>();
-    m_gravitySystem = std::make_shared<Systems::GravityDampingSystem>(tuning.gravity, tuning.damping);
+    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(tuning.gravity);
     m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-    if (m_physicsMachine)
+    if (m_physicsMachine && m_contactSystem)
     {
-        m_physicsMachine->SetSystem(m_gravitySystem);
-        if (m_integrateSystem)
-        {
-            m_physicsMachine->SetIntegrator(m_integrateSystem);
-        }
-        if (m_contactSystem)
-        {
-            const auto& bodies = m_physicsMachine->GetBodies();
-            m_contactSystem->SetBodySource(&bodies);
-        }
+        const auto& bodies = m_physicsMachine->GetBodies();
+        m_contactSystem->SetBodySource(&bodies);
     }
 
     if (m_contactSystem)
