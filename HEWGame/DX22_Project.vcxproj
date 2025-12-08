@@ -202,7 +202,6 @@
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Components\BoxColliderComponent.cpp" />
-    <ClCompile Include="src\Physics2D.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -290,7 +289,6 @@
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />
-    <ClInclude Include="include\Physics2D.h" />
     <ClInclude Include="include\HudRenderer.h" />
     <ClInclude Include="include\BackgroundRenderer.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
