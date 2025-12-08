@@ -157,6 +157,8 @@ namespace Systems
                 m_contactListener = std::move(listener);
                 if (m_box2dSystem)
                 {
+                        // The Box2D event buffers consumed by the listener are owned by the world
+                        // and do not require manual deallocation.
                         m_box2dSystem->SetContactListener(m_contactListener);
                 }
         }
