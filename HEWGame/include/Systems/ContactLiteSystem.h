@@ -87,7 +87,6 @@ namespace Systems
         bool m_loggedPlayerSweetsContact;
         bool m_loggedKinematicPlayerFilter;
         bool m_loggedKinematicFilter;
-        bool m_loggedSuppressedSweetsFloor;
         bool m_loggedPlanarZSeparation;
         bool m_loggedPlanarZIgnore;
         std::unordered_set<const Entities::PhysicalEntity*> m_contactedBodies;

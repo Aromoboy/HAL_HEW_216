@@ -13,14 +13,13 @@ Summary of notable debug log messages in core runtime systems, with frequency ex
 
 | Location | Message intent | Frequency guard | Lifecycle signal? |
 | --- | --- | --- | --- |
-| Missing body list | Warns when `OnUpdate` has no body source configured. | Single-shot via `m_loggedMissingBodyList`. | Yes — highlights misconfiguration preventing collision resolution.【F:src/Systems/ContactLiteSystem.cpp†L371-L380】 |
-| Kinematic filters | Notes when kinematic bodies (player or others) are skipped due to configuration. | Single-shot flags per category. | No — configuration debug; not critical lifecycle info.【F:src/Systems/ContactLiteSystem.cpp†L393-L416】 |
-| Body snapshot | First pass dump of active bodies/tags. | One-time via `m_loggedBodySnapshot`. | No — diagnostic snapshot only.【F:src/Systems/ContactLiteSystem.cpp†L421-L446】 |
-| Player presence/absence | Announces whether player body is in contact set. | Toggles between single-shot presence/absence flags. | Yes — indicates whether avatar collisions are enabled.【F:src/Systems/ContactLiteSystem.cpp†L448-L468】 |
-| Suppressed sweets/floor pair | Notes when sweets–floor collisions are filtered out. | One-time via `m_loggedSuppressedSweetsFloor`. | No — tuning debug.【F:src/Systems/ContactLiteSystem.cpp†L520-L552】 |
-| Player contact confirmations | Logs first player contact with platform or sweets. | One-time flags per contact type. | No — gameplay instrumentation.【F:src/Systems/ContactLiteSystem.cpp†L560-L584】 |
-| Planar Z checks | First occurrence of excessive Z separation or ignored Z overlap. | One-time flags for separation/ignore cases. | No — geometry debugging.【F:src/Systems/ContactLiteSystem.cpp†L600-L640】 |
-| SAT bypass / failure notes | Reports SAT bypass for shallow foundation contact, or failed SAT for sweets pairs. | No guard; can trigger per-collision pair inside the nested loop. | No — high-chatter debug; consider gating if noise is an issue.【F:src/Systems/ContactLiteSystem.cpp†L660-L734】 |
+| Missing body list | Warns when `OnUpdate` has no body source configured. | Single-shot via `m_loggedMissingBodyList`. | Yes — highlights misconfiguration preventing collision resolution.【F:src/Systems/ContactLiteSystem.cpp†L362-L369】 |
+| Kinematic filters | Notes when kinematic bodies (player or others) are skipped due to configuration. | Single-shot flags per category. | No — configuration debug; not critical lifecycle info.【F:src/Systems/ContactLiteSystem.cpp†L464-L489】 |
+| Body snapshot | First pass dump of active bodies/tags. | One-time via `m_loggedBodySnapshot`. | No — diagnostic snapshot only.【F:src/Systems/ContactLiteSystem.cpp†L374-L397】 |
+| Player presence/absence | Announces whether player body is in contact set. | Toggles between single-shot presence/absence flags. | Yes — indicates whether avatar collisions are enabled.【F:src/Systems/ContactLiteSystem.cpp†L399-L420】 |
+| Player contact confirmations | Logs first player contact with platform or sweets. | One-time flags per contact type. | No — gameplay instrumentation.【F:src/Systems/ContactLiteSystem.cpp†L565-L576】 |
+| Planar Z checks | First occurrence of excessive Z separation or ignored Z overlap. | One-time flags for separation/ignore cases. | No — geometry debugging.【F:src/Systems/ContactLiteSystem.cpp†L595-L633】 |
+| SAT bypass / failure notes | Reports SAT bypass for shallow foundation contact, or failed SAT for sweets pairs. | No guard; can trigger per-collision pair inside the nested loop. | No — high-chatter debug; consider gating if noise is an issue.【F:src/Systems/ContactLiteSystem.cpp†L654-L734】 |
 
 ## Gravity damping
 
