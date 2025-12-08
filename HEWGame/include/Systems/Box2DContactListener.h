@@ -21,7 +21,9 @@ namespace Systems
 
                 Box2DContactListener() = default;
 
-                void ProcessContacts(b2WorldId worldId);
+                void ProcessContacts();
+
+                void SetWorld(b2WorldId worldId);
 
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
@@ -35,6 +37,7 @@ namespace Systems
                 Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
                 void LogMeshContact(const b2ContactBeginTouchEvent& evt) const;
 
+                b2WorldId m_worldId{ b2_nullWorldId };
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
                 bool m_logMeshContacts = false;

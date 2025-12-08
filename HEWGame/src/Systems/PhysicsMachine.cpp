@@ -532,9 +532,11 @@ namespace Systems
 
         // ShapeDef 設定
         b2ShapeDef shapeDef = b2DefaultShapeDef();
+        shapeDef.userData = &body;
         if (hasColliderComponent)
         {
             shapeDef = colliderComponent->shapeDef;
+            shapeDef.userData = &body;
         }
 
         const float configuredDensity = hasShapeConfig
