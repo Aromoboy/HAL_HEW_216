@@ -13,8 +13,6 @@
 #include "ModelCache.h"
 #include "ModelDX.h"
 #include "BoxColliderComponent.h"
-#include "SweetsPrototypeManifest.h"
-#include "Systems/Box2DMeshBuilder.h"
 #include "Systems/PhysicsMachine.h"
 
 namespace
@@ -195,21 +193,6 @@ namespace Stage
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
         SetAnchorTransform(transform);
-
-        if (const auto* descriptor = SweetsSpace::SweetsPrototypeManifest::Instance().Find(SweetsSpace::SweetsType::Cake))
-        {
-            auto fixtures = Systems::Box2DMeshBuilder::Instance().BuildFromModel(descriptor->modelPath);
-            if (fixtures)
-            {
-                SetBox2DMesh(fixtures->polygons, fixtures->boundary);
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << kLogPrefix << "Applied Box2D mesh fixtures to foundation platform polygons="
-                    << fixtures->polygons.size() << " boundaryPoints=" << fixtures->boundary.size() << "\n";
-                DebugTrace(oss.str());
-#endif
-            }
-        }
 
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
