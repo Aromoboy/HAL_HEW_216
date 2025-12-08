@@ -70,18 +70,6 @@ namespace Systems
                         EndContact(entityA, entityB);
                 }
 
-                if (events.beginEvents)
-                {
-                        b2Free(events.beginEvents);
-                }
-                if (events.endEvents)
-                {
-                        b2Free(events.endEvents);
-                }
-                if (events.hitEvents)
-                {
-                        b2Free(events.hitEvents);
-                }
         }
 
         void Box2DContactListener::SetBeginContactCallback(ContactCallback callback)
