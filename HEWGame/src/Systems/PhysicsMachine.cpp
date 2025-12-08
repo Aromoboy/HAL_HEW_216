@@ -760,7 +760,10 @@ namespace Systems
             if (b2World_IsValid(bodyWorld))
             {
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
-                const bool colliderOwnsBody = colliderComponent && colliderComponent->bodyId == it->second;
+                const bool colliderOwnsBody =
+                    colliderComponent &&
+                    B2_ID_EQUALS(colliderComponent->bodyId, it->second);
+
                 if (colliderComponent)
                 {
                     colliderComponent->Destroy(bodyWorld);
