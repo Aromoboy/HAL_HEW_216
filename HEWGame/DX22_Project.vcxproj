@@ -172,7 +172,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\AABB.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
@@ -245,7 +244,6 @@
     <ClCompile Include="src\SweetsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\AABB.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />

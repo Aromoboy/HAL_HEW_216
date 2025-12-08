@@ -161,7 +161,6 @@ namespace Components {
     +CheckCollision(other:ICollider) bool
     +UpdateBounds(t:Transform)
   }
-  class AABB["Components::AABB"] { <<struct>> min:float3 max:float3 }
 }
 namespace CameraSpace {
   class ICamera["CameraSpace::ICamera"] { <<interface>> +GetView() +GetProjection() }
@@ -200,7 +199,6 @@ namespace Render {
   class Mesh["Render::Mesh"] {
     - vbo      : Core_VertexBuffer
     - ibo      : Core_IndexBuffer
-    - localAABB: Components_AABB
   }
   class Material["Render::Material"] {
     - albedo : shared_ptr<Core_Texture2D>
@@ -235,22 +233,13 @@ ModelRenderer ..> CameraSpace_ICamera
 ModelRenderer ..> Render_Model
 namespace Systems {
   class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
-  class GravityDampingSystem["Systems::GravityDampingSystem"] {
-    - gravity : float3
-    +Apply(obj:SceneSpace_PhysicalEntity, dt:float)
-  }
   class PhysicsMachine["Systems::PhysicsMachine"] {
     - system : IPhysicsSystem
     +OnUpdate(ctx:Core_UpdateContext)
     +SetSystem(sys:IPhysicsSystem)
   }
-  class ContactLiteSystem["Systems::ContactLiteSystem"] {
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
 }
-GravityDampingSystem ..|> IPhysicsSystem
 Core_UpdateNode <|-- PhysicsMachine
-Core_UpdateNode <|-- ContactLiteSystem
 PhysicsMachine ..> IPhysicsSystem
 namespace GameFlow {
   class PhaseManager["GameFlow::PhaseManager"] {
@@ -322,7 +311,6 @@ namespace SceneSpace {
     - upgrades    : GameFlow_UpgradeMenu
     - player      : Entities_Player
     - sweets      : SweetsSpace_SweetsManager
-    - contactLite : Systems_ContactLiteSystem
     - rig         : CameraSpace_CameraRig
     +Load()
     +Update()
@@ -348,7 +336,6 @@ Scene o-- Core_UpdateScheduler
 PlayScene o-- Stage_StageData
 PlayScene o-- GameFlow_PhaseManager
 PlayScene o-- GameFlow_UpgradeMenu
-PlayScene o-- Systems_ContactLiteSystem
 PlayScene o-- CameraSpace_CameraRig
 namespace Entities {
   class Player["Entities::Player"] {
@@ -431,7 +418,7 @@ Render：
 
 Systems：
 物理系。重力＋減衰だけ
-接地感は、余裕あったら ContactLiteSystem で
+接地感は、余裕あったら別システムで
 
 GameFlow：
 フェーズ管理と強化メニュー

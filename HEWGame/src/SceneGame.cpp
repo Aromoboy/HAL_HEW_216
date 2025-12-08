@@ -1971,7 +1971,7 @@ SceneGame::SceneGame()
                 if (sizeDelta > kColliderEpsilon || centerDelta > kColliderEpsilon)
                 {
                     std::ostringstream mismatch;
-                    mismatch << kLogPrefix << "[PlayerCollider] ContactLite footprint mismatch expectedSize=(" << expectedAabbSize.x
+                    mismatch << kLogPrefix << "[PlayerCollider] Collider footprint mismatch expectedSize=(" << expectedAabbSize.x
                         << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ")"
                         << " expectedCenterOffset=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ")"
                         << " syncedSize=(" << syncedSize.x << ',' << syncedSize.y << ',' << syncedSize.z << ")"
