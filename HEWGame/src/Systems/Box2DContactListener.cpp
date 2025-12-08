@@ -139,6 +139,21 @@ namespace Systems
                 return static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(bodyId));
         }
 
+        Entities::PhysicalEntity* Box2DContactListener::GetEntityForShape(b2ShapeId shapeId) const
+        {
+                if (!b2Shape_IsValid(shapeId))
+                {
+                        return nullptr;
+                }
+
+                if (void* userData = b2Shape_GetUserData(shapeId))
+                {
+                        return static_cast<Entities::PhysicalEntity*>(userData);
+                }
+
+                return GetEntityForBody(b2Shape_GetBody(shapeId));
+        }
+
         void Box2DContactListener::LogMeshContact(const b2ContactBeginTouchEvent& evt) const
         {
                 Entities::PhysicalEntity* entityA = GetEntityForBody(b2Shape_GetBody(evt.shapeIdA));
