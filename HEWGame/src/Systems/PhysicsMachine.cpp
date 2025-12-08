@@ -9,11 +9,13 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include <box2d/box2d.h>
 #include <box2d/collision.h>
 #include <box2d/math_functions.h>
+#include <box2d/shape_chain.h>
 
 #if defined(_WIN32)
 #   ifndef NOMINMAX
@@ -85,15 +87,12 @@ namespace Systems
                 , m_contactListener()
                 , m_bodies()
                 , m_bodyMap()
-                , m_subStepCount(subStepCount)
+                , m_subStepCount(4)
                 , m_loggedMissingSystem(false)
                 , m_loggedMissingIntegrator(false)
                 , m_loggedMissingWorld(false)
         {
-                if (m_box2dSystem)
-                {
-                        m_box2dSystem->SetSubStepCount(subStepCount);
-                }
+                SetSubStepCount(subStepCount);
         }
 
         PhysicsMachine::~PhysicsMachine()
@@ -229,14 +228,14 @@ namespace Systems
                 {
                         const b2WorldId worldId = GetWorldId();
                         const b2WorldId existingWorldId = b2Body_GetWorld(existing);
-                        if (existingWorldId.id == worldId.id)
+                        if (existingWorldId.key == worldId.key)
                         {
                                 m_bodies.push_back(bodyPtr);
                                 m_bodyMap.emplace(bodyPtr, existing);
 #if defined(_DEBUG)
                                 std::ostringstream oss;
-                                oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "' id="
-                                    << existing.index << "\n";
+                                oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "'"
+                                    << " worldKey=" << worldId.key << "\n";
                                 DebugTrace(oss.str());
 #endif
                                 return;
@@ -245,8 +244,8 @@ namespace Systems
 #if defined(_DEBUG)
                         std::ostringstream oss;
                         oss << "[PhysicsMachine] Ignored foreign Box2D body for tag='" << body.GetTag()
-                            << "' worldId=" << existingWorldId.id
-                            << " expectedWorld=" << worldId.id << "\n";
+                            << "' worldKey=" << existingWorldId.key
+                            << " expectedWorldKey=" << worldId.key << "\n";
                         DebugTrace(oss.str());
 #endif
                         body.SetBox2DBodyId(b2_nullBodyId);
@@ -405,7 +404,7 @@ namespace Systems
                 const auto& meshBoundary = body.GetBox2DBoundary();
                 const bool hasMeshFixtures = !meshPolygons.empty();
 
-                const auto computeHalfExtents = [&]()
+                const auto computeBounds = [&]()
                 {
                         const float kMinHalfExtent = Entities::PhysicalEntity::ToBox2DLength(0.05f);
                         float minX = std::numeric_limits<float>::max();
@@ -453,7 +452,7 @@ namespace Systems
                                 {
                                         const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
                                         const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
-                                        return std::make_pair(hx, hy);
+                                        return std::make_tuple(b2Vec2_zero, hx, hy);
                                 }
                                 case Physics::Box2DShapeConfig::Type::Polygon:
                                 {
@@ -501,22 +500,26 @@ namespace Systems
 
                         if (hasPoints)
                         {
+                                const b2Vec2 center{
+                                        (maxX + minX) * 0.5f,
+                                        (maxY + minY) * 0.5f,
+                                };
                                 const float halfWidth = std::max(kMinHalfExtent, (maxX - minX) * 0.5f);
                                 const float halfHeight = std::max(kMinHalfExtent, (maxY - minY) * 0.5f);
-                                return std::make_pair(halfWidth, halfHeight);
+                                return std::make_tuple(center, halfWidth, halfHeight);
                         }
 
                         const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.x));
                         const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, 0.5f * transform.scale.y));
-                        return std::make_pair(halfWidth, halfHeight);
+                        return std::make_tuple(b2Vec2_zero, halfWidth, halfHeight);
                 };
 
-                const auto [halfWidth, halfHeight] = computeHalfExtents();
+                const auto [localCenter, halfWidth, halfHeight] = computeBounds();
 
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
                 bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
-                bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
+                bodyDef.orientation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
                 // 重力スケール（動的ボディのみ適用）
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
                 bodyDef.userData = &body;
@@ -589,9 +592,7 @@ namespace Systems
                                         const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
                                         if (b2ValidateHull(&hull))
                                         {
-                                                shapeDef.radius = b2_polygonRadius;
-
-                                                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
+                                                const b2Polygon shape = b2MakePolygon(&hull, b2_defaultPolygonRadius);
                                                 b2CreatePolygonShape(bodyId, &shapeDef, &shape);
                                                 return bodyId;
                                         }
@@ -615,9 +616,6 @@ namespace Systems
                 int meshShapes = 0;
                 if (hasMeshFixtures)
                 {
-                        const float originalRadius = shapeDef.radius;
-                        shapeDef.radius = b2_polygonRadius;
-
                         for (const auto& polygon : meshPolygons)
                         {
                                 if (polygon.size() < 3)
@@ -638,12 +636,15 @@ namespace Systems
                                         continue;
                                 }
 
-                                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
+                                const b2Polygon shape = b2MakePolygon(&hull, b2_defaultPolygonRadius);
                                 b2CreatePolygonShape(bodyId, &shapeDef, &shape);
                                 ++meshShapes;
                         }
 
-                        if (meshBoundary.size() >= 4)
+                        // TODO: Re-enable chain shape creation once chain support is needed.
+                        constexpr bool kEnableChainShapes = false;
+
+                        if (kEnableChainShapes && meshBoundary.size() >= 4)
                         {
                                 std::vector<b2Vec2> scaledBoundary = meshBoundary;
                                 for (auto& v : scaledBoundary)
@@ -663,8 +664,6 @@ namespace Systems
                                 ++meshShapes;
                         }
 
-                        shapeDef.radius = originalRadius;
-
                         if (meshShapes > 0)
                         {
 #if defined(_DEBUG)
@@ -678,7 +677,7 @@ namespace Systems
                         }
                 }
 
-                const b2Polygon box = b2MakeBox(halfWidth, halfHeight);
+                const b2Polygon box = b2MakeOffsetBox(halfWidth, halfHeight, localCenter, b2Rot_identity);
                 b2CreatePolygonShape(bodyId, &shapeDef, &box);
 
                 return bodyId;

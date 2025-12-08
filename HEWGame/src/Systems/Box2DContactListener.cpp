@@ -129,22 +129,6 @@ namespace Systems
                 }
         }
 
-        Entities::PhysicalEntity* Box2DContactListener::GetEntityForShape(b2ShapeId shapeId) const
-        {
-                if (!b2Shape_IsValid(shapeId))
-                {
-                        return nullptr;
-                }
-
-                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                if (!b2Body_IsValid(bodyId))
-                {
-                        return nullptr;
-                }
-
-                return GetEntityForBody(bodyId);
-        }
-
         Entities::PhysicalEntity* Box2DContactListener::GetEntityForBody(b2BodyId bodyId) const
         {
                 if (!b2Body_IsValid(bodyId))
