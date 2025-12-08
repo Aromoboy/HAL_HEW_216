@@ -215,6 +215,7 @@
     <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\ContactLiteSystem.cpp" />
+    <ClCompile Include="src\Systems\ContactLiteSystemTests.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
     <ClCompile Include="src\Systems\IntegrateSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
@@ -262,6 +263,7 @@
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugColliderRenderer.h" />
     <ClInclude Include="include\Systems\ContactLiteSystem.h" />
+    <ClInclude Include="include\Systems\ContactLiteSystemTests.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />
     <ClInclude Include="include\Diagnostics\Logger.h" />

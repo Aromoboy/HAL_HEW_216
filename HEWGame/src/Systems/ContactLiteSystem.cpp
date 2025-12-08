@@ -185,19 +185,6 @@ namespace
                 }
         }
 
-        bool CanCollide(Collision::CollisionLayer a, Collision::CollisionLayer b)
-        {
-                const bool sweetsFloorPair =
-                        (a == Collision::CollisionLayer::Sweets && b == Collision::CollisionLayer::Floor)
-                        || (a == Collision::CollisionLayer::Floor && b == Collision::CollisionLayer::Sweets);
-                if (sweetsFloorPair)
-                {
-                        return false;
-                }
-
-                return true;
-        }
-
         std::optional<SweetsSpace::SweetsType> ResolveSweetsTag(const std::string& tag)
         {
                 return SweetsSpace::ParseSweetsType(tag);
@@ -250,7 +237,6 @@ namespace Systems
                 , m_loggedPlayerSweetsContact(false)
                 , m_loggedKinematicPlayerFilter(false)
                 , m_loggedKinematicFilter(false)
-                , m_loggedSuppressedSweetsFloor(false)
                 , m_loggedPlanarZSeparation(false)
                 , m_loggedPlanarZIgnore(false)
         {
@@ -267,7 +253,6 @@ namespace Systems
                 m_loggedPlayerSweetsContact = false;
                 m_loggedKinematicPlayerFilter = false;
                 m_loggedKinematicFilter = false;
-                m_loggedSuppressedSweetsFloor = false;
                 m_loggedPlanarZSeparation = false;
                 m_loggedPlanarZIgnore = false;
 #if defined(_DEBUG)
@@ -560,24 +545,6 @@ namespace Systems
                                 const Collision::CollisionLayer layerB = bodyB->GetCollisionLayer();
 
                                 bodyB->SyncColliderBounds();
-
-                                if (!CanCollide(layerA, layerB))
-                                {
-#if defined(_DEBUG)
-                                        if (!m_loggedSuppressedSweetsFloor &&
-                                                ((layerA == Collision::CollisionLayer::Sweets && layerB == Collision::CollisionLayer::Floor)
-                                                        || (layerA == Collision::CollisionLayer::Floor && layerB == Collision::CollisionLayer::Sweets)))
-                                        {
-                                                std::ostringstream oss;
-                                                oss << kLogPrefix << "Collision suppressed for layers "
-                                                        << ToString(layerA) << " vs " << ToString(layerB)
-                                                        << " (bodies '" << bodyA->GetTag() << "' and '" << bodyB->GetTag() << "').\n";
-                                                DebugTrace(oss.str());
-                                                m_loggedSuppressedSweetsFloor = true;
-                                        }
-#endif
-                                        continue;
-                                }
 
                                 ++testedPairs;
                                 if (!colliderA->CheckCollision(*colliderB))
