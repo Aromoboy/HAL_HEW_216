@@ -378,6 +378,8 @@ namespace
         Physics::BoxColliderComponent colliderComponent{};
         ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
 
+        // Keep collider vertices in local space; PhysicsMachine::CreateBody applies the sweets transform scale when creating fixtures.
+
         switch (type)
         {
         case SweetsType::Cake:
