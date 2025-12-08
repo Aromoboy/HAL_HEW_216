@@ -693,8 +693,7 @@ namespace Entities
             Transform updated = current;
             updated.position = ComputeCarryAnchor();
             updated.rotation = m_transform.rotation;
-
-            it->SetTransform(updated);
+            it->SetTransformViaPhysics(updated.position, updated.rotation);
 
             Physics::Physical& physical = it->GetPhysical();
             physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
@@ -831,7 +830,7 @@ namespace Entities
         Transform updated = current;
         updated.position = ComputeCarryAnchor();
         updated.rotation = m_transform.rotation;
-        candidate->SetTransform(updated);
+        candidate->SetTransformViaPhysics(updated.position, updated.rotation);
 
         auto& physical = candidate->GetPhysical();
         physical.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
@@ -853,7 +852,7 @@ namespace Entities
         };
 
         auto sweets = m_carrieds.back();
-        sweets->SetPosition(ComputeCarryAnchor());
+        sweets->SetPositionViaPhysics(ComputeCarryAnchor());
 
         auto& sweetsPhysical = sweets->GetPhysical();
         const float3 bodyVelocity = GetBodyLinearVelocity();
