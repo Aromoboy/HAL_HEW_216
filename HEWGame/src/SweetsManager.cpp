@@ -897,6 +897,7 @@ namespace
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+        const std::string normalizedKind = NormalizeKey(path);
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc, normalizedKind, path);
         const std::vector<float2> originalHull = rawHull.hullPointsCentered;
         constexpr std::size_t kMinHullPoints = 6;

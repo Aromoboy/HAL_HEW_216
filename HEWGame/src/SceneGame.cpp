@@ -210,7 +210,7 @@ namespace
 
         void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
-            Render::Model* model = entity.GetRenderableModel();
+            const Render::Model* model = entity.GetRenderableModel();
             if (!model || !model->HasLocalBounds())
             {
                 return;
