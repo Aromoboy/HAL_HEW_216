@@ -94,6 +94,11 @@ namespace Entities
             m_boxColliderComponent = std::move(component);
         }
 
+        std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent()
+        {
+            return m_boxColliderComponent;
+        }
+
         const std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent() const
         {
             return m_boxColliderComponent;
