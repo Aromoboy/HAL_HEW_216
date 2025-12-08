@@ -64,3 +64,5 @@ x86
 !HEWGame/box2d/**
 
 
+HEWGame/box2d/build/_deps/enkits-src/
+HEWGame/box2d/build/_deps/glfw-src/
