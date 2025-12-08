@@ -205,7 +205,7 @@ namespace
         return model;
     }
 
-    Physics::Box2DShapeConfig BuildPlayerShapeConfig(Collision::ICollider* collider, const Transform& transform, bool isKinematic)
+    Physics::Box2DShapeConfig BuildDefaultPlayerShapeConfig(const Transform& transform, bool isKinematic)
     {
         Physics::Box2DShapeConfig config{};
         config.type = Physics::Box2DShapeConfig::Type::Polygon;
@@ -214,15 +214,8 @@ namespace
         config.friction = 0.35f;
         config.restitution = 0.05f;
 
-        float halfWidth = 0.35f;
-        float halfHeight = 0.5f;
-        if (collider)
-        {
-            collider->UpdateBounds(transform);
-            const AABB bounds = collider->GetAABB();
-            halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
-            halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
-        }
+        const float halfWidth = 0.35f;
+        const float halfHeight = 0.5f;
 
         config.vertices = {
             b2Vec2{ -halfWidth, -halfHeight },
@@ -315,7 +308,7 @@ namespace Entities
             m_model = m_fairyModel;
         }
 
-        const auto shapeConfig = BuildPlayerShapeConfig(GetCollider(), m_transform, m_isKinematic);
+        const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
         SetBox2DShapeConfig(shapeConfig);
     }
 
@@ -682,22 +675,24 @@ namespace Entities
             return;
         }
 
-        Collision::ICollider* collider = GetCollider();
-        if (!collider)
+        if (!m_colliderFootprint)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: collider missing.\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: collider footprint missing.\n");
             return;
         }
 
         SyncTransformFromBox2DBody();
-        collider->UpdateBounds(m_transform);
-        const AABB colliderBounds = collider->GetAABB();
-        const float boundsCenterX = (colliderBounds.min.x + colliderBounds.max.x) * 0.5f;
-        const float boundsCenterY = (colliderBounds.min.y + colliderBounds.max.y) * 0.5f;
-        const float boundsCenterZ = (colliderBounds.min.z + colliderBounds.max.z) * 0.5f;
-        const float halfDepth = ((colliderBounds.max.z - colliderBounds.min.z) * 0.5f) + 0.05f;
 
-        const float3 pickupCenter{ boundsCenterX + m_pickupForwardOffset, boundsCenterY, boundsCenterZ };
+        const float3 colliderCenter
+        {
+            m_transform.position.x + m_colliderFootprint->centerOffset.x,
+            m_transform.position.y + m_colliderFootprint->centerOffset.y,
+            m_transform.position.z + m_colliderFootprint->centerOffset.z,
+        };
+
+        const float halfDepth = m_colliderFootprint->halfExtents.z + 0.05f;
+
+        const float3 pickupCenter{ colliderCenter.x + m_pickupForwardOffset, colliderCenter.y, colliderCenter.z };
 
         AABB pickupBounds{};
         pickupBounds.min.x = pickupCenter.x - m_pickupHalfWidth;
@@ -793,6 +788,11 @@ namespace Entities
             << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
             << ") forwardOffset=" << m_pickupForwardOffset << "\n";
         PlayerDebugTrace(oss.str());
+    }
+
+    void Player::SetColliderFootprint(const float3& halfExtents, const float3& centerOffset)
+    {
+        m_colliderFootprint = ColliderFootprint{ halfExtents, centerOffset };
     }
 
     void Player::DropCarriedSweets()

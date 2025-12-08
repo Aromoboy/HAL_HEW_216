@@ -1670,8 +1670,10 @@ SceneGame::SceneGame()
     }
 
     const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
-    std::shared_ptr<Collision::ICollider> collider;
     std::optional<Physics::BoxColliderComponent> boxColliderComponent;
+    std::optional<Physics::Box2DShapeConfig> playerShapeConfig;
+    float3 playerColliderHalfExtents{ 0.0f, 0.0f, 0.0f };
+    float3 playerColliderOffset{ 0.0f, 0.0f, 0.0f };
     Transform trans = m_playerSpawnTransform.transform;
     trans.position.z += platePlaneZ;
     {
@@ -1684,105 +1686,64 @@ SceneGame::SceneGame()
             << " rotationSource=" << (m_playerSpawnTransform.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
         DebugTrace(oss.str());
     }
-    bool colliderFromConfig = false;
-    std::string colliderSource = "unresolved";
-    std::string colliderDecisionReason = "undecided";
-    const std::string canonicalColliderKey = ResolvePlayerColliderKey(playerColliderKey);
-    auto colliderDef = m_playerColliderDefinitions.find(canonicalColliderKey);
-    if (colliderDef == m_playerColliderDefinitions.end())
-    {
-        colliderDef = m_playerColliderDefinitions.find(playerColliderKey);
-        if (colliderDef == m_playerColliderDefinitions.end())
-        {
-            colliderDef = m_playerColliderDefinitions.find(NormalizeColliderKey(playerColliderKey));
-        }
-    }
-    const bool configAvailable = colliderDef != m_playerColliderDefinitions.end();
+
     const bool geometryValid = playerGeometry.bounds.valid;
-    float3 expectedAabbSize{ 0.0f, 0.0f, 0.0f };
-    float3 expectedAabbCenter{ 0.0f, 0.0f, 0.0f };
-    float3 expectedCenterOffset{ 0.0f, 0.0f, 0.0f };
-    bool expectedAabbComputed = false;
-    float3 fallbackColliderSize{ 0.0f, 0.0f, 0.0f };
-    float3 fallbackColliderOffset{ 0.0f, 0.0f, 0.0f };
-    bool hasFallbackComponent = false;
 
-    const auto tryGenerated = [&]()
+    const auto buildBoxCollider = [&](const float3& size, const float3& offset)
     {
-        collider = BuildGeneratedPlayerCollider(playerGeometry, m_playerColliderTuning, trans);
-        colliderSource = collider ? "generated" : "generated_failed";
+        const float halfWidth = std::max(0.01f, size.x * 0.5f);
+        const float halfHeight = std::max(0.01f, size.y * 0.5f);
+        const float halfDepth = std::max(0.01f, size.z * 0.5f);
+
+        Physics::BoxColliderComponent component;
+        component.shapeDef.material.friction    = 0.6f;
+        component.shapeDef.material.restitution = 0.05f;
+        component.AddBox(halfWidth, halfHeight, b2Vec2{ offset.x, offset.y });
+
+        Physics::Box2DShapeConfig shapeConfig{};
+        shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
+        shapeConfig.bodyType = b2_kinematicBody;
+        shapeConfig.density = 0.5f;
+        shapeConfig.friction = 0.35f;
+        shapeConfig.restitution = 0.05f;
+        shapeConfig.vertices =
+        {
+            b2Vec2{ offset.x - halfWidth, offset.y - halfHeight },
+            b2Vec2{ offset.x + halfWidth, offset.y - halfHeight },
+            b2Vec2{ offset.x + halfWidth, offset.y + halfHeight },
+            b2Vec2{ offset.x - halfWidth, offset.y + halfHeight },
+        };
+
+        boxColliderComponent = component;
+        playerShapeConfig = shapeConfig;
+        playerColliderHalfExtents = float3{ halfWidth, halfHeight, halfDepth };
+        playerColliderOffset = offset;
     };
 
-    const auto tryConfig = [&]()
+    if (geometryValid)
     {
-        if (configAvailable)
-        {
-            collider = Collision::BuildColliderFromDefinition(colliderDef->second, trans, Collision::CollisionLayer::Player);
-            colliderFromConfig = collider != nullptr;
-            colliderSource = colliderFromConfig ? "config" : "config_build_failed";
-            if (!colliderFromConfig)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Definition found for key='" << playerColliderKey
-                    << "' but build failed; generated collider will be used if available.\n";
-                DebugTrace(oss.str());
-            }
-        }
-        else
-        {
-            colliderSource = "config_missing";
-        }
-    };
+        float3 colliderSize = ScaleVector(float3{ playerGeometry.bounds.max.x - playerGeometry.bounds.min.x,
+            playerGeometry.bounds.max.y - playerGeometry.bounds.min.y,
+            playerGeometry.bounds.max.z - playerGeometry.bounds.min.z }, trans.scale);
 
-    if (m_forceConfigPlayerCollider || !geometryValid)
-    {
-        tryConfig();
-        if (!collider && geometryValid)
-        {
-            tryGenerated();
-            colliderDecisionReason = collider ? "config_unavailable_generated_fallback" : "config_unavailable_generated_failed";
-        }
-        else if (collider)
-        {
-            colliderDecisionReason = m_forceConfigPlayerCollider ? "forced_config" : "geometry_invalid";
-        }
+        float3 colliderOffset = ScaleVector(float3{ (playerGeometry.bounds.min.x + playerGeometry.bounds.max.x) * 0.5f,
+            (playerGeometry.bounds.min.y + playerGeometry.bounds.max.y) * 0.5f,
+            (playerGeometry.bounds.min.z + playerGeometry.bounds.max.z) * 0.5f }, trans.scale);
+
+        colliderSize.x += m_playerColliderTuning.padding.x * 2.0f;
+        colliderSize.y += m_playerColliderTuning.padding.y * 2.0f;
+        colliderSize.z = std::max(colliderSize.z * m_playerColliderTuning.thicknessPadding, kMinGeneratedThickness);
+
+        colliderOffset.x += m_playerColliderTuning.offset.x;
+        colliderOffset.y += m_playerColliderTuning.offset.y;
+        colliderOffset.z += m_playerColliderTuning.offset.z;
+
+        buildBoxCollider(colliderSize, colliderOffset);
     }
     else
     {
-        tryGenerated();
-        if (!collider)
-        {
-            tryConfig();
-            colliderDecisionReason = collider ? "generated_failed_config_fallback" : "generated_failed_config_unavailable";
-        }
-        else
-        {
-            colliderDecisionReason = "preferred_generated";
-        }
-    }
-
-    if (!collider)
-    {
-        float3 colliderSize{};
-        float3 colliderOffset{};
-
-        if (geometryValid)
-        {
-            colliderSize = ScaleVector(float3{ playerGeometry.bounds.max.x - playerGeometry.bounds.min.x,
-                playerGeometry.bounds.max.y - playerGeometry.bounds.min.y,
-                playerGeometry.bounds.max.z - playerGeometry.bounds.min.z }, trans.scale);
-
-            colliderOffset = ScaleVector(float3{ (playerGeometry.bounds.min.x + playerGeometry.bounds.max.x) * 0.5f,
-                (playerGeometry.bounds.min.y + playerGeometry.bounds.max.y) * 0.5f,
-                (playerGeometry.bounds.min.z + playerGeometry.bounds.max.z) * 0.5f }, trans.scale);
-        }
-        else
-        {
-            colliderSize = m_playerColliderTuning.fallbackSize;
-            colliderOffset = float3{ 0.0f, m_playerColliderTuning.fallbackSize.y * 0.5f, 0.0f };
-        }
-
-        const float3 prePaddingSize = colliderSize;
+        float3 colliderSize = m_playerColliderTuning.fallbackSize;
+        float3 colliderOffset{ 0.0f, m_playerColliderTuning.fallbackSize.y * 0.5f, 0.0f };
 
         colliderSize.x += m_playerColliderTuning.fallbackPadding.x * 2.0f;
         colliderSize.y += m_playerColliderTuning.fallbackPadding.y * 2.0f;
@@ -1792,116 +1753,13 @@ SceneGame::SceneGame()
         colliderOffset.y += m_playerColliderTuning.fallbackOffset.y;
         colliderOffset.z += m_playerColliderTuning.fallbackOffset.z;
 
-        const auto safeScale = [](float value)
-        {
-            return std::max(value, 1e-3f);
-        };
-
-        const float halfWidth  = std::max(0.01f, colliderSize.x * 0.5f);
-        const float halfHeight = std::max(0.01f, colliderSize.y * 0.5f);
-
-      
-        Physics::BoxColliderComponent component;
-        component.shapeDef.material.friction     = 0.6f;
-        component.shapeDef.material.restitution  = 0.05f;
-
-      
-        component.AddBox(
-            halfWidth  / safeScale(trans.scale.x),
-            halfHeight / safeScale(trans.scale.y),
-            b2Vec2{ colliderOffset.x, colliderOffset.y }
-        );
-
-     
-        boxColliderComponent = component;
-        fallbackColliderSize = colliderSize;
-        fallbackColliderOffset = colliderOffset;
-        hasFallbackComponent = true;
-
-      
-        colliderSource = "aabb_fallback";
-        colliderDecisionReason =
-            geometryValid
-                ? "generated_and_config_failed_geometry_sized"
-                : "generated_and_config_failed_default_sized";
-
-
-        const float3 expand
-        {
-            colliderSize.x - prePaddingSize.x,
-            colliderSize.y - prePaddingSize.y,
-            colliderSize.z - prePaddingSize.z,
-        };
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] Applied fallback AABB size=(" << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z << ')'
-            << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ')'
-            << " expand=(" << expand.x << ',' << expand.y << ',' << expand.z << ')'
-            << " geometryBased=" << std::boolalpha << geometryValid << "\n";
-        DebugTrace(oss.str());
+        buildBoxCollider(colliderSize, colliderOffset);
     }
 
-    if (collider)
-    {
-        collider->UpdateBounds(trans);
-
-        const AABB colliderAabb = collider->GetAABB();
-        expectedAabbSize = float3
-        {
-            colliderAabb.max.x - colliderAabb.min.x,
-            colliderAabb.max.y - colliderAabb.min.y,
-            colliderAabb.max.z - colliderAabb.min.z,
-        };
-        expectedAabbCenter = colliderAabb.Center();
-        expectedCenterOffset = float3
-        {
-            expectedAabbCenter.x - trans.position.x,
-            expectedAabbCenter.y - trans.position.y,
-            expectedAabbCenter.z - trans.position.z,
-        };
-        expectedAabbComputed = true;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] Footprint pre-contact source=" << colliderSource
-            << " size=(" << expectedAabbSize.x << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ')'
-            << " center=(" << expectedAabbCenter.x << ',' << expectedAabbCenter.y << ',' << expectedAabbCenter.z << ')'
-            << " centerOffsetFromSpawn=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ')'
-            << " spawnPos=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
-            << " decision=" << colliderDecisionReason
-            << "\n";
-        ::DebugTrace(oss.str());
-    }
-    else if (hasFallbackComponent)
-    {
-        expectedAabbSize = fallbackColliderSize;
-        expectedAabbCenter = float3
-        {
-            trans.position.x + fallbackColliderOffset.x,
-            trans.position.y + fallbackColliderOffset.y,
-            trans.position.z + fallbackColliderOffset.z,
-        };
-        expectedCenterOffset = float3
-        {
-            fallbackColliderOffset.x,
-            fallbackColliderOffset.y,
-            fallbackColliderOffset.z,
-        };
-        expectedAabbComputed = true;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] Footprint pre-contact source=" << colliderSource
-            << " size=(" << expectedAabbSize.x << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ')'
-            << " center=(" << expectedAabbCenter.x << ',' << expectedAabbCenter.y << ',' << expectedAabbCenter.z << ')'
-            << " centerOffsetFromSpawn=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ')'
-            << " spawnPos=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
-            << " decision=" << colliderDecisionReason
-            << "\n";
-        ::DebugTrace(oss.str());
-    }
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
-        collider,
+        nullptr,
         m_physicsMachine.get(),
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
@@ -1916,6 +1774,14 @@ SceneGame::SceneGame()
         {
             player->SetBoxColliderComponent(boxColliderComponent);
         }
+        if (playerShapeConfig)
+        {
+            player->SetBox2DShapeConfig(playerShapeConfig);
+        }
+        if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f && playerColliderHalfExtents.z > 0.0f)
+        {
+            player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
+        }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
         float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
         if (m_platePlatform)
@@ -1927,67 +1793,6 @@ SceneGame::SceneGame()
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
-        player->SyncColliderBounds();
-
-        Collision::ICollider* playerCollider = player->GetCollider();
-        if (playerCollider)
-        {
-            const AABB syncedAabb = playerCollider->GetAABB();
-            const float3 syncedSize
-            {
-                syncedAabb.max.x - syncedAabb.min.x,
-                syncedAabb.max.y - syncedAabb.min.y,
-                syncedAabb.max.z - syncedAabb.min.z,
-            };
-            const float3 syncedCenter = syncedAabb.Center();
-            const float3 syncedCenterOffset
-            {
-                syncedCenter.x - trans.position.x,
-                syncedCenter.y - trans.position.y,
-                syncedCenter.z - trans.position.z,
-            };
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Post-sync AABB size=(" << syncedSize.x << ',' << syncedSize.y << ',' << syncedSize.z << ')'
-                << " center=(" << syncedCenter.x << ',' << syncedCenter.y << ',' << syncedCenter.z << ')'
-                << " centerOffsetFromSpawn=(" << syncedCenterOffset.x << ',' << syncedCenterOffset.y << ',' << syncedCenterOffset.z << ')'
-                << " contactUpdatePending\n";
-            ::DebugTrace(oss.str());
-
-            if (expectedAabbComputed && !m_playerColliderMismatchLogged)
-            {
-                const auto maxAbsDiff = [](float3 a, float3 b)
-                {
-                    const float dx = std::fabs(a.x - b.x);
-                    const float dy = std::fabs(a.y - b.y);
-                    const float dz = std::fabs(a.z - b.z);
-                    return std::max({ dx, dy, dz });
-                };
-
-                const float sizeDelta = maxAbsDiff(expectedAabbSize, syncedSize);
-                const float centerDelta = maxAbsDiff(expectedCenterOffset, syncedCenterOffset);
-                constexpr float kColliderEpsilon = 1e-4f;
-
-                if (sizeDelta > kColliderEpsilon || centerDelta > kColliderEpsilon)
-                {
-                    std::ostringstream mismatch;
-                    mismatch << kLogPrefix << "[PlayerCollider] Collider footprint mismatch expectedSize=(" << expectedAabbSize.x
-                        << ',' << expectedAabbSize.y << ',' << expectedAabbSize.z << ")"
-                        << " expectedCenterOffset=(" << expectedCenterOffset.x << ',' << expectedCenterOffset.y << ',' << expectedCenterOffset.z << ")"
-                        << " syncedSize=(" << syncedSize.x << ',' << syncedSize.y << ',' << syncedSize.z << ")"
-                        << " syncedCenterOffset=(" << syncedCenterOffset.x << ',' << syncedCenterOffset.y << ',' << syncedCenterOffset.z << ")"
-                        << " sizeDeltaMax=" << sizeDelta
-                        << " centerDeltaMax=" << centerDelta
-                        << "\n";
-                    ::DebugTrace(mismatch.str());
-                    m_playerColliderMismatchLogged = true;
-                }
-            }
-        }
-        else
-        {
-            DebugTrace(std::string(kLogPrefix) + "[PlayerCollider] Missing collider when synchronizing player bounds.\n");
-        }
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
@@ -1996,60 +1801,6 @@ SceneGame::SceneGame()
                 << std::boolalpha << isKinematic
                 << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
             ::DebugTrace(oss.str());
-        }
-        if (collider)
-        {
-            const Collision::Collider2DBase* const colliderPtr = dynamic_cast<const Collision::Collider2DBase*>(collider.get());
-
-            if (colliderPtr)
-            {
-                const AABB bounds = colliderPtr->GetAABB();
-                const float aabbThickness = bounds.max.z - bounds.min.z;
-
-                const char* colliderType = "Unknown";
-                if (dynamic_cast<const Collision::ConvexHullCollider2D*>(colliderPtr))
-                {
-                    colliderType = "ConvexHullCollider2D";
-                }
-                else if (dynamic_cast<const Collision::Collider2DBase*>(colliderPtr))
-                {
-                    colliderType = "Collider2DBase";
-                }
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
-                    << " key='" << playerColliderKey << "'"
-                    << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
-                    << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")"
-                    << " aabbThickness=" << aabbThickness
-                    << " colliderType=" << colliderType
-                    << " pad=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
-                    << " offset=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
-                    << " spawnScale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
-                    << " spawnRotation=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
-                    << " configLoaded=" << std::boolalpha << colliderFromConfig
-                    << " forceConfig=" << m_forceConfigPlayerCollider
-                    << " configAvailable=" << configAvailable
-                    << " geometryValid=" << geometryValid
-                    << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
-                    << " reason=" << colliderDecisionReason
-                    << "\n";
-                ::DebugTrace(oss.str());
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Non-2D collider; logging minimal info. source=" << colliderSource
-                    << " key='" << playerColliderKey << "'"
-                    << " configLoaded=" << std::boolalpha << colliderFromConfig
-                    << " forceConfig=" << m_forceConfigPlayerCollider
-                    << " configAvailable=" << configAvailable
-                    << " geometryValid=" << geometryValid
-                    << " tuningThicknessPad=" << m_playerColliderTuning.thicknessPadding
-                    << " reason=" << colliderDecisionReason
-                    << "\n";
-                ::DebugTrace(oss.str());
-            }
         }
         if (m_drawSystem)
         {
