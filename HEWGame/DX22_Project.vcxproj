@@ -96,8 +96,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>box2dd.lib;box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
@@ -120,7 +120,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
@@ -140,8 +140,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>box2dd.lib;box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
@@ -164,7 +164,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\bin\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
