@@ -1,7 +1,9 @@
 #include "AssimpModelLorder.h"
 
 #include <DirectXMath.h>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include "TextureCache.h"
@@ -36,22 +38,29 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     directory = directory.substr(0, directory.find_last_of('\\') + 1);
 
     // メッシュ作成
-    auto meshes = MakeMesh(pScene);
+    AABB localBounds{};
+    bool hasBounds = false;
+    auto meshes = MakeMesh(pScene, localBounds, hasBounds);
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, device, textureCache);
 
     // モデル生成
-    return std::make_shared<ModelDX>(meshes, materials);
+    std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
+    return std::make_shared<ModelDX>(meshes, materials, bounds);
 }
 
 // メッシュ作成
 std::vector<std::shared_ptr<MeshDX>>
-AssimpModelLorder::MakeMesh(const aiScene* ptr)
+AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MeshDX>> meshes;
     meshes.resize(pScene->mNumMeshes);
+
+    float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+    hasBounds = false;
 
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
@@ -79,6 +88,14 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr)
                 DirectX::XMFLOAT2(uv.x, uv.y),
                 DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
             };
+
+            minBounds.x = std::min(minBounds.x, pos.x);
+            minBounds.y = std::min(minBounds.y, pos.y);
+            minBounds.z = std::min(minBounds.z, pos.z);
+            maxBounds.x = std::max(maxBounds.x, pos.x);
+            maxBounds.y = std::max(maxBounds.y, pos.y);
+            maxBounds.z = std::max(maxBounds.z, pos.z);
+            hasBounds = true;
         }
 
         // インデックス
@@ -106,6 +123,11 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr)
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
         meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+    }
+
+    if (hasBounds)
+    {
+        outBounds = AABB(maxBounds, minBounds);
     }
 
     return meshes;

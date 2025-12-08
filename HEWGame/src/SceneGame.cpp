@@ -1549,14 +1549,13 @@ SceneGame::SceneGame()
                 kPlatformScreenBottomFraction,
                 kStageCenterX,
                 i);
-            auto platformCollider = std::make_shared<Collision::AABBCollider>(platformTransform, false, float3{ 1.0f, 1.7f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Floor);
 
             std::ostringstream tagStream;
             tagStream << "StageFoundation" << i;
             auto platform = std::make_unique<Stage::FoundationPlatform>(
                 tagStream.str(),
                 platformTransform,
-                platformCollider,
+                nullptr,
                 descriptor.color,
                 Core::UpdatePhase::PrePhysics,
                 -100 - static_cast<int>(i));
