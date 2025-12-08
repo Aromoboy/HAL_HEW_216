@@ -26,7 +26,6 @@
 #endif
 #include <d3d11.h>
 #include <vector>
-#include "AABBCollider.h"
 #include "BoxColliderComponent.h"
 #include "ColliderConfigLoader.h"
 #include "Collision2D.h"

@@ -161,18 +161,8 @@ namespace Components {
     +CheckCollision(other:ICollider) bool
     +UpdateBounds(t:Transform)
   }
-  class AABBCollider["Components::AABBCollider"] {
-    +CheckCollision(other:ICollider) bool
-    +UpdateBounds(t:Transform)
-  }
-  class OBBCollider["Components::OBBCollider"] {
-    +CheckCollision(other:ICollider) bool
-    +UpdateBounds(t:Transform)
-  }
   class AABB["Components::AABB"] { <<struct>> min:float3 max:float3 }
 }
-AABBCollider ..|> ICollider
-OBBCollider  ..|> ICollider
 namespace CameraSpace {
   class ICamera["CameraSpace::ICamera"] { <<interface>> +GetView() +GetProjection() }
   class BaseCamera["CameraSpace::BaseCamera"] {
@@ -429,7 +419,7 @@ DXContext・Input・Shader/TextureCacheあたりはいじらなくてOK
 
 Components：
 オブジェクトの基礎データ
-Transform（位置）、Physical（速度とか）、AABBCollider（当たり判定）だけで十分
+Transform（位置）、Physical（速度とか）、2D コライダー（当たり判定）だけで十分
 
 CameraSpace：
 カメラは1個だけ。priorityとかあるけど今は使わない

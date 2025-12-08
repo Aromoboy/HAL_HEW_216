@@ -297,12 +297,17 @@ namespace Entities
 
     bool Player::HasValidBody() const
     {
-        return b2Body_IsValid(m_bodyId);
+        return HasBox2DBody();
     }
 
-    b2Vec2 Player::GetBodyLinearVelocity() const
+    float3 Player::GetBodyLinearVelocity() const
     {
-        return HasValidBody() ? b2Body_GetLinearVelocity(m_bodyId) : b2Vec2{ 0.0f, 0.0f };
+        if (!HasValidBody())
+        {
+            return float3{ 0.0f, 0.0f, 0.0f };
+        }
+
+        return ToWorldVector(b2Body_GetLinearVelocity(m_bodyId));
     }
 
     void Player::SetBox2DBodyId(b2BodyId bodyId)
@@ -313,23 +318,8 @@ namespace Entities
 
     void Player::SyncTransformFromBody()
     {
-        if (!HasValidBody())
-        {
-            return;
-        }
-
-        const b2Vec2 position = b2Body_GetPosition(m_bodyId);
-        const float angle = b2Body_GetAngle(m_bodyId);
-        const b2Vec2 velocity = b2Body_GetLinearVelocity(m_bodyId);
-
-        Transform updated = m_transform;
-        updated.position.x = position.x;
-        updated.position.y = position.y;
-        updated.rotation.z = angle;
-        SetTransform(updated);
-
-        m_physical.velocity = float3{ velocity.x, velocity.y, 0.0f };
-        m_physical.force = float3{ 0.0f, 0.0f, 0.0f };
+        SyncTransformFromBox2DBody();
+        m_bodyId = GetBox2DBodyId();
     }
 
     void Player::InitializeBody(const Transform& transform)
@@ -349,9 +339,9 @@ namespace Entities
 
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.type = b2_dynamicBody;
-        bodyDef.position = b2Vec2{ transform.position.x, transform.position.y };
-        bodyDef.angle = transform.rotation.z;
-        bodyDef.linearVelocity = b2Vec2{ m_physical.velocity.x, m_physical.velocity.y };
+        bodyDef.position = ToBox2DPosition(transform.position);
+        bodyDef.angle = ToBox2DAngle(transform.rotation.z);
+        bodyDef.linearVelocity = ToBox2DVector(m_physical.velocity);
         bodyDef.gravityScale = m_isKinematic ? 0.0f : 1.0f;
 
         const float damping = std::clamp(m_physical.damping, 0.0f, 1.0f);
@@ -380,7 +370,7 @@ namespace Entities
         shapeDef.density = std::max(0.01f, m_physical.weight);
         shapeDef.material.friction = 0.6f;
 
-        const b2Polygon box = b2MakeBox(halfWidth, halfHeight);
+        const b2Polygon box = b2MakeBox(ToBox2DLength(halfWidth), ToBox2DLength(halfHeight));
         b2CreatePolygonShape(m_bodyId, &shapeDef, &box);
 
         SetBox2DBodyId(m_bodyId);
@@ -404,8 +394,8 @@ namespace Entities
         {
             if (HasValidBody())
             {
-                const b2Vec2 desired{ horizontal * effectiveHorizontalSpeed, vertical * effectiveVerticalSpeed };
-                b2Body_SetLinearVelocity(m_bodyId, desired);
+                const float3 desired{ horizontal * effectiveHorizontalSpeed, vertical * effectiveVerticalSpeed, 0.0f };
+                b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(desired));
 
 #if defined(_DEBUG)
                 std::ostringstream oss;
@@ -427,7 +417,7 @@ namespace Entities
         }
         else if (HasValidBody())
         {
-            b2Body_SetLinearVelocity(m_bodyId, b2Vec2{ 0.0f, 0.0f });
+            b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(float3{ 0.0f, 0.0f, 0.0f }));
         }
 
         ClampVerticalPosition();
@@ -879,8 +869,8 @@ namespace Entities
 
         auto& sweetsPhysical = sweets->GetPhysical();
         sweetsPhysical.force = { 0.0f, 0.0f, 0.0f };
-        const b2Vec2 bodyVelocity = GetBodyLinearVelocity();
-        sweetsPhysical.velocity = float3{ bodyVelocity.x, bodyVelocity.y, 0.0f };
+        const float3 bodyVelocity = GetBodyLinearVelocity();
+        sweetsPhysical.velocity = bodyVelocity;
         sweetsPhysical.velocity.y = std::max(sweetsPhysical.velocity.y, m_dropUpwardBoost);
 
         if (m_sweetsManager)
@@ -930,16 +920,18 @@ namespace Entities
             return;
         }
 
-        const b2Vec2 bodyPosition = b2Body_GetPosition(m_bodyId);
+        const float3 bodyPosition = ToWorldPosition(b2Body_GetPosition(m_bodyId));
         if (bodyPosition.y >= m_minimumY)
         {
             return;
         }
 
         const float previousY = bodyPosition.y;
-        const b2Vec2 bodyVelocity = b2Body_GetLinearVelocity(m_bodyId);
-        b2Body_SetTransform(m_bodyId, b2Vec2{ bodyPosition.x, m_minimumY }, b2Body_GetAngle(m_bodyId));
-        b2Body_SetLinearVelocity(m_bodyId, b2Vec2{ bodyVelocity.x, 0.0f });
+        const float3 bodyVelocity = ToWorldVector(b2Body_GetLinearVelocity(m_bodyId));
+        b2Body_SetTransform(m_bodyId, ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }), b2Body_GetAngle(m_bodyId));
+        float3 clampedVelocity = bodyVelocity;
+        clampedVelocity.y = 0.0f;
+        b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(clampedVelocity));
         SyncTransformFromBody();
 
         std::ostringstream oss;
@@ -993,7 +985,7 @@ namespace Entities
             return;
         }
 
-        const b2Vec2 position = b2Body_GetPosition(m_bodyId);
+        const float3 position = ToWorldPosition(b2Body_GetPosition(m_bodyId));
         const float originalX = position.x;
         const float originalY = position.y;
 
@@ -1009,7 +1001,7 @@ namespace Entities
             return;
         }
 
-        b2Body_SetTransform(m_bodyId, b2Vec2{ clampedX, clampedY }, b2Body_GetAngle(m_bodyId));
+        b2Body_SetTransform(m_bodyId, ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }), b2Body_GetAngle(m_bodyId));
         SyncTransformFromBody();
 
         std::ostringstream oss;

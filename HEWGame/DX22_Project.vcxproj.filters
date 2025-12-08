@@ -7,9 +7,6 @@
     <ClCompile Include="src\AABB.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\AABBCollider.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="src\ColliderConfigLoader.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -104,6 +101,9 @@
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Input.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Components\BoxColliderComponent.cpp">
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Main.cpp">
@@ -229,7 +229,6 @@
     <ClInclude Include="include\AABB.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\AABBCollider.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\BoxColliderComponent.h">
@@ -468,6 +467,9 @@
     </ClInclude>
     <ClInclude Include="include\TextureDX.h">
       <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Components\BoxColliderComponent.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Transform.h">
       <Filter>Core</Filter>

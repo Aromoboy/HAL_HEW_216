@@ -50,6 +50,7 @@ namespace Entities
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0,
             std::string tag = {});
+
         PhysicalEntity(const std::string& tag,
             const float3& pos,
             const float3& rot,
@@ -62,7 +63,8 @@ namespace Entities
             float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
-        ~PhysicalEntity() override = default;
+
+        ~PhysicalEntity() override;
 
         Physics::Physical& GetPhysical();
         const Physics::Physical& GetPhysical() const;
@@ -72,7 +74,9 @@ namespace Entities
         virtual void SetBox2DBodyId(b2BodyId bodyId);
         virtual b2BodyId GetBox2DBodyId() const;
 
-        void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary);
+        void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons,
+                          const std::vector<b2Vec2>& boundary);
+
         bool HasBox2DMesh() const;
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
@@ -82,21 +86,35 @@ namespace Entities
             m_boxColliderComponent = std::move(component);
         }
 
-        const std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent() const { return m_boxColliderComponent; }
+        const std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent() const
+        {
+            return m_boxColliderComponent;
+        }
 
-        void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config) { m_box2dShapeConfig = std::move(config); }
-        const std::optional<Physics::Box2DShapeConfig>& GetBox2DShapeConfig() const { return m_box2dShapeConfig; }
+        void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config);
+
+        const std::optional<Physics::Box2DShapeConfig>& GetBox2DShapeConfig() const
+        {
+            return m_box2dShapeConfig;
+        }
+
+        void AttachPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
+        void DetachPhysicsMachine();
 
     protected:
         Physics::Physical m_physical;
-        Systems::PhysicsMachine* m_physicsMachine;
+        Systems::PhysicsMachine* m_physicsMachine = nullptr;
 
         b2BodyId m_box2dBodyId{ b2_nullBodyId };
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;
+
         std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
+
+    private:
+        void RecreateBox2DBody();
     };
 }
 
@@ -104,4 +122,3 @@ namespace Entities
 {
     void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta);
 }
-

@@ -173,7 +173,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\AABB.cpp" />
-    <ClCompile Include="src\AABBCollider.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
@@ -202,6 +201,7 @@
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Components\BoxColliderComponent.cpp" />
     <ClCompile Include="src\Physics2D.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
@@ -248,7 +248,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AABB.h" />
-    <ClInclude Include="include\AABBCollider.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
@@ -299,6 +298,7 @@
     <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
+    <ClInclude Include="include\Components\BoxColliderComponent.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />

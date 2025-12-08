@@ -1,4 +1,4 @@
-#include "AABBCollider.h"
+#include "Collision2D.h"
 #include "Transform.h"
 #include "SceneGame.h"
 #include "Collision2D.h"
@@ -1808,20 +1808,34 @@ SceneGame::SceneGame()
             return std::max(value, 1e-3f);
         };
 
-        const float halfWidth = std::max(0.01f, colliderSize.x * 0.5f);
+        const float halfWidth  = std::max(0.01f, colliderSize.x * 0.5f);
         const float halfHeight = std::max(0.01f, colliderSize.y * 0.5f);
 
+      
         Physics::BoxColliderComponent component;
-        component.shapeDef.material.friction = 0.6f;
-        component.shapeDef.material.restitution = 0.05f;
-        component.AddBox(halfWidth / safeScale(trans.scale.x), halfHeight / safeScale(trans.scale.y),
-            b2Vec2{ colliderOffset.x, colliderOffset.y });
+        component.shapeDef.material.friction     = 0.6f;
+        component.shapeDef.material.restitution  = 0.05f;
+
+      
+        component.AddBox(
+            halfWidth  / safeScale(trans.scale.x),
+            halfHeight / safeScale(trans.scale.y),
+            b2Vec2{ colliderOffset.x, colliderOffset.y }
+        );
+
+     
         boxColliderComponent = component;
         fallbackColliderSize = colliderSize;
         fallbackColliderOffset = colliderOffset;
         hasFallbackComponent = true;
+
+      
         colliderSource = "aabb_fallback";
-        colliderDecisionReason = geometryValid ? "generated_and_config_failed_geometry_sized" : "generated_and_config_failed_default_sized";
+        colliderDecisionReason =
+            geometryValid
+                ? "generated_and_config_failed_geometry_sized"
+                : "generated_and_config_failed_default_sized";
+
 
         std::ostringstream oss;
         oss << kLogPrefix << "[PlayerCollider] Applied fallback AABB size=(" << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z << ')'
@@ -2840,7 +2854,7 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
         return;
     }
 
-    m_physicsMachine->RegisterBody(entity);
+    entity.AttachPhysicsMachine(m_physicsMachine);
 }
 
 void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
@@ -2865,7 +2879,7 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
 
     if (m_physicsMachine)
     {
-        m_physicsMachine->UnregisterBody(*entity);
+        entity->DetachPhysicsMachine();
     }
     else
     {

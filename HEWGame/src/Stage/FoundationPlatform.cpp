@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "Collision2D.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelCache.h"
@@ -65,11 +66,18 @@ namespace
         const float3 extents = bounds.Extents();
         const float3 safeScale = SafeScale(transform);
 
-        const float halfWidth = std::max(0.01f, extents.x / safeScale.x);
+        const float halfWidth  = std::max(0.01f, extents.x / safeScale.x);
         const float halfHeight = std::max(0.01f, extents.y / safeScale.y);
-        component.AddBox(halfWidth, halfHeight, b2Vec2{ center.x, center.y });
+
+        component.AddBox(
+            halfWidth,
+            halfHeight,
+            b2Vec2{ center.x, center.y }
+        );
 
         return component;
+    }
+
     }
 
     AABB BuildDescriptorLocalBounds(const Transform& transform)
