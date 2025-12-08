@@ -1,4 +1,4 @@
-#include "AABBCollider.h"
+#include "Collision2D.h"
 #include "Transform.h"
 #include "SceneGame.h"
 #include "Collision2D.h"
@@ -1804,14 +1804,27 @@ SceneGame::SceneGame()
             return std::max(value, 1e-3f);
         };
 
+        const float3 safeScaleVec{ safeScale(trans.scale.x), safeScale(trans.scale.y), safeScale(trans.scale.z) };
         const float3 expand
         {
-            colliderSize.x / safeScale(trans.scale.x),
-            colliderSize.y / safeScale(trans.scale.y),
-            colliderSize.z / safeScale(trans.scale.z)
+            colliderSize.x / safeScaleVec.x,
+            colliderSize.y / safeScaleVec.y,
+            colliderSize.z / safeScaleVec.z
         };
 
-        collider = std::make_shared<Collision::AABBCollider>(trans, false, expand, colliderOffset, Collision::CollisionLayer::Player);
+        const float2 offset2D{ colliderOffset.x / safeScaleVec.x, colliderOffset.y / safeScaleVec.y };
+        const float halfX = 0.5f * expand.x;
+        const float halfY = 0.5f * expand.y;
+        std::vector<float2> points
+        {
+            float2{ -halfX, -halfY },
+            float2{ halfX, -halfY },
+            float2{ halfX, halfY },
+            float2{ -halfX, halfY },
+        };
+
+        collider = std::make_shared<Collision::ConvexHullCollider2D>(points, offset2D, expand.z, Collision::CollisionLayer::Player);
+        collider->UpdateBounds(trans);
         colliderSource = "aabb_fallback";
         colliderDecisionReason = geometryValid ? "generated_and_config_failed_geometry_sized" : "generated_and_config_failed_default_sized";
 
