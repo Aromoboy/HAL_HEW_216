@@ -94,7 +94,7 @@
     <ClCompile Include="src\Geometory.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\GravityDampingSystem.cpp">
+    <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
     <ClCompile Include="src\HudRenderer.cpp">
@@ -334,7 +334,7 @@
     <ClInclude Include="include\Geometory.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\GravityDampingSystem.h">
+    <ClInclude Include="include\Systems\Box2DPhysicsSystem.h">
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\HudRenderer.h">

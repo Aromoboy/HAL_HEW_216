@@ -1,0 +1,91 @@
+#include "Systems/Box2DPhysicsSystem.h"
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+
+#if defined(_WIN32)
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <windows.h>
+#endif
+
+namespace
+{
+        void DebugTrace(const std::string& message)
+        {
+#if defined(_WIN32)
+#if defined(_DEBUG)
+                ::OutputDebugStringA(message.c_str());
+#else
+                (void)message;
+#endif
+#else
+                (void)message;
+#endif
+        }
+}
+
+namespace Systems
+{
+        Box2DPhysicsSystem::Box2DPhysicsSystem(float gravity)
+                : m_worldDef(b2DefaultWorldDef())
+        {
+                SetGravity(gravity);
+                m_worldId = b2CreateWorld(&m_worldDef);
+                if (!b2World_IsValid(m_worldId))
+                {
+                        DebugTrace("[Box2DPhysicsSystem] Failed to create Box2D world.\n");
+                        m_loggedMissingWorld = true;
+                }
+        }
+
+        Box2DPhysicsSystem::~Box2DPhysicsSystem()
+        {
+                DestroyWorld();
+        }
+
+        void Box2DPhysicsSystem::Apply(float dt)
+        {
+                if (!b2World_IsValid(m_worldId))
+                {
+                        if (!m_loggedMissingWorld)
+                        {
+                                DebugTrace("[Box2DPhysicsSystem] World invalid; skipping step.\n");
+                                m_loggedMissingWorld = true;
+                        }
+                        return;
+                }
+
+                constexpr int kSubStepCount = 4;
+                const float step = std::max(0.0f, dt);
+                b2World_Step(m_worldId, step, kSubStepCount);
+        }
+
+        void Box2DPhysicsSystem::SetGravity(float gravity)
+        {
+                const float sanitized = std::isfinite(gravity) ? gravity : 9.8f;
+                m_worldDef.gravity = b2Vec2{ 0.0f, -sanitized };
+                if (b2World_IsValid(m_worldId))
+                {
+                        b2World_SetGravity(m_worldId, m_worldDef.gravity);
+                        m_loggedMissingWorld = false;
+                }
+        }
+
+        b2WorldId Box2DPhysicsSystem::GetWorldId() const
+        {
+                return m_worldId;
+        }
+
+        void Box2DPhysicsSystem::DestroyWorld()
+        {
+                if (b2World_IsValid(m_worldId))
+                {
+                        b2DestroyWorld(m_worldId);
+                        m_worldId = b2_nullWorldId;
+                }
+        }
+}
+

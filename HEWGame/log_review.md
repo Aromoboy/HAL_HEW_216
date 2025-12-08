@@ -126,9 +126,6 @@ Notes on current logging usage. Each entry lists the message, logging API, rough
 ## src/Collision/ConvexHullBuilder.cpp
 - `OutputDebugStringA` `DebugTrace` for convex hull build issues (event). Keep.
 
-## src/GravityDampingSystem.cpp
-- `OutputDebugStringA` `DebugTrace` for damping system setup (event). Keep.
-
 ## src/AABBCollider.cpp
 - `OutputDebugStringA` `DebugTrace` for collider initialization (event). Keep.
 
