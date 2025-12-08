@@ -214,13 +214,7 @@ namespace Stage
 
                 for (const auto& polygon : fixtures->polygons)
                 {
-                    std::vector<b2Vec2> scaled = polygon;
-                    for (auto& vertex : scaled)
-                    {
-                        vertex.x *= transform.scale.x;
-                        vertex.y *= transform.scale.y;
-                    }
-                    colliderComponent.AddPolygon(scaled);
+                    colliderComponent.AddPolygon(polygon);
                 }
 
 #if defined(_DEBUG)
