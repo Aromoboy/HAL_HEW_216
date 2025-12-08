@@ -3,6 +3,8 @@
 #include <memory>
 #include <utility>
 
+#include <box2d/math_functions.h>
+
 namespace
 {
     constexpr float kWorldToBox2DScale = 1.0f;
@@ -228,6 +230,17 @@ namespace Entities
 {
     void TranslatePhysicalEntity(PhysicalEntity& entity, const float3& delta)
     {
+        const b2BodyId bodyId = entity.GetBox2DBodyId();
+        if (b2Body_IsValid(bodyId))
+        {
+            const b2Vec2 currentPosition = b2Body_GetPosition(bodyId);
+            const b2Vec2 targetPosition = b2Vec2Add(currentPosition, PhysicalEntity::ToBox2DVector(delta));
+
+            b2Body_SetTransform(bodyId, targetPosition, b2Body_GetAngle(bodyId));
+            entity.SyncTransformFromBox2DBody();
+            return;
+        }
+
         entity.ApplyTranslation(delta);
         entity.SyncBox2DBodyFromTransform();
     }

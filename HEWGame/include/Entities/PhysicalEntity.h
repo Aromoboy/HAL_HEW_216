@@ -69,6 +69,19 @@ namespace Entities
 
         virtual void SetBox2DBodyId(b2BodyId bodyId);
         virtual b2BodyId GetBox2DBodyId() const;
+        bool HasBox2DBody() const;
+
+        void SyncTransformFromBox2DBody();
+        void SyncBox2DBodyFromTransform();
+
+        static b2Vec2 ToBox2DPosition(const float3& worldPosition);
+        static float3 ToWorldPosition(const b2Vec2& box2dPosition);
+        static b2Vec2 ToBox2DVector(const float3& worldVector);
+        static float3 ToWorldVector(const b2Vec2& box2dVector);
+        static float ToBox2DAngle(float worldRadians);
+        static float ToWorldAngle(float box2dRadians);
+        static float ToBox2DLength(float worldLength);
+        static float ToWorldLength(float box2dLength);
 
         void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons,
                           const std::vector<b2Vec2>& boundary);
