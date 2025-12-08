@@ -244,6 +244,7 @@ namespace SweetsSpace
         bool m_forceGeneratedColliders;
         bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
+        std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
