@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\build\CMakeFiles\3684d2ea3d80e101e5f28242607bf178\update_mappings.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\mappings.h.in">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\CMake\GenerateMappings.cmake" />
+    <None Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-build\src\CMakeFiles\update_mappings" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{D41C93E3-8C21-3B23-BCAB-FE1A77E26492}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{A38D8539-DF69-3A25-88E4-C2C0AA669A07}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

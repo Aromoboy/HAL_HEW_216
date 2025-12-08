@@ -1,0 +1,464 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:06.
+      
+      ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdC\\CompilerIdC.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+      PrepareForBuild:
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "Debug\\".
+        ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "Debug\\CompilerIdC.tlog\\".
+      InitializeBuildStatus:
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "Debug\\CompilerIdC.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+        ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+        CMakeCCompilerId.c
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
+        CompilerIdC.vcxproj -> C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdC\\CompilerIdC.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_C_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        ﾐ､ﾐｰﾐｹﾐｻ "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" ﾑσｴﾐｰﾐｻﾑ紹ｵﾑび・・
+        ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "Debug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate".
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdC\\CompilerIdC.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+      
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾑτ・ｿﾐｵﾑ威ｽﾐｾ ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ.
+          ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+          ﾐ樮威ｸﾐｱﾐｾﾐｺ: 0
+      
+      ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.33
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      
+      The C compiler identification is MSVC, found in:
+        C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/3.31.6-msvc6/CompilerIdC/CompilerIdC.exe
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:06.
+      
+      ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdCXX\\CompilerIdCXX.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+      PrepareForBuild:
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "Debug\\".
+        ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+        ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        ﾐ､ﾐｰﾐｹﾐｻ "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" ﾑσｴﾐｰﾐｻﾑ紹ｵﾑび・・
+        ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\3.31.6-msvc6\\CompilerIdCXX\\CompilerIdCXX.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+      
+      ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾑτ・ｿﾐｵﾑ威ｽﾐｾ ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ.
+          ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+          ﾐ樮威ｸﾐｱﾐｾﾐｺ: 0
+      
+      ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.33
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/3.31.6-msvc6/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-xi7ri3"
+      binary: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-xi7ri3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-xi7ri3'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_aaacf.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:07.
+        
+        ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xi7ri3\\cmTC_aaacf.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        PrepareForBuild:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_aaacf.dir\\Debug\\".
+          ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xi7ri3\\Debug\\".
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_aaacf.dir\\Debug\\cmTC_aaacf.tlog\\".
+        InitializeBuildStatus:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "cmTC_aaacf.dir\\Debug\\cmTC_aaacf.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_aaacf.dir\\Debug\\cmTC_aaacf.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_aaacf.dir\\Debug\\\\" /Fd"cmTC_aaacf.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+          ﾐ榧ｿﾑひｸﾐｼﾐｸﾐｷﾐｸﾑ\xc2\x80ﾑτ紗禍ｸﾐｹ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80 Microsoft (R) C/C++ ﾐｲﾐｵﾑ\xc2\x80ﾑ・ｸﾐｸ 19.44.35220 ﾐｴﾐｻﾑ・x64
+          (C) ﾐ墟ｾﾑ\xc2\x80ﾐｿﾐｾﾑ\xc2\x80ﾐｰﾑ・ｸﾑ・ﾐ慴ｰﾐｹﾐｺﾑ\xc2\x80ﾐｾﾑ・ｾﾑ・・(Microsoft Corporation).  ﾐ柘・ｵ ﾐｿﾑ\xc2\x80ﾐｰﾐｲﾐｰ ﾐｷﾐｰﾑ禍ｸﾑ禍ｵﾐｽﾑ・
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_aaacf.dir\\Debug\\\\" /Fd"cmTC_aaacf.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+          CMakeCCompilerABI.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xi7ri3\\Debug\\cmTC_aaacf.exe" /INCREMENTAL /ILK:"cmTC_aaacf.dir\\Debug\\cmTC_aaacf.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-xi7ri3/Debug/cmTC_aaacf.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-xi7ri3/Debug/cmTC_aaacf.lib" /MACHINE:X64  /machine:x64 cmTC_aaacf.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_aaacf.vcxproj -> C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xi7ri3\\Debug\\cmTC_aaacf.exe
+        FinalizeBuildStatus:
+          ﾐ､ﾐｰﾐｹﾐｻ "cmTC_aaacf.dir\\Debug\\cmTC_aaacf.tlog\\unsuccessfulbuild" ﾑσｴﾐｰﾐｻﾑ紹ｵﾑび・・
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_aaacf.dir\\Debug\\cmTC_aaacf.tlog\\cmTC_aaacf.lastbuildstate".
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xi7ri3\\cmTC_aaacf.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾑτ・ｿﾐｵﾑ威ｽﾐｾ ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ.
+            ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+            ﾐ樮威ｸﾐｱﾐｾﾐｺ: 0
+        
+        ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.33
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'C': C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Running the C compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.44.35220.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-hth7n2"
+      binary: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-hth7n2"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-hth7n2'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_df1d8.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:08.
+        
+        ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-hth7n2\\cmTC_df1d8.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        PrepareForBuild:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_df1d8.dir\\Debug\\".
+          ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-hth7n2\\Debug\\".
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_df1d8.dir\\Debug\\cmTC_df1d8.tlog\\".
+        InitializeBuildStatus:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "cmTC_df1d8.dir\\Debug\\cmTC_df1d8.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_df1d8.dir\\Debug\\cmTC_df1d8.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_df1d8.dir\\Debug\\\\" /Fd"cmTC_df1d8.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+          ﾐ榧ｿﾑひｸﾐｼﾐｸﾐｷﾐｸﾑ\xc2\x80ﾑτ紗禍ｸﾐｹ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80 Microsoft (R) C/C++ ﾐｲﾐｵﾑ\xc2\x80ﾑ・ｸﾐｸ 19.44.35220 ﾐｴﾐｻﾑ・x64
+          (C) ﾐ墟ｾﾑ\xc2\x80ﾐｿﾐｾﾑ\xc2\x80ﾐｰﾑ・ｸﾑ・ﾐ慴ｰﾐｹﾐｺﾑ\xc2\x80ﾐｾﾑ・ｾﾑ・・(Microsoft Corporation).  ﾐ柘・ｵ ﾐｿﾑ\xc2\x80ﾐｰﾐｲﾐｰ ﾐｷﾐｰﾑ禍ｸﾑ禍ｵﾐｽﾑ・
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_df1d8.dir\\Debug\\\\" /Fd"cmTC_df1d8.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-hth7n2\\Debug\\cmTC_df1d8.exe" /INCREMENTAL /ILK:"cmTC_df1d8.dir\\Debug\\cmTC_df1d8.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-hth7n2/Debug/cmTC_df1d8.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-hth7n2/Debug/cmTC_df1d8.lib" /MACHINE:X64  /machine:x64 cmTC_df1d8.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_df1d8.vcxproj -> C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-hth7n2\\Debug\\cmTC_df1d8.exe
+        FinalizeBuildStatus:
+          ﾐ､ﾐｰﾐｹﾐｻ "cmTC_df1d8.dir\\Debug\\cmTC_df1d8.tlog\\unsuccessfulbuild" ﾑσｴﾐｰﾐｻﾑ紹ｵﾑび・・
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_df1d8.dir\\Debug\\cmTC_df1d8.tlog\\cmTC_df1d8.lastbuildstate".
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-hth7n2\\cmTC_df1d8.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾑτ・ｿﾐｵﾑ威ｽﾐｾ ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ.
+            ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+            ﾐ樮威ｸﾐｱﾐｾﾐｺ: 0
+        
+        ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.32
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:5 (project)"
+    message: |
+      Running the CXX compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.44.35220.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "build/_deps/glfw-src/CMakeLists.txt:60 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-02qycw"
+      binary: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-02qycw"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-02qycw'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_3eceb.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:14.
+        
+        ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\cmTC_3eceb.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        PrepareForBuild:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_3eceb.dir\\Debug\\".
+          ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\Debug\\".
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_3eceb.dir\\Debug\\cmTC_3eceb.tlog\\".
+        InitializeBuildStatus:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "cmTC_3eceb.dir\\Debug\\cmTC_3eceb.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_3eceb.dir\\Debug\\cmTC_3eceb.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_3eceb.dir\\Debug\\\\" /Fd"cmTC_3eceb.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\src.c"
+          ﾐ榧ｿﾑひｸﾐｼﾐｸﾐｷﾐｸﾑ\xc2\x80ﾑτ紗禍ｸﾐｹ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80 Microsoft (R) C/C++ ﾐｲﾐｵﾑ\xc2\x80ﾑ・ｸﾐｸ 19.44.35220 ﾐｴﾐｻﾑ・x64
+          (C) ﾐ墟ｾﾑ\xc2\x80ﾐｿﾐｾﾑ\xc2\x80ﾐｰﾑ・ｸﾑ・ﾐ慴ｰﾐｹﾐｺﾑ\xc2\x80ﾐｾﾑ・ｾﾑ・・(Microsoft Corporation).  ﾐ柘・ｵ ﾐｿﾑ\xc2\x80ﾐｰﾐｲﾐｰ ﾐｷﾐｰﾑ禍ｸﾑ禍ｵﾐｽﾑ・
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_3eceb.dir\\Debug\\\\" /Fd"cmTC_3eceb.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\src.c"
+          src.c
+        C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\src.c(1,10): error C1083: ﾐ斷ｵ ﾑσｴﾐｰﾐｵﾑび・・ﾐｾﾑひｺﾑ\xc2\x80ﾑ錦び・ﾑ・ｰﾐｹﾐｻ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽﾐｸﾐｵ: pthread.h: No such file or directory, [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\cmTC_3eceb.vcxproj]
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\cmTC_3eceb.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ ﾑ・ﾐｾﾑ威ｸﾐｱﾐｺﾐｾﾐｹ.
+        
+        ﾐ樮威ｸﾐｱﾐｺﾐｰ ﾑ・ｱﾐｾﾑ\xc2\x80ﾐｺﾐｸ.
+        
+        "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\cmTC_3eceb.vcxproj" (ﾑ・ｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ (1) ->
+        (ﾐｦﾐｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・ClCompile) -> 
+          C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\src.c(1,10): error C1083: ﾐ斷ｵ ﾑσｴﾐｰﾐｵﾑび・・ﾐｾﾑひｺﾑ\xc2\x80ﾑ錦び・ﾑ・ｰﾐｹﾐｻ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽﾐｸﾐｵ: pthread.h: No such file or directory, [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-02qycw\\cmTC_3eceb.vcxproj]
+        
+            ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+            ﾐ樮威ｸﾐｱﾐｾﾐｺ: 1
+        
+        ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.20
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:175 (_threads_check_lib)"
+      - "build/_deps/glfw-src/CMakeLists.txt:60 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthreads"
+    directories:
+      source: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-woxdnr"
+      binary: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-woxdnr"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREADS_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-woxdnr'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_6d837.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:15.
+        
+        ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\cmTC_6d837.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        PrepareForBuild:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_6d837.dir\\Debug\\".
+          ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\Debug\\".
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_6d837.dir\\Debug\\cmTC_6d837.tlog\\".
+        InitializeBuildStatus:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "cmTC_6d837.dir\\Debug\\cmTC_6d837.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_6d837.dir\\Debug\\cmTC_6d837.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_6d837.dir\\Debug\\\\" /Fd"cmTC_6d837.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\CheckFunctionExists.c"
+          ﾐ榧ｿﾑひｸﾐｼﾐｸﾐｷﾐｸﾑ\xc2\x80ﾑτ紗禍ｸﾐｹ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80 Microsoft (R) C/C++ ﾐｲﾐｵﾑ\xc2\x80ﾑ・ｸﾐｸ 19.44.35220 ﾐｴﾐｻﾑ・x64
+          (C) ﾐ墟ｾﾑ\xc2\x80ﾐｿﾐｾﾑ\xc2\x80ﾐｰﾑ・ｸﾑ・ﾐ慴ｰﾐｹﾐｺﾑ\xc2\x80ﾐｾﾑ・ｾﾑ・・(Microsoft Corporation).  ﾐ柘・ｵ ﾐｿﾑ\xc2\x80ﾐｰﾐｲﾐｰ ﾐｷﾐｰﾑ禍ｸﾑ禍ｵﾐｽﾑ・
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_6d837.dir\\Debug\\\\" /Fd"cmTC_6d837.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\Debug\\cmTC_6d837.exe" /INCREMENTAL /ILK:"cmTC_6d837.dir\\Debug\\cmTC_6d837.ilk" /NOLOGO pthreads.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-woxdnr/Debug/cmTC_6d837.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-woxdnr/Debug/cmTC_6d837.lib" /MACHINE:X64  /machine:x64 cmTC_6d837.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\cmTC_6d837.vcxproj]
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\cmTC_6d837.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ ﾑ・ﾐｾﾑ威ｸﾐｱﾐｺﾐｾﾐｹ.
+        
+        ﾐ樮威ｸﾐｱﾐｺﾐｰ ﾑ・ｱﾐｾﾑ\xc2\x80ﾐｺﾐｸ.
+        
+        "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\cmTC_6d837.vcxproj" (ﾑ・ｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ (1) ->
+        (ﾐｦﾐｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・Link) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-woxdnr\\cmTC_6d837.vcxproj]
+        
+            ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+            ﾐ樮威ｸﾐｱﾐｾﾐｺ: 1
+        
+        ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.25
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FindThreads.cmake:176 (_threads_check_lib)"
+      - "build/_deps/glfw-src/CMakeLists.txt:60 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthread"
+    directories:
+      source: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-l5rf5g"
+      binary: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-l5rf5g"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREAD_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-l5rf5g'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_c41f0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        ﾐ漬ｵﾑ\xc2\x80ﾑ・ｸﾑ・MSBuild 17.14.23+b0019275e ﾐｴﾐｻﾑ・.NET Framework
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｽﾐｰﾑ・ｰﾑひｰ 2025/12/08 12:28:15.
+        
+        ﾐ湲\xc2\x80ﾐｾﾐｵﾐｺﾑ・"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\cmTC_c41f0.vcxproj" ﾐｲ ﾑσｷﾐｻﾐｵ 1 (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・.
+        PrepareForBuild:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_c41f0.dir\\Debug\\".
+          ﾐ｡ﾑび\xc2\x80ﾑσｺﾑびτ\xc2\x80ﾐｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｽﾑ巾ｹ ﾐｲﾑ巾ｲﾐｾﾐｴ ﾐｲﾐｺﾐｻﾑ紗・ｵﾐｽ. ﾐ､ﾐｾﾑ\xc2\x80ﾐｼﾐｰﾑひｸﾑ\xc2\x80ﾐｾﾐｲﾐｰﾐｽﾐｸﾐｵ ﾐｴﾐｸﾐｰﾐｳﾐｽﾐｾﾑ・ひｸﾐｺﾐｸ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80ﾐｰ ﾐｱﾑσｴﾐｵﾑ・ﾐｾﾑび\xc2\x80ﾐｰﾐｶﾐｰﾑび・ﾐｸﾐｵﾑ\xc2\x80ﾐｰﾑ\xc2\x80ﾑ・ｸﾑ・ﾐｾﾑ威ｸﾐｱﾐｾﾐｺ. ﾐ渙ｾﾐｴﾑ\xc2\x80ﾐｾﾐｱﾐｽﾐｵﾐｵ ﾑ・ｼ. https://aka.ms/cpp/structured-output.
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\Debug\\".
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ ﾐｺﾐｰﾑひｰﾐｻﾐｾﾐｳﾐｰ "cmTC_c41f0.dir\\Debug\\cmTC_c41f0.tlog\\".
+        InitializeBuildStatus:
+          ﾐ｡ﾐｾﾐｷﾐｴﾐｰﾐｽﾐｸﾐｵ "cmTC_c41f0.dir\\Debug\\cmTC_c41f0.tlog\\unsuccessfulbuild", ﾑひｰﾐｺ ﾐｺﾐｰﾐｺ ﾐｱﾑ巾ｻﾐｾ ﾐｷﾐｰﾐｴﾐｰﾐｽﾐｾ "AlwaysCreate".
+          ﾐ榧ｱﾑ\xc2\x80ﾐｰﾑ禍ｵﾐｽﾐｸﾐｵ ﾐｺ "cmTC_c41f0.dir\\Debug\\cmTC_c41f0.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_c41f0.dir\\Debug\\\\" /Fd"cmTC_c41f0.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\CheckFunctionExists.c"
+          ﾐ榧ｿﾑひｸﾐｼﾐｸﾐｷﾐｸﾑ\xc2\x80ﾑτ紗禍ｸﾐｹ ﾐｺﾐｾﾐｼﾐｿﾐｸﾐｻﾑ肖ひｾﾑ\xc2\x80 Microsoft (R) C/C++ ﾐｲﾐｵﾑ\xc2\x80ﾑ・ｸﾐｸ 19.44.35220 ﾐｴﾐｻﾑ・x64
+          (C) ﾐ墟ｾﾑ\xc2\x80ﾐｿﾐｾﾑ\xc2\x80ﾐｰﾑ・ｸﾑ・ﾐ慴ｰﾐｹﾐｺﾑ\xc2\x80ﾐｾﾑ・ｾﾑ・・(Microsoft Corporation).  ﾐ柘・ｵ ﾐｿﾑ\xc2\x80ﾐｰﾐｲﾐｰ ﾐｷﾐｰﾑ禍ｸﾑ禍ｵﾐｽﾑ・
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_c41f0.dir\\Debug\\\\" /Fd"cmTC_c41f0.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\Debug\\cmTC_c41f0.exe" /INCREMENTAL /ILK:"cmTC_c41f0.dir\\Debug\\cmTC_c41f0.ilk" /NOLOGO pthread.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-l5rf5g/Debug/cmTC_c41f0.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/CMakeScratch/TryCompile-l5rf5g/Debug/cmTC_c41f0.lib" /MACHINE:X64  /machine:x64 cmTC_c41f0.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthread.lib' [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\cmTC_c41f0.vcxproj]
+        ﾐ｡ﾐｱﾐｾﾑ\xc2\x80ﾐｺﾐｰ ﾐｿﾑ\xc2\x80ﾐｾﾐｵﾐｺﾑひｰ "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\cmTC_c41f0.vcxproj" ﾐｷﾐｰﾐｲﾐｵﾑ\xc2\x80ﾑ威ｵﾐｽﾐｰ (ﾑ・ｵﾐｻﾐｵﾐｲﾑ巾ｵ ﾐｾﾐｱﾑ諌ｵﾐｺﾑび・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ ﾑ・ﾐｾﾑ威ｸﾐｱﾐｺﾐｾﾐｹ.
+        
+        ﾐ樮威ｸﾐｱﾐｺﾐｰ ﾑ・ｱﾐｾﾑ\xc2\x80ﾐｺﾐｸ.
+        
+        "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\cmTC_c41f0.vcxproj" (ﾑ・ｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・ﾐｿﾐｾ ﾑσｼﾐｾﾐｻﾑ・ｰﾐｽﾐｸﾑ・ (1) ->
+        (ﾐｦﾐｵﾐｻﾐｵﾐｲﾐｾﾐｹ ﾐｾﾐｱﾑ諌ｵﾐｺﾑ・Link) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthread.lib' [C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\CMakeFiles\\CMakeScratch\\TryCompile-l5rf5g\\cmTC_c41f0.vcxproj]
+        
+            ﾐ湲\xc2\x80ﾐｵﾐｴﾑσｿﾑ\xc2\x80ﾐｵﾐｶﾐｴﾐｵﾐｽﾐｸﾐｹ: 0
+            ﾐ樮威ｸﾐｱﾐｾﾐｺ: 1
+        
+        ﾐ湲\xc2\x80ﾐｾﾑ威ｻﾐｾ ﾐｲﾑ\xc2\x80ﾐｵﾐｼﾐｵﾐｽﾐｸ 00:00:00.26
+        
+      exitCode: 1
+...

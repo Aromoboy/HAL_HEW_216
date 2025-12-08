@@ -1,0 +1,6 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/samples/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\glad\include /W1 /WX- /diagnostics:column /O2 /Ob2 /D _MBCS /D WIN32 /D _WINDOWS /D NDEBUG /D "CMAKE_INTDIR=\"Release\"" /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"glad.dir\Release\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\samples\Release\glad.pdb" /external:W1 /Gd /TC /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\extern\glad\src\glad.c
+  glad.c
+  glad.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\samples\Release\glad.lib

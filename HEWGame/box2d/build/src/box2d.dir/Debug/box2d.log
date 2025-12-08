@@ -1,0 +1,42 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/src/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\src\..\include /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\src /IC:\HEW\HAL_HEW_216\HEWGame\box2d\src /ZI /Wall /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /std:c17 /Fo"box2d.dir\Debug\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\src\Debug\box2dd.pdb" /external:W4 /Gd /TC /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\src\aabb.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\arena_allocator.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\array.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\bitset.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\body.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\broad_phase.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\constraint_graph.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\contact.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\contact_solver.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\core.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\distance.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\distance_joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\dynamic_tree.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\geometry.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\hull.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\id_pool.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\island.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\manifold.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\math_functions.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\motor_joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\mover.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\physics_world.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\prismatic_joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\revolute_joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\sensor.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\shape.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\solver.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\solver_set.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\table.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\timer.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\types.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\weld_joint.c C:\HEW\HAL_HEW_216\HEWGame\box2d\src\wheel_joint.c
+  aabb.c
+  arena_allocator.c
+  array.c
+  bitset.c
+  body.c
+  broad_phase.c
+  constraint_graph.c
+  contact.c
+  contact_solver.c
+  core.c
+  distance.c
+  distance_joint.c
+  dynamic_tree.c
+  geometry.c
+  hull.c
+  id_pool.c
+  island.c
+  joint.c
+  manifold.c
+  math_functions.c
+  Создание кода...
+  Компиляция...
+  motor_joint.c
+  mover.c
+  physics_world.c
+  prismatic_joint.c
+  revolute_joint.c
+  sensor.c
+  shape.c
+  solver.c
+  solver_set.c
+  table.c
+  timer.c
+  types.c
+  weld_joint.c
+  wheel_joint.c
+  Создание кода...
+  box2d.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\src\Debug\box2dd.lib

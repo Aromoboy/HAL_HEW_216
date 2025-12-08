@@ -59,3 +59,8 @@ x64/
 !HEWGame/DirectXTex/x64/Release/**
 x86
 
+# Allow Box2D vendored library
+!HEWGame/box2d/
+!HEWGame/box2d/**
+
+

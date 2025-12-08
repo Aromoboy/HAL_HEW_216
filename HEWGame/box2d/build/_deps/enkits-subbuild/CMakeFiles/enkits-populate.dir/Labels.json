@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/enkits-populate"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/079224b8805b0f1c5cc404d21901cbe9/enkits-populate.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/6077ad59a4f1ef7bf8c60396b7757b02/enkits-populate-complete.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-build.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-configure.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-download.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-install.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-patch.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-test.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/CMakeFiles/ba87979f105b4bfdca072e7dfc100743/enkits-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"enkits-populate"
+		],
+		"name" : "enkits-populate"
+	}
+}

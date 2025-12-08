@@ -1,0 +1,29 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-src/src/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\include" /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src" /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-build\src" /ZI /W3 /WX- /diagnostics:column /Od /Ob0 /D _UNICODE /D UNICODE /D WIN32 /D _WINDOWS /D _GLFW_WIN32 /D UNICODE /D _UNICODE /D _CRT_SECURE_NO_WARNINGS /D "CMAKE_INTDIR=\"Debug\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"glfw.dir\Debug\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-build\src\Debug\glfw3.pdb" /external:W3 /Gd /TC /errorReport:prompt "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\context.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\init.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\input.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\monitor.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\platform.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\vulkan.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\window.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\egl_context.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\osmesa_context.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\null_init.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\null_monitor.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\null_window.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\null_joystick.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_module.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_time.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_thread.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_init.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_joystick.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_monitor.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\win32_window.c" "C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\src\wgl_context.c"
+  context.c
+  init.c
+  input.c
+  monitor.c
+  platform.c
+  vulkan.c
+  window.c
+  egl_context.c
+  osmesa_context.c
+  null_init.c
+  null_monitor.c
+  null_window.c
+  null_joystick.c
+  win32_module.c
+  win32_time.c
+  win32_thread.c
+  win32_init.c
+  win32_joystick.c
+  win32_monitor.c
+  win32_window.c
+  Создание кода...
+  Компиляция...
+  wgl_context.c
+  Создание кода...
+  glfw.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-build\src\Debug\glfw3.lib

@@ -1,0 +1,10 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/shared/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\shared /IC:\HEW\HAL_HEW_216\HEWGame\box2d\src\..\include /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\src /W1 /WX- /diagnostics:column /O2 /Ob2 /D _MBCS /D WIN32 /D _WINDOWS /D NDEBUG /D "CMAKE_INTDIR=\"Release\"" /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /std:c17 /Fo"shared.dir\Release\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\shared\Release\shared.pdb" /external:W1 /Gd /TC /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\shared\benchmarks.c C:\HEW\HAL_HEW_216\HEWGame\box2d\shared\determinism.c C:\HEW\HAL_HEW_216\HEWGame\box2d\shared\human.c C:\HEW\HAL_HEW_216\HEWGame\box2d\shared\random.c
+  benchmarks.c
+  determinism.c
+  human.c
+  random.c
+  Создание кода...
+  shared.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\shared\Release\shared.lib

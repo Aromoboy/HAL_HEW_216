@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\car.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\container.c" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\donut.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\doohickey.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\draw.c" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\main.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_benchmark.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_bodies.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_character.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_collision.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_continuous.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_determinism.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_events.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_geometry.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_issues.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_joints.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_robustness.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_shapes.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_stacking.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_world.cpp" />
+    <ClCompile Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\shader.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\car.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\container.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\donut.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\doohickey.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\draw.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\shader.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\stb_image_write.h" />
+    <ClInclude Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\stb_truetype.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+</Project>
