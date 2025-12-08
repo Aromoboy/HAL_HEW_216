@@ -22,6 +22,26 @@ struct AABB
         AABB::min = float3{ 0.0f,0.0f,0.0f };
     };
 
+    float3 Center() const
+    {
+        return float3
+        {
+            (min.x + max.x) * 0.5f,
+            (min.y + max.y) * 0.5f,
+            (min.z + max.z) * 0.5f,
+        };
+    }
+
+    float3 Extents() const
+    {
+        return float3
+        {
+            (max.x - min.x) * 0.5f,
+            (max.y - min.y) * 0.5f,
+            (max.z - min.z) * 0.5f,
+        };
+    }
+
     bool Intersects(const AABB& other, float tolerance = 0.0f) const
     {
         const float overlapX = std::min(max.x, other.max.x) - std::max(min.x, other.min.x) - tolerance;

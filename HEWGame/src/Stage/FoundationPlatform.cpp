@@ -66,18 +66,8 @@ namespace
 
     std::shared_ptr<Collision::AABBCollider> CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
     {
-        const float3 center
-        {
-            (bounds.min.x + bounds.max.x) * 0.5f,
-            (bounds.min.y + bounds.max.y) * 0.5f,
-            (bounds.min.z + bounds.max.z) * 0.5f
-        };
-        const float3 extents
-        {
-            (bounds.max.x - bounds.min.x) * 0.5f,
-            (bounds.max.y - bounds.min.y) * 0.5f,
-            (bounds.max.z - bounds.min.z) * 0.5f
-        };
+        const float3 center = bounds.Center();
+        const float3 extents = bounds.Extents();
 
         const float3 safeScale = SafeScale(transform);
         const float3 expand = CalculateExpandFromExtents(extents, safeScale);
