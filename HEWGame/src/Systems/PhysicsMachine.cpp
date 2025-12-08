@@ -159,11 +159,38 @@ namespace Systems
                         return;
                 }
 
+                const b2BodyId existing = body.GetBox2DBodyId();
+                if (b2Body_IsValid(existing))
+                {
+                        if (b2Body_GetWorld(existing).index == m_worldId.index)
+                        {
+                                m_bodies.push_back(bodyPtr);
+                                m_bodyMap.emplace(bodyPtr, existing);
+#if defined(_DEBUG)
+                                std::ostringstream oss;
+                                oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "' id="
+                                    << existing.index << "\n";
+                                DebugTrace(oss.str());
+#endif
+                                return;
+                        }
+
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << "[PhysicsMachine] Ignored foreign Box2D body for tag='" << body.GetTag()
+                            << "' worldIndex=" << b2Body_GetWorld(existing).index
+                            << " expectedWorld=" << m_worldId.index << "\n";
+                        DebugTrace(oss.str());
+#endif
+                        body.SetBox2DBodyId(b2_nullBodyId);
+                }
+
                 m_bodies.push_back(bodyPtr);
 
                 b2BodyId bodyId = CreateBody(body);
                 if (b2Body_IsValid(bodyId))
                 {
+                        body.SetBox2DBodyId(bodyId);
                         m_bodyMap.emplace(bodyPtr, bodyId);
                 }
         }
@@ -423,6 +450,7 @@ namespace Systems
                         b2DestroyBody(it->second);
                 }
 
+                const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);
                 m_bodyMap.erase(it);
         }
 

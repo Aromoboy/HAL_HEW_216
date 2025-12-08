@@ -35,6 +35,16 @@ namespace Entities
         return m_physicsMachine;
     }
 
+    void PhysicalEntity::SetBox2DBodyId(b2BodyId bodyId)
+    {
+        m_box2dBodyId = bodyId;
+    }
+
+    b2BodyId PhysicalEntity::GetBox2DBodyId() const
+    {
+        return m_box2dBodyId;
+    }
+
     void PhysicalEntity::SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary)
     {
         m_box2dPolygons = polygons;

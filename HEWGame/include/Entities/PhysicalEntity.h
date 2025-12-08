@@ -46,6 +46,9 @@ namespace Entities
 
         Systems::PhysicsMachine* GetPhysicsMachine() const;
 
+        virtual void SetBox2DBodyId(b2BodyId bodyId);
+        virtual b2BodyId GetBox2DBodyId() const;
+
         void SetBox2DMesh(const std::vector<std::vector<b2Vec2>>& polygons, const std::vector<b2Vec2>& boundary);
         bool HasBox2DMesh() const;
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
@@ -54,6 +57,8 @@ namespace Entities
     protected:
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine;
+
+        b2BodyId m_box2dBodyId{ b2_nullBodyId };
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;

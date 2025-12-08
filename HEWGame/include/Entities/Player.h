@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <box2d/box2d.h>
+
 #include "Entities/PhysicalEntity.h"
 #include "Input.h"
 
@@ -55,6 +57,12 @@ namespace Entities
         void SetPickupArea(float width, float height, float forwardOffset);
 
     private:
+        void SyncTransformFromBody();
+        bool HasValidBody() const;
+        void InitializeBody(const Transform& transform);
+        b2Vec2 GetBodyLinearVelocity() const;
+        void SetBox2DBodyId(b2BodyId bodyId) override;
+
         std::shared_ptr<Render::Model> m_fairyModel;
         Systems::ContactLiteSystem* m_contactSystem;
         SweetsSpace::SweetsManager* m_sweetsManager;
@@ -77,6 +85,7 @@ namespace Entities
         float m_maxScreenX;
         bool m_hasMaximumY;
         float m_maximumY;
+        b2BodyId m_bodyId{ b2_nullBodyId };
 
         float3 ComputeCarryAnchor() const;
         void UpdateCarriedSweets();
