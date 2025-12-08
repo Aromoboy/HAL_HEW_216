@@ -463,7 +463,9 @@ namespace Systems
                                         const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
                                         if (b2ValidateHull(&hull))
                                         {
-                                                const b2Polygon shape = b2MakePolygon(&hull, b2_polygonRadius);
+                                                shapeDef.radius = b2_polygonRadius;
+
+                                                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
                                                 b2CreatePolygonShape(bodyId, &shapeDef, &shape);
                                                 return bodyId;
                                         }
@@ -487,6 +489,9 @@ namespace Systems
                 int meshShapes = 0;
                 if (hasMeshFixtures)
                 {
+                        const float originalRadius = shapeDef.radius;
+                        shapeDef.radius = b2_polygonRadius;
+
                         for (const auto& polygon : meshPolygons)
                         {
                                 if (polygon.size() < 3)
@@ -507,7 +512,7 @@ namespace Systems
                                         continue;
                                 }
 
-                                const b2Polygon shape = b2MakePolygon(&hull, b2_polygonRadius);
+                                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
                                 b2CreatePolygonShape(bodyId, &shapeDef, &shape);
                                 ++meshShapes;
                         }
@@ -531,6 +536,8 @@ namespace Systems
                                 b2CreateChainShape(bodyId, &chainShapeDef, &chainDef);
                                 ++meshShapes;
                         }
+
+                        shapeDef.radius = originalRadius;
 
                         if (meshShapes > 0)
                         {
