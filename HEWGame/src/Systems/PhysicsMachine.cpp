@@ -429,6 +429,14 @@ namespace Systems
             return b2_nullBodyId;
         }
 
+        const std::string& tag = body.GetTag();
+        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
+
+        const auto clampRange = [](float value, float minValue, float maxValue)
+        {
+            return std::clamp(value, minValue, maxValue);
+        };
+
         // BodyDef 設定
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
@@ -437,6 +445,14 @@ namespace Systems
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
         bodyDef.userData = &body;
+
+        if (isSweetTag)
+        {
+            bodyDef.type = b2_dynamicBody;
+            bodyDef.gravityScale = 1.0f;
+            bodyDef.linearDamping = clampRange(bodyDef.linearDamping, 0.5f, 1.0f);
+            bodyDef.angularDamping = clampRange(bodyDef.angularDamping, 1.0f, 3.0f);
+        }
 
         b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);
         if (!b2Body_IsValid(bodyId))
@@ -465,6 +481,36 @@ namespace Systems
         shapeDef.enableHitEvents = true;
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
         shapeDef.filter.maskBits = ToMaskBits(layer);
+
+        if (isSweetTag)
+        {
+            shapeDef.material.friction = clampRange(shapeDef.material.friction, 0.6f, 0.8f);
+            shapeDef.material.restitution = clampRange(shapeDef.material.restitution, 0.1f, 0.25f);
+
+            auto toBodyTypeString = [](b2BodyType type)
+            {
+                switch (type)
+                {
+                case b2_staticBody:
+                    return "static";
+                case b2_kinematicBody:
+                    return "kinematic";
+                case b2_dynamicBody:
+                default:
+                    return "dynamic";
+                }
+            };
+
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] sweet body params tag='" << tag
+                << "' type=" << toBodyTypeString(bodyDef.type)
+                << " gravityScale=" << bodyDef.gravityScale
+                << " linearDamping=" << bodyDef.linearDamping
+                << " angularDamping=" << bodyDef.angularDamping
+                << " friction=" << shapeDef.material.friction
+                << " restitution=" << shapeDef.material.restitution << "\n";
+            DebugTrace(oss.str());
+        }
 
         const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
         bool createdFixtures = false;
