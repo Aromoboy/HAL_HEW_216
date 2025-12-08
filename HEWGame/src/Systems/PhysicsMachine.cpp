@@ -77,6 +77,38 @@ namespace
             return kDefaultCategory | kPlayerCategory | kFloorCategory | kSweetsCategory;
         }
     }
+
+    const char* ToString(b2BodyType bodyType)
+    {
+        switch (bodyType)
+        {
+        case b2_staticBody:
+            return "static";
+        case b2_kinematicBody:
+            return "kinematic";
+        case b2_dynamicBody:
+            return "dynamic";
+        default:
+            return "unknown";
+        }
+    }
+
+    const char* ToString(Physics::Box2DShapeConfig::Type shapeType)
+    {
+        switch (shapeType)
+        {
+        case Physics::Box2DShapeConfig::Type::None:
+            return "none";
+        case Physics::Box2DShapeConfig::Type::Box:
+            return "box";
+        case Physics::Box2DShapeConfig::Type::Polygon:
+            return "polygon";
+        case Physics::Box2DShapeConfig::Type::Circle:
+            return "circle";
+        default:
+            return "unknown";
+        }
+    }
 }
 
 namespace Systems
@@ -434,6 +466,8 @@ namespace Systems
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
         bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
         bodyDef.rotation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
+        bodyDef.fixedRotation = hasShapeConfig ? shapeConfig->fixedRotation : false;
+        bodyDef.angularDamping = hasShapeConfig ? std::max(0.0f, shapeConfig->angularDamping) : bodyDef.angularDamping;
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
         bodyDef.userData = &body;
@@ -465,6 +499,21 @@ namespace Systems
         shapeDef.enableHitEvents = true;
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
         shapeDef.filter.maskBits = ToMaskBits(layer);
+
+#if defined(_DEBUG)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Creating body tag='" << body.GetTag() << "'"
+                << " bodyType=" << ToString(bodyDef.type)
+                << " fixedRotation=" << std::boolalpha << bodyDef.fixedRotation
+                << " angularDamping=" << bodyDef.angularDamping
+                << " shapeType=" << ToString(hasShapeConfig ? shapeConfig->type : Physics::Box2DShapeConfig::Type::None)
+                << " density=" << shapeDef.density
+                << " friction=" << shapeDef.material.friction
+                << " restitution=" << shapeDef.material.restitution << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
 
         const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
         bool createdFixtures = false;

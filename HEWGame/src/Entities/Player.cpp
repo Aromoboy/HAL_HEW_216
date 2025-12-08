@@ -209,6 +209,9 @@ namespace
         Physics::Box2DShapeConfig config{};
         config.type = Physics::Box2DShapeConfig::Type::Polygon;
         config.bodyType = isKinematic ? b2_kinematicBody : b2_dynamicBody;
+        config.fixedRotation = true;
+        config.allowRotation = false;
+        config.angularDamping = 5.0f;
         config.density = 0.5f;
         config.friction = 0.35f;
         config.restitution = 0.05f;

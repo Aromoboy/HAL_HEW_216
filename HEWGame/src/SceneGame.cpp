@@ -1708,6 +1708,9 @@ SceneGame::SceneGame()
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
         shapeConfig.bodyType = playerBodyType;
+        shapeConfig.fixedRotation = true;
+        shapeConfig.allowRotation = false;
+        shapeConfig.angularDamping = 5.0f;
         shapeConfig.density = 0.5f;
         shapeConfig.friction = 0.35f;
         shapeConfig.restitution = 0.05f;
