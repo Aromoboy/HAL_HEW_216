@@ -297,8 +297,16 @@ namespace Systems
                                 }
 
                                 const b2BodyId bodyId = mapIt->second;
+                                const b2Vec2 position = b2Body_GetPosition(bodyId);
+                                const float angle = b2Body_GetAngle(bodyId);
+
+                                Transform updated = body->GetTransform();
+                                updated.position = Entities::PhysicalEntity::ToWorldPosition(position);
+                                updated.rotation.z = Entities::PhysicalEntity::ToWorldAngle(angle);
+
+                                body->SetTransform(updated);
                                 body->SetBox2DBodyId(bodyId);
-                                body->SyncTransformFromBox2DBody();
+                                body->SyncColliderBounds();
                         }
                         return;
                 }
