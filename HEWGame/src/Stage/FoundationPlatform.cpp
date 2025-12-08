@@ -1,7 +1,6 @@
 #include "Stage/FoundationPlatform.h"
 
 #include <algorithm>
-#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -48,27 +47,20 @@ namespace
         unsigned int nullMaterials{ 0 };
     };
 
-    float3 SafeScale(const Transform& transform)
-    {
-        float3 scale = transform.scale;
-        scale.x = scale.x == 0.0f ? 1.0f : scale.x;
-        scale.y = scale.y == 0.0f ? 1.0f : scale.y;
-        scale.z = scale.z == 0.0f ? 1.0f : scale.z;
-        return scale;
-    }
-
     Physics::BoxColliderComponent CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
     {
+        (void)transform;
+
         Physics::BoxColliderComponent component;
         component.shapeDef.density = 0.0f;
         component.shapeDef.material.friction = 0.8f;
 
         const float3 center = bounds.Center();
         const float3 extents = bounds.Extents();
-        const float3 safeScale = SafeScale(transform);
-
-        const float halfWidth  = std::max(0.01f, extents.x / safeScale.x);
-        const float halfHeight = std::max(0.01f, extents.y / safeScale.y);
+        // Preserve raw mesh extents; PhysicsMachine::CreateBody applies the entity's transform.scale
+        // when it builds Box2D fixtures.
+        const float halfWidth  = std::max(0.01f, extents.x);
+        const float halfHeight = std::max(0.01f, extents.y);
 
         component.AddBox(
             halfWidth,
@@ -81,13 +73,12 @@ namespace
 
     AABB BuildDescriptorLocalBounds(const Transform& transform)
     {
-        const float halfX = std::max(0.0f, std::abs(transform.scale.x) * 0.5f);
-        const float halfY = std::max(0.0f, std::abs(transform.scale.y) * 0.5f);
-        const float halfZ = std::max(0.0f, std::abs(transform.scale.z) * 0.5f);
+        (void)transform;
 
+        constexpr float kHalfExtent = 0.5f;
         return AABB(
-            float3{ halfX, halfY, halfZ },
-            float3{ -halfX, -halfY, -halfZ });
+            float3{ kHalfExtent, kHalfExtent, kHalfExtent },
+            float3{ -kHalfExtent, -kHalfExtent, -kHalfExtent });
     }
 
     std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)

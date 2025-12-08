@@ -1769,7 +1769,6 @@ SceneGame::SceneGame()
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
-        nullptr,
         m_physicsMachine.get(),
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
@@ -2589,12 +2588,16 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     if (!m_physicsMachine)
         return;
 
-    const bool hasCollider = static_cast<bool>(entity.GetCollider());
     const auto& boxColliderComponent = entity.GetBoxColliderComponent();
     const bool hasBoxColliderComponent = boxColliderComponent && !boxColliderComponent->Empty();
     const auto& shapeConfig = entity.GetBox2DShapeConfig();
     const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     const bool hasMesh = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
+    if (!hasBoxColliderComponent && !hasShapeConfig && !hasMesh)
+    {
+        DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
+        return;
+    }
     const bool meshOnly = hasMesh && !hasCollider && !hasBoxColliderComponent && !hasShapeConfig;
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
@@ -2611,6 +2614,14 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     }
 
     entity.AttachPhysicsMachine(m_physicsMachine.get());
+
+    {
+        const bool hasBody = entity.HasBox2DBody();
+        std::ostringstream oss;
+        oss << kLogPrefix << "Physics registration complete for tag='" << entity.GetTag()
+            << "' hasBody=" << std::boolalpha << hasBody << (hasBody ? "" : " (unexpected)") << "\n";
+        ::DebugTrace(oss.str());
+    }
 }
 
 void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
