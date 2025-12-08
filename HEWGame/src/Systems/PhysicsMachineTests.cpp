@@ -101,7 +101,7 @@ namespace
         machine.UnregisterBody(falling);
 
 #if defined(_DEBUG)
-        assert(machine.FindBody(falling) == b2_nullBodyId);
+        assert(!b2Body_IsValid(machine.FindBody(falling)));
 #endif
     }
 
