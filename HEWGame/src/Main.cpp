@@ -23,6 +23,8 @@ namespace
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
 }
 
+SceneSpace::Scene* g_pScene;
+
 HRESULT Init(HWND hWnd, UINT width, UINT height)
 {
         HRESULT hr = InitDirectX(hWnd, width, height, false);
