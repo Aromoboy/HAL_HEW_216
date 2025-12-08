@@ -5,6 +5,8 @@
 
 #include <box2d/box2d.h>
 
+#include "Systems/PhysicsMachine.h"
+
 namespace
 {
     constexpr float kWorldToBox2DScale = 1.0f;
@@ -234,7 +236,8 @@ namespace Entities
         if (b2Body_IsValid(bodyId))
         {
             const b2Vec2 currentPosition = b2Body_GetPosition(bodyId);
-            const b2Vec2 targetPosition = b2Vec2Add(currentPosition, PhysicalEntity::ToBox2DVector(delta));
+            const b2Vec2 deltaPosition = PhysicalEntity::ToBox2DVector(delta);
+            const b2Vec2 targetPosition{ currentPosition.x + deltaPosition.x, currentPosition.y + deltaPosition.y };
 
             b2Body_SetTransform(bodyId, targetPosition, b2Body_GetAngle(bodyId));
             entity.SyncTransformFromBox2DBody();
