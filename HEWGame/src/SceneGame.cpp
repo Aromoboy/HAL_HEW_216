@@ -1782,6 +1782,8 @@ SceneGame::SceneGame()
             colliderOffset = float3{ 0.0f, m_playerColliderTuning.fallbackSize.y * 0.5f, 0.0f };
         }
 
+        const float3 prePaddingSize = colliderSize;
+
         colliderSize.x += m_playerColliderTuning.fallbackPadding.x * 2.0f;
         colliderSize.y += m_playerColliderTuning.fallbackPadding.y * 2.0f;
         colliderSize.z = std::max(colliderSize.z + m_playerColliderTuning.fallbackPadding.z * 2.0f, kMinGeneratedThickness);
@@ -1823,6 +1825,13 @@ SceneGame::SceneGame()
                 ? "generated_and_config_failed_geometry_sized"
                 : "generated_and_config_failed_default_sized";
 
+
+        const float3 expand
+        {
+            colliderSize.x - prePaddingSize.x,
+            colliderSize.y - prePaddingSize.y,
+            colliderSize.z - prePaddingSize.z,
+        };
 
         std::ostringstream oss;
         oss << kLogPrefix << "[PlayerCollider] Applied fallback AABB size=(" << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z << ')'
