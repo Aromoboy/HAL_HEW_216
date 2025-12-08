@@ -261,18 +261,8 @@ namespace Systems
                                 }
 
                                 const b2BodyId bodyId = mapIt->second;
-                                const b2Vec2 position = b2Body_GetPosition(bodyId);
-                                const b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
-
-                                Physics::Physical& physical = body->GetPhysical();
-                                physical.velocity = float3{ velocity.x, velocity.y, 0.0f };
-                                physical.force = float3{ 0.0f, 0.0f, 0.0f };
-
-                                const auto& collisionEntity = static_cast<const Entities::CollisionEntity&>(*body);
-                                Transform updatedTransform = collisionEntity.GetTransform();
-                                updatedTransform.position.x = position.x;
-                                updatedTransform.position.y = position.y;
-                                body->SetTransform(updatedTransform);
+                                body->SetBox2DBodyId(bodyId);
+                                body->SyncTransformFromBox2DBody();
                         }
                         return;
                 }
@@ -328,16 +318,17 @@ namespace Systems
                 const auto shapeConfig = body.GetBox2DShapeConfig();
                 const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
                 const AABB bounds = collisionEntity.GetCollider() ? collisionEntity.GetCollider()->GetAABB() : AABB{};
-                const float halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
-                const float halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
+                const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f));
+                const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f));
 
                 const auto& meshPolygons = body.GetBox2DPolygons();
                 const auto& meshBoundary = body.GetBox2DBoundary();
                 const bool hasMeshFixtures = !meshPolygons.empty();
 
                 b2BodyDef bodyDef = b2DefaultBodyDef();
-                bodyDef.position = b2Vec2{ transform.position.x, transform.position.y };
-                bodyDef.linearVelocity = b2Vec2{ body.GetPhysical().velocity.x, body.GetPhysical().velocity.y };
+                bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
+                bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
+                bodyDef.linearVelocity = Entities::PhysicalEntity::ToBox2DVector(body.GetPhysical().velocity);
                 bodyDef.type = (body.GetPhysical().weight > 0.0f) ? b2_dynamicBody : b2_staticBody;
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
 
@@ -368,8 +359,8 @@ namespace Systems
                         {
                         case Physics::Box2DShapeConfig::Type::Box:
                         {
-                                const float hx = std::max(0.01f, 0.5f * transform.scale.x);
-                                const float hy = std::max(0.01f, 0.5f * transform.scale.y);
+                                const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
+                                const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
                                 const b2Polygon box = b2MakeBox(hx, hy);
                                 b2CreatePolygonShape(bodyId, &shapeDef, &box);
                                 return bodyId;
@@ -379,8 +370,8 @@ namespace Systems
                                 std::vector<b2Vec2> scaled = shapeConfig->vertices;
                                 for (auto& v : scaled)
                                 {
-                                        v.x *= transform.scale.x;
-                                        v.y *= transform.scale.y;
+                                        v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                        v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                                 }
 
                                 if (scaled.size() >= 3)
@@ -399,7 +390,7 @@ namespace Systems
                         case Physics::Box2DShapeConfig::Type::Circle:
                         {
                                 const float radius = std::max(0.01f, shapeConfig->radius);
-                                const float scaledRadius = radius * std::max(transform.scale.x, transform.scale.y);
+                                const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(radius * std::max(transform.scale.x, transform.scale.y));
                                 const b2Circle circle{ b2Vec2{0.0f, 0.0f}, scaledRadius };
                                 b2CreateCircleShape(bodyId, &shapeDef, &circle);
                                 return bodyId;
@@ -422,8 +413,8 @@ namespace Systems
                                 std::vector<b2Vec2> scaled = polygon;
                                 for (auto& v : scaled)
                                 {
-                                        v.x *= transform.scale.x;
-                                        v.y *= transform.scale.y;
+                                        v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                        v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                                 }
 
                                 const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
@@ -442,8 +433,8 @@ namespace Systems
                                 std::vector<b2Vec2> scaledBoundary = meshBoundary;
                                 for (auto& v : scaledBoundary)
                                 {
-                                        v.x *= transform.scale.x;
-                                        v.y *= transform.scale.y;
+                                        v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
+                                        v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                                 }
 
                                 b2ChainDef chainDef = b2DefaultChainDef();
