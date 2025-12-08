@@ -2,7 +2,7 @@
 
 #include "AABB.h"
 #include "Core/Input.h"
-#include "ICollider.h"
+#include "BoxColliderComponent.h"
 #include "ModelCache.h"
 #include "Systems/PhysicsMachine.h"
 #include "Sweets/BaseSweets.h"
@@ -230,8 +230,8 @@ namespace
 
 namespace Entities
 {
-    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
-        : PhysicalEntity(transform, std::move(collider), collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+        : PhysicalEntity(transform, nullptr, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
@@ -309,6 +309,13 @@ namespace Entities
         }
 
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
+        Physics::BoxColliderComponent colliderComponent;
+        colliderComponent.shapeDef.density = shapeConfig.density;
+        colliderComponent.shapeDef.material.friction = shapeConfig.friction;
+        colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
+        colliderComponent.AddPolygon(shapeConfig.vertices);
+
+        SetBoxColliderComponent(colliderComponent);
         SetBox2DShapeConfig(shapeConfig);
     }
 
