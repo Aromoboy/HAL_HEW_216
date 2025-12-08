@@ -60,7 +60,7 @@ namespace Entities
         void SyncTransformFromBody();
         bool HasValidBody() const;
         void InitializeBody(const Transform& transform);
-        b2Vec2 GetBodyLinearVelocity() const;
+        float3 GetBodyLinearVelocity() const;
         void SetBox2DBodyId(b2BodyId bodyId) override;
 
         std::shared_ptr<Render::Model> m_fairyModel;
