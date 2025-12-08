@@ -26,6 +26,7 @@ namespace Physics
         };
 
         Type type{ Type::None };
+        b2BodyType bodyType{ b2_dynamicBody };
         std::vector<b2Vec2> vertices{};
         float radius{ 0.0f };
         float density{ 1.0f };

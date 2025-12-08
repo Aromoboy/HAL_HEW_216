@@ -109,8 +109,6 @@ namespace SweetsSpace
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
-            float weight = 1.0f;
-            float damping = 0.98f;
             float3 minScale{ 1.0f, 1.0f, 1.0f };
             float3 maxScale{ 1.0f, 1.0f, 1.0f };
             ColliderPreset colliderPreset;
@@ -278,10 +276,6 @@ namespace SweetsSpace
             const Transform& transform,
             const std::shared_ptr<Collision::ICollider>& collider,
             Collision::CollisionLayer layer,
-            const float3& velocity,
-            const float3& force,
-            float weight,
-            float damping,
             Core::UpdatePhase phase,
             int priority)
         {
@@ -290,14 +284,12 @@ namespace SweetsSpace
                 return nullptr;
             }
 
-            Physics::Physical physical{ velocity, force, weight, damping };
-
             return std::make_shared<T>(tag,
                 transform,
                 model,
                 collider,
                 layer,
-                physical,
+                Physics::Physical{},
                 m_physicsMachine,
                 nullptr,
                 phase,
