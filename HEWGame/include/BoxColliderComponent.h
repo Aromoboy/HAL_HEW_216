@@ -42,7 +42,7 @@ namespace Physics
                 return;
             }
 
-            polygons.push_back(b2MakePolygon(&hull, b2_polygonRadius));
+            polygons.push_back(b2MakePolygon(&hull, b2_defaultPolygonRadius));
         }
 
         void AddCircle(float radius)
