@@ -2098,10 +2098,7 @@ SceneGame::~SceneGame()
 
         if (m_physicsRegistered && m_physicsMachine)
         {
-                if (auto system = m_physicsMachine->GetBox2DSystem())
-                {
-                        GetUpdateScheduler().Unregister(*system);
-                }
+            GetUpdateScheduler().Register(*m_physicsMachine);
                 m_physicsRegistered = false;
         }
 
@@ -2177,7 +2174,6 @@ void SceneGame::ConfigureUpdates()
         {
                 if (auto system = m_physicsMachine->GetBox2DSystem())
                 {
-                        GetUpdateScheduler().Register(*system);
                         m_physicsRegistered = true;
                 }
         }
@@ -2830,19 +2826,18 @@ void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
 void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 {
     if (!m_physicsMachine)
+        return;
+
+    if (!entity.GetCollider() &&
+        (!entity.GetBoxColliderComponent() || entity.GetBoxColliderComponent()->Empty()))
     {
-        DebugTrace(std::string(kLogPrefix) + "RegisterPhysicsBody skipped: physics machine missing.\n");
+        DebugTrace("[SceneGame] Skipped physics registration: entity has no collider or shape.\n");
         return;
     }
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "RegisterPhysicsBody ignored duplicate entity=" << &entity << "\n";
-        ::DebugTrace(oss.str());
         return;
-    }
 
     entity.AttachPhysicsMachine(m_physicsMachine.get());
 }
@@ -3332,10 +3327,6 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     if (m_physicsMachine)
     {
         m_physicsMachine->Enable(enabled);
-        if (auto system = m_physicsMachine->GetBox2DSystem())
-        {
-            system->Enable(enabled);
-        }
     }
     if (m_sweetsManager)
     {

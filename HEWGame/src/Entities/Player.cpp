@@ -8,6 +8,9 @@
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
+#include "Entities/CollisionEntity.h"
+#include "Entities/PhysicalEntity.h"
+
 
 #include <algorithm>
 #include <array>
@@ -320,10 +323,8 @@ namespace Entities
     {
         SyncTransformFromBox2DBody();
 
-        if (!HasValidBody())
-        {
+        if (!HasBox2DBody())
             return;
-        }
 
         Core::Input& input = ctx.input;
 
@@ -333,32 +334,29 @@ namespace Entities
         const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
         const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
 
-        const bool canMove = (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f));
-        if (canMove && (horizontal != 0.0f || vertical != 0.0f))
+        if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
         {
-            if (HasBox2DBody())
+            if (horizontal != 0.0f || vertical != 0.0f)
             {
-                const float3 desired{ horizontal * effectiveHorizontalSpeed, vertical * effectiveVerticalSpeed, 0.0f };
-                SetLinearVelocity(desired);
+                if (HasBox2DBody())
+                {
+                    const float3 desired{
+                        horizontal * effectiveHorizontalSpeed,
+                        vertical * effectiveVerticalSpeed,
+                        0.0f
+                    };
 
-#if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Move input hx=" << horizontal
-                << " vy=" << vertical
-                << " baseXY=(" << m_baseHorizontalMoveSpeed << ',' << m_baseVerticalMoveSpeed << ')'
-                << " mult=" << m_speedMultiplier
-                << " velocity=(" << desired.x << ',' << desired.y << ")\n";
-            PlayerDebugTrace(oss.str());
-#endif
-        }
-        else if (HasBox2DBody())
-        {
-            SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                    SetLinearVelocity(desired);
+                }
+            }
+            else if (HasBox2DBody())
+            {
+                SetLinearVelocity(float3{ 0,0,0 });
+            }
         }
 
         ClampVerticalPosition();
         ClampScreenBounds();
-
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
 
@@ -377,7 +375,7 @@ namespace Entities
             return;
         }
 
-        SyncTransformFromBody();
+        SyncTransformFromBox2DBody();
         renderer.Draw(*m_model, m_transform, &camera);
     }
 
@@ -619,9 +617,9 @@ namespace Entities
 
     float3 Player::ComputeCarryAnchor() const
     {
-        if (HasValidBody())
+        if (HasBox2DBody())
         {
-            const float3 position = ToWorldPosition(b2Body_GetPosition(m_bodyId));
+            const float3 position = ToWorldPosition(b2Body_GetPosition(GetBox2DBodyId()));
             return float3{ position.x + m_carryOffset.x, position.y + m_carryOffset.y, position.z + m_carryOffset.z };
         }
 
@@ -638,7 +636,7 @@ namespace Entities
             return;
         }
 
-        SyncTransformFromBody();
+        SyncTransformFromBox2DBody();
 
         for (auto& it : m_carrieds)
         {
@@ -691,7 +689,7 @@ namespace Entities
             return;
         }
 
-        SyncTransformFromBody();
+        SyncTransformFromBox2DBody();
         collider->UpdateBounds(m_transform);
         const AABB colliderBounds = collider->GetAABB();
         const float boundsCenterX = (colliderBounds.min.x + colliderBounds.max.x) * 0.5f;
