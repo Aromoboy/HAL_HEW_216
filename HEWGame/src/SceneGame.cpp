@@ -2593,16 +2593,25 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     const auto& shapeConfig = entity.GetBox2DShapeConfig();
     const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     const bool hasMesh = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
-
     if (!hasBoxColliderComponent && !hasShapeConfig && !hasMesh)
     {
         DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
         return;
     }
+    const bool meshOnly = hasMesh && !hasCollider && !hasBoxColliderComponent && !hasShapeConfig;
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
         return;
+
+    if (meshOnly)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Registering mesh-only physics body tag='" << entity.GetTag()
+            << "' polygons=" << entity.GetBox2DPolygons().size()
+            << " boundaryPoints=" << entity.GetBox2DBoundary().size() << "\\n";
+        DebugTrace(oss.str());
+    }
 
     entity.AttachPhysicsMachine(m_physicsMachine.get());
 
