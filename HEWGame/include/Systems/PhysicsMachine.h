@@ -18,10 +18,11 @@ namespace Systems
     {
     public:
         virtual ~IPhysicsSystem() = default;
-        virtual void Apply(Entities::PhysicalEntity& entity, float dt) = 0;
+        virtual void Apply(float dt) = 0;
     };
 
     class IntegrateSystem;
+    class Box2DPhysicsSystem;
 
     class PhysicsMachine : public Core::UpdateNode
     {
@@ -54,15 +55,13 @@ namespace Systems
     private:
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body);
-        void DestroyWorld();
         void LogMeshContacts();
 
+        std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
         IntegratorPtr m_integrator;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
-        b2WorldDef m_worldDef{};
-        b2WorldId m_worldId{ b2_nullWorldId };
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingIntegrator = false;
         bool m_loggedMissingWorld = false;

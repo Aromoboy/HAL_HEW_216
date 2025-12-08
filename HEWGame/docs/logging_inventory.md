@@ -21,13 +21,6 @@ Summary of notable debug log messages in core runtime systems, with frequency ex
 | Planar Z checks | First occurrence of excessive Z separation or ignored Z overlap. | One-time flags for separation/ignore cases. | No — geometry debugging.【F:src/Systems/ContactLiteSystem.cpp†L595-L633】 |
 | SAT bypass / failure notes | Reports SAT bypass for shallow foundation contact, or failed SAT for sweets pairs. | No guard; can trigger per-collision pair inside the nested loop. | No — high-chatter debug; consider gating if noise is an issue.【F:src/Systems/ContactLiteSystem.cpp†L654-L734】 |
 
-## Gravity damping
-
-| Location | Message intent | Frequency guard | Lifecycle signal? |
-| --- | --- | --- | --- |
-| Kinematic skip | Notes when a kinematic entity is skipped and zeroed. | Per-entity single-shot via `m_loggedKinematicSkips`. | No — per-entity debug.【F:src/GravityDampingSystem.cpp†L36-L57】 |
-| Planar violation | Warns when Z motion is found and clamped. | Per-entity single-shot via `m_loggedPlanarViolations`. | No — per-entity debug.【F:src/GravityDampingSystem.cpp†L59-L79】 |
-
 ## SceneGame lifecycle checks
 
 | Location | Message intent | Frequency guard | Lifecycle signal? |

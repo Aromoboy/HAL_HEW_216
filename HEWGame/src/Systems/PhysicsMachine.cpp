@@ -1,4 +1,5 @@
 #include "Systems/PhysicsMachine.h"
+#include "Systems/Box2DPhysicsSystem.h"
 #include "Systems/IntegrateSystem.h"
 
 #include <algorithm>
@@ -40,29 +41,20 @@ namespace Systems
 {
         PhysicsMachine::PhysicsMachine(float gravity)
                 : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
-                , m_system(nullptr)
+                , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
+                , m_system(m_box2dSystem)
                 , m_integrator(std::make_shared<IntegrateSystem>())
                 , m_bodies()
                 , m_bodyMap()
-                , m_worldDef(b2DefaultWorldDef())
-                , m_worldId(b2_nullWorldId)
                 , m_loggedMissingSystem(false)
                 , m_loggedMissingIntegrator(false)
                 , m_loggedMissingWorld(false)
         {
-                SetGravity(gravity);
-                m_worldId = b2CreateWorld(&m_worldDef);
-                if (!b2World_IsValid(m_worldId) && !m_loggedMissingWorld)
-                {
-                        DebugTrace("[PhysicsMachine] Failed to create Box2D world.\n");
-                        m_loggedMissingWorld = true;
-                }
         }
 
         PhysicsMachine::~PhysicsMachine()
         {
                 ClearBodies();
-                DestroyWorld();
         }
 
         void PhysicsMachine::SetSystem(SystemPtr system)
@@ -82,6 +74,7 @@ namespace Systems
 #endif
 
                 m_system = std::move(system);
+                m_box2dSystem = std::dynamic_pointer_cast<Box2DPhysicsSystem>(m_system);
                 m_loggedMissingSystem = false;
         }
 
@@ -122,11 +115,9 @@ namespace Systems
 
         void PhysicsMachine::SetGravity(float gravity)
         {
-                const float sanitized = std::isfinite(gravity) ? gravity : 9.8f;
-                m_worldDef.gravity = b2Vec2{ 0.0f, -sanitized };
-                if (b2World_IsValid(m_worldId))
+                if (m_box2dSystem)
                 {
-                        b2World_SetGravity(m_worldId, m_worldDef.gravity);
+                        m_box2dSystem->SetGravity(gravity);
                         m_loggedMissingWorld = false;
                 }
         }
@@ -143,7 +134,7 @@ namespace Systems
 
         b2WorldId PhysicsMachine::GetWorldId() const
         {
-                return m_worldId;
+                return m_box2dSystem ? m_box2dSystem->GetWorldId() : b2_nullWorldId;
         }
 
         void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
@@ -202,11 +193,21 @@ namespace Systems
 
         void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
         {
-                if (b2World_IsValid(m_worldId))
+                const b2WorldId worldId = GetWorldId();
+
+                if (!m_system)
                 {
-                        constexpr int kSubStepCount = 4;
-                        const float dt = std::max(0.0f, ctx.dt);
-                        b2World_Step(m_worldId, dt, kSubStepCount);
+                        if (!m_loggedMissingSystem)
+                        {
+                                DebugTrace("[PhysicsMachine] No physics system configured; skipping step.\n");
+                                m_loggedMissingSystem = true;
+                        }
+                        return;
+                }
+
+                if (b2World_IsValid(worldId))
+                {
+                        m_system->Apply(ctx.dt);
 
                         LogMeshContacts();
 
@@ -224,10 +225,6 @@ namespace Systems
                                 const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
                                 if (!hasBody)
                                 {
-                                        if (m_system)
-                                        {
-                                                m_system->Apply(*body, ctx.dt);
-                                        }
                                         if (m_integrator)
                                         {
                                                 m_integrator->Integrate(*body, ctx.dt);
@@ -259,19 +256,6 @@ namespace Systems
                         m_loggedMissingWorld = true;
                 }
 
-                if (!m_system)
-                {
-                        if (!m_bodies.empty() && !m_loggedMissingSystem)
-                        {
-                                std::ostringstream oss;
-                                oss << "[PhysicsMachine] No physics system configured while bodies are registered. bodyCount="
-                                    << m_bodies.size() << "\n";
-                                DebugTrace(oss.str());
-                                m_loggedMissingSystem = true;
-                        }
-                        return;
-                }
-
                 if (!m_integrator && !m_loggedMissingIntegrator)
                 {
                         DebugTrace("[PhysicsMachine] No integrator configured; skipping translation step.\n");
@@ -288,8 +272,6 @@ namespace Systems
                                 continue;
                         }
 
-                        m_system->Apply(*body, ctx.dt);
-
                         if (m_integrator)
                         {
                                 m_integrator->Integrate(*body, ctx.dt);
@@ -301,7 +283,9 @@ namespace Systems
 
         b2BodyId PhysicsMachine::CreateBody(Entities::PhysicalEntity& body)
         {
-                if (!b2World_IsValid(m_worldId))
+                const b2WorldId worldId = GetWorldId();
+
+                if (!b2World_IsValid(worldId))
                 {
                         if (!m_loggedMissingWorld)
                         {
@@ -332,7 +316,7 @@ namespace Systems
                 bodyDef.linearDamping = (damping > 0.0f) ? -std::log(damping) : 0.0f;
                 bodyDef.userData = &body;
 
-                b2BodyId bodyId = b2CreateBody(m_worldId, &bodyDef);
+                b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);
                 if (!b2Body_IsValid(bodyId))
                 {
                         DebugTrace("[PhysicsMachine] Failed to create Box2D body.\n");
@@ -426,23 +410,16 @@ namespace Systems
                 m_bodyMap.erase(it);
         }
 
-        void PhysicsMachine::DestroyWorld()
-        {
-                if (b2World_IsValid(m_worldId))
-                {
-                        b2DestroyWorld(m_worldId);
-                        m_worldId = b2_nullWorldId;
-                }
-        }
-
         void PhysicsMachine::LogMeshContacts()
         {
-                if (!m_logMeshContacts || !b2World_IsValid(m_worldId))
+                const b2WorldId worldId = GetWorldId();
+
+                if (!m_logMeshContacts || !b2World_IsValid(worldId))
                 {
                         return;
                 }
 
-                const b2ContactEvents events = b2World_GetContactEvents(m_worldId);
+                const b2ContactEvents events = b2World_GetContactEvents(worldId);
                 constexpr int kMaxLogsPerFrame = 4;
                 int logged = 0;
 

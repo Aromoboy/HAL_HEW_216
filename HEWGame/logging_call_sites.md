@@ -54,8 +54,3 @@ Summary of every `DebugTrace` logging call in the targeted files, including when
 | L1305-L1325 | Post-contact Z velocity reset for bodies with non-zero Z velocity. | Debug / warning | Logged whenever Z velocity is zeroed after contact. |
 | L1335-L1349 | Frame summary of resolved overlaps and solver parameters. | Debug / informational | Logged once per update when any overlaps were resolved. |
 
-## src/GravityDampingSystem.cpp
-| Location | Message context | Severity | Trigger frequency / guards |
-| --- | --- | --- | --- |
-| L44-L49 | Skipping kinematic entity; logs tag and weight. | Info | Logged once per kinematic entity the first time it is skipped (`m_loggedKinematicSkips`). |
-| L65-L71 | Planar assumption violated by non-zero Z velocity/force. | Warning | Logged once per entity until planar inputs are cleared (`m_loggedPlanarViolations`). |
