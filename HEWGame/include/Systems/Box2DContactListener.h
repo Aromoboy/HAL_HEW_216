@@ -12,6 +12,8 @@ namespace Entities
 
 namespace Systems
 {
+        class PhysicsMachine;
+
         class Box2DContactListener
         {
         public:
@@ -24,6 +26,7 @@ namespace Systems
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
                 void EnableMeshContactLogging(bool enabled);
+                void SetPhysicsMachine(PhysicsMachine* physicsMachine);
 
         private:
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
@@ -35,6 +38,7 @@ namespace Systems
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
                 bool m_logMeshContacts = false;
+                PhysicsMachine* m_physicsMachine = nullptr;
         };
 }
 

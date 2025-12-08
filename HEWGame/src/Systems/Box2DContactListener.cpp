@@ -13,6 +13,7 @@
 #endif
 
 #include "Entities/PhysicalEntity.h"
+#include "Systems/PhysicsMachine.h"
 
 namespace
 {
@@ -103,6 +104,11 @@ namespace Systems
                 m_logMeshContacts = enabled;
         }
 
+        void Box2DContactListener::SetPhysicsMachine(PhysicsMachine* physicsMachine)
+        {
+                m_physicsMachine = physicsMachine;
+        }
+
         void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
         {
                 if (!entityA || !entityB)
@@ -151,7 +157,25 @@ namespace Systems
                         return static_cast<Entities::PhysicalEntity*>(userData);
                 }
 
-                return GetEntityForBody(b2Shape_GetBody(shapeId));
+                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                if (Entities::PhysicalEntity* fromBody = GetEntityForBody(bodyId))
+                {
+                        return fromBody;
+                }
+
+                if (m_physicsMachine)
+                {
+                        const auto& bodies = m_physicsMachine->GetBodies();
+                        for (Entities::PhysicalEntity* entity : bodies)
+                        {
+                                if (entity && B2_ID_EQUALS(entity->GetBox2DBodyId(), bodyId))
+                                {
+                                        return entity;
+                                }
+                        }
+                }
+
+                return nullptr;
         }
 
         void Box2DContactListener::LogMeshContact(const b2ContactBeginTouchEvent& evt) const
