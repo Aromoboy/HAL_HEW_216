@@ -1562,18 +1562,12 @@ SceneGame::SceneGame()
 
             std::ostringstream tagStream;
             tagStream << "StageFoundation" << i;
-            Physics::BoxColliderComponent platformCollider;
-            platformCollider.shapeDef.density = 0.0f;
-            platformCollider.shapeDef.material.friction = 0.8f;
-            const float halfWidth = std::max(0.01f, platformTransform.scale.x * 0.5f);
-            const float halfHeight = std::max(0.01f, platformTransform.scale.y * 0.5f);
-            platformCollider.AddBox(halfWidth, halfHeight, b2Vec2_zero);
 
             auto platform = std::make_unique<Stage::FoundationPlatform>(
                 tagStream.str(),
                 platformTransform,
                 nullptr,
-                platformCollider,
+                std::nullopt,
                 m_physicsMachine.get(),
                 descriptor.color,
                 Core::UpdatePhase::PrePhysics,
