@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -23,6 +24,11 @@
 
 namespace
 {
+        constexpr uint16_t kDefaultCategory = 0x0001;
+        constexpr uint16_t kPlayerCategory = 0x0002;
+        constexpr uint16_t kFloorCategory = 0x0004;
+        constexpr uint16_t kSweetsCategory = 0x0008;
+
         void DebugTrace(const std::string& message)
         {
 #if defined(_WIN32)
@@ -34,6 +40,36 @@ namespace
 #else
                 (void)message;
 #endif
+        }
+
+        uint16_t ToCategoryBits(Collision::CollisionLayer layer)
+        {
+                switch (layer)
+                {
+                case Collision::CollisionLayer::Player:
+                        return kPlayerCategory;
+                case Collision::CollisionLayer::Floor:
+                        return kFloorCategory;
+                case Collision::CollisionLayer::Sweets:
+                        return kSweetsCategory;
+                default:
+                        return kDefaultCategory;
+                }
+        }
+
+        uint16_t ToMaskBits(Collision::CollisionLayer layer)
+        {
+                switch (layer)
+                {
+                case Collision::CollisionLayer::Player:
+                        return kDefaultCategory | kFloorCategory | kSweetsCategory | kPlayerCategory;
+                case Collision::CollisionLayer::Floor:
+                        return kDefaultCategory | kPlayerCategory | kSweetsCategory;
+                case Collision::CollisionLayer::Sweets:
+                        return kDefaultCategory | kFloorCategory | kPlayerCategory | kSweetsCategory;
+                default:
+                        return kDefaultCategory | kPlayerCategory | kFloorCategory | kSweetsCategory;
+                }
         }
 }
 
@@ -353,6 +389,7 @@ namespace Systems
                 }
 
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
+                const Collision::CollisionLayer layer = collisionEntity.GetCollisionLayer();
                 const float configuredDensity = hasShapeConfig
                         ? std::max(0.0f, shapeConfig->density)
                         : std::max(0.01f, body.GetPhysical().weight);
@@ -361,6 +398,8 @@ namespace Systems
                 shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;
                 shapeDef.enableContactEvents = true;
                 shapeDef.enableHitEvents = true;
+                shapeDef.filter.categoryBits = ToCategoryBits(layer);
+                shapeDef.filter.maskBits = ToMaskBits(layer);
 
                 if (hasShapeConfig)
                 {

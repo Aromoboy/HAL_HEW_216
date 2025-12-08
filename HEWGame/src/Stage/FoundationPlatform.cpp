@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "AABBCollider.h"
+#include "Collision2D.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelCache.h"
@@ -65,14 +65,27 @@ namespace
         };
     }
 
-    std::shared_ptr<Collision::AABBCollider> CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
+    std::shared_ptr<Collision::ICollider> CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
     {
         const float3 center = bounds.Center();
         const float3 extents = bounds.Extents();
 
         const float3 safeScale = SafeScale(transform);
         const float3 expand = CalculateExpandFromExtents(extents, safeScale);
-        return std::make_shared<Collision::AABBCollider>(transform, false, expand, center, Collision::CollisionLayer::Floor);
+        const float2 offset2D{ center.x / safeScale.x, center.y / safeScale.y };
+        const float halfX = 0.5f * expand.x;
+        const float halfY = 0.5f * expand.y;
+        std::vector<float2> points
+        {
+            float2{ -halfX, -halfY },
+            float2{ halfX, -halfY },
+            float2{ halfX, halfY },
+            float2{ -halfX, halfY },
+        };
+
+        auto collider = std::make_shared<Collision::ConvexHullCollider2D>(points, offset2D, expand.z, Collision::CollisionLayer::Floor);
+        collider->UpdateBounds(transform);
+        return collider;
     }
 
     AABB BuildDescriptorLocalBounds(const Transform& transform)

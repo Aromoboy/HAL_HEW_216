@@ -1,5 +1,5 @@
 #include "Systems/PhysicsMachine.h"
-#include "AABBCollider.h"
+#include "Collision2D.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 
@@ -11,7 +11,15 @@ namespace
 {
     Entities::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform, float weight, float damping)
     {
-        auto collider = std::make_shared<Collision::AABBCollider>(transform, false, float3{ 1.0f,1.0f,1.0f } , float3{ 0.0f, 0.0f, 0.0f });
+        std::vector<float2> points
+        {
+            float2{ -0.5f, -0.5f },
+            float2{ 0.5f, -0.5f },
+            float2{ 0.5f, 0.5f },
+            float2{ -0.5f, 0.5f },
+        };
+        auto collider = std::make_shared<Collision::ConvexHullCollider2D>(points, float2{ 0.0f, 0.0f }, transform.scale.z, Collision::CollisionLayer::Default);
+        collider->UpdateBounds(transform);
         return Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
