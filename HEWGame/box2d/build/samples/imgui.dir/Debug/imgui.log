@@ -1,0 +1,13 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/samples/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\backends /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\include" /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\glad\include /ZI /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D IMGUI_DISABLE_OBSOLETE_FUNCTIONS /D IMGUI_STB_NAMESPACE=imgui_stb /D "CMAKE_INTDIR=\"Debug\"" /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /std:c++20 /Fo"imgui.dir\Debug\\" /Fd"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\samples\Debug\imgui.pdb" /external:W1 /Gd /TP /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\imgui.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\imgui_draw.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\imgui_demo.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\imgui_tables.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\imgui_widgets.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\backends\imgui_impl_glfw.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\backends\imgui_impl_opengl3.cpp
+  imgui.cpp
+  imgui_draw.cpp
+  imgui_demo.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_opengl3.cpp
+  Создание кода...
+  imgui.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\samples\Debug\imgui.lib

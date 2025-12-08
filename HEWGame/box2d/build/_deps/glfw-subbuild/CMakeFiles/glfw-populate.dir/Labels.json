@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/glfw-populate"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/dcee9e3f0b0b6aa9c8973a21ee61f01f/glfw-populate.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/533bcf9e90aab40dc090e80339a2cbcf/glfw-populate-complete.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-build.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-configure.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-download.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-install.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-patch.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-test.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/CMakeFiles/1599cc3439bf2dd1f5f6de0a3fc52a4a/glfw-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glfw-populate"
+		],
+		"name" : "glfw-populate"
+	}
+}

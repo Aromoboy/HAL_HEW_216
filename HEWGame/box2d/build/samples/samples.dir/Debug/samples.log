@@ -1,0 +1,32 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/samples/CMakeLists.txt
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\samples /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\jsmn /IC:\HEW\HAL_HEW_216\HEWGame\box2d\src\..\include /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\src /IC:\HEW\HAL_HEW_216\HEWGame\box2d\shared /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\backends /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\include" /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\glad\include /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-src\src" /ZI /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D IMGUI_DISABLE_OBSOLETE_FUNCTIONS /D ENKITS_TASK_PRIORITIES_NUM=3 /D "CMAKE_INTDIR=\"Debug\"" /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /std:c++20 /Fo"samples.dir\Debug\\" /Fd"samples.dir\Debug\vc143.pdb" /external:W1 /Gd /TP /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\car.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\donut.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\doohickey.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\main.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_benchmark.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_bodies.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_character.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_collision.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_continuous.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_determinism.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_events.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_geometry.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_issues.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_joints.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_robustness.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_shapes.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_stacking.cpp C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\sample_world.cpp
+  car.cpp
+  donut.cpp
+  doohickey.cpp
+  main.cpp
+  sample.cpp
+  sample_benchmark.cpp
+  sample_bodies.cpp
+  sample_character.cpp
+  sample_collision.cpp
+  sample_continuous.cpp
+  sample_determinism.cpp
+  sample_events.cpp
+  sample_geometry.cpp
+  sample_issues.cpp
+  sample_joints.cpp
+  sample_robustness.cpp
+  sample_shapes.cpp
+  sample_stacking.cpp
+  sample_world.cpp
+  Создание кода...
+  Оптимизирующий компилятор Microsoft (R) C/C++ версии 19.44.35220 для x64
+  (C) Корпорация Майкрософт (Microsoft Corporation).  Все права защищены.
+  cl /c /IC:\HEW\HAL_HEW_216\HEWGame\box2d\samples /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\jsmn /IC:\HEW\HAL_HEW_216\HEWGame\box2d\src\..\include /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\src /IC:\HEW\HAL_HEW_216\HEWGame\box2d\shared /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui /IC:\HEW\HAL_HEW_216\HEWGame\box2d\build\imgui\backends /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\glfw-src\include" /IC:\HEW\HAL_HEW_216\HEWGame\box2d\extern\glad\include /I"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-src\src" /ZI /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D IMGUI_DISABLE_OBSOLETE_FUNCTIONS /D ENKITS_TASK_PRIORITIES_NUM=3 /D "CMAKE_INTDIR=\"Debug\"" /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"samples.dir\Debug\\" /Fd"samples.dir\Debug\vc143.pdb" /external:W1 /Gd /TC /errorReport:prompt C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\container.c C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\draw.c C:\HEW\HAL_HEW_216\HEWGame\box2d\samples\shader.c
+  container.c
+  draw.c
+  shader.c
+  Создание кода...
+  samples.vcxproj -> C:\HEW\HAL_HEW_216\HEWGame\box2d\build\bin\Debug\samples.exe

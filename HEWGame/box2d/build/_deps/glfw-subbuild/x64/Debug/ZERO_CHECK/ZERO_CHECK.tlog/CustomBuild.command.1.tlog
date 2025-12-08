@@ -1,0 +1,10 @@
+^C:\HEW\HAL_HEW_216\HEWGAME\BOX2D\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\DCEE9E3F0B0B6AA9C8973A21EE61F01F\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild -BC:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/glfw-subbuild/glfw-populate.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
