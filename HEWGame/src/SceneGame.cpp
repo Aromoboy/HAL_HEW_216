@@ -24,6 +24,7 @@
 #include "Entities/Player.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
+#include "DebugColliderRenderer.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -152,6 +153,89 @@ namespace
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
         }
+
+#if defined(_DEBUG)
+        Color MakeColor(float r, float g, float b, float a)
+        {
+            return Color{ r, g, b, a };
+        }
+
+        float2 ApplyTransform2D(const float2& local, const Transform& transform)
+        {
+            const float scaledX = local.x * transform.scale.x;
+            const float scaledY = local.y * transform.scale.y;
+            const float cosR = std::cos(transform.rotation.z);
+            const float sinR = std::sin(transform.rotation.z);
+
+            return float2{
+                transform.position.x + (cosR * scaledX - sinR * scaledY),
+                transform.position.y + (sinR * scaledX + cosR * scaledY),
+            };
+        }
+
+        void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
+        {
+            const auto& colliderComponent = entity.GetBoxColliderComponent();
+            if (!colliderComponent)
+            {
+                return;
+            }
+
+            const Transform& transform = entity.GetTransform();
+            const float z = transform.position.z;
+
+            for (const auto& polygon : colliderComponent->polygons)
+            {
+                if (polygon.count <= 0)
+                {
+                    continue;
+                }
+
+                std::vector<float2> hull;
+                hull.reserve(static_cast<std::size_t>(polygon.count));
+                for (int i = 0; i < polygon.count; ++i)
+                {
+                    hull.push_back(ApplyTransform2D(float2{ polygon.vertices[i].x, polygon.vertices[i].y }, transform));
+                }
+
+                DebugColliderRenderer::DrawHull(hull, z, color);
+            }
+
+            for (const auto& circle : colliderComponent->circles)
+            {
+                const float2 center = ApplyTransform2D(float2{ circle.center.x, circle.center.y }, transform);
+                const float scaledRadius = circle.radius * std::max(transform.scale.x, transform.scale.y);
+                DebugColliderRenderer::DrawCircle(center, scaledRadius, z, color);
+            }
+        }
+
+        void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
+        {
+            Render::Model* model = entity.GetRenderableModel();
+            if (!model || !model->HasLocalBounds())
+            {
+                return;
+            }
+
+            const Transform& transform = entity.GetTransform();
+            const AABB bounds = model->GetLocalBounds();
+            const float2 corners[4] = {
+                float2{ bounds.min.x, bounds.min.y },
+                float2{ bounds.max.x, bounds.min.y },
+                float2{ bounds.max.x, bounds.max.y },
+                float2{ bounds.min.x, bounds.max.y },
+            };
+
+            std::vector<float2> worldCorners;
+            worldCorners.reserve(4u);
+            for (const auto& corner : corners)
+            {
+                worldCorners.push_back(ApplyTransform2D(corner, transform));
+            }
+
+            DebugColliderRenderer::DrawHull(worldCorners, transform.position.z, color);
+        }
+#endif
 
         PlayerColliderGeometry AnalyzePlayerModelGeometry(const std::string& path, float thicknessPadding)
         {
@@ -1730,15 +1814,18 @@ SceneGame::SceneGame()
         playerColliderOffset = offset;
     };
 
+    // Collider geometry stays in local units; PhysicsMachine::CreateBody applies the player's transform scale.
     if (geometryValid)
     {
-        float3 colliderSize = ScaleVector(float3{ playerGeometry.bounds.max.x - playerGeometry.bounds.min.x,
+        float3 colliderSize{
+            playerGeometry.bounds.max.x - playerGeometry.bounds.min.x,
             playerGeometry.bounds.max.y - playerGeometry.bounds.min.y,
-            playerGeometry.bounds.max.z - playerGeometry.bounds.min.z }, trans.scale);
+            playerGeometry.bounds.max.z - playerGeometry.bounds.min.z };
 
-        float3 colliderOffset = ScaleVector(float3{ (playerGeometry.bounds.min.x + playerGeometry.bounds.max.x) * 0.5f,
+        float3 colliderOffset{
+            (playerGeometry.bounds.min.x + playerGeometry.bounds.max.x) * 0.5f,
             (playerGeometry.bounds.min.y + playerGeometry.bounds.max.y) * 0.5f,
-            (playerGeometry.bounds.min.z + playerGeometry.bounds.max.z) * 0.5f }, trans.scale);
+            (playerGeometry.bounds.min.z + playerGeometry.bounds.max.z) * 0.5f };
 
         colliderSize.x += m_playerColliderTuning.padding.x * 2.0f;
         colliderSize.y += m_playerColliderTuning.padding.y * 2.0f;
@@ -2261,6 +2348,55 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 }
 #endif
 
+#if defined(_DEBUG)
+void SceneGame::DrawPhysicsDebugOverlay()
+{
+    if (!g_DrawColliders)
+    {
+        return;
+    }
+
+    const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
+    const Color modelColor = MakeColor(0.0f, 0.9f, 0.9f, 1.0f);
+
+    const auto drawEntity = [&](Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return;
+        }
+
+        DrawModelBoundsOverlay(*entity, modelColor);
+        DrawColliderOverlay(*entity, fixtureColor);
+    };
+
+    drawEntity(player.get());
+
+    for (const auto& platform : m_foundationPlatforms)
+    {
+        drawEntity(platform.get());
+    }
+
+    if (m_sweetsManager)
+    {
+        const auto drawState = [&](SweetsSpace::SweetsState state)
+        {
+            const auto& list = m_sweetsManager->GetByState(state);
+            for (const auto& sweets : list)
+            {
+                drawEntity(sweets.get());
+            }
+        };
+
+        drawState(SweetsSpace::SweetsState::Active);
+        drawState(SweetsSpace::SweetsState::Stacked);
+        drawState(SweetsSpace::SweetsState::Carried);
+    }
+
+    Geometory::DrawLines();
+}
+#endif
+
 bool SceneGame::LoadStageLayout(const std::string& csvPath)
 {
     // CSVファイルを開く
@@ -2411,6 +2547,10 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         m_drawSystem->RenderQueued(activeCamera);
 
         m_drawSystem->DebugDrawQueued(activeCamera);
+
+#if defined(_DEBUG)
+        DrawPhysicsDebugOverlay();
+#endif
 
         if (m_hudRenderer)
         {

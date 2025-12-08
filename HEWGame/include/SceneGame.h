@@ -109,6 +109,7 @@ private:
     void RefreshPlatformAnchor(bool forceRecompute);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
+    void DrawPhysicsDebugOverlay();
 #endif
     void SetStageState(StageState newState);
     void OnStageStart();
