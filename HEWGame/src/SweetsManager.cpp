@@ -297,9 +297,9 @@ namespace
         }
     }
 
-    float ComputeSpeedSq(const Physics::Physical& physical)
+    float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
-        const auto v = physical.GetLinearVelocity();
+        const auto v = entity.GetLinearVelocity();
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
@@ -364,7 +364,7 @@ namespace
             return ::SweetsSpace::SweetsState::Carried;
         }
 
-        const float speedSq = ComputeSpeedSq(sweets.GetPhysical());
+        const float speedSq = ComputeSpeedSq(sweets);
         if (speedSq > kRestVelocityThresholdSq)
         {
             return ::SweetsSpace::SweetsState::Active;

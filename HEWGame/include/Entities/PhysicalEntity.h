@@ -70,6 +70,11 @@ namespace Entities
         virtual b2BodyId GetBox2DBodyId() const;
         bool HasBox2DBody() const;
 
+        float3 GetLinearVelocity() const;
+        void SetLinearVelocity(const float3& velocity);
+        float GetGravityScale() const;
+        void SetGravityScale(float scale);
+
         void SyncTransformFromBox2DBody();
         void SyncBox2DBodyFromTransform();
 
