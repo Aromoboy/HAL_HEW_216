@@ -9,6 +9,7 @@
 #include "SceneGame.h"
 #include "SceneManager.h"
 #include "TitleScene.h"
+#include "ScenePowerUp.h"
 #include "Defines.h"
 #include "ShaderList.h"
 #include "DebugConsole.h"
@@ -46,6 +47,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
+        g_pScene = new SceneSpace::ScenePowerUp;
 
         return hr;
 }

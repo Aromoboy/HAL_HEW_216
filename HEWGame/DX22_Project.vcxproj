@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -175,10 +175,13 @@
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
+    <ClCompile Include="include\PowerUpRenderer.cpp" />
+    <ClCompile Include="include\PowerUpTarget.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
     <ClCompile Include="src\CameraDebug.cpp" />
     <ClCompile Include="src\CameraManager.cpp" />
     <ClCompile Include="src\CameraRig.cpp" />
+    <ClCompile Include="src\CameraTarget.cpp" />
     <ClCompile Include="src\Core\InputMap.cpp" />
     <ClCompile Include="src\Core\Gamepad.cpp" />
     <ClCompile Include="src\Core\UpdateNode.cpp" />
@@ -213,12 +216,17 @@
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="src\Entities\Player.cpp" />
+    <ClCompile Include="src\PowerUpCursor.cpp" />
+    <ClCompile Include="src\PowerUpManager.cpp" />
+    <ClCompile Include="src\PowerUpNode.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
     <ClCompile Include="src\TitleScene.cpp" />
+    <ClCompile Include="src\ScenePowerUp.cpp" />
+    <ClCompile Include="src\SpriteRenderer.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
@@ -242,6 +250,7 @@
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
+    <ClCompile Include="src\UpdatableTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\BoxColliderComponent.h" />
@@ -255,6 +264,8 @@
     <ClInclude Include="include\CameraManager.h" />
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\Core\ActionId.h" />
+    <ClInclude Include="include\PowerUpRenderer.h" />
+    <ClInclude Include="include\PowerUpTarget.h" />
     <ClInclude Include="include\Core\IUpdatable.h" />
     <ClInclude Include="include\Core\Input.h" />
     <ClInclude Include="include\Core\InputMap.h" />
@@ -269,6 +280,12 @@
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugColliderRenderer.h" />
     <ClInclude Include="include\Systems\Box2DContactListener.h" />
+    <ClInclude Include="include\PowerUpCursor.h" />
+    <ClInclude Include="include\PowerUpManager.h" />
+    <ClInclude Include="include\PowerUpNode.h" />
+    <ClInclude Include="include\ScenePowerUp.h" />
+    <ClInclude Include="include\SpriteRenderer.h" />
+    <ClInclude Include="include\Systems\ContactLiteSystem.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />
     <ClInclude Include="include\Diagnostics\Logger.h" />
@@ -324,6 +341,7 @@
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\TextureCache.h" />
     <ClInclude Include="include\TextureDX.h" />
+    <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />

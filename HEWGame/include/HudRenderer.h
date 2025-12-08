@@ -42,6 +42,11 @@ struct HudLayoutConfig
     DirectX::XMFLOAT4 guidelineColor{ 0.95f, 0.95f, 0.95f, 0.8f };
 };
 
+struct PowerUpHudData
+{
+
+};
+
 class HudRenderer
 {
 public:
@@ -51,6 +56,7 @@ public:
     bool Initialize(const HudLayoutConfig& config);
     void Shutdown();
     void Draw(const HudDisplayData& data);
+    void Draw();
 
 private:
     class DynamicTexture;

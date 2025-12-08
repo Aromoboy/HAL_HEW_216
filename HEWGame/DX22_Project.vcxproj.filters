@@ -214,8 +214,29 @@
     <ClCompile Include="src\TextureDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Entities\CollisionEntity.cpp" />
+    <ClCompile Include="src\Entities\Entity.cpp" />
+    <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
+    <ClCompile Include="src\PowerUpManager.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PowerUpNode.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ScenePowerUp.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SpriteRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PowerUpCursor.cpp" />
+    <ClCompile Include="src\UpdatableTimer.cpp" />
+    <ClCompile Include="src\CameraTarget.cpp" />
+    <ClCompile Include="include\PowerUpTarget.cpp" />
+    <ClCompile Include="include\PowerUpRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
-
   <!-- ==================== -->
   <!-- All .h with filters  -->
   <!-- ==================== -->
@@ -254,9 +275,6 @@
     </ClInclude>
     <ClInclude Include="include\CameraRig.h">
       <Filter>Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="include\CollisionEntity.h">
-      <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\conioex.h">
       <Filter>Debug</Filter>
@@ -317,9 +335,6 @@
     </ClInclude>
     <ClInclude Include="include\DrawMatrix.h">
       <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Entity.h">
-      <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\GameFlow\PhaseManager.h">
       <Filter>GameFlow</Filter>
@@ -465,8 +480,29 @@
     <ClInclude Include="include\Vector.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\Entities\CollisionEntity.h" />
+    <ClInclude Include="include\Entities\Entity.h" />
+    <ClInclude Include="include\Entities\PhysicalEntity.h" />
+    <ClInclude Include="include\Entities\Player.h" />
+    <ClInclude Include="include\PowerUpManager.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpNode.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ScenePowerUp.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SpriteRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpCursor.h" />
+    <ClInclude Include="include\UpdatableTimer.h" />
+    <ClInclude Include="include\PowerUpTarget.h" />
+    <ClInclude Include="include\PowerUpRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
-
   <!-- =================== -->
   <!-- Filter definitions  -->
   <!-- =================== -->
@@ -507,8 +543,10 @@
     <Filter Include="Systems">
       <UniqueIdentifier>{65e26d16-506d-46f8-a2b7-bfc524717648}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PowerUp">
+      <UniqueIdentifier>{a9e43c74-296a-43df-9608-cba01a9594b9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
-
   <ItemGroup>
     <None Include="cpp.hint" />
   </ItemGroup>

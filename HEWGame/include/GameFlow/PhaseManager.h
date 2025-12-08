@@ -21,6 +21,8 @@ namespace GameFlow
 
         std::vector<float> m_thresholds;
         std::vector<float> m_rewardMultipliers;
+
+
         std::size_t m_nextThresholdIndex;
         int m_currentPhase;
         bool m_initialized;
