@@ -60,9 +60,8 @@ namespace Systems
                         return;
                 }
 
-                constexpr int kSubStepCount = 4;
                 const float step = std::max(0.0f, dt);
-                b2World_Step(m_worldId, step, kSubStepCount);
+                b2World_Step(m_worldId, step, m_subStepCount);
 
                 if (m_contactListener)
                 {
@@ -79,6 +78,12 @@ namespace Systems
                         b2World_SetGravity(m_worldId, m_worldDef.gravity);
                         m_loggedMissingWorld = false;
                 }
+        }
+
+        void Box2DPhysicsSystem::SetSubStepCount(int subStepCount)
+        {
+                const int clamped = std::clamp(subStepCount, 1, 24);
+                m_subStepCount = clamped;
         }
 
         b2WorldId Box2DPhysicsSystem::GetWorldId() const

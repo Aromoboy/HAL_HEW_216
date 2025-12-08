@@ -32,20 +32,18 @@ namespace Systems
         using IntegratorPtr = std::shared_ptr<IntegrateSystem>;
         using ContactListenerPtr = std::shared_ptr<Box2DContactListener>;
 
-        explicit PhysicsMachine(float gravity = 9.8f);
+        explicit PhysicsMachine(float gravity = 9.8f, int subStepCount = 4);
         ~PhysicsMachine() override;
 
         void SetSystem(SystemPtr system);
         void SetIntegrator(IntegratorPtr integrator);
         void SetContactListener(ContactListenerPtr listener);
+        void SetSubStepCount(int subStepCount);
         SystemPtr GetSystem() const;
         IntegratorPtr GetIntegrator() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
 
         void SetGravity(float gravity);
-
-
-
         void RegisterBody(Entities::PhysicalEntity& body);
         void UnregisterBody(Entities::PhysicalEntity& body);
         void ClearBodies();
@@ -65,6 +63,7 @@ namespace Systems
         ContactListenerPtr m_contactListener;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
+        int m_subStepCount = 4;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingIntegrator = false;
         bool m_loggedMissingWorld = false;

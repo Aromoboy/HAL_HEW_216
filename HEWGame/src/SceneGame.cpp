@@ -528,21 +528,22 @@ namespace
 
         struct PhysicsTuningSettings
         {
-            float gravity = 9.8f;
-            float damping = 0.98f;
-            float penetrationTolerance = 0.01f;
-            float restitution = 0.15f;
-            float frictionStatic = 0.8f;
-            float frictionDynamic = 0.65f;
-            float maxSlopeCos = 1.0f;
-            float maxRestitutionVelocity = 25.0f;
-            float verticalSnapCos = 0.96f;
-            float groundMinCos = 0.85f;
-            float baumgarteFactor = 0.2f;
-            float maxPenetrationCorrection = 0.5f;
-            float minLinearSpeed = 0.03f;
-            float minVerticalSpeed = 0.02f;
-            float minTangentialSpeed = 0.02f;
+            float gravity = 11.5f;
+            int subStepCount = 8;
+            float damping = 0.97f;
+            float penetrationTolerance = 0.005f;
+            float restitution = 0.06f;
+            float frictionStatic = 0.85f;
+            float frictionDynamic = 0.52f;
+            float maxSlopeCos = 0.96f;
+            float maxRestitutionVelocity = 5.0f;
+            float verticalSnapCos = 0.97f;
+            float groundMinCos = 0.92f;
+            float baumgarteFactor = 0.18f;
+            float maxPenetrationCorrection = 0.1f;
+            float minLinearSpeed = 0.05f;
+            float minVerticalSpeed = 0.03f;
+            float minTangentialSpeed = 0.03f;
         };
 
         SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
@@ -691,6 +692,7 @@ namespace
                 std::ostringstream oss;
                 oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
                     << "'. Using defaults (gravity=" << settings.gravity
+                    << ", subSteps=" << settings.subStepCount
                     << ", damping=" << settings.damping
                     << ", penetrationTolerance=" << settings.penetrationTolerance
                     << ", restitution=" << settings.restitution
@@ -748,6 +750,10 @@ namespace
                     if (key == "gravity")
                     {
                         settings.gravity = std::stof(value);
+                    }
+                    else if (key == "subSteps")
+                    {
+                        settings.subStepCount = std::max(1, std::stoi(value));
                     }
                     else if (key == "damping")
                     {
@@ -825,6 +831,7 @@ namespace
             std::ostringstream oss;
             oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
                 << "' (gravity=" << settings.gravity
+                << ", subSteps=" << settings.subStepCount
                 << ", damping=" << settings.damping
                 << ", penetrationTolerance=" << settings.penetrationTolerance
                 << ", restitution=" << settings.restitution
@@ -1340,7 +1347,7 @@ SceneGame::SceneGame()
     }
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
-    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(tuning.gravity);
+    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(tuning.gravity, tuning.subStepCount);
     m_contactListener = std::make_shared<Systems::Box2DContactListener>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();

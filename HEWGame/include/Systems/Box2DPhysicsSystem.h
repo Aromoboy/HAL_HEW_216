@@ -19,6 +19,7 @@ namespace Systems
                 void Apply(float dt) override;
 
                 void SetGravity(float gravity);
+                void SetSubStepCount(int subStepCount);
                 b2WorldId GetWorldId() const;
                 void SetContactListener(std::shared_ptr<Box2DContactListener> listener);
 
@@ -28,6 +29,7 @@ namespace Systems
                 b2WorldDef m_worldDef{};
                 b2WorldId m_worldId{ b2_nullWorldId };
                 std::shared_ptr<Box2DContactListener> m_contactListener;
+                int m_subStepCount = 4;
                 bool m_loggedMissingWorld = false;
         };
 }
