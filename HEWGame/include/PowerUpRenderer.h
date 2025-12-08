@@ -172,7 +172,9 @@ private:
 		float2 uvScale;
 		float2 projOffset;
 		float2 projScale;
-		float3 rgb;
+		float r;
+		float g;
+		float b;
 		float alpha;
 
 
@@ -181,7 +183,9 @@ private:
 			, uvScale(a_uvScale)
 			, projOffset(a_projOffset)
 			, projScale(a_projScale)
-			, rgb(a_rgb)
+			, r(a_rgb.x)
+			, g(a_rgb.y)
+			, b(a_rgb.z)
 			, alpha(a_alpha)
 		{}
 	};

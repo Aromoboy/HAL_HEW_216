@@ -375,7 +375,7 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 	// ステータスを設定
 	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
 	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
-	param[2] = DirectX::XMFLOAT4(drawData.rgb.x, drawData.rgb.y, drawData.rgb.z, drawData.alpha);
+	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
 	// シェーダーをバインド
@@ -443,7 +443,7 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 	// ステータスを設定
 	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
 	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
-	param[2] = DirectX::XMFLOAT4(drawData.rgb.x, drawData.rgb.y, drawData.rgb.z, drawData.alpha);
+	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
 
