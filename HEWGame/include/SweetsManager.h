@@ -287,48 +287,34 @@ namespace SweetsSpace
             const std::shared_ptr<Collision::ICollider>& collider,
             Collision::CollisionLayer layer,
             Core::UpdatePhase phase,
-            int priority);
+            int priority)
+        {
+            if (!model)
+                return nullptr;
+
+            auto sweets = std::make_shared<T>(
+                tag,
+                transform,
+                model,
+                collider,
+                layer,
+                m_physicsMachine,
+                nullptr,
+                phase,
+                priority
+            );
+
+            if (!sweets)
+                return nullptr;
+
+            if (auto* machine = sweets->GetPhysicsMachine())
+            {
+                machine->UnregisterBody(*sweets);
+                machine->RegisterBody(*sweets);
+            }
+
+            return sweets;
+        }
     };
-
-    // =====================
-// TEMPLATE IMPLEMENTATION
-// =====================
-
-template<typename T>
-std::shared_ptr<ActiveSweets> SweetsManager::MakeSweets(
-    const std::string& tag,
-    const std::shared_ptr<Render::Model>& model,
-    const Transform& transform,
-    const std::shared_ptr<Collision::ICollider>& collider,
-    Collision::CollisionLayer layer,
-    Core::UpdatePhase phase,
-    int priority)
-{
-    if (!model)
-        return nullptr;
-
-    auto sweets = std::make_shared<T>(
-        tag,
-        transform,
-        model,
-        collider,
-        layer,
-        m_physicsMachine,
-        nullptr,
-        phase,
-        priority
-    );
-
-    if (!sweets)
-        return nullptr;
-
-    if (auto* machine = sweets->GetPhysicsMachine())
-    {
-        machine->UnregisterBody(*sweets);
-        machine->RegisterBody(*sweets);
-    }
-
-    return sweets;
-}
 
 }
