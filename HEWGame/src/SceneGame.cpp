@@ -1949,7 +1949,10 @@ SceneGame::SceneGame()
             {
                 const auto maxAbsDiff = [](float3 a, float3 b)
                 {
-                    return std::max({ std::fabs(a.x - b.x), std::fabs(a.y - b.y), std::fabs(a.z - b.z) });
+                    const float dx = std::fabs(a.x - b.x);
+                    const float dy = std::fabs(a.y - b.y);
+                    const float dz = std::fabs(a.z - b.z);
+                    return std::max({ dx, dy, dz });
                 };
 
                 const float sizeDelta = maxAbsDiff(expectedAabbSize, syncedSize);
