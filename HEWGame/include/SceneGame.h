@@ -56,10 +56,8 @@ struct StageObject
 namespace Systems
 {
     class PhysicsMachine;
-    class GravityDampingSystem;
     class ContactLiteSystem;
     class DrawSystem;
-    class IntegrateSystem;
 }
 
 namespace SweetsSpace
@@ -143,8 +141,6 @@ private:
     std::unique_ptr<Entities::Player> player;
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
-    std::shared_ptr<Systems::IntegrateSystem> m_integrateSystem;
-    std::shared_ptr<Systems::GravityDampingSystem> m_gravitySystem;
     std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;

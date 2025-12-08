@@ -1,7 +1,4 @@
 #include "Systems/PhysicsMachine.h"
-#include "Systems/IntegrateSystem.h"
-#include "Systems/ContactLiteSystem.h"
-#include "GravityDampingSystem.h"
 #include "AABBCollider.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
@@ -29,13 +26,9 @@ namespace
             0);
     }
 
-    void RunIntegrationStepMovesBodiesTest()
+    void RunBox2DStepMovesBodiesTest()
     {
-        Systems::PhysicsMachine machine;
-        auto integrator = std::make_shared<Systems::IntegrateSystem>();
-        auto gravity = std::make_shared<Systems::GravityDampingSystem>(9.8f, 0.98f);
-        machine.SetSystem(gravity);
-        machine.SetIntegrator(integrator);
+        Systems::PhysicsMachine machine(9.8f);
 
         Transform fallingTransform{};
         fallingTransform.position = float3{ 0.0f, 5.0f, 0.0f };
@@ -57,62 +50,23 @@ namespace
         const float updatedY = falling.GetTransform().position.y;
 
 #if defined(_DEBUG)
+        const b2BodyId bodyId = machine.FindBody(falling);
+        assert(b2Body_IsValid(bodyId));
         assert(updatedY < initialY);
 #endif
 
         machine.UnregisterBody(falling);
-    }
-
-    void RunContactStopsVerticalVelocityTest()
-    {
-        Systems::PhysicsMachine machine;
-        auto integrator = std::make_shared<Systems::IntegrateSystem>();
-        auto gravity = std::make_shared<Systems::GravityDampingSystem>(9.8f, 0.98f);
-        machine.SetSystem(gravity);
-        machine.SetIntegrator(integrator);
-
-        Systems::ContactLiteSystem contactSystem;
-        contactSystem.SetBodySource(&machine.GetBodies());
-
-        Transform platformTransform{};
-        platformTransform.position = float3{ 0.0f, -1.0f, 0.0f };
-        platformTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-        platformTransform.scale = float3{ 4.0f, 1.0f, 4.0f };
-        auto platform = CreateDynamicBody("TestPlatform", platformTransform, 0.0f, 1.0f);
-
-        Transform fallingTransform{};
-        fallingTransform.position = float3{ 0.0f, -0.2f, 0.0f };
-        fallingTransform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-        fallingTransform.scale = float3{ 1.0f, 1.0f, 1.0f };
-        auto falling = CreateDynamicBody("TestFallingSweet", fallingTransform, 1.0f, 0.95f);
-
-        machine.RegisterBody(platform);
-        machine.RegisterBody(falling);
-
-        Core::StepTimer timer;
-        Core::Input dummyInput;
-        Core::UpdateContext ctx(0.016f, timer, dummyInput, nullptr);
-
-        auto& phys = falling.GetPhysical();
-        phys.velocity = float3{ 0.0f, -10.0f, 0.0f };
-
-        machine.OnUpdate(ctx);
-        contactSystem.OnUpdate(ctx);
 
 #if defined(_DEBUG)
-        //assert(phys.velocity.y >= -1e-4f);
+        assert(machine.FindBody(falling) == b2_nullBodyId);
 #endif
-
-        machine.UnregisterBody(platform);
-        machine.UnregisterBody(falling);
     }
 
     struct PhysicsMachineTestRunner
     {
         PhysicsMachineTestRunner()
         {
-            RunIntegrationStepMovesBodiesTest();
-            RunContactStopsVerticalVelocityTest();
+            RunBox2DStepMovesBodiesTest();
         }
     };
 
