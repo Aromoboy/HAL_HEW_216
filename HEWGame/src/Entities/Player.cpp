@@ -355,8 +355,9 @@ namespace Entities
         }
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.density = 1.0f;
-        shapeDef.material.friction = 0.6f;
+        shapeDef.density = 0.5f;
+        shapeDef.material.friction = 0.35f;
+        shapeDef.material.restitution = 0.05f;
 
         const b2Polygon box = b2MakeBox(ToBox2DLength(halfWidth), ToBox2DLength(halfHeight));
         b2CreatePolygonShape(m_bodyId, &shapeDef, &box);

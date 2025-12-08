@@ -77,7 +77,7 @@ namespace
 
 namespace Systems
 {
-        PhysicsMachine::PhysicsMachine(float gravity)
+        PhysicsMachine::PhysicsMachine(float gravity, int subStepCount)
                 : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
                 , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
                 , m_system(m_box2dSystem)
@@ -85,10 +85,15 @@ namespace Systems
                 , m_contactListener()
                 , m_bodies()
                 , m_bodyMap()
+                , m_subStepCount(subStepCount)
                 , m_loggedMissingSystem(false)
                 , m_loggedMissingIntegrator(false)
                 , m_loggedMissingWorld(false)
         {
+                if (m_box2dSystem)
+                {
+                        m_box2dSystem->SetSubStepCount(subStepCount);
+                }
         }
 
         PhysicsMachine::~PhysicsMachine()
@@ -115,6 +120,11 @@ namespace Systems
                 m_system = std::move(system);
                 m_box2dSystem = std::dynamic_pointer_cast<Box2DPhysicsSystem>(m_system);
                 m_loggedMissingSystem = false;
+
+                if (m_box2dSystem)
+                {
+                        m_box2dSystem->SetSubStepCount(m_subStepCount);
+                }
 
                 if (m_box2dSystem && m_contactListener)
                 {
@@ -148,6 +158,15 @@ namespace Systems
                 if (m_box2dSystem)
                 {
                         m_box2dSystem->SetContactListener(m_contactListener);
+                }
+        }
+
+        void PhysicsMachine::SetSubStepCount(int subStepCount)
+        {
+                m_subStepCount = std::clamp(subStepCount, 1, 24);
+                if (m_box2dSystem)
+                {
+                        m_box2dSystem->SetSubStepCount(m_subStepCount);
                 }
         }
 

@@ -322,9 +322,9 @@ namespace
         {
         case SweetsType::Cake:
             config.type = Box2DShapeConfig::Type::Box;
-            config.density = 1.35f;
-            config.friction = 0.65f;
-            config.restitution = 0.05f;
+            config.density = 1.6f;
+            config.friction = 0.72f;
+            config.restitution = 0.03f;
             break;
         case SweetsType::Pudding:
             config.type = Box2DShapeConfig::Type::Polygon;
@@ -333,16 +333,16 @@ namespace
                 b2Vec2{ 0.5f, -0.45f },
                 b2Vec2{ 0.0f, 0.55f },
             };
-            config.density = 1.0f;
-            config.friction = 0.55f;
-            config.restitution = 0.02f;
+            config.density = 1.1f;
+            config.friction = 0.6f;
+            config.restitution = 0.06f;
             break;
         case SweetsType::Sherbet:
             config.type = Box2DShapeConfig::Type::Circle;
             config.radius = 0.5f;
-            config.density = 0.9f;
-            config.friction = 0.45f;
-            config.restitution = 0.2f;
+            config.density = 0.85f;
+            config.friction = 0.35f;
+            config.restitution = 0.28f;
             break;
         default:
             config.type = Box2DShapeConfig::Type::Box;
