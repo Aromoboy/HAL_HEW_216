@@ -142,9 +142,6 @@ Notes on current logging usage. Each entry lists the message, logging API, rough
 - Extensive `DebugTrace` (`OutputDebugStringA`) usage across initialization, configuration, spawning, drawing, and physics hooks. Many entries sit inside gameplay update/draw paths (per-frame when verbose toggles are left true), e.g., draw skips and object render traces. Others cover config load failures and setup events. Per-frame style traces should be candidates for removal or conditional gating; setup/error logs can remain.
 - Also uses `std::cout` for padding/progress output around HUD formatting and flush (likely debug-only, could be per-frame in debug builds). Consider removing or guarding.
 
-## src/Systems/ContactLiteSystem.cpp
-- `OutputDebugStringA` `DebugTrace` for contact system initialization (event). Keep.
-
 ## src/DebugConsole.cpp
 - `std::cout` logs console initialization message once on startup (event). Keep or guard.
 

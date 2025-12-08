@@ -9,18 +9,6 @@ Summary of notable debug log messages in core runtime systems, with frequency ex
 | `Scene::LogExecutionPlan` | Dumps ordered UpdateScheduler plan when size changes or first seen. | Guarded by `m_loggedExecutionPlan`/size check; fires once per plan change. | Yes — useful to confirm scheduler composition after registration changes.【F:src/Scene.cpp†L223-L346】 |
 | `Scene::Register` / `Scene::Unregister` | Logs every request to add/remove update nodes. | None; emits per call (potentially noisy inside bulk registration). | No — per-call debug noise, not lifecycle status.【F:src/Scene.cpp†L318-L346】 |
 
-## Physics contact solver
-
-| Location | Message intent | Frequency guard | Lifecycle signal? |
-| --- | --- | --- | --- |
-| Missing body list | Warns when `OnUpdate` has no body source configured. | Single-shot via `m_loggedMissingBodyList`. | Yes — highlights misconfiguration preventing collision resolution.【F:src/Systems/ContactLiteSystem.cpp†L362-L369】 |
-| Kinematic filters | Notes when kinematic bodies (player or others) are skipped due to configuration. | Single-shot flags per category. | No — configuration debug; not critical lifecycle info.【F:src/Systems/ContactLiteSystem.cpp†L464-L489】 |
-| Body snapshot | First pass dump of active bodies/tags. | One-time via `m_loggedBodySnapshot`. | No — diagnostic snapshot only.【F:src/Systems/ContactLiteSystem.cpp†L374-L397】 |
-| Player presence/absence | Announces whether player body is in contact set. | Toggles between single-shot presence/absence flags. | Yes — indicates whether avatar collisions are enabled.【F:src/Systems/ContactLiteSystem.cpp†L399-L420】 |
-| Player contact confirmations | Logs first player contact with platform or sweets. | One-time flags per contact type. | No — gameplay instrumentation.【F:src/Systems/ContactLiteSystem.cpp†L565-L576】 |
-| Planar Z checks | First occurrence of excessive Z separation or ignored Z overlap. | One-time flags for separation/ignore cases. | No — geometry debugging.【F:src/Systems/ContactLiteSystem.cpp†L595-L633】 |
-| SAT bypass / failure notes | Reports SAT bypass for shallow foundation contact, or failed SAT for sweets pairs. | No guard; can trigger per-collision pair inside the nested loop. | No — high-chatter debug; consider gating if noise is an issue.【F:src/Systems/ContactLiteSystem.cpp†L654-L734】 |
-
 ## SceneGame lifecycle checks
 
 | Location | Message intent | Frequency guard | Lifecycle signal? |
@@ -39,5 +27,4 @@ Summary of notable debug log messages in core runtime systems, with frequency ex
 ### Lifecycle retention candidates
 
 - Scene scheduler plan dump and player registration/StageLayout loader logs should be retained as lifecycle breadcrumbs for initialization and recovery flows.
-- Missing body list warnings in `ContactLiteSystem` and missing subsystem warnings in `SweetsManager` surface critical configuration issues and should remain.
 - Player collider construction logs document collider parameters at spawn time and are useful for lifecycle tracing.
