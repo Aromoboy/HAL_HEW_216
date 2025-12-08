@@ -66,12 +66,12 @@ void Physics2DWorld::DestroyBody(b2BodyId bodyId)
 
 void TestBox2DIntegration()
 {
-    Physics2DWorld world(b2Vec2(0.0f, -9.8f));
+    Physics2DWorld world(b2MakeVec2(0.0f, -9.8f));
 
-    b2BodyId ground = world.CreateBoxBody(b2Vec2(0.0f, -10.0f), 50.0f, 10.0f, 0.0f, 0.3f);
+    b2BodyId ground = world.CreateBoxBody(b2MakeVec2(0.0f, -10.0f), 50.0f, 10.0f, 0.0f, 0.3f);
     (void)ground;
 
-    b2BodyId dynamicBox = world.CreateBoxBody(b2Vec2(0.0f, 4.0f), 1.0f, 1.0f, 1.0f, 0.3f);
+    b2BodyId dynamicBox = world.CreateBoxBody(b2MakeVec2(0.0f, 4.0f), 1.0f, 1.0f, 1.0f, 0.3f);
     if (!b2Body_IsValid(dynamicBox))
     {
         std::printf("Failed to create dynamic box body\n");
