@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <box2d/box2d.h>
+#include <box2d/math_functions.h>
 
 #include "Systems/PhysicsMachine.h"
 
@@ -83,7 +84,7 @@ namespace Entities
         }
 
         const b2Vec2 position = b2Body_GetPosition(m_physical.bodyId);
-        const float angle = b2Body_GetAngle(m_physical.bodyId);
+        const float angle = b2Rot_GetAngle(b2Body_GetRotation(m_physical.bodyId));
 
         Transform updatedTransform = m_transform;
         updatedTransform.position = ToWorldPosition(position);
@@ -239,7 +240,7 @@ namespace Entities
             const b2Vec2 deltaPosition = PhysicalEntity::ToBox2DVector(delta);
             const b2Vec2 targetPosition{ currentPosition.x + deltaPosition.x, currentPosition.y + deltaPosition.y };
 
-            b2Body_SetTransform(bodyId, targetPosition, b2MakeRot(b2Body_GetAngle(bodyId)));
+            b2Body_SetTransform(bodyId, targetPosition, b2Body_GetRotation(bodyId));
             entity.SyncTransformFromBox2DBody();
             return;
         }
