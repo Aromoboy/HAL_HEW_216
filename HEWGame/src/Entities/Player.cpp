@@ -8,7 +8,6 @@
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
-#include "Entities/CollisionEntity.h"
 #include "Entities/PhysicalEntity.h"
 
 
@@ -231,7 +230,7 @@ namespace
 namespace Entities
 {
     Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
-        : PhysicalEntity(transform, nullptr, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
+        : PhysicalEntity(transform, std::nullopt, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
@@ -640,8 +639,7 @@ namespace Entities
 
         for (auto& it : m_carrieds)
         {
-            const auto* sweetsEntity = static_cast<const CollisionEntity*>(it.get());
-            const Transform current = sweetsEntity ? sweetsEntity->GetTransform() : Transform{};
+            const Transform current = it ? it->GetTransform() : Transform{};
             Transform updated = current;
             updated.position = ComputeCarryAnchor();
             updated.rotation = m_transform.rotation;
@@ -728,13 +726,7 @@ namespace Entities
                     }
 
                     sweets->SyncColliderBounds();
-                    Collision::ICollider* sweetsCollider = sweets->GetCollider();
-                    if (!sweetsCollider)
-                    {
-                        continue;
-                    }
-
-                    const AABB sweetsBounds = sweetsCollider->GetAABB();
+                    const AABB sweetsBounds = sweets->GetAABB();
                     if (!sweetsBounds.Intersects(pickupBounds))
                     {
                         continue;
@@ -773,14 +765,7 @@ namespace Entities
         }
 
         candidate->SyncColliderBounds();
-        Collision::ICollider* sweetsCollider = candidate->GetCollider();
-        if (!sweetsCollider)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup failed: sweets collider missing.\n");
-            return;
-        }
-
-        const Transform current = static_cast<const CollisionEntity&>(*candidate).GetTransform();
+        const Transform current = candidate->GetTransform();
         Transform updated = current;
         updated.position = ComputeCarryAnchor();
         updated.rotation = m_transform.rotation;

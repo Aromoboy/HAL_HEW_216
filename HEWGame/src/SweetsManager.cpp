@@ -408,23 +408,10 @@ namespace
         float fallbackLimit,
         bool* usedFallback)
     {
-        float minX = 0.0f;
-        float maxX = 0.0f;
-        const Collision::ICollider* collider = sweets.GetCollider();
-        if (collider)
-        {
-            sweets.SyncColliderBounds();
-            const AABB bounds = collider->GetAABB();
-            minX = bounds.min.x;
-            maxX = bounds.max.x;
-        }
-        else
-        {
-            const Transform& transform = sweets.GetTransform();
-            const float halfWidth = std::max(0.0f, transform.scale.x * 0.5f);
-            minX = transform.position.x - halfWidth;
-            maxX = transform.position.x + halfWidth;
-        }
+        sweets.SyncColliderBounds();
+        const AABB bounds = sweets.GetAABB();
+        float minX = bounds.min.x;
+        float maxX = bounds.max.x;
 
         const float sanitizedMargin = std::max(0.0f, margin);
         float allowedMin = -fallbackLimit;
@@ -1225,8 +1212,6 @@ namespace SweetsSpace
         , m_warnedMissingScheduler(false)
         , m_warnedMissingPhaseCallback(false)
         , m_warnedMissingSpawnOrigins(false)
-        , m_warnedMissingHeightCollider(false)
-        , m_warnedMissingBoundsCollider(false)
         , m_loggedContactNotification(false)
         , m_warnedMissingColliderDefinitionKinds()
         , m_warnedMissingFactoryPresetKinds()
@@ -1414,13 +1399,8 @@ namespace SweetsSpace
                 Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
                 shapeConfig.density *= scaleFactor;
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
-
-                if (sweets)
-                {
-                    sweets->SetBox2DShapeConfig(shapeConfig);
-                }
 
                 return sweets;
             };
@@ -1516,15 +1496,6 @@ namespace SweetsSpace
                         m_horizontalBoundsMargin,
                         fallbackHorizontalLimit,
                         &usedFallbackBounds);
-                    if (!sweets->GetCollider() && !m_warnedMissingBoundsCollider)
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Horizontal bounds check using transform scale for sweets ptr="
-                            << sweets.get() << " (missing collider).\n";
-                        DebugTrace(oss.str());
-                        m_warnedMissingBoundsCollider = true;
-                    }
-
                     if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
                     {
                         std::ostringstream oss;
@@ -1688,30 +1659,9 @@ namespace SweetsSpace
                 continue;
             }
 
-            float sweetsTop = sweets->GetTransform().position.y;
-            const Collision::ICollider* collider = sweets->GetCollider();
-            if (collider)
-            {
-                sweets->SyncColliderBounds();
-                const AABB bounds = collider->GetAABB();
-                sweetsTop = bounds.max.y;
-            }
-            else
-            {
-                const Transform& transform = sweets->GetTransform();
-                const float halfHeight = std::max(0.0f, transform.scale.y * 0.5f);
-                sweetsTop = transform.position.y + halfHeight;
-#if defined(_DEBUG)
-                if (!m_warnedMissingHeightCollider)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "GetHighestStackedHeight fallback to transform scale"
-                        << " for sweets ptr=" << sweets.get() << " (missing collider).\n";
-                    DebugTrace(oss.str());
-                    m_warnedMissingHeightCollider = true;
-                }
-#endif
-            }
+            sweets->SyncColliderBounds();
+            const AABB bounds = sweets->GetAABB();
+            float sweetsTop = bounds.max.y;
 
             maxHeight = std::max(maxHeight, sweetsTop);
         }
@@ -2004,14 +1954,8 @@ namespace SweetsSpace
                     continue;
                 }
 
-                const Collision::ICollider* collider = sweets->GetCollider();
-                if (!collider)
-                {
-                    continue;
-                }
-
                 sweets->SyncColliderBounds();
-                const AABB bounds = collider->GetAABB();
+                const AABB bounds = sweets->GetAABB();
                 const float minX = position.x - halfWidth;
                 const float maxX = position.x + halfWidth;
                 const float minY = position.y - halfHeight;

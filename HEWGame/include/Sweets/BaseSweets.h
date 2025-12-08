@@ -1,10 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "Entities/PhysicalEntity.h"
-#include "ICollider.h"
 
 namespace SweetsSpace
 {
@@ -14,7 +14,7 @@ namespace SweetsSpace
         BaseSweets(const std::string& tag,
             const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
-            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,

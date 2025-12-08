@@ -5,7 +5,9 @@
 
 #include <box2d/box2d.h>
 
-#include "Entities/CollisionEntity.h"
+#include "AABB.h"
+#include "CollisionLayer.h"
+#include "Entities/Entity.h"
 #include "Physical.h"
 #include "BoxColliderComponent.h"
 
@@ -38,11 +40,11 @@ namespace Physics
 
 namespace Entities
 {
-    class PhysicalEntity : public CollisionEntity
+    class PhysicalEntity : public Entity
     {
     public:
         PhysicalEntity(const Transform& transform,
-            std::shared_ptr<Collision::ICollider> collider = nullptr,
+            std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
@@ -54,7 +56,7 @@ namespace Entities
             const float3& pos,
             const float3& rot,
             const float3& scl,
-            std::shared_ptr<Collision::ICollider> collider,
+            std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
@@ -65,6 +67,26 @@ namespace Entities
         const Physics::Physical& GetPhysical() const;
 
         Systems::PhysicsMachine* GetPhysicsMachine() const;
+
+        Collision::CollisionLayer GetCollisionLayer() const;
+        void SetCollisionLayer(Collision::CollisionLayer layer);
+
+        void SetTransform(const Transform& transform);
+        void SetPosition(const float3& position);
+        void SetRotation(const float3& rotation);
+        void SetScale(const float3& scale);
+
+        void SyncColliderBounds();
+        void MarkTransformDirty();
+        bool IsTransformDirty() const;
+        void ApplyTranslation(const float3& delta);
+
+        void OnUpdate(Core::UpdateContext& ctx) override;
+
+        const AABB& GetAABB() const
+        {
+            return m_aabb;
+        }
 
         virtual void SetBox2DBodyId(b2BodyId bodyId);
         virtual b2BodyId GetBox2DBodyId() const;
@@ -128,6 +150,12 @@ namespace Entities
     protected:
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine = nullptr;
+
+        Collision::CollisionLayer m_collisionLayer{ Collision::CollisionLayer::Default };
+        AABB m_aabb{};
+        Transform m_lastBoundsTransform{};
+        Transform m_lastTransform{};
+        bool m_transformDirty{ false };
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;

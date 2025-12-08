@@ -2246,14 +2246,8 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 
         const auto& transform = player->GetTransform();
 
-        Collision::ICollider* collider = player->GetCollider();
-        if (!collider)
-        {
-                DebugTrace(std::string(kLogPrefix) + "[ColliderDebug] Player collider missing; cannot log extents.\n");
-                return;
-        }
-
-        const AABB bounds = collider->GetAABB();
+        player->SyncColliderBounds();
+        const AABB bounds = player->GetAABB();
         std::ostringstream oss;
         oss << kLogPrefix << "[ColliderDebug] Nudged player by (" << delta.x << ',' << delta.y << ',' << delta.z << ")"
             << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"

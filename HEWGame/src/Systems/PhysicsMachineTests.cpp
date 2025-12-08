@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace
@@ -15,14 +16,14 @@ namespace
     Entities::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform)
     {
 
-        // PhysicalEntityの新しいコンストラクタはPhysicalパラメータを受け取らない
+        // PhysicalEntityの新しいコンストラクタはBox2Dの形状設定を直接受け取る
         // Transform + ColliderLayer + UpdatePhaseで十分
         Entities::PhysicalEntity entity(
             tag,
             transform.position,
             transform.rotation,
             transform.scale,
-            nullptr,
+            std::nullopt,
             Collision::CollisionLayer::Default,
             Core::UpdatePhase::Physics,
             0

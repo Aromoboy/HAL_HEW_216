@@ -1,6 +1,7 @@
 #include "Entities/PhysicalEntity.h"
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -11,17 +12,28 @@
 
 namespace
 {
+    bool AreFloat3Equal(const float3& lhs, const float3& rhs)
+    {
+        return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    }
+}
+
+namespace
+{
     float gWorldToBox2DScale = 1.0f;
     float gBox2DToWorldScale = 1.0f / gWorldToBox2DScale;
 }
 
 namespace Entities
 {
-    PhysicalEntity::PhysicalEntity(const Transform& transform, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag)
-        : CollisionEntity(transform, std::move(collider), layer, std::move(model), phase, priority, std::move(tag))
+    PhysicalEntity::PhysicalEntity(const Transform& transform, std::optional<Physics::Box2DShapeConfig> shapeConfig, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag)
+        : Entity(transform, std::move(model), phase, priority, std::move(tag))
         , m_physical()
         , m_physicsMachine(physicsMachine)
+        , m_collisionLayer(layer)
     {
+        m_box2dShapeConfig = std::move(shapeConfig);
+        SyncColliderBounds();
         AttachPhysicsMachine(m_physicsMachine);
     }
 
@@ -30,15 +42,12 @@ namespace Entities
         const float3& pos,
         const float3& rot,
         const float3& scl,
-        std::shared_ptr<Collision::ICollider> collider,
+        std::optional<Physics::Box2DShapeConfig> shapeConfig,
         Collision::CollisionLayer layer,
         Core::UpdatePhase phase,
         int priority)
-        : CollisionEntity(Transform{ pos, rot, scl }, std::move(collider), layer, nullptr, phase, priority)
-        , m_physical()
-        , m_physicsMachine(nullptr)
+        : PhysicalEntity(Transform{ pos, rot, scl }, std::move(shapeConfig), layer, nullptr, nullptr, phase, priority, tag)
     {
-        m_tag = tag;
     }
 
 
@@ -60,6 +69,213 @@ namespace Entities
     Systems::PhysicsMachine* PhysicalEntity::GetPhysicsMachine() const
     {
         return m_physicsMachine;
+    }
+
+    Collision::CollisionLayer PhysicalEntity::GetCollisionLayer() const
+    {
+        return m_collisionLayer;
+    }
+
+    void PhysicalEntity::SetCollisionLayer(Collision::CollisionLayer layer)
+    {
+        m_collisionLayer = layer;
+    }
+
+    void PhysicalEntity::SetTransform(const Transform& transform)
+    {
+        const bool positionChanged = !AreFloat3Equal(transform.position, m_transform.position);
+        const bool rotationChanged = !AreFloat3Equal(transform.rotation, m_transform.rotation);
+        const bool scaleChanged = !AreFloat3Equal(transform.scale, m_transform.scale);
+
+        if (!positionChanged && !rotationChanged && !scaleChanged)
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform = transform;
+        SyncColliderBounds();
+    }
+
+    void PhysicalEntity::SetPosition(const float3& position)
+    {
+        if (AreFloat3Equal(position, m_transform.position))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.position = position;
+        SyncColliderBounds();
+    }
+
+    void PhysicalEntity::SetRotation(const float3& rotation)
+    {
+        if (AreFloat3Equal(rotation, m_transform.rotation))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.rotation = rotation;
+        SyncColliderBounds();
+    }
+
+    void PhysicalEntity::SetScale(const float3& scale)
+    {
+        if (AreFloat3Equal(scale, m_transform.scale))
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.scale = scale;
+        SyncColliderBounds();
+    }
+
+    void PhysicalEntity::SyncColliderBounds()
+    {
+        float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+        float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+        bool hasPoints = false;
+
+        const auto accumulate = [&](float x, float y, float z)
+            {
+                min.x = std::min(min.x, x);
+                min.y = std::min(min.y, y);
+                min.z = std::min(min.z, z);
+                max.x = std::max(max.x, x);
+                max.y = std::max(max.y, y);
+                max.z = std::max(max.z, z);
+                hasPoints = true;
+            };
+
+        const auto accumulatePoint = [&](const float3& point)
+            {
+                accumulate(point.x, point.y, point.z);
+            };
+
+        const Transform& transform = m_transform;
+
+        if (m_boxColliderComponent)
+        {
+            for (const auto& polygon : m_boxColliderComponent->polygons)
+            {
+                for (int i = 0; i < polygon.count; ++i)
+                {
+                    const float3 point{
+                        transform.position.x + polygon.vertices[i].x * transform.scale.x,
+                        transform.position.y + polygon.vertices[i].y * transform.scale.y,
+                        transform.position.z,
+                    };
+                    accumulatePoint(point);
+                }
+            }
+
+            for (const auto& circle : m_boxColliderComponent->circles)
+            {
+                const float radius = circle.radius * std::max(transform.scale.x, transform.scale.y);
+                const float3 center{
+                    transform.position.x + circle.center.x * transform.scale.x,
+                    transform.position.y + circle.center.y * transform.scale.y,
+                    transform.position.z,
+                };
+
+                accumulate(center.x - radius, center.y - radius, center.z);
+                accumulate(center.x + radius, center.y + radius, center.z);
+            }
+        }
+
+        if (!hasPoints && m_box2dShapeConfig)
+        {
+            switch (m_box2dShapeConfig->type)
+            {
+            case Physics::Box2DShapeConfig::Type::Box:
+            {
+                const float hx = std::max(0.01f, 0.5f * transform.scale.x);
+                const float hy = std::max(0.01f, 0.5f * transform.scale.y);
+                accumulate(transform.position.x - hx, transform.position.y - hy, transform.position.z);
+                accumulate(transform.position.x + hx, transform.position.y + hy, transform.position.z);
+                break;
+            }
+            case Physics::Box2DShapeConfig::Type::Polygon:
+            {
+                for (auto vertex : m_box2dShapeConfig->vertices)
+                {
+                    const float3 point{
+                        transform.position.x + vertex.x * transform.scale.x,
+                        transform.position.y + vertex.y * transform.scale.y,
+                        transform.position.z,
+                    };
+                    accumulatePoint(point);
+                }
+                break;
+            }
+            case Physics::Box2DShapeConfig::Type::Circle:
+            {
+                const float radius = std::max(0.01f, m_box2dShapeConfig->radius * std::max(transform.scale.x, transform.scale.y));
+                accumulate(transform.position.x - radius, transform.position.y - radius, transform.position.z);
+                accumulate(transform.position.x + radius, transform.position.y + radius, transform.position.z);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
+        if (!hasPoints)
+        {
+            const float hx = std::max(0.0f, transform.scale.x * 0.5f);
+            const float hy = std::max(0.0f, transform.scale.y * 0.5f);
+            const float hz = std::max(0.0f, transform.scale.z * 0.5f);
+            accumulate(transform.position.x - hx, transform.position.y - hy, transform.position.z - hz);
+            accumulate(transform.position.x + hx, transform.position.y + hy, transform.position.z + hz);
+        }
+
+        m_aabb.min = min;
+        m_aabb.max = max;
+        m_lastBoundsTransform = transform;
+        m_transformDirty = false;
+    }
+
+    void PhysicalEntity::MarkTransformDirty()
+    {
+        m_lastTransform = m_transform;
+        m_transformDirty = true;
+    }
+
+    bool PhysicalEntity::IsTransformDirty() const
+    {
+        return m_transformDirty;
+    }
+
+    void PhysicalEntity::ApplyTranslation(const float3& delta)
+    {
+        if (delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f)
+        {
+            return;
+        }
+
+        MarkTransformDirty();
+        m_transform.position.x += delta.x;
+        m_transform.position.y += delta.y;
+        m_transform.position.z += delta.z;
+        SyncColliderBounds();
+    }
+
+    void PhysicalEntity::OnUpdate(Core::UpdateContext& ctx)
+    {
+        Entity::OnUpdate(ctx);
+
+        const bool transformChanged =
+            !AreFloat3Equal(m_transform.position, m_lastBoundsTransform.position)
+            || !AreFloat3Equal(m_transform.rotation, m_lastBoundsTransform.rotation)
+            || !AreFloat3Equal(m_transform.scale, m_lastBoundsTransform.scale);
+
+        if (m_transformDirty || transformChanged)
+        {
+            SyncColliderBounds();
+        }
     }
 
     void PhysicalEntity::SetBox2DBodyId(b2BodyId bodyId)
