@@ -19,7 +19,7 @@ namespace
     }
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
-    constexpr const char* kPlatformModelPath = "Assets/Model/SweetsPrototype/CakeCube.obj";
+    constexpr const char* kPlatformModelPath = "Assets/Model/cake_high.fbx";
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
