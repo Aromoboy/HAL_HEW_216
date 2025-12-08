@@ -49,7 +49,52 @@ namespace Systems
                 // valid until the next world step. They must not be freed by the listener.
 
                 constexpr int kMaxLogsPerFrame = 4;
+                constexpr int kMaxUnknownShapeLogsPerFrame = 8;
                 int loggedMeshContacts = 0;
+                int loggedUnknownShapes = 0;
+
+                const auto logUnknownShape = [&](b2ShapeId shapeId)
+                    {
+                        if (loggedUnknownShapes >= kMaxUnknownShapeLogsPerFrame)
+                        {
+                                return;
+                        }
+
+                        const bool shapeIsValid = b2Shape_IsValid(shapeId);
+
+                        std::ostringstream oss;
+                        oss << "[Box2DContactListener] Contact event received for unknown shape id=";
+                        if (shapeIsValid)
+                        {
+                                oss << b2StoreShapeId(shapeId);
+                        }
+                        else
+                        {
+                                oss << "<invalid>";
+                        }
+
+                        if (shapeIsValid)
+                        {
+                                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                                oss << " bodyId=";
+                                if (b2Body_IsValid(bodyId))
+                                {
+                                        oss << b2StoreBodyId(bodyId);
+                                }
+                                else
+                                {
+                                        oss << "<invalid>";
+                                }
+                        }
+                        else
+                        {
+                                oss << " (invalid shape)";
+                        }
+
+                        oss << "\n";
+                        DebugTrace(oss.str());
+                        ++loggedUnknownShapes;
+                    };
 
                 const std::span<const b2ContactBeginTouchEvent> beginEvents =
                     (events.beginEvents && events.beginCount > 0)
@@ -60,6 +105,15 @@ namespace Systems
                 {
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+
+                        if (!entityA)
+                        {
+                                logUnknownShape(evt.shapeIdA);
+                        }
+                        if (!entityB)
+                        {
+                                logUnknownShape(evt.shapeIdB);
+                        }
                         BeginContact(entityA, entityB);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
@@ -83,6 +137,15 @@ namespace Systems
                 {
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+
+                        if (!entityA)
+                        {
+                                logUnknownShape(evt.shapeIdA);
+                        }
+                        if (!entityB)
+                        {
+                                logUnknownShape(evt.shapeIdB);
+                        }
                         EndContact(entityA, entityB);
                 }
 
@@ -166,6 +229,11 @@ namespace Systems
                 }
 
                 const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                if (!b2Body_IsValid(bodyId))
+                {
+                        return nullptr;
+                }
+
                 if (Entities::PhysicalEntity* fromBody = GetEntityForBody(bodyId))
                 {
                         return fromBody;

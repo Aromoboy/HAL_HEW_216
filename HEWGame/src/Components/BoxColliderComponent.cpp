@@ -198,6 +198,7 @@ namespace Components
                 shapeDef.material.friction = Clamp01(m_material.friction);
                 shapeDef.material.restitution = Clamp01(m_material.restitution);
                 shapeDef.enableContactEvents = true;
+                shapeDef.userData = b2Body_GetUserData(m_body);
 
                 switch (m_shapeKind)
                 {

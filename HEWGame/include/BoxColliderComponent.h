@@ -91,6 +91,10 @@ namespace Physics
             fixtures.clear();
 
             b2ShapeDef shapeDef = baseShapeDef;
+            if (!shapeDef.userData)
+            {
+                shapeDef.userData = b2Body_GetUserData(bodyId);
+            }
             for (const auto& polygon : polygons)
             {
                 const b2ShapeId shapeId = b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
