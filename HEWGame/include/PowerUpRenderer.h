@@ -116,6 +116,7 @@ public:
 		std::shared_ptr<PowerUpStringTexture> stringTexture;
 		float2 drawPosition;
 		float2 drawScale;
+
 		
 		// NodeÇ…ï`âÊÇ∑ÇÈï∂éöóÒãyÇ—êîíl
 		bool dirty;
@@ -171,12 +172,17 @@ private:
 		float2 uvScale;
 		float2 projOffset;
 		float2 projScale;
+		float3 rgb;
+		float alpha;
 
-		DrawSpriteData(float2 a_uvPos = {0.0f, 0.0f}, float2 a_uvScale = { 1.0f, 1.0f }, float2 a_projOffset = { 0.0f, 0.0f }, float2 a_projScale = { 1.0f, 1.0f })
+
+		DrawSpriteData(float2 a_uvPos = {0.0f, 0.0f}, float2 a_uvScale = { 1.0f, 1.0f }, float2 a_projOffset = { 0.0f, 0.0f }, float2 a_projScale = { 1.0f, 1.0f }, float3 a_rgb = {1.0f,1.0f,1.0f}, float a_alpha = 1.0f)
 			: uvPos(a_uvPos)
 			, uvScale(a_uvScale)
 			, projOffset(a_projOffset)
 			, projScale(a_projScale)
+			, rgb(a_rgb)
+			, alpha(a_alpha)
 		{}
 	};
 
