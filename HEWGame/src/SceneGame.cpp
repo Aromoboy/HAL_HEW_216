@@ -1698,6 +1698,8 @@ SceneGame::SceneGame()
     }
 
     const bool geometryValid = playerGeometry.bounds.valid;
+    const bool playerIsKinematic = false;
+    const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
 
     const auto buildBoxCollider = [&](const float3& size, const float3& offset)
     {
@@ -1712,7 +1714,7 @@ SceneGame::SceneGame()
 
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
-        shapeConfig.bodyType = b2_kinematicBody;
+        shapeConfig.bodyType = playerBodyType;
         shapeConfig.density = 0.5f;
         shapeConfig.friction = 0.35f;
         shapeConfig.restitution = 0.05f;
@@ -1772,7 +1774,7 @@ SceneGame::SceneGame()
         m_physicsMachine.get(),
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
-        true,
+        playerIsKinematic,
         Core::UpdatePhase::Gameplay,
         0,
         "player");
@@ -1805,10 +1807,24 @@ SceneGame::SceneGame()
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
-            const bool isKinematic = player->IsKinematic();
-            oss << kLogPrefix << "Player physics body registered (kinematic="
-                << std::boolalpha << isKinematic
-                << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
+            const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
+            const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
+            const auto bodyTypeToString = [](b2BodyType type)
+            {
+                switch (type)
+                {
+                case b2_staticBody: return "static";
+                case b2_kinematicBody: return "kinematic";
+                case b2_dynamicBody: return "dynamic";
+                default: return "unknown";
+                }
+            };
+
+            const bool typeMatches = configuredBodyType == createdBodyType;
+            oss << kLogPrefix << "Player physics body registered (expected="
+                << bodyTypeToString(configuredBodyType)
+                << ", created=" << bodyTypeToString(createdBodyType)
+                << ", match=" << std::boolalpha << typeMatches << ").\n";
             ::DebugTrace(oss.str());
         }
         if (m_drawSystem)
