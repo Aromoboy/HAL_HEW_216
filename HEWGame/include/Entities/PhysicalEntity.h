@@ -46,7 +46,6 @@ namespace Entities
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
-            Systems::ContactLiteSystem* contactSystem = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0,
             std::string tag = {});

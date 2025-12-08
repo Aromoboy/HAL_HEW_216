@@ -14,11 +14,6 @@ namespace Collision
     class ICollider;
 }
 
-namespace Systems
-{
-    class ContactLiteSystem;
-}
-
 namespace Entities
 {
     class CollisionEntity : public Entity
@@ -28,7 +23,6 @@ namespace Entities
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             std::shared_ptr<Render::Model> model = nullptr,
-            Systems::ContactLiteSystem* contactSystem = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0,
             std::string tag = {});
@@ -65,12 +59,9 @@ namespace Entities
         void UpdateSleepState(const float3& velocity);
         void Wake();
 
-        Systems::ContactLiteSystem* GetContactSystem() const;
-
     protected:
         std::shared_ptr<Collision::ICollider> m_collider;
         Collision::CollisionLayer m_collisionLayer{ Collision::CollisionLayer::Default };
-        Systems::ContactLiteSystem* m_contactSystem{ nullptr };
 
         AABB m_aabb{};
         Transform m_lastBoundsTransform{};

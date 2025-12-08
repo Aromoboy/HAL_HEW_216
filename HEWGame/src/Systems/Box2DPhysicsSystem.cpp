@@ -4,6 +4,8 @@
 #include <cmath>
 #include <string>
 
+#include "Systems/Box2DContactListener.h"
+
 #if defined(_WIN32)
 #   ifndef NOMINMAX
 #       define NOMINMAX
@@ -61,6 +63,11 @@ namespace Systems
                 constexpr int kSubStepCount = 4;
                 const float step = std::max(0.0f, dt);
                 b2World_Step(m_worldId, step, kSubStepCount);
+
+                if (m_contactListener)
+                {
+                        m_contactListener->ProcessContacts(m_worldId);
+                }
         }
 
         void Box2DPhysicsSystem::SetGravity(float gravity)
@@ -77,6 +84,11 @@ namespace Systems
         b2WorldId Box2DPhysicsSystem::GetWorldId() const
         {
                 return m_worldId;
+        }
+
+        void Box2DPhysicsSystem::SetContactListener(std::shared_ptr<Box2DContactListener> listener)
+        {
+                m_contactListener = std::move(listener);
         }
 
         void Box2DPhysicsSystem::DestroyWorld()

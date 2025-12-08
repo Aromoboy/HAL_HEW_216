@@ -24,7 +24,6 @@ namespace Entities
             std::shared_ptr<Render::Model> model = nullptr,
             std::shared_ptr<Collision::ICollider> collider = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
-            Systems::ContactLiteSystem* contactSystem = nullptr,
             SweetsSpace::SweetsManager* sweetsManager = nullptr,
             Collision::CollisionLayer collisionLayer = Collision::CollisionLayer::Player,
             bool kinematic = false,
@@ -63,7 +62,6 @@ namespace Entities
         void SetBox2DBodyId(b2BodyId bodyId) override;
 
         std::shared_ptr<Render::Model> m_fairyModel;
-        Systems::ContactLiteSystem* m_contactSystem;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         int m_maxCarry;

@@ -11,7 +11,7 @@
 #include "MeshBuffer.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
-#include "Systems/ContactLiteSystem.h"
+#include "Systems/Box2DContactListener.h"
 #include "Systems/DrawSystem.h"
 #include "ModelCache.h"
 #include "TextureCache.h"
@@ -1341,47 +1341,29 @@ SceneGame::SceneGame()
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(tuning.gravity);
-    m_contactSystem = std::make_unique<Systems::ContactLiteSystem>();
+    m_contactListener = std::make_shared<Systems::Box2DContactListener>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
-    if (m_physicsMachine && m_contactSystem)
+    if (m_contactListener)
     {
-        const auto& bodies = m_physicsMachine->GetBodies();
-        m_contactSystem->SetBodySource(&bodies);
-    }
+        m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b) {
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->OnContactBegin(&a, &b);
+            }
+        });
 
-    if (m_contactSystem)
+        m_contactListener->SetEndContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b) {
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->OnContactEnd(&a, &b);
+            }
+        });
+    }
+    if (m_physicsMachine && m_contactListener)
     {
-        m_contactSystem->SetPenetrationTolerance(tuning.penetrationTolerance);
-        m_contactSystem->SetRestitution(tuning.restitution);
-        m_contactSystem->SetFriction(tuning.frictionStatic, tuning.frictionDynamic);
-        m_contactSystem->SetMaxSlopeCos(tuning.maxSlopeCos);
-        m_contactSystem->SetVerticalSnapCos(tuning.verticalSnapCos);
-        m_contactSystem->SetGroundMinCos(tuning.groundMinCos);
-        m_contactSystem->SetMaxRestitutionVelocity(tuning.maxRestitutionVelocity);
-        m_contactSystem->SetBaumgarteFactor(tuning.baumgarteFactor);
-        m_contactSystem->SetMaxPenetrationCorrection(tuning.maxPenetrationCorrection);
-        m_contactSystem->SetMinLinearSpeed(tuning.minLinearSpeed);
-        m_contactSystem->SetMinVerticalSpeed(tuning.minVerticalSpeed);
-        m_contactSystem->SetMinTangentialSpeed(tuning.minTangentialSpeed);
-        m_contactSystem->SetIncludeKinematicBodies(true);
-        m_contactSystem->SetAllowKinematicPlayerCollision(true);
-        std::ostringstream oss;
-        oss << kLogPrefix << "Configured ContactLiteSystem (penetrationTolerance=" << tuning.penetrationTolerance
-            << ", restitution=" << tuning.restitution
-            << ", frictionStatic=" << tuning.frictionStatic
-            << ", frictionDynamic=" << tuning.frictionDynamic
-            << ", maxSlopeCos=" << tuning.maxSlopeCos
-            << ", verticalSnapCos=" << tuning.verticalSnapCos
-            << ", groundMinCos=" << tuning.groundMinCos
-            << ", maxRestitutionVelocity=" << tuning.maxRestitutionVelocity
-            << ", baumgarteFactor=" << tuning.baumgarteFactor
-            << ", maxPenetrationCorrection=" << tuning.maxPenetrationCorrection
-            << ", minLinearSpeed=" << tuning.minLinearSpeed
-            << ", minVerticalSpeed=" << tuning.minVerticalSpeed
-            << ", minTangentialSpeed=" << tuning.minTangentialSpeed
-            << ").\n";
-        ::DebugTrace(oss.str());
+        m_physicsMachine->SetContactListener(m_contactListener);
+        m_contactListener->EnableMeshContactLogging(true);
     }
 
     if (m_sweetsManager)
@@ -1904,9 +1886,7 @@ SceneGame::SceneGame()
         trans,
         m_playerModel,
         collider,
-        Physics::Physical{},
         m_physicsMachine.get(),
-        m_contactSystem.get(),
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
         true,
@@ -1990,7 +1970,6 @@ SceneGame::SceneGame()
             DebugTrace(std::string(kLogPrefix) + "[PlayerCollider] Missing collider when synchronizing player bounds.\n");
         }
         RegisterPhysicsBody(*player);
-        RefreshContactSolverBodies("spawn");
         {
             std::ostringstream oss;
             const bool isKinematic = player->IsKinematic();
@@ -2104,12 +2083,6 @@ SceneGame::~SceneGame()
                 m_physicsRegistered = false;
         }
 
-        if (m_contactRegistered && m_contactSystem)
-        {
-                GetUpdateScheduler().Unregister(*m_contactSystem);
-                m_contactRegistered = false;
-        }
-
         if (m_cameraRigRegistered && m_cameraRig)
         {
                 Unregister(*m_cameraRig);
@@ -2182,12 +2155,6 @@ void SceneGame::ConfigureUpdates()
         {
                 GetUpdateScheduler().Register(*m_physicsMachine);
                 m_physicsRegistered = true;
-        }
-
-        if (m_contactSystem && !m_contactRegistered)
-        {
-                GetUpdateScheduler().Register(*m_contactSystem);
-                m_contactRegistered = true;
         }
 
         if (m_drawSystem && !m_drawRegistered)
@@ -2885,64 +2852,6 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
     }
 }
 
-void SceneGame::RefreshContactSolverBodies(const char* reason)
-{
-    if (!player)
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: player missing.\n");
-        return;
-    }
-
-    if (!m_contactSystem)
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: contact system missing.\n");
-        return;
-    }
-
-    if (!m_physicsMachine)
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ContactBodies] Refresh skipped: physics machine missing.\n");
-        return;
-    }
-
-    const auto& physicsBodies = m_physicsMachine->GetBodies();
-    m_contactSystem->SetBodySource(&physicsBodies);
-
-    const auto* contactBodies = m_contactSystem->GetBodySource();
-    const std::size_t contactCount = contactBodies ? contactBodies->size() : 0u;
-    const auto* playerPtr = player.get();
-
-    bool playerPresent = false;
-    std::ptrdiff_t playerIndex = -1;
-    if (contactBodies)
-    {
-        const auto it = std::find(contactBodies->begin(), contactBodies->end(), playerPtr);
-        playerPresent = it != contactBodies->end();
-        if (playerPresent)
-        {
-            playerIndex = std::distance(contactBodies->begin(), it);
-        }
-    }
-
-    std::ostringstream oss;
-    oss << kLogPrefix << "[ContactBodies] refreshed reason='" << (reason ? reason : "unspecified") << "'"
-        << " physicsBodies=" << physicsBodies.size()
-        << " contactBodies=" << contactCount
-        << " playerPtr=" << playerPtr
-        << " present=" << std::boolalpha << playerPresent;
-    if (playerIndex >= 0)
-    {
-        oss << " index=" << playerIndex;
-    }
-    else if (contactBodies)
-    {
-        oss << " missingPlayerInContactList";
-    }
-    oss << " allowKinematicPlayer=" << std::boolalpha << m_contactSystem->IsAllowingKinematicPlayerCollision()
-        << "\n";
-    ::DebugTrace(oss.str());
-}
-
 void SceneGame::ValidatePlayerPhysicsRegistration()
 {
     if (!player || !m_physicsMachine)
@@ -2966,42 +2875,6 @@ void SceneGame::ValidatePlayerPhysicsRegistration()
     {
         DebugTrace(std::string(kLogPrefix) + "Player body present in PhysicsMachine after prior recovery.\n");
         m_loggedPlayerBodyRecovery = false;
-    }
-
-    if (!m_contactSystem)
-    {
-        return;
-    }
-
-    const auto* contactBodies = m_contactSystem->GetBodySource();
-    const bool contactListInitialized = (contactBodies != nullptr);
-    const bool registeredWithContact = contactListInitialized
-        && std::find(contactBodies->begin(), contactBodies->end(), player.get()) != contactBodies->end();
-
-    if (!registeredWithContact && contactListInitialized)
-    {
-        RefreshContactSolverBodies("validation_recovery");
-        m_loggedPlayerContactRecovery = true;
-    }
-    else if (!contactListInitialized)
-    {
-        DebugTrace(std::string(kLogPrefix) + "ContactLiteSystem body source missing; cannot validate player registration.\n");
-    }
-    else if (m_loggedPlayerContactRecovery)
-    {
-        std::ostringstream oss;
-        const auto it = std::find(contactBodies->begin(), contactBodies->end(), player.get());
-        const bool present = it != contactBodies->end();
-        const std::ptrdiff_t index = present ? std::distance(contactBodies->begin(), it) : -1;
-        oss << kLogPrefix << "Player body confirmed in ContactLiteSystem after recovery. bodyCount="
-            << contactBodies->size() << " present=" << std::boolalpha << present;
-        if (index >= 0)
-        {
-            oss << " index=" << index;
-        }
-        oss << "\n";
-        ::DebugTrace(oss.str());
-        m_loggedPlayerContactRecovery = false;
     }
 }
 
@@ -3149,8 +3022,6 @@ void SceneGame::ResetPlaySession()
         }
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
-
-        RefreshContactSolverBodies("reset");
     }
 
     InitializeStageAnchors();
@@ -3436,10 +3307,6 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     if (m_physicsMachine)
     {
         m_physicsMachine->Enable(enabled);
-    }
-    if (m_contactSystem)
-    {
-        m_contactSystem->Enable(enabled);
     }
     if (m_sweetsManager)
     {

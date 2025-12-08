@@ -44,11 +44,10 @@ namespace
 
 namespace Entities
 {
-    CollisionEntity::CollisionEntity(const Transform& transform, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::ContactLiteSystem* contactSystem, Core::UpdatePhase phase, int priority, std::string tag)
+    CollisionEntity::CollisionEntity(const Transform& transform, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Core::UpdatePhase phase, int priority, std::string tag)
         : Entity(transform, std::move(model), phase, priority, std::move(tag))
         , m_collider(std::move(collider))
         , m_collisionLayer(layer)
-        , m_contactSystem(contactSystem)
     {
         if (m_collider)
         {
@@ -61,7 +60,7 @@ namespace Entities
     }
 
     CollisionEntity::CollisionEntity(const std::string& tag, const float3& pos, const float3& rot, const float3& scl, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, Core::UpdatePhase phase, int priority)
-        : CollisionEntity(Transform{ pos, rot, scl }, std::move(collider), layer, nullptr, nullptr, phase, priority, tag)
+        : CollisionEntity(Transform{ pos, rot, scl }, std::move(collider), layer, nullptr, phase, priority, tag)
     {
     }
 
@@ -281,11 +280,6 @@ namespace Entities
     {
         m_isSleeping = false;
         m_stationaryFrameCount = 0;
-    }
-
-    Systems::ContactLiteSystem* CollisionEntity::GetContactSystem() const
-    {
-        return m_contactSystem;
     }
 }
 
