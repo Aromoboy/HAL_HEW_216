@@ -334,7 +334,7 @@ namespace
             config.type = Box2DShapeConfig::Type::Box;
             config.allowRotation = false;
             config.angularDamping = 6.0f;
-            config.density = 1.6f;
+            config.density = 1.2f;
             config.friction = 0.72f;
             config.restitution = 0.03f;
             break;
@@ -346,7 +346,7 @@ namespace
                 b2Vec2{ 0.0f, 0.55f },
             };
             config.angularDamping = 0.35f;
-            config.density = 1.1f;
+            config.density = 0.95f;
             config.friction = 0.6f;
             config.restitution = 0.06f;
             break;
@@ -354,14 +354,14 @@ namespace
             config.type = Box2DShapeConfig::Type::Circle;
             config.radius = 0.5f;
             config.angularDamping = 0.1f;
-            config.density = 0.85f;
+            config.density = 0.75f;
             config.friction = 0.35f;
             config.restitution = 0.28f;
             break;
         default:
             config.type = Box2DShapeConfig::Type::Box;
             config.angularDamping = 0.25f;
-            config.density = 1.0f;
+            config.density = 0.9f;
             config.friction = 0.6f;
             config.restitution = 0.05f;
             break;
