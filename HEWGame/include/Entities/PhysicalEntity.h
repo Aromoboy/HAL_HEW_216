@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include <box2d/box2d.h>
@@ -10,6 +11,27 @@
 namespace Systems
 {
     class PhysicsMachine;
+}
+
+namespace Physics
+{
+    struct Box2DShapeConfig
+    {
+        enum class Type
+        {
+            None,
+            Box,
+            Polygon,
+            Circle,
+        };
+
+        Type type{ Type::None };
+        std::vector<b2Vec2> vertices{};
+        float radius{ 0.0f };
+        float density{ 1.0f };
+        float friction{ 0.6f };
+        float restitution{ 0.0f };
+    };
 }
 
 namespace Entities
@@ -51,12 +73,16 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
+        void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config) { m_box2dShapeConfig = std::move(config); }
+        const std::optional<Physics::Box2DShapeConfig>& GetBox2DShapeConfig() const { return m_box2dShapeConfig; }
+
     protected:
         Physics::Physical m_physical;
         Systems::PhysicsMachine* m_physicsMachine;
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;
+        std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
     };
 }
 

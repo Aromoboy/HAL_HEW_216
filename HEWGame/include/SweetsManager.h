@@ -285,7 +285,7 @@ namespace SweetsSpace
             Core::UpdatePhase phase,
             int priority)
         {
-            if (!model || !collider)
+            if (!model)
             {
                 return nullptr;
             }
