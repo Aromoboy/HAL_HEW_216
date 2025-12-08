@@ -24,6 +24,7 @@
 #include "ColliderConfigLoader.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Box2DMeshBuilder.h"
+#include "Systems/PhysicsMachine.h"
 
 namespace Core
 {
@@ -290,18 +291,34 @@ namespace SweetsSpace
                 return nullptr;
             }
 
-            Physics::Physical physical{ velocity, force, weight, damping };
-
-            return std::make_shared<T>(tag,
+            auto sweets = std::make_shared<T>(tag,
                 transform,
                 model,
                 collider,
                 layer,
-                physical,
                 m_physicsMachine,
                 nullptr,
                 phase,
                 priority);
+
+            if (!sweets)
+            {
+                return nullptr;
+            }
+
+            auto& physical = sweets->GetPhysical();
+            physical.velocity = velocity;
+            physical.force = force;
+            physical.weight = weight;
+            physical.damping = damping;
+
+            if (auto* machine = sweets->GetPhysicsMachine())
+            {
+                machine->UnregisterBody(*sweets);
+                machine->RegisterBody(*sweets);
+            }
+
+            return sweets;
         }
     };
 }

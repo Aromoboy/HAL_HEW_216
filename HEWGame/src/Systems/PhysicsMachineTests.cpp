@@ -20,18 +20,20 @@ namespace
         };
         auto collider = std::make_shared<Collision::ConvexHullCollider2D>(points, float2{ 0.0f, 0.0f }, transform.scale.z, Collision::CollisionLayer::Default);
         collider->UpdateBounds(transform);
-        return Entities::PhysicalEntity(tag,
+        Entities::PhysicalEntity entity(tag,
             transform.position,
             transform.rotation,
             transform.scale,
             collider,
             Collision::CollisionLayer::Default,
-            float3{ 0.0f, 0.0f, 0.0f },
-            float3{ 0.0f, 0.0f, 0.0f },
-            weight,
-            damping,
             Core::UpdatePhase::Physics,
             0);
+
+        auto& physical = entity.GetPhysical();
+        physical.weight = weight;
+        physical.damping = damping;
+
+        return entity;
     }
 
     void RunBox2DStepMovesBodiesTest()
