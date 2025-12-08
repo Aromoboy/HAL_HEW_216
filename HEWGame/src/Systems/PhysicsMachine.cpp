@@ -93,6 +93,7 @@ namespace Systems
         , m_loggedMissingSystem(false)
         , m_loggedMissingIntegrator(false)
         , m_loggedMissingWorld(false)
+        , m_loggedFirstTick(false)
     {
         SetSubStepCount(subStepCount);
         if (m_box2dSystem)
@@ -375,6 +376,17 @@ namespace Systems
             }
             return;
         }
+
+#if defined(_DEBUG)
+        if (!m_loggedFirstTick)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] First tick: dt=" << ctx.dt
+                << " bodies=" << m_bodies.size() << "\n";
+            DebugTrace(oss.str());
+            m_loggedFirstTick = true;
+        }
+#endif
 
         m_system->Apply(ctx.dt);
         SyncBodies(ctx.dt);
@@ -760,7 +772,10 @@ namespace Systems
             if (b2World_IsValid(bodyWorld))
             {
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
-                const bool colliderOwnsBody = colliderComponent && colliderComponent->bodyId == it->second;
+                const bool colliderOwnsBody =
+                    colliderComponent &&
+                    B2_ID_EQUALS(colliderComponent->bodyId, it->second);
+
                 if (colliderComponent)
                 {
                     colliderComponent->Destroy(bodyWorld);

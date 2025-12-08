@@ -57,7 +57,7 @@ namespace Systems
                     {
                         if (loggedUnknownShapes >= kMaxUnknownShapeLogsPerFrame)
                         {
-                                return;
+                            return;
                         }
 
                         const bool shapeIsValid = b2Shape_IsValid(shapeId);
@@ -96,6 +96,24 @@ namespace Systems
                         ++loggedUnknownShapes;
                     };
 
+                const auto validateShapeAndBody = [&](b2ShapeId shapeId)
+                    {
+                        if (!b2Shape_IsValid(shapeId))
+                        {
+                            logUnknownShape(shapeId);
+                            return false;
+                        }
+
+                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                        if (!b2Body_IsValid(bodyId))
+                        {
+                            logUnknownShape(shapeId);
+                            return false;
+                        }
+
+                        return true;
+                    };
+
                 const std::span<const b2ContactBeginTouchEvent> beginEvents =
                     (events.beginEvents && events.beginCount > 0)
                         ? std::span<const b2ContactBeginTouchEvent>(
@@ -103,6 +121,13 @@ namespace Systems
                         : std::span<const b2ContactBeginTouchEvent>();
                 for (const b2ContactBeginTouchEvent& evt : beginEvents)
                 {
+                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
+                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValid || !shapeBValid)
+                        {
+                                continue;
+                        }
+
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
@@ -135,6 +160,13 @@ namespace Systems
                         : std::span<const b2ContactEndTouchEvent>();
                 for (const b2ContactEndTouchEvent& evt : endEvents)
                 {
+                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
+                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValid || !shapeBValid)
+                        {
+                                continue;
+                        }
+
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
@@ -264,8 +296,20 @@ namespace Systems
 
         void Box2DContactListener::LogMeshContact(const b2ContactBeginTouchEvent& evt) const
         {
-                Entities::PhysicalEntity* entityA = GetEntityForBody(b2Shape_GetBody(evt.shapeIdA));
-                Entities::PhysicalEntity* entityB = GetEntityForBody(b2Shape_GetBody(evt.shapeIdB));
+                if (!b2Shape_IsValid(evt.shapeIdA) || !b2Shape_IsValid(evt.shapeIdB))
+                {
+                        return;
+                }
+
+                const b2BodyId bodyIdA = b2Shape_GetBody(evt.shapeIdA);
+                const b2BodyId bodyIdB = b2Shape_GetBody(evt.shapeIdB);
+                if (!b2Body_IsValid(bodyIdA) || !b2Body_IsValid(bodyIdB))
+                {
+                        return;
+                }
+
+                Entities::PhysicalEntity* entityA = GetEntityForBody(bodyIdA);
+                Entities::PhysicalEntity* entityB = GetEntityForBody(bodyIdB);
 
                 const char* tagA = entityA ? entityA->GetTag().c_str() : "<null>";
                 const char* tagB = entityB ? entityB->GetTag().c_str() : "<null>";

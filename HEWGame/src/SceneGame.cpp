@@ -1562,18 +1562,12 @@ SceneGame::SceneGame()
 
             std::ostringstream tagStream;
             tagStream << "StageFoundation" << i;
-            Physics::BoxColliderComponent platformCollider;
-            platformCollider.shapeDef.density = 0.0f;
-            platformCollider.shapeDef.material.friction = 0.8f;
-            const float halfWidth = std::max(0.01f, platformTransform.scale.x * 0.5f);
-            const float halfHeight = std::max(0.01f, platformTransform.scale.y * 0.5f);
-            platformCollider.AddBox(halfWidth, halfHeight, b2Vec2_zero);
 
             auto platform = std::make_unique<Stage::FoundationPlatform>(
                 tagStream.str(),
                 platformTransform,
                 nullptr,
-                platformCollider,
+                std::nullopt,
                 m_physicsMachine.get(),
                 descriptor.color,
                 Core::UpdatePhase::PrePhysics,
@@ -1698,6 +1692,8 @@ SceneGame::SceneGame()
     }
 
     const bool geometryValid = playerGeometry.bounds.valid;
+    const bool playerIsKinematic = false;
+    const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
 
     const auto buildBoxCollider = [&](const float3& size, const float3& offset)
     {
@@ -1712,7 +1708,7 @@ SceneGame::SceneGame()
 
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
-        shapeConfig.bodyType = b2_kinematicBody;
+        shapeConfig.bodyType = playerBodyType;
         shapeConfig.density = 0.5f;
         shapeConfig.friction = 0.35f;
         shapeConfig.restitution = 0.05f;
@@ -1772,7 +1768,7 @@ SceneGame::SceneGame()
         m_physicsMachine.get(),
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
-        true,
+        playerIsKinematic,
         Core::UpdatePhase::Gameplay,
         0,
         "player");
@@ -1805,10 +1801,24 @@ SceneGame::SceneGame()
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
-            const bool isKinematic = player->IsKinematic();
-            oss << kLogPrefix << "Player physics body registered (kinematic="
-                << std::boolalpha << isKinematic
-                << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
+            const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
+            const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
+            const auto bodyTypeToString = [](b2BodyType type)
+            {
+                switch (type)
+                {
+                case b2_staticBody: return "static";
+                case b2_kinematicBody: return "kinematic";
+                case b2_dynamicBody: return "dynamic";
+                default: return "unknown";
+                }
+            };
+
+            const bool typeMatches = configuredBodyType == createdBodyType;
+            oss << kLogPrefix << "Player physics body registered (expected="
+                << bodyTypeToString(configuredBodyType)
+                << ", created=" << bodyTypeToString(createdBodyType)
+                << ", match=" << std::boolalpha << typeMatches << ").\n";
             ::DebugTrace(oss.str());
         }
         if (m_drawSystem)
@@ -1846,82 +1856,79 @@ SceneGame::~SceneGame()
         }
     }
 
-        UnregisterAllPhysicsBodies();
-        if (m_inputRegistered)
+    UnregisterAllPhysicsBodies();
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
         {
-                if (auto* input = GetInput())
-                {
-                        Unregister(*input);
-                }
-                m_inputRegistered = false;
+            Unregister(*input);
         }
+        m_inputRegistered = false;
+    }
 
-        if (m_physicsRegistered && m_physicsMachine)
+    if (m_physicsRegistered && m_physicsMachine)
+    {
+        GetUpdateScheduler().Unregister(*m_physicsMachine);
+        m_physicsRegistered = false;
+    }
+
+    if (m_cameraRigRegistered && m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+        m_cameraRigRegistered = false;
+    }
+
+    if (m_drawRegistered && m_drawSystem)
+    {
+        GetUpdateScheduler().Unregister(*m_drawSystem);
+        m_drawRegistered = false;
+    }
+
+    if (m_sweetsLateRegistered && m_sweetsManager)
+    {
+        if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
         {
-            GetUpdateScheduler().Register(*m_physicsMachine);
-                m_physicsRegistered = false;
+            GetUpdateScheduler().Unregister(*lateNode);
         }
+        m_sweetsLateRegistered = false;
+    }
 
-        if (m_cameraRigRegistered && m_cameraRig)
-        {
-                Unregister(*m_cameraRig);
-                m_cameraRigRegistered = false;
-        }
+    if (m_sweetsRegistered && m_sweetsManager)
+    {
+        GetUpdateScheduler().Unregister(*m_sweetsManager);
+        m_sweetsRegistered = false;
+    }
 
-        if (m_drawRegistered && m_drawSystem)
-        {
-                GetUpdateScheduler().Unregister(*m_drawSystem);
-                m_drawRegistered = false;
-        }
-
-        if (m_sweetsLateRegistered && m_sweetsManager)
-        {
-                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
-                {
-                        GetUpdateScheduler().Unregister(*lateNode);
-                }
-                m_sweetsLateRegistered = false;
-        }
-
-        if (m_sweetsRegistered && m_sweetsManager)
-        {
-                GetUpdateScheduler().Unregister(*m_sweetsManager);
-                m_sweetsRegistered = false;
-        }
-
-        if (player)
-        {
-                if (m_drawSystem)
-                {
-                        m_drawSystem->UnregisterRenderable(*player);
-                }
-                Unregister(*player);
-        }
-
+    if (player)
+    {
         if (m_drawSystem)
         {
-                m_drawSystem->ClearRenderables();
-                std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+            m_drawSystem->UnregisterRenderable(*player);
         }
+        Unregister(*player);
+    }
 
-        if (m_sweetsLateRegistered && m_sweetsManager)
-        {
-                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
-                {
-                        GetUpdateScheduler().Unregister(*lateNode);
-                }
-                m_sweetsLateRegistered = false;
-        }
-
-        if (m_sweetsRegistered && m_sweetsManager)
-        {
-                GetUpdateScheduler().Unregister(*m_sweetsManager);
-                m_sweetsRegistered = false;
-        }
+    if (m_drawSystem)
+    {
+        m_drawSystem->ClearRenderables();
+        std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+    }
 }
 
 void SceneGame::ConfigureUpdates()
 {
+        if (m_physicsMachine && !m_physicsRegistered)
+        {
+                GetUpdateScheduler().Register(*m_physicsMachine);
+                m_physicsRegistered = true;
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
+                    << static_cast<int>(m_physicsMachine->GetPhase())
+                    << ", priority=" << m_physicsMachine->GetPriority() << ").\n";
+                ::DebugTrace(oss.str());
+        }
+
         if (auto* input = GetInput())
         {
                 Register(*input);
@@ -1929,14 +1936,6 @@ void SceneGame::ConfigureUpdates()
         }
 
         RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
-
-        if (m_physicsMachine && !m_physicsRegistered)
-        {
-                if (auto system = m_physicsMachine->GetBox2DSystem())
-                {
-                        m_physicsRegistered = true;
-                }
-        }
 
         if (m_drawSystem && !m_drawRegistered)
         {
@@ -2598,8 +2597,10 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
         DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
         return;
     }
-
-    const bool meshOnly = hasMeshData && !hasBoxColliderComponent && !hasShapeConfig;
+    const bool meshOnly =
+        hasMesh &&
+        !hasBoxColliderComponent &&
+        !hasShapeConfig;
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
