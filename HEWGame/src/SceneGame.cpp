@@ -2592,13 +2592,14 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     const bool hasBoxColliderComponent = boxColliderComponent && !boxColliderComponent->Empty();
     const auto& shapeConfig = entity.GetBox2DShapeConfig();
     const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-    const bool hasMesh = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
-    if (!hasBoxColliderComponent && !hasShapeConfig && !hasMesh)
+    const bool hasMeshData = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
+    if (!hasBoxColliderComponent && !hasShapeConfig && !hasMeshData)
     {
         DebugTrace("[SceneGame] Skipped physics registration: entity has no Box2D collider component, shape config, or mesh.\n");
         return;
     }
-    const bool meshOnly = hasMesh && !hasCollider && !hasBoxColliderComponent && !hasShapeConfig;
+
+    const bool meshOnly = hasMeshData && !hasBoxColliderComponent && !hasShapeConfig;
 
     const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
     if (!insertResult.second)
