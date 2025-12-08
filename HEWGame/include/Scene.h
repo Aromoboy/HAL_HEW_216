@@ -24,7 +24,7 @@ void RootDraw();
 
 Scene();
 virtual ~Scene();
-virtual void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) = 0;
+virtual void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) = 0;
 
 protected:
 virtual void ConfigureUpdates();
@@ -46,9 +46,9 @@ Core::Input* GetInput();
 const Core::Input* GetInput() const;
 CameraSpace::CameraManager& GetCameraManager();
 const CameraSpace::CameraManager& GetCameraManager() const;
-std::shared_ptr<CameraSpace::ICamera> AddCamera(std::shared_ptr<CameraSpace::ICamera> camera);
-void SetActiveCamera(const std::shared_ptr<CameraSpace::ICamera>& camera);
-std::shared_ptr<CameraSpace::ICamera> GetActiveCamera() const;
+std::shared_ptr<::CameraSpace::ICamera> AddCamera(std::shared_ptr<::CameraSpace::ICamera> camera);
+void SetActiveCamera(const std::shared_ptr<::CameraSpace::ICamera>& camera);
+std::shared_ptr<::CameraSpace::ICamera> GetActiveCamera() const;
 
 private:
 Core::UpdateScheduler m_scheduler;

@@ -418,7 +418,7 @@ namespace Entities
         SyncTransformFromBody();
     }
 
-    void Player::Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
+    void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
         if (!m_model)
         {

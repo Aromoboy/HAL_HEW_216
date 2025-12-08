@@ -23,7 +23,7 @@ namespace SweetsSpace
         ~BaseSweets() override = default;
 
         void OnUpdate(Core::UpdateContext& ctx) override;
-        void Draw(Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera) override;
+        void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
         bool IsPendingDestroy() const noexcept
         {

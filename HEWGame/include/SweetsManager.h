@@ -126,7 +126,7 @@ namespace SweetsSpace
         void OnUpdate(Core::UpdateContext& ctx) override;
         void OnLateUpdate(Core::UpdateContext& ctx);
 
-        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<CameraSpace::ICamera>& camera);
+        void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera);
 
         SweetsList& GetByState(SweetsState state);
         const SweetsList& GetByState(SweetsState state) const;
