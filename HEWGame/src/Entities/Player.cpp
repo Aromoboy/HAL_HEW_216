@@ -19,6 +19,7 @@
 #include <vector>
 #include <DirectXMath.h>
 
+#include <box2d/b2_math.h>
 #include <box2d/box2d.h>
 
 #if defined(_WIN32)
@@ -330,7 +331,7 @@ namespace Entities
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.type = b2_dynamicBody;
         bodyDef.position = ToBox2DPosition(transform.position);
-        bodyDef.angle = ToBox2DAngle(transform.rotation.z);
+        bodyDef.orientation = b2MakeRot(ToBox2DAngle(transform.rotation.z));
         bodyDef.linearVelocity = b2Vec2{ 0.0f, 0.0f };
         bodyDef.gravityScale = m_isKinematic ? 0.0f : 1.0f;
         bodyDef.linearDamping = 0.0f;
