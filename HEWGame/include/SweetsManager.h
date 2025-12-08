@@ -166,6 +166,7 @@ namespace SweetsSpace
         void SetGeneratedColliderMinThickness(float thickness);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        bool HasSupportingContact(const ActiveSweets& sweets) const;
 
     private:
         struct SweetsStateHash
@@ -274,7 +275,6 @@ namespace SweetsSpace
             const char* context,
             bool logWarnings,
             DeleteBatchContext* batchContext);
-        bool HasSupportingContact(const ActiveSweets& sweets) const;
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void ClearContactState(ActiveSweets* sweets);
