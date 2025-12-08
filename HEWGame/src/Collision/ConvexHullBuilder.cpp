@@ -5,11 +5,49 @@
 #include <cstddef>
 #include <limits>
 #include <optional>
+#include <sstream>
+#include <string_view>
 #include <unordered_map>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
 
 namespace
 {
     constexpr float kEpsilon = 1e-5f;
+    constexpr const char* kLogPrefix = "[ConvexHullBuilder] ";
+
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    void LogInvalidHull(std::string_view reason, std::string_view tag, std::string_view modelPath, size_t pointCount)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Hull build failed: " << reason;
+        if (!tag.empty())
+        {
+            oss << " tag='" << tag << '\'';
+        }
+        if (!modelPath.empty())
+        {
+            oss << " modelPath='" << modelPath << '\'';
+        }
+        oss << " points=" << pointCount << "\n";
+        DebugTrace(oss.str());
+    }
 
     float Cross(const float2& a, const float2& b, const float2& c)
     {
@@ -475,7 +513,7 @@ namespace Collision
         return extraction;
     }
 
-    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc)
+    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc, std::string_view tag, std::string_view modelPath)
     {
         HullBuildResult result{};
         std::vector<float2> extracted;
@@ -508,10 +546,27 @@ namespace Collision
 
         if (extracted.empty())
         {
+            LogInvalidHull("No projected vertices available", tag, modelPath, 0);
             return result;
         }
 
         auto uniquePoints = extracted;
+        const auto nonFinite = std::find_if(uniquePoints.begin(), uniquePoints.end(), [](const float2& p)
+            {
+                return !std::isfinite(p.x) || !std::isfinite(p.y);
+            });
+        if (nonFinite != uniquePoints.end())
+        {
+            LogInvalidHull("Non-finite vertex encountered", tag, modelPath, uniquePoints.size());
+            return result;
+        }
+
+        if (uniquePoints.size() < 3)
+        {
+            LogInvalidHull("Insufficient unique points for hull", tag, modelPath, uniquePoints.size());
+            return result;
+        }
+
         std::sort(uniquePoints.begin(), uniquePoints.end(), [](const float2& lhs, const float2& rhs)
             {
                 if (!AlmostEqual(lhs.x, rhs.x))
@@ -528,10 +583,33 @@ namespace Collision
         const auto hull = ComputeConvexHull(uniquePoints);
         if (hull.empty())
         {
+            LogInvalidHull("Convex hull computation returned no vertices", tag, modelPath, uniquePoints.size());
+            return result;
+        }
+
+        if (hull.size() < 3)
+        {
+            LogInvalidHull("Convex hull produced fewer than 3 vertices", tag, modelPath, hull.size());
+            return result;
+        }
+
+        const auto invalidHullPoint = std::find_if(hull.begin(), hull.end(), [](const float2& p)
+            {
+                return !std::isfinite(p.x) || !std::isfinite(p.y);
+            });
+        if (invalidHullPoint != hull.end())
+        {
+            LogInvalidHull("Convex hull contained non-finite vertices", tag, modelPath, hull.size());
             return result;
         }
 
         const float2 centroid = ComputeCentroid(hull);
+        const float area = std::fabs(ComputeSignedArea(hull));
+        if (area <= kEpsilon)
+        {
+            LogInvalidHull("Convex hull is degenerate or collinear", tag, modelPath, hull.size());
+            return result;
+        }
         result.centroidOffset = centroid;
 
         result.hullPointsCentered.reserve(hull.size());
@@ -539,6 +617,8 @@ namespace Collision
         {
             result.hullPointsCentered.push_back(float2{ p.x - centroid.x, p.y - centroid.y });
         }
+
+        result.valid = true;
 
         return result;
     }
