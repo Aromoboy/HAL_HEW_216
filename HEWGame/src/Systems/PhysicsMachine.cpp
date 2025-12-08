@@ -161,6 +161,11 @@ namespace Systems
             // Box2D のイベントバッファは World 管理。解放不要。
             m_box2dSystem->SetContactListener(m_contactListener);
         }
+
+        if (m_contactListener)
+        {
+            m_contactListener->SetPhysicsMachine(this);
+        }
     }
 
     void PhysicsMachine::SetSubStepCount(int subStepCount)
