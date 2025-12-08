@@ -16,6 +16,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <box2d/box2d.h>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -202,6 +203,7 @@ namespace
         }
     }
 
+    using ::Physics::Box2DShapeConfig;
     using ::SweetsSpace::ColliderPreset;
     using ::SweetsSpace::ColliderShape;
     using ::SweetsSpace::SweetsPrototypeManifest;
@@ -312,6 +314,44 @@ namespace
         return std::fabs(previous - current) > epsilon;
     }
 
+    Box2DShapeConfig BuildShapeConfig(SweetsType type, const float3& /*scale*/)
+    {
+        Box2DShapeConfig config{};
+
+        switch (type)
+        {
+        case SweetsType::Cake:
+            config.type = Box2DShapeConfig::Type::Box;
+            config.density = 1.35f;
+            config.friction = 0.65f;
+            config.restitution = 0.05f;
+            break;
+        case SweetsType::Pudding:
+            config.type = Box2DShapeConfig::Type::Polygon;
+            config.vertices = {
+                b2Vec2{ -0.5f, -0.45f },
+                b2Vec2{ 0.5f, -0.45f },
+                b2Vec2{ 0.0f, 0.55f },
+            };
+            config.density = 1.0f;
+            config.friction = 0.55f;
+            config.restitution = 0.02f;
+            break;
+        case SweetsType::Sherbet:
+            config.type = Box2DShapeConfig::Type::Circle;
+            config.radius = 0.5f;
+            config.density = 0.9f;
+            config.friction = 0.45f;
+            config.restitution = 0.2f;
+            break;
+        default:
+            config.type = Box2DShapeConfig::Type::Box;
+            break;
+        }
+
+        return config;
+    }
+
     float ComputeFallbackHorizontalLimit(float margin)
     {
         const float sanitizedMargin = std::max(0.0f, margin);
@@ -331,11 +371,30 @@ namespace
             return ::SweetsSpace::SweetsState::Active;
         }
 
-        const auto* contactSystem = sweets.GetContactSystem();
-        const bool hadContact = contactSystem && contactSystem->HadAnyContactThisFrame(&sweets);
-        const bool hasSupportOverlap = contactSystem && contactSystem->HasZOverlapWithAnyCollider(&sweets);
+        bool touching = false;
+        if (auto* physicsMachine = sweets.GetPhysicsMachine())
+        {
+            const b2BodyId bodyId = physicsMachine->FindBody(sweets);
+            if (b2Body_IsValid(bodyId))
+            {
+                const int capacity = b2Body_GetContactCapacity(bodyId);
+                if (capacity > 0)
+                {
+                    std::vector<b2ContactData> contacts(static_cast<std::size_t>(capacity));
+                    const int count = b2Body_GetContactData(bodyId, contacts.data(), capacity);
+                    for (int i = 0; i < count; ++i)
+                    {
+                        if (contacts[i].manifold.pointCount > 0)
+                        {
+                            touching = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
-        if (hadContact || hasSupportOverlap)
+        if (touching)
         {
             return ::SweetsSpace::SweetsState::Stacked;
         }
@@ -1294,95 +1353,6 @@ namespace SweetsSpace
                 << " overrideParseError=" << std::boolalpha << factoryParseError << "\n";
             DebugTrace(presetLog.str());
 
-            MeshHullSummary geometry = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
-            if (geometry.hull.empty() && geometry.bounds.valid)
-            {
-                std::ostringstream warn;
-                warn << kLogPrefix << "No hull generated for kind '" << resolvedKind << "'" << aliasSuffix
-                    << "; collider definition or fallback will be used.\n";
-                DebugTrace(warn.str());
-            }
-
-            ModelBounds bounds = geometry.bounds.valid ? geometry.bounds : fallbackBounds;
-            if (!geometry.bounds.valid)
-            {
-                std::ostringstream warn;
-                warn << kLogPrefix << "Fallback collider bounds applied for kind '" << resolvedKind << "'" << aliasSuffix
-                    << " because model bounds were unavailable.\n";
-                DebugTrace(warn.str());
-            }
-            const float resolvedRawThickness = geometry.bounds.valid
-                ? geometry.rawThickness
-            : ComputeAdaptiveThicknessFromExtents(
-                    bounds.max.x - bounds.min.x,
-                    bounds.max.y - bounds.min.y,
-                    float3{ 1.0f, 1.0f, 1.0f },
-                    m_generatedColliderMinThickness);
-
-            const float adaptiveThickness = geometry.thickness;
-
-            GeneratedCollider generatedCollider{ geometry.hull, geometry.centroidOffset, adaptiveThickness };
-
-            m_generatedColliders[normalizedKind] = generatedCollider;
-
-            if (prototype.type == SweetsType::Cake)
-            {
-                auto meshFixtures = Systems::Box2DMeshBuilder::Instance().BuildFromModel(modelPath);
-                if (meshFixtures)
-                {
-                    m_box2dFixtures[normalizedKind] = *meshFixtures;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Cached Box2D mesh fixtures for kind '" << resolvedKind
-                        << "' polygons=" << meshFixtures->polygons.size()
-                        << " boundaryPoints=" << meshFixtures->boundary.size() << "\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to build Box2D mesh fixtures for kind '" << resolvedKind << "'.\n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-
-            const auto colliderDefinitionIt = FindColliderDefinition(resolvedKind);
-            const bool colliderDefinitionFound = colliderDefinitionIt != m_colliderDefinitions.end();
-            const bool colliderDefinitionEmpty =
-                colliderDefinitionFound &&
-                IsColliderDefinitionEmpty(colliderDefinitionIt->second);
-            if (!colliderDefinitionFound || colliderDefinitionEmpty)
-            {
-                std::ostringstream padLog;
-                padLog << kLogPrefix << "Using adaptive thickness for kind '" << resolvedKind << "'" << aliasSuffix
-                    << " baseThickness=" << resolvedRawThickness
-                    << " paddingFactor=" << m_generatedColliderThicknessPadding
-                    << " adaptiveThickness=" << adaptiveThickness
-                    << (colliderDefinitionFound ? " because collider config was empty.\n"
-                        : " because collider config was missing.\n");
-                DebugTrace(padLog.str());
-            }
-
-            if (!generatedCollider.hull.empty())
-            {
-                std::ostringstream hullLog;
-                hullLog << kLogPrefix << "Cached generated hull for kind '" << resolvedKind << "' points="
-                    << generatedCollider.hull.size() << " polyParts=1"
-                    << " thickness=" << generatedCollider.thickness << "\n";
-            DebugTrace(hullLog.str());
-            }
-
-            {
-                const float3 baseHalfExtents = ComputeHalfExtents(bounds, float3{ 1.0f, 1.0f, 1.0f }, preset.colliderPreset);
-                const float3 baseCenter = ComputeColliderOffset(bounds, float3{ 1.0f, 1.0f, 1.0f });
-                std::ostringstream boundsLog;
-                boundsLog << kLogPrefix << "Resolved collider template for kind '" << kind
-                    << "' shape=" << ToString(preset.colliderPreset.shape)
-                    << " halfExtents=(" << baseHalfExtents.x << ',' << baseHalfExtents.y << ',' << baseHalfExtents.z << ")"
-                    << " center=(" << baseCenter.x << ',' << baseCenter.y << ',' << baseCenter.z << ")\n";
-                DebugTrace(boundsLog.str());
-            }
-
             std::ostringstream oss;
             oss << kLogPrefix << "Registering sweets kind '" << kind
                 << "' with asset '" << modelPath << "'.\n";
@@ -1390,7 +1360,7 @@ namespace SweetsSpace
 
             const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, preset, bounds, geometry, generatedCollider,
+            auto factory = [this, &cache, kind, modelPath, type, preset,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
@@ -1456,267 +1426,6 @@ namespace SweetsSpace
                 scaledTransform.scale.x *= sampledScale.x;
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
-                std::shared_ptr<Collision::ICollider> collider;
-                const bool hasGeneratedHull = !generatedCollider.hull.empty();
-                ModelBounds generatedBounds{};
-                bool usedGeneratedHull = false;
-                bool colliderDefinitionFound = false;
-                bool colliderDefinitionFailed = false;
-                bool colliderDefinitionEmpty = false;
-                bool colliderDefinitionHullMissingPoints = false;
-                bool colliderDefinitionIsCompound = false;
-                bool colliderDefinitionIsHull = false;
-                bool colliderDefinitionIsCircle = false;
-                const Collision::ColliderDefinition* colliderDefinition = nullptr;
-                const bool warnedMissingColliderDefinition = m_warnedMissingColliderDefinitionKinds.find(resolvedKind) != m_warnedMissingColliderDefinitionKinds.end();
-                std::string colliderTypeChosen = "unresolved";
-                std::string colliderResolutionReason = "unresolved";
-
-                const auto colliderDef = FindColliderDefinition(normalizedKind);
-
-                if (colliderDef != m_colliderDefinitions.end())
-                {
-                    colliderDefinitionFound = true;
-                    colliderDefinition = &colliderDef->second;
-                    colliderDefinitionIsCompound = colliderDefinition->type == Collision::ColliderKind::Compound;
-                    colliderDefinitionIsHull = colliderDefinition->type == Collision::ColliderKind::Hull;
-                    colliderDefinitionIsCircle = colliderDefinition->type == Collision::ColliderKind::Circle;
-
-                    colliderDefinitionHullMissingPoints = colliderDefinitionIsHull && colliderDefinition->points.empty();
-                    colliderDefinitionEmpty = IsColliderDefinitionEmpty(*colliderDefinition);
-                }
-
-                const float baseThickness = geometry.bounds.valid
-                    ? ComputeAdaptiveThickness(generatedCollider.hull, scaledTransform.scale, m_generatedColliderMinThickness)
-                    : ComputeAdaptiveThicknessFromExtents(
-                        bounds.max.x - bounds.min.x,
-                        bounds.max.y - bounds.min.y,
-                        scaledTransform.scale,
-                        m_generatedColliderMinThickness);
-                const float colliderThickness = baseThickness * geometry.paddingFactor;
-                ModelBounds colliderBounds = bounds;
-                colliderBounds.min.z = -colliderThickness * 0.5f;
-                colliderBounds.max.z = colliderThickness * 0.5f;
-
-                const float3 halfExtents = ComputeHalfExtents(colliderBounds, scaledTransform.scale, preset.colliderPreset);
-                const float3 colliderOffset = ComputeColliderOffset(colliderBounds, scaledTransform.scale);
-                const float3 colliderExpand = ComputeExpandFromHalfExtents(halfExtents, scaledTransform.scale);
-
-                const bool configDefinitionAvailable = colliderDefinitionFound && !colliderDefinitionEmpty;
-                const bool configOverrideRequested = configDefinitionAvailable
-                    && m_colliderConfigOverridesEnabled && !m_forceGeneratedColliders;
-                const bool preferGenerated = m_forceGeneratedColliders || !configOverrideRequested;
-
-                {
-                    std::ostringstream plan;
-                    plan << kLogPrefix << "Collider resolve plan kind='" << resolvedKind << "'";
-                    if (isAliasedKind)
-                    {
-                        plan << " (from key '" << kind << "')";
-                    }
-                    plan << " preferGenerated=" << std::boolalpha << preferGenerated
-                        << " forceGenerated=" << m_forceGeneratedColliders
-                        << " configOverride=" << m_colliderConfigOverridesEnabled
-                        << " configFound=" << colliderDefinitionFound
-                        << " configEmpty=" << colliderDefinitionEmpty
-                        << " hasHull=" << hasGeneratedHull
-                        << "\n";
-                    DebugTrace(plan.str());
-                }
-
-                const auto tryBuildGeneratedColliders = [&]()
-                {
-                    if (collider)
-                    {
-                        return;
-                    }
-
-                    if (!collider && hasGeneratedHull)
-                    {
-                        collider = std::make_shared<Collision::ConvexHullCollider2D>(
-                            generatedCollider.hull,
-                            float2{0.0f, 0.0f},
-                            colliderThickness,
-                            Collision::CollisionLayer::Sweets,
-                            generatedCollider.centroidOffset);
-                        usedGeneratedHull = true;
-                        if (colliderDefinitionHullMissingPoints)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Hull collider definition for '" << resolvedKind << "'" << aliasSuffix
-                                << " had no usable points; using auto-generated hull points=" << generatedCollider.hull.size()
-                                << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
-                                << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
-                                << " thickness=" << colliderThickness
-                                << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
-                            DebugTrace(warn.str());
-                        }
-                        else if (colliderDefinitionFailed)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Collider definition for '" << resolvedKind << "'" << aliasSuffix
-                                << " failed or was empty; using generated hull points=" << generatedCollider.hull.size()
-                                << " thickness=" << colliderThickness << "\n";
-                            DebugTrace(warn.str());
-                        }
-                        else if ((!colliderDefinitionFound || colliderDefinitionEmpty) && !warnedMissingColliderDefinition)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Using auto-generated hull for '" << resolvedKind << "'" << aliasSuffix << " ("
-                                << (colliderDefinitionEmpty ? "empty collider config" : "no collider config found") << ")"
-                                << " points=" << generatedCollider.hull.size()
-                                << " scale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
-                                << " margin=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ')'
-                                << " thickness=" << colliderThickness
-                                << " paddingFactor=" << m_generatedColliderThicknessPadding << "\n";
-                            DebugTrace(warn.str());
-                            m_warnedMissingColliderDefinitionKinds.insert(resolvedKind);
-                        }
-                        else if (colliderDefinitionFound && !colliderDefinitionEmpty && !preferGenerated)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Generated hull used despite available collider config for '" << resolvedKind
-                                << "'" << aliasSuffix
-                                << " because generated colliders are preferred.\n";
-                            DebugTrace(warn.str());
-                        }
-
-                        if (colliderDefinitionHullMissingPoints)
-                        {
-                            colliderResolutionReason = "config hull empty -> generated hull";
-                        }
-                        else if (colliderDefinitionFailed)
-                        {
-                            colliderResolutionReason = "build failed -> generated hull";
-                        }
-                        else if (colliderDefinitionEmpty)
-                        {
-                            colliderResolutionReason = "config empty -> generated hull";
-                        }
-                        else if (!colliderDefinitionFound)
-                        {
-                            colliderResolutionReason = "no config -> generated hull";
-                        }
-                        else
-                        {
-                            colliderResolutionReason = configOverrideRequested
-                                ? "config override bypassed -> generated hull"
-                                : "generated hull used";
-                        }
-                        colliderTypeChosen = "generated hull";
-                    }
-                };
-
-                const auto tryBuildConfigColliders = [&]()
-                {
-                    if (!colliderDefinitionFound)
-                    {
-                        return;
-                    }
-
-                    if (colliderDefinitionIsCircle)
-                    {
-                        collider = Collision::BuildColliderFromDefinition(
-                            *colliderDefinition,
-                            scaledTransform,
-                            Collision::CollisionLayer::Sweets);
-                        if (!collider)
-                        {
-                            colliderDefinitionFailed = true;
-                            return;
-                        }
-
-                        colliderTypeChosen = "circle from config";
-                        colliderResolutionReason = "config circle used";
-                        return;
-                    }
-
-                    if (colliderDefinitionIsHull)
-                    {
-                        const auto colliderHull = colliderDefinition->points;
-                        if (colliderHull.empty())
-                        {
-                            colliderDefinitionHullMissingPoints = true;
-                            return;
-                        }
-
-                        const auto clampMargin = [](float value)
-                        {
-                            if (!std::isfinite(value))
-                            {
-                                return 0.0f;
-                            }
-                            return std::clamp(value, -0.25f, 0.25f);
-                        };
-
-                        Collision::ColliderDefinition adjustedDefinition = *colliderDefinition;
-                        const float clampedMargin = clampMargin(adjustedDefinition.margin);
-                        adjustedDefinition.margin = clampedMargin;
-
-                        if (std::abs(clampedMargin - colliderDefinition->margin) > 1e-6f)
-                        {
-                            std::ostringstream warn;
-                            warn << kLogPrefix << "Hull margin for '" << resolvedKind << "'" << aliasSuffix
-                                << " clamped from " << colliderDefinition->margin
-                                << " to " << clampedMargin << "\n";
-                            DebugTrace(warn.str());
-                        }
-
-                        collider = Collision::BuildColliderFromDefinition(
-                            adjustedDefinition,
-                            scaledTransform,
-                            Collision::CollisionLayer::Sweets);
-                        if (!collider)
-                        {
-                            colliderDefinitionFailed = true;
-                            return;
-                        }
-
-                        colliderTypeChosen = "hull from config";
-                        colliderResolutionReason = "config hull used";
-                        return;
-                    }
-
-                    if (colliderDefinitionIsCompound)
-                    {
-                        collider = Collision::BuildColliderFromDefinition(
-                            *colliderDefinition,
-                            scaledTransform,
-                            Collision::CollisionLayer::Sweets,
-                            1.0f,
-                            0.0f);
-                        if (!collider)
-                        {
-                            colliderDefinitionFailed = true;
-                            return;
-                        }
-
-                        colliderTypeChosen = "compound from config";
-                        colliderResolutionReason = "config compound used";
-                        return;
-                    }
-                };
-
-                if (preferGenerated)
-                {
-                    tryBuildGeneratedColliders();
-                    tryBuildConfigColliders();
-                }
-                else
-                {
-                    tryBuildConfigColliders();
-                    tryBuildGeneratedColliders();
-                }
-
-                if (colliderDefinitionFound && !colliderDefinitionEmpty && !collider)
-                {
-                    colliderDefinitionFailed = true;
-
-                    std::ostringstream warn;
-                    warn << kLogPrefix << "Collider definition for '" << resolvedKind << "'" << aliasSuffix
-                        << " could not be turned into a collider; falling back to generated or AABB.\n";
-                    DebugTrace(warn.str());
-                }
 
                 const float3 velocity{ 0.0f, 0.0f, 0.0f };
                 const float3 force{ 0.0f, 0.0f, 0.0f };
@@ -1724,49 +1433,15 @@ namespace SweetsSpace
                 const float scaledWeight = preset.weight * scaleFactor;
                 const float scaledDamping = std::min(preset.damping * scaleFactor, 0.999f);
 
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Factory spawn kind='" << resolvedKind << "'" << aliasSuffix << " scale=("
-                        << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ")"
-                        << " enabledRandomScale=" << std::boolalpha << m_enableRandomScale
-                        << " weight=" << scaledWeight << " (base=" << preset.weight << ")\n";
-                    DebugTrace(oss.str());
-                }
+                Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
+                shapeConfig.density = scaledWeight;
 
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Collider resolved kind='" << resolvedKind << "'" << aliasSuffix
-                        << " type=" << colliderTypeChosen
-                        << " reason=" << colliderResolutionReason
-                        << " sampledScale=(" << sampledScale.x << ',' << sampledScale.y << ',' << sampledScale.z << ')'
-                        << " appliedScale=(" << scaledTransform.scale.x << ',' << scaledTransform.scale.y << ',' << scaledTransform.scale.z << ")"
-                        << " halfExtents=(" << halfExtents.x << ',' << halfExtents.y << ',' << halfExtents.z << ")"
-                        << " offset=(" << colliderOffset.x << ',' << colliderOffset.y << ',' << colliderOffset.z << ")"
-                        << " expand=(" << colliderExpand.x << ',' << colliderExpand.y << ',' << colliderExpand.z << ")"
-                        << " defFound=" << std::boolalpha << colliderDefinitionFound
-                        << " defEmpty=" << std::boolalpha << colliderDefinitionEmpty
-                        << " buildFailed=" << std::boolalpha << colliderDefinitionFailed
-                        << " forceGenerated=" << std::boolalpha << m_forceGeneratedColliders
-                        << " configOverride=" << std::boolalpha << m_colliderConfigOverridesEnabled
-                        << " usedGeneratedHull=" << std::boolalpha << usedGeneratedHull
-                        << " hullAvailable=" << std::boolalpha << hasGeneratedHull
-                        << " hullPoints=" << generatedCollider.hull.size()
-                        << " polygonParts=1"
-                        << " paddingFactor=" << m_generatedColliderThicknessPadding
-                        << "\n";
-                    DebugTrace(oss.str());
-                }
-
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, collider, Collision::CollisionLayer::Sweets, velocity, force, scaledWeight, scaledDamping,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets, velocity, force, shapeConfig.density, scaledDamping,
                     Core::UpdatePhase::Physics, 0);
 
                 if (sweets)
                 {
-                    auto fixtureIt = m_box2dFixtures.find(normalizedKind);
-                    if (fixtureIt != m_box2dFixtures.end())
-                    {
-                        sweets->SetBox2DMesh(fixtureIt->second.polygons, fixtureIt->second.boundary);
-                    }
+                    sweets->SetBox2DShapeConfig(shapeConfig);
                 }
 
                 return sweets;
@@ -2309,6 +1984,19 @@ namespace SweetsSpace
 
         SetState(sweets, SweetsState::Active);
         RegisterWithSystems(sweets);
+
+        if (m_physicsMachine && sweets)
+        {
+            const b2BodyId bodyId = m_physicsMachine->FindBody(*sweets);
+            if (b2Body_IsValid(bodyId))
+            {
+                const b2Vec2 position = b2Body_GetPosition(bodyId);
+                Transform synced = sweets->GetTransform();
+                synced.position.x = position.x;
+                synced.position.y = position.y;
+                sweets->SetTransform(synced);
+            }
+        }
 
         return sweets;
     }

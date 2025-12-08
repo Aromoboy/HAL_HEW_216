@@ -314,6 +314,8 @@ namespace Systems
                 body.SyncColliderBounds();
                 const auto& collisionEntity = static_cast<const Entities::CollisionEntity&>(body);
                 const Transform& transform = collisionEntity.GetTransform();
+                const auto shapeConfig = body.GetBox2DShapeConfig();
+                const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
                 const AABB bounds = collisionEntity.GetCollider() ? collisionEntity.GetCollider()->GetAABB() : AABB{};
                 const float halfWidth = std::max(0.05f, (bounds.max.x - bounds.min.x) * 0.5f);
                 const float halfHeight = std::max(0.05f, (bounds.max.y - bounds.min.y) * 0.5f);
@@ -340,8 +342,61 @@ namespace Systems
                 }
 
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
-                shapeDef.density = bodyDef.type == b2_dynamicBody ? std::max(0.01f, body.GetPhysical().weight) : 0.0f;
-                shapeDef.material.friction = 0.6f;
+                const float configuredDensity = hasShapeConfig
+                        ? std::max(0.0f, shapeConfig->density)
+                        : std::max(0.01f, body.GetPhysical().weight);
+                shapeDef.density = bodyDef.type == b2_dynamicBody ? configuredDensity : 0.0f;
+                shapeDef.material.friction = hasShapeConfig ? shapeConfig->friction : 0.6f;
+                shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;
+                shapeDef.enableContactEvents = true;
+                shapeDef.enableHitEvents = true;
+
+                if (hasShapeConfig)
+                {
+                        switch (shapeConfig->type)
+                        {
+                        case Physics::Box2DShapeConfig::Type::Box:
+                        {
+                                const float hx = std::max(0.01f, 0.5f * transform.scale.x);
+                                const float hy = std::max(0.01f, 0.5f * transform.scale.y);
+                                const b2Polygon box = b2MakeBox(hx, hy);
+                                b2CreatePolygonShape(bodyId, &shapeDef, &box);
+                                return bodyId;
+                        }
+                        case Physics::Box2DShapeConfig::Type::Polygon:
+                        {
+                                std::vector<b2Vec2> scaled = shapeConfig->vertices;
+                                for (auto& v : scaled)
+                                {
+                                        v.x *= transform.scale.x;
+                                        v.y *= transform.scale.y;
+                                }
+
+                                if (scaled.size() >= 3)
+                                {
+                                        const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
+                                        if (b2ValidateHull(&hull))
+                                        {
+                                                const b2Polygon shape = b2MakePolygon(&hull, b2_polygonRadius);
+                                                b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                                                return bodyId;
+                                        }
+                                }
+
+                                break;
+                        }
+                        case Physics::Box2DShapeConfig::Type::Circle:
+                        {
+                                const float radius = std::max(0.01f, shapeConfig->radius);
+                                const float scaledRadius = radius * std::max(transform.scale.x, transform.scale.y);
+                                const b2Circle circle{ b2Vec2{0.0f, 0.0f}, scaledRadius };
+                                b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                                return bodyId;
+                        }
+                        default:
+                                break;
+                        }
+                }
 
                 int meshShapes = 0;
                 if (hasMeshFixtures)
