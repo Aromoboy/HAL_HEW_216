@@ -11,7 +11,6 @@ namespace SweetsSpace
         std::shared_ptr<Collision::ICollider> collider,
         Collision::CollisionLayer layer,
         Systems::PhysicsMachine* physicsMachine,
-        Systems::ContactLiteSystem* contactSystem,
         Core::UpdatePhase phase,
         int priority)
         : Entities::PhysicalEntity(transform,
@@ -19,7 +18,6 @@ namespace SweetsSpace
             layer,
             std::move(model),
             physicsMachine,
-            contactSystem,
             phase,
             priority,
             tag)

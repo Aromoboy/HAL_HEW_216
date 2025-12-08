@@ -37,6 +37,11 @@ namespace Systems
     class PhysicsMachine;
 }
 
+namespace Entities
+{
+    class PhysicalEntity;
+}
+
 namespace Collision
 {
     class ICollider;
@@ -159,6 +164,8 @@ namespace SweetsSpace
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
+        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
 
     private:
         struct SweetsStateHash
@@ -224,6 +231,7 @@ namespace SweetsSpace
         bool m_warnedMissingSpawnOrigins;
         mutable bool m_warnedMissingHeightCollider;
         mutable bool m_warnedMissingBoundsCollider;
+        bool m_loggedContactNotification;
         std::unordered_set<std::string> m_warnedMissingColliderDefinitionKinds;
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_warnedMissingGeneratedHull;

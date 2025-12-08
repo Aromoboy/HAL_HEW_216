@@ -56,7 +56,7 @@ struct StageObject
 namespace Systems
 {
     class PhysicsMachine;
-    class ContactLiteSystem;
+    class Box2DContactListener;
     class DrawSystem;
 }
 
@@ -126,7 +126,6 @@ private:
     bool TryGetGuidelineClipY(const CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
-    void RefreshContactSolverBodies(const char* reason);
     int ComputeScore() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
@@ -141,7 +140,7 @@ private:
     std::unique_ptr<Entities::Player> player;
     std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
-    std::unique_ptr<Systems::ContactLiteSystem> m_contactSystem;
+    std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::vector<std::unique_ptr<Stage::FoundationPlatform>> m_foundationPlatforms;
@@ -150,10 +149,8 @@ private:
     Stage::FoundationPlatform* m_platePlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
-    bool m_loggedPlayerContactRecovery = false;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
-    bool m_contactRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;

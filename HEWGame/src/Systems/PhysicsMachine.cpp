@@ -1,6 +1,7 @@
 #include "Systems/PhysicsMachine.h"
 #include "Systems/Box2DPhysicsSystem.h"
 #include "Systems/IntegrateSystem.h"
+#include "Systems/Box2DContactListener.h"
 
 #include <algorithm>
 #include <cmath>
@@ -80,6 +81,7 @@ namespace Systems
                 , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
                 , m_system(m_box2dSystem)
                 , m_integrator(std::make_shared<IntegrateSystem>())
+                , m_contactListener()
                 , m_bodies()
                 , m_bodyMap()
                 , m_loggedMissingSystem(false)
@@ -112,6 +114,11 @@ namespace Systems
                 m_system = std::move(system);
                 m_box2dSystem = std::dynamic_pointer_cast<Box2DPhysicsSystem>(m_system);
                 m_loggedMissingSystem = false;
+
+                if (m_box2dSystem && m_contactListener)
+                {
+                        m_box2dSystem->SetContactListener(m_contactListener);
+                }
         }
 
         void PhysicsMachine::SetIntegrator(IntegratorPtr integrator)
@@ -132,6 +139,15 @@ namespace Systems
 
                 m_integrator = std::move(integrator);
                 m_loggedMissingIntegrator = false;
+        }
+
+        void PhysicsMachine::SetContactListener(ContactListenerPtr listener)
+        {
+                m_contactListener = std::move(listener);
+                if (m_box2dSystem)
+                {
+                        m_box2dSystem->SetContactListener(m_contactListener);
+                }
         }
 
         PhysicsMachine::SystemPtr PhysicsMachine::GetSystem() const
@@ -271,8 +287,6 @@ namespace Systems
                 if (b2World_IsValid(worldId))
                 {
                         m_system->Apply(ctx.dt);
-
-                        LogMeshContacts();
 
                         for (Entities::PhysicalEntity* body : m_bodies)
                         {
@@ -553,54 +567,6 @@ namespace Systems
 
                 const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);
                 m_bodyMap.erase(it);
-        }
-
-        void PhysicsMachine::LogMeshContacts()
-        {
-                const b2WorldId worldId = GetWorldId();
-
-                if (!m_logMeshContacts || !b2World_IsValid(worldId))
-                {
-                        return;
-                }
-
-                const b2ContactEvents events = b2World_GetContactEvents(worldId);
-                constexpr int kMaxLogsPerFrame = 4;
-                int logged = 0;
-
-                for (int i = 0; i < events.beginCount && logged < kMaxLogsPerFrame; ++i)
-                {
-                        const b2ContactBeginTouchEvent& evt = events.beginEvents[i];
-                        Entities::PhysicalEntity* bodyA = static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(evt.bodyIdA));
-                        Entities::PhysicalEntity* bodyB = static_cast<Entities::PhysicalEntity*>(b2Body_GetUserData(evt.bodyIdB));
-
-                        const bool meshContact = (bodyA && bodyA->HasBox2DMesh()) || (bodyB && bodyB->HasBox2DMesh());
-                        if (!meshContact)
-                        {
-                                continue;
-                        }
-
-                        const char* tagA = bodyA ? bodyA->GetTag().c_str() : "<null>";
-                        const char* tagB = bodyB ? bodyB->GetTag().c_str() : "<null>";
-
-                        std::ostringstream oss;
-                        oss << "[PhysicsMachine] Mesh contact begin between '" << tagA << "' and '" << tagB << "'\n";
-                        DebugTrace(oss.str());
-                        ++logged;
-                }
-
-                if (events.beginEvents)
-                {
-                        b2Free(events.beginEvents);
-                }
-                if (events.endEvents)
-                {
-                        b2Free(events.endEvents);
-                }
-                if (events.hitEvents)
-                {
-                        b2Free(events.hitEvents);
-                }
         }
 }
 

@@ -23,18 +23,21 @@ namespace Systems
 
     class IntegrateSystem;
     class Box2DPhysicsSystem;
+    class Box2DContactListener;
 
     class PhysicsMachine : public Core::UpdateNode
     {
     public:
         using SystemPtr = std::shared_ptr<IPhysicsSystem>;
         using IntegratorPtr = std::shared_ptr<IntegrateSystem>;
+        using ContactListenerPtr = std::shared_ptr<Box2DContactListener>;
 
         explicit PhysicsMachine(float gravity = 9.8f);
         ~PhysicsMachine() override;
 
         void SetSystem(SystemPtr system);
         void SetIntegrator(IntegratorPtr integrator);
+        void SetContactListener(ContactListenerPtr listener);
         SystemPtr GetSystem() const;
         IntegratorPtr GetIntegrator() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
@@ -55,16 +58,15 @@ namespace Systems
     private:
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body);
-        void LogMeshContacts();
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
         IntegratorPtr m_integrator;
+        ContactListenerPtr m_contactListener;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingIntegrator = false;
         bool m_loggedMissingWorld = false;
-        bool m_logMeshContacts = true;
     };
 }

@@ -37,7 +37,7 @@
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
-#include "Systems/ContactLiteSystem.h"
+#include "Entities/PhysicalEntity.h"
 #include <DirectXMath.h>
 
 namespace SweetsSpace
@@ -1228,6 +1228,7 @@ namespace SweetsSpace
         , m_warnedMissingSpawnOrigins(false)
         , m_warnedMissingHeightCollider(false)
         , m_warnedMissingBoundsCollider(false)
+        , m_loggedContactNotification(false)
         , m_warnedMissingColliderDefinitionKinds()
         , m_warnedMissingFactoryPresetKinds()
         , m_warnedMissingGeneratedHull(false)
@@ -2735,6 +2736,52 @@ namespace SweetsSpace
         if (!changed)
         {
             DebugTrace(std::string(kLogPrefix) + "Minimum thickness unchanged from prior value.\n");
+        }
+    }
+
+    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+        if (!sweetsA && !sweetsB)
+        {
+            return;
+        }
+
+        if (!m_loggedContactNotification)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Contact begin between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            DebugTrace(oss.str());
+            m_loggedContactNotification = true;
+        }
+    }
+
+    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+        if (!sweetsA && !sweetsB)
+        {
+            return;
+        }
+
+        if (!m_loggedContactNotification)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Contact end between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            DebugTrace(oss.str());
+            m_loggedContactNotification = true;
         }
     }
 

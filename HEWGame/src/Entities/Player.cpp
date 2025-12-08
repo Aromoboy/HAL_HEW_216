@@ -203,10 +203,9 @@ namespace
 
 namespace Entities
 {
-    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Systems::PhysicsMachine* physicsMachine, Systems::ContactLiteSystem* contactSystem, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
-        : PhysicalEntity(transform, std::move(collider), collisionLayer, std::move(model), physicsMachine, contactSystem, phase, priority, std::move(tag))
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, std::shared_ptr<Collision::ICollider> collider, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+        : PhysicalEntity(transform, std::move(collider), collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
-        , m_contactSystem(contactSystem)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
         , m_maxCarry(kDefaultMaxCarry)

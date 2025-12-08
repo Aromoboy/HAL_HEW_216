@@ -190,10 +190,7 @@
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
-    <ClCompile Include="src\Systems\ContactLiteSystem.cpp">
-      <Filter>Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Systems\ContactLiteSystemTests.cpp">
+    <ClCompile Include="src\Systems\Box2DContactListener.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
     <ClCompile Include="src\Systems\DrawSystem.cpp">
@@ -438,10 +435,7 @@
     <ClInclude Include="include\SweetsPrototypeManifest.h">
       <Filter>Sweets</Filter>
     </ClInclude>
-    <ClInclude Include="include\Systems\ContactLiteSystem.h">
-      <Filter>Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Systems\ContactLiteSystemTests.h">
+    <ClInclude Include="include\Systems\Box2DContactListener.h">
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\Systems\DrawSystem.h">
