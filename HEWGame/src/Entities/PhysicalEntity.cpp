@@ -10,6 +10,7 @@ namespace Entities
         , m_physical(physical)
         , m_physicsMachine(physicsMachine)
     {
+        AttachPhysicsMachine(m_physicsMachine);
     }
 
     PhysicalEntity::PhysicalEntity(const std::string& tag, const float3& pos, const float3& rot, const float3& scl, std::shared_ptr<Collision::ICollider> collider, Collision::CollisionLayer layer, const float3& velocity, const float3& force, float weight, float damping, Core::UpdatePhase phase, int priority)
@@ -18,6 +19,11 @@ namespace Entities
         , m_physicsMachine(nullptr)
     {
         m_tag = tag;
+    }
+
+    PhysicalEntity::~PhysicalEntity()
+    {
+        DetachPhysicsMachine();
     }
 
     Physics::Physical& PhysicalEntity::GetPhysical()
@@ -49,6 +55,8 @@ namespace Entities
     {
         m_box2dPolygons = polygons;
         m_box2dBoundary = boundary;
+
+        RecreateBox2DBody();
     }
 
     bool PhysicalEntity::HasBox2DMesh() const
@@ -64,6 +72,66 @@ namespace Entities
     const std::vector<b2Vec2>& PhysicalEntity::GetBox2DBoundary() const
     {
         return m_box2dBoundary;
+    }
+
+    void PhysicalEntity::SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config)
+    {
+        m_box2dShapeConfig = std::move(config);
+
+        RecreateBox2DBody();
+    }
+
+    void PhysicalEntity::AttachPhysicsMachine(Systems::PhysicsMachine* physicsMachine)
+    {
+        if (physicsMachine == m_physicsMachine)
+        {
+            if (m_physicsMachine && !b2Body_IsValid(m_box2dBodyId))
+            {
+                m_physicsMachine->RegisterBody(*this);
+            }
+            return;
+        }
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->UnregisterBody(*this);
+            m_box2dBodyId = b2_nullBodyId;
+        }
+
+        m_physicsMachine = physicsMachine;
+
+        if (m_physicsMachine)
+        {
+            m_physicsMachine->RegisterBody(*this);
+        }
+    }
+
+    void PhysicalEntity::DetachPhysicsMachine()
+    {
+        if (!m_physicsMachine)
+        {
+            return;
+        }
+
+        m_physicsMachine->UnregisterBody(*this);
+        m_physicsMachine = nullptr;
+        m_box2dBodyId = b2_nullBodyId;
+    }
+
+    void PhysicalEntity::RecreateBox2DBody()
+    {
+        if (!m_physicsMachine)
+        {
+            return;
+        }
+
+        if (b2Body_IsValid(m_box2dBodyId))
+        {
+            m_physicsMachine->UnregisterBody(*this);
+            m_box2dBodyId = b2_nullBodyId;
+        }
+
+        m_physicsMachine->RegisterBody(*this);
     }
 }
 

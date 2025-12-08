@@ -61,7 +61,7 @@ namespace Entities
             float damping = 0.98f,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0);
-        ~PhysicalEntity() override = default;
+        ~PhysicalEntity() override;
 
         Physics::Physical& GetPhysical();
         const Physics::Physical& GetPhysical() const;
@@ -76,8 +76,11 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
-        void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config) { m_box2dShapeConfig = std::move(config); }
+        void SetBox2DShapeConfig(std::optional<Physics::Box2DShapeConfig> config);
         const std::optional<Physics::Box2DShapeConfig>& GetBox2DShapeConfig() const { return m_box2dShapeConfig; }
+
+        void AttachPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
+        void DetachPhysicsMachine();
 
     protected:
         Physics::Physical m_physical;
@@ -88,6 +91,9 @@ namespace Entities
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
+
+    private:
+        void RecreateBox2DBody();
     };
 }
 
