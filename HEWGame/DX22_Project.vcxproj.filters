@@ -1,17 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- ===================== -->
-  <!-- All .cpp with filters -->
-  <!-- ===================== -->
   <ItemGroup>
-    <ClCompile Include="src\ColliderConfigLoader.cpp">
-      <Filter>Core</Filter>
+    <Filter Include="App">
+      <UniqueIdentifier>{8654e2a1-f166-4f20-9c6e-348f98c22312}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Audio">
+      <UniqueIdentifier>{a5202f65-5797-4b12-bcd1-61ee87f5a94d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Camera">
+      <UniqueIdentifier>{f67f3091-b57f-4b70-a832-a6ad57503882}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{c0201565-d312-4c4a-9a59-eb70b61b7702}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\DirectX">
+      <UniqueIdentifier>{58586234-8be6-48e3-8263-5f68de2d083e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Debug">
+      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Entities">
+      <UniqueIdentifier>{38d16add-f8cd-4f23-8494-c3fce06e36e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameFlow">
+      <UniqueIdentifier>{71782b0c-11fb-40b8-9d5d-f7c626a2dbaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PowerUp">
+      <UniqueIdentifier>{a9e43c74-296a-43df-9608-cba01a9594b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Rendering">
+      <UniqueIdentifier>{5dfca3d5-e0cd-4c75-af87-42cb12625aa6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Stage">
+      <UniqueIdentifier>{d2b5d854-546c-4102-a868-98610ff3ea9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sweets">
+      <UniqueIdentifier>{836b4fc0-4474-4415-8699-b9b46d00f457}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Systems">
+      <UniqueIdentifier>{65e26d16-506d-46f8-a2b7-bfc524717648}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="include\PowerUpRenderer.cpp">
+      <Filter>PowerUp</Filter>
     </ClCompile>
-    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Collision2D.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="include\PowerUpTarget.cpp">
+      <Filter>PowerUp</Filter>
     </ClCompile>
     <ClCompile Include="src\AssimpModelLorder.cpp">
       <Filter>Rendering</Filter>
@@ -31,25 +66,31 @@
     <ClCompile Include="src\CameraRig.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
-    <ClCompile Include="src\Entities\CollisionEntity.cpp">
-      <Filter>Entities</Filter>
+    <ClCompile Include="src\CameraTarget.cpp">
+      <Filter>Camera</Filter>
     </ClCompile>
-    <ClCompile Include="src\Entities\Entity.cpp">
-      <Filter>Entities</Filter>
+    <ClCompile Include="src\ColliderConfigLoader.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Entities\PhysicalEntity.cpp">
-      <Filter>Entities</Filter>
+    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Collision2D.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Components\BoxColliderComponent.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\DXContext.cpp">
       <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Gamepad.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\IndexBuffer.cpp">
       <Filter>Core\DirectX</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\InputMap.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Core\Gamepad.cpp">
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\UpdateNode.cpp">
@@ -79,6 +120,15 @@
     <ClCompile Include="src\DrawMatrix.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Entities\CollisionEntity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Entities\Entity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Entities\PhysicalEntity.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
     <ClCompile Include="src\Entities\Player.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
@@ -88,9 +138,6 @@
     <ClCompile Include="src\Geometory.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp">
-      <Filter>Systems</Filter>
-    </ClCompile>
     <ClCompile Include="src\HudRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -98,9 +145,6 @@
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Input.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Components\BoxColliderComponent.cpp">
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Main.cpp">
@@ -130,6 +174,15 @@
     <ClCompile Include="src\PerspectiveCamera.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
+    <ClCompile Include="src\PowerUpCursor.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PowerUpManager.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PowerUpNode.cpp">
+      <Filter>PowerUp</Filter>
+    </ClCompile>
     <ClCompile Include="src\Scene.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -138,6 +191,9 @@
     </ClCompile>
     <ClCompile Include="src\SceneManager.cpp">
       <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ScenePowerUp.cpp">
+      <Filter>PowerUp</Filter>
     </ClCompile>
     <ClCompile Include="src\SelectScene.cpp">
       <Filter>App</Filter>
@@ -160,10 +216,10 @@
     <ClCompile Include="src\SoundSystem.cpp">
       <Filter>Audio</Filter>
     </ClCompile>
-    <ClCompile Include="src\TitleScene.cpp">
-      <Filter>App</Filter>
-    </ClCompile>
     <ClCompile Include="src\Sprite.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SpriteRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Stage\FoundationPlatform.cpp">
@@ -184,10 +240,13 @@
     <ClCompile Include="src\SweetsPrototypeManifest.cpp">
       <Filter>Sweets</Filter>
     </ClCompile>
+    <ClCompile Include="src\Systems\Box2DContactListener.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
-    <ClCompile Include="src\Systems\Box2DContactListener.cpp">
+    <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
     <ClCompile Include="src\Systems\DrawSystem.cpp">
@@ -214,51 +273,17 @@
     <ClCompile Include="src\TextureDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\Entities\CollisionEntity.cpp" />
-    <ClCompile Include="src\Entities\Entity.cpp" />
-    <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
-    <ClCompile Include="src\PowerUpManager.cpp">
-      <Filter>PowerUp</Filter>
+    <ClCompile Include="src\TitleScene.cpp">
+      <Filter>App</Filter>
     </ClCompile>
-    <ClCompile Include="src\PowerUpNode.cpp">
-      <Filter>PowerUp</Filter>
+    <ClCompile Include="src\UpdatableTimer.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\ScenePowerUp.cpp">
-      <Filter>PowerUp</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SpriteRenderer.cpp">
+    <ClCompile Include="TimerDisplay.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\PowerUpCursor.cpp" />
-    <ClCompile Include="src\UpdatableTimer.cpp" />
-    <ClCompile Include="src\CameraTarget.cpp" />
-    <ClCompile Include="include\PowerUpTarget.cpp" />
-    <ClCompile Include="include\PowerUpRenderer.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
-  <!-- ==================== -->
-  <!-- All .h with filters  -->
-  <!-- ==================== -->
   <ItemGroup>
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\BoxColliderComponent.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ColliderConfigLoader.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Collision\ConvexHullBuilder.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Collision2D.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\CollisionLayer.h">
-      <Filter>Core</Filter>
-    </ClInclude>
     <ClInclude Include="include\AssimpModelLorder.h">
       <Filter>Rendering</Filter>
     </ClInclude>
@@ -267,6 +292,9 @@
     </ClInclude>
     <ClInclude Include="include\BaseCamera.h">
       <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="include\BoxColliderComponent.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\CameraDebug.h">
       <Filter>Camera</Filter>
@@ -277,14 +305,32 @@
     <ClInclude Include="include\CameraRig.h">
       <Filter>Camera</Filter>
     </ClInclude>
-    <ClInclude Include="include\conioex.h">
-      <Filter>Debug</Filter>
+    <ClInclude Include="include\ColliderConfigLoader.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Collision\ConvexHullBuilder.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Collision2D.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CollisionEntity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CollisionLayer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Components\BoxColliderComponent.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\ActionId.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\DXContext.h">
       <Filter>Core\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Core\Gamepad.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\IndexBuffer.h">
       <Filter>Core\DirectX</Filter>
@@ -293,9 +339,6 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\InputMap.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Core\Gamepad.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\IUpdatable.h">
@@ -325,11 +368,11 @@
     <ClInclude Include="include\DebugConsole.h">
       <Filter>Debug</Filter>
     </ClInclude>
-    <ClInclude Include="include\Diagnostics\Logger.h">
-      <Filter>Debug</Filter>
-    </ClInclude>
     <ClInclude Include="include\Defines.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Diagnostics\Logger.h">
+      <Filter>Debug</Filter>
     </ClInclude>
     <ClInclude Include="include\DirectX.h">
       <Filter>Core\DirectX</Filter>
@@ -337,14 +380,26 @@
     <ClInclude Include="include\DrawMatrix.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\Entities\CollisionEntity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Entities\Entity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Entities\PhysicalEntity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Entities\Player.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Entity.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
     <ClInclude Include="include\GameFlow\PhaseManager.h">
       <Filter>GameFlow</Filter>
     </ClInclude>
     <ClInclude Include="include\Geometory.h">
       <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Systems\Box2DPhysicsSystem.h">
-      <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\HudRenderer.h">
       <Filter>Rendering</Filter>
@@ -394,14 +449,32 @@
     <ClInclude Include="include\PhysicalEntity.h">
       <Filter>Entities</Filter>
     </ClInclude>
-    <ClInclude Include="include\SceneManager.h">
-      <Filter>App</Filter>
+    <ClInclude Include="include\PowerUpCursor.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpManager.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpNode.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpRenderer.h">
+      <Filter>PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PowerUpTarget.h">
+      <Filter>PowerUp</Filter>
     </ClInclude>
     <ClInclude Include="include\Scene.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneGame.h">
       <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SceneManager.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ScenePowerUp.h">
+      <Filter>PowerUp</Filter>
     </ClInclude>
     <ClInclude Include="include\SelectScene.h">
       <Filter>App</Filter>
@@ -427,8 +500,8 @@
     <ClInclude Include="include\Sprite.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\TitleScene.h">
-      <Filter>App</Filter>
+    <ClInclude Include="include\SpriteRenderer.h">
+      <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\FoundationPlatform.h">
       <Filter>Stage</Filter>
@@ -448,10 +521,13 @@
     <ClInclude Include="include\Systems\Box2DContactListener.h">
       <Filter>Systems</Filter>
     </ClInclude>
-    <ClInclude Include="include\Systems\DrawSystem.h">
+    <ClInclude Include="include\Systems\Box2DMeshBuilder.h">
       <Filter>Systems</Filter>
     </ClInclude>
-    <ClInclude Include="include\Systems\Box2DMeshBuilder.h">
+    <ClInclude Include="include\Systems\Box2DPhysicsSystem.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\DrawSystem.h">
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\Systems\IntegrateSystem.h">
@@ -472,82 +548,24 @@
     <ClInclude Include="include\TextureDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\Components\BoxColliderComponent.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="include\TitleScene.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Transform.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Vector.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\Entities\CollisionEntity.h" />
-    <ClInclude Include="include\Entities\Entity.h" />
-    <ClInclude Include="include\Entities\PhysicalEntity.h" />
-    <ClInclude Include="include\Entities\Player.h" />
-    <ClInclude Include="include\PowerUpManager.h">
-      <Filter>PowerUp</Filter>
+    <ClInclude Include="include\conioex.h">
+      <Filter>Debug</Filter>
     </ClInclude>
-    <ClInclude Include="include\PowerUpNode.h">
-      <Filter>PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ScenePowerUp.h">
-      <Filter>PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="include\SpriteRenderer.h">
+    <ClInclude Include="TimerDisplay.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\PowerUpCursor.h" />
-    <ClInclude Include="include\UpdatableTimer.h" />
-    <ClInclude Include="include\PowerUpTarget.h" />
-    <ClInclude Include="include\PowerUpRenderer.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="TimerDisplay.h" />
-  </ItemGroup>
-  <!-- =================== -->
-  <!-- Filter definitions  -->
-  <!-- =================== -->
-  <ItemGroup>
-    <Filter Include="App">
-      <UniqueIdentifier>{8654e2a1-f166-4f20-9c6e-348f98c22312}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Audio">
-      <UniqueIdentifier>{a5202f65-5797-4b12-bcd1-61ee87f5a94d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Camera">
-      <UniqueIdentifier>{f67f3091-b57f-4b70-a832-a6ad57503882}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Core">
-      <UniqueIdentifier>{c0201565-d312-4c4a-9a59-eb70b61b7702}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Core\DirectX">
-      <UniqueIdentifier>{58586234-8be6-48e3-8263-5f68de2d083e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Debug">
-      <UniqueIdentifier>{4e5fa03a-95e4-43e4-9823-11cf3054e9b0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Entities">
-      <UniqueIdentifier>{38d16add-f8cd-4f23-8494-c3fce06e36e8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="GameFlow">
-      <UniqueIdentifier>{71782b0c-11fb-40b8-9d5d-f7c626a2dbaa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Rendering">
-      <UniqueIdentifier>{5dfca3d5-e0cd-4c75-af87-42cb12625aa6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Stage">
-      <UniqueIdentifier>{d2b5d854-546c-4102-a868-98610ff3ea9c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Sweets">
-      <UniqueIdentifier>{836b4fc0-4474-4415-8699-b9b46d00f457}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Systems">
-      <UniqueIdentifier>{65e26d16-506d-46f8-a2b7-bfc524717648}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="PowerUp">
-      <UniqueIdentifier>{a9e43c74-296a-43df-9608-cba01a9594b9}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
