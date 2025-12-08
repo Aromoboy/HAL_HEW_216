@@ -79,8 +79,6 @@ namespace
         return component;
     }
 
-    }
-
     AABB BuildDescriptorLocalBounds(const Transform& transform)
     {
         const float halfX = std::max(0.0f, std::abs(transform.scale.x) * 0.5f);
