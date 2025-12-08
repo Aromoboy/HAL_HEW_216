@@ -915,7 +915,10 @@ namespace Entities
 
         const float previousY = bodyPosition.y;
         const float3 bodyVelocity = ToWorldVector(b2Body_GetLinearVelocity(m_bodyId));
-        b2Body_SetTransform(m_bodyId, ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }), b2Body_GetAngle(m_bodyId));
+        b2Body_SetTransform(
+            m_bodyId,
+            ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }),
+            b2MakeRot(b2Body_GetAngle(m_bodyId)));
         float3 clampedVelocity = bodyVelocity;
         clampedVelocity.y = 0.0f;
         b2Body_SetLinearVelocity(m_bodyId, ToBox2DVector(clampedVelocity));
@@ -988,7 +991,10 @@ namespace Entities
             return;
         }
 
-        b2Body_SetTransform(m_bodyId, ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }), b2Body_GetAngle(m_bodyId));
+        b2Body_SetTransform(
+            m_bodyId,
+            ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
+            b2MakeRot(b2Body_GetAngle(m_bodyId)));
         SyncTransformFromBody();
 
         std::ostringstream oss;

@@ -236,7 +236,7 @@ namespace Entities
             const b2Vec2 currentPosition = b2Body_GetPosition(bodyId);
             const b2Vec2 targetPosition = b2Vec2Add(currentPosition, PhysicalEntity::ToBox2DVector(delta));
 
-            b2Body_SetTransform(bodyId, targetPosition, b2Body_GetAngle(bodyId));
+            b2Body_SetTransform(bodyId, targetPosition, b2MakeRot(b2Body_GetAngle(bodyId)));
             entity.SyncTransformFromBox2DBody();
             return;
         }
