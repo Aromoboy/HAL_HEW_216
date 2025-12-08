@@ -1807,10 +1807,6 @@ SceneGame::SceneGame()
         colliderOffset.y += m_playerColliderTuning.fallbackOffset.y;
         colliderOffset.z += m_playerColliderTuning.fallbackOffset.z;
 
-        trans.position.x += colliderOffset.x;
-        trans.position.y += colliderOffset.y;
-        trans.position.z += colliderOffset.z;
-
         const auto safeScale = [](float value)
         {
             return std::max(value, 1e-3f);
@@ -1823,7 +1819,7 @@ SceneGame::SceneGame()
             colliderSize.z / safeScale(trans.scale.z)
         };
 
-        collider = std::make_shared<Collision::AABBCollider>(trans, false, expand, float3{ 0.0f, 0.0f, 0.0f }, Collision::CollisionLayer::Player);
+        collider = std::make_shared<Collision::AABBCollider>(trans, false, expand, colliderOffset, Collision::CollisionLayer::Player);
         colliderSource = "aabb_fallback";
         colliderDecisionReason = geometryValid ? "generated_and_config_failed_geometry_sized" : "generated_and_config_failed_default_sized";
 
