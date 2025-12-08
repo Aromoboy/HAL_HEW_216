@@ -202,6 +202,7 @@
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Components\BoxColliderComponent.cpp" />
     <ClCompile Include="src\Physics2D.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MeshBuffer.cpp" />
@@ -298,6 +299,7 @@
     <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
+    <ClInclude Include="include\Components\BoxColliderComponent.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
