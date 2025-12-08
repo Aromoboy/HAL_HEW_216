@@ -188,13 +188,6 @@ private:
         float triggerHeight = 0.0f;
     };
     std::deque<PendingTimeBonus> m_pendingTimeBonuses;
-    float m_cachedViewportWidth = std::numeric_limits<float>::quiet_NaN();
-    float m_cachedViewportHeight = std::numeric_limits<float>::quiet_NaN();
-    float3 m_cachedCameraPosition{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
-    float3 m_cachedCameraRotation{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
-    float m_cachedCameraFovDegrees = std::numeric_limits<float>::quiet_NaN();
-    float m_cachedCameraAspect = std::numeric_limits<float>::quiet_NaN();
-    float3 m_cachedCameraRigOffset{ std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() };
     bool m_platformAnchorInitialized = false;
     mutable bool m_guidelineInvalidLogged = false;
     mutable bool m_guidelineClampLogged = false;

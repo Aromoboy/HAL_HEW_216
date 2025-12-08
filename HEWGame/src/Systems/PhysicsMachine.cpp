@@ -312,6 +312,10 @@ namespace Systems
 
             const b2BodyId bodyId = mapIt->second;
             body->SetBox2DBodyId(bodyId);
+            if (body->GetPhysical().GetBodyType() == b2_staticBody)
+            {
+                continue;
+            }
             body->SyncTransformFromBox2DBody();
             body->SyncColliderBounds();
         }
