@@ -1,8 +1,7 @@
 #include "PowerUpCursor.h"
 #include "Core/Input.h"
 #include "DebugConsole.h"
-#include "PowerUpCursor.h"
-
+#include <iostream>
 
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
