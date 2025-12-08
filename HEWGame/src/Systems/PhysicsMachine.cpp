@@ -95,6 +95,10 @@ namespace Systems
         , m_loggedMissingWorld(false)
     {
         SetSubStepCount(subStepCount);
+        if (m_box2dSystem)
+        {
+            m_box2dSystem->SetPhysicsMachine(this);
+        }
     }
 
     PhysicsMachine::~PhysicsMachine()
@@ -125,6 +129,7 @@ namespace Systems
         if (m_box2dSystem)
         {
             m_box2dSystem->SetSubStepCount(m_subStepCount);
+            m_box2dSystem->SetPhysicsMachine(this);
         }
 
         if (m_box2dSystem && m_contactListener)
@@ -180,6 +185,11 @@ namespace Systems
     PhysicsMachine::SystemPtr PhysicsMachine::GetSystem() const
     {
         return m_system;
+    }
+
+    std::shared_ptr<Box2DPhysicsSystem> PhysicsMachine::GetBox2DSystem() const
+    {
+        return m_box2dSystem;
     }
 
     PhysicsMachine::IntegratorPtr PhysicsMachine::GetIntegrator() const
@@ -285,24 +295,12 @@ namespace Systems
         m_bodies.clear();
     }
 
-    void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
+    void PhysicsMachine::SyncBodies(float dt)
     {
         const b2WorldId worldId = GetWorldId();
 
-        if (!m_system)
-        {
-            if (!m_loggedMissingSystem)
-            {
-                DebugTrace("[PhysicsMachine] No physics system configured; skipping step.\n");
-                m_loggedMissingSystem = true;
-            }
-            return;
-        }
-
         if (b2World_IsValid(worldId))
         {
-            m_system->Apply(ctx.dt);
-
             for (Entities::PhysicalEntity* body : m_bodies)
             {
                 if (!body)
@@ -320,7 +318,7 @@ namespace Systems
                     // Box2D body がない場合はレガシー積分で動かす
                     if (m_integrator)
                     {
-                        m_integrator->Integrate(*body, ctx.dt);
+                        m_integrator->Integrate(*body, dt);
                     }
                     body->SyncColliderBounds();
                     continue;
@@ -359,11 +357,27 @@ namespace Systems
 
             if (m_integrator)
             {
-                m_integrator->Integrate(*body, ctx.dt);
+                m_integrator->Integrate(*body, dt);
             }
 
             body->SyncColliderBounds();
         }
+    }
+
+    void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
+    {
+        if (!m_system)
+        {
+            if (!m_loggedMissingSystem)
+            {
+                DebugTrace("[PhysicsMachine] No physics system configured; skipping step.\n");
+                m_loggedMissingSystem = true;
+            }
+            return;
+        }
+
+        m_system->Apply(ctx.dt);
+        SyncBodies(ctx.dt);
     }
 
     b2BodyId PhysicsMachine::CreateBody(Entities::PhysicalEntity& body)
