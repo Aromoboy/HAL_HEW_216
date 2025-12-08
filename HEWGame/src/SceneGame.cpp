@@ -2838,7 +2838,7 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
         return;
     }
 
-    entity.AttachPhysicsMachine(m_physicsMachine);
+    entity.AttachPhysicsMachine(m_physicsMachine.get());
 }
 
 void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
