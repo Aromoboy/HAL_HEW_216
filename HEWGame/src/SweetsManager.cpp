@@ -987,8 +987,6 @@ namespace SweetsSpace
     {
         FactoryPreset preset{};
         preset.spawnWeight = 0.0f;
-        preset.weight = 1.0f;
-        preset.damping = 0.98f;
         preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
         preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
         preset.colliderPreset = ColliderPreset{};
@@ -997,32 +995,24 @@ namespace SweetsSpace
         {
         case SweetsType::Cake:
             preset.spawnWeight = 1.0f;
-            preset.weight = 1.35f;
-            preset.damping = 0.96f;
             preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
             preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
             return preset;
         case SweetsType::Pudding:
             preset.spawnWeight = 1.0f;
-            preset.weight = 1.0f;
-            preset.damping = 0.98f;
             preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
             preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
             return preset;
         case SweetsType::Sherbet:
             preset.spawnWeight = 1.0f;
-            preset.weight = 0.85f;
-            preset.damping = 0.99f;
             preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
             preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.weight = 0.9f;
-            preset.damping = 0.985f;
             preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
             preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
@@ -1034,38 +1024,36 @@ namespace SweetsSpace
 
     bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
     {
-        if (tokens.size() < 13)
+        if (tokens.size() < 11)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Factory preset row on line " << lineNumber
-                << " had " << tokens.size() << " tokens; expected 13.\n";
+                << " had " << tokens.size() << " tokens; expected at least 11.\n";
             DebugTrace(oss.str());
             return false;
         }
 
         bool parseError = false;
         parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.weight);
-        parseError |= !TryParseFloat(tokens[3], &outPreset.damping);
-        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.x);
-        parseError |= !TryParseFloat(tokens[5], &outPreset.minScale.y);
-        parseError |= !TryParseFloat(tokens[6], &outPreset.minScale.z);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.x);
-        parseError |= !TryParseFloat(tokens[8], &outPreset.maxScale.y);
-        parseError |= !TryParseFloat(tokens[9], &outPreset.maxScale.z);
-        parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[12], &outPreset.colliderPreset.padding.y);
+        parseError |= !TryParseFloat(tokens[2], &outPreset.minScale.x);
+        parseError |= !TryParseFloat(tokens[3], &outPreset.minScale.y);
+        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.z);
+        parseError |= !TryParseFloat(tokens[5], &outPreset.maxScale.x);
+        parseError |= !TryParseFloat(tokens[6], &outPreset.maxScale.y);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.z);
+        parseError |= !TryParseFloat(tokens[9], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[10], &outPreset.colliderPreset.padding.y);
 
-        if (tokens.size() > 13)
+        if (tokens.size() > 11)
         {
-            parseError |= !TryParseFloat(tokens[13], &outPreset.colliderPreset.padding.z);
+            parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.z);
         }
         else
         {
             outPreset.colliderPreset.padding.z = 0.0f;
         }
 
-        const std::string colliderShape = NormalizeKey(tokens[10]);
+        const std::string colliderShape = NormalizeKey(tokens[8]);
         if (colliderShape == "capsule")
         {
             outPreset.colliderPreset.shape = ColliderShape::Capsule;
@@ -1084,8 +1072,6 @@ namespace SweetsSpace
         }
 
         outPreset.spawnWeight = std::max(0.0f, outPreset.spawnWeight);
-        outPreset.weight = std::max(0.0f, outPreset.weight);
-        outPreset.damping = std::clamp(outPreset.damping, 0.0f, 0.999f);
         return !parseError;
     }
 
@@ -1121,42 +1107,40 @@ namespace SweetsSpace
                 tokens.push_back(TrimToken(column));
             }
 
-        if (tokens.empty())
-        {
-            continue;
-        }
-
-        const std::string normalizedHeader = NormalizeKey(tokens[0]);
-        if (normalizedHeader == "key")
-        {
-            continue;
-        }
-
-        FactoryPreset preset{};
-        if (!ParseFactoryRow(tokens, preset, lineNumber))
-        {
-            if (parseError)
+            if (tokens.empty())
             {
-                *parseError = true;
+                continue;
             }
-            continue;
-        }
 
-        const std::string resolvedKey = ResolveManifestKeyAlias(tokens[0]);
-        const std::string normalizedKey = NormalizeKey(resolvedKey);
-        overrides[normalizedKey] = preset;
+            const std::string normalizedHeader = NormalizeKey(tokens[0]);
+            if (normalizedHeader == "key")
+            {
+                continue;
+            }
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
-            << "' resolvedKey='" << resolvedKey << "'"
-            << "' spawnWeight=" << preset.spawnWeight
-            << " weight=" << preset.weight
-            << " damping=" << preset.damping
-            << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-            << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
-                << " collider=" << ToString(preset.colliderPreset.shape)
-                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
-                << preset.colliderPreset.padding.z << ")\n";
+            FactoryPreset preset{};
+            if (!ParseFactoryRow(tokens, preset, lineNumber))
+            {
+                if (parseError)
+                {
+                    *parseError = true;
+                }
+                continue;
+            }
+
+            const std::string resolvedKey = ResolveManifestKeyAlias(tokens[0]);
+            const std::string normalizedKey = NormalizeKey(resolvedKey);
+            overrides[normalizedKey] = preset;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
+                << "' resolvedKey='" << resolvedKey << "'"
+                << "' spawnWeight=" << preset.spawnWeight
+                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
+                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                    << " collider=" << ToString(preset.colliderPreset.shape)
+                    << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                    << preset.colliderPreset.padding.z << ")\n";
             DebugTrace(oss.str());
         }
 
@@ -1343,8 +1327,6 @@ namespace SweetsSpace
             }
             presetLog << "' source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
-                << " weight=" << preset.weight
-                << " damping=" << preset.damping
                 << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
                 << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
@@ -1427,52 +1409,12 @@ namespace SweetsSpace
                 scaledTransform.scale.y *= sampledScale.y;
                 scaledTransform.scale.z *= sampledScale.z;
 
-                const float3 velocity{ 0.0f, 0.0f, 0.0f };
-                const float3 force{ 0.0f, 0.0f, 0.0f };
                 const float scaleFactor = sampledScale.x * sampledScale.y * sampledScale.z;
-                const float scaledWeight = preset.weight * scaleFactor;
-                const float scaledDamping = std::min(preset.damping * scaleFactor, 0.999f);
 
                 Box2DShapeConfig shapeConfig = BuildShapeConfig(type, scaledTransform.scale);
-                shapeConfig.density = scaledWeight;
+                shapeConfig.density *= scaleFactor;
 
-                Physics::BoxColliderComponent colliderComponent;
-                colliderComponent.shapeDef.density = shapeConfig.density;
-                colliderComponent.shapeDef.material.friction = shapeConfig.friction;
-                colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
-
-                switch (shapeConfig.type)
-                {
-                case Box2DShapeConfig::Type::Box:
-                {
-                    const float halfWidth = std::max(0.01f, 0.5f * scaledTransform.scale.x);
-                    const float halfHeight = std::max(0.01f, 0.5f * scaledTransform.scale.y);
-                    colliderComponent.AddBox(halfWidth, halfHeight);
-                    break;
-                }
-                case Box2DShapeConfig::Type::Polygon:
-                {
-                    std::vector<b2Vec2> scaledVertices = shapeConfig.vertices;
-                    for (auto& v : scaledVertices)
-                    {
-                        v.x *= scaledTransform.scale.x;
-                        v.y *= scaledTransform.scale.y;
-                    }
-                    colliderComponent.AddPolygon(scaledVertices);
-                    break;
-                }
-                case Box2DShapeConfig::Type::Circle:
-                {
-                    const float radius = std::max(0.01f, shapeConfig.radius);
-                    const float scaledRadius = radius * std::max(scaledTransform.scale.x, scaledTransform.scale.y);
-                    colliderComponent.AddCircle(scaledRadius);
-                    break;
-                }
-                default:
-                    break;
-                }
-
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets, velocity, force, shapeConfig.density, scaledDamping,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, nullptr, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
 
                 if (sweets)

@@ -365,14 +365,17 @@ namespace Systems
 
                 b2BodyDef bodyDef = b2DefaultBodyDef();
                 bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
+                bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
                 bodyDef.angle = Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z);
-                bodyDef.linearVelocity = Entities::PhysicalEntity::ToBox2DVector(body.GetPhysical().GetLinearVelocity());
-                const bool layerStatic = collisionEntity.GetCollisionLayer() == Collision::CollisionLayer::Floor;
-                bodyDef.type = layerStatic ? b2_staticBody : b2_dynamicBody;
+                // 初期速度は shapeConfig が指定していれば使用、無ければ 0
+                bodyDef.linearVelocity =
+                    (hasShapeConfig && shapeConfig->initialVelocity.has_value())
+                        ? Entities::PhysicalEntity::ToBox2DVector(shapeConfig->initialVelocity.value())
+                        : b2Vec2{0.0f, 0.0f};
+                // 重力スケール（動的ボディのみ適用）
                 bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
-                bodyDef.rotation = b2MakeRot(transform.rotation.z);
-
-                bodyDef.linearDamping = body.GetPhysical().GetLinearDamping();
+                // 減衰（shapeConfig 優先）
+                bodyDef.linearDamping = hasShapeConfig ? shapeConfig->linearDamping : 0.0f;
                 bodyDef.userData = &body;
 
                 b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);

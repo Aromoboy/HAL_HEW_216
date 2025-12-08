@@ -1419,9 +1419,7 @@ SceneGame::SceneGame()
                     << " pad=(" << preset.second.colliderPreset.padding.x << ','
                     << preset.second.colliderPreset.padding.y << ','
                     << preset.second.colliderPreset.padding.z << ")"
-                    << " spawnWeight=" << preset.second.spawnWeight
-                    << " weight=" << preset.second.weight
-                    << " damping=" << preset.second.damping << "\n";
+                    << " spawnWeight=" << preset.second.spawnWeight << "\n";
             }
             ::DebugTrace(oss.str());
         }
