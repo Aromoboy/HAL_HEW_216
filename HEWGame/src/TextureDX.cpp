@@ -77,28 +77,37 @@ namespace
 //============================================================
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
+    std::string pathStr(path.begin(), path.end());
     // WICt@Ng[쐬
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
         DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
         return false;
     }
 
     Microsoft::WRL::ComPtr<IStream> stream;
     if (FAILED(SHCreateStreamOnFileEx(path.c_str(), STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream)))
     {
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
         return false;
     }
 
-    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    if (!result)
+    {
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
+    }
+    return result;
 }
 
 bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
 {
     if (!data || size == 0)
     {
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
@@ -113,6 +122,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
         IID_PPV_ARGS(&factory))))
     {
         DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
@@ -120,6 +130,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, size);
     if (hMem == nullptr)
     {
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
@@ -127,6 +138,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
     if (pMem == nullptr)
     {
         GlobalFree(hMem);
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
     std::memcpy(pMem, data, size);
@@ -137,10 +149,16 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
     if (FAILED(hr))
     {
         GlobalFree(hMem);
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
-    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    if (!result)
+    {
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
+    }
+    return result;
 }
 
 //============================================================

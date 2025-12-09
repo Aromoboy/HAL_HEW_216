@@ -1,4 +1,5 @@
 #include "MaterialDX.h"
+#include "Debug.h"
 
 MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
 	: m_diffuse(diffuse)
@@ -25,8 +26,12 @@ void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
 		return;
 	}
 
-	ID3D11ShaderResourceView* textureView = GetTexture();
-	context->PSSetShaderResources(slot, 1, &textureView);
+        ID3D11ShaderResourceView* textureView = GetTexture();
+        if (!textureView)
+        {
+                DebugMessage("[MaterialDX] WARNING: SRV is NULL for material");
+        }
+        context->PSSetShaderResources(slot, 1, &textureView);
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
