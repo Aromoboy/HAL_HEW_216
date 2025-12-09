@@ -6,8 +6,33 @@
 #include "Vector.h"
 #include "DirectX.h"
 #include "Debug.h"
+#include "TextureCache.h"
 
-ModelRender::ModelRender() = default;
+#include <cstdint>
+
+ModelRender::ModelRender()
+{
+    auto& cache = TextureCache::Instance();
+    constexpr const char* kFallbackKey = "ModelRenderFallbackWhite";
+    m_fallbackTexture = cache.Get(kFallbackKey);
+    if (!m_fallbackTexture)
+    {
+        static const uint32_t kWhitePixel = 0xFFFFFFFFu;
+        m_fallbackTexture = cache.LoadFromMemory(
+            kFallbackKey,
+            GetDevice(),
+            reinterpret_cast<const uint8_t*>(&kWhitePixel),
+            sizeof(kWhitePixel),
+            1,
+            1,
+            "R8G8B8A8");
+
+        if (!m_fallbackTexture)
+        {
+            DebugMessage("[ModelRender] Failed to create fallback texture for missing SRVs");
+        }
+    }
+}
 
 ModelRender::~ModelRender() = default;
 
@@ -42,22 +67,30 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             continue;
         }
 
-        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
-        if (material && !material->GetTexture())
+        const int materialId = mesh->GetMaterialID();
+        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(materialId).lock();
+        bool materialHasSrv = material && material->GetTexture();
+        if (material && !materialHasSrv && m_warnedMissingSrvMaterials.emplace(materialId).second)
         {
             DebugMessage("[ModelRender] Material has NO SRV, fallback to white");
         }
+
         if (material)
         {
+            if (!materialHasSrv && m_fallbackTexture)
+            {
+                material = std::make_shared<MaterialDX>(
+                    material->GetDiffuse(),
+                    material->GetAmbient(),
+                    material->GetSpecular(),
+                    m_fallbackTexture);
+            }
             ShaderList::SetMaterial(*material);
         }
-        else
+        else if (context)
         {
-            if (context)
-            {
-                ID3D11ShaderResourceView* nullView = nullptr;
-                context->PSSetShaderResources(0, 1, &nullView);
-            }
+            ID3D11ShaderResourceView* view = m_fallbackTexture ? m_fallbackTexture->Get() : nullptr;
+            context->PSSetShaderResources(0, 1, &view);
         }
 
         MeshDraw(*mesh);
