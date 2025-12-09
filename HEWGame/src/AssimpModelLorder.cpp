@@ -168,7 +168,8 @@ AssimpModelLorder::MakeMaterial(
     materials.resize(pScene->mNumMaterials);
 
     const auto directory = modelPath.parent_path();
-    const std::string modelExtension8(modelPath.extension().u8string().begin(), modelPath.extension().u8string().end());
+    const auto modelExtensionU8 = modelPath.extension().u8string();
+    const std::string modelExtension8(modelExtensionU8.begin(), modelExtensionU8.end());
     const auto modelExtension = TextureCache::NormalizeKey(modelExtension8);
     const bool isFbx = modelExtension == ".fbx";
 
@@ -216,7 +217,8 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
-                    const std::string modelPath8(modelPath.u8string().begin(), modelPath.u8string().end());
+                    const auto modelPathU8 = modelPath.u8string();
+                    const std::string modelPath8(modelPathU8.begin(), modelPathU8.end());
                     const auto cacheKey = isFbx
                         ? TextureCache::MakeFbxEmbeddedKey(modelPath8, texIndex)
                         : TextureCache::NormalizeKey(modelPath8 + ":embedded:" + std::to_string(texIndex));
@@ -227,7 +229,8 @@ AssimpModelLorder::MakeMaterial(
             {
                 std::filesystem::path texturePath = directory / texFile;
                 texturePath = texturePath.lexically_normal();
-                const std::string texturePath8(texturePath.u8string().begin(), texturePath.u8string().end());
+                const auto texturePathU8 = texturePath.u8string();
+                const std::string texturePath8(texturePathU8.begin(), texturePathU8.end());
                 const auto cacheKey = TextureCache::MakeFileKey(texturePath8);
                 const std::wstring wfull = texturePath.wstring();
                 texture = textureCache.Load(cacheKey, device, wfull);

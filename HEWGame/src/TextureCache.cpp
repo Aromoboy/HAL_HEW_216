@@ -35,7 +35,8 @@ std::string TextureCache::NormalizeKey(std::string key)
 std::string TextureCache::MakeFileKey(const std::string& fullPath)
 {
     const auto normalizedPath = std::filesystem::path(fullPath).lexically_normal();
-    const std::string path8(normalizedPath.u8string().begin(), normalizedPath.u8string().end());
+    const auto u8 = normalizedPath.u8string();
+    const std::string path8(u8.begin(), u8.end());
     const auto normalized = NormalizeKey(path8);
     return "file:" + normalized;
 }
@@ -44,7 +45,8 @@ std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int ind
 {
     std::filesystem::path normalizedPath(std::filesystem::path(fbxPath).lexically_normal());
     normalizedPath.replace_extension();
-    const std::string path8(normalizedPath.u8string().begin(), normalizedPath.u8string().end());
+    const auto u8 = normalizedPath.u8string();
+    const std::string path8(u8.begin(), u8.end());
     return "fbx:" + NormalizeKey(path8) + ":embedded:" + std::to_string(index);
 }
 
