@@ -5,6 +5,7 @@
 #include <d3d11.h>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include "TextureDX.h"
 
@@ -29,7 +30,8 @@ public:
 
     std::shared_ptr<Texture2D> Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
     std::shared_ptr<Texture2D> LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width = 0, unsigned int height = 0, const char* formatHint = nullptr);
-    std::shared_ptr<Texture2D> Get(const std::string& name);
+    std::shared_ptr<Texture2D> GetTexture(const std::string& name);
+    ID3D11ShaderResourceView* Get(const std::string& name);
 
 private:
     // RXgN^private
@@ -37,5 +39,8 @@ private:
     ~TextureCache() = default;
 
     std::map<std::string, std::shared_ptr<Texture2D>> textures;
+#ifdef _DEBUG
+    std::set<std::string> missingLogged;
+#endif
 };
 #endif

@@ -19,7 +19,7 @@ PowerUpManager::PowerUpManager(Core::UpdateScheduler& a_scheduler, TextureCache&
 
 PowerUpManager::~PowerUpManager()
 {
-	// 全て開放
+	std::shared_ptr<Texture2D> texture = m_cache.GetTexture(key);
 	for (auto& it : m_nodes)
 	{
 		m_scheduler.Unregister(*it.second);
@@ -60,7 +60,7 @@ void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace
 	}
 }
 
-// データ出力に合わせて後で書き換える
+// 繝�繝ｼ繧ｿ蜃ｺ蜉帙↓蜷医ｏ縺帙※蠕後〒譖ｸ縺肴鋤縺医ｋ
 int PowerUpManager::GetLevel(int num)
 {
 	if (num >= m_nodes.size()) return -1;
@@ -82,7 +82,7 @@ std::optional<float2> PowerUpManager::GetDrawPosition(int a_index)
 {
 	if (a_index >= m_nodes.size() || a_index < 0)
 	{
-		DebugMessage("Nodeが見つかりませんでした");
+		DebugMessage("Node縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ縺ｧ縺励◆");
 		return std::nullopt;
 	}
 	return m_nodes.at(a_index).second->GetDrawPos();

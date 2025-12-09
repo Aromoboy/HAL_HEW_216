@@ -117,9 +117,9 @@ float4 main(PS_IN pin) : SV_TARGET {
 	ps = std::make_shared <PixelShader>();
 	ps->Compile(PS);
 
-	m_cost = a_cache.Get(kCostTextureKey);
-	m_iconFrame = a_cache.Get(kFrameTextureKey);
-	m_backFrame = a_cache.Get(kBackFrameTextureKey);
+	m_cost = a_cache.GetTexture(kCostTextureKey);
+	m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
+	m_backFrame = a_cache.GetTexture(kBackFrameTextureKey);
 }
 
 PowerUpRenderer::~PowerUpRenderer()

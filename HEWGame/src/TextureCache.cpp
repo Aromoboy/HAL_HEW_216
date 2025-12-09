@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
-#include <iostream>
 
 namespace
 {
@@ -23,18 +22,6 @@ namespace
         str.erase(std::find_if(str.rbegin(), str.rend(), isNotSpace).base(), str.end());
     }
 
-    void StripImageExtension(std::string& key)
-    {
-        static const std::string extensions[] = { ".png", ".jpg", ".jpeg", ".tga", ".bmp" };
-        for (const auto& ext : extensions)
-        {
-            if (key.size() >= ext.size() && key.compare(key.size() - ext.size(), ext.size(), ext) == 0)
-            {
-                key.erase(key.size() - ext.size());
-                break;
-            }
-        }
-    }
 }
 
 std::string TextureCache::NormalizeKey(std::string key)
@@ -42,7 +29,6 @@ std::string TextureCache::NormalizeKey(std::string key)
     Trim(key);
     std::replace(key.begin(), key.end(), '\\', '/');
     std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    StripImageExtension(key);
     return key;
 }
 
@@ -123,6 +109,12 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height, const char* formatHint)
 {
     const auto key = NormalizeKey(name);
+
+    if (key.empty())
+    {
+        DebugMessage("[TextureCache] Empty texture key provided; aborting in-memory texture load.\n");
+        return nullptr;
+    }
     auto it = textures.find(key);
     if (it != textures.end()) return it->second;
 
@@ -139,18 +131,34 @@ std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name,
 //============================================================
 // LbVeNX`擾
 //============================================================
-std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
+std::shared_ptr<Texture2D> TextureCache::GetTexture(const std::string& name)
 {
     const auto key = NormalizeKey(name);
+
+    if (key.empty())
+    {
+        return nullptr;
+    }
     auto it = textures.find(key);
 
     if (it == textures.end())
     {
-        DebugMessage("[TextureCache] Texture not found in cache: '" + key + "'\n");
+#ifdef _DEBUG
+        if (missingLogged.emplace(key).second)
+        {
+            DebugMessage("[TextureCache] Texture not found in cache: '" + key + "'\n");
+        }
+#endif
         return nullptr;
     }
 
     return it->second;
+}
+
+ID3D11ShaderResourceView* TextureCache::Get(const std::string& name)
+{
+    const auto texture = GetTexture(name);
+    return texture ? texture->Get() : nullptr;
 }
 //============================================================
 // gp
@@ -160,9 +168,9 @@ std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
 // FeNX`[hăLbVɓo^
 auto& playerTex = TextureCache::Instance().Load("player", device, L"textures/player.png");
 auto& enemyTex = TextureCache::Instance().Load("enemy", device, L"textures/enemy.png");
-// `掞FLbVeNX`擾Ďgp
-auto& tex = TextureCache::Instance().Get("player");  // iLbV擾j
-context->PSSetShaderResources(0, 1, tex.textureView.GetAddressOf());
+// `掞FLbVeNX`SRV 擾Ďgp
+auto* srv = TextureCache::Instance().Get("player");
+context->PSSetShaderResources(0, 1, &srv);
 // ܂͒Z
 TextureCache::Instance().Get("enemy");
 // ӁFOŉxLoad()ĂłAŏ1񂾂[h܂
