@@ -408,9 +408,10 @@ namespace
             break;
         case SweetsType::Sherbet:
             config.type = Box2DShapeConfig::Type::Circle;
+            config.allowRotation = false;
             config.radius = 0.5f;
             config.angularDamping = 0.75f;
-            config.density = 0.75f;
+            config.density = 0.85f;
             config.friction = 0.35f;
             config.restitution = 0.28f;
             break;
