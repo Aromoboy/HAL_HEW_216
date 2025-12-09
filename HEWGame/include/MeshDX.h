@@ -8,26 +8,18 @@
 class MeshDX
 {
 public:
-	// 頂点情報
-	struct Vertex
-	{
-		DirectX::XMFLOAT3	pos;
-		DirectX::XMFLOAT3	normal;
-		DirectX::XMFLOAT2	uv;
-		DirectX::XMFLOAT4	color;
-		float				weight[4];
-		unsigned int		index[4];
-	};
+        // 頂点情報
+        struct Vertex
+        {
+                DirectX::XMFLOAT3       pos;
+                DirectX::XMFLOAT3       normal;
+                DirectX::XMFLOAT2       uv;
+                DirectX::XMFLOAT4       color;
+        };
 
-	struct PackedVertex
-	{
-		DirectX::XMFLOAT3 pos;
-		DirectX::XMFLOAT3 normal;
-		DirectX::XMFLOAT2 uv;
-		DirectX::XMFLOAT4 color;
-	};
+        static_assert(sizeof(Vertex) == 48, "MeshDX::Vertex layout must stay tightly packed (48 bytes).");
 
-	// 作成用の情報
+        // 作成用の情報
         struct Description
         {
                 const void* pVtx;
@@ -40,11 +32,11 @@ public:
                 bool isSkinned{ false };
         };
 
-	// コンストラクタ、デストラクタ
-	MeshDX(const MeshDX::Description& desc, unsigned long materialID);
-	~MeshDX();
-	
-	// メッシュに対応するモデルのマテリアルIDを取得
+        // コンストラクタ、デストラクタ
+        MeshDX(const MeshDX::Description& desc, unsigned long materialID);
+        ~MeshDX();
+
+        // メッシュに対応するモデルのマテリアルIDを取得
         unsigned int GetMaterialID();
 
         // 各バッファの取得
@@ -62,7 +54,7 @@ public:
 
 private:
 
-	// 各バッファ
+        // 各バッファ
         Core::VertexBuffer m_vertexBuffer;
         Core::IndexBuffer m_indexBuffer;
         bool m_hasIndexBuffer;
@@ -74,10 +66,10 @@ private:
         // 対応するマテリアルID
         unsigned int m_materialID;
 
-	// Index数
-	unsigned int m_indexCount;
+        // Index数
+        unsigned int m_indexCount;
 
-	// コンストラクタで使用するバッファ作成処理
+        // コンストラクタで使用するバッファ作成処理
         HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);
         HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
 };

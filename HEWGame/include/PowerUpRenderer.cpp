@@ -45,13 +45,16 @@ PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
 {
 	const char* VS = R"EOT(
 struct VS_IN {
-	float3 pos : POSITION0;
-	float2 uv : TEXCOORD0;
+        float3 pos : POSITION0;
+        float3 normal : NORMAL0;
+        float2 uv : TEXCOORD0;
+        float4 color : COLOR0;
 };
 struct VS_OUT {
-	float4 pos : SV_POSITION;
-	float2 uv : TEXCOORD0;
-	float4 color : COLOR0;
+        float4 pos : SV_POSITION;
+        float3 normal : NORMAL0;
+        float2 uv : TEXCOORD0;
+        float4 color : COLOR0;
 };
 cbuffer Matrix : register(b0) {
 	float4x4 world;
@@ -68,16 +71,17 @@ cbuffer Param : register(b1) {
 VS_OUT main(VS_IN vin) {
 	VS_OUT vout;
 	vout.pos = float4(vin.pos, 1.0f);
-	vout.pos.xy *= size;
-	vout.pos.xy += offset;
-	vout.pos = mul(vout.pos, world);
-	vout.pos = mul(vout.pos, view);
-	vout.pos = mul(vout.pos, proj);
-	vout.uv = vin.uv;
-	vout.uv *= uvScale;
-	vout.uv += uvPos;
-	vout.color = color;
-	return vout;
+        vout.pos.xy *= size;
+        vout.pos.xy += offset;
+        vout.pos = mul(vout.pos, world);
+        vout.pos = mul(vout.pos, view);
+        vout.pos = mul(vout.pos, proj);
+        vout.normal = vin.normal;
+        vout.uv = vin.uv;
+        vout.uv *= uvScale;
+        vout.uv += uvPos;
+        vout.color = color * vin.color;
+        return vout;
 })EOT";
 	const char* PS = R"EOT(
 struct PS_IN {
@@ -92,21 +96,17 @@ float4 main(PS_IN pin) : SV_TARGET {
 })EOT";
 
 
-	struct Vertex
-	{
-		float pos[3];
-		float uv[2];
-	} vtx[] = {
-		{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f}},
-		{{ 0.5f, 0.5f, 0.0f}, {1.0f, 0.0f}},
-		{{-0.5f,-0.5f, 0.0f}, {0.0f, 1.0f}},
-		{{ 0.5f,-0.5f, 0.0f}, {1.0f, 1.0f}},
-	};
+        MeshDX::Vertex vtx[] = {
+                { {-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+                { { 0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+                { {-0.5f,-0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+                { { 0.5f,-0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+        };
 
-	MeshDX::Description desc{};
-	desc.pVtx = vtx;
-	desc.vtxSize = sizeof(Vertex);
-	desc.vtxCount = 4;
+        MeshDX::Description desc{};
+        desc.pVtx = vtx;
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = 4;
 	desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
 	m_spriteMesh = std::make_shared<MeshDX>(desc, -1);

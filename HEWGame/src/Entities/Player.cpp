@@ -130,8 +130,6 @@ namespace
                         v.normal = nrm;
                         v.uv = uv;
                         v.color = col;
-                        for (float& w : v.weight) w = 0;
-                        for (unsigned& i : v.index) i = 0;
                         vertices.push_back(v);
                     };
 

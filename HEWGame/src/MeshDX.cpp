@@ -21,9 +21,17 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
 
         m_materialID = materialID;
 
-	// 頂点バッファ作成
-	const UINT vertexStride = desc.vtxSize == 0 ? sizeof(MeshDX::PackedVertex) : desc.vtxSize;
-	hr = CreateVertexBuffer(desc.pVtx, vertexStride, desc.vtxCount);
+        // 頂点バッファ作成
+        const UINT vertexStride = sizeof(MeshDX::Vertex);
+        if (desc.vtxSize != vertexStride)
+        {
+#ifdef _DEBUG
+                DebugMessage("MeshDX received unexpected vertex size.\n");
+#endif
+                return;
+        }
+
+        hr = CreateVertexBuffer(desc.pVtx, vertexStride, desc.vtxCount);
         if (FAILED(hr))
         {
 #ifdef _DEBUG
