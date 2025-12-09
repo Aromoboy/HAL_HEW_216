@@ -5,11 +5,15 @@
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
 
+#include "BackgroundRenderer.h"
+#include "TitleRenderer.h"
+
 #include <memory>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
 {
+
 }
 
 void TitleScene::Load(Core::Input& input)
@@ -41,10 +45,22 @@ void TitleScene::OnEnter()
     }
 
     SetActiveCamera(registeredCamera);
+
+    BackgroundRendererConfig cfg{};
+    cfg.texturePath = "Assets/Texture/StartScreen.png";
+    m_background = std::make_unique<BackgroundRenderer>();
+    if (!m_background->Initialize(cfg)) {
+        m_background.reset();
+        }
+    
+
+   
 }
 
 void TitleScene::OnExit()
 {
+    if (m_background) m_background->Shutdown();
+    m_background.reset();
     UnregisterSceneUpdateNode();
 }
 
@@ -71,5 +87,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+    if (m_background) m_background->Draw();
+    
     (void)activeCamera;
 }

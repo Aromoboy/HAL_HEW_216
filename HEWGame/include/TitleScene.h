@@ -3,8 +3,11 @@
 
 #include "Scene.h"
 #include "SceneManager.h"
+#include "BackgroundRenderer.h"
 
 #include <memory>
+
+
 
 namespace CameraSpace
 {
@@ -14,6 +17,11 @@ namespace CameraSpace
 
 class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
 {
+    enum class UiState
+    {
+        MainMenu,
+        Setting,
+    };
 public:
     explicit TitleScene(SceneSpace::SceneManager& manager);
 
@@ -31,6 +39,12 @@ protected:
 private:
     SceneSpace::SceneManager* m_manager;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
+private:
+    UiState m_uiState = UiState::MainMenu;
+    int m_cursor = 0;
+private:
+    std::unique_ptr<BackgroundRenderer> m_background;
+    
 };
 
 #endif // __TITLE_SCENE_H__

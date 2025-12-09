@@ -282,6 +282,9 @@
     <ClCompile Include="TimerDisplay.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\TitleRenderer.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h">
@@ -565,6 +568,9 @@
     </ClInclude>
     <ClInclude Include="TimerDisplay.h">
       <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TitleRenderer.h">
+      <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -224,6 +224,7 @@
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
+    <ClCompile Include="src\TitleRenderer.cpp" />
     <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\ScenePowerUp.cpp" />
     <ClCompile Include="src\SpriteRenderer.cpp" />
@@ -323,6 +324,7 @@
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneManager.h" />
     <ClInclude Include="include\SelectScene.h" />
+    <ClInclude Include="include\TitleRenderer.h" />
     <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
