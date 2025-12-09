@@ -7,7 +7,6 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         , m_indexBuffer()
         , m_hasIndexBuffer(false)
         , m_topology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
-        , m_isSkinned(desc.isSkinned)
 {
         HRESULT hr;
 

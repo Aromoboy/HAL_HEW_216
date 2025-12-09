@@ -89,8 +89,8 @@ public:
 		DirectX::XMFLOAT3	normal;
 		DirectX::XMFLOAT2	uv;
 		DirectX::XMFLOAT4	color;
-		float				weight[4];
-		unsigned int		index[4];
+		float				weight[4]; // Legacy skinning weights (unused by current renderer)
+		unsigned int		index[4]; // Legacy skinning indices (unused by current renderer)
 	};
 	using Vertices	= std::vector<Vertex>;
 	using Indices	= std::vector<unsigned long>;

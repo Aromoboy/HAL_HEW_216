@@ -29,7 +29,6 @@ public:
                 UINT idxSize;
                 UINT idxCount;
                 D3D11_PRIMITIVE_TOPOLOGY topology{ D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED };
-                bool isSkinned{ false };
         };
 
         // コンストラクタ、デストラクタ
@@ -47,8 +46,6 @@ public:
         // トポロジ
         D3D11_PRIMITIVE_TOPOLOGY GetTopology() const { return m_topology; }
 
-        bool IsSkinned() const { return m_isSkinned; }
-
         // Index数の取得
         unsigned int GetIndexCount();
 
@@ -60,8 +57,6 @@ private:
         bool m_hasIndexBuffer;
 
         D3D11_PRIMITIVE_TOPOLOGY m_topology{ D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
-
-        bool m_isSkinned{ false };
 
         // 対応するマテリアルID
         unsigned int m_materialID;
