@@ -1,8 +1,10 @@
 #include "Texture.h"
 #include "TextureLoad.h"
+#include <cstring>
+#include <string>
 
 /// <summary>
-/// テクスチャ
+/// クスチャ
 /// </summary>
 Texture::Texture()
 	: m_width(0), m_height(0)
@@ -19,7 +21,7 @@ HRESULT Texture::Create(const char* fileName)
 {
 	HRESULT hr = S_OK;
 
-	// 文字変換
+	// 字変換
 	wchar_t wPath[MAX_PATH];
 	size_t wLen = 0;
 	MultiByteToWideChar(0, 0, fileName, -1, wPath, MAX_PATH);
@@ -35,7 +37,7 @@ HRESULT Texture::Create(const char* fileName)
 		return E_FAIL;
 	}
 
-	// シェーダリソース生成
+	// シェーダリソース生
 	hr = CreateShaderResourceView(GetDevice(), image.GetImages(), image.GetImageCount(), mdata, &m_pSRV);
 	if (SUCCEEDED(hr))
 	{
@@ -43,6 +45,38 @@ HRESULT Texture::Create(const char* fileName)
 		m_height = (UINT)mdata.height;
 	}
 	return hr;
+}
+
+HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* formatHint)
+{
+        if (!data || size == 0) {
+                return E_INVALIDARG;
+        }
+
+        DirectX::TexMetadata mdata;
+        DirectX::ScratchImage image;
+        HRESULT hr = E_FAIL;
+
+        if (formatHint && _stricmp(formatHint, "dds") == 0) {
+                hr = DirectX::LoadFromDDSMemory(data, size, DirectX::DDS_FLAGS_NONE, &mdata, image);
+        }
+        if (FAILED(hr)) {
+                hr = DirectX::LoadFromWICMemory(data, size, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
+        }
+        if (FAILED(hr)) {
+                hr = DirectX::LoadFromDDSMemory(data, size, DirectX::DDS_FLAGS_NONE, &mdata, image);
+        }
+        if (FAILED(hr)) {
+                return hr;
+        }
+
+        hr = CreateShaderResourceView(GetDevice(), image.GetImages(), image.GetImageCount(), mdata, &m_pSRV);
+        if (SUCCEEDED(hr))
+        {
+                m_width = (UINT)mdata.width;
+                m_height = (UINT)mdata.height;
+        }
+        return hr;
 }
 HRESULT Texture::Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData)
 {
@@ -80,14 +114,14 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 {
 	HRESULT hr = E_FAIL;
 
-	// テクスチャ作成
+	// クスチャ作
 	D3D11_SUBRESOURCE_DATA data = {};
 	data.pSysMem = pData;
 	data.SysMemPitch = desc.Width * 4;
 	hr = GetDevice()->CreateTexture2D(&desc, pData ? &data : nullptr, &m_pTex);
 	if (FAILED(hr)) { return hr; }
 
-	// 設定
+	// 設
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	switch (desc.Format)
 	{
@@ -96,7 +130,7 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 	}
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
-	// 生成
+	// 生
 	hr = GetDevice()->CreateShaderResourceView(m_pTex, &srvDesc, &m_pSRV);
 	if (SUCCEEDED(hr))
 	{
@@ -107,7 +141,7 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 }
 
 /// <summary>
-/// レンダーターゲット
+/// レンダーターゲ
 /// </summary>
 RenderTarget::RenderTarget()
 	: m_pRTV(nullptr)
@@ -136,12 +170,12 @@ HRESULT RenderTarget::CreateFromScreen()
 {
 	HRESULT hr;
 
-	// バックバッファのポインタを取得
+	// バックバッファのポインタを取
 	ID3D11Texture2D* pBackBuffer = NULL;
 	hr = GetSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&m_pTex);
 	if (FAILED(hr)) { return hr; }
 
-	// バックバッファへのポインタを指定してレンダーターゲットビューを作成
+	// バックバッファへのポインタを指定してレンダーターゲトビューを作
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -162,21 +196,21 @@ ID3D11RenderTargetView* RenderTarget::GetView() const
 }
 HRESULT RenderTarget::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 {
-	// テクスチャリソース作成
+	// クスチャリソース作
 	HRESULT hr = Texture::CreateResource(desc, nullptr);
 	if (FAILED(hr)) { return hr; }
 
-	// 設定
+	// 設
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.Format = desc.Format;
 	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 
-	// 生成
+	// 生
 	return GetDevice()->CreateRenderTargetView(m_pTex, &rtvDesc, &m_pRTV);
 }
 
 /// <summary>
-/// 深度テクスチャ
+/// 深度クスチャ
 /// </summary>
 DepthStencil::DepthStencil()
 	: m_pDSV(nullptr)
@@ -203,19 +237,19 @@ ID3D11DepthStencilView* DepthStencil::GetView() const
 }
 HRESULT DepthStencil::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 {
-	// ステンシル使用判定
+	// スンシル使用判
 	bool useStencil = (desc.Format == DXGI_FORMAT_R24G8_TYPELESS);
 
-	// リソース生成
+	// リソース生
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
 	HRESULT hr = Texture::CreateResource(desc, nullptr);
 	if (FAILED(hr)) { return hr; }
 
-	// 設定
+	// 設
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Format = useStencil ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_D32_FLOAT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 
-	// 生成
+	// 生
 	return GetDevice()->CreateDepthStencilView(m_pTex, &dsvDesc, &m_pDSV);
 }

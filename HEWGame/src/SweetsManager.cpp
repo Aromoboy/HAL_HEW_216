@@ -26,6 +26,8 @@
 #endif
 #include <d3d11.h>
 #include <vector>
+#include "DirectX.h"
+#include "AABB.h"
 #include "ColliderConfigLoader.h"
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
@@ -84,6 +86,7 @@ namespace
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
     constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
+    constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
@@ -105,110 +108,162 @@ namespace
         return key;
     }
 
-    std::optional<std::string> ResolveFallbackModelPath(SweetsSpace::SweetsType type, const std::string& currentPath)
-    {
-        std::string fallbackPath;
-
-        switch (type)
-        {
-        case SweetsSpace::SweetsType::Cake:
-            fallbackPath = "Assets/Model/SweetsPrototype/Cake.obj";
-            break;
-        case SweetsSpace::SweetsType::Pudding:
-            fallbackPath = "Assets/Model/SweetsPrototype/Pudding.obj";
-            break;
-        case SweetsSpace::SweetsType::Sherbet:
-            fallbackPath = "Assets/Model/SweetsPrototype/Sherbet.obj";
-            break;
-        case SweetsSpace::SweetsType::Strawberry:
-            fallbackPath = "Assets/Model/strawberry_low01.fbx";
-            break;
-        case SweetsSpace::SweetsType::Fairy:
-            fallbackPath = "Assets/Model/SweetsPrototype/Fairy.obj";
-            break;
-        default:
-            break;
-        }
-
-        if (!fallbackPath.empty() && fallbackPath != currentPath)
-        {
-            return fallbackPath;
-        }
-
-        return std::nullopt;
-    }
-
-    struct FallbackMaterialColors
-    {
-        DirectX::XMFLOAT4 diffuse{};
-        DirectX::XMFLOAT4 ambient{};
-    };
-
-    FallbackMaterialColors GetFallbackColorsFor(::SweetsSpace::SweetsType type)
-    {
-        // Ambient alpha is kept at 1.0 to disable texture sampling for texture-less meshes.
-        switch (type)
-        {
-        case ::SweetsSpace::SweetsType::Pudding:
-            return { DirectX::XMFLOAT4{ 0.89f, 0.72f, 0.38f, 1.0f }, DirectX::XMFLOAT4{ 0.65f, 0.52f, 0.28f, 1.0f } };
-        case ::SweetsSpace::SweetsType::Sherbet:
-            return { DirectX::XMFLOAT4{ 0.96f, 0.78f, 0.86f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.62f, 0.69f, 1.0f } };
-        case ::SweetsSpace::SweetsType::Cake:
-        default:
-            return { DirectX::XMFLOAT4{ 1.0f, 0.94f, 0.85f, 1.0f }, DirectX::XMFLOAT4{ 0.78f, 0.72f, 0.62f, 1.0f } };
-        }
-    }
-
-    void ApplyFallbackMaterials(ModelDX& model, ::SweetsSpace::SweetsType type)
-    {
-        const FallbackMaterialColors colors = GetFallbackColorsFor(type);
-        std::unordered_set<unsigned int> visitedMaterials;
-
-        for (int i = 0; i < static_cast<int>(model.GetMeshCount()); ++i)
-        {
-            auto mesh = model.GetMesh(i).lock();
-            if (!mesh)
-            {
-                continue;
-            }
-
-            const unsigned int materialId = mesh->GetMaterialID();
-            if (!visitedMaterials.insert(materialId).second)
-            {
-                continue;
-            }
-
-            auto material = model.GetMaterial(static_cast<int>(materialId)).lock();
-            if (!material)
-            {
-                continue;
-            }
-
-            if (material->GetTexture())
-            {
-                continue;
-            }
-
-            material->SetDiffuse(colors.diffuse);
-            material->SetAmbient(colors.ambient);
-
-#if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << kLogPrefix << "Applied fallback material for materialId=" << materialId
-                << " diffuse=(" << colors.diffuse.x << ',' << colors.diffuse.y << ',' << colors.diffuse.z
-                << ") ambient=(" << colors.ambient.x << ',' << colors.ambient.y << ',' << colors.ambient.z
-                << ") sweetsType=" << ::SweetsSpace::ToString(type) << "\n";
-            DebugTrace(oss.str());
-#endif
-        }
-    }
-
     using ::Physics::Box2DShapeConfig;
     using ::SweetsSpace::ColliderPreset;
     using ::SweetsSpace::ColliderShape;
     using ::SweetsSpace::SweetsPrototypeManifest;
     using ::SweetsSpace::SweetsType;
     using ::SweetsSpace::SweetsTypeHash;
+
+    std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
+    {
+        if (vertices.empty())
+        {
+            return std::nullopt;
+        }
+
+        float3 min
+        {
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+        };
+        float3 max
+        {
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+        };
+
+        for (const auto& vertex : vertices)
+        {
+            min.x = std::min(min.x, vertex.pos.x);
+            min.y = std::min(min.y, vertex.pos.y);
+            min.z = std::min(min.z, vertex.pos.z);
+
+            max.x = std::max(max.x, vertex.pos.x);
+            max.y = std::max(max.y, vertex.pos.y);
+            max.z = std::max(max.z, vertex.pos.z);
+        }
+
+        return AABB(max, min);
+    }
+
+    std::shared_ptr<Render::Model> CreateProceduralFairyModel()
+    {
+        static std::weak_ptr<Render::Model> cached;
+        if (auto reused = cached.lock())
+        {
+            DebugTrace(std::string(kLogPrefix) + "Reusing cached procedural fairy.\n");
+            return reused;
+        }
+
+        ID3D11Device* device = GetDevice();
+        if (!device)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Cannot create procedural fairy: device missing.\n");
+            return nullptr;
+        }
+
+        constexpr float halfWidth = 0.4f;
+        constexpr float halfDepth = 0.12f;
+        constexpr float halfHeight = 0.7f;
+
+        const DirectX::XMFLOAT4 baseColor{ 0.45f, 0.65f, 1.0f, 1.0f };
+        const DirectX::XMFLOAT4 wingColor{ 0.6f, 0.8f, 1.0f, 1.0f };
+
+        std::vector<MeshDX::Vertex> vertices;
+        vertices.reserve(24);
+
+        auto appendQuad = [&](auto positions, DirectX::XMFLOAT3 normal,
+            const DirectX::XMFLOAT4& colFront,
+            const DirectX::XMFLOAT4& colBack)
+            {
+                const std::array<DirectX::XMFLOAT2, 4> uvs{
+                    DirectX::XMFLOAT2(0,1), DirectX::XMFLOAT2(1,1),
+                    DirectX::XMFLOAT2(1,0), DirectX::XMFLOAT2(0,0)
+                };
+
+                auto addV = [&](auto pos, auto nrm, auto uv, auto col)
+                    {
+                        MeshDX::Vertex v{};
+                        v.pos = pos;
+                        v.normal = nrm;
+                        v.uv = uv;
+                        v.color = col;
+                        for (float& w : v.weight) w = 0;
+                        for (unsigned& i : v.index) i = 0;
+                        vertices.push_back(v);
+                    };
+
+                DirectX::XMFLOAT3 n1 = normal;
+                DirectX::XMFLOAT3 n2{ -normal.x, -normal.y, -normal.z };
+
+                for (int i = 0; i < 4; i++) addV(positions[i], n1, uvs[i], colFront);
+                for (int i = 0; i < 4; i++) addV(positions[i], n2, uvs[i], colBack);
+            };
+
+        const std::array<DirectX::XMFLOAT3, 4> quadZ{
+            DirectX::XMFLOAT3(-halfWidth,-halfHeight,0),
+            DirectX::XMFLOAT3(halfWidth,-halfHeight,0),
+            DirectX::XMFLOAT3(halfWidth, halfHeight,0),
+            DirectX::XMFLOAT3(-halfWidth, halfHeight,0)
+        };
+        appendQuad(quadZ, DirectX::XMFLOAT3(0, 0, 1), wingColor, baseColor);
+
+        const std::array<DirectX::XMFLOAT3, 4> quadX{
+            DirectX::XMFLOAT3(0,-halfHeight,-halfDepth),
+            DirectX::XMFLOAT3(0,-halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0, halfHeight, halfDepth),
+            DirectX::XMFLOAT3(0, halfHeight,-halfDepth)
+        };
+        appendQuad(quadX, DirectX::XMFLOAT3(1, 0, 0), baseColor, wingColor);
+
+        std::vector<unsigned long> indices;
+        indices.reserve(36);
+
+        for (int q = 0; q < 2; q++)
+        {
+            unsigned long base = q * 8;
+            unsigned long f[6] = { base, base + 1, base + 2, base, base + 2, base + 3 };
+            unsigned long b[6] = { base + 4, base + 6, base + 5, base + 4, base + 7, base + 6 };
+            indices.insert(indices.end(), f, f + 6);
+            indices.insert(indices.end(), b, b + 6);
+        }
+
+        MeshDX::Description d{};
+        d.pVtx = vertices.data();
+        d.vtxSize = sizeof(MeshDX::Vertex);
+        d.vtxCount = (UINT)vertices.size();
+        d.pIdx = indices.data();
+        d.idxSize = sizeof(unsigned long);
+        d.idxCount = (UINT)indices.size();
+        d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        auto mesh = std::make_shared<MeshDX>(d, 0);
+        if (!mesh->GetVertexBuffer().IsValid() || !mesh->HasIndexBuffer())
+            return nullptr;
+
+        auto mat = std::make_shared<MaterialDX>(
+            DirectX::XMFLOAT4(0.5f, 0.75f, 1, 1),
+            DirectX::XMFLOAT4(0.2f, 0.35f, 0.55f, 1),
+            DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
+            nullptr);
+
+        const std::optional<AABB> bounds = ComputeBounds(vertices);
+
+        auto model = std::make_shared<ModelDX>(
+            std::vector<std::shared_ptr<MeshDX>>{mesh},
+            std::vector<std::shared_ptr<MaterialDX>>{mat});
+
+        if (bounds)
+        {
+            model->SetLocalBounds(*bounds);
+        }
+
+        cached = model;
+        return model;
+    }
 
     struct ModelBounds
     {
@@ -1458,8 +1513,7 @@ namespace SweetsSpace
             const std::string normalizedKind = NormalizeKey(resolvedKind);
             const bool isAliasedKind = NormalizeKey(kind) != normalizedKind;
             const std::string aliasSuffix = isAliasedKind ? std::string{" (alias for '"} + kind + "')" : std::string{};
-            const std::string modelPath = descriptor->modelPath;
-
+            const std::string descriptorPath = descriptor->modelPath;
             const auto overrideIt = factoryOverrides.find(normalizedKind);
             const bool hasOverride = overrideIt != factoryOverrides.end();
             std::optional<FactoryPreset> defaultPreset = BuildDefaultFactoryPreset(prototype.type);
@@ -1492,50 +1546,72 @@ namespace SweetsSpace
                 << " overrideParseError=" << std::boolalpha << factoryParseError << "\n";
             DebugTrace(presetLog.str());
 
+            const std::string registeredPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
             std::ostringstream oss;
             oss << kLogPrefix << "Registering sweets kind '" << kind
-                << "' with asset '" << modelPath << "'.\n";
+                << "' with asset '" << registeredPath << "'.\n";
             DebugTrace(oss.str());
 
             const SweetsType type = prototype.type;
 
-            auto factory = [this, &cache, kind, modelPath, type, preset,
+            auto factory = [this, &cache, kind, type, preset,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
             {
-                auto model = cache.Get(modelPath);
+                const auto& manifest = SweetsPrototypeManifest::Instance();
+                const auto* descriptor = manifest.Find(type);
+                std::string descriptorKey = descriptor ? descriptor->key : resolvedKind;
+                std::string descriptorPath = descriptor ? descriptor->modelPath : std::string{};
+
+                if (!descriptor)
+                {
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "Prototype descriptor missing for kind '" << resolvedKind
+                        << "'" << aliasSuffix << "; using placeholder path '" << kPlaceholderModelPath << "'.\n";
+                    DebugTrace(warn.str());
+                    descriptorPath = kPlaceholderModelPath;
+                }
+                else if (descriptorPath.empty())
+                {
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "Descriptor for kind '" << descriptorKey << "' path empty;"
+                        << " falling back to placeholder '" << kPlaceholderModelPath << "'.\n";
+                    DebugTrace(warn.str());
+                    descriptorPath = kPlaceholderModelPath;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Resolved prototype for kind '" << descriptorKey << "'"
+                        << aliasSuffix << " path='" << descriptor->modelPath << "'.\n";
+                    DebugTrace(oss.str());
+                }
+
+                auto model = type == SweetsType::Fairy ? CreateProceduralFairyModel() : nullptr;
                 if (!model)
                 {
-                    std::ostringstream fail;
-                    fail << kLogPrefix << "Model load failed for sweets kind '" << kind
-                        << "' path='" << modelPath << "'.\n";
-                    DebugTrace(fail.str());
-
-                    const auto fallbackPath = ResolveFallbackModelPath(type, modelPath);
-                    if (fallbackPath)
+                    const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
+                    model = cache.Get(primaryPath);
+                    if (!model && primaryPath != kPlaceholderModelPath)
                     {
-                        std::ostringstream fallbackAttempt;
-                        fallbackAttempt << kLogPrefix << "Attempting fallback model for kind '" << kind
-                            << "' path='" << *fallbackPath << "' (primary='" << modelPath << "').\n";
-                        DebugTrace(fallbackAttempt.str());
-
-                        model = cache.Get(*fallbackPath);
-                        if (!model)
-                        {
-                            std::ostringstream fallbackFail;
-                            fallbackFail << kLogPrefix << "Fallback model also failed for sweets kind '" << kind
-                                << "' fallbackPath='" << *fallbackPath << "'.\n";
-                            DebugTrace(fallbackFail.str());
-                        }
-                    }
-
-                    if (!model)
-                    {
-                        return nullptr;
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "Model load failed for sweets kind '" << descriptorKey
+                            << "' path='" << primaryPath << "'; trying placeholder '" << kPlaceholderModelPath
+                            << "'.\n";
+                        DebugTrace(warn.str());
+                        model = cache.Get(kPlaceholderModelPath);
                     }
                 }
 
-                ApplyFallbackMaterials(*model, type);
+                if (!model)
+                {
+                    std::ostringstream fail;
+                    fail << kLogPrefix << "No model available for sweets kind '" << descriptorKey
+                        << "' after fallbacks.\n";
+                    DebugTrace(fail.str());
+
+                    return nullptr;
+                }
 
                 Transform scaledTransform = transform;
                 const auto sampleScale = [&](float minValue, float maxValue)

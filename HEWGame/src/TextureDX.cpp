@@ -1,102 +1,165 @@
 #include "TextureDX.h"
 #include "Debug.h"
 #include <wincodec.h>
+#include <combaseapi.h>
+#include <shlwapi.h>
 #include <vector>
 #include <iostream>
+#include <cstring>
 #pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+namespace
+{
+    bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
+    {
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = data;
+        initData.SysMemPitch = width * 4;
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
+        if (FAILED(hr))
+        {
+            DebugMessage("[Texture2D] eNX`\\[XÌì¬És");
+            return false;
+        }
+
+        hr = device->CreateShaderResourceView(texture.Get(), nullptr, outTextureView.GetAddressOf());
+        if (FAILED(hr))
+        {
+            DebugMessage("[Texture2D] SRVÌì¬És");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool DecodeWICToTexture(ID3D11Device* device, IWICImagingFactory* factory, IStream* stream, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
+    {
+        Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+        if (FAILED(factory->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnLoad, &decoder)))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+        decoder->GetFrame(0, &frame);
+
+        Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+        factory->CreateFormatConverter(&converter);
+        converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
+            WICBitmapDitherTypeNone, nullptr, 0.0f,
+            WICBitmapPaletteTypeCustom);
+
+        UINT width, height;
+        converter->GetSize(&width, &height);
+
+        std::vector<BYTE> pixels(width * height * 4);
+        converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+
+        return CreateTexture(device, width, height, pixels.data(), outTextureView);
+    }
+}
 
 //============================================================
-// WIC‚ğg—p‚µ‚ÄƒeƒNƒXƒ`ƒƒƒtƒ@ƒCƒ‹‚ğƒ[ƒh
+// WICgpÄƒeNX`t@C[h
 //============================================================
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
-    // WICƒtƒ@ƒNƒgƒŠ[‚ğì¬
+    // WICt@Ng[ì¬
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
-        DebugMessage("[Texture2D] WICƒtƒ@ƒNƒgƒŠ[‚Ìì¬‚É¸”s");
+        DebugMessage("[Texture2D] WICt@Ng[Ìì¬És");
         return false;
     }
 
-    // ƒtƒ@ƒCƒ‹‚©‚çƒfƒR[ƒ_[‚ğì¬
-    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
-    if (FAILED(factory->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
-        WICDecodeMetadataCacheOnLoad, &decoder)))
+    Microsoft::WRL::ComPtr<IStream> stream;
+    if (FAILED(SHCreateStreamOnFileEx(path.c_str(), STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream)))
     {
         return false;
     }
 
-    // Å‰‚ÌƒtƒŒ[ƒ€‚ğæ“¾
-    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
-    decoder->GetFrame(0, &frame);
+    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+}
 
-    // RGBA32‚É•ÏŠ·
-    Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
-    factory->CreateFormatConverter(&converter);
-    converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
-        WICBitmapDitherTypeNone, nullptr, 0.0f,
-        WICBitmapPaletteTypeCustom);
+bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
+{
+    if (!data || size == 0)
+    {
+        return false;
+    }
 
-    // ƒTƒCƒY‚ğæ“¾
-    UINT width, height;
-    converter->GetSize(&width, &height);
+    // Raw RGBA data
+    if (height != 0 && width != 0)
+    {
+        return CreateTexture(device, width, height, data, textureView);
+    }
 
-    // ƒsƒNƒZƒ‹ƒf[ƒ^‚ğ“Ç‚İ‚İ
-    std::vector<BYTE> pixels(width * height * 4);
-    converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+    Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&factory))))
+    {
+        DebugMessage("[Texture2D] WICt@Ng[Ìì¬És");
+        return false;
+    }
 
-    // ƒeƒNƒXƒ`ƒƒ‚ğì¬
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = width;
-    desc.Height = height;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    // Copy compressed payload into an IStream for WIC decoding
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, size);
+    if (hMem == nullptr)
+    {
+        return false;
+    }
 
-    D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = pixels.data();
-    initData.SysMemPitch = width * 4;
+    void* pMem = GlobalLock(hMem);
+    if (pMem == nullptr)
+    {
+        GlobalFree(hMem);
+        return false;
+    }
+    std::memcpy(pMem, data, size);
+    GlobalUnlock(hMem);
 
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-    HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
+    Microsoft::WRL::ComPtr<IStream> stream;
+    HRESULT hr = CreateStreamOnHGlobal(hMem, TRUE, &stream);
     if (FAILED(hr))
     {
-        DebugMessage("[Texture2D] ƒeƒNƒXƒ`ƒƒƒŠƒ\[ƒX‚Ìì¬‚É¸”s");
+        GlobalFree(hMem);
         return false;
     }
 
-    // ƒVƒF[ƒ_[ƒŠƒ\[ƒXƒrƒ…[‚ğì¬
-    hr = device->CreateShaderResourceView(texture.Get(), nullptr, textureView.GetAddressOf());
-    if (FAILED(hr))
-    {
-        DebugMessage("[Texture2D] SRV‚Ìì¬‚É¸”s");
-        return false;
-    }
-
-    return true;
+    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
 }
 
 //============================================================
-// g—p—á
+// gp
 //============================================================
 /*
-// ƒeƒNƒXƒ`ƒƒ‚ğì¬
+// eNX`ì¬
 Texture2D texture;
 
-// ƒeƒNƒXƒ`ƒƒƒtƒ@ƒCƒ‹‚ğƒ[ƒh
+// eNX`t@C[h
 if (texture.LoadFromFile(device, L"textures/player.png"))
 {
-    // •`‰æ‚ÉƒeƒNƒXƒ`ƒƒ‚ğƒoƒCƒ“ƒh
+    // `æÉƒeNX`oCh
     context->PSSetShaderResources(0, 1, texture.textureView.GetAddressOf());
 
-    // •`‰æˆ—...
+    // `æˆ...
     context->Draw(...);
 }
 
-// ’ˆÓF’Êí‚ÍTextureCache‚ğg—p‚µ‚ÄƒeƒNƒXƒ`ƒƒ‚ğŠÇ—‚µ‚Ü‚·
-// Texture2D‚ğ’¼Úg‚¤‚Ì‚Í“Á•Ê‚Èê‡‚Ì‚İ‚Å‚·
+// ÓFÊTextureCachegpÄƒeNX`Ç—Ü‚
+// Texture2Dğ’¼ÚgÌ‚Í“Ê‚Èê‡Ì‚İ‚Å‚
 */

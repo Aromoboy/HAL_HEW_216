@@ -113,7 +113,7 @@ namespace SweetsSpace
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry_low01.fbx", "Textured strawberry fruit with visible seeds");
-        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Procedural cross-plane fairy (Fairy.obj kept as fallback)");
+        Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Cross-plane fairy using embedded material data");
         RegisterAlias(SweetsType::Fairy, "Player");
     }
 
