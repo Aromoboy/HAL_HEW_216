@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "TextureCache.h"
 #include "TextureDX.h"
 #include "ModelDX.h"
@@ -31,12 +32,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     if (!pScene)
         return nullptr;
 
-    // ディレクトリ抽出
-    std::string directory = path;
-    for (auto& c : directory)
-        if (c == '/')
-            c = '\\';
-    directory = directory.substr(0, directory.find_last_of('\\') + 1);
+    const std::filesystem::path modelPath(path);
 
     // メッシュ作成
     AABB localBounds{};
@@ -44,7 +40,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     auto meshes = MakeMesh(pScene, localBounds, hasBounds);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, device, textureCache);
+    auto materials = MakeMaterial(pScene, modelPath, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
@@ -152,13 +148,17 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 std::vector<std::shared_ptr<MaterialDX>>
 AssimpModelLorder::MakeMaterial(
     const aiScene* ptr,
-    const std::string& directory,
+    const std::filesystem::path& modelPath,
     ID3D11Device* device,
     TextureCache& textureCache)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
+
+    const auto directory = modelPath.parent_path();
+    const auto modelExtension = TextureCache::NormalizeKey(modelPath.extension().u8string());
+    const bool isFbx = modelExtension == ".fbx";
 
     for (unsigned int i = 0; i < materials.size(); ++i)
     {
@@ -193,7 +193,6 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
-            std::string cacheKey = directory + texFile;
 
             if (!texFile.empty() && texFile[0] == '*')
             {
@@ -205,14 +204,19 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+                    const auto cacheKey = isFbx
+                        ? TextureCache::MakeFbxEmbeddedKey(modelPath.u8string(), texIndex)
+                        : TextureCache::NormalizeKey(modelPath.u8string() + ":embedded:" + std::to_string(texIndex));
                     texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
             else
             {
-                std::string full = directory + texFile;
-                std::wstring wfull(full.begin(), full.end());
-                texture = textureCache.Load(full, device, wfull);
+                std::filesystem::path texturePath = directory / texFile;
+                texturePath = texturePath.lexically_normal();
+                const auto cacheKey = TextureCache::MakeFileKey(texturePath.u8string());
+                const std::wstring wfull = texturePath.wstring();
+                texture = textureCache.Load(cacheKey, device, wfull);
             }
         }
 
