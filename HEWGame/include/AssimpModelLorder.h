@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <filesystem>
 
 #include "AABB.h"
 #include "ModelDX.h"
@@ -58,7 +59,7 @@ private:
         // bV쐬
         std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds);
         // }eA̍쐬
-        std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, const std::string& pathWithoutExtension, ID3D11Device* device, TextureCache& textureCache);
+        std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::filesystem::path& modelPath, ID3D11Device* device, TextureCache& textureCache);
 
 
 

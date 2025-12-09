@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
@@ -32,12 +33,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     if (!pScene)
         return nullptr;
 
-    // ディレクトリ抽出
-    std::string directory = path;
-    for (auto& c : directory)
-        if (c == '/')
-            c = '\\';
-    directory = directory.substr(0, directory.find_last_of('\\') + 1);
+    const std::filesystem::path modelPath(path);
 
     std::string pathWithoutExtension = path;
     for (auto& c : pathWithoutExtension)
@@ -55,7 +51,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     auto meshes = MakeMesh(pScene, localBounds, hasBounds);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, pathWithoutExtension, device, textureCache);
+    auto materials = MakeMaterial(pScene, modelPath, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
@@ -163,14 +159,17 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 std::vector<std::shared_ptr<MaterialDX>>
 AssimpModelLorder::MakeMaterial(
     const aiScene* ptr,
-    const std::string& directory,
-    const std::string& pathWithoutExtension,
+    const std::filesystem::path& modelPath,
     ID3D11Device* device,
     TextureCache& textureCache)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
+
+    const auto directory = modelPath.parent_path();
+    const auto modelExtension = TextureCache::NormalizeKey(modelPath.extension().u8string());
+    const bool isFbx = modelExtension == ".fbx";
 
     for (unsigned int i = 0; i < materials.size(); ++i)
     {
@@ -205,6 +204,7 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
+
             if (!texFile.empty() && texFile[0] == '*')
             {
                 const int texIndex = std::atoi(texFile.c_str() + 1);
@@ -215,32 +215,19 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
-                    const std::string cacheKey = "fbx:" + pathWithoutExtension + ":embedded:" + std::to_string(texIndex);
-                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight, embedded->achFormatHint);
-                    if (!texture)
-                    {
-                        DebugMessage("[AssimpModelLoader] Failed to load embedded texture index " + std::to_string(texIndex) + ".\n");
-                    }
-                }
-                else
-                {
-                    DebugMessage("[AssimpModelLoader] Embedded texture index out of range.\n");
+                    const auto cacheKey = isFbx
+                        ? TextureCache::MakeFbxEmbeddedKey(modelPath.u8string(), texIndex)
+                        : TextureCache::NormalizeKey(modelPath.u8string() + ":embedded:" + std::to_string(texIndex));
+                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
             else
             {
-                std::string full = directory + texFile;
-                for (auto& c : full)
-                {
-                    if (c == '\\')
-                        c = '/';
-                }
-                std::wstring wfull(full.begin(), full.end());
-                texture = textureCache.Load(full, device, wfull);
-                if (!texture)
-                {
-                    DebugMessage("[AssimpModelLoader] Failed to load texture from path '" + full + "'.\n");
-                }
+                std::filesystem::path texturePath = directory / texFile;
+                texturePath = texturePath.lexically_normal();
+                const auto cacheKey = TextureCache::MakeFileKey(texturePath.u8string());
+                const std::wstring wfull = texturePath.wstring();
+                texture = textureCache.Load(cacheKey, device, wfull);
             }
         }
 

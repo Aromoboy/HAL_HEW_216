@@ -23,6 +23,10 @@ public:
     TextureCache(TextureCache&&) = delete;
     TextureCache& operator=(TextureCache&&) = delete;
 
+    static std::string NormalizeKey(std::string key);
+    static std::string MakeFileKey(const std::string& fullPath);
+    static std::string MakeFbxEmbeddedKey(const std::string& fbxPath, int index);
+
     std::shared_ptr<Texture2D> Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
     std::shared_ptr<Texture2D> LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width = 0, unsigned int height = 0, const char* formatHint = nullptr);
     std::shared_ptr<Texture2D> Get(const std::string& name);

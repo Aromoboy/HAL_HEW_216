@@ -5,53 +5,98 @@
 // windowscodecs.lib ̃J[ݒ肪KvłB
 #include "TextureCache.h"
 #include "Debug.h"
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <iostream>
+
+namespace
+{
+    void Trim(std::string& str)
+    {
+        const auto isNotSpace = [](unsigned char ch)
+        {
+            return !std::isspace(ch);
+        };
+
+        str.erase(str.begin(), std::find_if(str.begin(), str.end(), isNotSpace));
+        str.erase(std::find_if(str.rbegin(), str.rend(), isNotSpace).base(), str.end());
+    }
+}
+
+std::string TextureCache::NormalizeKey(std::string key)
+{
+    Trim(key);
+    std::replace(key.begin(), key.end(), '\\', '/');
+    std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return key;
+}
+
+std::string TextureCache::MakeFileKey(const std::string& fullPath)
+{
+    const auto normalizedPath = NormalizeKey(std::filesystem::path(fullPath).lexically_normal().u8string());
+    return "file:" + normalizedPath;
+}
+
+std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int index)
+{
+    std::filesystem::path normalizedPath(std::filesystem::path(fbxPath).lexically_normal());
+    normalizedPath.replace_extension();
+    return "fbx:" + NormalizeKey(normalizedPath.u8string()) + ":embedded:" + std::to_string(index);
+}
 
 //============================================================
 // eNX`[hăLbVɓo^
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
+    const auto key = NormalizeKey(name);
     // LbVɂłɑ݂邩mF
-    auto it = textures.find(name);
+    auto it = textures.find(key);
     if (it != textures.end()) return it->second;
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
     if (!texture->LoadFromFile(device, path))
     {
-        DebugMessage("[TextureCache] Failed to load texture '" + name + "' from file. Skipping cache entry.\n");
+        DebugMessage("[TextureCache] Failed to load texture '" + key + "' from file. Skipping cache entry.\n");
         return nullptr;
     }
 
     // LbVɓo^
-    textures[name] = std::move(texture);
-    return textures[name];
+    textures[key] = std::move(texture);
+    return textures[key];
 }
 
 std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height, const char* formatHint)
 {
-    auto it = textures.find(name);
+    const auto key = NormalizeKey(name);
+    auto it = textures.find(key);
     if (it != textures.end()) return it->second;
 
     auto texture = std::make_shared<Texture2D>();
     if (!texture->LoadFromMemory(device, data, size, width, height, formatHint))
     {
-        DebugMessage("[TextureCache] Failed to load in-memory texture '" + name + "'. Skipping cache entry.\n");
+        DebugMessage("[TextureCache] Failed to load in-memory texture '" + key + "'. Skipping cache entry.\n");
         return nullptr;
     }
 
-    textures[name] = std::move(texture);
-    return textures[name];
+    textures[key] = std::move(texture);
+    return textures[key];
 }
 //============================================================
 // LbVeNX`擾
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
 {
-    auto it = textures.find(name);
+    const auto key = NormalizeKey(name);
+    auto it = textures.find(key);
 
-    if (it == textures.end()) return nullptr;
+    if (it == textures.end())
+    {
+        DebugMessage("[TextureCache] Texture not found in cache: '" + key + "'\n");
+        return nullptr;
+    }
 
     return it->second;
 }
