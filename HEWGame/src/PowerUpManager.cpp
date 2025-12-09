@@ -19,11 +19,10 @@ PowerUpManager::PowerUpManager(Core::UpdateScheduler& a_scheduler, TextureCache&
 
 PowerUpManager::~PowerUpManager()
 {
-	std::shared_ptr<Texture2D> texture = m_cache.GetTexture(key);
-	for (auto& it : m_nodes)
-	{
-		m_scheduler.Unregister(*it.second);
-	}
+        for (auto& it : m_nodes)
+        {
+                m_scheduler.Unregister(*it.second);
+        }
 }
 
 void PowerUpManager::OnUpdate(Core::UpdateContext& ctx)
@@ -38,7 +37,7 @@ void PowerUpManager::SetFormat(const NodeFormat& a_format)
 
 void PowerUpManager::AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification)
 {
-	std::shared_ptr<Texture2D> texture = m_cache.Get(key);
+        std::shared_ptr<Texture2D> texture = m_cache.GetTexture(key);
 
 	int indexX = m_nodes.size() / m_format.y;
 	int indexY = m_nodes.size() % m_format.y;

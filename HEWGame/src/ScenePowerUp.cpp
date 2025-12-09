@@ -38,29 +38,27 @@ namespace SceneSpace
 	{
 
 
-		TextureCache& cache = TextureCache::Instance();
-		const auto starKey = PowerUpTextures::BuildKey(PowerUpTextures::kStarPath);
-		const auto costKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
-		const auto speedUpKey = PowerUpTextures::BuildKey(PowerUpTextures::kSpeedUpPath);
-		const auto cakeSizeKey = PowerUpTextures::BuildKey(PowerUpTextures::kCakeSizePath);
-		const auto whipKey = PowerUpTextures::BuildKey(PowerUpTextures::kWhipPath);
-		const auto frameKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
-		const auto backFrameKey = PowerUpTextures::BuildKey(PowerUpTextures::kBackFramePath);
-		cache.Load(starKey, GetDevice(), std::filesystem::path(PowerUpTextures::kStarPath).wstring());
-		cache.Load(costKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCostPath).wstring());
-		cache.Load(speedUpKey, GetDevice(), std::filesystem::path(PowerUpTextures::kSpeedUpPath).wstring());
-		cache.Load(cakeSizeKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCakeSizePath).wstring());
-		cache.Load(whipKey, GetDevice(), std::filesystem::path(PowerUpTextures::kWhipPath).wstring());
-		cache.Load(frameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kFramePath).wstring());
-		cache.Load(backFrameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kBackFramePath).wstring());
+                TextureCache& cache = TextureCache::Instance();
+                const auto starKey = PowerUpTextures::BuildKey(PowerUpTextures::kStarPath);
+                const auto costKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
+                const auto speedUpKey = PowerUpTextures::BuildKey(PowerUpTextures::kSpeedUpPath);
+                const auto cakeSizeKey = PowerUpTextures::BuildKey(PowerUpTextures::kCakeSizePath);
+                const auto whipKey = PowerUpTextures::BuildKey(PowerUpTextures::kWhipPath);
+                const auto frameKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
+                const auto backFrameKey = PowerUpTextures::BuildKey(PowerUpTextures::kBackFramePath);
+                cache.Load(starKey, GetDevice(), std::filesystem::path(PowerUpTextures::kStarPath).wstring());
+                cache.Load(costKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCostPath).wstring());
+                cache.Load(speedUpKey, GetDevice(), std::filesystem::path(PowerUpTextures::kSpeedUpPath).wstring());
+                cache.Load(cakeSizeKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCakeSizePath).wstring());
+                cache.Load(whipKey, GetDevice(), std::filesystem::path(PowerUpTextures::kWhipPath).wstring());
+                cache.Load(frameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kFramePath).wstring());
+                cache.Load(backFrameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kBackFramePath).wstring());
 
-
-		m_cursor = std::make_unique<PowerUpCursor>(cache.Get(starKey), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost);
-		m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
-		m_rig = std::make_unique<CameraRig>(m_camera);
-		m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
-		m_powerUpRenderer = std::make_unique<PowerUpRenderer>(cache);
-		m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost);
+                m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
+                m_rig = std::make_unique<CameraRig>(m_camera);
+                m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
+                m_powerUpRenderer = std::make_unique<PowerUpRenderer>(cache);
+                m_cursor = std::make_unique<PowerUpCursor>(cache.GetTexture(starKey), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost);
 		m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
 		
