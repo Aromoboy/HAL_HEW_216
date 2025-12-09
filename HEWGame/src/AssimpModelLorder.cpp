@@ -222,6 +222,13 @@ AssimpModelLorder::MakeMaterial(
                     const auto cacheKey = isFbx
                         ? TextureCache::MakeFbxEmbeddedKey(modelPath8, texIndex)
                         : TextureCache::NormalizeKey(modelPath8 + ":embedded:" + std::to_string(texIndex));
+
+                    if (cacheKey.empty())
+                    {
+                        DebugMessage("[AssimpModelLorder] Failed to build cache key for embedded texture in '" + modelPath8 + "'. Skipping texture load.\n");
+                        continue;
+                    }
+
                     texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
@@ -232,6 +239,11 @@ AssimpModelLorder::MakeMaterial(
                 const auto texturePathU8 = texturePath.u8string();
                 const std::string texturePath8(texturePathU8.begin(), texturePathU8.end());
                 const auto cacheKey = TextureCache::MakeFileKey(texturePath8);
+                if (cacheKey.empty())
+                {
+                    DebugMessage("[AssimpModelLorder] Failed to build cache key for texture path '" + texturePath8 + "'. Skipping texture load.\n");
+                    continue;
+                }
                 const std::wstring wfull = texturePath.wstring();
                 texture = textureCache.Load(cacheKey, device, wfull);
             }
