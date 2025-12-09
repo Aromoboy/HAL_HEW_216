@@ -31,11 +31,18 @@ namespace
 
 namespace Systems
 {
-        Box2DPhysicsSystem::Box2DPhysicsSystem(float gravity)
+        Box2DPhysicsSystem::Box2DPhysicsSystem(const PhysicsTuningParameters& tuning)
                 : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
                 , m_worldDef(b2DefaultWorldDef())
         {
-                SetGravity(gravity);
+                m_worldDef.gravity = b2Vec2{ 0.0f, -(std::isfinite(tuning.gravity) ? tuning.gravity : 9.8f) };
+                m_worldDef.restitutionThreshold = std::max(0.0f, tuning.restitutionThreshold);
+                if (tuning.hitEventThreshold > 0.0f)
+                {
+                        m_worldDef.hitEventThreshold = tuning.hitEventThreshold;
+                }
+
+                SetSubStepCount(tuning.subStepCount);
                 m_worldId = b2CreateWorld(&m_worldDef);
                 if (!b2World_IsValid(m_worldId))
                 {
