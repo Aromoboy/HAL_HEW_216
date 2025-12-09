@@ -1,3 +1,4 @@
+#include "SpriteRenderer.h"
 #include "ShaderList.h"
 #include "DirectX.h"
 #include "DrawMatrix.h"
