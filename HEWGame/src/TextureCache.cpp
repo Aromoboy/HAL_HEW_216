@@ -22,6 +22,19 @@ namespace
         str.erase(str.begin(), std::find_if(str.begin(), str.end(), isNotSpace));
         str.erase(std::find_if(str.rbegin(), str.rend(), isNotSpace).base(), str.end());
     }
+
+    void StripImageExtension(std::string& key)
+    {
+        static const std::string extensions[] = { ".png", ".jpg", ".jpeg", ".tga", ".bmp" };
+        for (const auto& ext : extensions)
+        {
+            if (key.size() >= ext.size() && key.compare(key.size() - ext.size(), ext.size(), ext) == 0)
+            {
+                key.erase(key.size() - ext.size());
+                break;
+            }
+        }
+    }
 }
 
 std::string TextureCache::NormalizeKey(std::string key)
@@ -29,6 +42,7 @@ std::string TextureCache::NormalizeKey(std::string key)
     Trim(key);
     std::replace(key.begin(), key.end(), '\\', '/');
     std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    StripImageExtension(key);
     return key;
 }
 
@@ -62,7 +76,8 @@ std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int ind
         normalizedPath.replace_extension();
         const auto u8 = normalizedPath.u8string();
         const std::string path8(u8.begin(), u8.end());
-        return "fbx:" + NormalizeKey(path8) + ":embedded:" + std::to_string(index);
+        const auto baseKey = NormalizeKey(path8);
+        return baseKey + "::embedded::" + std::to_string(index);
     }
     catch (const std::filesystem::filesystem_error& e)
     {

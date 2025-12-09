@@ -161,8 +161,6 @@ bool Texture2D::LoadFromMemory(
     unsigned int height,
     const char* formatHint)
 {
-    (void)formatHint;
-
     if (!data || size == 0)
     {
         DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
@@ -172,8 +170,21 @@ bool Texture2D::LoadFromMemory(
     // Raw RGBA data embedded inside FBX
     if (height != 0 && width != 0)
     {
+        const auto expectedSize = static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
+        if (size < expectedSize)
+        {
+            DebugMessage(
+                "[TextureDX] Raw texture data too small: expected "
+                + std::to_string(expectedSize)
+                + " bytes but got "
+                + std::to_string(size)
+            );
+            return false;
+        }
         return CreateTexture(device, width, height, data, textureView);
     }
+
+    const std::string hint = formatHint ? formatHint : "";
 
     // Create WIC factory
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
@@ -230,7 +241,11 @@ bool Texture2D::LoadFromMemory(
     bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
     if (!result)
     {
-        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
+        DebugMessage(
+            "[TextureDX] Failed to decode texture: size="
+            + std::to_string(size)
+            + (hint.empty() ? "" : ", hint=" + hint)
+        );
     }
 
     return result;

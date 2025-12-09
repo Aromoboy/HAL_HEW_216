@@ -253,9 +253,6 @@ AssimpModelLorder::MakeMaterial(
                 {
                     const aiTexture* embedded = pScene->mTextures[texIndex];
                     const uint8_t* texData = reinterpret_cast<const uint8_t*>(embedded->pcData);
-                    const size_t byteSize = embedded->mHeight == 0
-                        ? static_cast<size_t>(embedded->mWidth)
-                        : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
                     const auto cacheKey = isFbx
                         ? TextureCache::MakeFbxEmbeddedKey(modelPath8, texIndex)
                         : TextureCache::NormalizeKey(modelPath8 + ":embedded:" + std::to_string(texIndex));
@@ -267,7 +264,24 @@ AssimpModelLorder::MakeMaterial(
                     }
                     else
                     {
-                        texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                        const size_t byteSize = embedded->mHeight == 0
+                            ? static_cast<size_t>(embedded->mWidth)
+                            : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+
+                        if (embedded->mHeight == 0)
+                        {
+                            texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, 0, 0, "compressed");
+                        }
+                        else
+                        {
+                            texture = textureCache.LoadFromMemory(
+                                cacheKey,
+                                device,
+                                texData,
+                                byteSize,
+                                embedded->mWidth,
+                                embedded->mHeight);
+                        }
 
                         if (!texture)
                         {
