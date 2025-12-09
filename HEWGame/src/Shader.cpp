@@ -141,7 +141,7 @@ HRESULT Shader::Make(void* pData, UINT size)
                 pReflection->GetResourceBindingDesc(i, &bindDesc);
                 if (bindDesc.Type == D3D_SIT_TEXTURE)
                 {
-                        maxTextureSlot = max(maxTextureSlot, bindDesc.BindPoint + bindDesc.BindCount);
+                       // maxTextureSlot = max(maxTextureSlot, bindDesc.BindPoint + bindDesc.BindCount);　定義してないからコメントアウト
                 }
         }
         m_pTextures.resize(maxTextureSlot, nullptr);
