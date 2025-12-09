@@ -10,24 +10,25 @@
 
 class TextureCache {
 public:
-    // シングルトンインスタンスを取得
+    // VOgCX^X謫ｾ
     static TextureCache& Instance()
     {
         static TextureCache instance;
         return instance;
     }
 
-    // コピー・ムーブを禁止
+    // Rs[E[uﾖ止
     TextureCache(const TextureCache&) = delete;
     TextureCache& operator=(const TextureCache&) = delete;
     TextureCache(TextureCache&&) = delete;
     TextureCache& operator=(TextureCache&&) = delete;
 
     std::shared_ptr<Texture2D> Load(const std::string& name, ID3D11Device* device, const std::wstring& path);
+    std::shared_ptr<Texture2D> LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width = 0, unsigned int height = 0);
     std::shared_ptr<Texture2D> Get(const std::string& name);
 
 private:
-    // コンストラクタをprivateに
+    // RXgN^private
     TextureCache() = default;
     ~TextureCache() = default;
 

@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include "TextureCache.h"
@@ -25,7 +26,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     TextureCache& textureCache)
 {
     Assimp::Importer importer;
-    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs;
+    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
     const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
     if (!pScene)
         return nullptr;
@@ -82,9 +83,23 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                 ? pScene->mMeshes[i]->mColors[0][j]
                 : aiColor4D(1, 1, 1, 1);
 
+            DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
+            const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
+            if (normalLenSq > 0.0f)
+            {
+                normalVec = DirectX::XMVector3Normalize(normalVec);
+            }
+            else
+            {
+                normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+            }
+
+            DirectX::XMFLOAT3 normalFloat;
+            DirectX::XMStoreFloat3(&normalFloat, normalVec);
+
             vertices[j] = {
                 DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
-                DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
+                normalFloat,
                 DirectX::XMFLOAT2(uv.x, uv.y),
                 DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
             };
@@ -178,9 +193,27 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
-            std::string full = directory + texFile;
-            std::wstring wfull(full.begin(), full.end());
-            texture = textureCache.Load(full, device, wfull);
+            std::string cacheKey = directory + texFile;
+
+            if (!texFile.empty() && texFile[0] == '*')
+            {
+                const int texIndex = std::atoi(texFile.c_str() + 1);
+                if (texIndex >= 0 && static_cast<unsigned int>(texIndex) < pScene->mNumTextures)
+                {
+                    const aiTexture* embedded = pScene->mTextures[texIndex];
+                    const uint8_t* texData = reinterpret_cast<const uint8_t*>(embedded->pcData);
+                    const size_t byteSize = embedded->mHeight == 0
+                        ? static_cast<size_t>(embedded->mWidth)
+                        : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                }
+            }
+            else
+            {
+                std::string full = directory + texFile;
+                std::wstring wfull(full.begin(), full.end());
+                texture = textureCache.Load(full, device, wfull);
+            }
         }
 
         materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
