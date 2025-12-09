@@ -43,12 +43,12 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         return;
     }
 
-    DirectX::XMFLOAT4X4 wvp[3];
-    wvp[1] = camera->GetView();
-    wvp[2] = camera->GetProjection();
+    ShaderList::WVPMatrix wvp = {};
+    wvp.view = camera->GetView();
+    wvp.projection = camera->GetProjection();
 
     float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
-    DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, radRotation);
+    DrawMatrix::CreateWorldMatrix(wvp.world, transform.position, transform.scale, radRotation);
 
     ShaderList::SetWVP(wvp);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);

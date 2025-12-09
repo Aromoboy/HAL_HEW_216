@@ -20,12 +20,11 @@ void ShaderList::Init()
 	MakeToonPS();
 	MakeFogPS();
 
-	DirectX::XMFLOAT4X4 mat[3];
-	for (int i = 0; i < 3; ++i)
-	{
-		DirectX::XMStoreFloat4x4(&mat[i], DirectX::XMMatrixIdentity());
-	}
-	SetWVP(mat);
+        ShaderList::WVPMatrix identityWvp = {};
+        DirectX::XMStoreFloat4x4(&identityWvp.world, DirectX::XMMatrixIdentity());
+        DirectX::XMStoreFloat4x4(&identityWvp.view, DirectX::XMMatrixIdentity());
+        DirectX::XMStoreFloat4x4(&identityWvp.projection, DirectX::XMMatrixIdentity());
+        SetWVP(identityWvp);
 
 	Model::Material material = {
 		DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
@@ -68,12 +67,12 @@ PixelShader* ShaderList::GetPS(PSKind ps)
 	return m_pPS[ps];
 }
 
-void ShaderList::SetWVP(DirectX::XMFLOAT4X4* wvp)
+void ShaderList::SetWVP(const ShaderList::WVPMatrix& wvp)
 {
-	if (m_pVS[VS_WORLD])
-	{
-		m_pVS[VS_WORLD]->WriteBuffer(0, wvp);
-	}
+        if (m_pVS[VS_WORLD])
+        {
+                m_pVS[VS_WORLD]->WriteBuffer(0, &wvp);
+        }
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
@@ -137,36 +136,36 @@ void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
 
 void ShaderList::MakeWorldVS()
 {
-	const char* code = R"EOT(
+        const char* code = R"EOT(
 struct VSInput {
-	float3 pos    : POSITION;
-	float3 normal : NORMAL;
-	float2 uv     : TEXCOORD0;
-	float4 color  : COLOR0;
+        float3 pos    : POSITION;
+        float3 normal : NORMAL;
+        float2 uv     : TEXCOORD0;
+        float4 color  : COLOR0;
 };
 struct VS_OUT {
-	float4 pos : SV_POSITION;
-	float3 normal : NORMAL0;
-	float2 uv : TEXCOORD0;
-	float4 color : COLOR0;
-	float4 wPos : POSITION0;
+        float4 pos : SV_POSITION;
+        float3 normal : NORMAL0;
+        float2 uv : TEXCOORD0;
+        float4 color : COLOR0;
+        float4 wPos : POSITION0;
 };
 cbuffer WVP : register(b0) {
-	float4x4 world;
-	float4x4 view;
-	float4x4 proj;
+        float4x4 World;
+        float4x4 View;
+        float4x4 Projection;
 };
 VS_OUT main(VSInput vin) {
-	VS_OUT vout;
-	vout.pos = float4(vin.pos, 1.0f);
-	vout.pos = mul(vout.pos, world);
-	vout.wPos = vout.pos;
-	vout.pos = mul(vout.pos, view);
-	vout.pos = mul(vout.pos, proj);
-	vout.normal = mul(vin.normal, (float3x3)world);
-	vout.uv = vin.uv;
-	vout.color = vin.color;
-	return vout;
+        VS_OUT vout;
+        vout.pos = float4(vin.pos, 1.0f);
+        vout.pos = mul(vout.pos, World);
+        vout.wPos = vout.pos;
+        vout.pos = mul(vout.pos, View);
+        vout.pos = mul(vout.pos, Projection);
+        vout.normal = mul(vin.normal, (float3x3)World);
+        vout.uv = vin.uv;
+        vout.color = vin.color;
+        return vout;
 })EOT";
         // MeshDX::Vertex layout: POSITION(float3), NORMAL(float3), TEXCOORD(float2), COLOR(float4) = 48 bytes
         m_pVS[VS_WORLD] = new VertexShader();

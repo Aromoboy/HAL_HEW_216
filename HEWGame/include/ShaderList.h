@@ -10,10 +10,12 @@
 class ShaderList
 {
 public:
-		VS_WORLD, // SetWVP
-		VS_ANIME, // SetWVP,SetBones
-		VS_KIND_MAX
-	};
+        enum VSKind
+        {
+                VS_WORLD, // SetWVP
+                VS_ANIME, // SetWVP,SetBones
+                VS_KIND_MAX
+        };
 	enum PSKind
 	{
 		PS_LAMBERT, //SetMaterial, SetLight
@@ -28,16 +30,23 @@ public:
 	ShaderList();
 	~ShaderList();
 
-	static void Init();
-	static void Uninit();
+        static void Init();
+        static void Uninit();
 
-	// シェーダー設定
-	static VertexShader* GetVS(VSKind vs);
-	static PixelShader* GetPS(PSKind ps);
+        struct WVPMatrix
+        {
+                DirectX::XMFLOAT4X4 world;
+                DirectX::XMFLOAT4X4 view;
+                DirectX::XMFLOAT4X4 projection;
+        };
 
-	// 定数バッファへの設定
-	static void SetWVP(DirectX::XMFLOAT4X4* wvp);
-	static void SetBones(DirectX::XMFLOAT4X4* bones200);
+        // シェーダー設定
+        static VertexShader* GetVS(VSKind vs);
+        static PixelShader* GetPS(PSKind ps);
+
+        // 定数バッファへの設定
+        static void SetWVP(const WVPMatrix& wvp);
+        static void SetBones(DirectX::XMFLOAT4X4* bones200);
 	static void SetMaterial(const Model::Material& material);
 	static void SetMaterial(const MaterialDX& material);
 
