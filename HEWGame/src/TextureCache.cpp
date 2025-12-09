@@ -18,7 +18,11 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
-    if (!texture->LoadFromFile(device, path)) return nullptr;
+    if (!texture->LoadFromFile(device, path))
+    {
+        DebugMessage("[TextureCache] Failed to load texture '" + name + "' from file. Skipping cache entry.\n");
+        return nullptr;
+    }
 
     // LbVɓo^
     textures[name] = std::move(texture);
@@ -31,7 +35,11 @@ std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name,
     if (it != textures.end()) return it->second;
 
     auto texture = std::make_shared<Texture2D>();
-    if (!texture->LoadFromMemory(device, data, size, width, height)) return nullptr;
+    if (!texture->LoadFromMemory(device, data, size, width, height))
+    {
+        DebugMessage("[TextureCache] Failed to load in-memory texture '" + name + "'. Skipping cache entry.\n");
+        return nullptr;
+    }
 
     textures[name] = std::move(texture);
     return textures[name];

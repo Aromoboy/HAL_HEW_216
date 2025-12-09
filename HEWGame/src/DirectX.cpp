@@ -1,14 +1,66 @@
 #include "DirectX.h"
 #include "Texture.h"
 #include "Core/DXContext.h"
+#include "Debug.h"
+
+#include <atomic>
+#include <objbase.h>
+#include <sstream>
 
 namespace
 {
-	Core::DXContext g_dxContext;
-	ID3D11RasterizerState*		g_pRasterizerState[3];
-	ID3D11DepthStencilState*	g_pDepthStencilState[2];
-	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
-	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
+        Core::DXContext g_dxContext;
+        ID3D11RasterizerState*          g_pRasterizerState[3];
+        ID3D11DepthStencilState*        g_pDepthStencilState[2];
+        ID3D11BlendState*                       g_pBlendState[BLEND_MAX];
+        ID3D11SamplerState*                     g_pSamplerState[SAMPLER_MAX];
+
+        std::atomic<int> g_comInitCount{ 0 };
+        bool g_comInitialized = false;
+
+        HRESULT EnsureRenderingCOMInitialized()
+        {
+                if (g_comInitialized)
+                {
+                        ++g_comInitCount;
+                        return S_OK;
+                }
+
+                HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+                if (hr == RPC_E_CHANGED_MODE)
+                {
+                        DebugMessage("[DirectX] COM apartment already initialized with a different model. Texture loading will be skipped.\n");
+                        return hr;
+                }
+
+                if (SUCCEEDED(hr) || hr == S_FALSE)
+                {
+                        g_comInitialized = true;
+                        g_comInitCount = 1;
+                        return S_OK;
+                }
+
+                std::ostringstream ss;
+                ss << "[DirectX] Failed to initialize COM for rendering (hr=0x" << std::hex << hr << ").\n";
+                DebugMessage(ss.str());
+                return hr;
+        }
+
+        void ShutdownRenderingCOM()
+        {
+                if (!g_comInitialized)
+                {
+                        return;
+                }
+
+                const int remaining = --g_comInitCount;
+                if (remaining <= 0)
+                {
+                        CoUninitialize();
+                        g_comInitialized = false;
+                        g_comInitCount = 0;
+                }
+        }
 }
 
 
@@ -36,9 +88,16 @@ DepthStencil* GetDefaultDSV()
 
 HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 {
-        HRESULT hr = g_dxContext.Init(hWnd, width, height, fullscreen);
+        HRESULT hr = EnsureRenderingCOMInitialized();
         if (FAILED(hr))
         {
+                return hr;
+        }
+
+        hr = g_dxContext.Init(hWnd, width, height, fullscreen);
+        if (FAILED(hr))
+        {
+                ShutdownRenderingCOM();
                 return hr;
         }
 
@@ -146,6 +205,7 @@ void UninitDirectX()
         for(int i = 0; i < 3; ++ i)
                 SAFE_RELEASE(g_pRasterizerState[i]);
         g_dxContext.Shutdown();
+        ShutdownRenderingCOM();
 }
 
 void BeginDrawDirectX()
