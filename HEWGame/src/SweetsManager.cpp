@@ -414,6 +414,42 @@ namespace
             config.friction = 0.35f;
             config.restitution = 0.28f;
             break;
+        case SweetsType::Strawberry:
+            config.type = Box2DShapeConfig::Type::Circle;
+            config.radius = 0.45f;
+            config.angularDamping = 0.85f;
+            config.density = 0.85f;
+            config.friction = 0.5f;
+            config.restitution = 0.12f;
+            break;
+        case SweetsType::Blueberry:
+            config.type = Box2DShapeConfig::Type::Circle;
+            config.radius = 0.35f;
+            config.angularDamping = 0.7f;
+            config.density = 0.7f;
+            config.friction = 0.42f;
+            config.restitution = 0.18f;
+            break;
+        case SweetsType::Pineapple:
+            config.type = Box2DShapeConfig::Type::Box;
+            config.angularDamping = 0.5f;
+            config.density = 1.05f;
+            config.friction = 0.68f;
+            config.restitution = 0.04f;
+            break;
+        case SweetsType::Banana:
+            config.type = Box2DShapeConfig::Type::Polygon;
+            config.vertices = {
+                b2Vec2{ -0.6f, -0.08f },
+                b2Vec2{ 0.6f, 0.08f },
+                b2Vec2{ 0.55f, 0.24f },
+                b2Vec2{ -0.45f, 0.24f },
+            };
+            config.angularDamping = 0.65f;
+            config.density = 0.9f;
+            config.friction = 0.55f;
+            config.restitution = 0.08f;
+            break;
         default:
             config.type = Box2DShapeConfig::Type::Box;
             config.angularDamping = 0.9f;
@@ -465,6 +501,27 @@ namespace
             break;
         case SweetsType::Sherbet:
             colliderComponent.AddCircle(0.5f);
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Strawberry:
+            colliderComponent.AddCircle(0.45f);
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Blueberry:
+            colliderComponent.AddCircle(0.35f);
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Pineapple:
+            colliderComponent.AddBox(0.32f, 0.6f);
+            result.colliderComponent = colliderComponent;
+            break;
+        case SweetsType::Banana:
+            colliderComponent.AddPolygon({
+                b2Vec2{ -0.6f, -0.08f },
+                b2Vec2{ 0.6f, 0.08f },
+                b2Vec2{ 0.55f, 0.24f },
+                b2Vec2{ -0.45f, 0.24f },
+            });
             result.colliderComponent = colliderComponent;
             break;
         default:
@@ -1229,6 +1286,24 @@ namespace SweetsSpace
             preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
             preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
+            return preset;
+        case SweetsType::Blueberry:
+            preset.spawnWeight = 1.0f;
+            preset.minScale = float3{ 0.65f, 0.65f, 0.65f };
+            preset.maxScale = float3{ 1.15f, 1.15f, 1.15f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            return preset;
+        case SweetsType::Pineapple:
+            preset.spawnWeight = 0.8f;
+            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
+            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.05f, 0.02f } };
+            return preset;
+        case SweetsType::Banana:
+            preset.spawnWeight = 0.9f;
+            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
+            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
             return preset;
         default:
             return std::nullopt;
