@@ -168,7 +168,8 @@ AssimpModelLorder::MakeMaterial(
     materials.resize(pScene->mNumMaterials);
 
     const auto directory = modelPath.parent_path();
-    const auto modelExtension = TextureCache::NormalizeKey(modelPath.extension().u8string());
+    const std::string modelExtension8(modelPath.extension().u8string().begin(), modelPath.extension().u8string().end());
+    const auto modelExtension = TextureCache::NormalizeKey(modelExtension8);
     const bool isFbx = modelExtension == ".fbx";
 
     for (unsigned int i = 0; i < materials.size(); ++i)
@@ -215,9 +216,10 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+                    const std::string modelPath8(modelPath.u8string().begin(), modelPath.u8string().end());
                     const auto cacheKey = isFbx
-                        ? TextureCache::MakeFbxEmbeddedKey(modelPath.u8string(), texIndex)
-                        : TextureCache::NormalizeKey(modelPath.u8string() + ":embedded:" + std::to_string(texIndex));
+                        ? TextureCache::MakeFbxEmbeddedKey(modelPath8, texIndex)
+                        : TextureCache::NormalizeKey(modelPath8 + ":embedded:" + std::to_string(texIndex));
                     texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
@@ -225,7 +227,8 @@ AssimpModelLorder::MakeMaterial(
             {
                 std::filesystem::path texturePath = directory / texFile;
                 texturePath = texturePath.lexically_normal();
-                const auto cacheKey = TextureCache::MakeFileKey(texturePath.u8string());
+                const std::string texturePath8(texturePath.u8string().begin(), texturePath.u8string().end());
+                const auto cacheKey = TextureCache::MakeFileKey(texturePath8);
                 const std::wstring wfull = texturePath.wstring();
                 texture = textureCache.Load(cacheKey, device, wfull);
             }
