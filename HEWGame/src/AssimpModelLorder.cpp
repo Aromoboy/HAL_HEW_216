@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #include <vector>
 #include <filesystem>
 #include "Debug.h"
@@ -237,14 +238,22 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
             specular.w = shininess;
 
-        // テクスチャ
-        std::shared_ptr<Texture2D> texture = nullptr;
-        aiString texPath;
-        if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+        auto loadTexture = [&](aiTextureType type, bool allowFallback) -> std::pair<std::shared_ptr<Texture2D>, bool>
         {
-            std::string texFile = texPath.C_Str();
+            aiString texPath;
+            if (pScene->mMaterials[i]->GetTexture(type, 0, &texPath) != AI_SUCCESS)
+            {
+                if (allowFallback)
+                {
+                    auto fallback = getFallbackTexture();
+                    return { fallback, fallback != nullptr };
+                }
+                return { nullptr, false };
+            }
 
+            std::shared_ptr<Texture2D> texture = nullptr;
             bool usedFallback = false;
+            std::string texFile = texPath.C_Str();
 
             if (!texFile.empty() && texFile[0] == '*')
             {
@@ -320,16 +329,44 @@ AssimpModelLorder::MakeMaterial(
                 }
             }
 
-            if (!texture)
+            if (!texture && allowFallback)
             {
                 texture = getFallbackTexture();
+                usedFallback = true;
             }
 
-            materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture, usedFallback || texture == fallbackTexture);
-            continue;
-        }
+            return { texture, usedFallback };
+        };
 
-        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, getFallbackTexture(), true);
+        auto [diffuseTexture, diffuseUsedFallback] = loadTexture(aiTextureType_DIFFUSE, true);
+        auto [normalTexture, normalUsedFallback] = loadTexture(aiTextureType_NORMALS, false);
+        auto [roughnessTexture, roughnessUsedFallback] = loadTexture(aiTextureType_SHININESS, false);
+        if (!roughnessTexture)
+        {
+            auto [roughnessFallbackTexture, altFallbackUsed] = loadTexture(aiTextureType_DIFFUSE_ROUGHNESS, false);
+            roughnessTexture = roughnessFallbackTexture;
+            roughnessUsedFallback = roughnessUsedFallback || altFallbackUsed;
+        }
+        auto [metallicTexture, metallicUsedFallback] = loadTexture(aiTextureType_METALNESS, false);
+        auto [aoTexture, aoUsedFallback] = loadTexture(aiTextureType_AMBIENT_OCCLUSION, false);
+
+        (void)normalUsedFallback;
+        (void)roughnessUsedFallback;
+        (void)metallicUsedFallback;
+        (void)aoUsedFallback;
+
+        const bool materialUsedFallback = diffuseUsedFallback || !diffuseTexture;
+
+        materials[i] = std::make_shared<MaterialDX>(
+            diffuse,
+            ambient,
+            specular,
+            diffuseTexture,
+            materialUsedFallback,
+            normalTexture,
+            roughnessTexture,
+            metallicTexture,
+            aoTexture);
     }
 
     return materials;
