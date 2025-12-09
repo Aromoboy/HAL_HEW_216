@@ -5,6 +5,7 @@
 #include "Defines.h"
 #include "Vector.h"
 #include "DirectX.h"
+#include "Debug.h"
 
 ModelRender::ModelRender() = default;
 
@@ -42,6 +43,10 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         }
 
         std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
+        if (material && !material->GetTexture())
+        {
+            DebugMessage("[ModelRender] Material has NO SRV, fallback to white");
+        }
         if (material)
         {
             ShaderList::SetMaterial(*material);
