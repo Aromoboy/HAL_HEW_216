@@ -34,20 +34,46 @@ std::string TextureCache::NormalizeKey(std::string key)
 
 std::string TextureCache::MakeFileKey(const std::string& fullPath)
 {
-    const auto normalizedPath = std::filesystem::path(fullPath).lexically_normal();
-    const auto u8 = normalizedPath.u8string();
-    const std::string path8(u8.begin(), u8.end());
-    const auto normalized = NormalizeKey(path8);
-    return "file:" + normalized;
+    try
+    {
+        const auto normalizedPath = std::filesystem::path(fullPath).lexically_normal();
+        const auto u8 = normalizedPath.u8string();
+        const std::string path8(u8.begin(), u8.end());
+        const auto normalized = NormalizeKey(path8);
+        return "file:" + normalized;
+    }
+    catch (const std::filesystem::filesystem_error& e)
+    {
+        DebugMessage("[TextureCache] Failed to normalize texture path '" + fullPath + "': " + e.what() + "\n");
+    }
+    catch (const std::exception& e)
+    {
+        DebugMessage("[TextureCache] Unexpected error while building texture key for path '" + fullPath + "': " + e.what() + "\n");
+    }
+
+    return {};
 }
 
 std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int index)
 {
-    std::filesystem::path normalizedPath(std::filesystem::path(fbxPath).lexically_normal());
-    normalizedPath.replace_extension();
-    const auto u8 = normalizedPath.u8string();
-    const std::string path8(u8.begin(), u8.end());
-    return "fbx:" + NormalizeKey(path8) + ":embedded:" + std::to_string(index);
+    try
+    {
+        std::filesystem::path normalizedPath(std::filesystem::path(fbxPath).lexically_normal());
+        normalizedPath.replace_extension();
+        const auto u8 = normalizedPath.u8string();
+        const std::string path8(u8.begin(), u8.end());
+        return "fbx:" + NormalizeKey(path8) + ":embedded:" + std::to_string(index);
+    }
+    catch (const std::filesystem::filesystem_error& e)
+    {
+        DebugMessage("[TextureCache] Failed to normalize FBX embedded texture path '" + fbxPath + "': " + e.what() + "\n");
+    }
+    catch (const std::exception& e)
+    {
+        DebugMessage("[TextureCache] Unexpected error while building FBX embedded texture key for path '" + fbxPath + "': " + e.what() + "\n");
+    }
+
+    return {};
 }
 
 //============================================================
@@ -56,6 +82,12 @@ std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int ind
 std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
     const auto key = NormalizeKey(name);
+
+    if (key.empty())
+    {
+        DebugMessage("[TextureCache] Empty texture key provided; aborting texture load.\n");
+        return nullptr;
+    }
     // LbVɂłɑ݂邩mF
     auto it = textures.find(key);
     if (it != textures.end()) return it->second;
