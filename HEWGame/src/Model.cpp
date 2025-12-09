@@ -1,6 +1,8 @@
 #include "Model.h"
 #include "TextureLoad.h"
 #include <algorithm>
+#include <cstdint>
+#include <cstdlib>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -331,7 +333,7 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                         m_materials[i].specular.w = shininess;
 
                 // テクスチャの読み込み
-                HRESULT hr;
+                HRESULT hr = E_FAIL;
                 aiString path;
 
                 // テクスチャパス取得
@@ -340,16 +342,56 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                         continue;
                 }
 
-                // テクスチャ生成
-                m_materials[i].pTexture = new Texture;
+                // 埋め込みテクスチャ
+                if (path.length > 0 && path.C_Str()[0] == '*')
+                {
+                        unsigned int texIndex = std::atoi(path.C_Str() + 1);
+                        if (texIndex < pScene->mNumTextures && pScene->mTextures[texIndex])
+                        {
+                                const aiTexture* pTexture = pScene->mTextures[texIndex];
+                                Texture* texture = new Texture();
+                                if (pTexture->mHeight == 0)
+                                {
+                                        const uint8_t* data = reinterpret_cast<const uint8_t*>(pTexture->pcData);
+                                        hr = texture->CreateFromMemory(data, pTexture->mWidth, pTexture->achFormatHint);
+                                }
+                                else
+                                {
+                                        const uint8_t* data = reinterpret_cast<const uint8_t*>(pTexture->pcData);
+                                        hr = texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, pTexture->mWidth, pTexture->mHeight, data);
+                                }
+
+                                if (SUCCEEDED(hr))
+                                {
+                                        m_materials[i].pTexture = texture;
+                                        continue;
+                                }
+#ifdef _DEBUG
+                                m_errorStr += "embedded texture load failed: ";
+                                m_errorStr += path.C_Str();
+                                m_errorStr += '\n';
+#endif
+                                delete texture;
+                        }
+#ifdef _DEBUG
+                        else
+                        {
+                                m_errorStr += "embedded texture missing: ";
+                                m_errorStr += path.C_Str();
+                                m_errorStr += '\n';
+                        }
+#endif
+                }
+
+                Texture* texture = new Texture;
 
                 // 直接読込
-                hr = m_materials[i].pTexture->Create(path.C_Str());
-                if (SUCCEEDED(hr)) { continue; }
+                hr = texture->Create(path.C_Str());
+                if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // ルートと結合して再試行
-                hr = m_materials[i].pTexture->Create((directory + path.C_Str()).c_str());
-                if (SUCCEEDED(hr)) { continue; }
+                hr = texture->Create((directory + path.C_Str()).c_str());
+                if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // ファイル名のみで再試行
                 std::string fullPath = path.C_Str();
@@ -363,11 +405,11 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                 std::string fileName = fullPath;
                 if (find != std::string::npos)
                         fileName = fileName.substr(find + 1);
-                hr = m_materials[i].pTexture->Create((directory + fileName).c_str());
-                if (SUCCEEDED(hr)) { continue; }
+                hr = texture->Create((directory + fileName).c_str());
+                if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // テクスチャなし
-                delete m_materials[i].pTexture;
+                delete texture;
                 m_materials[i].pTexture = nullptr;
 #ifdef _DEBUG
                 m_errorStr += path.C_Str();
