@@ -51,10 +51,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, radRotation);
 
     ShaderList::SetWVP(wvp);
-    VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
-    pVTX->Bind();
     pPXS->Bind();
 
     ID3D11DeviceContext* context = GetContext();
@@ -93,6 +91,9 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             context->PSSetShaderResources(0, 1, &view);
         }
 
+        VertexShader* pVTX = ShaderList::GetVS(mesh->IsSkinned() ? ShaderList::VS_ANIME : ShaderList::VS_WORLD);
+        pVTX->Bind();
+
         MeshDraw(*mesh);
     }
 }
@@ -110,7 +111,7 @@ void ModelRender::MeshDraw(MeshDX& a_mesh)
         const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
         vertexBuffer.Bind(0, offset);
 
-        pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pContext->IASetPrimitiveTopology(a_mesh.GetTopology());
 
         if (a_mesh.HasIndexBuffer())
         {

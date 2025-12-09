@@ -6,11 +6,18 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         : m_vertexBuffer()
         , m_indexBuffer()
         , m_hasIndexBuffer(false)
+        , m_topology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
+        , m_isSkinned(desc.isSkinned)
 {
         HRESULT hr;
 
         // 各種ステータスを設定
         m_indexCount = desc.idxCount;
+
+        if (desc.topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
+        {
+                m_topology = desc.topology;
+        }
 
         m_materialID = materialID;
 
