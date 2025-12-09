@@ -17,7 +17,7 @@ public:
         };
         enum PSKind
         {
-                PS_LAMBERT, //SetMaterial, SetLight
+                PS_LAMBERT, //SetMaterial
                 PS_KIND_MAX
         };
 
@@ -44,8 +44,6 @@ public:
         static void SetWVP(const WVPMatrix& wvp);
         static void SetMaterial(const Model::Material& material);
         static void SetMaterial(const MaterialDX& material);
-
-        static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
 
 private:
         static void MakeWorldVS();
