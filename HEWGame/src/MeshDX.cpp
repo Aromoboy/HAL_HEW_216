@@ -14,8 +14,9 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
 
         m_materialID = materialID;
 
-        // 頂点バッファ作成
-        hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
+	// 頂点バッファ作成
+	const UINT vertexStride = desc.vtxSize == 0 ? sizeof(MeshDX::PackedVertex) : desc.vtxSize;
+	hr = CreateVertexBuffer(desc.pVtx, vertexStride, desc.vtxCount);
         if (FAILED(hr))
         {
 #ifdef _DEBUG
