@@ -49,12 +49,11 @@ void TitleScene::OnEnter()
     BackgroundRendererConfig cfg{};
     cfg.texturePath = "Assets/Texture/StartScreen.png";
     m_background = std::make_unique<BackgroundRenderer>();
-    if (!m_background->Initialize(cfg)) {
+    if (!m_background->Initialize(cfg)) 
+    {
         m_background.reset();
-        }
-    
+    }
 
-   
 }
 
 void TitleScene::OnExit()
