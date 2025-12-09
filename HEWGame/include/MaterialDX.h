@@ -6,8 +6,13 @@
 class MaterialDX
 {
 public:
-	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_tecture);
-	~MaterialDX();
+        MaterialDX(
+                DirectX::XMFLOAT4 diffuse,
+                DirectX::XMFLOAT4 ambient,
+                DirectX::XMFLOAT4 specular,
+                std::shared_ptr<Texture2D> a_texture,
+                bool usedFallback = false);
+        ~MaterialDX();
 
         ID3D11ShaderResourceView* GetTexture() const;
         void BindTexture(ID3D11DeviceContext* context, UINT slot = 0) const;
@@ -18,6 +23,8 @@ public:
 
         std::shared_ptr<Texture2D> GetTextureResource() const;
 
+        bool UsedFallbackTexture() const { return m_usedFallback; }
+
         void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
         void SetAmbient(const DirectX::XMFLOAT4& ambient);
         void SetSpecular(const DirectX::XMFLOAT4& specular);
@@ -25,10 +32,13 @@ public:
 private:
 
 	DirectX::XMFLOAT4 m_diffuse;
-	DirectX::XMFLOAT4 m_ambient;
-	DirectX::XMFLOAT4 m_specular;
+        DirectX::XMFLOAT4 m_ambient;
+        DirectX::XMFLOAT4 m_specular;
 
-	std::shared_ptr<Texture2D> m_texture;
+        std::shared_ptr<Texture2D> m_texture;
+
+        bool m_usedFallback = false;
+        mutable bool m_warnedMissingTexture = false;
 
 
 
