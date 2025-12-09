@@ -1,11 +1,17 @@
 #include "MaterialDX.h"
 #include "Debug.h"
 
-MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
-	: m_diffuse(diffuse)
-	, m_ambient(ambient)
-	, m_specular(specular)
-	, m_texture(a_texture)
+MaterialDX::MaterialDX(
+        DirectX::XMFLOAT4 diffuse,
+        DirectX::XMFLOAT4 ambient,
+        DirectX::XMFLOAT4 specular,
+        std::shared_ptr<Texture2D> a_texture,
+        bool usedFallback)
+        : m_diffuse(diffuse)
+        , m_ambient(ambient)
+        , m_specular(specular)
+        , m_texture(std::move(a_texture))
+        , m_usedFallback(usedFallback)
 {}
 
 MaterialDX::~MaterialDX()
@@ -21,15 +27,23 @@ ID3D11ShaderResourceView* MaterialDX::GetTexture() const
 
 void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
 {
-	if (!context)
-	{
-		return;
-	}
+        if (!context)
+        {
+                return;
+        }
 
         ID3D11ShaderResourceView* textureView = GetTexture();
-        if (!textureView)
+        if (!textureView && !m_warnedMissingTexture)
         {
-                DebugMessage("[MaterialDX] WARNING: SRV is NULL for material");
+                if (m_usedFallback)
+                {
+                        DebugMessage("[MaterialDX] WARNING: SRV is NULL after applying fallback texture");
+                }
+                else
+                {
+                        DebugMessage("[MaterialDX] WARNING: SRV is NULL for material");
+                }
+                m_warnedMissingTexture = true;
         }
         context->PSSetShaderResources(slot, 1, &textureView);
 }

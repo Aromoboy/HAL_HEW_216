@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -173,6 +174,42 @@ AssimpModelLorder::MakeMaterial(
     const auto modelExtension = TextureCache::NormalizeKey(modelExtension8);
     const bool isFbx = modelExtension == ".fbx";
 
+    const auto modelPathU8 = modelPath.u8string();
+    const std::string modelPath8(modelPathU8.begin(), modelPathU8.end());
+
+    std::shared_ptr<Texture2D> fallbackTexture;
+    const auto getFallbackTexture = [&]() -> std::shared_ptr<Texture2D>
+    {
+        if (fallbackTexture)
+        {
+            return fallbackTexture;
+        }
+
+        const std::filesystem::path fallbackPath("Assets/Texture/Shadow.png");
+        const auto fallbackPathU8 = fallbackPath.u8string();
+        const std::string fallbackPath8(fallbackPathU8.begin(), fallbackPathU8.end());
+        const auto fallbackKey = TextureCache::MakeFileKey(fallbackPath8);
+
+        if (!fallbackKey.empty())
+        {
+            fallbackTexture = textureCache.Load(fallbackKey, device, fallbackPath.wstring());
+        }
+
+        if (!fallbackTexture)
+        {
+            static const uint8_t whitePixel[4] = { 255, 255, 255, 255 };
+            const auto generatedKey = TextureCache::NormalizeKey("generated:fallback:white");
+            fallbackTexture = textureCache.LoadFromMemory(generatedKey, device, whitePixel, sizeof(whitePixel), 1, 1);
+
+            if (!fallbackTexture)
+            {
+                DebugMessage("[AssimpModelLorder] Failed to create fallback texture SRV for model '" + modelPath8 + "'. Materials may bind null SRVs.\n");
+            }
+        }
+
+        return fallbackTexture;
+    };
+
     for (unsigned int i = 0; i < materials.size(); ++i)
     {
         DirectX::XMFLOAT4 diffuse;
@@ -207,6 +244,8 @@ AssimpModelLorder::MakeMaterial(
         {
             std::string texFile = texPath.C_Str();
 
+            bool usedFallback = false;
+
             if (!texFile.empty() && texFile[0] == '*')
             {
                 const int texIndex = std::atoi(texFile.c_str() + 1);
@@ -217,8 +256,6 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
-                    const auto modelPathU8 = modelPath.u8string();
-                    const std::string modelPath8(modelPathU8.begin(), modelPathU8.end());
                     const auto cacheKey = isFbx
                         ? TextureCache::MakeFbxEmbeddedKey(modelPath8, texIndex)
                         : TextureCache::NormalizeKey(modelPath8 + ":embedded:" + std::to_string(texIndex));
@@ -226,10 +263,21 @@ AssimpModelLorder::MakeMaterial(
                     if (cacheKey.empty())
                     {
                         DebugMessage("[AssimpModelLorder] Failed to build cache key for embedded texture in '" + modelPath8 + "'. Skipping texture load.\n");
-                        continue;
+                        usedFallback = true;
                     }
+                    else
+                    {
+                        texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
 
-                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                        if (!texture)
+                        {
+                            DebugMessage("[AssimpModelLorder] Texture load returned null for embedded index "
+                                + std::to_string(texIndex)
+                                + " (material " + std::to_string(i)
+                                + ") in model '" + modelPath8 + "'. Using fallback.\n");
+                            usedFallback = true;
+                        }
+                    }
                 }
             }
             else
@@ -242,14 +290,32 @@ AssimpModelLorder::MakeMaterial(
                 if (cacheKey.empty())
                 {
                     DebugMessage("[AssimpModelLorder] Failed to build cache key for texture path '" + texturePath8 + "'. Skipping texture load.\n");
-                    continue;
+                    usedFallback = true;
                 }
-                const std::wstring wfull = texturePath.wstring();
-                texture = textureCache.Load(cacheKey, device, wfull);
+                else
+                {
+                    const std::wstring wfull = texturePath.wstring();
+                    texture = textureCache.Load(cacheKey, device, wfull);
+
+                    if (!texture)
+                    {
+                        DebugMessage("[AssimpModelLorder] Texture load returned null for path '" + texturePath8 + "' (material "
+                            + std::to_string(i) + ") in model '" + modelPath8 + "'. Using fallback.\n");
+                        usedFallback = true;
+                    }
+                }
             }
+
+            if (!texture)
+            {
+                texture = getFallbackTexture();
+            }
+
+            materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture, usedFallback || texture == fallbackTexture);
+            continue;
         }
 
-        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, getFallbackTexture(), true);
     }
 
     return materials;
