@@ -4,7 +4,8 @@
 #include "DirectX.h"
 
 /// <summary>
-/// ƒeƒNƒXƒ`ƒƒ
+        HRESULT CreateFromMemory(const void* data, size_t size, const char* formatHint = nullptr);
+/// ãƒ†ã‚¯ã‚¹ãƒãƒ£
 /// </summary>
 class Texture
 {
@@ -23,14 +24,14 @@ protected:
 	virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC &desc, const void* pData);
 
 protected:
-	UINT m_width;	///< ‰¡•
-	UINT m_height;	///< c•
+	UINT m_width;	///< æ¨ªå¹…
+	UINT m_height;	///< ç¸¦å¹…
 	ID3D11ShaderResourceView *m_pSRV;
 	ID3D11Texture2D* m_pTex;
 };
 
 /// <summary>
-/// ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒg
+/// ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆ
 /// </summary>
 class RenderTarget : public Texture
 {
@@ -51,7 +52,7 @@ private:
 };
 
 /// <summary>
-/// [“xƒeƒNƒXƒ`ƒƒ
+#endif // __TEXTURE_H__
 /// </summary>
 class DepthStencil : public Texture
 {
