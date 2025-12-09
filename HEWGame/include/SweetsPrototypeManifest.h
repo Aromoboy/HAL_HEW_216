@@ -14,6 +14,9 @@ namespace SweetsSpace
         Pudding,
         Sherbet,
         Strawberry,
+        Blueberry,
+        Pineapple,
+        Banana,
         Fairy,
     };
 

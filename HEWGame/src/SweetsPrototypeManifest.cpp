@@ -113,6 +113,9 @@ namespace SweetsSpace
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry_low01.fbx", "Textured strawberry fruit with visible seeds");
+        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
+        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple_high_fin.fbx", "High-detail pineapple with leafy crown");
+        Register(SweetsType::Banana, "Banana", "Assets/Model/Banana_low01.fbx", "Low-poly curved banana fruit");
         Register(SweetsType::Fairy, "Fairy", "Fairy.obj", "Cross-plane fairy using embedded material data");
         RegisterAlias(SweetsType::Fairy, "Player");
     }
@@ -143,7 +146,16 @@ namespace SweetsSpace
 
         const bool loaded = LoadOverridesFromCsv(csvPath);
 
-        const std::array<SweetsType, 5> kTypes{ SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Strawberry, SweetsType::Fairy };
+        const std::array<SweetsType, 8> kTypes{
+            SweetsType::Cake,
+            SweetsType::Pudding,
+            SweetsType::Sherbet,
+            SweetsType::Strawberry,
+            SweetsType::Blueberry,
+            SweetsType::Pineapple,
+            SweetsType::Banana,
+            SweetsType::Fairy,
+        };
         for (const auto type : kTypes)
         {
             if (m_byType.find(type) == m_byType.end())
@@ -229,6 +241,9 @@ namespace SweetsSpace
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pudding))) mappedType = SweetsType::Pudding;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Sherbet))) mappedType = SweetsType::Sherbet;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Strawberry))) mappedType = SweetsType::Strawberry;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Blueberry))) mappedType = SweetsType::Blueberry;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pineapple))) mappedType = SweetsType::Pineapple;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Banana))) mappedType = SweetsType::Banana;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Fairy)) || isPlayerAlias) mappedType = SweetsType::Fairy;
 
             if (!mappedType)
@@ -336,6 +351,12 @@ namespace SweetsSpace
             return "Sherbet";
         case SweetsType::Strawberry:
             return "Strawberry";
+        case SweetsType::Blueberry:
+            return "Blueberry";
+        case SweetsType::Pineapple:
+            return "Pineapple";
+        case SweetsType::Banana:
+            return "Banana";
         case SweetsType::Fairy:
             return "Fairy";
         default:
