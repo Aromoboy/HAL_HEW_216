@@ -9,10 +9,7 @@
 
 class ShaderList
 {
-	// ’è‹`
 public:
-	enum VSKind
-	{
 		VS_WORLD, // SetWVP
 		VS_ANIME, // SetWVP,SetBones
 		VS_KIND_MAX
@@ -34,11 +31,11 @@ public:
 	static void Init();
 	static void Uninit();
 
-	// ƒVƒF[ƒ_[İ’è
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼è¨­å®š
 	static VertexShader* GetVS(VSKind vs);
 	static PixelShader* GetPS(PSKind ps);
 
-	// ’è”ƒoƒbƒtƒ@‚Ö‚Ìİ’è
+	// å®šæ•°ãƒãƒƒãƒ•ã‚¡ã¸ã®è¨­å®š
 	static void SetWVP(DirectX::XMFLOAT4X4* wvp);
 	static void SetBones(DirectX::XMFLOAT4X4* bones200);
 	static void SetMaterial(const Model::Material& material);

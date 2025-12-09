@@ -91,7 +91,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             context->PSSetShaderResources(0, 1, &view);
         }
 
-        VertexShader* pVTX = ShaderList::GetVS(mesh->IsSkinned() ? ShaderList::VS_ANIME : ShaderList::VS_WORLD);
+        VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
         pVTX->Bind();
 
         MeshDraw(*mesh);
