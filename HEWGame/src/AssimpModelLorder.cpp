@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
 #include "ModelDX.h"
@@ -33,6 +34,16 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
         return nullptr;
 
     const std::filesystem::path modelPath(path);
+
+    std::string pathWithoutExtension = path;
+    for (auto& c : pathWithoutExtension)
+        if (c == '\\')
+            c = '/';
+    const auto extPos = pathWithoutExtension.find_last_of('.');
+    if (extPos != std::string::npos)
+    {
+        pathWithoutExtension = pathWithoutExtension.substr(0, extPos);
+    }
 
     // メッシュ作成
     AABB localBounds{};

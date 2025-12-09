@@ -68,14 +68,14 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
     return textures[key];
 }
 
-std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
+std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height, const char* formatHint)
 {
     const auto key = NormalizeKey(name);
     auto it = textures.find(key);
     if (it != textures.end()) return it->second;
 
     auto texture = std::make_shared<Texture2D>();
-    if (!texture->LoadFromMemory(device, data, size, width, height))
+    if (!texture->LoadFromMemory(device, data, size, width, height, formatHint))
     {
         DebugMessage("[TextureCache] Failed to load in-memory texture '" + key + "'. Skipping cache entry.\n");
         return nullptr;

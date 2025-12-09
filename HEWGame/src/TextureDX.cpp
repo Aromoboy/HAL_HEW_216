@@ -6,11 +6,19 @@
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <sstream>
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "shlwapi.lib")
 
 namespace
 {
+    std::string FormatHR(const char* message, HRESULT hr)
+    {
+        std::ostringstream oss;
+        oss << message << " hr=0x" << std::hex << static_cast<unsigned long>(hr);
+        return oss.str();
+    }
+
     bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
         D3D11_TEXTURE2D_DESC desc = {};
@@ -31,14 +39,14 @@ namespace
         HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
         if (FAILED(hr))
         {
-            DebugMessage("[Texture2D] eNX`\\[X̍쐬Ɏs");
+            DebugMessage(FormatHR("[Texture2D] eNX`\\[X̍쐬Ɏs", hr));
             return false;
         }
 
         hr = device->CreateShaderResourceView(texture.Get(), nullptr, outTextureView.GetAddressOf());
         if (FAILED(hr))
         {
-            DebugMessage("[Texture2D] SRV̍쐬Ɏs");
+            DebugMessage(FormatHR("[Texture2D] SRV̍쐬Ɏs", hr));
             return false;
         }
 
@@ -48,99 +56,184 @@ namespace
     bool DecodeWICToTexture(ID3D11Device* device, IWICImagingFactory* factory, IStream* stream, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
         Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
-        if (FAILED(factory->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnLoad, &decoder)))
+        HRESULT hr = factory->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnLoad, &decoder);
+        if (FAILED(hr))
         {
+            DebugMessage(FormatHR("[Texture2D] Failed to create decoder from stream", hr));
             return false;
         }
 
         Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
-        decoder->GetFrame(0, &frame);
+        hr = decoder->GetFrame(0, &frame);
+        if (FAILED(hr))
+        {
+            DebugMessage(FormatHR("[Texture2D] Failed to get frame", hr));
+            return false;
+        }
 
         Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
-        factory->CreateFormatConverter(&converter);
-        converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
+        hr = factory->CreateFormatConverter(&converter);
+        if (FAILED(hr))
+        {
+            DebugMessage(FormatHR("[Texture2D] Failed to create format converter", hr));
+            return false;
+        }
+        hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
             WICBitmapDitherTypeNone, nullptr, 0.0f,
             WICBitmapPaletteTypeCustom);
+        if (FAILED(hr))
+        {
+            DebugMessage(FormatHR("[Texture2D] Failed to initialize format converter", hr));
+            return false;
+        }
 
         UINT width, height;
-        converter->GetSize(&width, &height);
+        hr = converter->GetSize(&width, &height);
+        if (FAILED(hr))
+        {
+            DebugMessage(FormatHR("[Texture2D] Failed to get image size", hr));
+            return false;
+        }
 
         std::vector<BYTE> pixels(width * height * 4);
-        converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+        hr = converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+        if (FAILED(hr))
+        {
+            DebugMessage(FormatHR("[Texture2D] Failed to copy pixels", hr));
+            return false;
+        }
 
         return CreateTexture(device, width, height, pixels.data(), outTextureView);
     }
 }
 
-//============================================================
-// WICgpăeNX`t@C[h
-//============================================================
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
-    // WICt@Ng[쐬
+    std::string pathStr(path.begin(), path.end());
+
+    // Create WIC factory
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
-    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&factory))))
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&factory)
+    );
+
+    if (FAILED(hr))
     {
-        DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
+        DebugMessage(FormatHR("[Texture2D] Failed to create WIC factory", hr));
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
         return false;
     }
 
+    // Create file stream
     Microsoft::WRL::ComPtr<IStream> stream;
-    if (FAILED(SHCreateStreamOnFileEx(path.c_str(), STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream)))
+    hr = SHCreateStreamOnFileEx(
+        path.c_str(),
+        STGM_READ | STGM_SHARE_DENY_WRITE,
+        FILE_ATTRIBUTE_NORMAL,
+        FALSE,
+        nullptr,
+        &stream
+    );
+
+    if (FAILED(hr))
     {
+        DebugMessage(FormatHR("[Texture2D] Failed to create file stream", hr));
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
         return false;
     }
 
-    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    if (!result)
+    {
+        DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
+    }
+
+    return result;
 }
 
-bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
+
+bool Texture2D::LoadFromMemory(
+    ID3D11Device* device,
+    const uint8_t* data,
+    size_t size,
+    unsigned int width,
+    unsigned int height,
+    const char* formatHint)
 {
+    (void)formatHint;
+
     if (!data || size == 0)
     {
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
-    // Raw RGBA data
+    // Raw RGBA data embedded inside FBX
     if (height != 0 && width != 0)
     {
         return CreateTexture(device, width, height, data, textureView);
     }
 
+    // Create WIC factory
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
-    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&factory))))
-    {
-        DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
-        return false;
-    }
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&factory)
+    );
 
-    // Copy compressed payload into an IStream for WIC decoding
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, size);
-    if (hMem == nullptr)
-    {
-        return false;
-    }
-
-    void* pMem = GlobalLock(hMem);
-    if (pMem == nullptr)
-    {
-        GlobalFree(hMem);
-        return false;
-    }
-    std::memcpy(pMem, data, size);
-    GlobalUnlock(hMem);
-
-    Microsoft::WRL::ComPtr<IStream> stream;
-    HRESULT hr = CreateStreamOnHGlobal(hMem, TRUE, &stream);
     if (FAILED(hr))
     {
-        GlobalFree(hMem);
+        DebugMessage(FormatHR("[Texture2D] Failed to create WIC factory", hr));
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
         return false;
     }
 
-    return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    // Allocate memory
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, size);
+    if (!hMem)
+    {
+        DebugMessage("[TextureDX] Failed to allocate memory for texture decode");
+        return false;
+    }
+
+    struct HGlobalReleaser
+    {
+        HGLOBAL handle;
+        bool release;
+        ~HGlobalReleaser() { if (release && handle) GlobalFree(handle); }
+    } hMemReleaser{ hMem, true };
+
+    void* pMem = GlobalLock(hMem);
+    if (!pMem)
+    {
+        DebugMessage("[TextureDX] Failed to lock HGLOBAL");
+        return false;
+    }
+
+    memcpy(pMem, data, size);
+    GlobalUnlock(hMem);
+
+    // Convert HGLOBAL to IStream
+    Microsoft::WRL::ComPtr<IStream> stream;
+    hr = CreateStreamOnHGlobal(hMem, TRUE, &stream);
+
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[Texture2D] Failed to create stream from HGLOBAL", hr));
+        return false;
+    }
+
+    // ownership handed over to IStream
+    hMemReleaser.release = false;
+
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    if (!result)
+    {
+        DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
+    }
+
+    return result;
 }
 
 //============================================================
