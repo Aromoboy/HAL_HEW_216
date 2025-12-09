@@ -13,17 +13,13 @@ public:
         enum VSKind
         {
                 VS_WORLD, // SetWVP
-                VS_ANIME, // SetWVP,SetBones
                 VS_KIND_MAX
         };
-	enum PSKind
-	{
-		PS_LAMBERT, //SetMaterial, SetLight
-		PS_SPECULAR, //SetMaterial, SetLight, SetCameraPos
-		PS_TOON, // SetMaterial, SetLight
-		PS_FOG, // SetMaterial, SetLight,SetFog
-		PS_KIND_MAX
-	};
+        enum PSKind
+        {
+                PS_LAMBERT, //SetMaterial, SetLight
+                PS_KIND_MAX
+        };
 
 
 public:
@@ -46,21 +42,14 @@ public:
 
         // 定数バッファへの設定
         static void SetWVP(const WVPMatrix& wvp);
-        static void SetBones(DirectX::XMFLOAT4X4* bones200);
-	static void SetMaterial(const Model::Material& material);
-	static void SetMaterial(const MaterialDX& material);
+        static void SetMaterial(const Model::Material& material);
+        static void SetMaterial(const MaterialDX& material);
 
-	static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
-	static void SetCameraPos(const DirectX::XMFLOAT3 pos);
-	static void SetFog(DirectX::XMFLOAT4 color, float start, float range);
-	
+        static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
+
 private:
-	static void MakeWorldVS();
-	static void MakeAnimeVS();
-	static void MakeLambertPS();
-	static void MakeSpecularPS();
-	static void MakeToonPS();
-	static void MakeFogPS();
+        static void MakeWorldVS();
+        static void MakeLambertPS();
 
 private:
 	static VertexShader* m_pVS[VS_KIND_MAX];

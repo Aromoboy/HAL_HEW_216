@@ -76,7 +76,6 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         for (unsigned int i = 0; i < meshes.size(); ++i)
         {
                 const aiMesh* mesh = pScene->mMeshes[i];
-                const bool hasBones = mesh->HasBones();
                 std::vector<MeshDX::Vertex> vertices;
                 std::vector<unsigned long> indices;
 
@@ -149,8 +148,6 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                 desc.idxSize = sizeof(unsigned long);
                 desc.idxCount = static_cast<unsigned int>(indices.size());
                 desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-                desc.isSkinned = hasBones;
-
                 meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
         }
 
