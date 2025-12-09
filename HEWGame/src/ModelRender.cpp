@@ -55,8 +55,6 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
     pPXS->Bind();
 
-    ID3D11DeviceContext* context = GetContext();
-
     for (int i = 0; i < a_model.GetMeshCount(); i++)
     {
         std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
@@ -67,15 +65,15 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         const int materialId = mesh->GetMaterialID();
         std::shared_ptr<MaterialDX> material = a_model.GetMaterial(materialId).lock();
-        bool materialHasSrv = material && material->GetTexture();
-        if (material && !materialHasSrv && m_warnedMissingSrvMaterials.emplace(materialId).second)
+
+        if (material && !material->GetTexture() && m_warnedMissingSrvMaterials.emplace(materialId).second)
         {
             DebugMessage("[ModelRender] Material has NO SRV, fallback to white");
         }
 
         if (material)
         {
-            if (!materialHasSrv && m_fallbackTexture)
+            if (!material->GetTexture() && m_fallbackTexture)
             {
                 material = std::make_shared<MaterialDX>(
                     material->GetDiffuse(),
@@ -83,12 +81,17 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
                     material->GetSpecular(),
                     m_fallbackTexture);
             }
+
             ShaderList::SetMaterial(*material);
         }
-        else if (context)
+        else if (m_fallbackTexture)
         {
-            ID3D11ShaderResourceView* view = m_fallbackTexture ? m_fallbackTexture->Get() : nullptr;
-            context->PSSetShaderResources(0, 1, &view);
+            MaterialDX fallbackMaterial(
+                DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+                DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f),
+                DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+                m_fallbackTexture);
+            ShaderList::SetMaterial(fallbackMaterial);
         }
 
         VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);

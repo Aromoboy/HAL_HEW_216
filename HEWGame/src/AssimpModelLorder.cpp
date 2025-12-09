@@ -344,34 +344,19 @@ AssimpModelLorder::MakeMaterial(
         };
 
         auto [diffuseTexture, diffuseUsedFallback] = loadTexture(aiTextureType_DIFFUSE, true);
-        auto [normalTexture, normalUsedFallback] = loadTexture(aiTextureType_NORMALS, false);
-        auto [roughnessTexture, roughnessUsedFallback] = loadTexture(aiTextureType_SHININESS, false);
-        if (!roughnessTexture)
-        {
-            auto [roughnessFallbackTexture, altFallbackUsed] = loadTexture(aiTextureType_DIFFUSE_ROUGHNESS, false);
-            roughnessTexture = roughnessFallbackTexture;
-            roughnessUsedFallback = roughnessUsedFallback || altFallbackUsed;
-        }
-        auto [metallicTexture, metallicUsedFallback] = loadTexture(aiTextureType_METALNESS, false);
-        auto [aoTexture, aoUsedFallback] = loadTexture(aiTextureType_AMBIENT_OCCLUSION, false);
-
-        (void)normalUsedFallback;
-        (void)roughnessUsedFallback;
-        (void)metallicUsedFallback;
-        (void)aoUsedFallback;
 
         const bool materialUsedFallback = diffuseUsedFallback || !diffuseTexture;
+
+        if (!diffuseTexture && materialUsedFallback)
+        {
+            diffuseTexture = getFallbackTexture();
+        }
 
         materials[i] = std::make_shared<MaterialDX>(
             diffuse,
             ambient,
             specular,
-            diffuseTexture,
-            materialUsedFallback,
-            normalTexture,
-            roughnessTexture,
-            metallicTexture,
-            aoTexture);
+            diffuseTexture);
     }
 
     return materials;
