@@ -38,6 +38,8 @@
 VertexShader*	Model::m_pDefVS		= nullptr;
 PixelShader*	Model::m_pDefPS		= nullptr;
 unsigned int	Model::m_shaderRef	= 0;
+Texture*	Model::m_pWhiteTex	= nullptr;
+unsigned int	Model::m_textureRef	= 0;
 #ifdef _DEBUG
 std::string		Model::m_errorStr	= "";
 #endif
@@ -84,17 +86,26 @@ VS_OUT main(VS_IN vin) {
 	vout.uv = vin.uv;
 	return vout;
 })EOT";
-	const char* ModelPS = R"EOT(
+        const char* ModelPS = R"EOT(
 struct PS_IN {
 	float4 pos : SV_POSITION;
 	float3 normal : NORMAL0;
 	float2 uv : TEXCOORD0;
 };
+cbuffer MaterialCB : register(b0)
+{
+	float4 diffuseColor;
+};
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-	return tex.Sample(samp, pin.uv);
+	float4 sampled = tex.Sample(samp, pin.uv);
+	if (all(sampled == 0.0f))
+	{
+		return diffuseColor;
+	}
+	return sampled * diffuseColor;
 })EOT";
 	*vs = new VertexShader();
 	(*vs)->Compile(ModelVS);
@@ -125,6 +136,19 @@ Model::Model()
 	m_pVS = m_pDefVS;
 	m_pPS = m_pDefPS;
 	++m_shaderRef;
+
+	if (m_textureRef == 0)
+	{
+		m_pWhiteTex = new Texture();
+		uint32_t white = 0xFFFFFFFF;
+		HRESULT hr = m_pWhiteTex->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, &white);
+		if (FAILED(hr))
+		{
+			delete m_pWhiteTex;
+			m_pWhiteTex = nullptr;
+		}
+	}
+	++m_textureRef;
 }
 
 /*
@@ -138,6 +162,13 @@ Model::~Model()
 	{
 		delete m_pDefPS;
 		delete m_pDefVS;
+	}
+
+	--m_textureRef;
+	if (m_textureRef <= 0)
+	{
+		delete m_pWhiteTex;
+		m_pWhiteTex = nullptr;
 	}
 }
 
@@ -438,12 +469,24 @@ void Model::Draw(int meshNo)
 	else
 		meshNo = 0;
 
-
 	// 描画
 	for (UINT i = meshNo; i < drawNum; ++i)
 	{
+		const auto& material = m_materials[m_meshes[i].materialID];
+
+		if (m_pPS == m_pDefPS && m_pPS)
+		{
+			struct MaterialParam
+			{
+				DirectX::XMFLOAT4 diffuse;
+			} param;
+			param.diffuse = material.diffuse;
+			m_pPS->WriteBuffer(0, &param);
+		}
+
 		if (isAutoTexture) {
-			m_pPS->SetTexture(0, m_materials[m_meshes[i].materialID].pTexture);
+			Texture* activeTex = material.pTexture ? material.pTexture : m_pWhiteTex;
+			m_pPS->SetTexture(0, activeTex);
 		}
 		m_meshes[i].pMesh->Draw();
 	}
