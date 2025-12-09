@@ -29,13 +29,13 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
     return textures[name];
 }
 
-std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
+std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name, ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height, const char* formatHint)
 {
     auto it = textures.find(name);
     if (it != textures.end()) return it->second;
 
     auto texture = std::make_shared<Texture2D>();
-    if (!texture->LoadFromMemory(device, data, size, width, height))
+    if (!texture->LoadFromMemory(device, data, size, width, height, formatHint))
     {
         DebugMessage("[TextureCache] Failed to load in-memory texture '" + name + "'. Skipping cache entry.\n");
         return nullptr;

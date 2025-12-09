@@ -95,8 +95,9 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     return DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
 }
 
-bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
+bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height, const char* formatHint)
 {
+    (void)formatHint;
     if (!data || size == 0)
     {
         return false;
