@@ -365,13 +365,13 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
 	// 各マトリクスと描画用のパラメーター
-	DirectX::XMFLOAT4X4 wvp[3];
-	DirectX::XMFLOAT4 param[3];
+        ShaderList::WVPMatrix wvp{};
+        DirectX::XMFLOAT4 param[3];
 
-	// 各マトリクスを設定
-	wvp[0] = worldMatrix;
-	wvp[1] = viewMatrix;
-	wvp[2] = projMatrix;
+        // 各マトリクスを設定
+        wvp.world = worldMatrix;
+        wvp.view = viewMatrix;
+        wvp.projection = projMatrix;
 
 	
 	// ステータスを設定
@@ -381,9 +381,9 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
+        ShaderList::SetWVP(wvp);
 
-	vs->WriteBuffer(0, wvp);
+        vs->WriteBuffer(0, &wvp);
 	vs->WriteBuffer(1, param);
 	vs->Bind();
 
@@ -399,13 +399,13 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
 	// 各マトリクスと描画用のパラメーター
-	DirectX::XMFLOAT4X4 wvp[3];
-	DirectX::XMFLOAT4 param[3];
+        ShaderList::WVPMatrix wvp{};
+        DirectX::XMFLOAT4 param[3];
 
-	// 各マトリクスを設定
-	wvp[0] = worldMatrix;
-	wvp[1] = viewMatrix;
-	wvp[2] = projMatrix;
+        // 各マトリクスを設定
+        wvp.world = worldMatrix;
+        wvp.view = viewMatrix;
+        wvp.projection = projMatrix;
 
 
 	// ステータスを設定
@@ -415,9 +415,9 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
+        ShaderList::SetWVP(wvp);
 
-	vs->WriteBuffer(0, wvp);
+        vs->WriteBuffer(0, &wvp);
 	vs->WriteBuffer(1, param);
 	vs->Bind();
 
@@ -433,13 +433,13 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
 	// 各マトリクスと描画用のパラメーター
-	DirectX::XMFLOAT4X4 wvp[3];
-	DirectX::XMFLOAT4 param[3];
+        ShaderList::WVPMatrix wvp{};
+        DirectX::XMFLOAT4 param[3];
 
-	// 各マトリクスを設定
-	wvp[0] = worldMatrix;
-	wvp[1] = viewMatrix;
-	wvp[2] = projMatrix;
+        // 各マトリクスを設定
+        wvp.world = worldMatrix;
+        wvp.view = viewMatrix;
+        wvp.projection = projMatrix;
 
 
 	// ステータスを設定
@@ -450,9 +450,9 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
+        ShaderList::SetWVP(wvp);
 
-	vs->WriteBuffer(0, wvp);
+        vs->WriteBuffer(0, &wvp);
 	vs->WriteBuffer(1, param);
 	vs->Bind();
 	ps->SetTexture(0, texture->GetResource());
