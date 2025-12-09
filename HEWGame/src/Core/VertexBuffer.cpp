@@ -52,9 +52,14 @@ namespace Core
                         return;
                 }
 
-                UINT stride = m_stride;
-                GetContext()->IASetVertexBuffers(slot, 1, &buffer, &stride, &offset);
-        }
+		UINT stride = m_stride;
+		if (stride == 0)
+		{
+			DebugMessage("[VertexBuffer] Bind called with zero stride.\n");
+			return;
+		}
+		GetContext()->IASetVertexBuffers(slot, 1, &buffer, &stride, &offset);
+	}
 
         void VertexBuffer::Shutdown()
         {
