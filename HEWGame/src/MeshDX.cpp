@@ -12,21 +12,13 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
 
         // 各種ステータスを設定
         m_indexCount = desc.idxCount;
-
-        if (desc.topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
-        {
-                m_topology = desc.topology;
-        }
-
         m_materialID = materialID;
 
         // 頂点バッファ作成
         const UINT vertexStride = sizeof(MeshDX::Vertex);
         if (desc.vtxSize != vertexStride)
         {
-#ifdef _DEBUG
                 DebugMessage("MeshDX received unexpected vertex size.\n");
-#endif
                 return;
         }
 
@@ -38,15 +30,14 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
 #endif
                 return;
         }
+
         // インデックスバッファ作成
-        if (desc.pIdx) {
+        if (desc.pIdx)
+        {
                 hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
                 if (FAILED(hr))
                 {
-#ifdef _DEBUG
                         DebugMessage("インデックスバッファの作成に失敗しました");
-#endif
-
                         return;
                 }
         }
@@ -96,13 +87,10 @@ HRESULT MeshDX::CreateVertexBuffer(const void* pVtx, UINT size, UINT count)
 HRESULT MeshDX::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
 {
         // インデックスサイズの確認
-        switch (size)
+        if (size != sizeof(unsigned int))
         {
-        default:
+                DebugMessage("MeshDX only supports 32-bit indices.\n");
                 return E_FAIL;
-        case 2:
-        case 4:
-                break;
         }
 
         HRESULT hr = m_indexBuffer.Init(pIdx, size, count);
