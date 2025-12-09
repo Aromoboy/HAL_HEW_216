@@ -6,6 +6,7 @@
 #include "PerspectiveCamera.h"
 #include "Core/Input.h"
 #include "DebugConsole.h"
+#include "PowerUpTextures.h"
 #include <fstream>
 #include <filesystem>
 #include <string>
@@ -36,17 +37,25 @@ namespace SceneSpace
 		m_cost(9999)
 	{
 
+
 		TextureCache& cache = TextureCache::Instance();
-		cache.Load("Star", GetDevice(), L"Assets/Texture/Star.png");
-		cache.Load("Cost", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
-		cache.Load("SpeedUp", GetDevice(), L"Assets/Texture/upgrade_UI_MoveSpeed_icon.png");
-		cache.Load("CakeSize", GetDevice(), L"Assets/Texture/upgrade_UI_cakesizeUpai_icon.png");
-		cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
-		cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
-		cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
+		const auto starKey = PowerUpTextures::BuildKey(PowerUpTextures::kStarPath);
+		const auto costKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
+		const auto speedUpKey = PowerUpTextures::BuildKey(PowerUpTextures::kSpeedUpPath);
+		const auto cakeSizeKey = PowerUpTextures::BuildKey(PowerUpTextures::kCakeSizePath);
+		const auto whipKey = PowerUpTextures::BuildKey(PowerUpTextures::kWhipPath);
+		const auto frameKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
+		const auto backFrameKey = PowerUpTextures::BuildKey(PowerUpTextures::kBackFramePath);
+		cache.Load(starKey, GetDevice(), std::filesystem::path(PowerUpTextures::kStarPath).wstring());
+		cache.Load(costKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCostPath).wstring());
+		cache.Load(speedUpKey, GetDevice(), std::filesystem::path(PowerUpTextures::kSpeedUpPath).wstring());
+		cache.Load(cakeSizeKey, GetDevice(), std::filesystem::path(PowerUpTextures::kCakeSizePath).wstring());
+		cache.Load(whipKey, GetDevice(), std::filesystem::path(PowerUpTextures::kWhipPath).wstring());
+		cache.Load(frameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kFramePath).wstring());
+		cache.Load(backFrameKey, GetDevice(), std::filesystem::path(PowerUpTextures::kBackFramePath).wstring());
 
 
-		// Šeƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚Ş
+		m_cursor = std::make_unique<PowerUpCursor>(cache.Get(starKey), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost);
 		m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
 		m_rig = std::make_unique<CameraRig>(m_camera);
 		m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
@@ -153,35 +162,35 @@ namespace SceneSpace
 
 			if (!GetValue(name, loadString, kName)) continue;
 
-			// à–¾•¶
+			// èª¬æ˜æ–‡
 			std::string infomation;
 			std::getline(file, loadString);
 			if (!GetValue(infomation, loadString, kInfomation)) continue;
 
-			// ƒeƒNƒXƒ`ƒƒ–¼
+			// ãƒ†ã‚¯ã‚¹ãƒãƒ£å
 			std::string textureKey;
 			std::getline(file, loadString);
 			if (!GetValue(textureKey, loadString, kTextureKey)) continue;
 			
-			// Å‘åƒŒƒxƒ‹
+			// æœ€å¤§ãƒ¬ãƒ™ãƒ«
 			std::string maxLevel;
 			std::getline(file, loadString);
 			if (!GetValue(maxLevel, loadString, kMaxLevel)) continue;
 			int finalMaxLevel = std::stoi(maxLevel);
 
-			// ‰ŠúƒRƒXƒg
+			// åˆæœŸã‚³ã‚¹ãƒˆ
 			std::string defaultCost;
 			std::getline(file, loadString);
 			if (!GetValue(defaultCost, loadString, kDefaultCost)) continue;
 			int finalDefaultCost = std::stoi(defaultCost);
 
-			// ƒRƒXƒg‰ÁZ”
+			// ã‚³ã‚¹ãƒˆåŠ ç®—æ•°
 			std::string costAdditional;
 			std::getline(file, loadString);
 			if (!GetValue(costAdditional, loadString, kCostAdditional)) continue;
 			int finalCostAdditional = std::stoi(costAdditional);
 
-			// ƒRƒXƒg”{—¦
+			// ã‚³ã‚¹ãƒˆå€ç‡
 			std::string costMagnification;
 			std::getline(file, loadString);
 			if (!GetValue(costMagnification, loadString, kCostMagnification)) continue;
@@ -200,7 +209,7 @@ namespace SceneSpace
 
 		std::string keyWithEq = checkKey;
 
-		// ˆê”ÔÅ‰‚ÉŒ©‚Â‚©‚ç‚È‚¯‚ê‚Î•Ô‚·
+		// ä¸€ç•ªæœ€åˆã«è¦‹ã¤ã‹ã‚‰ãªã‘ã‚Œã°è¿”ã™
 		if (a_status.rfind(checkKey,0) != 0) return false;
 
 
