@@ -51,7 +51,9 @@ namespace
     {
 
         // 重力を設定したPhysicsMachineを作成
-        Systems::PhysicsMachine machine(9.8f);
+        Systems::PhysicsTuningParameters tuning{};
+        tuning.gravity = 9.8f;
+        Systems::PhysicsMachine machine(tuning);
 
         // 落下開始位置
         Transform fallingTransform{};

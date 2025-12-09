@@ -14,6 +14,18 @@ namespace Systems
 // PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する
 // UpdateNode。旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける。
 {
+    struct PhysicsTuningParameters
+    {
+        float gravity = 9.8f;
+        int subStepCount = 4;
+        float defaultLinearDamping = 0.0f;
+        float defaultAngularDamping = 0.0f;
+        float defaultFriction = 0.6f;
+        float defaultRestitution = 0.0f;
+        float restitutionThreshold = 1.0f;
+        float hitEventThreshold = 0.0f;
+    };
+
     class IPhysicsSystem
     {
     public:
@@ -30,7 +42,7 @@ namespace Systems
         using SystemPtr = std::shared_ptr<IPhysicsSystem>;
         using ContactListenerPtr = std::shared_ptr<Box2DContactListener>;
 
-        explicit PhysicsMachine(float gravity = 9.8f, int subStepCount = 4);
+        explicit PhysicsMachine(const PhysicsTuningParameters& tuning = {});
         ~PhysicsMachine() override;
 
         void SetSystem(SystemPtr system);
@@ -60,6 +72,8 @@ namespace Systems
         ContactListenerPtr m_contactListener;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
+        b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
+        b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
         int m_subStepCount = 4;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;
