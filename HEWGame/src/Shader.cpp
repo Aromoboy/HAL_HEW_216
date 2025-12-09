@@ -133,10 +133,22 @@ HRESULT Shader::Make(void* pData, UINT size)
 		hr = pDevice->CreateBuffer(&bufDesc, nullptr, &m_pBuffers[i]);
 		if (FAILED(hr)) { return hr; }
 	}
-	// テクスチャ領域作成
-	m_pTextures.resize(shaderDesc.TextureNormalInstructions, nullptr);
+        // テクスチャ領域作成
+        UINT maxTextureSlot = 0;
+        for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
+        {
+                D3D11_SHADER_INPUT_BIND_DESC bindDesc;
+                pReflection->GetResourceBindingDesc(i, &bindDesc);
+                if (bindDesc.Type == D3D_SIT_TEXTURE)
+                {
+                        maxTextureSlot = max(maxTextureSlot, bindDesc.BindPoint + bindDesc.BindCount);
+                }
+        }
+        m_pTextures.resize(maxTextureSlot, nullptr);
 
-	return MakeShader(pData, size);
+        HRESULT makeResult = MakeShader(pData, size);
+        SAFE_RELEASE(pReflection);
+        return makeResult;
 }
 
 //----------
