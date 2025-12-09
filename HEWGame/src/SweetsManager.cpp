@@ -169,36 +169,26 @@ namespace
         constexpr float halfDepth = 0.12f;
         constexpr float halfHeight = 0.7f;
 
-        const DirectX::XMFLOAT4 baseColor{ 0.45f, 0.65f, 1.0f, 1.0f };
-        const DirectX::XMFLOAT4 wingColor{ 0.6f, 0.8f, 1.0f, 1.0f };
-
         std::vector<MeshDX::Vertex> vertices;
         vertices.reserve(24);
 
-        auto appendQuad = [&](auto positions, DirectX::XMFLOAT3 normal,
-            const DirectX::XMFLOAT4& colFront,
-            const DirectX::XMFLOAT4& colBack)
+        auto appendQuad = [&](auto positions)
             {
                 const std::array<DirectX::XMFLOAT2, 4> uvs{
                     DirectX::XMFLOAT2(0,1), DirectX::XMFLOAT2(1,1),
                     DirectX::XMFLOAT2(1,0), DirectX::XMFLOAT2(0,0)
                 };
 
-                auto addV = [&](auto pos, auto nrm, auto uv, auto col)
+                auto addV = [&](auto pos, auto uv)
                     {
                         MeshDX::Vertex v{};
                         v.pos = pos;
-                        v.normal = nrm;
                         v.uv = uv;
-                        v.color = col;
                         vertices.push_back(v);
                     };
 
-                DirectX::XMFLOAT3 n1 = normal;
-                DirectX::XMFLOAT3 n2{ -normal.x, -normal.y, -normal.z };
-
-                for (int i = 0; i < 4; i++) addV(positions[i], n1, uvs[i], colFront);
-                for (int i = 0; i < 4; i++) addV(positions[i], n2, uvs[i], colBack);
+                for (int i = 0; i < 4; i++) addV(positions[i], uvs[i]);
+                for (int i = 0; i < 4; i++) addV(positions[i], uvs[i]);
             };
 
         const std::array<DirectX::XMFLOAT3, 4> quadZ{
@@ -207,7 +197,7 @@ namespace
             DirectX::XMFLOAT3(halfWidth, halfHeight,0),
             DirectX::XMFLOAT3(-halfWidth, halfHeight,0)
         };
-        appendQuad(quadZ, DirectX::XMFLOAT3(0, 0, 1), wingColor, baseColor);
+        appendQuad(quadZ);
 
         const std::array<DirectX::XMFLOAT3, 4> quadX{
             DirectX::XMFLOAT3(0,-halfHeight,-halfDepth),
@@ -215,7 +205,7 @@ namespace
             DirectX::XMFLOAT3(0, halfHeight, halfDepth),
             DirectX::XMFLOAT3(0, halfHeight,-halfDepth)
         };
-        appendQuad(quadX, DirectX::XMFLOAT3(1, 0, 0), baseColor, wingColor);
+        appendQuad(quadX);
 
         std::vector<unsigned long> indices;
         indices.reserve(36);

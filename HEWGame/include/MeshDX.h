@@ -9,15 +9,13 @@ class MeshDX
 {
 public:
         // 頂点情報
-        struct Vertex
-        {
-                DirectX::XMFLOAT3       pos;
-                DirectX::XMFLOAT3       normal;
-                DirectX::XMFLOAT2       uv;
-                DirectX::XMFLOAT4       color;
-        };
+struct Vertex
+{
+DirectX::XMFLOAT3       pos;
+DirectX::XMFLOAT2       uv;
+};
 
-        static_assert(sizeof(Vertex) == 48, "MeshDX::Vertex layout must stay tightly packed (48 bytes).");
+static_assert(sizeof(Vertex) == 20, "MeshDX::Vertex layout must stay tightly packed (20 bytes).");
 
         // 作成用の情報
         struct Description

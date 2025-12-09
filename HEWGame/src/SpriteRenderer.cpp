@@ -12,13 +12,10 @@ SpriteRenderer::SpriteRenderer()
         const char* VS = R"EOT(
 struct VS_IN {
         float3 pos : POSITION0;
-        float3 normal : NORMAL0;
         float2 uv : TEXCOORD0;
-        float4 color : COLOR0;
 };
 struct VS_OUT {
         float4 pos : SV_POSITION;
-        float3 normal : NORMAL0;
         float2 uv : TEXCOORD0;
         float4 color : COLOR0;
 };
@@ -42,11 +39,10 @@ VS_OUT main(VS_IN vin) {
         vout.pos = mul(vout.pos, world);
         vout.pos = mul(vout.pos, view);
         vout.pos = mul(vout.pos, proj);
-        vout.normal = vin.normal;
         vout.uv = vin.uv;
         vout.uv *= uvScale;
         vout.uv += uvPos;
-        vout.color = color * vin.color;
+        vout.color = color;
         return vout;
 })EOT";
         const char* PS = R"EOT(
@@ -63,17 +59,21 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 
         MeshDX::Vertex vtx[] = {
-                { {-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-                { { 0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-                { {-0.5f,-0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-                { { 0.5f,-0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+                { {-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f} },
+                { { 0.5f, 0.5f, 0.0f}, {1.0f, 0.0f} },
+                { {-0.5f,-0.5f, 0.0f}, {0.0f, 1.0f} },
+                { { 0.5f,-0.5f, 0.0f}, {1.0f, 1.0f} },
         };
+
+        uint32_t idx[] = { 0, 1, 2, 2, 1, 3 };
 
         MeshDX::Description desc{};
         desc.pVtx = vtx;
         desc.vtxSize = sizeof(MeshDX::Vertex);
         desc.vtxCount = 4;
-        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+        desc.pIdx = idx;
+        desc.idxSize = sizeof(uint32_t);
+        desc.idxCount = _countof(idx);
 
         m_spriteMesh = std::make_shared<MeshDX>(desc, -1);
 

@@ -74,82 +74,60 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
     hasBounds = false;
 
         for (unsigned int i = 0; i < meshes.size(); ++i)
+    {
+        const aiMesh* mesh = pScene->mMeshes[i];
+        std::vector<MeshDX::Vertex> vertices;
+        std::vector<unsigned long> indices;
+
+        // 頂点
+        vertices.resize(mesh->mNumVertices);
+        for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
         {
-                const aiMesh* mesh = pScene->mMeshes[i];
-                std::vector<MeshDX::Vertex> vertices;
-                std::vector<unsigned long> indices;
+            aiVector3D pos = mesh->mVertices[j];
+            aiVector3D uv = mesh->HasTextureCoords(0)
+                    ? mesh->mTextureCoords[0][j]
+                    : aiVector3D(0, 0, 0);
 
-                // 頂点
-                vertices.resize(mesh->mNumVertices);
-                for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
-                {
-                        aiVector3D pos = mesh->mVertices[j];
-                        aiVector3D normal = mesh->HasNormals()
-                                ? mesh->mNormals[j]
-                                : aiVector3D(0, 0, 0);
-                        aiVector3D uv = mesh->HasTextureCoords(0)
-                                ? mesh->mTextureCoords[0][j]
-                                : aiVector3D(0, 0, 0);
-                        aiColor4D col = mesh->HasVertexColors(0)
-                                ? mesh->mColors[0][j]
-                                : aiColor4D(1, 1, 1, 1);
+            MeshDX::Vertex v{};
+            v.pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
+            v.uv = DirectX::XMFLOAT2(uv.x, uv.y);
 
-                        DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
-                        const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
-                        if (normalLenSq > 0.0f)
-                        {
-                                normalVec = DirectX::XMVector3Normalize(normalVec);
-                        }
-                        else
-                        {
-                                normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-                        }
+            vertices[j] = v;
 
-                        DirectX::XMFLOAT3 normalFloat;
-                        DirectX::XMStoreFloat3(&normalFloat, normalVec);
-
-                        MeshDX::Vertex v{};
-                        v.pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
-                        v.normal = normalFloat;
-                        v.uv = DirectX::XMFLOAT2(uv.x, uv.y);
-                        v.color = DirectX::XMFLOAT4(col.r, col.g, col.b, col.a);
-
-                        vertices[j] = v;
-
-                        minBounds.x = std::min(minBounds.x, pos.x);
-                        minBounds.y = std::min(minBounds.y, pos.y);
-                        minBounds.z = std::min(minBounds.z, pos.z);
-                        maxBounds.x = std::max(maxBounds.x, pos.x);
-                        maxBounds.y = std::max(maxBounds.y, pos.y);
-                        maxBounds.z = std::max(maxBounds.z, pos.z);
-                        hasBounds = true;
-                }
-
-                // インデックス
-                indices.resize(mesh->mNumFaces * 3);
-                for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
-                {
-                        aiFace face = mesh->mFaces[j];
-                        int idx = j * 3;
-                        indices[idx + 0] = face.mIndices[0];
-                        indices[idx + 1] = face.mIndices[1];
-                        indices[idx + 2] = face.mIndices[2];
-                }
-
-		// マテリアル番号
-		unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
-
-                // 説明構造体
-                MeshDX::Description desc{};
-                desc.pVtx = vertices.data();
-                desc.vtxSize = sizeof(MeshDX::Vertex);
-                desc.vtxCount = static_cast<unsigned int>(vertices.size());
-                desc.pIdx = indices.data();
-                desc.idxSize = sizeof(unsigned long);
-                desc.idxCount = static_cast<unsigned int>(indices.size());
-                desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-                meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+            minBounds.x = std::min(minBounds.x, pos.x);
+            minBounds.y = std::min(minBounds.y, pos.y);
+            minBounds.z = std::min(minBounds.z, pos.z);
+            maxBounds.x = std::max(maxBounds.x, pos.x);
+            maxBounds.y = std::max(maxBounds.y, pos.y);
+            maxBounds.z = std::max(maxBounds.z, pos.z);
+            hasBounds = true;
         }
+
+        // インデックス
+        indices.resize(mesh->mNumFaces * 3);
+        for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
+        {
+            aiFace face = mesh->mFaces[j];
+            int idx = j * 3;
+            indices[idx + 0] = face.mIndices[0];
+            indices[idx + 1] = face.mIndices[1];
+            indices[idx + 2] = face.mIndices[2];
+        }
+
+        // マテリアル番号
+        unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
+
+        // 説明構造体
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = static_cast<unsigned int>(vertices.size());
+        desc.pIdx = indices.data();
+        desc.idxSize = sizeof(unsigned long);
+        desc.idxCount = static_cast<unsigned int>(indices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+    }
 
     if (hasBounds)
     {
