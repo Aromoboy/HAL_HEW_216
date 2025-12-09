@@ -14,7 +14,7 @@ ModelRender::ModelRender()
 {
     auto& cache = TextureCache::Instance();
     constexpr const char* kFallbackKey = "ModelRenderFallbackWhite";
-    m_fallbackTexture = cache.Get(kFallbackKey);
+    m_fallbackTexture = cache.GetTexture(kFallbackKey);
     if (!m_fallbackTexture)
     {
         static const uint32_t kWhitePixel = 0xFFFFFFFFu;
