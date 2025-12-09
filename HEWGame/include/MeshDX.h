@@ -28,31 +28,37 @@ public:
 	};
 
 	// 作成用の情報
-	struct Description
-	{
-		const void* pVtx;
-		UINT vtxSize;
-		UINT vtxCount;
-		const void* pIdx;
-		UINT idxSize;
-		UINT idxCount;
-		D3D11_PRIMITIVE_TOPOLOGY topology;
-	};
+        struct Description
+        {
+                const void* pVtx;
+                UINT vtxSize;
+                UINT vtxCount;
+                const void* pIdx;
+                UINT idxSize;
+                UINT idxCount;
+                D3D11_PRIMITIVE_TOPOLOGY topology{ D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED };
+                bool isSkinned{ false };
+        };
 
 	// コンストラクタ、デストラクタ
 	MeshDX(const MeshDX::Description& desc, unsigned long materialID);
 	~MeshDX();
 	
 	// メッシュに対応するモデルのマテリアルIDを取得
-	unsigned int GetMaterialID();
+        unsigned int GetMaterialID();
 
-	// 各バッファの取得
+        // 各バッファの取得
         const Core::VertexBuffer& GetVertexBuffer() const;
         const Core::IndexBuffer* GetIndexBuffer() const;
         bool HasIndexBuffer() const;
 
-	// Index数の取得
-	unsigned int GetIndexCount();
+        // トポロジ
+        D3D11_PRIMITIVE_TOPOLOGY GetTopology() const { return m_topology; }
+
+        bool IsSkinned() const { return m_isSkinned; }
+
+        // Index数の取得
+        unsigned int GetIndexCount();
 
 private:
 
@@ -61,8 +67,12 @@ private:
         Core::IndexBuffer m_indexBuffer;
         bool m_hasIndexBuffer;
 
-	// 対応するマテリアルID
-	unsigned int m_materialID;
+        D3D11_PRIMITIVE_TOPOLOGY m_topology{ D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
+
+        bool m_isSkinned{ false };
+
+        // 対応するマテリアルID
+        unsigned int m_materialID;
 
 	// Index数
 	unsigned int m_indexCount;

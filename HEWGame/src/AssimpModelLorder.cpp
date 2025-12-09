@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include <filesystem>
@@ -73,81 +74,170 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
     hasBounds = false;
 
 	for (unsigned int i = 0; i < meshes.size(); ++i)
-	{
-		std::vector<MeshDX::PackedVertex> vertices;
-		std::vector<unsigned long> indices;
+        {
+                const aiMesh* mesh = pScene->mMeshes[i];
+                const bool hasBones = mesh->HasBones();
+                std::vector<MeshDX::PackedVertex> packedVertices;
+                std::vector<MeshDX::Vertex> skinnedVertices;
+                std::vector<unsigned long> indices;
 
-		// 頂点
-		vertices.resize(pScene->mMeshes[i]->mNumVertices);
-		for (unsigned int j = 0; j < vertices.size(); ++j)
-		{
-			aiVector3D pos = pScene->mMeshes[i]->mVertices[j];
-			aiVector3D normal = pScene->mMeshes[i]->HasNormals()
-				? pScene->mMeshes[i]->mNormals[j]
-				: aiVector3D(0, 0, 0);
-			aiVector3D uv = pScene->mMeshes[i]->HasTextureCoords(0)
-				? pScene->mMeshes[i]->mTextureCoords[0][j]
-				: aiVector3D(0, 0, 0);
-			aiColor4D col = pScene->mMeshes[i]->HasVertexColors(0)
-				? pScene->mMeshes[i]->mColors[0][j]
-				: aiColor4D(1, 1, 1, 1);
+                // 頂点
+                packedVertices.resize(mesh->mNumVertices);
+                skinnedVertices.resize(hasBones ? mesh->mNumVertices : 0);
+                for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
+                {
+                        aiVector3D pos = mesh->mVertices[j];
+                        aiVector3D normal = mesh->HasNormals()
+                                ? mesh->mNormals[j]
+                                : aiVector3D(0, 0, 0);
+                        aiVector3D uv = mesh->HasTextureCoords(0)
+                                ? mesh->mTextureCoords[0][j]
+                                : aiVector3D(0, 0, 0);
+                        aiColor4D col = mesh->HasVertexColors(0)
+                                ? mesh->mColors[0][j]
+                                : aiColor4D(1, 1, 1, 1);
 
-			DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
-			const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
-			if (normalLenSq > 0.0f)
-			{
-				normalVec = DirectX::XMVector3Normalize(normalVec);
-			}
-			else
-			{
-				normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-			}
+                        DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
+                        const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
+                        if (normalLenSq > 0.0f)
+                        {
+                                normalVec = DirectX::XMVector3Normalize(normalVec);
+                        }
+                        else
+                        {
+                                normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+                        }
 
-			DirectX::XMFLOAT3 normalFloat;
-			DirectX::XMStoreFloat3(&normalFloat, normalVec);
+                        DirectX::XMFLOAT3 normalFloat;
+                        DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
-			vertices[j] = {
-				DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
-				normalFloat,
-				DirectX::XMFLOAT2(uv.x, uv.y),
-				DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
-			};
+                        MeshDX::PackedVertex packed{
+                                DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
+                                normalFloat,
+                                DirectX::XMFLOAT2(uv.x, uv.y),
+                                DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
+                        };
 
-			minBounds.x = std::min(minBounds.x, pos.x);
-			minBounds.y = std::min(minBounds.y, pos.y);
-			minBounds.z = std::min(minBounds.z, pos.z);
-			maxBounds.x = std::max(maxBounds.x, pos.x);
-			maxBounds.y = std::max(maxBounds.y, pos.y);
-			maxBounds.z = std::max(maxBounds.z, pos.z);
-			hasBounds = true;
-		}
+                        packedVertices[j] = packed;
 
-		// インデックス
-		indices.resize(pScene->mMeshes[i]->mNumFaces * 3);
-		for (unsigned int j = 0; j < pScene->mMeshes[i]->mNumFaces; ++j)
-		{
-			aiFace face = pScene->mMeshes[i]->mFaces[j];
-			int idx = j * 3;
-			indices[idx + 0] = face.mIndices[0];
-			indices[idx + 1] = face.mIndices[1];
-			indices[idx + 2] = face.mIndices[2];
-		}
+                        if (hasBones)
+                        {
+                                MeshDX::Vertex v{};
+                                v.pos = packed.pos;
+                                v.normal = packed.normal;
+                                v.uv = packed.uv;
+                                v.color = packed.color;
+                                skinnedVertices[j] = v;
+                        }
+
+                        minBounds.x = std::min(minBounds.x, pos.x);
+                        minBounds.y = std::min(minBounds.y, pos.y);
+                        minBounds.z = std::min(minBounds.z, pos.z);
+                        maxBounds.x = std::max(maxBounds.x, pos.x);
+                        maxBounds.y = std::max(maxBounds.y, pos.y);
+                        maxBounds.z = std::max(maxBounds.z, pos.z);
+                        hasBounds = true;
+                }
+
+                if (hasBones)
+                {
+                        struct WeightPair
+                        {
+                                unsigned int idx;
+                                float weight;
+                        };
+
+                        std::vector<std::vector<WeightPair>> weights(mesh->mNumVertices);
+
+                        for (unsigned int boneIdx = 0; boneIdx < mesh->mNumBones; ++boneIdx)
+                        {
+                                const aiBone* assimpBone = mesh->mBones[boneIdx];
+                                const unsigned int weightNum = assimpBone->mNumWeights;
+                                for (unsigned int w = 0; w < weightNum; ++w)
+                                {
+                                        const aiVertexWeight weight = assimpBone->mWeights[w];
+                                        if (weight.mVertexId < weights.size())
+                                        {
+                                                weights[weight.mVertexId].push_back({ boneIdx, weight.mWeight });
+                                        }
+                                }
+                        }
+
+                        for (unsigned int vtxIdx = 0; vtxIdx < skinnedVertices.size(); ++vtxIdx)
+                        {
+                                auto& v = skinnedVertices[vtxIdx];
+                                auto& wList = weights[vtxIdx];
+
+                                if (wList.empty())
+                                {
+                                        v.weight[0] = 1.0f;
+                                        v.index[0] = 0;
+                                        continue;
+                                }
+
+                                std::sort(wList.begin(), wList.end(), [](const WeightPair& a, const WeightPair& b)
+                                {
+                                        return a.weight > b.weight;
+                                });
+
+                                const size_t maxWeights = std::min<size_t>(4, wList.size());
+                                float total = 0.0f;
+                                for (size_t wi = 0; wi < maxWeights; ++wi)
+                                {
+                                        total += wList[wi].weight;
+                                }
+
+                                if (total <= 0.0f)
+                                {
+                                        v.weight[0] = 1.0f;
+                                        v.index[0] = 0;
+                                        continue;
+                                }
+
+                                for (size_t wi = 0; wi < maxWeights; ++wi)
+                                {
+                                        v.index[wi] = wList[wi].idx;
+                                        v.weight[wi] = wList[wi].weight / total;
+                                }
+                        }
+                }
+
+                // インデックス
+                indices.resize(mesh->mNumFaces * 3);
+                for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
+                {
+                        aiFace face = mesh->mFaces[j];
+                        int idx = j * 3;
+                        indices[idx + 0] = face.mIndices[0];
+                        indices[idx + 1] = face.mIndices[1];
+                        indices[idx + 2] = face.mIndices[2];
+                }
 
 		// マテリアル番号
 		unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
 
-		// 説明構造体
-		MeshDX::Description desc{};
-		desc.pVtx = vertices.data();
-		desc.vtxSize = sizeof(MeshDX::PackedVertex);
-		desc.vtxCount = static_cast<unsigned int>(vertices.size());
-		desc.pIdx = indices.data();
-		desc.idxSize = sizeof(unsigned long);
-		desc.idxCount = static_cast<unsigned int>(indices.size());
-		desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+                // 説明構造体
+                MeshDX::Description desc{};
+                if (hasBones)
+                {
+                        desc.pVtx = skinnedVertices.data();
+                        desc.vtxSize = sizeof(MeshDX::Vertex);
+                        desc.vtxCount = static_cast<unsigned int>(skinnedVertices.size());
+                }
+                else
+                {
+                        desc.pVtx = packedVertices.data();
+                        desc.vtxSize = sizeof(MeshDX::PackedVertex);
+                        desc.vtxCount = static_cast<unsigned int>(packedVertices.size());
+                }
+                desc.pIdx = indices.data();
+                desc.idxSize = sizeof(unsigned long);
+                desc.idxCount = static_cast<unsigned int>(indices.size());
+                desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+                desc.isSkinned = hasBones;
 
-		meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
-	}
+                meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+        }
 
     if (hasBounds)
     {
