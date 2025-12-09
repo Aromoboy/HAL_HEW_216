@@ -113,9 +113,9 @@ namespace
 
 namespace Systems
 {
-    PhysicsMachine::PhysicsMachine(const PhysicsTuningParameters& tuning)
+    PhysicsMachine::PhysicsMachine(float gravity, int subStepCount)
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
-        , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(tuning))
+        , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(gravity))
         , m_system(m_box2dSystem)
         , m_contactListener()
         , m_bodies()
@@ -125,15 +125,7 @@ namespace Systems
         , m_loggedMissingWorld(false)
         , m_loggedFirstTick(false)
     {
-        m_defaultBodyDef = b2DefaultBodyDef();
-        m_defaultBodyDef.linearDamping = std::max(0.0f, tuning.defaultLinearDamping);
-        m_defaultBodyDef.angularDamping = std::max(0.0f, tuning.defaultAngularDamping);
-
-        m_defaultShapeDef = b2DefaultShapeDef();
-        m_defaultShapeDef.material.friction = std::max(0.0f, tuning.defaultFriction);
-        m_defaultShapeDef.material.restitution = std::clamp(tuning.defaultRestitution, 0.0f, 1.0f);
-
-        SetSubStepCount(tuning.subStepCount);
+        SetSubStepCount(subStepCount);
         if (m_box2dSystem)
         {
             m_box2dSystem->SetPhysicsMachine(this);
@@ -482,15 +474,12 @@ namespace Systems
         };
 
         // BodyDef 設定
-        b2BodyDef bodyDef = m_defaultBodyDef;
+        b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
         bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
         bodyDef.rotation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
         bodyDef.motionLocks.angularZ = hasShapeConfig ? shapeConfig->fixedRotation : false;
-        if (hasShapeConfig && shapeConfig->angularDamping > 0.0f)
-        {
-            bodyDef.angularDamping = shapeConfig->angularDamping;
-        }
+        bodyDef.angularDamping = hasShapeConfig ? std::max(0.0f, shapeConfig->angularDamping) : bodyDef.angularDamping;
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
         bodyDef.userData = &body;
@@ -512,40 +501,20 @@ namespace Systems
         }
 
         // ShapeDef 設定
-        const b2ShapeDef box2dDefaultShapeDef = b2DefaultShapeDef();
-        b2ShapeDef shapeDef = m_defaultShapeDef;
+        b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.userData = &body;
         if (hasColliderComponent)
         {
             shapeDef = colliderComponent->shapeDef;
             shapeDef.userData = &body;
-            if (!hasShapeConfig)
-            {
-                if (std::fabs(shapeDef.material.friction - box2dDefaultShapeDef.material.friction) <= std::numeric_limits<float>::epsilon())
-                {
-                    shapeDef.material.friction = m_defaultShapeDef.material.friction;
-                }
-                if (std::fabs(shapeDef.material.restitution - box2dDefaultShapeDef.material.restitution) <= std::numeric_limits<float>::epsilon())
-                {
-                    shapeDef.material.restitution = m_defaultShapeDef.material.restitution;
-                }
-            }
         }
 
         const float configuredDensity = hasShapeConfig
             ? std::max(0.0f, shapeConfig->density)
             : 1.0f;
         shapeDef.density = bodyDef.type == b2_dynamicBody ? configuredDensity : 0.0f;
-        if (hasShapeConfig)
-        {
-            shapeDef.material.friction = std::max(0.0f, shapeConfig->friction);
-            shapeDef.material.restitution = std::clamp(shapeConfig->restitution, 0.0f, 1.0f);
-        }
-        else
-        {
-            shapeDef.material.friction = std::max(0.0f, shapeDef.material.friction);
-            shapeDef.material.restitution = std::clamp(shapeDef.material.restitution, 0.0f, 1.0f);
-        }
+        shapeDef.material.friction = hasShapeConfig ? shapeConfig->friction : 0.6f;
+        shapeDef.material.restitution = hasShapeConfig ? shapeConfig->restitution : shapeDef.material.restitution;
         shapeDef.enableContactEvents = true;
         shapeDef.enableHitEvents = true;
         shapeDef.filter.categoryBits = ToCategoryBits(layer);

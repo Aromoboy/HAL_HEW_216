@@ -15,7 +15,7 @@ namespace Systems
         class Box2DPhysicsSystem : public Core::UpdateNode, public IPhysicsSystem
         {
         public:
-                explicit Box2DPhysicsSystem(const PhysicsTuningParameters& tuning = {});
+                explicit Box2DPhysicsSystem(float gravity = 9.8f);
                 ~Box2DPhysicsSystem() override;
 
                 void Apply(float dt) override;

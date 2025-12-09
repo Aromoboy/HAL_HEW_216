@@ -616,12 +616,20 @@ namespace
         {
             float gravity = 11.5f;
             int subStepCount = 8;
-            float linearDamping = 0.97f;
-            float angularDamping = 0.97f;
-            float defaultFriction = 0.52f;
-            float defaultRestitution = 0.06f;
-            float restitutionThreshold = 5.0f;
-            float hitEventThreshold = 0.0f;
+            float damping = 0.97f;
+            float penetrationTolerance = 0.005f;
+            float restitution = 0.06f;
+            float frictionStatic = 0.85f;
+            float frictionDynamic = 0.52f;
+            float maxSlopeCos = 0.96f;
+            float maxRestitutionVelocity = 5.0f;
+            float verticalSnapCos = 0.97f;
+            float groundMinCos = 0.92f;
+            float baumgarteFactor = 0.18f;
+            float maxPenetrationCorrection = 0.1f;
+            float minLinearSpeed = 0.05f;
+            float minVerticalSpeed = 0.03f;
+            float minTangentialSpeed = 0.03f;
         };
 
         SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
@@ -771,12 +779,20 @@ namespace
                 oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
                     << "'. Using defaults (gravity=" << settings.gravity
                     << ", subSteps=" << settings.subStepCount
-                    << ", linearDamping=" << settings.linearDamping
-                    << ", angularDamping=" << settings.angularDamping
-                    << ", defaultFriction=" << settings.defaultFriction
-                    << ", defaultRestitution=" << settings.defaultRestitution
-                    << ", restitutionThreshold=" << settings.restitutionThreshold
-                    << ", hitEventThreshold=" << settings.hitEventThreshold
+                    << ", damping=" << settings.damping
+                    << ", penetrationTolerance=" << settings.penetrationTolerance
+                    << ", restitution=" << settings.restitution
+                    << ", frictionStatic=" << settings.frictionStatic
+                    << ", frictionDynamic=" << settings.frictionDynamic
+                    << ", maxSlopeCos=" << settings.maxSlopeCos
+                    << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                    << ", verticalSnapCos=" << settings.verticalSnapCos
+                    << ", groundMinCos=" << settings.groundMinCos
+                    << ", baumgarteFactor=" << settings.baumgarteFactor
+                    << ", maxPenetrationCorrection=" << settings.maxPenetrationCorrection
+                    << ", minLinearSpeed=" << settings.minLinearSpeed
+                    << ", minVerticalSpeed=" << settings.minVerticalSpeed
+                    << ", minTangentialSpeed=" << settings.minTangentialSpeed
                     << ").\n";
                 ::DebugTrace(oss.str());
                 return settings;
@@ -825,29 +841,61 @@ namespace
                     {
                         settings.subStepCount = std::max(1, std::stoi(value));
                     }
-                    else if (key == "linearDamping")
+                    else if (key == "damping")
                     {
-                        settings.linearDamping = std::max(0.0f, std::stof(value));
+                        settings.damping = std::stof(value);
                     }
-                    else if (key == "angularDamping")
+                    else if (key == "penetrationTolerance")
                     {
-                        settings.angularDamping = std::max(0.0f, std::stof(value));
+                        settings.penetrationTolerance = std::max(0.0f, std::stof(value));
                     }
-                    else if (key == "defaultFriction")
+                    else if (key == "restitution")
                     {
-                        settings.defaultFriction = std::max(0.0f, std::stof(value));
+                        settings.restitution = std::clamp(std::stof(value), 0.0f, 1.0f);
                     }
-                    else if (key == "defaultRestitution")
+                    else if (key == "frictionStatic")
                     {
-                        settings.defaultRestitution = std::clamp(std::stof(value), 0.0f, 1.0f);
+                        settings.frictionStatic = std::max(0.0f, std::stof(value));
                     }
-                    else if (key == "restitutionThreshold")
+                    else if (key == "frictionDynamic")
                     {
-                        settings.restitutionThreshold = std::max(0.0f, std::stof(value));
+                        settings.frictionDynamic = std::max(0.0f, std::stof(value));
                     }
-                    else if (key == "hitEventThreshold")
+                    else if (key == "maxSlopeCos")
                     {
-                        settings.hitEventThreshold = std::max(0.0f, std::stof(value));
+                        settings.maxSlopeCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "maxRestitutionVelocity")
+                    {
+                        settings.maxRestitutionVelocity = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "verticalSnapCos")
+                    {
+                        settings.verticalSnapCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "groundMinCos")
+                    {
+                        settings.groundMinCos = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "baumgarteFactor")
+                    {
+                        settings.baumgarteFactor = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    }
+                    else if (key == "maxPenetrationCorrection")
+                    {
+                        settings.maxPenetrationCorrection = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minLinearSpeed")
+                    {
+                        settings.minLinearSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minVerticalSpeed")
+                    {
+                        settings.minVerticalSpeed = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "minTangentialSpeed")
+                    {
+                        settings.minTangentialSpeed = std::max(0.0f, std::stof(value));
                     }
                     else
                     {
@@ -870,12 +918,20 @@ namespace
             oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
                 << "' (gravity=" << settings.gravity
                 << ", subSteps=" << settings.subStepCount
-                << ", linearDamping=" << settings.linearDamping
-                << ", angularDamping=" << settings.angularDamping
-                << ", defaultFriction=" << settings.defaultFriction
-                << ", defaultRestitution=" << settings.defaultRestitution
-                << ", restitutionThreshold=" << settings.restitutionThreshold
-                << ", hitEventThreshold=" << settings.hitEventThreshold
+                << ", damping=" << settings.damping
+                << ", penetrationTolerance=" << settings.penetrationTolerance
+                << ", restitution=" << settings.restitution
+                << ", frictionStatic=" << settings.frictionStatic
+                << ", frictionDynamic=" << settings.frictionDynamic
+                << ", maxSlopeCos=" << settings.maxSlopeCos
+                << ", maxRestitutionVelocity=" << settings.maxRestitutionVelocity
+                << ", verticalSnapCos=" << settings.verticalSnapCos
+                << ", groundMinCos=" << settings.groundMinCos
+                << ", baumgarteFactor=" << settings.baumgarteFactor
+                << ", maxPenetrationCorrection=" << settings.maxPenetrationCorrection
+                << ", minLinearSpeed=" << settings.minLinearSpeed
+                << ", minVerticalSpeed=" << settings.minVerticalSpeed
+                << ", minTangentialSpeed=" << settings.minTangentialSpeed
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -1168,16 +1224,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     }
 
     const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
-    Systems::PhysicsTuningParameters physicsParameters{};
-    physicsParameters.gravity = tuning.gravity;
-    physicsParameters.subStepCount = tuning.subStepCount;
-    physicsParameters.defaultLinearDamping = tuning.linearDamping;
-    physicsParameters.defaultAngularDamping = tuning.angularDamping;
-    physicsParameters.defaultFriction = tuning.defaultFriction;
-    physicsParameters.defaultRestitution = tuning.defaultRestitution;
-    physicsParameters.restitutionThreshold = tuning.restitutionThreshold;
-    physicsParameters.hitEventThreshold = tuning.hitEventThreshold;
-    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(physicsParameters);
+    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(tuning.gravity, tuning.subStepCount);
     m_contactListener = std::make_shared<Systems::Box2DContactListener>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
