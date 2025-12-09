@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
 #include "ModelDX.h"
@@ -38,13 +39,23 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             c = '\\';
     directory = directory.substr(0, directory.find_last_of('\\') + 1);
 
+    std::string pathWithoutExtension = path;
+    for (auto& c : pathWithoutExtension)
+        if (c == '\\')
+            c = '/';
+    const auto extPos = pathWithoutExtension.find_last_of('.');
+    if (extPos != std::string::npos)
+    {
+        pathWithoutExtension = pathWithoutExtension.substr(0, extPos);
+    }
+
     // メッシュ作成
     AABB localBounds{};
     bool hasBounds = false;
     auto meshes = MakeMesh(pScene, localBounds, hasBounds);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, device, textureCache);
+    auto materials = MakeMaterial(pScene, directory, pathWithoutExtension, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
@@ -153,6 +164,7 @@ std::vector<std::shared_ptr<MaterialDX>>
 AssimpModelLorder::MakeMaterial(
     const aiScene* ptr,
     const std::string& directory,
+    const std::string& pathWithoutExtension,
     ID3D11Device* device,
     TextureCache& textureCache)
 {
@@ -193,8 +205,6 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
-            std::string cacheKey = directory + texFile;
-
             if (!texFile.empty() && texFile[0] == '*')
             {
                 const int texIndex = std::atoi(texFile.c_str() + 1);
@@ -205,14 +215,32 @@ AssimpModelLorder::MakeMaterial(
                     const size_t byteSize = embedded->mHeight == 0
                         ? static_cast<size_t>(embedded->mWidth)
                         : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
-                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                    const std::string cacheKey = "fbx:" + pathWithoutExtension + ":embedded:" + std::to_string(texIndex);
+                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight, embedded->achFormatHint);
+                    if (!texture)
+                    {
+                        DebugMessage("[AssimpModelLoader] Failed to load embedded texture index " + std::to_string(texIndex) + ".\n");
+                    }
+                }
+                else
+                {
+                    DebugMessage("[AssimpModelLoader] Embedded texture index out of range.\n");
                 }
             }
             else
             {
                 std::string full = directory + texFile;
+                for (auto& c : full)
+                {
+                    if (c == '\\')
+                        c = '/';
+                }
                 std::wstring wfull(full.begin(), full.end());
                 texture = textureCache.Load(full, device, wfull);
+                if (!texture)
+                {
+                    DebugMessage("[AssimpModelLoader] Failed to load texture from path '" + full + "'.\n");
+                }
             }
         }
 
