@@ -6,13 +6,11 @@
 #include <string>
 #include <map>
 #include <vector>
-
-	void WriteBuffer(UINT slot, const void* pData);
 class Shader
 {
 protected:
-	enum Kind
-	{
+        enum Kind
+        {
 		Vertex,
 		Pixel
 	};
@@ -27,8 +25,8 @@ public:
 	HRESULT Compile(const char* pCode);
 
 
-	// 定数の書き込み
-	void WriteBuffer(UINT slot, void* pData);
+        // 定数の書き込み
+        void WriteBuffer(UINT slot, const void* pData);
 	// テクスチャの設定
 	void SetTexture(UINT slot, Texture* tex);
 	// テクスチャの設定
