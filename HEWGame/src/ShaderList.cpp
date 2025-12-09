@@ -168,9 +168,9 @@ VS_OUT main(VSInput vin) {
 	vout.color = vin.color;
 	return vout;
 })EOT";
-	// PackedVertex layout: POSITION(float3), NORMAL(float3), TEXCOORD(float2), COLOR(float4) = 48 bytes
-	m_pVS[VS_WORLD] = new VertexShader();
-	m_pVS[VS_WORLD]->Compile(code);
+        // MeshDX::Vertex layout: POSITION(float3), NORMAL(float3), TEXCOORD(float2), COLOR(float4) = 48 bytes
+        m_pVS[VS_WORLD] = new VertexShader();
+        m_pVS[VS_WORLD]->Compile(code);
 }
 void ShaderList::MakeLambertPS()
 {
