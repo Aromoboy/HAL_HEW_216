@@ -3,7 +3,6 @@
 
 #include "Scene.h"
 #include "SceneManager.h"
-#include "TestObject.h"
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
@@ -51,6 +50,12 @@ struct StageObject
     float spinSpeed;
     std::shared_ptr<Render::Model> model;
     float currentRotation;
+};
+
+struct StageAnchor
+{
+    Transform transform{};
+    std::shared_ptr<Render::Model> model;
 };
 
 namespace Systems
@@ -138,7 +143,7 @@ private:
     std::shared_ptr<IModelLoader> m_loader;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
-    std::vector<std::shared_ptr<TestObject>> m_pObjects;
+    std::vector<StageAnchor> m_stageAnchors;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
