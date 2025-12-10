@@ -6,98 +6,36 @@
 #include "Debug.h"
 #include "MatrixUtil.h"
 #include "TextureCache.h"
-
-#include <d3dcompiler.h>
-#pragma comment(lib, "d3dcompiler.lib")
-#include <cstring>
-#include <array>
+#include "WorldBuffer.h"
 
 #include <cstdint>
 
-namespace
-{
-    struct ModelShaderResources
-    {
-        ID3D11VertexShader* vertexShader{ nullptr };
-        ID3D11PixelShader* pixelShader{ nullptr };
-        ID3D11InputLayout* inputLayout{ nullptr };
-        ID3D11Buffer* wvpBuffer{ nullptr };
-        ID3D11Buffer* materialBuffer{ nullptr };
-    };
-
-    ModelShaderResources g_modelShaders;
-
-    struct ModelWvp
-    {
-        DirectX::XMFLOAT4X4 world;
-        DirectX::XMFLOAT4X4 view;
-        DirectX::XMFLOAT4X4 proj;
-    };
-
-    struct MaterialParams
-    {
-        DirectX::XMFLOAT4 diffuse;
-        DirectX::XMFLOAT4 ambient;
-        DirectX::XMFLOAT4 specular;
-    };
-
-    void ReleaseModelShaders()
-    {
-        SAFE_RELEASE(g_modelShaders.vertexShader);
-        SAFE_RELEASE(g_modelShaders.pixelShader);
-        SAFE_RELEASE(g_modelShaders.inputLayout);
-        SAFE_RELEASE(g_modelShaders.wvpBuffer);
-        SAFE_RELEASE(g_modelShaders.materialBuffer);
-    }
-
-    bool CreateConstantBuffer(UINT byteWidth, ID3D11Buffer** buffer)
-    {
-        D3D11_BUFFER_DESC desc{};
-        desc.ByteWidth = (byteWidth + 15u) & ~15u;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        return SUCCEEDED(GetDevice()->CreateBuffer(&desc, nullptr, buffer));
-    }
-
-    bool CompileShader(const char* source, const char* target, ID3DBlob** blob)
-    {
-        return SUCCEEDED(D3DCompile(
-            source,
-            strlen(source),
-            nullptr,
-            nullptr,
-            nullptr,
-            "main",
-            target,
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-            0,
-            blob,
-            nullptr));
-    }
-}
+std::shared_ptr<VertexShader> ModelRender::s_defaultVS;
+std::shared_ptr<PixelShader> ModelRender::s_defaultPS;
 
 void ModelRender::EnsureDefaultShaders()
 {
-    if (g_modelShaders.vertexShader && g_modelShaders.pixelShader && g_modelShaders.inputLayout && g_modelShaders.wvpBuffer && g_modelShaders.materialBuffer)
+    if (s_defaultVS && s_defaultPS)
     {
         return;
     }
-
-    ReleaseModelShaders();
 
     const char* kDefaultVS = R"EOT(
 struct VS_IN {
         float3 pos : POSITION;
         float2 uv : TEXCOORD0;
+        float3 normal : NORMAL0;
 };
 struct VS_OUT {
         float4 pos : SV_POSITION;
+        float3 normal : NORMAL0;
         float2 uv : TEXCOORD0;
 };
 cbuffer WVP : register(b0) {
         float4x4 world;
         float4x4 view;
         float4x4 proj;
+        float4 normalBasis[3];
 };
 VS_OUT main(VS_IN vin) {
         VS_OUT vout;
@@ -105,12 +43,15 @@ VS_OUT main(VS_IN vin) {
         float4 viewPos = mul(worldPos, view);
         vout.pos = mul(viewPos, proj);
         vout.uv = vin.uv;
+        float3x3 normalMat = float3x3(normalBasis[0].xyz, normalBasis[1].xyz, normalBasis[2].xyz);
+        vout.normal = normalize(mul(vin.normal, normalMat));
         return vout;
 })EOT";
 
     const char* kDefaultPS = R"EOT(
 struct PS_IN {
         float4 pos : SV_POSITION;
+        float3 normal : NORMAL0;
         float2 uv : TEXCOORD0;
 };
 cbuffer Material : register(b0) {
@@ -122,74 +63,24 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
+        float3 n = normalize(pin.normal);
+        float3 lightDir = normalize(float3(-1.0f, -1.0f, -1.0f));
+        float lambert = saturate(dot(n, -lightDir));
         float4 sampled = tex.Sample(samp, pin.uv);
         float3 base = sampled.rgb * diffuse.rgb;
-        float3 lit = saturate(base + ambient.rgb);
+        float3 lit = lerp(ambient.rgb * diffuse.rgb, base, lambert);
         return float4(lit, sampled.a * diffuse.a);
 })EOT";
 
-    ID3DBlob* vsBlob = nullptr;
-    if (!CompileShader(kDefaultVS, "vs_5_0", &vsBlob))
-    {
-        SAFE_RELEASE(vsBlob);
-        return;
-    }
-
-    if (FAILED(GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &g_modelShaders.vertexShader)))
-    {
-        SAFE_RELEASE(vsBlob);
-        return;
-    }
-
-    D3D11_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-
-    const UINT layoutCount = static_cast<UINT>(std::size(layout));
-    if (FAILED(GetDevice()->CreateInputLayout(layout, layoutCount, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &g_modelShaders.inputLayout)))
-    {
-        SAFE_RELEASE(vsBlob);
-        return;
-    }
-
-    SAFE_RELEASE(vsBlob);
-
-    ID3DBlob* psBlob = nullptr;
-    if (!CompileShader(kDefaultPS, "ps_5_0", &psBlob))
-    {
-        SAFE_RELEASE(psBlob);
-        return;
-    }
-
-    if (FAILED(GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &g_modelShaders.pixelShader)))
-    {
-        SAFE_RELEASE(psBlob);
-        return;
-    }
-
-    SAFE_RELEASE(psBlob);
-
-    if (!CreateConstantBuffer(sizeof(ModelWvp), &g_modelShaders.wvpBuffer))
-    {
-        ReleaseModelShaders();
-        return;
-    }
-
-    if (!CreateConstantBuffer(sizeof(MaterialParams), &g_modelShaders.materialBuffer))
-    {
-        ReleaseModelShaders();
-    }
+    s_defaultVS = std::make_shared<VertexShader>();
+    s_defaultVS->Compile(kDefaultVS);
+    s_defaultPS = std::make_shared<PixelShader>();
+    s_defaultPS->Compile(kDefaultPS);
 }
 
 ModelRender::ModelRender()
 {
     EnsureDefaultShaders();
-
-    if (!g_modelShaders.vertexShader || !g_modelShaders.pixelShader)
-    {
-        DebugMessage("[ModelRender] Failed to initialize default shaders");
-    }
 
     auto& cache = TextureCache::Instance();
     constexpr const char* kFallbackKey = "ModelRenderFallbackWhite";
@@ -239,23 +130,15 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         return;
     }
 
-    if (!g_modelShaders.vertexShader || !g_modelShaders.pixelShader || !g_modelShaders.inputLayout || !g_modelShaders.wvpBuffer || !g_modelShaders.materialBuffer)
-    {
-        return;
-    }
-
-    ID3D11DeviceContext* context = GetContext();
-    if (!context)
-    {
-        return;
-    }
-
-    ModelWvp wvp = {};
+    WorldBuffer wvp = {};
     wvp.view = camera->GetView();
     wvp.proj = camera->GetProjection();
 
     const float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
     wvp.world = MathUtil::MakeWorldMatrix(transform.position, transform.scale, radRotation);
+    wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+    wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+    wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
     for (int i = 0; i < a_model.GetMeshCount(); i++)
     {
@@ -303,14 +186,12 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         MaterialParams params{ effectiveMaterial->GetDiffuse(), effectiveMaterial->GetAmbient(), effectiveMaterial->GetSpecular() };
 
-        context->UpdateSubresource(g_modelShaders.wvpBuffer, 0, nullptr, &wvp, 0, 0);
-        context->UpdateSubresource(g_modelShaders.materialBuffer, 0, nullptr, &params, 0, 0);
-        context->PSSetShaderResources(0, 1, &srvRef);
-        context->VSSetConstantBuffers(0, 1, &g_modelShaders.wvpBuffer);
-        context->PSSetConstantBuffers(0, 1, &g_modelShaders.materialBuffer);
-        context->IASetInputLayout(g_modelShaders.inputLayout);
-        context->VSSetShader(g_modelShaders.vertexShader, nullptr, 0);
-        context->PSSetShader(g_modelShaders.pixelShader, nullptr, 0);
+        s_defaultVS->WriteBuffer(0, &wvp);
+        s_defaultPS->WriteBuffer(0, &params);
+        s_defaultPS->SetTexture(0, srvRef);
+
+        s_defaultPS->Bind();
+        s_defaultVS->Bind();
 
         MeshDraw(*mesh);
     }

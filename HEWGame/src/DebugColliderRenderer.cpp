@@ -8,10 +8,8 @@
 #include "ICamera.h"
 #include "Core/VertexBuffer.h"
 #include "DirectX.h"
-#include <d3dcompiler.h>
-#pragma comment(lib, "d3dcompiler.lib")
-#include <cstring>
-#include <array>
+#include "Shader.h"
+#include "WorldBuffer.h"
 
 namespace
 {
@@ -92,23 +90,8 @@ namespace
     };
 
     LineBatch g_lineBatch;
-
-    struct LineShaderResources
-    {
-        ID3D11VertexShader* vertexShader{ nullptr };
-        ID3D11PixelShader* pixelShader{ nullptr };
-        ID3D11InputLayout* inputLayout{ nullptr };
-        ID3D11Buffer* wvpBuffer{ nullptr };
-    };
-
-    LineShaderResources g_lineShaders;
-
-    struct LineWvp
-    {
-        DirectX::XMFLOAT4X4 world;
-        DirectX::XMFLOAT4X4 view;
-        DirectX::XMFLOAT4X4 proj;
-    };
+    std::shared_ptr<VertexShader> g_lineVS;
+    std::shared_ptr<PixelShader> g_linePS;
 
     DirectX::XMFLOAT4 ToFloat4(const Color& c)
     {
@@ -120,47 +103,12 @@ namespace
         return DirectX::XMFLOAT3{ point.x, point.y, z };
     }
 
-    void ReleaseLineShaders()
-    {
-        SAFE_RELEASE(g_lineShaders.vertexShader);
-        SAFE_RELEASE(g_lineShaders.pixelShader);
-        SAFE_RELEASE(g_lineShaders.inputLayout);
-        SAFE_RELEASE(g_lineShaders.wvpBuffer);
-    }
-
-    bool CreateConstantBuffer(UINT byteWidth, ID3D11Buffer** buffer)
-    {
-        D3D11_BUFFER_DESC desc{};
-        desc.ByteWidth = (byteWidth + 15u) & ~15u;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        return SUCCEEDED(GetDevice()->CreateBuffer(&desc, nullptr, buffer));
-    }
-
-    bool CompileShader(const char* source, const char* target, ID3DBlob** blob)
-    {
-        return SUCCEEDED(D3DCompile(
-            source,
-            strlen(source),
-            nullptr,
-            nullptr,
-            nullptr,
-            "main",
-            target,
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-            0,
-            blob,
-            nullptr));
-    }
-
     void EnsureLineShaders()
     {
-        if (g_lineShaders.vertexShader && g_lineShaders.pixelShader && g_lineShaders.inputLayout && g_lineShaders.wvpBuffer)
+        if (g_lineVS && g_linePS)
         {
             return;
         }
-
-        ReleaseLineShaders();
 
         const char* kVS = R"EOT(
 struct VS_IN {
@@ -175,6 +123,7 @@ cbuffer WVP : register(b0) {
         float4x4 world;
         float4x4 view;
         float4x4 proj;
+        float4 normalBasis[3];
 };
 VS_OUT main(VS_IN vin) {
         VS_OUT vout;
@@ -195,52 +144,10 @@ float4 main(PS_IN pin) : SV_TARGET
         return pin.color;
 })EOT";
 
-        ID3DBlob* vsBlob = nullptr;
-        if (!CompileShader(kVS, "vs_5_0", &vsBlob))
-        {
-            SAFE_RELEASE(vsBlob);
-            return;
-        }
-
-        if (FAILED(GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &g_lineShaders.vertexShader)))
-        {
-            SAFE_RELEASE(vsBlob);
-            return;
-        }
-
-        D3D11_INPUT_ELEMENT_DESC layout[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-
-        const UINT layoutCount = static_cast<UINT>(std::size(layout));
-        if (FAILED(GetDevice()->CreateInputLayout(layout, layoutCount, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &g_lineShaders.inputLayout)))
-        {
-            SAFE_RELEASE(vsBlob);
-            return;
-        }
-
-        SAFE_RELEASE(vsBlob);
-
-        ID3DBlob* psBlob = nullptr;
-        if (!CompileShader(kPS, "ps_5_0", &psBlob))
-        {
-            SAFE_RELEASE(psBlob);
-            return;
-        }
-
-        if (FAILED(GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &g_lineShaders.pixelShader)))
-        {
-            SAFE_RELEASE(psBlob);
-            return;
-        }
-
-        SAFE_RELEASE(psBlob);
-
-        if (!CreateConstantBuffer(sizeof(LineWvp), &g_lineShaders.wvpBuffer))
-        {
-            ReleaseLineShaders();
-        }
+        g_lineVS = std::make_shared<VertexShader>();
+        g_lineVS->Compile(kVS);
+        g_linePS = std::make_shared<PixelShader>();
+        g_linePS->Compile(kPS);
     }
 
     void PushLine(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end, const DirectX::XMFLOAT4& color)
@@ -371,7 +278,7 @@ namespace DebugColliderRenderer
 
         EnsureLineShaders();
 
-        if (!g_lineShaders.vertexShader || !g_lineShaders.pixelShader || !g_lineShaders.inputLayout || !g_lineShaders.wvpBuffer)
+        if (!g_lineVS || !g_linePS)
         {
             g_lineBatch.Clear();
             return;
@@ -383,27 +290,21 @@ namespace DebugColliderRenderer
             return;
         }
 
-        ID3D11DeviceContext* context = GetContext();
-        if (!context)
-        {
-            g_lineBatch.Clear();
-            return;
-        }
-
-        LineWvp wvp{};
+        WorldBuffer wvp{};
         DirectX::XMStoreFloat4x4(&wvp.world, DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity()));
         wvp.view = camera.GetView();
         wvp.proj = camera.GetProjection();
+        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
-        context->UpdateSubresource(g_lineShaders.wvpBuffer, 0, nullptr, &wvp, 0, 0);
-        context->IASetInputLayout(g_lineShaders.inputLayout);
-        context->VSSetShader(g_lineShaders.vertexShader, nullptr, 0);
-        context->PSSetShader(g_lineShaders.pixelShader, nullptr, 0);
-        context->VSSetConstantBuffers(0, 1, &g_lineShaders.wvpBuffer);
+        g_lineVS->WriteBuffer(0, &wvp);
+        g_lineVS->Bind();
+        g_linePS->Bind();
 
         g_lineBatch.Bind();
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-        context->DrawIndexed(g_lineBatch.IndexCount(), 0, 0);
+        GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+        GetContext()->DrawIndexed(g_lineBatch.IndexCount(), 0, 0);
 
         g_lineBatch.Clear();
     }
