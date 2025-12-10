@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <system_error>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -285,8 +286,28 @@ AssimpModelLorder::MakeMaterial(
             }
             else
             {
-                std::filesystem::path texturePath = directory / texFile;
-                texturePath = texturePath.lexically_normal();
+                std::filesystem::path texturePath;
+                try
+                {
+                    texturePath = (directory / texFile).lexically_normal();
+                }
+                catch (const std::filesystem::filesystem_error& e)
+                {
+                    DebugMessage(
+                        "[AssimpModelLorder] Failed to normalize texture path '" + texFile + "' for model '" + modelPath8
+                        + "': " + e.what() + ". Skipping texture and using fallback.\n");
+                    auto fallback = allowFallback ? getFallbackTexture() : nullptr;
+                    return { fallback, true };
+                }
+                catch (const std::system_error& e)
+                {
+                    DebugMessage(
+                        "[AssimpModelLorder] System error while resolving texture path '" + texFile + "' for model '" + modelPath8
+                        + "': " + e.what() + ". Skipping texture and using fallback.\n");
+                    auto fallback = allowFallback ? getFallbackTexture() : nullptr;
+                    return { fallback, true };
+                }
+
                 const auto texturePathU8 = texturePath.u8string();
                 const std::string texturePath8(texturePathU8.begin(), texturePathU8.end());
                 const auto cacheKey = TextureCache::MakeFileKey(texturePath8);
