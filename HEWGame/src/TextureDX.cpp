@@ -48,7 +48,13 @@ namespace
         bool shouldUninit = false;
     };
 
-    bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
+    bool CreateTexture(
+        ID3D11Device* device,
+        UINT width,
+        UINT height,
+        const void* data,
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView,
+        Microsoft::WRL::ComPtr<ID3D11Texture2D>& outTexture)
     {
         D3D11_TEXTURE2D_DESC desc = {};
         desc.Width = width;
@@ -79,10 +85,16 @@ namespace
             return false;
         }
 
+        outTexture = std::move(texture);
         return true;
     }
 
-    bool DecodeWICToTexture(ID3D11Device* device, IWICImagingFactory* factory, IStream* stream, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
+    bool DecodeWICToTexture(
+        ID3D11Device* device,
+        IWICImagingFactory* factory,
+        IStream* stream,
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView,
+        Microsoft::WRL::ComPtr<ID3D11Texture2D>& outTexture)
     {
         Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
         HRESULT hr = factory->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnLoad, &decoder);
@@ -132,7 +144,7 @@ namespace
             return false;
         }
 
-        return CreateTexture(device, width, height, pixels.data(), outTextureView);
+        return CreateTexture(device, width, height, pixels.data(), outTextureView, outTexture);
     }
 }
 
@@ -179,10 +191,19 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
         return false;
     }
 
-    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> textureResource;
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView, textureResource);
     if (!result)
     {
         DebugMessage("[TextureDX] Failed to decode texture: " + pathStr);
+    }
+    else
+    {
+        texture = std::move(textureResource);
+        D3D11_TEXTURE2D_DESC desc{};
+        texture->GetDesc(&desc);
+        width = desc.Width;
+        height = desc.Height;
     }
 
     return result;
@@ -224,7 +245,15 @@ bool Texture2D::LoadFromMemory(
             );
             return false;
         }
-        return CreateTexture(device, width, height, data, textureView);
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> textureResource;
+        const bool created = CreateTexture(device, width, height, data, textureView, textureResource);
+        if (created)
+        {
+            texture = std::move(textureResource);
+            this->width = width;
+            this->height = height;
+        }
+        return created;
     }
 
     const std::string hint = formatHint ? formatHint : "";
@@ -281,7 +310,8 @@ bool Texture2D::LoadFromMemory(
     // ownership handed over to IStream
     hMemReleaser.release = false;
 
-    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView);
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> textureResource;
+    bool result = DecodeWICToTexture(device, factory.Get(), stream.Get(), textureView, textureResource);
     if (!result)
     {
         DebugMessage(
@@ -290,8 +320,84 @@ bool Texture2D::LoadFromMemory(
             + (hint.empty() ? "" : ", hint=" + hint)
         );
     }
+    else
+    {
+        texture = std::move(textureResource);
+        D3D11_TEXTURE2D_DESC desc{};
+        texture->GetDesc(&desc);
+        width = desc.Width;
+        height = desc.Height;
+    }
 
     return result;
+}
+
+bool Texture2D::CreateBlank(
+    ID3D11Device* device,
+    DXGI_FORMAT format,
+    UINT width,
+    UINT height,
+    const void* initialData,
+    UINT pitch)
+{
+    if (!device || width == 0 || height == 0)
+    {
+        DebugMessage("[TextureDX] Invalid parameters for blank texture creation.\n");
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc{};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = format;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA initData{};
+    D3D11_SUBRESOURCE_DATA* initPtr = nullptr;
+
+    if (initialData)
+    {
+        initData.pSysMem = initialData;
+        initData.SysMemPitch = pitch != 0 ? pitch : width * 4;
+        initPtr = &initData;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture2D;
+    HRESULT hr = device->CreateTexture2D(&desc, initPtr, &texture2D);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[TextureDX] Failed to create blank texture", hr));
+        return false;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+    hr = device->CreateShaderResourceView(texture2D.Get(), nullptr, &srv);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[TextureDX] Failed to create SRV for blank texture", hr));
+        return false;
+    }
+
+    texture = std::move(texture2D);
+    textureView = std::move(srv);
+    this->width = width;
+    this->height = height;
+    return true;
+}
+
+bool Texture2D::UpdatePixels(ID3D11DeviceContext* context, const void* data, UINT pitch)
+{
+    if (!context || !texture || !data || pitch == 0)
+    {
+        return false;
+    }
+
+    context->UpdateSubresource(texture.Get(), 0, nullptr, data, pitch, 0);
+    return true;
 }
 
 //============================================================

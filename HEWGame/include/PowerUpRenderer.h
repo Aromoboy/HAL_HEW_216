@@ -1,6 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <string>
+#include <vector>
+#include <d3d11.h>
 #include "Vector.h"
 #include "ICamera.h"
 #include "TextureCache.h"
@@ -56,51 +59,29 @@ struct TextBounds
 	}
 };
 
-class PowerUpStringTexture : public Texture
+class PowerUpStringTexture
 {
 public:
-	PowerUpStringTexture()
-		: m_stringTextureScale(float2{ 1.0f, 1.0f })
-	{
-		
-	}
+        PowerUpStringTexture();
 
-
-
-	void UpdatePixels(const void* data, UINT pitch)
-	{
-		if (!GetContext())
-		{
-			return;
-		}
-		if (!m_pTex)
-		{
-			return;
-		}
-		GetContext()->UpdateSubresource(m_pTex, 0, nullptr, data, pitch, 0);
-	}
-
-	void SetScale(float2 a_scale)
-	{
-		m_stringTextureScale = a_scale;
-	}
-
-	float2 GetScale()
-	{
-		return m_stringTextureScale;
-	}
-
-	TextBounds& GetBound()
-	{
-		return bound;
-	}
+        HRESULT Create(DXGI_FORMAT format, UINT width, UINT height);
+        void UpdatePixels(const void* data, UINT pitch);
+        void SetScale(float2 a_scale);
+        float2 GetScale() const;
+        TextBounds& GetBound();
+        const TextBounds& GetBound() const;
+        UINT GetWidth() const;
+        UINT GetHeight() const;
+        ID3D11ShaderResourceView* Get() const;
+        std::shared_ptr<Texture2D> GetTexture() const;
 
 private:
-	// 各文字列のテクスチャサイズ
-	float2 m_stringTextureScale;
+        std::shared_ptr<Texture2D> m_texture;
+        // 各文字列のテクスチャサイズ
+        float2 m_stringTextureScale;
 
-	// テクスチャの表示範囲
-	TextBounds bound;
+        // テクスチャの表示範囲
+        TextBounds bound;
 };
 
 
@@ -200,7 +181,6 @@ private:
         std::shared_ptr<VertexShader> m_vertexShader;
         std::shared_ptr<PixelShader> m_pixelShader;
         void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
-        void DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
         void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix);
         void MeshDraw();
 
@@ -227,11 +207,11 @@ private:
 	std::string BuildHudString(const NodeRenderData& data) const;
 
 
-	// 各リソース
-	PowerUpHudLayoutConfig m_config{};
-	std::shared_ptr<PowerUpStringTexture> m_texture;
-	// フォーマットから作成するのでCacheを使わない
-	std::shared_ptr<Texture> m_guidelineTexture;
+        // 各リソース
+        PowerUpHudLayoutConfig m_config{};
+        std::shared_ptr<PowerUpStringTexture> m_texture;
+        // フォーマットから作成するのでCacheを使わない
+        std::shared_ptr<Texture2D> m_guidelineTexture;
 	std::vector<uint8_t> m_rgbaBuffer;
 	bool m_ready = false;
 	bool m_textureDirty = false;
