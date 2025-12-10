@@ -57,6 +57,9 @@
     <ClCompile Include="src\QuadRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\UnifiedQuadRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\BaseCamera.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
@@ -378,6 +381,9 @@
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\QuadRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\UnifiedQuadRenderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\ICamera.h">

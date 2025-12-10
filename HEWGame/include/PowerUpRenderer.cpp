@@ -1,6 +1,10 @@
 ﻿#include "PowerUpRenderer.h"
 #include "Defines.h"
+#include "DirectX.h"
 #include "PowerUpTextures.h"
+
+#include <cstdint>
+#include <vector>
 
 namespace
 {
@@ -15,15 +19,6 @@ namespace
     constexpr float kBackFrameScaleOffset = 1.8f;
     constexpr float kCostIconScaleOffset = 0.3f;
     constexpr float kHudCostIconScaleOffset = 0.25f;
-
-    Transform MakeTransformImpl(const float2& position, const float2& scale)
-    {
-        Transform transform{};
-        transform.position = float3{ position.x, position.y, 0.0f };
-        transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-        transform.scale = float3{ scale.x, scale.y, 1.0f };
-        return transform;
-    }
 }
 
 // ================================================================
@@ -40,7 +35,18 @@ HRESULT PowerUpStringTexture::Create(DXGI_FORMAT /*format*/, UINT width, UINT he
 {
     m_width = width;
     m_height = height;
-    return S_OK;
+    std::vector<uint8_t> blank(static_cast<size_t>(width) * static_cast<size_t>(height) * 4, 0u);
+    m_cacheKey = "powerup:string:" + std::to_string(reinterpret_cast<std::uintptr_t>(this));
+    m_texture = TextureCache::Instance().LoadFromMemory(
+        m_cacheKey,
+        GetDevice(),
+        blank.data(),
+        blank.size(),
+        width,
+        height,
+        "RGBA");
+
+    return m_texture ? S_OK : E_FAIL;
 }
 
 void PowerUpStringTexture::UpdatePixels(const void* /*data*/, UINT /*pitch*/)
@@ -85,7 +91,6 @@ std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
 
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
     : m_cache(a_cache)
-    , m_modelRenderer(std::make_unique<ModelRender>())
 {
     const std::string costKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
     const std::string frameKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
@@ -94,6 +99,8 @@ PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
     m_cost = m_cache.GetTexture(costKey);
     m_iconFrame = m_cache.GetTexture(frameKey);
     m_backFrame = m_cache.GetTexture(backFrameKey);
+
+    m_quadRenderer = std::make_unique<UnifiedQuadRenderer>();
 }
 
 PowerUpRenderer::~PowerUpRenderer() = default;
@@ -101,83 +108,16 @@ PowerUpRenderer::~PowerUpRenderer() = default;
 bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 {
     m_config = config;
-    EnsureQuadMesh();
     return true;
 }
 
 void PowerUpRenderer::Shutdown()
 {
-    m_modelRenderer.reset();
-    m_quadMeshStrong.reset();
-    m_quadMeshWeak.reset();
+    m_quadRenderer.reset();
 
     m_cost.reset();
     m_iconFrame.reset();
     m_backFrame.reset();
-}
-
-
-// ================================================================
-// PRIVATE — quad mesh creation
-// ================================================================
-
-void PowerUpRenderer::EnsureQuadMesh()
-{
-    if (auto s = m_quadMeshWeak.lock())
-    {
-        m_quadMeshStrong = s;
-        return;
-    }
-
-    // Create a standard -0.5..0.5 unit quad with default UVs
-    const std::vector<MeshDX::Vertex> vertices{
-        { { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f } },
-        { {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f } },
-        { { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f } },
-        { {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f } },
-    };
-
-    MeshDX::Description desc{};
-    desc.pVtx = vertices.data();
-    desc.vtxSize = sizeof(MeshDX::Vertex);
-    desc.vtxCount = (UINT)vertices.size();
-    desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
-    auto mesh = std::make_shared<MeshDX>(desc, 0);
-
-    m_quadMeshStrong = mesh;
-    m_quadMeshWeak = mesh;
-}
-
-std::shared_ptr<MeshDX> PowerUpRenderer::GetQuadMesh()
-{
-    EnsureQuadMesh();
-    return m_quadMeshStrong;
-}
-
-
-// ================================================================
-// Build a model out of 1 mesh + 1 material
-// ================================================================
-
-std::shared_ptr<Render::Model> PowerUpRenderer::BuildModel(
-    const std::shared_ptr<MaterialDX>& material,
-    const std::shared_ptr<MeshDX>& mesh) const
-{
-    std::vector<std::shared_ptr<MeshDX>>     meshes{ mesh };
-    std::vector<std::shared_ptr<MaterialDX>> materials{ material };
-
-    return std::make_shared<Render::Model>(std::move(meshes), std::move(materials));
-}
-
-
-// ================================================================
-// DRAW HELPERS
-// ================================================================
-
-Transform PowerUpRenderer::MakeTransform(const float2& position, const float2& scale) const
-{
-    return MakeTransformImpl(position, scale);
 }
 
 
@@ -279,23 +219,31 @@ void PowerUpRenderer::DrawSprite(
     const DirectX::XMFLOAT4& tint,
     const CameraSpace::ICamera& camera)
 {
-    if (!texture || !m_modelRenderer)
+    (void)camera;
+
+    if (!texture || !m_quadRenderer)
         return;
 
-    auto mesh = GetQuadMesh();
-    if (!mesh)
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    if (!m_quadRenderer->TryGetViewportSize(viewportWidth, viewportHeight))
+    {
         return;
+    }
 
-    // Build material (UVRect applied through material until your shader supports it)
-    auto material = std::make_shared<MaterialDX>(
-        tint,
-        DirectX::XMFLOAT4(0, 0, 0, 0),
-        DirectX::XMFLOAT4(0, 0, 0, 0),
-        texture
-    );
+    const float centerX = (position.x * 0.5f + 0.5f) * viewportWidth;
+    const float centerY = (1.0f - position.y) * 0.5f * viewportHeight;
+    const float sizeX = scale.x * 0.5f * viewportWidth;
+    const float sizeY = scale.y * 0.5f * viewportHeight;
 
-    auto model = BuildModel(material, mesh);
-    Transform tr = MakeTransform(position, scale);
-
-    m_modelRenderer->Draw(*model, tr, &camera);
+    UnifiedQuadRenderer::DrawParams params{};
+    params.texture = texture;
+    params.tint = tint;
+    params.positionPx = DirectX::XMFLOAT2(centerX - sizeX * 0.5f, centerY - sizeY * 0.5f);
+    params.sizePx = DirectX::XMFLOAT2(sizeX, sizeY);
+    params.uvStart = DirectX::XMFLOAT2(uvRect.start.x, uvRect.start.y);
+    params.uvSize = DirectX::XMFLOAT2(uvRect.size.x, uvRect.size.y);
+    params.enableBlending = true;
+    params.disableDepth = true;
+    m_quadRenderer->Draw(params);
 }
