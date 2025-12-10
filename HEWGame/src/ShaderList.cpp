@@ -62,17 +62,9 @@ void ShaderList::Init()
         identity.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
         identity.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
         SetWVP(identity);
-
-	Model::Material material = {
-		DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-		DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f),
-		DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-		nullptr
-	};
-	SetMaterial(material);
-	SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
-	SetCameraData(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f), DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
-	SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
+        SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
+        SetCameraData(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f), DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
+        SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
 }
 
 void ShaderList::Uninit()
@@ -111,21 +103,11 @@ void ShaderList::SetWVP(const WorldBuffer& wvp)
                 m_pVS[i]->WriteBuffer(0, (void*)&wvp);
         }
 }
-void ShaderList::SetMaterial(const Model::Material& material)
-{
-	ApplyMaterial(MaterialParams{
-		material.diffuse,
-		material.ambient,
-		material.specular,
-		material.pTexture ? material.pTexture->GetResource() : nullptr,
-	});
-}
-
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	ApplyMaterial(MaterialParams{
-		material.GetDiffuse(),
-		material.GetAmbient(),
+        ApplyMaterial(MaterialParams{
+                material.GetDiffuse(),
+                material.GetAmbient(),
 		material.GetSpecular(),
 		material.GetTexture(),
 	});
