@@ -7,6 +7,7 @@
 
 #include "ICamera.h"
 #include "Transform.h"
+#include "RenderStateManager.h"
 
 class MeshDX;
 class ModelRender;
@@ -59,22 +60,6 @@ private:
         DirectX::XMFLOAT4X4 m_proj{};
         float m_width = 0.0f;
         float m_height = 0.0f;
-    };
-
-    class RenderStateGuard
-    {
-    public:
-        RenderStateGuard(bool disableDepth, bool enableBlend);
-        ~RenderStateGuard();
-
-    private:
-        bool m_restoreDepth = false;
-        bool m_restoreBlend = false;
-        UINT m_prevStencilRef = 0;
-        UINT m_prevSampleMask = 0;
-        FLOAT m_prevBlendFactor[4]{};
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_prevDepthState;
-        Microsoft::WRL::ComPtr<ID3D11BlendState> m_prevBlendState;
     };
 
     Transform BuildTransform(const DrawParams& params) const;

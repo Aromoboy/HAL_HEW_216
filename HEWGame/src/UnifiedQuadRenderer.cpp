@@ -52,48 +52,6 @@ void UnifiedQuadRenderer::ScreenSpaceCamera::UpdateProjection(float width, float
     DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixOrthographicOffCenterLH(0.0f, width, height, 0.0f, 0.0f, 1.0f));
 }
 
-UnifiedQuadRenderer::RenderStateGuard::RenderStateGuard(bool disableDepth, bool enableBlend)
-{
-    auto* context = GetContext();
-    if (!context)
-    {
-        return;
-    }
-
-    if (disableDepth)
-    {
-        context->OMGetDepthStencilState(m_prevDepthState.GetAddressOf(), &m_prevStencilRef);
-        SetDepthTest(false);
-        m_restoreDepth = true;
-    }
-
-    if (enableBlend)
-    {
-        context->OMGetBlendState(m_prevBlendState.GetAddressOf(), m_prevBlendFactor, &m_prevSampleMask);
-        SetBlendMode(BLEND_ALPHA);
-        m_restoreBlend = true;
-    }
-}
-
-UnifiedQuadRenderer::RenderStateGuard::~RenderStateGuard()
-{
-    auto* context = GetContext();
-    if (!context)
-    {
-        return;
-    }
-
-    if (m_restoreDepth)
-    {
-        context->OMSetDepthStencilState(m_prevDepthState.Get(), m_prevStencilRef);
-    }
-
-    if (m_restoreBlend)
-    {
-        context->OMSetBlendState(m_prevBlendState.Get(), m_prevBlendFactor, m_prevSampleMask);
-    }
-}
-
 UnifiedQuadRenderer::UnifiedQuadRenderer()
     : m_modelRenderer(std::make_unique<ModelRender>())
 {
@@ -134,7 +92,10 @@ bool UnifiedQuadRenderer::Draw(const DrawParams& params)
         std::vector<std::shared_ptr<MeshDX>>{ mesh },
         std::vector<std::shared_ptr<MaterialDX>>{ material });
 
-    RenderStateGuard stateGuard(params.disableDepth, params.enableBlending);
+    RenderStateManager::ScopedState stateGuard{};
+    auto& stateManager = RenderStateManager::Instance();
+    stateManager.SetDepthTest(!params.disableDepth);
+    stateManager.SetBlend(params.enableBlending ? BlendMode::BLEND_ALPHA : BlendMode::BLEND_NONE);
     const Transform transform = BuildTransform(params);
     m_modelRenderer->Draw(model, transform, &m_camera);
     return true;
