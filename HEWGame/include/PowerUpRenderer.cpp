@@ -365,13 +365,16 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
 	// 各マトリクスと描画用のパラメーター
-        ShaderList::WVPMatrix wvp{};
+        WorldBuffer wvp{};
         DirectX::XMFLOAT4 param[3];
 
         // 各マトリクスを設定
         wvp.world = worldMatrix;
         wvp.view = viewMatrix;
-        wvp.projection = projMatrix;
+        wvp.proj = projMatrix;
+        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
 	
 	// ステータスを設定
@@ -399,13 +402,16 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
 	// 各マトリクスと描画用のパラメーター
-        ShaderList::WVPMatrix wvp{};
+        WorldBuffer wvp{};
         DirectX::XMFLOAT4 param[3];
 
         // 各マトリクスを設定
         wvp.world = worldMatrix;
         wvp.view = viewMatrix;
-        wvp.projection = projMatrix;
+        wvp.proj = projMatrix;
+        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
 
 	// ステータスを設定
@@ -433,13 +439,16 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
 	// 各マトリクスと描画用のパラメーター
-        ShaderList::WVPMatrix wvp{};
+        WorldBuffer wvp{};
         DirectX::XMFLOAT4 param[3];
 
         // 各マトリクスを設定
         wvp.world = worldMatrix;
         wvp.view = viewMatrix;
-        wvp.projection = projMatrix;
+        wvp.proj = projMatrix;
+        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
 
 	// ステータスを設定
