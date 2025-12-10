@@ -32,6 +32,8 @@ namespace Systems
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
 
+                void QueueManualDraw(Render::Model* model, const Transform& transform, Entities::Entity* source = nullptr);
+
                 void OnUpdate(Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
@@ -60,6 +62,7 @@ namespace Systems
                 std::vector<Entities::Entity*> m_renderables;
                 std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
                 std::vector<DrawCommand> m_commands;
+                std::vector<DrawCommand> m_manualCommands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
         };
 }

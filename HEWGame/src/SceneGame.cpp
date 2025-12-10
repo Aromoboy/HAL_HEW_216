@@ -1884,6 +1884,37 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         }
     }
 
+    if (m_drawSystem)
+    {
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!obj.model)
+            {
+                continue;
+            }
+
+            Transform renderTransform = obj.transform;
+
+            if (obj.spinEnabled)
+            {
+                if (obj.spinAxis.y > 0.5f)
+                {
+                    renderTransform.rotation.y += obj.currentRotation;
+                }
+                else if (obj.spinAxis.x > 0.5f)
+                {
+                    renderTransform.rotation.x += obj.currentRotation;
+                }
+                else if (obj.spinAxis.z > 0.5f)
+                {
+                    renderTransform.rotation.z += obj.currentRotation;
+                }
+            }
+
+            m_drawSystem->QueueManualDraw(obj.model.get(), renderTransform);
+        }
+    }
+
     // =========================================
     // SIMPLE & CORRECT PLAYER WORLD-BOUNDS
     // =========================================
@@ -2245,59 +2276,6 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         {
                 DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
                 return;
-        }
-
-        if (m_render)
-        {
-            DebugTrace(std::string(kLogPrefix) + "描画開始: " + std::to_string(m_stageObjects.size()) + "個のオブジェクト\n");
-
-            for (const auto& obj : m_stageObjects)
-            {
-                if (obj.model)
-                {
-                    DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
-
-                    Transform renderTransform = obj.transform;
-                    
-                    // 回転アニメーションを適用
-                    if (obj.spinEnabled)
-                    {
-                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
-                            renderTransform.rotation.y += obj.currentRotation;
-                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
-                            renderTransform.rotation.x += obj.currentRotation;
-                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
-                            renderTransform.rotation.z += obj.currentRotation;
-                    }
-
-                    m_render->Draw(*obj.model, renderTransform, activeCamera.get());
-                }
-                else
-                {
-                    DebugTrace(std::string(kLogPrefix) + "モデルがnull\n");
-                }
-            }
-
-            for (const auto& anchor : m_pObjects)
-            {
-                if (!anchor)
-                {
-                    continue;
-                }
-
-                const auto model = anchor->GetModel();
-                if (!model)
-                {
-                    continue;
-                }
-
-                const Transform anchorTransform = anchor->GetTransform();
-                m_render->Draw(*model, anchorTransform, activeCamera.get());
-            }
-        }
-        else
-        {
-            DebugTrace(std::string(kLogPrefix) + "m_renderがnull\n");
         }
 
         Geometory::SetView(activeCamera->GetView());
