@@ -217,6 +217,160 @@ bool Model::Load(const char* file, float scale, Flip flip)
 }
 
 /*
+* @brief メッシュ作成
+*/
+void Model::MakeMesh(const void* ptr, float scale, Flip flip)
+{
+        const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+        if (!pScene)
+        {
+                return;
+        }
+
+        m_meshes.resize(pScene->mNumMeshes);
+
+        const bool flipX = flip == Flip::XFlip;
+        const bool flipZ = flip == Flip::ZFlip || flip == Flip::ZFlipUseAnime;
+        const bool needReverseWinding = flipX || flipZ;
+
+        for (unsigned int i = 0; i < pScene->mNumMeshes; ++i)
+        {
+                const aiMesh* mesh = pScene->mMeshes[i];
+                if (!mesh)
+                {
+                        continue;
+                }
+
+                Mesh modelMesh{};
+                modelMesh.materialID = mesh->mMaterialIndex;
+
+                // 頂点情報の取得
+                modelMesh.vertices.resize(mesh->mNumVertices);
+                for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
+                {
+                        aiVector3D pos = mesh->mVertices[j];
+                        aiVector3D uv = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][j] : aiVector3D(0, 0, 0);
+                        aiVector3D normal = mesh->HasNormals() ? mesh->mNormals[j] : aiVector3D(0, 0, 0);
+
+                        if (flipX) { pos.x = -pos.x; normal.x = -normal.x; }
+                        if (flipZ) { pos.z = -pos.z; normal.z = -normal.z; }
+
+                        Vertex v{};
+                        v.pos = DirectX::XMFLOAT3(pos.x * scale, pos.y * scale, pos.z * scale);
+                        v.uv = DirectX::XMFLOAT2(uv.x, uv.y);
+                        v.normal = DirectX::XMFLOAT3(normal.x, normal.y, normal.z);
+                        modelMesh.vertices[j] = v;
+                }
+
+                // インデックスの取得
+                modelMesh.indices.resize(mesh->mNumFaces * 3);
+                for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
+                {
+                        const aiFace& face = mesh->mFaces[j];
+                        const size_t idx = static_cast<size_t>(j) * 3;
+                        modelMesh.indices[idx + 0] = face.mIndices[0];
+                        modelMesh.indices[idx + 1] = face.mIndices[1];
+                        modelMesh.indices[idx + 2] = face.mIndices[2];
+
+                        if (needReverseWinding)
+                        {
+                                std::swap(modelMesh.indices[idx + 1], modelMesh.indices[idx + 2]);
+                        }
+                }
+
+                // バッファ生成
+                MeshBuffer::Description desc{};
+                desc.pVtx = modelMesh.vertices.data();
+                desc.vtxSize = sizeof(Vertex);
+                desc.vtxCount = static_cast<UINT>(modelMesh.vertices.size());
+                desc.isWrite = false;
+                desc.pIdx = modelMesh.indices.data();
+                desc.idxSize = sizeof(Indices::value_type);
+                desc.idxCount = static_cast<UINT>(modelMesh.indices.size());
+                desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+                modelMesh.pMesh = new MeshBuffer();
+                if (FAILED(modelMesh.pMesh->Create(desc)))
+                {
+                        delete modelMesh.pMesh;
+                        modelMesh.pMesh = nullptr;
+                }
+
+                m_meshes[i] = modelMesh;
+        }
+}
+
+/*
+* @brief マテリアル作成
+*/
+void Model::MakeMaterial(const void* ptr, std::string directory)
+{
+        const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+        if (!pScene)
+        {
+                return;
+        }
+
+        m_materials.resize(pScene->mNumMaterials);
+
+        // ディレクトリ区切りを統一
+        for (auto& c : directory)
+        {
+                if (c == '/')
+                {
+                        c = '\\';
+                }
+        }
+
+        for (unsigned int i = 0; i < pScene->mNumMaterials; ++i)
+        {
+                Material material{};
+                aiColor3D col;
+                float shininess = 0.0f;
+
+                if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, col) == AI_SUCCESS)
+                        material.diffuse = { col.r, col.g, col.b, 1.0f };
+                else
+                        material.diffuse = { 1, 1, 1, 1 };
+
+                if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_AMBIENT, col) == AI_SUCCESS)
+                        material.ambient = { col.r, col.g, col.b, 1.0f };
+                else
+                        material.ambient = { 0.3f, 0.3f, 0.3f, 1.0f };
+
+                if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_SPECULAR, col) == AI_SUCCESS)
+                        material.specular = { col.r, col.g, col.b, 0.0f };
+                else
+                        material.specular = { 0, 0, 0, 0 };
+
+                if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
+                        material.specular.w = shininess;
+
+                aiString texPath;
+                if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+                {
+                        std::string texFile = texPath.C_Str();
+                        if (!texFile.empty() && texFile[0] != '*')
+                        {
+                                std::string fullPath = directory + texFile;
+                                Texture* pTex = new Texture();
+                                if (SUCCEEDED(pTex->Create(fullPath.c_str())))
+                                {
+                                        material.pTexture = pTex;
+                                }
+                                else
+                                {
+                                        delete pTex;
+                                        material.pTexture = nullptr;
+                                }
+                        }
+                }
+
+                m_materials[i] = material;
+        }
+}
+
+/*
 * @brief 描画
 * @param[in] meshNo 描画するメッシュ番号
 */
