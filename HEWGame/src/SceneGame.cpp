@@ -1277,8 +1277,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
     }
 
-    RenderTarget* pRTV = GetDefaultRTV();
-    DepthStencil* pDSV = GetDefaultDSV();
+    RenderTargetDX* pRTV = GetDefaultRTV();
+    DepthStencilDX* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
     InitializeStageAnchors();
@@ -1868,7 +1868,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
     bool viewportFromDefault = true;
     bool boundsIssueThisFrame = false;
-    if (RenderTarget* rtv = GetDefaultRTV())
+    if (RenderTargetDX* rtv = GetDefaultRTV())
     {
         viewportWidth = static_cast<float>(rtv->GetWidth());
         viewportHeight = static_cast<float>(rtv->GetHeight());

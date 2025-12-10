@@ -19,6 +19,35 @@ namespace
         return oss.str();
     }
 
+    class ScopedComInitializer
+    {
+    public:
+        ScopedComInitializer()
+        {
+            result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            shouldUninit = (result == S_OK || result == S_FALSE);
+        }
+
+        ~ScopedComInitializer()
+        {
+            if (shouldUninit)
+            {
+                CoUninitialize();
+            }
+        }
+
+        bool Succeeded() const
+        {
+            return result == S_OK || result == S_FALSE || result == RPC_E_CHANGED_MODE;
+        }
+
+        HRESULT Result() const { return result; }
+
+    private:
+        HRESULT result = E_FAIL;
+        bool shouldUninit = false;
+    };
+
     bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
         D3D11_TEXTURE2D_DESC desc = {};
@@ -109,6 +138,13 @@ namespace
 
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
+    ScopedComInitializer comInit;
+    if (!comInit.Succeeded())
+    {
+        DebugMessage(FormatHR("[Texture2D] Failed to initialize COM", comInit.Result()));
+        return false;
+    }
+
     std::string pathStr(path.begin(), path.end());
 
     // Create WIC factory
@@ -164,6 +200,13 @@ bool Texture2D::LoadFromMemory(
     if (!data || size == 0)
     {
         DebugMessage("[TextureDX] Failed to decode texture: size=" + std::to_string(size));
+        return false;
+    }
+
+    ScopedComInitializer comInit;
+    if (!comInit.Succeeded())
+    {
+        DebugMessage(FormatHR("[Texture2D] Failed to initialize COM", comInit.Result()));
         return false;
     }
 
@@ -271,3 +314,157 @@ if (texture.LoadFromFile(device, L"textures/player.png"))
 // ӁFʏTextureCachegpăeNX`Ǘ܂
 // Texture2D𒼐ڎĝ͓ʂȏꍇ݂̂ł
 */
+
+//============================================================
+// RenderTargetDX
+//============================================================
+bool RenderTargetDX::Create(ID3D11Device* device, UINT width, UINT height, DXGI_FORMAT format)
+{
+    if (!device || width == 0 || height == 0)
+    {
+        DebugMessage("[RenderTargetDX] Invalid parameters for render target creation.\n");
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = format;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture2D;
+    HRESULT hr = device->CreateTexture2D(&desc, nullptr, &texture2D);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[RenderTargetDX] Failed to create texture", hr));
+        return false;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
+    hr = device->CreateRenderTargetView(texture2D.Get(), nullptr, &rtv);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[RenderTargetDX] Failed to create RTV", hr));
+        return false;
+    }
+
+    texture = std::move(texture2D);
+    renderTargetView = std::move(rtv);
+    this->format = format;
+    this->width = width;
+    this->height = height;
+    return true;
+}
+
+bool RenderTargetDX::CreateFromSwapChain(ID3D11Device* device, IDXGISwapChain* swapChain)
+{
+    if (!device || !swapChain)
+    {
+        DebugMessage("[RenderTargetDX] Missing device or swap chain for back buffer target creation.\n");
+        return false;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+    HRESULT hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[RenderTargetDX] Failed to acquire swap chain buffer", hr));
+        return false;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
+    hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &rtv);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[RenderTargetDX] Failed to create back buffer RTV", hr));
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    backBuffer->GetDesc(&desc);
+
+    texture = std::move(backBuffer);
+    renderTargetView = std::move(rtv);
+    format = desc.Format;
+    width = desc.Width;
+    height = desc.Height;
+    return true;
+}
+
+void RenderTargetDX::Clear(ID3D11DeviceContext* context, const float* color) const
+{
+    if (context && renderTargetView)
+    {
+        context->ClearRenderTargetView(renderTargetView.Get(), color);
+    }
+}
+
+void RenderTargetDX::Clear(ID3D11DeviceContext* context) const
+{
+    static const float defaultColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    Clear(context, defaultColor);
+}
+
+//============================================================
+// DepthStencilDX
+//============================================================
+bool DepthStencilDX::Create(ID3D11Device* device, UINT width, UINT height, bool useStencil)
+{
+    if (!device || width == 0 || height == 0)
+    {
+        DebugMessage("[DepthStencilDX] Invalid parameters for depth-stencil creation.\n");
+        return false;
+    }
+
+    const DXGI_FORMAT textureFormat = useStencil ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_R32_TYPELESS;
+    const DXGI_FORMAT viewFormat = useStencil ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_D32_FLOAT;
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = textureFormat;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> depthTexture;
+    HRESULT hr = device->CreateTexture2D(&desc, nullptr, &depthTexture);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[DepthStencilDX] Failed to create texture", hr));
+        return false;
+    }
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = viewFormat;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
+    hr = device->CreateDepthStencilView(depthTexture.Get(), &dsvDesc, &dsv);
+    if (FAILED(hr))
+    {
+        DebugMessage(FormatHR("[DepthStencilDX] Failed to create DSV", hr));
+        return false;
+    }
+
+    texture = std::move(depthTexture);
+    depthStencilView = std::move(dsv);
+    format = viewFormat;
+    this->width = width;
+    this->height = height;
+    return true;
+}
+
+void DepthStencilDX::Clear(ID3D11DeviceContext* context) const
+{
+    if (context && depthStencilView)
+    {
+        context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    }
+}

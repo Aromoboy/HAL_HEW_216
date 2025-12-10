@@ -15,4 +15,41 @@ public:
 private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureView;
 };
+
+class RenderTargetDX
+{
+public:
+    bool Create(ID3D11Device* device, UINT width, UINT height, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
+    bool CreateFromSwapChain(ID3D11Device* device, IDXGISwapChain* swapChain);
+    void Clear(ID3D11DeviceContext* context, const float* color) const;
+    void Clear(ID3D11DeviceContext* context) const;
+    ID3D11RenderTargetView* GetView() const { return renderTargetView.Get(); }
+    UINT GetWidth() const { return width; }
+    UINT GetHeight() const { return height; }
+    DXGI_FORMAT GetFormat() const { return format; }
+
+private:
+    DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+    UINT width = 0;
+    UINT height = 0;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+};
+
+class DepthStencilDX
+{
+public:
+    bool Create(ID3D11Device* device, UINT width, UINT height, bool useStencil);
+    void Clear(ID3D11DeviceContext* context) const;
+    ID3D11DepthStencilView* GetView() const { return depthStencilView.Get(); }
+    UINT GetWidth() const { return width; }
+    UINT GetHeight() const { return height; }
+
+private:
+    DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+    UINT width = 0;
+    UINT height = 0;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
+};
 #endif
