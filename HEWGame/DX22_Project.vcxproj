@@ -231,7 +231,6 @@
     <ClCompile Include="src\Systems\IntegrateSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachineTests.cpp" />
-    <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Startup.cpp" />
@@ -317,14 +316,12 @@
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
     <ClInclude Include="include\Systems\IntegrateSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
-    <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\SoundManagerEX.h" />
     <ClInclude Include="include\SoundSystem.h" />
     <ClInclude Include="include\TextureDX.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
-    <ClInclude Include="include\WorldBuffer.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />

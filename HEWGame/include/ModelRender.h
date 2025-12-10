@@ -6,7 +6,6 @@
 #include "ModelDX.h"
 #include "ICamera.h"
 #include "Transform.h"
-#include "Shader.h"
 
 class Texture2D;
 
@@ -18,11 +17,8 @@ public:
 
     void Draw(Render::Model& model, Transform transform, const CameraSpace::ICamera* camera);
 
-    static void EnsureDefaultShaders();
-    static std::shared_ptr<VertexShader> s_defaultVS;
-    static std::shared_ptr<PixelShader> s_defaultPS;
-
 private:
+    static void EnsureDefaultShaders();
     void MeshDraw(MeshDX&);
 
     std::unordered_set<int> m_warnedMissingSrvMaterials;

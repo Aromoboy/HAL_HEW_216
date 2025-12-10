@@ -189,20 +189,11 @@
     <ClCompile Include="src\SelectScene.cpp">
       <Filter>App</Filter>
     </ClCompile>
-    <ClCompile Include="src\Shader.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="src\SoundManagerEX.cpp">
       <Filter>Audio</Filter>
     </ClCompile>
     <ClCompile Include="src\SoundSystem.cpp">
       <Filter>Audio</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sprite.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SpriteRenderer.cpp">
-      <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Stage\FoundationPlatform.cpp">
       <Filter>Stage</Filter>
@@ -449,20 +440,11 @@
     <ClInclude Include="include\SelectScene.h">
       <Filter>App</Filter>
     </ClInclude>
-    <ClInclude Include="include\Shader.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="include\SoundManagerEX.h">
       <Filter>Audio</Filter>
     </ClInclude>
     <ClInclude Include="include\SoundSystem.h">
       <Filter>Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Sprite.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\SpriteRenderer.h">
-      <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\FoundationPlatform.h">
       <Filter>Stage</Filter>
@@ -498,9 +480,6 @@
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\TextureDX.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\WorldBuffer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\TitleScene.h">
