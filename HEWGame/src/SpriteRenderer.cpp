@@ -102,8 +102,8 @@ SpriteRenderer::~SpriteRenderer()
 
 void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const CameraSpace::ICamera* camera)
 {
-        ShaderList::WVPMatrix wvp = {};
-        DirectX::XMFLOAT4 param[3];
+    WorldBuffer wvp = {};
+    DirectX::XMFLOAT4 param[3];
 
         float3 drawRads;
         drawRads.x = transform.rotation.x * RAD;
@@ -112,8 +112,11 @@ void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const 
 
         DrawMatrix::CreateWorldMatrix(wvp.world, transform.position, transform.scale, drawRads);
 
-        wvp.view = camera->GetView();
-        wvp.projection = camera->GetProjection();
+    wvp.view = camera->GetView();
+    wvp.proj = camera->GetProjection();
+    wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+    wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+    wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
         param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
         param[1] = DirectX::XMFLOAT4(m_uvPos.x, m_uvPos.y, m_uvScale.x, m_uvScale.y);
