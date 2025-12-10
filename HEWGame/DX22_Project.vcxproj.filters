@@ -54,6 +54,9 @@
     <ClCompile Include="src\BackgroundRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\QuadRenderer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\BaseCamera.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
@@ -372,6 +375,9 @@
       <Filter>GameFlow</Filter>
     </ClInclude>
     <ClInclude Include="include\HudRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\QuadRenderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\ICamera.h">
