@@ -10,7 +10,7 @@
 #include "Collision2D.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
-#include "Geometory.h"
+#include "DebugColliderRenderer.h"
 
 namespace
 {
@@ -248,7 +248,6 @@ namespace Systems
 
         void DrawSystem::RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
-            (void)camera;
             if (m_colliderCommands.empty())
             {
                 return;
@@ -265,6 +264,9 @@ namespace Systems
             }
 
             m_colliderCommands.clear();
-            Geometory::DrawLines();
+            if (camera)
+            {
+                DebugColliderRenderer::Flush(*camera);
+            }
         }
 }

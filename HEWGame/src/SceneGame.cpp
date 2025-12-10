@@ -2,10 +2,7 @@
 #include "Transform.h"
 #include "SceneGame.h"
 #include "Collision2D.h"
-#include "Geometory.h"
-#include "DrawMatrix.h"
 #include "Vector.h"
-#include "ShaderList.h"
 #include "Defines.h"
 #include "AssimpModelLorder.h"
 #include "MeshDX.h"
@@ -2177,7 +2174,6 @@ void SceneGame::DrawPhysicsDebugOverlay()
         drawState(SweetsSpace::SweetsState::Carried);
     }
 
-    Geometory::DrawLines();
 }
 #endif
 
@@ -2282,9 +2278,6 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                 DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
                 return;
         }
-
-        Geometory::SetView(activeCamera->GetView());
-        Geometory::SetProjection(activeCamera->GetProjection());
 
         if (!m_drawSystem)
         {
