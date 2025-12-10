@@ -1,15 +1,12 @@
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"
-#include "Sprite.h"
 #include "PowerUpTextures.h"
-#include "WorldBuffer.h"
-#include "MatrixUtil.h"
 
-#include <sstream>
-#include <iomanip>
-#include <array>
 #include <algorithm>
+#include <array>
+#include <iomanip>
+#include <sstream>
 
 const std::string kCostTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
 const std::string kFrameTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
@@ -38,6 +35,48 @@ constexpr const char* kBackFrameTexturenName = "BackFrame";
 
 constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
 constexpr float kHudCostIconScaleOffset = 0.25f;
+
+namespace
+{
+    struct QuadVertex
+    {
+        DirectX::XMFLOAT3 pos;
+        DirectX::XMFLOAT2 uv;
+        DirectX::XMFLOAT3 normal;
+    };
+
+    std::shared_ptr<MeshDX> CreateQuadMesh(const DirectX::XMFLOAT2& uvStart, const DirectX::XMFLOAT2& uvScale)
+    {
+        const std::array<QuadVertex, 4> vertices{
+            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { uvStart.x, uvStart.y }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { uvStart.x + uvScale.x, uvStart.y }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { uvStart.x, uvStart.y + uvScale.y }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { uvStart.x + uvScale.x, uvStart.y + uvScale.y }, { 0.0f, 0.0f, -1.0f } },
+        };
+
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(QuadVertex);
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+        return std::make_shared<MeshDX>(desc, 0);
+    }
+
+    DirectX::XMFLOAT4 MakeColor(const PowerUpRenderer::DrawSpriteData& data)
+    {
+        return DirectX::XMFLOAT4(data.r, data.g, data.b, data.alpha);
+    }
+
+    Transform MakeTransform(const float3& position, const float3& scale, const PowerUpRenderer::DrawSpriteData& data)
+    {
+        Transform transform{};
+        transform.position = float3{ position.x + data.projOffset.x, position.y + data.projOffset.y, position.z };
+        transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+        transform.scale = float3{ scale.x * data.projScale.x, scale.y * data.projScale.y, scale.z };
+        return transform;
+    }
+}
 
 
 PowerUpStringTexture::PowerUpStringTexture()
@@ -117,79 +156,12 @@ std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
 
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
 {
-	const char* VS = R"EOT(
-struct VS_IN {
-        float3 pos : POSITION0;
-        float2 uv : TEXCOORD0;
-};
-struct VS_OUT {
-        float4 pos : SV_POSITION;
-        float2 uv : TEXCOORD0;
-        float4 color : COLOR0;
-};
-cbuffer Matrix : register(b0) {
-	float4x4 world;
-	float4x4 view;
-	float4x4 proj;
-};
-cbuffer Param : register(b1) {
-	float2 offset;
-	float2 size;
-	float2 uvPos;
-	float2 uvScale;
-	float4 color;
-};
-VS_OUT main(VS_IN vin) {
-	VS_OUT vout;
-	vout.pos = float4(vin.pos, 1.0f);
-        vout.pos.xy *= size;
-        vout.pos.xy += offset;
-        vout.pos = mul(vout.pos, world);
-        vout.pos = mul(vout.pos, view);
-        vout.pos = mul(vout.pos, proj);
-        vout.uv = vin.uv;
-        vout.uv *= uvScale;
-        vout.uv += uvPos;
-        vout.color = color;
-        return vout;
-})EOT";
-	const char* PS = R"EOT(
-struct PS_IN {
-	float4 pos : SV_POSITION;
-	float2 uv : TEXCOORD0;
-	float4 color : COLOR0;
-};
-Texture2D tex : register(t0);
-SamplerState samp : register(s0);
-float4 main(PS_IN pin) : SV_TARGET {
-	return tex.Sample(samp, pin.uv) * pin.color;
-})EOT";
+        m_modelRenderer = std::make_unique<ModelRender>();
+        m_quadMesh = CreateQuadMesh(DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT2(1.0f, 1.0f));
 
-
-        MeshDX::Vertex vtx[] = {
-                { {-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f} },
-                { { 0.5f, 0.5f, 0.0f}, {1.0f, 0.0f} },
-                { {-0.5f,-0.5f, 0.0f}, {0.0f, 1.0f} },
-                { { 0.5f,-0.5f, 0.0f}, {1.0f, 1.0f} },
-        };
-
-        MeshDX::Description desc{};
-        desc.pVtx = vtx;
-        desc.vtxSize = sizeof(MeshDX::Vertex);
-        desc.vtxCount = 4;
-	desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
-	m_spriteMesh = std::make_shared<MeshDX>(desc, -1);
-
-m_vertexShader = std::make_shared<VertexShader>();
-m_vertexShader->Compile(VS);
-
-m_pixelShader = std::make_shared <PixelShader>();
-m_pixelShader->Compile(PS);
-
-	m_cost = a_cache.GetTexture(kCostTextureKey);
-	m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
-	m_backFrame = a_cache.GetTexture(kBackFrameTextureKey);
+        m_cost = a_cache.GetTexture(kCostTextureKey);
+        m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
+        m_backFrame = a_cache.GetTexture(kBackFrameTextureKey);
 }
 
 PowerUpRenderer::~PowerUpRenderer()
@@ -231,10 +203,12 @@ bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 
 void PowerUpRenderer::Shutdown()
 {
-	DestroyTextResources();
-	m_texture.reset();
-	m_guidelineTexture.reset();
-	m_rgbaBuffer.clear();
+        DestroyTextResources();
+        m_modelRenderer.reset();
+        m_quadMesh.reset();
+        m_texture.reset();
+        m_guidelineTexture.reset();
+        m_rgbaBuffer.clear();
 	m_ready = false;
 	m_textureDirty = false;
 }
@@ -242,15 +216,9 @@ void PowerUpRenderer::Shutdown()
 
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 {
-	
-
-	const DirectX::XMFLOAT4X4& view = camera.GetView();
-	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
-
-	DirectX::XMFLOAT4X4 world;
-	float3 position;
-	float3 scale;
-	float2 offset;
+        float3 position;
+        float3 scale;
+        float2 offset;
 
 
 	// バックフレーム描画
@@ -263,20 +231,15 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	scale.y = kHudCostIconScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(m_cost, world, view, proj);
+        const Transform transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(m_cost, transform, camera, DrawSpriteData());
 }
 
 void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
 {
-	const DirectX::XMFLOAT4X4& view = camera.GetView();
-	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
-
-	DirectX::XMFLOAT4X4 world;
-	float3 position;
-	float3 scale;
-	float2 offset;
+        float3 position;
+        float3 scale;
+        float2 offset;
 
 	offset.x = kBackFramePositionOffset.x * a_scale.x;
 	offset.y = kBackFramePositionOffset.y * a_scale.y;
@@ -287,9 +250,8 @@ void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_
 	scale.y = a_scale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(a_texture, world, view, proj);
+        const Transform transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(a_texture, transform, camera, DrawSpriteData());
 }
 
 
@@ -305,13 +267,9 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 		UploadTexture(data);
 	}
 
-	const DirectX::XMFLOAT4X4& view = camera.GetView();
-	const DirectX::XMFLOAT4X4& proj= camera.GetProjection();
-	
-	DirectX::XMFLOAT4X4 world;
-	float3 position;
-	float3 scale;
-	float2 offset;
+        float3 position;
+        float3 scale;
+        float2 offset;
 	
 	
 	// バックフレーム描画
@@ -324,9 +282,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(m_backFrame, world, view, proj);
+        Transform transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(m_backFrame, transform, camera, DrawSpriteData());
 
 	// アイコンフレーム描画
 	offset.x = kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -338,9 +295,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kFrameScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(m_iconFrame, world, view, proj);
+        transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(m_iconFrame, transform, camera, DrawSpriteData());
 
 	// アイコン描画
 	offset.x = kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -352,9 +308,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kIconScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(data.texture, world, view, proj);
+        transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(data.texture, transform, camera, DrawSpriteData());
 
 	// コストアイコン描画
 	offset.x = kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -366,9 +321,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostIconScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
-	DrawSprite(m_cost, world, view, proj);
+        transform = MakeTransform(position, scale, DrawSpriteData());
+        DrawQuad(m_cost, transform, camera, DrawSpriteData());
 	
 
 
@@ -383,9 +337,9 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.z = 1.0f;
 
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        transform = MakeTransform(position, scale, DrawSpriteData());
 
-	RenderString(data, world, view, proj, NodeName);
+        RenderString(data, transform, camera, NodeName);
 
 	// 説明描画
 	offset.x = kInfomationPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -397,11 +351,10 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kInfomationScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        transform = MakeTransform(position, scale, DrawSpriteData());
 
-	
 
-	RenderString(data, world, view, proj, NodeInfomation);
+        RenderString(data, transform, camera, NodeInfomation);
 
 
 	// コスト描画
@@ -414,9 +367,9 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kLevelScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        transform = MakeTransform(position, scale, DrawSpriteData());
 
-	RenderString(data, world, view, proj, NodeLevel);
+        RenderString(data, transform, camera, NodeLevel);
 
 	offset.x = kCostPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kCostPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
@@ -427,108 +380,49 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostScaleOffset;
 	scale.z = 1.0f;
 
-	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        transform = MakeTransform(position, scale, DrawSpriteData());
 
-	RenderString(data, world, view, proj, NodeCost);
+        RenderString(data, transform, camera, NodeCost);
 }
 
-void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
+void PowerUpRenderer::DrawQuad(
+        std::shared_ptr<Texture2D> texture,
+        const Transform& transform,
+        const CameraSpace::ICamera& camera,
+        const DrawSpriteData& drawData)
 {
-        if (!texture)
+        if (!texture || !m_modelRenderer)
         {
                 return;
         }
 
-        // 各マトリクスと描画用のパラメーター
-        WorldBuffer wvp{};
-        DirectX::XMFLOAT4 param[3];
+        const DirectX::XMFLOAT2 uvStart(drawData.uvPos.x, drawData.uvPos.y);
+        const DirectX::XMFLOAT2 uvScale(drawData.uvScale.x, drawData.uvScale.y);
+        std::shared_ptr<MeshDX> mesh = m_quadMesh;
 
-        // 各マトリクスを設定
-        wvp.world = worldMatrix;
-        wvp.view = viewMatrix;
-        wvp.proj = projMatrix;
-        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+        Transform adjusted = transform;
+        adjusted.position.x += drawData.projOffset.x;
+        adjusted.position.y += drawData.projOffset.y;
+        adjusted.scale.x *= drawData.projScale.x;
+        adjusted.scale.y *= drawData.projScale.y;
 
-
-        // ステータスを設定
-        param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
-        param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
-        param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
-
-
-        // シェーダーをバインド
-        m_vertexShader->WriteBuffer(0, &wvp);
-        m_vertexShader->WriteBuffer(1, param);
-        m_vertexShader->Bind();
-
-        m_pixelShader->SetTexture(0, texture->Get());
-        m_pixelShader->Bind();
-
-        // 描画
-        MeshDraw();
-}
-
-void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
-{
-        if (!texture)
+        if (uvStart.x != 0.0f || uvStart.y != 0.0f || uvScale.x != 1.0f || uvScale.y != 1.0f)
         {
-                return;
+                mesh = CreateQuadMesh(uvStart, uvScale);
         }
 
-        // 各マトリクスと描画用のパラメーター
-        WorldBuffer wvp{};
-        DirectX::XMFLOAT4 param[3];
+        auto material = std::make_shared<MaterialDX>(
+                MakeColor(drawData),
+                DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+                DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+                texture);
 
-        // 各マトリクスを設定
-        wvp.world = worldMatrix;
-        wvp.view = viewMatrix;
-        wvp.proj = projMatrix;
-        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+        Render::Model model(
+                std::vector<std::shared_ptr<MeshDX>>{ mesh },
+                std::vector<std::shared_ptr<MaterialDX>>{ material });
 
-
-        // ステータスを設定
-        param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-        param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-        param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-
-
-        // シェーダーをバインド
-        m_vertexShader->WriteBuffer(0, &wvp);
-        m_vertexShader->WriteBuffer(1, param);
-        m_vertexShader->Bind();
-
-        m_pixelShader->SetTexture(0, texture->Get());
-        m_pixelShader->Bind();
-
-        // 描画
-        MeshDraw();
+        m_modelRenderer->Draw(model, adjusted, &camera);
 }
-
-
-
-
-
-
-void PowerUpRenderer::MeshDraw()
-{
-	// コンテキストを取得
-	ID3D11DeviceContext* pContext = GetContext();
-	UINT offset = 0;
-
-	// 頂点をバインド
-	const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
-	vertexBuffer.Bind(0, offset);
-
-	// 頂点バッファのみで描画
-	GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	pContext->Draw(vertexBuffer.GetCount(), 0);
-
-}
-
 
 bool PowerUpRenderer::CreateTextResources()
 {
@@ -738,12 +632,12 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 #endif
 }
 
-void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum)
+void PowerUpRenderer::RenderString(const NodeRenderData& data, const Transform& transform, const CameraSpace::ICamera& camera, int uvNum)
 {
-	if (!m_guidelineTexture)
-	{
-		return;
-	}
+        if (!m_guidelineTexture)
+        {
+                return;
+        }
 
 
 	float viewportWidth = 0.0f;
@@ -768,9 +662,10 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 
 	float width = static_cast<float>(scale.x / scale.y);
 	
-	SetBlendMode(BLEND_ALPHA);
+        SetBlendMode(BLEND_ALPHA);
 
-        DrawSprite(data.stringTexture->GetTexture(), worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f}));
+        DrawSpriteData spriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f});
+        DrawQuad(data.stringTexture->GetTexture(), transform, camera, spriteData);
 
 }
 

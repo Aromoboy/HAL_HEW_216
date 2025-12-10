@@ -1,19 +1,64 @@
 #include "HudRenderer.h"
 
 #include "DirectX.h"
-#include "Sprite.h"
+#include "ICamera.h"
+#include "Vector.h"
 
 #include <algorithm>
 #include <array>
 #include <cstring>
 #include <iomanip>
+#include <limits>
 #include <sstream>
-#include "PowerUpRenderer.h"
 
-HudRenderer::HudRenderer()
+namespace
 {
-    DirectX::XMStoreFloat4x4(&m_identityMatrix, DirectX::XMMatrixIdentity());
+    struct IdentityCamera : public CameraSpace::ICamera
+    {
+        IdentityCamera()
+        {
+            DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
+            DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixIdentity());
+        }
+
+        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
+        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
+
+    protected:
+        void RecalculateView() override {}
+
+    private:
+        DirectX::XMFLOAT4X4 m_view{};
+        DirectX::XMFLOAT4X4 m_proj{};
+    };
+
+    struct QuadVertex
+    {
+        DirectX::XMFLOAT3 pos;
+        DirectX::XMFLOAT2 uv;
+        DirectX::XMFLOAT3 normal;
+    };
+
+    std::shared_ptr<MeshDX> CreateQuadMesh(const DirectX::XMFLOAT2& uvScale)
+    {
+        const std::array<QuadVertex, 4> vertices{
+            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { uvScale.x, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, uvScale.y }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { uvScale.x, uvScale.y }, { 0.0f, 0.0f, -1.0f } },
+        };
+
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(QuadVertex);
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+        return std::make_shared<MeshDX>(desc, 0);
+    }
 }
+
+HudRenderer::HudRenderer() = default;
 
 HudRenderer::~HudRenderer()
 {
@@ -25,6 +70,10 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
     m_config = config;
     const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
     m_rgbaBuffer.resize(pixelCount * 4);
+
+    m_modelRenderer = std::make_unique<ModelRender>();
+    m_quadMesh = CreateQuadMesh(DirectX::XMFLOAT2(1.0f, 1.0f));
+    m_guidelineMesh = CreateQuadMesh(DirectX::XMFLOAT2(1.0f, 1.0f));
 
     if (!CreateTextResources())
     {
@@ -46,6 +95,9 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
 void HudRenderer::Shutdown()
 {
     DestroyTextResources();
+    m_modelRenderer.reset();
+    m_quadMesh.reset();
+    m_guidelineMesh.reset();
     m_texture.reset();
     m_guidelineTexture.reset();
     m_rgbaBuffer.clear();
@@ -236,7 +288,7 @@ bool HudRenderer::TryGetViewportSize(float& width, float& height) const
 
 void HudRenderer::RenderGuideline(const HudDisplayData& data)
 {
-    if (!data.guidelineVisible || !m_guidelineTexture)
+    if (!data.guidelineVisible || !m_guidelineTexture || !m_modelRenderer)
     {
         return;
     }
@@ -253,27 +305,40 @@ void HudRenderer::RenderGuideline(const HudDisplayData& data)
     const float repeatCount = std::max(1.0f, viewportWidth / repeatSpacing);
     const float clampedY = std::clamp(data.guidelineClipY, -0.98f, 0.98f);
 
-    
+
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
-    Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_guidelineTexture);
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetUVScale(DirectX::XMFLOAT2(repeatCount, 1.0f));
-    Sprite::SetColor(m_config.guidelineColor);
-    Sprite::SetSize(DirectX::XMFLOAT2(2.0f, thicknessClip));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, clampedY));
-    Sprite::Draw();
+    if (!m_guidelineMesh || std::abs(m_guidelineUVScaleX - repeatCount) > std::numeric_limits<float>::epsilon())
+    {
+        m_guidelineMesh = CreateQuadMesh(DirectX::XMFLOAT2(repeatCount, 1.0f));
+        m_guidelineUVScaleX = repeatCount;
+    }
+
+    auto material = std::make_shared<MaterialDX>(
+        m_config.guidelineColor,
+        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+        m_guidelineTexture);
+
+    Render::Model model(
+        std::vector<std::shared_ptr<MeshDX>>{ m_guidelineMesh },
+        std::vector<std::shared_ptr<MaterialDX>>{ material });
+
+    Transform transform{};
+    transform.position = float3{ 0.0f, clampedY, 0.0f };
+    transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+    transform.scale = float3{ 2.0f, thicknessClip, 1.0f };
+
+    static IdentityCamera identityCamera{};
+    m_modelRenderer->Draw(model, transform, &identityCamera);
 
     SetDepthTest(true);
 }
 
 void HudRenderer::RenderSprite(const HudDisplayData& data)
 {
-    if (!m_texture)
+    if (!m_texture || !m_modelRenderer || !m_quadMesh)
     {
         return;
     }
@@ -296,19 +361,25 @@ void HudRenderer::RenderSprite(const HudDisplayData& data)
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
-    Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_texture);
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-
     const bool showWarning = data.timeUp || data.remainingSeconds <= m_config.warningThresholdSeconds;
     const DirectX::XMFLOAT4 color = showWarning ? m_config.warningTextColor : m_config.normalTextColor;
-    Sprite::SetColor(color);
-    Sprite::SetSize(DirectX::XMFLOAT2(widthClip, heightClip));
-    Sprite::SetOffset(DirectX::XMFLOAT2(offsetX, offsetY));
-    Sprite::Draw();
+
+    auto material = std::make_shared<MaterialDX>(
+        color,
+        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+        m_texture);
+    Render::Model model(
+        std::vector<std::shared_ptr<MeshDX>>{ m_quadMesh },
+        std::vector<std::shared_ptr<MaterialDX>>{ material });
+
+    Transform transform{};
+    transform.position = float3{ offsetX, offsetY, 0.0f };
+    transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+    transform.scale = float3{ widthClip, heightClip, 1.0f };
+
+    static IdentityCamera identityCamera{};
+    m_modelRenderer->Draw(model, transform, &identityCamera);
 
     SetDepthTest(true);
 }
