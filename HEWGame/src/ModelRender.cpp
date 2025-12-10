@@ -6,7 +6,6 @@
 #include "Debug.h"
 #include "MatrixUtil.h"
 #include "TextureCache.h"
-#include "WorldBuffer.h"
 
 #include <cstdint>
 
@@ -20,45 +19,65 @@ void ModelRender::EnsureDefaultShaders()
         return;
     }
 
-    const char* kDefaultVS = R"EOT(
-struct VS_IN {
-        float3 pos : POSITION;
-        float2 uv  : TEXCOORD0;
-};
-struct VS_OUT {
-        float4 pos : SV_POSITION;
-        float2 uv  : TEXCOORD0;
-};
-cbuffer WVP : register(b0) {
-        float4x4 world;
-        float4x4 view;
-        float4x4 proj;
-};
-VS_OUT main(VS_IN vin) {
-        VS_OUT vout;
-        float4 worldPos = mul(float4(vin.pos, 1.0f), world);
-        float4 viewPos = mul(worldPos, view);
-        vout.pos = mul(viewPos, proj);
-        vout.uv = vin.uv;
-        return vout;
-})EOT";
-
-    const char* kDefaultPS = R"EOT(
-struct PS_IN {
-        float4 pos : SV_POSITION;
-        float2 uv  : TEXCOORD0;
-};
-Texture2D tex0 : register(t0);
-SamplerState sampler0 : register(s0);
-float4 main(PS_IN pin) : SV_TARGET
+    const char* g_defaultVS = R"(
+cbuffer VSConstants : register(b0)
 {
-        return tex0.Sample(sampler0, pin.uv);
-})EOT";
+    float4x4 gWorldViewProj;
+};
+
+struct VSInput {
+    float3 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+struct VSOutput {
+    float4 pos : SV_POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VSOutput main(VSInput input)
+{
+    VSOutput output;
+    output.pos = mul(float4(input.pos, 1.0f), gWorldViewProj);
+    output.uv  = input.uv;
+    return output;
+}
+)";
+
+    const char* g_defaultPS = R"(
+Texture2D tex0 : register(t0);
+SamplerState sam0 : register(s0);
+
+cbuffer PSConstants : register(b0)
+{
+    float4 diffuseColor;
+};
+
+float4 main(float2 uv : TEXCOORD0) : SV_TARGET
+{
+    float4 texColor = tex0.Sample(sam0, uv);
+    return texColor * diffuseColor;
+}
+)";
 
     s_defaultVS = std::make_shared<VertexShader>();
-    s_defaultVS->Compile(kDefaultVS);
+    HRESULT hrVS = s_defaultVS->Compile(g_defaultVS);
+    if (FAILED(hrVS))
+    {
+        DebugMessage("[ModelRender] Failed to compile default vertex shader.\n");
+        s_defaultVS.reset();
+        return;
+    }
+
     s_defaultPS = std::make_shared<PixelShader>();
-    s_defaultPS->Compile(kDefaultPS);
+    HRESULT hrPS = s_defaultPS->Compile(g_defaultPS);
+    if (FAILED(hrPS))
+    {
+        DebugMessage("[ModelRender] Failed to compile default pixel shader.\n");
+        s_defaultPS.reset();
+        s_defaultVS.reset();
+        return;
+    }
 }
 
 ModelRender::ModelRender()
@@ -113,15 +132,28 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         return;
     }
 
-    WorldBuffer wvp = {};
-    wvp.view = camera->GetView();
-    wvp.proj = camera->GetProjection();
+    if (!s_defaultVS || !s_defaultPS)
+    {
+        DebugMessage("[ModelRender] Default shaders are not initialized.\n");
+        return;
+    }
 
+    struct VSConstants
+    {
+        DirectX::XMFLOAT4X4 worldViewProj;
+    };
+
+    VSConstants vsConstants{};
     const float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
-    wvp.world = MathUtil::MakeWorldMatrix(transform.position, transform.scale, radRotation);
-    wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-    wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-    wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+    DirectX::XMFLOAT4X4 world = MathUtil::MakeWorldMatrix(transform.position, transform.scale, radRotation);
+    DirectX::XMFLOAT4X4 view = camera->GetView();
+    DirectX::XMFLOAT4X4 proj = camera->GetProjection();
+
+    DirectX::XMMATRIX worldMatrix = DirectX::XMLoadFloat4x4(&world);
+    DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
+    DirectX::XMMATRIX projMatrix = DirectX::XMLoadFloat4x4(&proj);
+    DirectX::XMMATRIX wvpMatrix = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(worldMatrix, viewMatrix), projMatrix);
+    DirectX::XMStoreFloat4x4(&vsConstants.worldViewProj, wvpMatrix);
 
     for (int i = 0; i < a_model.GetMeshCount(); i++)
     {
@@ -156,21 +188,19 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         std::shared_ptr<MaterialDX> effectiveMaterial = material ? material : m_defaultMaterial;
 
-        struct MaterialParams
-        {
-            DirectX::XMFLOAT4 diffuse;
-            DirectX::XMFLOAT4 ambient;
-            DirectX::XMFLOAT4 specular;
-        };
-
         ID3D11ShaderResourceView* srvRef = effectiveMaterial
             ? effectiveMaterial->GetTexture()
             : (m_fallbackTexture ? m_fallbackTexture->Get() : nullptr);
 
-        MaterialParams params{ effectiveMaterial->GetDiffuse(), effectiveMaterial->GetAmbient(), effectiveMaterial->GetSpecular() };
+        struct PSConstants
+        {
+            DirectX::XMFLOAT4 diffuseColor;
+        };
 
-        s_defaultVS->WriteBuffer(0, &wvp);
-        s_defaultPS->WriteBuffer(0, &params);
+        PSConstants psConstants{ effectiveMaterial->GetDiffuse() };
+
+        s_defaultVS->WriteBuffer(0, &vsConstants);
+        s_defaultPS->WriteBuffer(0, &psConstants);
         s_defaultPS->SetTexture(0, srvRef);
 
         s_defaultPS->Bind();
