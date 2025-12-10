@@ -9,7 +9,6 @@
 #include "Core/VertexBuffer.h"
 #include "DirectX.h"
 #include "Shader.h"
-#include "WorldBuffer.h"
 
 namespace
 {
@@ -119,17 +118,12 @@ struct VS_OUT {
         float4 pos : SV_POSITION;
         float4 color : COLOR0;
 };
-cbuffer WVP : register(b0) {
-        float4x4 world;
-        float4x4 view;
-        float4x4 proj;
-        float4 normalBasis[3];
+cbuffer VSConstants : register(b0) {
+        float4x4 gWorldViewProj;
 };
 VS_OUT main(VS_IN vin) {
         VS_OUT vout;
-        float4 worldPos = mul(float4(vin.pos, 1.0f), world);
-        float4 viewPos = mul(worldPos, view);
-        vout.pos = mul(viewPos, proj);
+        vout.pos = mul(float4(vin.pos, 1.0f), gWorldViewProj);
         vout.color = vin.color;
         return vout;
 })EOT";
@@ -290,15 +284,18 @@ namespace DebugColliderRenderer
             return;
         }
 
-        WorldBuffer wvp{};
-        DirectX::XMStoreFloat4x4(&wvp.world, DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity()));
-        wvp.view = camera.GetView();
-        wvp.proj = camera.GetProjection();
-        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+        struct VSConstants
+        {
+            DirectX::XMFLOAT4X4 worldViewProj;
+        };
 
-        g_lineVS->WriteBuffer(0, &wvp);
+        VSConstants constants{};
+        DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&camera.GetView());
+        DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&camera.GetProjection());
+        DirectX::XMStoreFloat4x4(&constants.worldViewProj, DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), proj));
+
+        g_lineVS->WriteBuffer(0, &constants);
         g_lineVS->Bind();
         g_linePS->Bind();
 

@@ -324,7 +324,6 @@
     <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
-    <ClInclude Include="include\WorldBuffer.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />
