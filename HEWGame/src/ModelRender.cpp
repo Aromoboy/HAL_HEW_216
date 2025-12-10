@@ -10,11 +10,63 @@
 #include <cstdint>
 #include <array>
 #include <cstring>
+#include <cassert>
 #include <d3dcompiler.h>
 
 std::shared_ptr<VertexShader> ModelRender::s_defaultVS;
 std::shared_ptr<PixelShader> ModelRender::s_defaultPS;
 Microsoft::WRL::ComPtr<ID3D11InputLayout> ModelRender::s_defaultInputLayout;
+
+namespace
+{
+    class ScopedRenderState
+    {
+    public:
+        ScopedRenderState()
+        {
+            ID3D11DeviceContext* context = GetContext();
+            if (!context)
+            {
+                return;
+            }
+
+            context->OMGetDepthStencilState(m_prevDepthState.GetAddressOf(), &m_prevStencilRef);
+            context->OMGetBlendState(m_prevBlendState.GetAddressOf(), m_prevBlendFactor, &m_prevSampleMask);
+            context->RSGetState(m_prevRasterizerState.GetAddressOf());
+            context->PSGetSamplers(0, 1, m_prevSampler.GetAddressOf());
+
+            SetDepthTest(true);
+            SetBlendMode(BLEND_NONE);
+            SetCullingMode(D3D11_CULL_BACK);
+            SetSamplerState(SAMPLER_LINEAR);
+        }
+
+        ~ScopedRenderState()
+        {
+            ID3D11DeviceContext* context = GetContext();
+            if (!context)
+            {
+                return;
+            }
+
+            context->OMSetDepthStencilState(m_prevDepthState.Get(), m_prevStencilRef);
+            context->OMSetBlendState(m_prevBlendState.Get(), m_prevBlendFactor, m_prevSampleMask);
+            context->RSSetState(m_prevRasterizerState.Get());
+
+            ID3D11SamplerState* sampler = m_prevSampler.Get();
+            context->PSSetSamplers(0, 1, &sampler);
+        }
+
+    private:
+        Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_prevDepthState;
+        Microsoft::WRL::ComPtr<ID3D11BlendState> m_prevBlendState;
+        Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_prevRasterizerState;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> m_prevSampler;
+        FLOAT m_prevBlendFactor[4]{};
+        UINT m_prevSampleMask = 0xffffffff;
+        UINT m_prevStencilRef = 0;
+    };
+}
 
 void ModelRender::EnsureDefaultShaders()
 {
@@ -184,6 +236,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         return;
     }
 
+    const ScopedRenderState scopedState;
+
     struct VSConstants
     {
         DirectX::XMFLOAT4X4 worldViewProj;
@@ -237,6 +291,9 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         ID3D11ShaderResourceView* srvRef = effectiveMaterial
             ? effectiveMaterial->GetTexture()
             : (m_fallbackTexture ? m_fallbackTexture->Get() : nullptr);
+
+        const bool expectsFallbackTexture = m_fallbackTexture && (!material || !material->GetTexture());
+        assert(!expectsFallbackTexture || srvRef);
 
         struct PSConstants
         {
