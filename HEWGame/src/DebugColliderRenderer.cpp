@@ -3,7 +3,7 @@
 #include <cmath>
 #include <vector>
 #include <DirectXMath.h>
-
+#include "ICamera.h"
 #include "Core/VertexBuffer.h"
 #include "DirectX.h"
 #include "Shader.h"

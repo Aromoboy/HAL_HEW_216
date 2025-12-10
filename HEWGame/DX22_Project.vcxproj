@@ -91,7 +91,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -113,7 +113,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
-        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,7 +157,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -222,7 +222,6 @@
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
     <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\ScenePowerUp.cpp" />
-    <ClCompile Include="src\SpriteRenderer.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
     <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
@@ -234,7 +233,6 @@
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
-    <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="src\Startup.cpp" />
     <ClCompile Include="src\TextureCache.cpp" />
     <ClCompile Include="src\TextureDX.cpp" />
@@ -276,7 +274,6 @@
     <ClInclude Include="include\PowerUpManager.h" />
     <ClInclude Include="include\PowerUpNode.h" />
     <ClInclude Include="include\ScenePowerUp.h" />
-    <ClInclude Include="include\SpriteRenderer.h" />
     <ClInclude Include="include\Systems\DrawSystem.h" />
     <ClInclude Include="include\DebugConsole.h" />
     <ClInclude Include="include\Diagnostics\Logger.h" />
@@ -321,16 +318,15 @@
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\SoundManagerEX.h" />
     <ClInclude Include="include\SoundSystem.h" />
-    <ClInclude Include="include\Sprite.h" />
-      <ClInclude Include="include\TextureDX.h" />
-      <ClInclude Include="include\UpdatableTimer.h" />
-      <ClInclude Include="include\Transform.h" />
-      <ClInclude Include="include\Vector.h" />
-      <ClInclude Include="include\WorldBuffer.h" />
-      <ClInclude Include="include\conioex.h" />
-      <ClInclude Include="include\Sweets\BaseSweets.h" />
-      <ClInclude Include="include\SweetsManager.h" />
-      <ClInclude Include="TimerDisplay.h" />
+    <ClInclude Include="include\TextureDX.h" />
+    <ClInclude Include="include\UpdatableTimer.h" />
+    <ClInclude Include="include\Transform.h" />
+    <ClInclude Include="include\Vector.h" />
+    <ClInclude Include="include\WorldBuffer.h" />
+    <ClInclude Include="include\conioex.h" />
+    <ClInclude Include="include\Sweets\BaseSweets.h" />
+    <ClInclude Include="include\SweetsManager.h" />
+    <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
