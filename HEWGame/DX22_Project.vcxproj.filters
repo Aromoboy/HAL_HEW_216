@@ -156,7 +156,13 @@
     <ClCompile Include="src\MeshDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\ModelCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\ModelDX.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ModelRender.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\PerspectiveCamera.cpp">
@@ -404,7 +410,13 @@
     <ClInclude Include="include\MeshDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="include\ModelCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="include\ModelDX.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelRender.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\PerspectiveCamera.h">
