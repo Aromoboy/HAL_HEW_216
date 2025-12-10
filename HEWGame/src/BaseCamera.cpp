@@ -1,8 +1,6 @@
 #include "BaseCamera.h"
 
 #include "Defines.h"
-#include "MatrixUtil.h"
-
 #include <cmath>
 
 namespace
@@ -191,32 +189,32 @@ namespace CameraSpace
         void BaseCamera::RecalculateView()
         {
                 const float3 eye = m_transform.position;
-
                 DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
                         m_transform.rotation.x,
                         m_transform.rotation.y,
                         m_transform.rotation.z);
 
+                DirectX::XMVECTOR eyeVec = DirectX::XMVectorSet(eye.x, eye.y, eye.z, 1.0f);
                 DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
                         DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
                 DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
                         DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
 
-                float3 focus
+                const float forwardLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(forward));
+                if (!(forwardLengthSq > 1.0e-6f))
                 {
-                        eye.x + DirectX::XMVectorGetX(forward),
-                        eye.y + DirectX::XMVectorGetY(forward),
-                        eye.z + DirectX::XMVectorGetZ(forward)
-                };
+                        forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+                }
 
-                float3 up
+                const float upLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(upVector));
+                if (!(upLengthSq > 1.0e-6f))
                 {
-                        DirectX::XMVectorGetX(upVector),
-                        DirectX::XMVectorGetY(upVector),
-                        DirectX::XMVectorGetZ(upVector)
-                };
+                        upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+                }
 
-                m_view = MathUtil::MakeViewMatrix(eye, focus, up);
+                DirectX::XMVECTOR focus = DirectX::XMVectorAdd(eyeVec, forward);
+                DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(eyeVec, focus, upVector);
+                DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixTranspose(view));
                 m_viewDirty = false;
 
 #if defined(_DEBUG)
@@ -226,11 +224,12 @@ namespace CameraSpace
 
         void BaseCamera::UpdateProjection()
         {
-                m_projection = MathUtil::MakeProjectionMatrix(
+                DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
                         DirectX::XMConvertToRadians(m_fovYDegrees),
                         m_aspect,
                         m_nearPlane,
                         m_farPlane);
+                DirectX::XMStoreFloat4x4(&m_projection, DirectX::XMMatrixTranspose(projection));
                 m_projectionDirty = false;
         }
 
