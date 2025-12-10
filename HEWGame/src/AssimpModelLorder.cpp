@@ -32,7 +32,7 @@ std::shared_ptr<Render::Model> AssimpModelLorder::Load(
     TextureCache& textureCache)
 {
     Assimp::Importer importer;
-    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
+    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs;
     const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
     if (!pScene)
         return nullptr;
