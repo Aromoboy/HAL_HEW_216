@@ -1,7 +1,6 @@
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"
-#include "ShaderList.h"
 #include "DrawMatrix.h"
 #include "Sprite.h"
 #include "PowerUpTextures.h"
@@ -39,6 +38,80 @@ constexpr const char* kBackFrameTexturenName = "BackFrame";
 constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
 constexpr float kHudCostIconScaleOffset = 0.25f;
 
+
+PowerUpStringTexture::PowerUpStringTexture()
+        : m_texture(std::make_shared<Texture2D>())
+        , m_stringTextureScale(float2{ 1.0f, 1.0f })
+{
+}
+
+HRESULT PowerUpStringTexture::Create(DXGI_FORMAT format, UINT width, UINT height)
+{
+        ID3D11Device* device = GetDevice();
+        if (!device)
+        {
+                return E_FAIL;
+        }
+
+        if (!m_texture)
+        {
+                m_texture = std::make_shared<Texture2D>();
+        }
+
+        const bool created = m_texture->CreateBlank(device, format, width, height);
+        return created ? S_OK : E_FAIL;
+}
+
+void PowerUpStringTexture::UpdatePixels(const void* data, UINT pitch)
+{
+        ID3D11DeviceContext* context = GetContext();
+        if (!context || !m_texture)
+        {
+                return;
+        }
+
+        m_texture->UpdatePixels(context, data, pitch);
+}
+
+void PowerUpStringTexture::SetScale(float2 a_scale)
+{
+        m_stringTextureScale = a_scale;
+}
+
+float2 PowerUpStringTexture::GetScale() const
+{
+        return m_stringTextureScale;
+}
+
+TextBounds& PowerUpStringTexture::GetBound()
+{
+        return bound;
+}
+
+const TextBounds& PowerUpStringTexture::GetBound() const
+{
+        return bound;
+}
+
+UINT PowerUpStringTexture::GetWidth() const
+{
+        return m_texture ? m_texture->GetWidth() : 0u;
+}
+
+UINT PowerUpStringTexture::GetHeight() const
+{
+        return m_texture ? m_texture->GetHeight() : 0u;
+}
+
+ID3D11ShaderResourceView* PowerUpStringTexture::Get() const
+{
+        return m_texture ? m_texture->Get() : nullptr;
+}
+
+std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
+{
+        return m_texture;
+}
 
 
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
@@ -360,7 +433,12 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
-	// 各マトリクスと描画用のパラメーター
+        if (!texture)
+        {
+                return;
+        }
+
+        // 各マトリクスと描画用のパラメーター
         WorldBuffer wvp{};
         DirectX::XMFLOAT4 param[3];
 
@@ -372,32 +450,33 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
         wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
         wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
-	
-	// ステータスを設定
-	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
-	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
-	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
+
+        // ステータスを設定
+        param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
+        param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
+        param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
-	// シェーダーをバインド
-        ShaderList::SetWVP(wvp);
+        // シェーダーをバインド
+        m_vertexShader->WriteBuffer(0, &wvp);
+        m_vertexShader->WriteBuffer(1, param);
+        m_vertexShader->Bind();
 
-m_vertexShader->WriteBuffer(0, &wvp);
-m_vertexShader->WriteBuffer(1, param);
-m_vertexShader->Bind();
+        m_pixelShader->SetTexture(0, texture->Get());
+        m_pixelShader->Bind();
 
-m_pixelShader->SetTexture(0, texture->Get());
-m_pixelShader->Bind();
-
-	// 描画
-	MeshDraw();
-
-
+        // 描画
+        MeshDraw();
 }
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
-	// 各マトリクスと描画用のパラメーター
+        if (!texture)
+        {
+                return;
+        }
+
+        // 各マトリクスと描画用のパラメーター
         WorldBuffer wvp{};
         DirectX::XMFLOAT4 param[3];
 
@@ -410,61 +489,22 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
         wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
 
-	// ステータスを設定
-	param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        // ステータスを設定
+        param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+        param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+        param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 
-	// シェーダーをバインド
-        ShaderList::SetWVP(wvp);
+        // シェーダーをバインド
+        m_vertexShader->WriteBuffer(0, &wvp);
+        m_vertexShader->WriteBuffer(1, param);
+        m_vertexShader->Bind();
 
-m_vertexShader->WriteBuffer(0, &wvp);
-m_vertexShader->WriteBuffer(1, param);
-m_vertexShader->Bind();
+        m_pixelShader->SetTexture(0, texture->Get());
+        m_pixelShader->Bind();
 
-m_pixelShader->SetTexture(0, texture->Get());
-m_pixelShader->Bind();
-
-	// 描画
-	MeshDraw();
-
-}
-
-
-void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
-{
-	// 各マトリクスと描画用のパラメーター
-        WorldBuffer wvp{};
-        DirectX::XMFLOAT4 param[3];
-
-        // 各マトリクスを設定
-        wvp.world = worldMatrix;
-        wvp.view = viewMatrix;
-        wvp.proj = projMatrix;
-        wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-        wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
-
-
-	// ステータスを設定
-	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
-	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
-	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
-
-
-
-	// シェーダーをバインド
-        ShaderList::SetWVP(wvp);
-
-m_vertexShader->WriteBuffer(0, &wvp);
-m_vertexShader->WriteBuffer(1, param);
-m_vertexShader->Bind();
-m_pixelShader->SetTexture(0, texture->GetResource());
-m_pixelShader->Bind();
-
-	// 描画
-	MeshDraw();
+        // 描画
+        MeshDraw();
 }
 
 
@@ -535,35 +575,39 @@ bool PowerUpRenderer::CreateTextResources()
 
 bool PowerUpRenderer::CreateGuidelineTexture()
 {
-	m_guidelineTexture = std::make_shared<Texture>();
-	if (!m_guidelineTexture)
-	{
-		return false;
-	}
+        ID3D11Device* device = GetDevice();
+        if (!device)
+        {
+                return false;
+        }
 
-	constexpr size_t kSize = 4;
-	std::array<uint32_t, kSize* kSize> pixels{};
-	for (size_t y = 0; y < kSize; ++y)
-	{
+        constexpr size_t kSize = 4;
+        std::array<uint32_t, kSize* kSize> pixels{};
+        for (size_t y = 0; y < kSize; ++y)
+        {
 		for (size_t x = 0; x < kSize; ++x)
 		{
 			const bool opaque = (x % 2) == 0;
-			pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
-		}
-	}
+                        pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
+                }
+        }
 
-	const HRESULT hr = m_guidelineTexture->Create(
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		static_cast<UINT>(kSize),
-		static_cast<UINT>(kSize),
-		pixels.data());
-	if (FAILED(hr))
-	{
-		m_guidelineTexture.reset();
-		return false;
-	}
+        auto texture = std::make_shared<Texture2D>();
+        const bool created = texture->CreateBlank(
+                device,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                static_cast<UINT>(kSize),
+                static_cast<UINT>(kSize),
+                pixels.data(),
+                static_cast<UINT>(kSize * sizeof(uint32_t)));
+        if (!created)
+        {
+                return false;
+        }
 
-	return true;
+        m_guidelineTexture = std::move(texture);
+
+        return true;
 }
 
 void PowerUpRenderer::DestroyTextResources()
@@ -725,7 +769,7 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 	
 	SetBlendMode(BLEND_ALPHA);
 
-	DrawSprite(data.stringTexture, worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f}));
+        DrawSprite(data.stringTexture->GetTexture(), worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f}));
 
 }
 
