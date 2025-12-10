@@ -128,9 +128,10 @@ void BackgroundRenderer::Draw()
 
     IdentityCamera screenCamera(identityView, ortho);
 
-    RenderStateGuard stateGuard{};
-    stateGuard.ApplyDepthTest(false);
-    stateGuard.ApplyBlendMode(BLEND_ALPHA);
+    RenderStateManager::ScopedState stateGuard{};
+    auto& stateManager = RenderStateManager::Instance();
+    stateManager.SetDepthTest(false);
+    stateManager.SetBlend(BlendMode::BLEND_ALPHA);
 
     m_modelRenderer->Draw(*m_model, transform, &screenCamera);
 }
