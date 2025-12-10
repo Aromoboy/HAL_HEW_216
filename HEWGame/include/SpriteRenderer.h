@@ -23,10 +23,10 @@ public:
 	void SetUVScale(DirectX::XMFLOAT2 scale);
 
 private:
-	std::shared_ptr<VertexShader> vs;
-	std::shared_ptr<PixelShader> ps;
-	std::shared_ptr<Shader> vs;
-	std::shared_ptr<Shader> ps;
+        std::shared_ptr<VertexShader> vs;
+        std::shared_ptr<PixelShader> ps;
+
+        std::shared_ptr<MeshDX> m_spriteMesh;
 
 	DirectX::XMFLOAT2 m_uvPos;
 	DirectX::XMFLOAT2 m_uvScale;
