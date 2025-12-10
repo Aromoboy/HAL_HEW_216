@@ -118,12 +118,6 @@ namespace SceneSpace
 
 	void ScenePowerUp::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
 	{
-		TextureCache& cache = TextureCache::Instance();
-
-		Transform transform;
-		transform.position  = float3{ 0.0f,0.0f,100.0f };
-		transform.rotation  = float3{ 0.0f,0.0f,0.0f };
-		transform.scale		= float3{ 100.0f,100.0f,100.0f };
 
 		m_powerUpRenderer->DrawHud(*activeCamera);
 		m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
