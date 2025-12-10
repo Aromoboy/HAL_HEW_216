@@ -2,7 +2,6 @@
 
 #include "Core/UpdateScheduler.h"
 #include "PowerUpNode.h"
-#include "SpriteRenderer.h"
 #include "ICamera.h"
 #include "Defines.h"
 #include "Debug.h"

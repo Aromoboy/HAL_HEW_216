@@ -4,7 +4,12 @@
 #include <string>
 
 #include <DirectXMath.h>
+#include "MaterialDX.h"
+#include "MeshDX.h"
+#include "ModelDX.h"
+#include "ModelRender.h"
 #include "TextureCache.h"
+#include "Transform.h"
 
 struct BackgroundRendererConfig
 {
@@ -27,6 +32,9 @@ private:
 
     BackgroundRendererConfig m_config{};
     std::shared_ptr<Texture2D> m_texture;
+    std::shared_ptr<MeshDX> m_quadMesh;
+    std::shared_ptr<MaterialDX> m_material;
+    std::unique_ptr<Render::Model> m_model;
+    std::unique_ptr<ModelRender> m_modelRenderer;
     bool m_ready = false;
-    DirectX::XMFLOAT4X4 m_identityMatrix;
 };

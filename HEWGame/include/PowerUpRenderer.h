@@ -1,14 +1,19 @@
 #pragma once
 
+#pragma once
+
 #include <memory>
 #include <string>
 #include <vector>
 #include <d3d11.h>
+#include "MaterialDX.h"
+#include "ModelDX.h"
+#include "ModelRender.h"
+#include "Transform.h"
 #include "Vector.h"
 #include "ICamera.h"
 #include "TextureCache.h"
 #include "MeshDX.h"
-#include "Shader.h"
 #include "TextureDX.h"
 
 
@@ -178,14 +183,14 @@ private:
 	};
 
 
-        std::shared_ptr<VertexShader> m_vertexShader;
-        std::shared_ptr<PixelShader> m_pixelShader;
-        void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
-        void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix);
-        void MeshDraw();
+        void DrawQuad(
+            std::shared_ptr<Texture2D> texture,
+            const Transform& transform,
+            const CameraSpace::ICamera& camera,
+            const DrawSpriteData& drawData);
 
-        // 板として描画するためのメッシュ及びシェーダー、コンストラクタで自作する。
-        std::shared_ptr<MeshDX> m_spriteMesh;
+        std::shared_ptr<MeshDX> m_quadMesh;
+        std::unique_ptr<ModelRender> m_modelRenderer;
 
 	// 描画用テクスチャ
 	std::shared_ptr<Texture2D> m_cost;
@@ -199,7 +204,7 @@ private:
 	void DestroyTextResources();
 	void UpdateBitmap(const NodeRenderData& data);
 	void UploadTexture(const NodeRenderData& data);
-	void RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum);
+        void RenderString(const NodeRenderData& data, const Transform& transform, const CameraSpace::ICamera& camera, int uvNum);
 	void DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, int width, int height);
 	UVRegion ComputeUV(const TextBounds& bounds, int textureHeight);
 
@@ -227,6 +232,5 @@ private:
 	HGDIOBJ m_prevFont = nullptr;
 	void* m_rawBits = nullptr;
 
-	DirectX::XMFLOAT4X4 m_identityMatrix;
 
 };

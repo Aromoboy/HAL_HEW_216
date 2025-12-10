@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "DirectX.h"
-#include "Sprite.h"
 #include "SceneGame.h"
 #include "SceneManager.h"
 #include "TitleScene.h"
@@ -39,9 +38,6 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
 
         g_stepTimer.Reset();
 
-        // 他機能初期化
-        Sprite::Init();
-
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
@@ -56,7 +52,6 @@ void Uninit()
 
         g_sceneManager.reset();
 
-        Sprite::Uninit();
         UninitDirectX();
 }
 

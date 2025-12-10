@@ -23,7 +23,6 @@ namespace Systems
 	class PhysicsMachine;
 }
 
-class SpriteRenderer;
 
 namespace CameraSpace
 {
@@ -67,15 +66,15 @@ public:
 
 	void SetFormat(const NodeFormat&);
 
-	// Node‚ğ’Ç‰Á‚·‚é
+	// Nodeã‚’è¿½åŠ ã™ã‚‹
 	void AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
 
-	// ‘S‚Ä‚Ìƒm[ƒh‚ğ•`‰æ
+	// å…¨ã¦ã®ãƒãƒ¼ãƒ‰ã‚’æç”»
 	void DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& Camera);
 
-	// ƒQƒbƒ^
+	// ã‚²ãƒƒã‚¿
 	int GetLevel(int num); // Level
-	int GetNodeCount(); // •Û‚µ‚Ä‚¢‚éƒm[ƒh”
+	int GetNodeCount(); // ä¿æŒã—ã¦ã„ã‚‹ãƒãƒ¼ãƒ‰æ•°
 	std::optional<float2> GetDrawPosition(int num);
 	std::optional<int> GetCost(int);
 	std::optional<float2> GetDrawScale(int);
@@ -85,14 +84,14 @@ public:
 	std::optional<DrawInfomation> GetDrawInfomation();
 
 
-	// ƒIƒuƒWƒFƒNƒgŠÇ—ƒIƒuƒWƒFƒNƒg‚ğæ“¾
+	// ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆç®¡ç†ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å–å¾—
 	void SetUpdateScheduler(Core::UpdateScheduler& scheduler);
 
 	bool LevelUp(int);
 
 private:
 	
-	// ‘S‚Ä‚ÌPowerUpNode‚ğ•Û
+	// å…¨ã¦ã®PowerUpNodeã‚’ä¿æŒ
 	std::vector<std::pair<std::string, std::unique_ptr<PowerUpNode>>> m_nodes;
 	Core::UpdateScheduler& m_scheduler;
 

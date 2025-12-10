@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "Scene.h"
-#include "SpriteRenderer.h"
 #include "BaseCamera.h"
 #include "PowerUpCursor.h"
 #include "CameraRig.h"
