@@ -1,7 +1,5 @@
 #include "PerspectiveCamera.h"
 
-#include "MatrixUtil.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -186,7 +184,8 @@ namespace CameraSpace
 
         void PerspectiveCamera::UpdateProjection()
         {
-                m_projection = MathUtil::MakeProjectionMatrix(m_fovY, m_aspect, m_nearZ, m_farZ);
+                DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
+                DirectX::XMStoreFloat4x4(&m_projection, DirectX::XMMatrixTranspose(projection));
                 m_projectionDirty = false;
         }
 
