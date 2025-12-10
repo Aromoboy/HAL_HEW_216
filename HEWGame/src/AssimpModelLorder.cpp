@@ -334,5 +334,15 @@ AssimpModelLorder::MakeMaterial(
             diffuseTexture);
     }
 
+    if (materials.empty())
+    {
+        auto fallback = getFallbackTexture();
+        materials.push_back(std::make_shared<MaterialDX>(
+            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+            DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f),
+            DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+            fallback));
+    }
+
     return materials;
 }

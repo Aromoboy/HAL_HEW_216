@@ -19,6 +19,7 @@ public:
 
         std::weak_ptr<MeshDX> GetMesh(int a_meshIndex) const;
         std::weak_ptr<MaterialDX> GetMaterial(int a_materialIndex) const;
+        unsigned int GetMaterialCount() const;
 
         bool HasLocalBounds() const;
         const AABB& GetLocalBounds() const;
