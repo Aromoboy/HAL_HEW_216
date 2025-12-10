@@ -18,16 +18,18 @@ public:
 
     void Draw(Render::Model& model, Transform transform, const CameraSpace::ICamera* camera);
 
+    static void EnsureDefaultShaders();
+
+protected:
+    static std::shared_ptr<VertexShader> s_defaultVS;
+    static std::shared_ptr<PixelShader> s_defaultPS;
+
 private:
     void MeshDraw(MeshDX&);
-    static void EnsureDefaultShaders();
 
     std::unordered_set<int> m_warnedMissingSrvMaterials;
     std::shared_ptr<Texture2D> m_fallbackTexture;
     std::shared_ptr<MaterialDX> m_defaultMaterial;
-
-    static std::shared_ptr<VertexShader> s_defaultVS;
-    static std::shared_ptr<PixelShader> s_defaultPS;
 };
 
 namespace Render
