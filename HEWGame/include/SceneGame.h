@@ -49,7 +49,7 @@ struct StageObject
     bool spinEnabled;
     float3 spinAxis;
     float spinSpeed;
-    std::shared_ptr<ModelDX> model;
+    std::shared_ptr<Render::Model> model;
     float currentRotation;
 };
 
