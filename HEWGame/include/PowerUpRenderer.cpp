@@ -4,6 +4,7 @@
 #include "DrawMatrix.h"
 #include "Sprite.h"
 #include "PowerUpTextures.h"
+#include "WorldBuffer.h"
 
 #include <sstream>
 #include <iomanip>
