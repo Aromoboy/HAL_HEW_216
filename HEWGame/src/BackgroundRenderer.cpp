@@ -1,7 +1,6 @@
 #include "BackgroundRenderer.h"
 
 #include "DirectX.h"
-#include "ICamera.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelDX.h"
@@ -16,25 +15,6 @@
 
 namespace
 {
-    struct IdentityCamera : public CameraSpace::ICamera
-    {
-        IdentityCamera()
-        {
-            DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
-            DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixIdentity());
-        }
-
-        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
-        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
-
-    protected:
-        void RecalculateView() override {}
-
-    private:
-        DirectX::XMFLOAT4X4 m_view{};
-        DirectX::XMFLOAT4X4 m_proj{};
-    };
-
     std::shared_ptr<MeshDX> CreateQuadMesh()
     {
         struct QuadVertex
@@ -85,7 +65,7 @@ bool BackgroundRenderer::Initialize(const BackgroundRendererConfig& config)
     m_quadMesh = CreateQuadMesh();
     m_material = std::make_shared<MaterialDX>(
         m_config.tintColor,
-        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
         DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
         m_texture);
     m_model = std::make_unique<Render::Model>(
@@ -113,18 +93,12 @@ void BackgroundRenderer::Draw() const
         return;
     }
 
-    SetDepthTest(false);
-    SetBlendMode(BLEND_ALPHA);
-
-    static IdentityCamera identityCamera{};
     Transform transform{};
     transform.position = float3{ 0.0f, 0.0f, 0.0f };
     transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
     transform.scale = float3{ 2.0f, 2.0f, 1.0f };
 
-    m_modelRenderer->Draw(*m_model, transform, &identityCamera);
-
-    SetDepthTest(true);
+    m_modelRenderer->Draw(*m_model, transform, nullptr);
 }
 
 bool BackgroundRenderer::LoadTexture(const std::string& path)
