@@ -23,19 +23,16 @@ void ModelRender::EnsureDefaultShaders()
     const char* kDefaultVS = R"EOT(
 struct VS_IN {
         float3 pos : POSITION;
-        float2 uv : TEXCOORD0;
-        float3 normal : NORMAL0;
+        float2 uv  : TEXCOORD0;
 };
 struct VS_OUT {
         float4 pos : SV_POSITION;
-        float3 normal : NORMAL0;
-        float2 uv : TEXCOORD0;
+        float2 uv  : TEXCOORD0;
 };
 cbuffer WVP : register(b0) {
         float4x4 world;
         float4x4 view;
         float4x4 proj;
-        float4 normalBasis[3];
 };
 VS_OUT main(VS_IN vin) {
         VS_OUT vout;
@@ -43,33 +40,19 @@ VS_OUT main(VS_IN vin) {
         float4 viewPos = mul(worldPos, view);
         vout.pos = mul(viewPos, proj);
         vout.uv = vin.uv;
-        float3x3 normalMat = float3x3(normalBasis[0].xyz, normalBasis[1].xyz, normalBasis[2].xyz);
-        vout.normal = normalize(mul(vin.normal, normalMat));
         return vout;
 })EOT";
 
     const char* kDefaultPS = R"EOT(
 struct PS_IN {
         float4 pos : SV_POSITION;
-        float3 normal : NORMAL0;
-        float2 uv : TEXCOORD0;
+        float2 uv  : TEXCOORD0;
 };
-cbuffer Material : register(b0) {
-        float4 diffuse;
-        float4 ambient;
-        float4 specular;
-};
-Texture2D tex : register(t0);
-SamplerState samp : register(s0);
+Texture2D tex0 : register(t0);
+SamplerState sampler0 : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-        float3 n = normalize(pin.normal);
-        float3 lightDir = normalize(float3(-1.0f, -1.0f, -1.0f));
-        float lambert = saturate(dot(n, -lightDir));
-        float4 sampled = tex.Sample(samp, pin.uv);
-        float3 base = sampled.rgb * diffuse.rgb;
-        float3 lit = lerp(ambient.rgb * diffuse.rgb, base, lambert);
-        return float4(lit, sampled.a * diffuse.a);
+        return tex0.Sample(sampler0, pin.uv);
 })EOT";
 
     s_defaultVS = std::make_shared<VertexShader>();
