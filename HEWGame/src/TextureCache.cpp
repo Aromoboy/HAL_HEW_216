@@ -101,9 +101,14 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
+    const std::filesystem::path filePath(path);
+    const bool fileExists = std::filesystem::exists(filePath);
     if (!texture->LoadFromFile(device, path))
     {
-        DebugMessage("[TextureCache] Failed to load texture '" + key + "' from file. Skipping cache entry.\n");
+        const auto u8 = filePath.u8string();
+        const std::string path8(u8.begin(), u8.end());
+        const std::string reason = fileExists ? "decode fail" : "file missing";
+        DebugMessage("[TextureCache] FAILED to load texture '" + path8 + "' (reason: " + reason + ")\n");
         return nullptr;
     }
 
@@ -112,6 +117,11 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
         DebugMessage("[TextureCache] Texture '" + key + "' loaded from file but SRV is null.\n");
         return nullptr;
     }
+
+    const auto u8 = filePath.u8string();
+    const std::string path8(u8.begin(), u8.end());
+    DebugMessage("[TextureCache] Loaded texture '" + path8 + "' size=" + std::to_string(texture->GetWidth())
+        + "x" + std::to_string(texture->GetHeight()) + " format=R8G8B8A8\n");
 
     // LbVɓo^
     textures[key] = std::move(texture);
