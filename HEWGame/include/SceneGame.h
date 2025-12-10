@@ -32,6 +32,7 @@
 #include <limits>
 #include <deque>
 #include <string>
+#include"SettingScene.h"
 
 struct CameraPrototypeSettings
 {

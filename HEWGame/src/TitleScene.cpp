@@ -4,7 +4,7 @@
 #include "Core/StepTimer.h"
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
-
+#include "SettingScene.h"
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
 
@@ -82,6 +82,17 @@ void TitleScene::Update(Core::UpdateContext& ctx)
             m_manager->RequestSceneChange(std::make_unique<SceneGame>());
         }
     }
+    
+
+        
+    //if (ctx.input.IsTrigger(Core::ActionId::Pause))  // © Ý’è—p‚Ì“ü—Í
+    //{
+    //    if (m_manager)
+    //    {
+    //        m_manager->RequestSceneChange( std::make_unique<SettingScene>(*m_manager)
+    //        );
+    //    }
+    //}
 }
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
