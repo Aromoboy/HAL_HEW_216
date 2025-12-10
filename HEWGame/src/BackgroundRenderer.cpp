@@ -15,6 +15,25 @@
 
 namespace
 {
+    struct ScreenSpaceCamera : public CameraSpace::ICamera
+    {
+        ScreenSpaceCamera()
+        {
+            DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
+            DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixOrthographicLH(2.0f, 2.0f, 0.0f, 1.0f));
+        }
+
+        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
+        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
+
+    protected:
+        void RecalculateView() override {}
+
+    private:
+        DirectX::XMFLOAT4X4 m_view{};
+        DirectX::XMFLOAT4X4 m_proj{};
+    };
+
     std::shared_ptr<MeshDX> CreateQuadMesh()
     {
         const std::array<MeshDX::Vertex, 4> vertices{
@@ -91,7 +110,8 @@ void BackgroundRenderer::Draw() const
     transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
     transform.scale = float3{ 2.0f, 2.0f, 1.0f };
 
-    m_modelRenderer->Draw(*m_model, transform, nullptr);
+    static ScreenSpaceCamera screenCamera{};
+    m_modelRenderer->Draw(*m_model, transform, &screenCamera);
 }
 
 bool BackgroundRenderer::LoadTexture(const std::string& path)

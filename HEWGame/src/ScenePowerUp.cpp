@@ -22,19 +22,47 @@ constexpr const char* kCostMagnification = "CostMagnification=";
 
 enum PowerUpStatus
 {
-	Name,
-	MaxLevel,
-	DefaultCost,
-	CostAdditional,
-	CostMagnification,
-	MaxStatusNum
+        Name,
+        MaxLevel,
+        DefaultCost,
+        CostAdditional,
+        CostMagnification,
+        MaxStatusNum
 };
+
+namespace
+{
+        struct ScreenSpaceCamera : public CameraSpace::ICamera
+        {
+                ScreenSpaceCamera()
+                {
+                        DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
+                        DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixOrthographicLH(2.0f, 2.0f, 0.0f, 1.0f));
+                }
+
+                const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
+                const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
+
+        protected:
+                void RecalculateView() override {}
+
+        private:
+                DirectX::XMFLOAT4X4 m_view{};
+                DirectX::XMFLOAT4X4 m_proj{};
+        };
+
+        const CameraSpace::ICamera& GetHudCamera()
+        {
+                static ScreenSpaceCamera camera{};
+                return camera;
+        }
+}
 
 
 namespace SceneSpace
 {
-	ScenePowerUp::ScenePowerUp() :
-		m_cost(9999)
+        ScenePowerUp::ScenePowerUp() :
+                m_cost(9999)
 	{
 
 
@@ -116,13 +144,14 @@ namespace SceneSpace
 		
 	}
 
-	void ScenePowerUp::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
-	{
+        void ScenePowerUp::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
+        {
+                const CameraSpace::ICamera& camera = activeCamera ? *activeCamera : GetHudCamera();
 
-		m_powerUpRenderer->DrawHud(*activeCamera);
-		m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
-		m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
-	}
+                m_powerUpRenderer->DrawHud(camera);
+                m_powerUpManager->DrawAll(*m_powerUpRenderer, camera);
+                m_cursor->Draw(*m_powerUpRenderer, camera);
+        }
 
 	bool ScenePowerUp::LoadPowerUpFile()
 	{
