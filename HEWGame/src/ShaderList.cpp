@@ -6,6 +6,38 @@ PixelShader* ShaderList::m_pPS[PS_KIND_MAX];
 static DirectX::XMFLOAT3 g_cameraTarget = { 0.0f, 0.0f, 0.0f };
 static DirectX::XMFLOAT3 g_cameraPos = { 0.0f, 1.0f, -2.0f };
 
+namespace
+{
+        struct MaterialParams
+        {
+                DirectX::XMFLOAT4 diffuse;
+                DirectX::XMFLOAT4 ambient;
+                DirectX::XMFLOAT4 specular;
+                ID3D11ShaderResourceView* texture;
+        };
+
+        void ApplyMaterial(const MaterialParams& material)
+        {
+                DirectX::XMFLOAT4 param[3] = {
+                        material.diffuse,
+                        material.ambient,
+                        material.specular
+                };
+                param[1].w = material.texture ? 1.0f : 0.0f;
+                for (int i = 0; i < ShaderList::PS_KIND_MAX; ++i)
+                {
+                        PixelShader* shader = ShaderList::GetPS(static_cast<ShaderList::PSKind>(i));
+                        if (!shader)
+                        {
+                                continue;
+                        }
+
+                        shader->SetTexture(0, material.texture);
+                        shader->WriteBuffer(0, param);
+                }
+        }
+}
+
 
 ShaderList::ShaderList()
 {
@@ -81,17 +113,22 @@ void ShaderList::SetWVP(const WorldBuffer& wvp)
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
-	DirectX::XMFLOAT4 param[3] = {
+	ApplyMaterial(MaterialParams{
 		material.diffuse,
 		material.ambient,
-		material.specular
-	};
-	param[1].w = material.pTexture ? 1.0f : 0.0f;
-	for (int i = 0; i < PS_KIND_MAX; ++i)
-	{
-		m_pPS[i]->SetTexture(0, material.pTexture);
-		m_pPS[i]->WriteBuffer(0, param);
-	}
+		material.specular,
+		material.pTexture ? material.pTexture->GetResource() : nullptr,
+	});
+}
+
+void ShaderList::SetMaterial(const MaterialDX& material)
+{
+	ApplyMaterial(MaterialParams{
+		material.GetDiffuse(),
+		material.GetAmbient(),
+		material.GetSpecular(),
+		material.GetTexture(),
+	});
 }
 void ShaderList::SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir)
 {
