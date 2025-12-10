@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <vector>
 #include <DirectXMath.h>
-
 #include "Core/IndexBuffer.h"
+#include "ICamera.h"
 #include "Core/VertexBuffer.h"
 #include "DirectX.h"
 #include "Shader.h"
