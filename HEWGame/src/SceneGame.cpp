@@ -77,6 +77,8 @@ namespace
         constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
         constexpr float kFallbackPlayerMoveSpeed = 10.0f;
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+        constexpr const char* kAnchorModelBasePath = "Assets/Model/LowPolyNature/Models/";
+        constexpr const char* kAnchorModelKey = "OiiaioooooiaiFin";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
@@ -1284,12 +1286,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     InitializeStageAnchors();
 
     m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
-    if (!m_pObjects.empty())
+    if (!m_stageAnchors.empty())
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
-        anchorTransform.position = m_pObjects.front()->GetPosition();
-        anchorTransform.rotation = m_pObjects.front()->GetfRads();
-        anchorTransform.scale = m_pObjects.front()->GetScale();
+        anchorTransform = m_stageAnchors.front().transform;
     }
 
     const auto& cameraSettings = kFixedSideViewCameraPreset;
@@ -1885,6 +1885,14 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
     if (m_drawSystem)
     {
+        for (const auto& anchor : m_stageAnchors)
+        {
+            if (anchor.model)
+            {
+                m_drawSystem->QueueManualDraw(anchor.model.get(), anchor.transform);
+            }
+        }
+
         for (const auto& obj : m_stageObjects)
         {
             if (!obj.model)
@@ -2048,12 +2056,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleManualRetryInput(ctx);
         fRads.z += 0.001f * RAD;
 
-        if (m_cameraAnchor && !m_pObjects.empty())
+        if (m_cameraAnchor && !m_stageAnchors.empty())
         {
             auto& anchorTransform = m_cameraAnchor->GetTransform();
-            anchorTransform.position = m_pObjects.front()->GetPosition();
-            anchorTransform.rotation = m_pObjects.front()->GetfRads();
-            anchorTransform.scale = m_pObjects.front()->GetScale();
+            anchorTransform = m_stageAnchors.front().transform;
         }
 
         const float stackedHeight = m_maxTowerHeight;
@@ -2599,12 +2605,24 @@ void SceneGame::UnregisterAllPhysicsBodies()
 
 void SceneGame::InitializeStageAnchors()
 {
-    m_pObjects.clear();
+    m_stageAnchors.clear();
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    const std::string anchorModelPath = std::string(kAnchorModelBasePath) + kAnchorModelKey + ".fbx";
+    std::shared_ptr<Render::Model> anchorModel = cache.Get(anchorModelPath);
+    if (!anchorModel)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to load anchor model: " + anchorModelPath + "\n");
+    }
     const auto& spawnPoints = m_stageData.GetSpawnPoints();
     if (spawnPoints.empty())
     {
         const float3 fallback{ 0.0f, 0.0f, m_stageData.GetPlaneZ() };
-        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", fallback, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
+        StageAnchor anchor{};
+        anchor.transform.position = fallback;
+        anchor.transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+        anchor.transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+        anchor.model = anchorModel;
+        m_stageAnchors.push_back(anchor);
         std::ostringstream oss;
         oss << kLogPrefix << "InitializeStageAnchors fallback anchor at z=" << fallback.z << "\n";
         ::DebugTrace(oss.str());
@@ -2613,11 +2631,16 @@ void SceneGame::InitializeStageAnchors()
 
     for (const auto& spawn : spawnPoints)
     {
-        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", spawn, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
+        StageAnchor anchor{};
+        anchor.transform.position = spawn;
+        anchor.transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+        anchor.transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+        anchor.model = anchorModel;
+        m_stageAnchors.push_back(anchor);
     }
 
     std::ostringstream oss;
-    oss << kLogPrefix << "InitializeStageAnchors loaded " << m_pObjects.size() << " stage anchors.\n";
+    oss << kLogPrefix << "InitializeStageAnchors loaded " << m_stageAnchors.size() << " stage anchors.\n";
     ::DebugTrace(oss.str());
 }
 
@@ -2676,12 +2699,10 @@ void SceneGame::ResetPlaySession()
     }
 
     InitializeStageAnchors();
-    if (m_cameraAnchor && !m_pObjects.empty())
+    if (m_cameraAnchor && !m_stageAnchors.empty())
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
-        anchorTransform.position = m_pObjects.front()->GetPosition();
-        anchorTransform.rotation = m_pObjects.front()->GetfRads();
-        anchorTransform.scale = m_pObjects.front()->GetScale();
+        anchorTransform = m_stageAnchors.front().transform;
     }
     else if (!m_cameraAnchor)
     {
