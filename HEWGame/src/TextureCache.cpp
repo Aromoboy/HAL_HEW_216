@@ -29,6 +29,12 @@ std::string TextureCache::NormalizeKey(std::string key)
     Trim(key);
     std::replace(key.begin(), key.end(), '\\', '/');
     std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    if (key.empty())
+    {
+        DebugMessage("[TextureCache] NormalizeKey produced an empty key.\n");
+    }
+
     return key;
 }
 
@@ -101,6 +107,12 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
         return nullptr;
     }
 
+    if (!texture->Get())
+    {
+        DebugMessage("[TextureCache] Texture '" + key + "' loaded from file but SRV is null.\n");
+        return nullptr;
+    }
+
     // LbVɓo^
     textures[key] = std::move(texture);
     return textures[key];
@@ -122,6 +134,12 @@ std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name,
     if (!texture->LoadFromMemory(device, data, size, width, height, formatHint))
     {
         DebugMessage("[TextureCache] Failed to load in-memory texture '" + key + "'. Skipping cache entry.\n");
+        return nullptr;
+    }
+
+    if (!texture->Get())
+    {
+        DebugMessage("[TextureCache] Texture '" + key + "' loaded from memory but SRV is null.\n");
         return nullptr;
     }
 
