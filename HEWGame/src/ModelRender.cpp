@@ -8,13 +8,17 @@
 #include "TextureCache.h"
 
 #include <cstdint>
+#include <array>
+#include <cstring>
+#include <d3dcompiler.h>
 
 std::shared_ptr<VertexShader> ModelRender::s_defaultVS;
 std::shared_ptr<PixelShader> ModelRender::s_defaultPS;
+Microsoft::WRL::ComPtr<ID3D11InputLayout> ModelRender::s_defaultInputLayout;
 
 void ModelRender::EnsureDefaultShaders()
 {
-    if (s_defaultVS && s_defaultPS)
+    if (s_defaultVS && s_defaultPS && s_defaultInputLayout)
     {
         return;
     }
@@ -60,6 +64,27 @@ float4 main(float2 uv : TEXCOORD0) : SV_TARGET
 }
 )";
 
+    Microsoft::WRL::ComPtr<ID3DBlob> vsBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> vsError;
+    HRESULT hrCompileVS = D3DCompile(
+        g_defaultVS,
+        strlen(g_defaultVS),
+        nullptr,
+        nullptr,
+        nullptr,
+        "main",
+        "vs_5_0",
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        vsBlob.GetAddressOf(),
+        vsError.GetAddressOf());
+
+    if (FAILED(hrCompileVS))
+    {
+        DebugMessage("[ModelRender] Failed to compile default vertex shader.\n");
+        return;
+    }
+
     s_defaultVS = std::make_shared<VertexShader>();
     HRESULT hrVS = s_defaultVS->Compile(g_defaultVS);
     if (FAILED(hrVS))
@@ -67,6 +92,27 @@ float4 main(float2 uv : TEXCOORD0) : SV_TARGET
         DebugMessage("[ModelRender] Failed to compile default vertex shader.\n");
         s_defaultVS.reset();
         return;
+    }
+
+    if (!s_defaultInputLayout)
+    {
+        D3D11_INPUT_ELEMENT_DESC layout[] = {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+
+        HRESULT hrLayout = GetDevice()->CreateInputLayout(
+            layout,
+            static_cast<UINT>(std::size(layout)),
+            vsBlob->GetBufferPointer(),
+            vsBlob->GetBufferSize(),
+            s_defaultInputLayout.GetAddressOf());
+
+        if (FAILED(hrLayout))
+        {
+            DebugMessage("[ModelRender] Failed to create default input layout.\n");
+            s_defaultInputLayout.Reset();
+        }
     }
 
     s_defaultPS = std::make_shared<PixelShader>();
@@ -83,6 +129,8 @@ float4 main(float2 uv : TEXCOORD0) : SV_TARGET
 ModelRender::ModelRender()
 {
     EnsureDefaultShaders();
+
+    m_inputLayout = s_defaultInputLayout;
 
     auto& cache = TextureCache::Instance();
     constexpr const char* kFallbackKey = "ModelRenderFallbackWhite";
@@ -218,6 +266,13 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {
         ID3D11DeviceContext* pContext = GetContext();
+        if (!m_inputLayout)
+        {
+                DebugMessage("[ModelRender] Input layout is not initialized.\n");
+                return;
+        }
+
+        pContext->IASetInputLayout(m_inputLayout.Get());
         UINT offset = 0;
 
         const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();

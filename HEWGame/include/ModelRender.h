@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_set>
+#include <wrl/client.h>
 
 #include "ModelDX.h"
 #include "ICamera.h"
@@ -28,6 +29,9 @@ private:
     std::unordered_set<int> m_warnedMissingSrvMaterials;
     std::shared_ptr<Texture2D> m_fallbackTexture;
     std::shared_ptr<MaterialDX> m_defaultMaterial;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
+
+    static Microsoft::WRL::ComPtr<ID3D11InputLayout> s_defaultInputLayout;
 };
 
 namespace Render
