@@ -130,8 +130,6 @@ ModelRender::ModelRender()
 {
     EnsureDefaultShaders();
 
-    m_inputLayout = s_defaultInputLayout;
-
     auto& cache = TextureCache::Instance();
     constexpr const char* kFallbackKey = "ModelRenderFallbackWhite";
     m_fallbackTexture = cache.GetTexture(kFallbackKey);
@@ -266,13 +264,14 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {
         ID3D11DeviceContext* pContext = GetContext();
-        if (!m_inputLayout)
+        if (!s_defaultInputLayout)
         {
-                DebugMessage("[ModelRender] Input layout is not initialized.\n");
-                return;
+            DebugMessage("[ModelRender] Default input layout is not initialized.\n");
+            return;
         }
 
-        pContext->IASetInputLayout(m_inputLayout.Get());
+        pContext->IASetInputLayout(s_defaultInputLayout.Get());
+
         UINT offset = 0;
 
         const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
