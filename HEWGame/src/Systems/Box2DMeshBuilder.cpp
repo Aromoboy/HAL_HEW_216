@@ -35,7 +35,7 @@ namespace
 
 namespace Systems
 {
-    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshBuffer::Description& desc, std::vector<b2Vec2>* outBoundary, const std::string& modelPath)
+    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshDX::Description& desc, std::vector<b2Vec2>* outBoundary, const std::string& modelPath)
     {
         std::vector<std::vector<b2Vec2>> polygons;
         Collision::Mesh2DExtraction extraction = Collision::ExtractProjectedPolygons(desc);
@@ -135,7 +135,7 @@ namespace Systems
         }
 
         std::vector<PositionOnly> positions;
-        std::vector<uint16_t> indices;
+        std::vector<uint32_t> indices;
 
         for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex)
         {
@@ -163,9 +163,9 @@ namespace Systems
                 }
 
                 // aiProcess_Triangulate guarantees triangles
-                indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[0]));
-                indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[1]));
-                indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[2]));
+                indices.push_back(static_cast<uint32_t>(baseIndex + face.mIndices[0]));
+                indices.push_back(static_cast<uint32_t>(baseIndex + face.mIndices[1]));
+                indices.push_back(static_cast<uint32_t>(baseIndex + face.mIndices[2]));
             }
         }
 
@@ -177,12 +177,12 @@ namespace Systems
             return fixtures;
         }
 
-        MeshBuffer::Description desc{};
+        MeshDX::Description desc{};
         desc.pVtx = positions.data();
         desc.vtxSize = sizeof(PositionOnly);
         desc.vtxCount = static_cast<UINT>(positions.size());
         desc.pIdx = indices.empty() ? nullptr : indices.data();
-        desc.idxSize = indices.empty() ? 0u : sizeof(uint16_t);
+        desc.idxSize = indices.empty() ? 0u : sizeof(uint32_t);
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

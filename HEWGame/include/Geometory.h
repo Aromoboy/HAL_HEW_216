@@ -2,8 +2,9 @@
 #define __GEOMETORY_H__
 
 #include <DirectXMath.h>
+#include <memory>
 #include "Shader.h"
-#include "MeshBuffer.h"
+#include "MeshDX.h"
 
 class Geometory
 {
@@ -48,16 +49,16 @@ private:
 	static const int MAX_LINE_NUM = 1000;
 	static const int CIRCLE_DETAIL = 16;
 private:
-	static MeshBuffer* m_pBox;
-	static MeshBuffer* m_pCylinder;
-	static MeshBuffer* m_pSphere;
-	static MeshBuffer* m_pLines;
-	static Shader* m_pVS;
-	static Shader* m_pPS;
-	static Shader* m_pLineShader[2];
-	static DirectX::XMFLOAT4X4 m_WVP[3];
-	static void* m_pLineVtx;
-	static int m_lineCnt;
+        static std::shared_ptr<MeshDX> m_pBox;
+        static std::shared_ptr<MeshDX> m_pCylinder;
+        static std::shared_ptr<MeshDX> m_pSphere;
+        static Core::VertexBuffer m_lineBuffer;
+        static Shader* m_pVS;
+        static Shader* m_pPS;
+        static Shader* m_pLineShader[2];
+        static DirectX::XMFLOAT4X4 m_WVP[3];
+        static void* m_pLineVtx;
+        static int m_lineCnt;
 };
 
 #endif // __GEOMETORY_H__

@@ -17,9 +17,9 @@ TimerDisplay::~TimerDisplay()
 {
 }
 
-void TimerDisplay::Init(Texture* numberTexture)
+void TimerDisplay::Init(std::shared_ptr<Texture2D> numberTexture)
 {
-    m_numberTexture = numberTexture;
+    m_numberTexture = std::move(numberTexture);
     Sprite::Init();
 }
 
@@ -40,7 +40,7 @@ void TimerDisplay::Draw(float remainingSeconds)
 {
     if (!m_numberTexture) return;
 
-    // ���Ԃ𕪂ƕb�ɕϊ�
+    // Ԃ𕪂ƕbɕϊ
     int totalSeconds = static_cast<int>(remainingSeconds);
     if (totalSeconds < 0) totalSeconds = 0;
 
@@ -62,9 +62,9 @@ void TimerDisplay::Draw(float remainingSeconds)
     Sprite::SetView(identity);
     Sprite::SetProjection(identity);
 
-    float startX = 0.60f;   
-    float startY = 0.85f;   
-    float spacing = 0.08f;  
+    float startX = 0.60f;
+    float startY = 0.85f;
+    float spacing = 0.08f;
 
     DrawDigit(min10, startX, startY);
     DrawDigit(min1, startX + spacing, startY);

@@ -13,6 +13,10 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         // 各種ステータスを設定
         m_indexCount = desc.idxCount;
         m_materialID = materialID;
+        if (desc.topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
+        {
+                m_topology = desc.topology;
+        }
 
         // 頂点バッファ作成
         const UINT vertexStride = sizeof(MeshDX::Vertex);

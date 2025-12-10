@@ -7,7 +7,7 @@
 
 #include <box2d/box2d.h>
 
-#include "MeshBuffer.h"
+#include "MeshDX.h"
 
 namespace Systems
 {
@@ -35,7 +35,7 @@ namespace Systems
     };
 
     // Shared polygon extraction helper (also used by tests/harnesses).
-    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshBuffer::Description& desc,
+    std::vector<std::vector<b2Vec2>> BuildPolygonsFromMesh(const MeshDX::Description& desc,
         std::vector<b2Vec2>* outBoundary = nullptr,
         const std::string& modelPath = {});
 }

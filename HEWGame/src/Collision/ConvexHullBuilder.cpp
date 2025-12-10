@@ -252,7 +252,7 @@ namespace
         }
     };
 
-    std::optional<UINT> ReadIndex(const MeshBuffer::Description& desc, UINT index)
+    std::optional<UINT> ReadIndex(const MeshDX::Description& desc, UINT index)
     {
         if (!desc.pIdx || desc.idxSize == 0 || desc.idxCount <= index)
         {
@@ -272,7 +272,7 @@ namespace
         return std::nullopt;
     }
 
-    std::vector<std::vector<UINT>> BuildBoundaryContours(const MeshBuffer::Description& desc)
+    std::vector<std::vector<UINT>> BuildBoundaryContours(const MeshDX::Description& desc)
     {
         std::vector<std::vector<UINT>> contours;
         if (!desc.pIdx || desc.idxCount < 3)
@@ -445,7 +445,7 @@ namespace
 
 namespace Collision
 {
-    Mesh2DExtraction ExtractProjectedPolygons(const MeshBuffer::Description& desc, const float3& projectionNormal)
+    Mesh2DExtraction ExtractProjectedPolygons(const MeshDX::Description& desc, const float3& projectionNormal)
     {
         Mesh2DExtraction extraction{};
         if (!desc.pVtx || desc.vtxSize < sizeof(float) * 3 || desc.vtxCount == 0)
@@ -513,7 +513,7 @@ namespace Collision
         return extraction;
     }
 
-    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc, std::string_view tag, std::string_view modelPath)
+    HullBuildResult BuildConvexHullFromMesh(const MeshDX::Description& desc, std::string_view tag, std::string_view modelPath)
     {
         HullBuildResult result{};
         std::vector<float2> extracted;

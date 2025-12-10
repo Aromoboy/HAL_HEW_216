@@ -90,10 +90,10 @@ void Shader::WriteBuffer(UINT slot, void* pData)
 	if(slot < m_pBuffers.size())
 		GetContext()->UpdateSubresource(m_pBuffers[slot], 0, nullptr, pData, 0, 0);
 }
-void Shader::SetTexture(UINT slot, Texture* tex)
+void Shader::SetTexture(UINT slot, const std::shared_ptr<Texture2D>& tex)
 {
-	ID3D11ShaderResourceView* pTex = tex ? tex->GetResource() : nullptr;
-	SetTexture(slot, pTex);
+        ID3D11ShaderResourceView* pTex = tex ? tex->Get() : nullptr;
+        SetTexture(slot, pTex);
 }
 
 HRESULT Shader::Make(void* pData, UINT size)

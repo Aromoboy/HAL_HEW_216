@@ -2,9 +2,10 @@
 #define __SHADER_H__
 
 #include "DirectX.h"
-#include "Texture.h"
-#include <string>
+#include "TextureDX.h"
 #include <map>
+#include <memory>
+#include <string>
 #include <vector>
 
 class Shader
@@ -27,9 +28,9 @@ public:
 
 	// 定数の書き込み
 	void WriteBuffer(UINT slot, void* pData);
-	void SetTexture(UINT slot, ID3D11ShaderResourceView* srv);
-	// テクスチャの設定
-	void SetTexture(UINT slot, Texture* tex);
+        void SetTexture(UINT slot, ID3D11ShaderResourceView* srv);
+        // テクスチャの設定
+        void SetTexture(UINT slot, const std::shared_ptr<Texture2D>& tex);
 	// シェーダーを描画に使用
 	virtual void Bind(void) = 0;
 

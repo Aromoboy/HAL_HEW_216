@@ -7,7 +7,7 @@
 #include <memory>
 #include "MeshDX.h"
 
-#include "Texture.h"
+#include "TextureDX.h"
 #include "Shader.h"
 #include <DirectXMath.h>
 
