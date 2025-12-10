@@ -107,11 +107,11 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 	m_spriteMesh = std::make_shared<MeshDX>(desc, -1);
 
-	vs = std::make_shared<VertexShader>();
-	vs->Compile(VS);
+m_vertexShader = std::make_shared<VertexShader>();
+m_vertexShader->Compile(VS);
 
-	ps = std::make_shared <PixelShader>();
-	ps->Compile(PS);
+m_pixelShader = std::make_shared <PixelShader>();
+m_pixelShader->Compile(PS);
 
 	m_cost = a_cache.GetTexture(kCostTextureKey);
 	m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
@@ -382,12 +382,12 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 	// シェーダーをバインド
         ShaderList::SetWVP(wvp);
 
-        vs->WriteBuffer(0, &wvp);
-	vs->WriteBuffer(1, param);
-	vs->Bind();
+m_vertexShader->WriteBuffer(0, &wvp);
+m_vertexShader->WriteBuffer(1, param);
+m_vertexShader->Bind();
 
-	ps->SetTexture(0, texture->Get());
-	ps->Bind();
+m_pixelShader->SetTexture(0, texture->Get());
+m_pixelShader->Bind();
 
 	// 描画
 	MeshDraw();
@@ -419,12 +419,12 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 	// シェーダーをバインド
         ShaderList::SetWVP(wvp);
 
-        vs->WriteBuffer(0, &wvp);
-	vs->WriteBuffer(1, param);
-	vs->Bind();
+m_vertexShader->WriteBuffer(0, &wvp);
+m_vertexShader->WriteBuffer(1, param);
+m_vertexShader->Bind();
 
-	ps->SetTexture(0, texture->Get());
-	ps->Bind();
+m_pixelShader->SetTexture(0, texture->Get());
+m_pixelShader->Bind();
 
 	// 描画
 	MeshDraw();
@@ -457,11 +457,11 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 	// シェーダーをバインド
         ShaderList::SetWVP(wvp);
 
-        vs->WriteBuffer(0, &wvp);
-	vs->WriteBuffer(1, param);
-	vs->Bind();
-	ps->SetTexture(0, texture->GetResource());
-	ps->Bind();
+m_vertexShader->WriteBuffer(0, &wvp);
+m_vertexShader->WriteBuffer(1, param);
+m_vertexShader->Bind();
+m_pixelShader->SetTexture(0, texture->GetResource());
+m_pixelShader->Bind();
 
 	// 描画
 	MeshDraw();
