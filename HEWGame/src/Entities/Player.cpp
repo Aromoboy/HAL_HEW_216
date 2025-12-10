@@ -179,7 +179,7 @@ namespace
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
 
-        auto model = std::make_shared<ModelDX>(
+        auto model = std::make_shared<Render::Model>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
             std::vector<std::shared_ptr<MaterialDX>>{mat});
 
