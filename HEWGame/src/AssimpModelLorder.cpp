@@ -261,6 +261,17 @@ AssimpModelLorder::MakeMaterial(
     const auto modelExtension = TextureCache::NormalizeKey(modelExtension8);
     const bool isFbx = modelExtension == ".fbx";
 
+    if (pScene->mNumTextures > 0)
+    {
+        DebugMessage("[AssimpModelLorder] Embedded texture count: " + std::to_string(pScene->mNumTextures) + "\n");
+        for (unsigned int texIdx = 0; texIdx < pScene->mNumTextures; ++texIdx)
+        {
+            const aiTexture* embedded = pScene->mTextures[texIdx];
+            DebugMessage("[AssimpModelLorder] Embedded texture[" + std::to_string(texIdx) + "] name='"
+                + std::string(embedded->mFilename.C_Str()) + "'\n");
+        }
+    }
+
     const auto modelPathU8 = modelPath.u8string();
     const std::string modelPath8(modelPathU8.begin(), modelPathU8.end());
     const auto modelDirU8 = directory.u8string();
@@ -321,6 +332,16 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
             specular.w = shininess;
 
+        unsigned int textureCount = 0;
+        for (int type = static_cast<int>(aiTextureType_NONE) + 1; type <= static_cast<int>(aiTextureType_UNKNOWN); ++type)
+        {
+            textureCount += pScene->mMaterials[i]->GetTextureCount(static_cast<aiTextureType>(type));
+        }
+        if (textureCount == 0)
+        {
+            DebugMessage("[Material] No textures on material " + std::to_string(i) + "\n");
+        }
+
         auto loadTexture = [&](aiTextureType type, bool allowFallback) -> std::pair<std::shared_ptr<Texture2D>, bool>
         {
             aiString texPath;
@@ -369,6 +390,10 @@ AssimpModelLorder::MakeMaterial(
                             ? static_cast<size_t>(embedded->mWidth)
                             : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
 
+                        DebugMessage(
+                            "[AssimpModelLorder] Loading embedded texture index " + std::to_string(texIndex)
+                            + " (material " + std::to_string(i) + ") name='" + embedded->mFilename.C_Str() + "'\n");
+
                         if (embedded->mHeight == 0)
                         {
                             texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, 0, 0, "compressed");
@@ -392,6 +417,11 @@ AssimpModelLorder::MakeMaterial(
                                 + ") in model '" + modelPath8 + "'. Using fallback.\n");
                             usedFallback = true;
                         }
+                        else
+                        {
+                            DebugMessage("[AssimpModelLorder] Created SRV from embedded texture memory (index "
+                                + std::to_string(texIndex) + ") for material " + std::to_string(i) + "\n");
+                        }
                     }
                 }
             }
@@ -400,6 +430,8 @@ AssimpModelLorder::MakeMaterial(
                 const auto resolved = ResolveTexturePath(texPath, pScene, modelDir8, modelPath8);
                 if (!resolved)
                 {
+                    DebugMessage("[AssimpModelLorder] Failed to resolve texture path '" + texFile + "' for material "
+                        + std::to_string(i) + " in model '" + modelPath8 + "'.\n");
                     auto fallback = allowFallback ? getFallbackTexture() : nullptr;
                     return { fallback, true };
                 }
@@ -414,7 +446,21 @@ AssimpModelLorder::MakeMaterial(
                 }
                 else
                 {
+                    std::filesystem::path resolvedPath(resolved->fullPath);
+                    const auto resolvedU8 = resolvedPath.u8string();
+                    const std::string resolved8(resolvedU8.begin(), resolvedU8.end());
+                    const bool exists = std::filesystem::exists(resolvedPath);
+
+                    DebugMessage(
+                        "[AssimpModelLorder] Resolved texture path for material " + std::to_string(i) + " type "
+                        + std::to_string(static_cast<int>(type)) + ": '" + resolved8 + "' exists="
+                        + std::string(exists ? "yes" : "no") + "\n");
+
                     texture = textureCache.Load(cacheKey, device, resolved->fullPath);
+
+                    DebugMessage(
+                        "[AssimpModelLorder] Load result for material " + std::to_string(i) + " texture '" + resolved8 + "': "
+                        + (texture ? "success" : "failure") + "\n");
 
                     if (!texture)
                     {
