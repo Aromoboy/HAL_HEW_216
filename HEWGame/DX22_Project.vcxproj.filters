@@ -500,9 +500,6 @@
     <ClInclude Include="include\TextureDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\WorldBuffer.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="include\TitleScene.h">
       <Filter>App</Filter>
     </ClInclude>
