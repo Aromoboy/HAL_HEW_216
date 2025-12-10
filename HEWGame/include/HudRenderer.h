@@ -6,13 +6,9 @@
 #include <string>
 #include <vector>
 #include <DirectXMath.h>
-#include "MaterialDX.h"
-#include "MeshDX.h"
-#include "ModelDX.h"
-#include "ModelRender.h"
 #include "TextureDX.h"
 #include "TextureCache.h"
-#include "Transform.h"
+#include "UnifiedQuadRenderer.h"
 #if defined(_WIN32)
 #include <windows.h>
 #endif
@@ -88,10 +84,9 @@ private:
     HGDIOBJ m_prevFont = nullptr;
     void* m_rawBits = nullptr;
 
-    std::unique_ptr<ModelRender> m_modelRenderer;
-    std::shared_ptr<MeshDX> m_quadMesh;
-    std::shared_ptr<MeshDX> m_guidelineMesh;
-    float m_guidelineUVScaleX = 1.0f;
+    std::unique_ptr<UnifiedQuadRenderer> m_quadRenderer;
+    std::string m_hudTextureKey;
+    std::string m_guidelineTextureKey;
 };
 
 #endif // HEWGAME_HUD_RENDERER_H

@@ -1,7 +1,6 @@
 #include "HudRenderer.h"
 
 #include "DirectX.h"
-#include "ICamera.h"
 #include "Vector.h"
 
 #include <algorithm>
@@ -13,42 +12,8 @@
 
 namespace
 {
-    struct IdentityCamera : public CameraSpace::ICamera
-    {
-        IdentityCamera()
-        {
-            DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
-            DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixIdentity());
-        }
-
-        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
-        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
-
-    protected:
-        void RecalculateView() override {}
-
-    private:
-        DirectX::XMFLOAT4X4 m_view{};
-        DirectX::XMFLOAT4X4 m_proj{};
-    };
-
-    std::shared_ptr<MeshDX> CreateQuadMesh(const DirectX::XMFLOAT2& uvScale)
-    {
-        const std::array<MeshDX::Vertex, 4> vertices{
-            MeshDX::Vertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f } },
-            MeshDX::Vertex{ {  0.5f,  0.5f, 0.0f }, { uvScale.x, 0.0f } },
-            MeshDX::Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, uvScale.y } },
-            MeshDX::Vertex{ {  0.5f, -0.5f, 0.0f }, { uvScale.x, uvScale.y } },
-        };
-
-        MeshDX::Description desc{};
-        desc.pVtx = vertices.data();
-        desc.vtxSize = sizeof(MeshDX::Vertex);
-        desc.vtxCount = static_cast<UINT>(vertices.size());
-        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
-        return std::make_shared<MeshDX>(desc, 0);
-    }
+    constexpr const char* kHudTextureCacheKey = "hud:texture";
+    constexpr const char* kGuidelineTextureCacheKey = "hud:guideline";
 }
 
 HudRenderer::HudRenderer() = default;
@@ -64,9 +29,9 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
     const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
     m_rgbaBuffer.resize(pixelCount * 4);
 
-    m_modelRenderer = std::make_unique<ModelRender>();
-    m_quadMesh = CreateQuadMesh(DirectX::XMFLOAT2(1.0f, 1.0f));
-    m_guidelineMesh = CreateQuadMesh(DirectX::XMFLOAT2(1.0f, 1.0f));
+    m_quadRenderer = std::make_unique<UnifiedQuadRenderer>();
+    m_hudTextureKey = kHudTextureCacheKey;
+    m_guidelineTextureKey = kGuidelineTextureCacheKey;
 
     if (!CreateTextResources())
     {
@@ -88,9 +53,7 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
 void HudRenderer::Shutdown()
 {
     DestroyTextResources();
-    m_modelRenderer.reset();
-    m_quadMesh.reset();
-    m_guidelineMesh.reset();
+    m_quadRenderer.reset();
     m_texture.reset();
     m_guidelineTexture.reset();
     m_rgbaBuffer.clear();
@@ -252,16 +215,23 @@ void HudRenderer::UploadTexture()
         dst += 4;
     }
 
-    auto updatedTexture = std::make_shared<Texture2D>();
-    if (updatedTexture->LoadFromMemory(
+    auto& cache = TextureCache::Instance();
+    if (!m_texture)
+    {
+        m_texture = cache.LoadFromMemory(
+            m_hudTextureKey,
             GetDevice(),
             m_rgbaBuffer.data(),
             m_rgbaBuffer.size(),
             m_config.textureWidth,
             m_config.textureHeight,
-            "RGBA"))
+            "RGBA");
+        m_textureDirty = false;
+        return;
+    }
+
+    if (m_texture->UpdatePixels(GetContext(), m_rgbaBuffer.data(), static_cast<UINT>(m_config.textureWidth * 4)))
     {
-        m_texture = updatedTexture;
         m_textureDirty = false;
     }
 }
@@ -281,100 +251,62 @@ bool HudRenderer::TryGetViewportSize(float& width, float& height) const
 
 void HudRenderer::RenderGuideline(const HudDisplayData& data)
 {
-    if (!data.guidelineVisible || !m_guidelineTexture || !m_modelRenderer)
+    if (!data.guidelineVisible || !m_guidelineTexture || !m_quadRenderer)
     {
         return;
     }
 
     float viewportWidth = 0.0f;
     float viewportHeight = 0.0f;
-    if (!TryGetViewportSize(viewportWidth, viewportHeight))
+    if (!m_quadRenderer->TryGetViewportSize(viewportWidth, viewportHeight))
     {
         return;
     }
 
-    const float thicknessClip = (m_config.guidelineThicknessPixels / viewportHeight) * 2.0f;
     const float repeatSpacing = std::max(1.0f, m_config.guidelinePatternPixels);
     const float repeatCount = std::max(1.0f, viewportWidth / repeatSpacing);
     const float clampedY = std::clamp(data.guidelineClipY, -0.98f, 0.98f);
+    const float centerY = (1.0f - clampedY) * 0.5f * viewportHeight;
 
-
-    SetDepthTest(false);
-    SetBlendMode(BLEND_ALPHA);
-
-    if (!m_guidelineMesh || std::abs(m_guidelineUVScaleX - repeatCount) > std::numeric_limits<float>::epsilon())
-    {
-        m_guidelineMesh = CreateQuadMesh(DirectX::XMFLOAT2(repeatCount, 1.0f));
-        m_guidelineUVScaleX = repeatCount;
-    }
-
-    auto material = std::make_shared<MaterialDX>(
-        m_config.guidelineColor,
-        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        m_guidelineTexture);
-
-    Render::Model model(
-        std::vector<std::shared_ptr<MeshDX>>{ m_guidelineMesh },
-        std::vector<std::shared_ptr<MaterialDX>>{ material });
-
-    Transform transform{};
-    transform.position = float3{ 0.0f, clampedY, 0.0f };
-    transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    transform.scale = float3{ 2.0f, thicknessClip, 1.0f };
-
-    static IdentityCamera identityCamera{};
-    m_modelRenderer->Draw(model, transform, &identityCamera);
-
-    SetDepthTest(true);
+    UnifiedQuadRenderer::DrawParams params{};
+    params.texture = m_guidelineTexture;
+    params.tint = m_config.guidelineColor;
+    params.positionPx = DirectX::XMFLOAT2(0.0f, centerY - (m_config.guidelineThicknessPixels * 0.5f));
+    params.sizePx = DirectX::XMFLOAT2(viewportWidth, m_config.guidelineThicknessPixels);
+    params.uvSize = DirectX::XMFLOAT2(repeatCount, 1.0f);
+    params.enableBlending = true;
+    params.disableDepth = true;
+    m_quadRenderer->Draw(params);
 }
 
 void HudRenderer::RenderSprite(const HudDisplayData& data)
 {
-    if (!m_texture || !m_modelRenderer || !m_quadMesh)
+    if (!m_texture || !m_quadRenderer)
     {
         return;
     }
 
     float viewportWidth = 0.0f;
     float viewportHeight = 0.0f;
-    if (!TryGetViewportSize(viewportWidth, viewportHeight))
+    if (!m_quadRenderer->TryGetViewportSize(viewportWidth, viewportHeight))
     {
         return;
     }
 
-    const float widthClip = (static_cast<float>(m_config.textureWidth) / viewportWidth) * 2.0f;
-    const float heightClip = (static_cast<float>(m_config.textureHeight) / viewportHeight) * 2.0f;
-    const float marginXClip = (m_config.marginPixels / viewportWidth) * 2.0f;
-    const float marginYClip = (m_config.marginPixels / viewportHeight) * 2.0f;
-
-    const float offsetX = 1.0f - marginXClip - (widthClip * 0.5f);
-    const float offsetY = 1.0f - marginYClip - (heightClip * 0.5f);
-
-    SetDepthTest(false);
-    SetBlendMode(BLEND_ALPHA);
+    const float posX = viewportWidth - m_config.marginPixels - static_cast<float>(m_config.textureWidth);
+    const float posY = m_config.marginPixels;
 
     const bool showWarning = data.timeUp || data.remainingSeconds <= m_config.warningThresholdSeconds;
     const DirectX::XMFLOAT4 color = showWarning ? m_config.warningTextColor : m_config.normalTextColor;
 
-    auto material = std::make_shared<MaterialDX>(
-        color,
-        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        m_texture);
-    Render::Model model(
-        std::vector<std::shared_ptr<MeshDX>>{ m_quadMesh },
-        std::vector<std::shared_ptr<MaterialDX>>{ material });
-
-    Transform transform{};
-    transform.position = float3{ offsetX, offsetY, 0.0f };
-    transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    transform.scale = float3{ widthClip, heightClip, 1.0f };
-
-    static IdentityCamera identityCamera{};
-    m_modelRenderer->Draw(model, transform, &identityCamera);
-
-    SetDepthTest(true);
+    UnifiedQuadRenderer::DrawParams params{};
+    params.texture = m_texture;
+    params.tint = color;
+    params.positionPx = DirectX::XMFLOAT2(posX, posY);
+    params.sizePx = DirectX::XMFLOAT2(static_cast<float>(m_config.textureWidth), static_cast<float>(m_config.textureHeight));
+    params.enableBlending = true;
+    params.disableDepth = true;
+    m_quadRenderer->Draw(params);
 }
 
 std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
@@ -411,18 +343,15 @@ bool HudRenderer::CreateGuidelineTexture()
         }
     }
 
-    auto texture = std::make_shared<Texture2D>();
-    if (!texture->LoadFromMemory(
-            GetDevice(),
-            reinterpret_cast<const uint8_t*>(pixels.data()),
-            pixels.size() * sizeof(uint32_t),
-            static_cast<unsigned int>(kSize),
-            static_cast<unsigned int>(kSize),
-            "BGRA"))
-    {
-        return false;
-    }
+    auto& cache = TextureCache::Instance();
+    m_guidelineTexture = cache.LoadFromMemory(
+        m_guidelineTextureKey,
+        GetDevice(),
+        reinterpret_cast<const uint8_t*>(pixels.data()),
+        pixels.size() * sizeof(uint32_t),
+        static_cast<unsigned int>(kSize),
+        static_cast<unsigned int>(kSize),
+        "BGRA");
 
-    m_guidelineTexture = texture;
-    return true;
+    return static_cast<bool>(m_guidelineTexture);
 }

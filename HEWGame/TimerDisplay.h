@@ -1,9 +1,7 @@
 #pragma once
-#include <array>
 #include <memory>
-#include "MeshDX.h"
-#include "ModelRender.h"
 #include "TextureDX.h"
+#include "UnifiedQuadRenderer.h"
 
 class TimerDisplay
 {
@@ -19,10 +17,8 @@ public:
 private:
     void DrawDigit(int digit, float x, float y); // 1̐`
     bool TryGetViewportSize(float& width, float& height) const;
-    std::shared_ptr<MeshDX> GetDigitMesh(int digit);
 
-    std::unique_ptr<ModelRender> m_modelRenderer;
-    std::array<std::shared_ptr<MeshDX>, 10> m_digitMeshes{};
+    std::unique_ptr<UnifiedQuadRenderer> m_quadRenderer;
 
     std::shared_ptr<Texture2D> m_numberTexture;   // ̃eNX`
     float m_posX;               // \ʒuX

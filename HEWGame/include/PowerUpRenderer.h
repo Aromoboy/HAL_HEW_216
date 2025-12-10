@@ -5,15 +5,12 @@
 #include <vector>
 #include <d3d11.h>
 
-#include "MaterialDX.h"
-#include "ModelDX.h"
-#include "ModelRender.h"
-#include "Transform.h"
 #include "Vector.h"
 #include "ICamera.h"
 #include "TextureCache.h"
 #include "MeshDX.h"
 #include "TextureDX.h"
+#include "UnifiedQuadRenderer.h"
 
 struct PowerUpHudLayoutConfig
 {
@@ -60,6 +57,7 @@ private:
     float2 m_stringTextureScale{};
     UINT m_width = 0u;
     UINT m_height = 0u;
+    std::string m_cacheKey;
 };
 
 class PowerUpRenderer
@@ -125,22 +123,10 @@ public:
         const CameraSpace::ICamera& camera);
 
 private:
-    std::shared_ptr<MeshDX> GetQuadMesh();
-    void EnsureQuadMesh();
-
-    std::shared_ptr<Render::Model> BuildModel(
-        const std::shared_ptr<MaterialDX>& material,
-        const std::shared_ptr<MeshDX>& mesh) const;
-
-    Transform MakeTransform(const float2& position, const float2& scale) const;
-
     TextureCache& m_cache;
     PowerUpHudLayoutConfig m_config{};
 
-    std::unique_ptr<ModelRender> m_modelRenderer;
-
-    std::shared_ptr<MeshDX> m_quadMeshStrong;
-    std::weak_ptr<MeshDX>    m_quadMeshWeak;
+    std::unique_ptr<UnifiedQuadRenderer> m_quadRenderer;
 
     std::shared_ptr<Texture2D> m_cost;
     std::shared_ptr<Texture2D> m_iconFrame;
