@@ -31,6 +31,7 @@ public:
     void Draw() const;
 
 private:
+    DirectX::XMFLOAT4X4 MakeOrthoMatrix() const;
     bool LoadTexture(const std::string& path);
 
     BackgroundRendererConfig m_config{};

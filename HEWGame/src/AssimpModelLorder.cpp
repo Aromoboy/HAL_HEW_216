@@ -9,9 +9,11 @@
 #include <string>
 #include <system_error>
 #include <algorithm>
+#include <cctype>
 #include <utility>
 #include <vector>
 #include <filesystem>
+#include <codecvt>
 #include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
@@ -22,6 +24,109 @@
 #if defined(_WIN32)
 #    include <windows.h>
 #endif
+
+namespace
+{
+    struct ResolvedTexturePath
+    {
+        std::string cacheKey;
+        std::wstring fullPath;
+    };
+
+    std::string TrimTexturePath(const std::string& path)
+    {
+        const auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
+
+        auto begin = path.begin();
+        auto end = path.end();
+
+        while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
+        {
+            ++begin;
+        }
+
+        while (end != begin && isSpace(static_cast<unsigned char>(*(end - 1))))
+        {
+            --end;
+        }
+
+        return std::string(begin, end);
+    }
+
+    std::optional<ResolvedTexturePath> ResolveTexturePath(
+        const aiString& texPath,
+        const aiScene* /*scene*/,
+        const std::string& modelDir,
+        const std::string& modelPath8)
+    {
+        std::string texturePath8 = TrimTexturePath(texPath.C_Str());
+
+        std::replace(texturePath8.begin(), texturePath8.end(), '\\', '/');
+
+        if (texturePath8.empty())
+        {
+            DebugMessage(
+                "[AssimpModelLorder] Texture path is empty in material from model '" + modelPath8
+                + "'. Skipping texture load.\n");
+            return std::nullopt;
+        }
+
+        const auto isAbsolute = [&texturePath8]()
+        {
+            if (texturePath8.size() >= 2 && std::isalpha(static_cast<unsigned char>(texturePath8[0])) && texturePath8[1] == ':')
+            {
+                return true;
+            }
+
+            return !texturePath8.empty() && texturePath8[0] == '/';
+        }();
+
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+        try
+        {
+            std::filesystem::path fullPath;
+
+            if (isAbsolute)
+            {
+                const std::wstring wide = converter.from_bytes(texturePath8);
+                fullPath = std::filesystem::path(wide).lexically_normal();
+            }
+            else
+            {
+                std::filesystem::path base(modelDir);
+                std::filesystem::path relative(std::u8string(texturePath8.begin(), texturePath8.end()));
+                fullPath = (base / relative).lexically_normal();
+            }
+
+            const auto filenameU8 = fullPath.filename().u8string();
+            std::string cacheKey(filenameU8.begin(), filenameU8.end());
+            std::transform(cacheKey.begin(), cacheKey.end(), cacheKey.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+            return ResolvedTexturePath{ cacheKey, fullPath.wstring() };
+        }
+        catch (const std::range_error& e)
+        {
+            DebugMessage(
+                "[AssimpModelLorder] Failed to convert texture path '" + texturePath8 + "' for model '" + modelPath8
+                + "' to UTF-16: " + e.what() + ". Using fallback texture if available.\n");
+        }
+        catch (const std::filesystem::filesystem_error& e)
+        {
+            DebugMessage(
+                "[AssimpModelLorder] Filesystem error while resolving texture path '" + texturePath8 + "' for model '" + modelPath8
+                + "': " + e.what() + ". Using fallback texture if available.\n");
+        }
+        catch (const std::exception& e)
+        {
+            DebugMessage(
+                "[AssimpModelLorder] Unexpected error while resolving texture path '" + texturePath8 + "' for model '" + modelPath8
+                + "': " + e.what() + ". Using fallback texture if available.\n");
+        }
+
+        return std::nullopt;
+    }
+}
 
 AssimpModelLorder::AssimpModelLorder() = default;
 
@@ -158,6 +263,8 @@ AssimpModelLorder::MakeMaterial(
 
     const auto modelPathU8 = modelPath.u8string();
     const std::string modelPath8(modelPathU8.begin(), modelPathU8.end());
+    const auto modelDirU8 = directory.u8string();
+    const std::string modelDir8(modelDirU8.begin(), modelDirU8.end());
 
     std::shared_ptr<Texture2D> fallbackTexture;
     const auto getFallbackTexture = [&]() -> std::shared_ptr<Texture2D>
@@ -290,44 +397,28 @@ AssimpModelLorder::MakeMaterial(
             }
             else
             {
-                std::filesystem::path texturePath;
-                try
+                const auto resolved = ResolveTexturePath(texPath, pScene, modelDir8, modelPath8);
+                if (!resolved)
                 {
-                    texturePath = (directory / texFile).lexically_normal();
-                }
-                catch (const std::filesystem::filesystem_error& e)
-                {
-                    DebugMessage(
-                        "[AssimpModelLorder] Failed to normalize texture path '" + texFile + "' for model '" + modelPath8
-                        + "': " + e.what() + ". Skipping texture and using fallback.\n");
-                    auto fallback = allowFallback ? getFallbackTexture() : nullptr;
-                    return { fallback, true };
-                }
-                catch (const std::system_error& e)
-                {
-                    DebugMessage(
-                        "[AssimpModelLorder] System error while resolving texture path '" + texFile + "' for model '" + modelPath8
-                        + "': " + e.what() + ". Skipping texture and using fallback.\n");
                     auto fallback = allowFallback ? getFallbackTexture() : nullptr;
                     return { fallback, true };
                 }
 
-                const auto texturePathU8 = texturePath.u8string();
-                const std::string texturePath8(texturePathU8.begin(), texturePathU8.end());
-                const auto cacheKey = TextureCache::MakeFileKey(texturePath8);
+                const auto& cacheKey = resolved->cacheKey;
                 if (cacheKey.empty())
                 {
-                    DebugMessage("[AssimpModelLorder] Failed to build cache key for texture path '" + texturePath8 + "'. Skipping texture load.\n");
+                    DebugMessage(
+                        "[AssimpModelLorder] Failed to build cache key for texture path '" + texFile + "' in model '" + modelPath8
+                        + "'. Skipping texture load.\n");
                     usedFallback = true;
                 }
                 else
                 {
-                    const std::wstring wfull = texturePath.wstring();
-                    texture = textureCache.Load(cacheKey, device, wfull);
+                    texture = textureCache.Load(cacheKey, device, resolved->fullPath);
 
                     if (!texture)
                     {
-                        DebugMessage("[AssimpModelLorder] Texture load returned null for path '" + texturePath8 + "' (material "
+                        DebugMessage("[AssimpModelLorder] Texture load returned null for path '" + texFile + "' (material "
                             + std::to_string(i) + ") in model '" + modelPath8 + "'. Using fallback.\n");
                         usedFallback = true;
                     }

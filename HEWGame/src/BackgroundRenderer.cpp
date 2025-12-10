@@ -15,32 +15,13 @@
 
 namespace
 {
-    struct ScreenSpaceCamera : public CameraSpace::ICamera
-    {
-        ScreenSpaceCamera()
-        {
-            DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixIdentity());
-            DirectX::XMStoreFloat4x4(&m_proj, DirectX::XMMatrixOrthographicLH(2.0f, 2.0f, 0.0f, 1.0f));
-        }
-
-        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
-        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
-
-    protected:
-        void RecalculateView() override {}
-
-    private:
-        DirectX::XMFLOAT4X4 m_view{};
-        DirectX::XMFLOAT4X4 m_proj{};
-    };
-
     std::shared_ptr<MeshDX> CreateQuadMesh()
     {
         const std::array<MeshDX::Vertex, 4> vertices{
-            MeshDX::Vertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f } },
-            MeshDX::Vertex{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f } },
-            MeshDX::Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f } },
-            MeshDX::Vertex{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f } },
+            MeshDX::Vertex{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f } },
+            MeshDX::Vertex{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f } },
+            MeshDX::Vertex{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+            MeshDX::Vertex{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } },
         };
 
         MeshDX::Description desc{};
@@ -108,10 +89,40 @@ void BackgroundRenderer::Draw() const
     Transform transform{};
     transform.position = float3{ 0.0f, 0.0f, 0.0f };
     transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    transform.scale = float3{ 2.0f, 2.0f, 1.0f };
+    transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 
-    static ScreenSpaceCamera screenCamera{};
+    struct IdentityCamera : public CameraSpace::ICamera
+    {
+        IdentityCamera(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& proj)
+            : m_view(view)
+            , m_proj(proj)
+        {
+        }
+
+        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
+        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
+
+    protected:
+        void RecalculateView() override {}
+
+    private:
+        DirectX::XMFLOAT4X4 m_view{};
+        DirectX::XMFLOAT4X4 m_proj{};
+    };
+
+    DirectX::XMFLOAT4X4 identityView{};
+    DirectX::XMStoreFloat4x4(&identityView, DirectX::XMMatrixIdentity());
+    const DirectX::XMFLOAT4X4 ortho = MakeOrthoMatrix();
+
+    IdentityCamera screenCamera(identityView, ortho);
     m_modelRenderer->Draw(*m_model, transform, &screenCamera);
+}
+
+DirectX::XMFLOAT4X4 BackgroundRenderer::MakeOrthoMatrix() const
+{
+    DirectX::XMFLOAT4X4 ortho{};
+    DirectX::XMStoreFloat4x4(&ortho, DirectX::XMMatrixIdentity());
+    return ortho;
 }
 
 bool BackgroundRenderer::LoadTexture(const std::string& path)

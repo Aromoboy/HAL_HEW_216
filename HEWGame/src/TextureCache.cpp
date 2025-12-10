@@ -46,7 +46,7 @@ std::string TextureCache::MakeFileKey(const std::string& fullPath)
         const auto u8 = normalizedPath.u8string();
         const std::string path8(u8.begin(), u8.end());
         const auto normalized = NormalizeKey(path8);
-        return "file:" + normalized;
+        return NormalizeKey("file:" + normalized);
     }
     catch (const std::filesystem::filesystem_error& e)
     {
@@ -69,7 +69,7 @@ std::string TextureCache::MakeFbxEmbeddedKey(const std::string& fbxPath, int ind
         const auto u8 = normalizedPath.u8string();
         const std::string path8(u8.begin(), u8.end());
         const auto baseKey = NormalizeKey(path8);
-        return baseKey + "::embedded::" + std::to_string(index);
+        return NormalizeKey(baseKey + "::embedded::" + std::to_string(index));
     }
     catch (const std::filesystem::filesystem_error& e)
     {
