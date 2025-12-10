@@ -198,6 +198,7 @@
     <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
     <ClCompile Include="src\BackgroundRenderer.cpp" />
+    <ClCompile Include="src\RenderStateManager.cpp" />
     <ClCompile Include="src\QuadRenderer.cpp" />
     <ClCompile Include="src\PerspectiveCamera.cpp" />
     <ClCompile Include="src\IModelLoader.cpp" />
@@ -293,6 +294,7 @@
     <ClInclude Include="include\HudRenderer.h" />
     <ClInclude Include="include\QuadRenderer.h" />
     <ClInclude Include="include\BackgroundRenderer.h" />
+    <ClInclude Include="include\RenderStateManager.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\ICollider.h" />
