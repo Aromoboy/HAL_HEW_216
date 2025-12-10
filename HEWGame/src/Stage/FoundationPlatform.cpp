@@ -79,7 +79,7 @@ namespace
             float3{ -kHalfExtent, -kHalfExtent, -kHalfExtent });
     }
 
-    std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
+    std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const Render::Model& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
     {
         const unsigned int meshCount = source.GetMeshCount();
         std::vector<std::shared_ptr<MeshDX>> meshes;
@@ -104,7 +104,7 @@ namespace
         return meshes;
     }
 
-    std::vector<std::shared_ptr<MaterialDX>> CopyMaterials(const ModelDX& source, unsigned int materialCount, unsigned int& nullMaterials)
+    std::vector<std::shared_ptr<MaterialDX>> CopyMaterials(const Render::Model& source, unsigned int materialCount, unsigned int& nullMaterials)
     {
         std::vector<std::shared_ptr<MaterialDX>> materials;
         materials.reserve(materialCount);
@@ -130,7 +130,7 @@ namespace
         return materials;
     }
 
-    std::shared_ptr<ModelDX> CloneModelWithUniqueMaterials(const ModelDX& source, ModelCloneStats& stats)
+    std::shared_ptr<Render::Model> CloneModelWithUniqueMaterials(const Render::Model& source, ModelCloneStats& stats)
     {
         unsigned int maxMaterialId = 0;
         stats.meshCount = source.GetMeshCount();
@@ -140,7 +140,7 @@ namespace
         stats.materialCount = static_cast<unsigned int>(materials.size());
 
         std::optional<AABB> clonedBounds = source.HasLocalBounds() ? std::optional<AABB>(source.GetLocalBounds()) : std::nullopt;
-        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials), clonedBounds);
+        return std::make_shared<Render::Model>(std::move(meshes), std::move(materials), clonedBounds);
     }
 }
 
