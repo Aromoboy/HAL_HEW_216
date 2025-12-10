@@ -2,9 +2,17 @@
 
 #include "DirectX.h"
 #include "ICamera.h"
+#include "MaterialDX.h"
+#include "MeshDX.h"
+#include "ModelDX.h"
+#include "ModelRender.h"
+#include "TextureCache.h"
+#include "Transform.h"
 #include "Vector.h"
 
 #include <array>
+#include <memory>
+#include <vector>
 
 namespace
 {
