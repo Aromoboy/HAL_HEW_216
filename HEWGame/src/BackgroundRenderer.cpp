@@ -17,23 +17,16 @@ namespace
 {
     std::shared_ptr<MeshDX> CreateQuadMesh()
     {
-        struct QuadVertex
-        {
-            DirectX::XMFLOAT3 pos;
-            DirectX::XMFLOAT3 normal;
-            DirectX::XMFLOAT2 uv;
-        };
-
-        const std::array<QuadVertex, 4> vertices{
-            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f } },
-            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f } },
-            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f } },
-            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f } },
+        const std::array<MeshDX::Vertex, 4> vertices{
+            MeshDX::Vertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f } },
+            MeshDX::Vertex{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f } },
+            MeshDX::Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f } },
+            MeshDX::Vertex{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f } },
         };
 
         MeshDX::Description desc{};
         desc.pVtx = vertices.data();
-        desc.vtxSize = sizeof(QuadVertex);
+        desc.vtxSize = sizeof(MeshDX::Vertex);
         desc.vtxCount = static_cast<UINT>(vertices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
