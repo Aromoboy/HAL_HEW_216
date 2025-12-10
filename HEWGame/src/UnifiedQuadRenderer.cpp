@@ -5,7 +5,7 @@
 #include "MeshDX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
-
+#include "RenderStateManager.h"
 #include <array>
 #include <vector>
 
