@@ -39,11 +39,19 @@ private:
 
 // Render-layer model abstraction
 // The class diagram groups renderable meshes under Render::Model.
-// ModelDX provides the concrete implementation, so we alias it here to
-// keep a single, unified model type across entities and systems.
+// ModelDX provides the concrete implementation, so Render::Model is a thin
+// wrapper that derives from ModelDX to keep a single, unified model type
+// across entities and systems while still allowing forward declarations.
 namespace Render
 {
-    using Model = ::ModelDX;
+    // Lightweight Render-layer wrapper to keep Render::Model as a distinct type
+    // while reusing the ModelDX implementation.
+    class Model : public ::ModelDX
+    {
+    public:
+        using ::ModelDX::ModelDX;
+        ~Model() = default;
+    };
 }
 
 
