@@ -36,6 +36,11 @@ std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex) const
         return m_materials[a_materialIndex];
 }
 
+unsigned int ModelDX::GetMaterialCount() const
+{
+        return static_cast<unsigned int>(m_materials.size());
+}
+
 bool ModelDX::HasLocalBounds() const
 {
         return m_hasLocalBounds;
