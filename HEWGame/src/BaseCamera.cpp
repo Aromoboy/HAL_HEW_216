@@ -334,18 +334,10 @@ BaseCamera::BaseCamera(const float3& position, const float3& rotation)
 		#endif
 		}
 
-		void BaseCamera::MarkViewDirty()
-		{
-			m_viewDirty = true;
-		}
-		void BaseCamera::MarkViewDirty()
-		{
-			m_viewDirty = true;
-		}
-void BaseCamera::MarkViewDirty()
-{
-m_viewDirty = true;
-}
+                void BaseCamera::MarkViewDirty()
+                {
+                        m_viewDirty = true;
+                }
 
         void BaseCamera::MarkProjectionDirty()
         {
