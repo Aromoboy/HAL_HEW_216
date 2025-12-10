@@ -1,19 +1,29 @@
 #include "SettingScene.h"
+
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
 
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
+#include "TitleScene.h"
 
+#include "BackgroundRenderer.h"
+#include "TitleRenderer.h"
 
+SceneSpace::SettingScene::SettingScene(SceneSpace::SceneManager& manager)
+    : m_manager(&manager)
+{
+}
 
 void SceneSpace::SettingScene::Load(Core::Input& input)
 {
 	(void)input;
 }
 
+
 void SceneSpace::SettingScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    
 	RootUpdate(timer, input);
 }
 
@@ -57,11 +67,13 @@ void SceneSpace::SettingScene::ConfigureUpdates()
 
 void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Confirm))
+    if (ctx.input.IsTrigger(Core::ActionId::Cancel))//Cancel¨ESCkey‚ÅÝ’è‰æ–Ê‚©‚çƒ^ƒCƒgƒ‹‰æ–Ê‚É–ß‚ê‚é
     {
         if (m_manager)
         {
-            m_manager->RequestSceneChange(std::make_unique<SceneGame>());
+            m_manager->RequestSceneChange(
+                std::make_unique<TitleScene>(*m_manager)
+            );
         }
     }
 }
@@ -69,6 +81,5 @@ void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
 void SceneSpace::SettingScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
  
-
     (void)activeCamera;
 }

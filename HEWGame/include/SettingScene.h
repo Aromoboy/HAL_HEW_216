@@ -1,4 +1,5 @@
 #pragma once
+//Setting.h
 #ifndef __SETTING_SCENE_H__
 #define __SETTING_SCENE_H__
 
@@ -23,7 +24,7 @@ namespace SceneSpace
 
     public:
 
-
+        explicit SettingScene(SceneSpace::SceneManager& manager);
 
         void Load(Core::Input& input) override;
         void Update(Core::StepTimer& timer, Core::Input& input) override;

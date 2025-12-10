@@ -2,9 +2,11 @@
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
+
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
 #include "SettingScene.h"
+
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
 
@@ -75,7 +77,7 @@ void TitleScene::ConfigureUpdates()
 
 void TitleScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Confirm))
+    if (ctx.input.IsTrigger(Core::ActionId::Confirm))//Corfirm ← Enterkeyで、タイトルシーンからゲームシーンに入る
     {
         if (m_manager)
         {
@@ -84,15 +86,15 @@ void TitleScene::Update(Core::UpdateContext& ctx)
     }
     
 
-        
-    //if (ctx.input.IsTrigger(Core::ActionId::Pause))  // ← 設定用の入力
-    //{
-    //    if (m_manager)
-    //    {
-    //        m_manager->RequestSceneChange( std::make_unique<SettingScene>(*m_manager)
-    //        );
-    //    }
-    //}
+    if (ctx.input.IsTrigger(Core::ActionId::Pause))  //Pause ← spacekeyで、タイトルシーンから設定シーンに入る
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange( std::make_unique<SceneSpace::SettingScene>(*m_manager)
+            );
+        }
+    }
+
 }
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
