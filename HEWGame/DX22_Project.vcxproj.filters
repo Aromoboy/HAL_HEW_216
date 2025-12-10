@@ -54,6 +54,9 @@
     <ClCompile Include="src\BackgroundRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\RenderStateManager.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\QuadRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -264,6 +267,9 @@
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\BackgroundRenderer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\RenderStateManager.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\BaseCamera.h">
