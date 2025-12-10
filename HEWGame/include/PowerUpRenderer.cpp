@@ -1,11 +1,8 @@
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
-#include "DirectXMath.h"
 #include "PowerUpTextures.h"
 
 #include <algorithm>
-#include <array>
-#include <iomanip>
 #include <sstream>
 
 const std::string kCostTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
@@ -38,42 +35,12 @@ constexpr float kHudCostIconScaleOffset = 0.25f;
 
 namespace
 {
-    struct QuadVertex
-    {
-        DirectX::XMFLOAT3 pos;
-        DirectX::XMFLOAT2 uv;
-        DirectX::XMFLOAT3 normal;
-    };
-
-    std::shared_ptr<MeshDX> CreateQuadMesh(const DirectX::XMFLOAT2& uvStart, const DirectX::XMFLOAT2& uvScale)
-    {
-        const std::array<QuadVertex, 4> vertices{
-            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { uvStart.x, uvStart.y }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { uvStart.x + uvScale.x, uvStart.y }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { uvStart.x, uvStart.y + uvScale.y }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { uvStart.x + uvScale.x, uvStart.y + uvScale.y }, { 0.0f, 0.0f, -1.0f } },
-        };
-
-        MeshDX::Description desc{};
-        desc.pVtx = vertices.data();
-        desc.vtxSize = sizeof(QuadVertex);
-        desc.vtxCount = static_cast<UINT>(vertices.size());
-        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
-        return std::make_shared<MeshDX>(desc, 0);
-    }
-
-    DirectX::XMFLOAT4 MakeColor(const PowerUpRenderer::DrawSpriteData& data)
-    {
-        return DirectX::XMFLOAT4(data.r, data.g, data.b, data.alpha);
-    }
-
-    Transform MakeTransform(const float3& position, const float3& scale, const PowerUpRenderer::DrawSpriteData& data)
+    Transform MakeTransform(const float3& position, const float3& scale)
     {
         Transform transform{};
-        transform.position = float3{ position.x + data.projOffset.x, position.y + data.projOffset.y, position.z };
+        transform.position = position;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-        transform.scale = float3{ scale.x * data.projScale.x, scale.y * data.projScale.y, scale.z };
+        transform.scale = scale;
         return transform;
     }
 }
@@ -157,7 +124,6 @@ std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
 {
         m_modelRenderer = std::make_unique<ModelRender>();
-        m_quadMesh = CreateQuadMesh(DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT2(1.0f, 1.0f));
 
         m_cost = a_cache.GetTexture(kCostTextureKey);
         m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
@@ -205,7 +171,6 @@ void PowerUpRenderer::Shutdown()
 {
         DestroyTextResources();
         m_modelRenderer.reset();
-        m_quadMesh.reset();
         m_texture.reset();
         m_guidelineTexture.reset();
         m_rgbaBuffer.clear();
@@ -231,8 +196,8 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	scale.y = kHudCostIconScaleOffset;
 	scale.z = 1.0f;
 
-        const Transform transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(m_cost, transform, camera, DrawSpriteData());
+        const Transform transform = MakeTransform(position, scale);
+        DrawQuad(m_cost, transform, camera);
 }
 
 void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
@@ -250,8 +215,8 @@ void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_
 	scale.y = a_scale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-        const Transform transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(a_texture, transform, camera, DrawSpriteData());
+        const Transform transform = MakeTransform(position, scale);
+        DrawQuad(a_texture, transform, camera);
 }
 
 
@@ -282,8 +247,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-        Transform transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(m_backFrame, transform, camera, DrawSpriteData());
+        Transform transform = MakeTransform(position, scale);
+        DrawQuad(m_backFrame, transform, camera);
 
 	// アイコンフレーム描画
 	offset.x = kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -295,8 +260,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kFrameScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(m_iconFrame, transform, camera, DrawSpriteData());
+        transform = MakeTransform(position, scale);
+        DrawQuad(m_iconFrame, transform, camera);
 
 	// アイコン描画
 	offset.x = kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -308,8 +273,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kIconScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(data.texture, transform, camera, DrawSpriteData());
+        transform = MakeTransform(position, scale);
+        DrawQuad(data.texture, transform, camera);
 
 	// コストアイコン描画
 	offset.x = kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -321,8 +286,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostIconScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
-        DrawQuad(m_cost, transform, camera, DrawSpriteData());
+        transform = MakeTransform(position, scale);
+        DrawQuad(m_cost, transform, camera);
 	
 
 
@@ -337,7 +302,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.z = 1.0f;
 
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
+        transform = MakeTransform(position, scale);
 
         RenderString(data, transform, camera, NodeName);
 
@@ -351,7 +316,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kInfomationScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
+        transform = MakeTransform(position, scale);
 
 
         RenderString(data, transform, camera, NodeInfomation);
@@ -367,7 +332,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kLevelScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
+        transform = MakeTransform(position, scale);
 
         RenderString(data, transform, camera, NodeLevel);
 
@@ -380,7 +345,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostScaleOffset;
 	scale.z = 1.0f;
 
-        transform = MakeTransform(position, scale, DrawSpriteData());
+        transform = MakeTransform(position, scale);
 
         RenderString(data, transform, camera, NodeCost);
 }
@@ -389,39 +354,23 @@ void PowerUpRenderer::DrawQuad(
         std::shared_ptr<Texture2D> texture,
         const Transform& transform,
         const CameraSpace::ICamera& camera,
-        const DrawSpriteData& drawData)
+        const float2& uvStart,
+        const float2& uvScale)
 {
         if (!texture || !m_modelRenderer)
         {
                 return;
         }
 
-        const DirectX::XMFLOAT2 uvStart(drawData.uvPos.x, drawData.uvPos.y);
-        const DirectX::XMFLOAT2 uvScale(drawData.uvScale.x, drawData.uvScale.y);
-        std::shared_ptr<MeshDX> mesh = m_quadMesh;
+        const DirectX::XMFLOAT2 dxUvStart(uvStart.x, uvStart.y);
+        const DirectX::XMFLOAT2 dxUvScale(uvScale.x, uvScale.y);
 
-        Transform adjusted = transform;
-        adjusted.position.x += drawData.projOffset.x;
-        adjusted.position.y += drawData.projOffset.y;
-        adjusted.scale.x *= drawData.projScale.x;
-        adjusted.scale.y *= drawData.projScale.y;
-
-        if (uvStart.x != 0.0f || uvStart.y != 0.0f || uvScale.x != 1.0f || uvScale.y != 1.0f)
+        if (!m_quadRenderer.SetTexture(texture))
         {
-                mesh = CreateQuadMesh(uvStart, uvScale);
+                return;
         }
 
-        auto material = std::make_shared<MaterialDX>(
-                MakeColor(drawData),
-                DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-                DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-                texture);
-
-        Render::Model model(
-                std::vector<std::shared_ptr<MeshDX>>{ mesh },
-                std::vector<std::shared_ptr<MaterialDX>>{ material });
-
-        m_modelRenderer->Draw(model, adjusted, &camera);
+        m_quadRenderer.Draw(*m_modelRenderer, transform, &camera, dxUvStart, dxUvScale);
 }
 
 bool PowerUpRenderer::CreateTextResources()
@@ -657,15 +606,17 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const Transform& 
 	float uvStartY = (scale.y * uvNum / data.stringTexture->GetHeight() + region.startY);
 	float height = (m_config.fontSizePixels) / data.stringTexture->GetHeight();
 	
-	float2 uvStart = float2{ 0.0f, uvStartY};
-	float2 uvSize = float2{ 1.0f, height};
+        float2 uvStart = float2{ 0.0f, uvStartY};
+        float2 uvSize = float2{ 1.0f, height};
 
-	float width = static_cast<float>(scale.x / scale.y);
-	
+        float width = static_cast<float>(scale.x / scale.y);
+
         SetBlendMode(BLEND_ALPHA);
 
-        DrawSpriteData spriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f});
-        DrawQuad(data.stringTexture->GetTexture(), transform, camera, spriteData);
+        Transform scaledTransform = transform;
+        scaledTransform.scale.x *= width;
+
+        DrawQuad(data.stringTexture->GetTexture(), scaledTransform, camera, uvStart, uvSize);
 
 }
 
