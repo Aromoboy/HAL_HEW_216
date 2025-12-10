@@ -2,8 +2,6 @@
 #define __MESH_BUFFER_H__
 
 #include "DirectX.h"
-#include "Core/VertexBuffer.h"
-#include "Core/IndexBuffer.h"
 
 class MeshBuffer
 {
@@ -30,13 +28,13 @@ public:
 	Description GetDesc();
 
 private:
-        HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count, bool isWrite);
-        HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
+	HRESULT CreateVertexBuffer(const void* pIdx, UINT size, UINT count, bool isWrite);
+	HRESULT CreateIndexBuffer(const void* pVtx, UINT size, UINT count);
 
 private:
-        Core::VertexBuffer m_vertexBuffer;
-        Core::IndexBuffer m_indexBuffer;
-        Description m_desc;
+	ID3D11Buffer* m_pVtxBuffer;
+	ID3D11Buffer* m_pIdxBuffer;
+	Description m_desc;
 
 };
 

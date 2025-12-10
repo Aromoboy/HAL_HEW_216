@@ -1,7 +1,7 @@
 #ifndef __TEXTURE_LOAD_H__
 #define __TEXTURE_LOAD_H__
 
-#include "DirectXTex.h"
+#include "DirectXTex/DirectXTex.h"
 
 #ifdef _X86_
 #ifdef _DEBUG

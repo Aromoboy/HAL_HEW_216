@@ -1,15 +1,12 @@
-/*
-* @brief
-* @ 合成アニメーションとは
-*/
 #ifndef __MODEL_H__
 #define __MODEL_H__
 
 #include <DirectXMath.h>
-#include <string>
+#include <cstdint>
 #include <vector>
 #include "Shader.h"
 #include "MeshBuffer.h"
+#include "WorldBuffer.h"
 
 class Model
 {
@@ -28,12 +25,12 @@ public:
         struct Vertex
         {
                 DirectX::XMFLOAT3       pos;
-                DirectX::XMFLOAT3       normal;
                 DirectX::XMFLOAT2       uv;
-                DirectX::XMFLOAT4       color;
+                DirectX::XMFLOAT3       normal;
         };
         using Vertices  = std::vector<Vertex>;
-        using Indices   = std::vector<unsigned long>;
+        using Indices   = std::vector<uint32_t>;
+        static_assert(sizeof(Indices::value_type) == sizeof(uint32_t), "Model indices must remain 32-bit.");
 
         // メッシュ
         struct Mesh
@@ -62,7 +59,7 @@ public:
         void SetVertexShader(VertexShader* vs);
         void SetPixelShader(PixelShader* ps);
         bool Load(const char* file, float scale = 1.0f, Flip flip = Flip::None);
-        void Draw(int meshNo = -1);
+        void Draw(const WorldBuffer& wvp, int meshNo);
 
         //--- 各種情報取得
         const Mesh* GetMesh(unsigned int index);
@@ -74,9 +71,8 @@ public:
         static std::string GetError();
 #endif
 
+
 private:
-        static Texture*         m_pWhiteTex;    // ftHgeNX`
-        static unsigned int             m_textureRef;   // ftHgeNX`QƐ
         // 各種生成
         void MakeMesh(const void* ptr, float scale, Flip flip);
         void MakeMaterial(const void* ptr, std::string directory);
@@ -90,14 +86,10 @@ private:
 #endif
 
 private:
-        float                   m_loadScale;    //
-        Flip                    m_loadFlip;             //
-
         Meshes                  m_meshes;               // メッシュ配列
         Materials               m_materials;    // マテリアル配列
         VertexShader*   m_pVS;                  // 設定中の頂点シェーダ
         PixelShader*    m_pPS;                  // 設定中のピクセルシェーダ
-
 };
 
 
