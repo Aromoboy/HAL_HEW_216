@@ -26,7 +26,7 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
                 return;
         }
 
-        hr = CreateVertexBuffer(desc.pVtx, vertexStride, desc.vtxCount);
+        hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
         if (FAILED(hr))
         {
 #ifdef _DEBUG
