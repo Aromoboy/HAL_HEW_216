@@ -48,14 +48,13 @@ namespace CameraSpace
                 mutable DirectX::XMFLOAT4X4 m_projection;
                 mutable bool m_projectionDirty;
 
-        private:
-                bool ValidatePosition(const float3& position) const;
-                bool ValidateRotation(const float3& rotation) const;
-                bool ValidatePriority(int priority) const;
-                bool ValidatePerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane) const;
+private:
+bool ValidatePosition(const float3& position) const;
+bool ValidateRotation(const float3& rotation) const;
+bool ValidatePriority(int priority) const;
 
-        private:
-                Components::Transform m_transform;
+private:
+Components::Transform m_transform;
                 int m_priority;
                 float m_fovYDegrees;
                 float m_aspect;

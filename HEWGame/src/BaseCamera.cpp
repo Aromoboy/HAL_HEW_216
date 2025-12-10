@@ -1,43 +1,130 @@
 #include "BaseCamera.h"
 
 #include "Defines.h"
+#include <algorithm>
 #include <cmath>
+#include <sstream>
+#include <string>
 
 namespace
 {
-        constexpr float kMaxCoordinateMagnitude = 100000.0f;
-        constexpr float kMaxRotationMagnitude = DirectX::XM_PI * 16.0f;
-        constexpr int kMaxPriorityMagnitude = 1000;
+constexpr float kMaxCoordinateMagnitude = 100000.0f;
+constexpr float kMaxRotationMagnitude = DirectX::XM_PI * 16.0f;
+constexpr int kMaxPriorityMagnitude = 1000;
+constexpr float kDefaultFovDegrees = 60.0f;
+constexpr float kMinFovDegrees = 1.0f;
+constexpr float kMaxFovDegrees = 175.0f;
+constexpr float kDefaultAspect = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
+constexpr float kDefaultNearPlane = 0.1f;
+constexpr float kDefaultFarPlane = 1000.0f;
 
-        bool AreFloat3Equal(const float3& lhs, const float3& rhs)
-        {
-                return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
-        }
+bool AreFloat3Equal(const float3& lhs, const float3& rhs)
+{
+return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+}
 
-        bool AreTransformsEqual(const Components::Transform& lhs, const Components::Transform& rhs)
-        {
-                return AreFloat3Equal(lhs.position, rhs.position)
-                        && AreFloat3Equal(lhs.rotation, rhs.rotation)
-                        && AreFloat3Equal(lhs.scale, rhs.scale);
-        }
+bool AreTransformsEqual(const Components::Transform& lhs, const Components::Transform& rhs)
+{
+return AreFloat3Equal(lhs.position, rhs.position)
+&& AreFloat3Equal(lhs.rotation, rhs.rotation)
+&& AreFloat3Equal(lhs.scale, rhs.scale);
+}
 
-        bool ValidateFloat(const char* /*label*/, float value, float maxMagnitude)
-        {
-                if (std::isfinite(value) && std::fabs(value) <= maxMagnitude)
-                {
-                        return true;
-                }
-                return false;
-        }
+bool ValidateFloat(const char* /*label*/, float value, float maxMagnitude)
+{
+if (std::isfinite(value) && std::fabs(value) <= maxMagnitude)
+{
+return true;
+}
+return false;
+}
 
-        bool ValidatePerspectiveValue(const char* /*label*/, float value)
-        {
-                if (std::isfinite(value) && value > 0.0f)
-                {
-                        return true;
-                }
-                return false;
-        }
+bool MatrixHasNaN(const DirectX::XMFLOAT4X4& matrix)
+{
+const float* values = &matrix._11;
+for (int i = 0; i < 16; ++i)
+{
+if (!std::isfinite(values[i]))
+{
+return true;
+}
+}
+return false;
+}
+
+struct PerspectiveParameters
+{
+float fovYDegrees;
+float aspect;
+float nearPlane;
+float farPlane;
+};
+
+void DebugTrace(const std::string& message)
+{
+#if defined(_WIN32) && defined(_DEBUG)
+::OutputDebugStringA(message.c_str());
+#else
+(void)message;
+#endif
+}
+
+PerspectiveParameters SanitizePerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane, const char* context)
+{
+PerspectiveParameters result{ fovYDegrees, aspect, nearPlane, farPlane };
+bool adjusted = false;
+std::ostringstream warnings;
+warnings << "[BaseCamera] " << context << " perspective adjusted: ";
+
+if (!std::isfinite(result.fovYDegrees))
+{
+result.fovYDegrees = kDefaultFovDegrees;
+adjusted = true;
+warnings << "FOV=nan->" << result.fovYDegrees << "deg ";
+}
+result.fovYDegrees = std::clamp(result.fovYDegrees, kMinFovDegrees, kMaxFovDegrees);
+if (result.fovYDegrees <= kMinFovDegrees || result.fovYDegrees >= kMaxFovDegrees)
+{
+adjusted = true;
+warnings << "FOV clamped to " << result.fovYDegrees << "deg ";
+}
+
+if (!std::isfinite(result.aspect) || result.aspect <= 0.0f)
+{
+result.aspect = kDefaultAspect;
+adjusted = true;
+warnings << "aspect reset to " << result.aspect << ' ';
+}
+
+if (!std::isfinite(result.nearPlane) || result.nearPlane <= 0.0f)
+{
+result.nearPlane = kDefaultNearPlane;
+adjusted = true;
+warnings << "nearZ reset to " << result.nearPlane << ' ';
+}
+
+if (!std::isfinite(result.farPlane))
+{
+result.farPlane = kDefaultFarPlane;
+adjusted = true;
+warnings << "farZ reset to " << result.farPlane << ' ';
+}
+
+if (result.farPlane <= result.nearPlane)
+{
+result.farPlane = std::max(result.nearPlane + 1.0f, kDefaultFarPlane);
+adjusted = true;
+warnings << "farZ increased to " << result.farPlane << ' ';
+}
+
+if (adjusted)
+{
+warnings << '\n';
+DebugTrace(warnings.str());
+}
+
+return result;
+}
 }
 
 namespace CameraSpace
@@ -47,12 +134,12 @@ namespace CameraSpace
         {
         }
 
-        BaseCamera::BaseCamera(const float3& position, const float3& rotation)
-                : m_priority(0)
-                , m_fovYDegrees(60.0f)
-                , m_aspect(static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT))
-                , m_nearPlane(CMETER(30.0f))
-                , m_farPlane(METER(1000.0f))
+BaseCamera::BaseCamera(const float3& position, const float3& rotation)
+: m_priority(0)
+, m_fovYDegrees(kDefaultFovDegrees)
+, m_aspect(kDefaultAspect)
+, m_nearPlane(kDefaultNearPlane)
+, m_farPlane(kDefaultFarPlane)
                 , m_viewDirty(true)
                 , m_projectionDirty(true)
         {
@@ -152,19 +239,16 @@ namespace CameraSpace
                 m_priority = priority;
         }
 
-        void BaseCamera::SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane)
-        {
-                if (!ValidatePerspective(fovYDegrees, aspect, nearPlane, farPlane))
-                {
-                        return;
-                }
-
-                m_fovYDegrees = fovYDegrees;
-                m_aspect = aspect;
-                m_nearPlane = nearPlane;
-                m_farPlane = farPlane;
-                MarkProjectionDirty();
-        }
+		void BaseCamera::SetPerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane)
+		{
+		const auto sanitized = SanitizePerspective(fovYDegrees, aspect, nearPlane, farPlane, "SetPerspective");
+		
+		m_fovYDegrees = sanitized.fovYDegrees;
+		m_aspect = sanitized.aspect;
+		m_nearPlane = sanitized.nearPlane;
+		m_farPlane = sanitized.farPlane;
+		MarkProjectionDirty();
+		}
 
         const float3& BaseCamera::GetPosition() const
         {
@@ -186,57 +270,82 @@ namespace CameraSpace
                 return m_transform;
         }
 
-        void BaseCamera::RecalculateView()
-        {
-                const float3 eye = m_transform.position;
-                DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
-                        m_transform.rotation.x,
-                        m_transform.rotation.y,
-                        m_transform.rotation.z);
+		void BaseCamera::RecalculateView()
+		{
+			const float3 eye = m_transform.position;
+			DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
+				m_transform.rotation.x,
+				m_transform.rotation.y,
+				m_transform.rotation.z);
+			DirectX::XMMATRIX scaleMatrix = DirectX::XMMatrixScaling(
+				m_transform.scale.x,
+				m_transform.scale.y,
+				m_transform.scale.z);
+			DirectX::XMMATRIX translationMatrix = DirectX::XMMatrixTranslation(eye.x, eye.y, eye.z);
 
-                DirectX::XMVECTOR eyeVec = DirectX::XMVectorSet(eye.x, eye.y, eye.z, 1.0f);
-                DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
-                        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
-                DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
-                        DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
+			DirectX::XMVECTOR eyeVec = DirectX::XMVectorSet(eye.x, eye.y, eye.z, 1.0f);
+			DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
+				DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
+			DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
+				DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
 
-                const float forwardLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(forward));
-                if (!(forwardLengthSq > 1.0e-6f))
-                {
-                        forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-                }
+			const float forwardLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(forward));
+			if (!(forwardLengthSq > 1.0e-6f))
+			{
+				forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+			}
 
-                const float upLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(upVector));
-                if (!(upLengthSq > 1.0e-6f))
-                {
-                        upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-                }
+			const float upLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(upVector));
+			if (!(upLengthSq > 1.0e-6f))
+			{
+				upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			}
 
-                DirectX::XMVECTOR focus = DirectX::XMVectorAdd(eyeVec, forward);
-                DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(eyeVec, focus, upVector);
-                DirectX::XMStoreFloat4x4(&m_view, DirectX::XMMatrixTranspose(view));
-                m_viewDirty = false;
+			DirectX::XMVECTOR focus = DirectX::XMVectorAdd(eyeVec, forward);
+			DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(eyeVec, focus, upVector);
+			DirectX::XMStoreFloat4x4(&m_view, view);
+			m_viewDirty = false;
+			DirectX::XMFLOAT4X4 worldMatrix;
+			DirectX::XMStoreFloat4x4(&worldMatrix, scaleMatrix * rotationMatrix * translationMatrix);
 
-#if defined(_DEBUG)
-                DebugUpdateTransformSnapshot();
-#endif
-        }
+		#if defined(_DEBUG)
+			assert(!MatrixHasNaN(worldMatrix));
+			assert(!MatrixHasNaN(m_view));
+		#endif
 
-        void BaseCamera::UpdateProjection()
-        {
-                DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
-                        DirectX::XMConvertToRadians(m_fovYDegrees),
-                        m_aspect,
-                        m_nearPlane,
-                        m_farPlane);
-                DirectX::XMStoreFloat4x4(&m_projection, DirectX::XMMatrixTranspose(projection));
-                m_projectionDirty = false;
-        }
+		#if defined(_DEBUG)
+			DebugUpdateTransformSnapshot();
+		#endif
+		}
 
-        void BaseCamera::MarkViewDirty()
-        {
-                m_viewDirty = true;
-        }
+		void BaseCamera::UpdateProjection()
+		{
+			DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
+				DirectX::XMConvertToRadians(m_fovYDegrees),
+				m_aspect,
+				m_nearPlane,
+				m_farPlane);
+			DirectX::XMStoreFloat4x4(&m_projection, projection);
+			m_projectionDirty = false;
+
+		#if defined(_DEBUG)
+			assert(!MatrixHasNaN(m_projection));
+			assert(!MatrixHasNaN(m_view));
+		#endif
+		}
+
+		void BaseCamera::MarkViewDirty()
+		{
+			m_viewDirty = true;
+		}
+		void BaseCamera::MarkViewDirty()
+		{
+			m_viewDirty = true;
+		}
+void BaseCamera::MarkViewDirty()
+{
+m_viewDirty = true;
+}
 
         void BaseCamera::MarkProjectionDirty()
         {
@@ -264,26 +373,6 @@ namespace CameraSpace
                         return true;
                 }
                 return false;
-        }
-
-        bool BaseCamera::ValidatePerspective(float fovYDegrees, float aspect, float nearPlane, float farPlane) const
-        {
-                bool fovValid = ValidatePerspectiveValue("fovYDegrees", fovYDegrees);
-                bool aspectValid = ValidatePerspectiveValue("aspect", aspect);
-                bool nearValid = ValidatePerspectiveValue("nearPlane", nearPlane);
-                bool farValid = ValidatePerspectiveValue("farPlane", farPlane);
-
-                if (!fovValid || !aspectValid || !nearValid || !farValid)
-                {
-                        return false;
-                }
-
-                if (farPlane <= nearPlane)
-                {
-                        return false;
-                }
-
-                return true;
         }
 
 #if defined(_DEBUG)

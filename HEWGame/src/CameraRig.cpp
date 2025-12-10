@@ -171,16 +171,14 @@ void CameraRig::OnUpdate(Core::UpdateContext& ctx)
                 m_camera->SetPosition(StoreFloat3(newPos));
         }
 
-        float3 newRotation
-        {
-                targetRotation.x + m_pitch,
-                targetRotation.y + m_yaw,
-                targetRotation.z
-        };
-        if (!m_lockYawPitch)
-        {
-                m_camera->SetRotation(newRotation);
-        }
-
-        m_camera->RecalculateView();
-}
+		float3 newRotation
+		{
+		targetRotation.x + m_pitch,
+		targetRotation.y + m_yaw,
+		targetRotation.z
+		};
+		if (!m_lockYawPitch)
+		{
+		m_camera->SetRotation(newRotation);
+		}
+		}
