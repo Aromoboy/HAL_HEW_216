@@ -32,7 +32,7 @@
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
-#include "MeshBuffer.h"
+#include "MeshDX.h"
 #include "ModelCache.h"
 #include "BoxColliderComponent.h"
 #include "Sweets/BaseSweets.h"
@@ -990,12 +990,12 @@ namespace
             return summary;
         }
 
-        MeshBuffer::Description desc{};
+        MeshDX::Description desc{};
         desc.pVtx = positions.data();
         desc.vtxSize = sizeof(PositionOnly);
         desc.vtxCount = static_cast<UINT>(positions.size());
         desc.pIdx = indices.empty() ? nullptr : indices.data();
-        desc.idxSize = indices.empty() ? 0u : sizeof(UINT);
+        desc.idxSize = indices.empty() ? 0u : sizeof(uint32_t);
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

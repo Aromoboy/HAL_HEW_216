@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-#include "MeshBuffer.h"
+#include "MeshDX.h"
 #include "Vector.h"
 
 namespace Collision
@@ -25,11 +25,11 @@ namespace Collision
     // provided normal (defaults to +Z) and rebuilding the boundary from mesh edges.
     // The returned polygons are convex (ear-clipped triangles) that approximate any
     // concave silhouette.
-    Mesh2DExtraction ExtractProjectedPolygons(const MeshBuffer::Description& desc, const float3& projectionNormal = float3{ 0.0f, 0.0f, 1.0f });
+    Mesh2DExtraction ExtractProjectedPolygons(const MeshDX::Description& desc, const float3& projectionNormal = float3{ 0.0f, 0.0f, 1.0f });
 
     // Extracts XY positions from a mesh description and computes a
     // normalized convex hull centered around its centroid for collider use.
-    HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc,
+    HullBuildResult BuildConvexHullFromMesh(const MeshDX::Description& desc,
         std::string_view tag = {}, std::string_view modelPath = {});
 }
 

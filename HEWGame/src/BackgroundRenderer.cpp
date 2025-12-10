@@ -2,7 +2,6 @@
 
 #include "DirectX.h"
 #include "Sprite.h"
-#include "Texture.h"
 
 BackgroundRenderer::BackgroundRenderer()
 {
@@ -50,7 +49,7 @@ void BackgroundRenderer::Draw() const
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_texture.get());
+    Sprite::SetTexture(m_texture);
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     Sprite::SetColor(m_config.tintColor);
@@ -63,17 +62,10 @@ void BackgroundRenderer::Draw() const
 
 bool BackgroundRenderer::LoadTexture(const std::string& path)
 {
-    m_texture = std::make_unique<Texture>();
-    if (!m_texture)
-    {
-        return false;
-    }
-
-    if (FAILED(m_texture->Create(path.c_str())))
-    {
-        m_texture.reset();
-        return false;
-    }
-
-    return true;
+    const auto texture = TextureCache::Instance().Load(
+        TextureCache::MakeFileKey(path),
+        GetDevice(),
+        std::wstring(path.begin(), path.end()));
+    m_texture = texture;
+    return m_texture != nullptr;
 }

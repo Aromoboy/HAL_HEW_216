@@ -1,6 +1,7 @@
 #pragma once
+#include <memory>
 #include "Sprite.h"
-#include "Texture.h"
+#include "TextureDX.h"
 
 class TimerDisplay
 {
@@ -8,18 +9,18 @@ public:
     TimerDisplay();
     ~TimerDisplay();
 
-    void Init(Texture* numberTexture);          // ”šƒeƒNƒXƒ`ƒƒ‚ğİ’è
-    void Draw(float remainingSeconds);          // c‚èŠÔ‚ğ•`‰æ
-    void SetPosition(float x, float y);         // •\¦ˆÊ’u‚ğİ’è
-    void SetDigitSize(float width, float height); // ”š‚ÌƒTƒCƒY‚ğİ’è
+    void Init(std::shared_ptr<Texture2D> numberTexture);          // eNX`İ’
+    void Draw(float remainingSeconds);          // cèÔ‚`
+    void SetPosition(float x, float y);         // \Ê’uİ’
+    void SetDigitSize(float width, float height); // ÌƒTCYİ’
 
 private:
-    void DrawDigit(int digit, float x, float y); // 1Œ…‚Ì”š‚ğ•`‰æ
+    void DrawDigit(int digit, float x, float y); // 1Ì`
 
-    Texture* m_numberTexture;   // ”š‚ÌƒeƒNƒXƒ`ƒƒ
-    float m_posX;               // •\¦ˆÊ’uX
-    float m_posY;               // •\¦ˆÊ’uY
-    float m_digitWidth;         // 1Œ…‚Ì•
-    float m_digitHeight;        // 1Œ…‚Ì‚‚³
-    float m_digitSpacing;       // ”šŠÔ‚ÌŠÔŠu
+    std::shared_ptr<Texture2D> m_numberTexture;   // ÌƒeNX`
+    float m_posX;               // \Ê’uX
+    float m_posY;               // \Ê’uY
+    float m_digitWidth;         // 1Ì•
+    float m_digitHeight;        // 1Ì
+    float m_digitSpacing;       // Ô‚ÌŠÔŠu
 };

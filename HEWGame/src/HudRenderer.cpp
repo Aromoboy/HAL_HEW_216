@@ -2,7 +2,6 @@
 
 #include "DirectX.h"
 #include "Sprite.h"
-#include "Texture.h"
 
 #include <algorithm>
 #include <array>
@@ -10,30 +9,6 @@
 #include <iomanip>
 #include <sstream>
 #include "PowerUpRenderer.h"
-
-namespace
-{
-    class HudTexture : public Texture
-    {
-    public:
-        void UpdatePixels(const void* data, UINT pitch)
-        {
-            if (!GetContext())
-            {
-                return;
-            }
-            if (!m_pTex)
-            {
-                return;
-            }
-            GetContext()->UpdateSubresource(m_pTex, 0, nullptr, data, pitch, 0);
-        }
-    };
-}
-
-class HudRenderer::DynamicTexture : public HudTexture
-{
-};
 
 HudRenderer::HudRenderer()
 {
@@ -48,13 +23,6 @@ HudRenderer::~HudRenderer()
 bool HudRenderer::Initialize(const HudLayoutConfig& config)
 {
     m_config = config;
-    m_texture = std::make_unique<DynamicTexture>();
-    HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight);
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
     const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
     m_rgbaBuffer.resize(pixelCount * 4);
 
@@ -217,7 +185,7 @@ void HudRenderer::UpdateBitmap(const HudDisplayData& data)
 
 void HudRenderer::UploadTexture()
 {
-    if (!m_textureDirty || !m_rawBits || m_rgbaBuffer.empty() || !m_texture)
+    if (!m_textureDirty || !m_rawBits || m_rgbaBuffer.empty())
     {
         return;
     }
@@ -239,8 +207,18 @@ void HudRenderer::UploadTexture()
         dst += 4;
     }
 
-    m_texture->UpdatePixels(m_rgbaBuffer.data(), m_config.textureWidth * 4);
-    m_textureDirty = false;
+    auto updatedTexture = std::make_shared<Texture2D>();
+    if (updatedTexture->LoadFromMemory(
+            GetDevice(),
+            m_rgbaBuffer.data(),
+            m_rgbaBuffer.size(),
+            m_config.textureWidth,
+            m_config.textureHeight,
+            "RGBA"))
+    {
+        m_texture = updatedTexture;
+        m_textureDirty = false;
+    }
 }
 
 bool HudRenderer::TryGetViewportSize(float& width, float& height) const
@@ -282,7 +260,7 @@ void HudRenderer::RenderGuideline(const HudDisplayData& data)
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_guidelineTexture.get());
+    Sprite::SetTexture(m_guidelineTexture);
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(repeatCount, 1.0f));
     Sprite::SetColor(m_config.guidelineColor);
@@ -321,7 +299,7 @@ void HudRenderer::RenderSprite(const HudDisplayData& data)
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_texture.get());
+    Sprite::SetTexture(m_texture);
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
 
@@ -358,12 +336,6 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
 
 bool HudRenderer::CreateGuidelineTexture()
 {
-    m_guidelineTexture = std::make_unique<Texture>();
-    if (!m_guidelineTexture)
-    {
-        return false;
-    }
-
     constexpr size_t kSize = 4;
     std::array<uint32_t, kSize * kSize> pixels{};
     for (size_t y = 0; y < kSize; ++y)
@@ -375,16 +347,18 @@ bool HudRenderer::CreateGuidelineTexture()
         }
     }
 
-    const HRESULT hr = m_guidelineTexture->Create(
-        DXGI_FORMAT_R8G8B8A8_UNORM,
-        static_cast<UINT>(kSize),
-        static_cast<UINT>(kSize),
-        pixels.data());
-    if (FAILED(hr))
+    auto texture = std::make_shared<Texture2D>();
+    if (!texture->LoadFromMemory(
+            GetDevice(),
+            reinterpret_cast<const uint8_t*>(pixels.data()),
+            pixels.size() * sizeof(uint32_t),
+            static_cast<unsigned int>(kSize),
+            static_cast<unsigned int>(kSize),
+            "BGRA"))
     {
-        m_guidelineTexture.reset();
         return false;
     }
 
+    m_guidelineTexture = texture;
     return true;
 }

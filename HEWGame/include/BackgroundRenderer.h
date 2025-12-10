@@ -4,8 +4,7 @@
 #include <string>
 
 #include <DirectXMath.h>
-
-class Texture;
+#include "TextureCache.h"
 
 struct BackgroundRendererConfig
 {
@@ -27,7 +26,7 @@ private:
     bool LoadTexture(const std::string& path);
 
     BackgroundRendererConfig m_config{};
-    std::unique_ptr<Texture> m_texture;
+    std::shared_ptr<Texture2D> m_texture;
     bool m_ready = false;
     DirectX::XMFLOAT4X4 m_identityMatrix;
 };

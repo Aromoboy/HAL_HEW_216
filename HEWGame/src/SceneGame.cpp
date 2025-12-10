@@ -8,7 +8,7 @@
 #include "ShaderList.h"
 #include "Defines.h"
 #include "AssimpModelLorder.h"
-#include "MeshBuffer.h"
+#include "MeshDX.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsMachine.h"
 #include "Systems/Box2DContactListener.h"
@@ -321,12 +321,12 @@ namespace
 
             if (!positions.empty())
             {
-                MeshBuffer::Description desc{};
+                MeshDX::Description desc{};
                 desc.pVtx = positions.data();
                 desc.vtxSize = sizeof(PositionOnly);
                 desc.vtxCount = static_cast<UINT>(positions.size());
                 desc.pIdx = indices.empty() ? nullptr : indices.data();
-                desc.idxSize = indices.empty() ? 0u : sizeof(UINT);
+                desc.idxSize = indices.empty() ? 0u : sizeof(uint32_t);
                 desc.idxCount = static_cast<UINT>(indices.size());
                 desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -1651,8 +1651,11 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_remainingCountdownSeconds = m_totalPlaySeconds;
     m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
     // 数字テクスチャをロード
-    m_numberTexture = new Texture();
-    m_numberTexture->Create("Assets/Texture/number.png"); 
+    const std::string numberTexturePath = "Assets/Texture/number.png";
+    m_numberTexture = TextureCache::Instance().Load(
+        TextureCache::MakeFileKey(numberTexturePath),
+        GetDevice(),
+        std::wstring(numberTexturePath.begin(), numberTexturePath.end()));
 
     // タイマー表示を初期化
     m_timerDisplay.Init(m_numberTexture);
@@ -1747,11 +1750,7 @@ SceneGame::~SceneGame()
                 m_sweetsRegistered = false;
         }
 
-        if (m_numberTexture)
-        {
-            delete m_numberTexture;
-            m_numberTexture = nullptr;
-        }
+        m_numberTexture.reset();
 }
 
 void SceneGame::ConfigureUpdates()

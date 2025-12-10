@@ -1,12 +1,13 @@
 #include "Geometory.h"
 #include <cmath>
+#include <cstring>
 #include <vector>
 #include <DirectXMath.h>
 
-MeshBuffer* Geometory::m_pBox;
-MeshBuffer* Geometory::m_pCylinder;
-MeshBuffer* Geometory::m_pSphere;
-MeshBuffer* Geometory::m_pLines;
+std::shared_ptr<MeshDX> Geometory::m_pBox;
+std::shared_ptr<MeshDX> Geometory::m_pCylinder;
+std::shared_ptr<MeshDX> Geometory::m_pSphere;
+Core::VertexBuffer Geometory::m_lineBuffer;
 Shader* Geometory::m_pVS;
 Shader* Geometory::m_pPS;
 Shader* Geometory::m_pLineShader[2];
@@ -28,15 +29,15 @@ void Geometory::Init()
 }
 void Geometory::Uninit()
 {
-	SAFE_DELETE_ARRAY(m_pLineVtx);
-	SAFE_DELETE(m_pLineShader[1]);
-	SAFE_DELETE(m_pLineShader[0]);
-	SAFE_DELETE(m_pPS);
-	SAFE_DELETE(m_pVS);
-	SAFE_DELETE(m_pLines);
-	SAFE_DELETE(m_pSphere);
-	SAFE_DELETE(m_pCylinder);
-	SAFE_DELETE(m_pBox);
+        SAFE_DELETE_ARRAY(m_pLineVtx);
+        SAFE_DELETE(m_pLineShader[1]);
+        SAFE_DELETE(m_pLineShader[0]);
+        SAFE_DELETE(m_pPS);
+        SAFE_DELETE(m_pVS);
+        m_lineBuffer.Shutdown();
+        m_pSphere.reset();
+        m_pCylinder.reset();
+        m_pBox.reset();
 }
 
 void Geometory::SetWorld(DirectX::XMFLOAT4X4 world)
@@ -64,40 +65,104 @@ void Geometory::AddLine(DirectX::XMFLOAT3 start, DirectX::XMFLOAT3 end, DirectX:
 }
 void Geometory::DrawLines()
 {
-	m_pLineShader[0]->WriteBuffer(0, m_WVP);
-	m_pLineShader[0]->Bind();
-	m_pLineShader[1]->Bind();
-	m_pLines->Write(m_pLineVtx);
-	m_pLines->Draw(m_lineCnt * 2);
-	m_lineCnt = 0;
+        if (!m_lineBuffer.IsValid() || !m_pLineVtx)
+        {
+                return;
+        }
+
+        m_pLineShader[0]->WriteBuffer(0, m_WVP);
+        m_pLineShader[0]->Bind();
+        m_pLineShader[1]->Bind();
+
+        if (m_lineBuffer.IsDynamic())
+        {
+                D3D11_MAPPED_SUBRESOURCE mapped{};
+                if (SUCCEEDED(GetContext()->Map(m_lineBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+                {
+                        memcpy(mapped.pData, m_pLineVtx, sizeof(LineVertex) * m_lineCnt * 2);
+                        GetContext()->Unmap(m_lineBuffer.Get(), 0);
+                }
+        }
+        else
+        {
+                GetContext()->UpdateSubresource(m_lineBuffer.Get(), 0, nullptr, m_pLineVtx, 0, 0);
+        }
+
+        UINT offset = 0;
+        m_lineBuffer.Bind(0, offset);
+        GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+        GetContext()->Draw(m_lineCnt * 2, 0);
+        m_lineCnt = 0;
 }
 
 void Geometory::DrawBox()
 {
-	if (m_pBox == nullptr)
-		return;
-	m_pVS->WriteBuffer(0, m_WVP);
-	m_pVS->Bind();
-	m_pPS->Bind();
-	m_pBox->Draw();
+        if (!m_pBox)
+                return;
+        m_pVS->WriteBuffer(0, m_WVP);
+        m_pVS->Bind();
+        m_pPS->Bind();
+        UINT offset = 0;
+        const Core::VertexBuffer& vtx = m_pBox->GetVertexBuffer();
+        vtx.Bind(0, offset);
+        const Core::IndexBuffer* idx = m_pBox->GetIndexBuffer();
+        if (idx)
+        {
+                idx->Bind();
+                GetContext()->IASetPrimitiveTopology(m_pBox->GetTopology());
+                GetContext()->DrawIndexed(m_pBox->GetIndexCount(), 0, 0);
+        }
+        else
+        {
+                GetContext()->IASetPrimitiveTopology(m_pBox->GetTopology());
+                GetContext()->Draw(vtx.GetCount(), 0);
+        }
 }
 void Geometory::DrawCylinder()
 {
-	if (m_pCylinder == nullptr)
-		return;
-	m_pVS->WriteBuffer(0, m_WVP);
-	m_pVS->Bind();
-	m_pPS->Bind();
-	m_pCylinder->Draw();
+        if (!m_pCylinder)
+                return;
+        m_pVS->WriteBuffer(0, m_WVP);
+        m_pVS->Bind();
+        m_pPS->Bind();
+        UINT offset = 0;
+        const Core::VertexBuffer& vtx = m_pCylinder->GetVertexBuffer();
+        vtx.Bind(0, offset);
+        const Core::IndexBuffer* idx = m_pCylinder->GetIndexBuffer();
+        if (idx)
+        {
+                idx->Bind();
+                GetContext()->IASetPrimitiveTopology(m_pCylinder->GetTopology());
+                GetContext()->DrawIndexed(m_pCylinder->GetIndexCount(), 0, 0);
+        }
+        else
+        {
+                GetContext()->IASetPrimitiveTopology(m_pCylinder->GetTopology());
+                GetContext()->Draw(vtx.GetCount(), 0);
+        }
 }
 void Geometory::DrawSphere()
 {
-	if (m_pSphere == nullptr)
-		return;
-	m_pVS->WriteBuffer(0, m_WVP);
-	m_pVS->Bind();
-	m_pPS->Bind();
-	m_pSphere->Draw();
+        if (!m_pSphere)
+                return;
+        m_pVS->WriteBuffer(0, m_WVP);
+        m_pVS->Bind();
+        m_pPS->Bind();
+        UINT offset = 0;
+        const Core::VertexBuffer& vtx = m_pSphere->GetVertexBuffer();
+        vtx.Bind(0, offset);
+        const Core::IndexBuffer* idx = m_pSphere->GetIndexBuffer();
+        if (idx)
+        {
+                idx->Bind();
+                GetContext()->IASetPrimitiveTopology(m_pSphere->GetTopology());
+                GetContext()->DrawIndexed(m_pSphere->GetIndexCount(), 0, 0);
+        }
+        else
+        {
+                GetContext()->IASetPrimitiveTopology(m_pSphere->GetTopology());
+                GetContext()->Draw(vtx.GetCount(), 0);
+        }
 }
 
 void Geometory::MakeVS()
@@ -205,7 +270,7 @@ float4 main(PS_IN pin) : SV_TARGET0 {
 
 void Geometory::MakeBox()
 {
-        SAFE_DELETE(m_pBox);
+        m_pBox.reset();
 
         const float half = 0.5f;
 
@@ -242,7 +307,7 @@ void Geometory::MakeBox()
                 {{-half, -half, +half}, {0.0f, 0.0f}},
         };
 
-        uint16_t indices[] = {
+        uint32_t indices[] = {
                 0, 1, 2, 0, 2, 3,       // Front
                 4, 5, 6, 4, 6, 7,       // Back
                 8, 9, 10, 8, 10, 11,    // Left
@@ -251,33 +316,28 @@ void Geometory::MakeBox()
                 20, 21, 22, 20, 22, 23  // Bottom
         };
 
-        MeshBuffer::Description desc = {};
+        MeshDX::Description desc = {};
         desc.pVtx = vertices;
         desc.vtxSize = sizeof(Vertex);
         desc.vtxCount = static_cast<UINT>(sizeof(vertices) / sizeof(vertices[0]));
-        desc.isWrite = false;
         desc.pIdx = indices;
-        desc.idxSize = sizeof(uint16_t);
+        desc.idxSize = sizeof(uint32_t);
         desc.idxCount = static_cast<UINT>(sizeof(indices) / sizeof(indices[0]));
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        m_pBox = new MeshBuffer();
-        if (FAILED(m_pBox->Create(desc)))
-        {
-                SAFE_DELETE(m_pBox);
-        }
+        m_pBox = std::make_shared<MeshDX>(desc, 0);
 }
 
 void Geometory::MakeCylinder()
 {
-        SAFE_DELETE(m_pCylinder);
+        m_pCylinder.reset();
 
         const int segments = CIRCLE_DETAIL;
         const float radius = 0.5f;
         const float halfHeight = 0.5f;
 
         std::vector<Vertex> vertices;
-        std::vector<uint16_t> indices;
+        std::vector<uint32_t> indices;
         vertices.reserve((segments + 1) * 2 + (segments + 1) * 2 + 2);
 
         // Side vertices
@@ -295,10 +355,10 @@ void Geometory::MakeCylinder()
         // Side indices
         for (int i = 0; i < segments; ++i)
         {
-                uint16_t i0 = static_cast<uint16_t>(i * 2);
-                uint16_t i1 = static_cast<uint16_t>(i * 2 + 1);
-                uint16_t i2 = static_cast<uint16_t>((i + 1) * 2);
-                uint16_t i3 = static_cast<uint16_t>((i + 1) * 2 + 1);
+                uint32_t i0 = static_cast<uint32_t>(i * 2);
+                uint32_t i1 = static_cast<uint32_t>(i * 2 + 1);
+                uint32_t i2 = static_cast<uint32_t>((i + 1) * 2);
+                uint32_t i3 = static_cast<uint32_t>((i + 1) * 2 + 1);
 
                 indices.push_back(i0);
                 indices.push_back(i2);
@@ -310,7 +370,7 @@ void Geometory::MakeCylinder()
         }
 
         // Top cap
-        uint16_t topCenterIndex = static_cast<uint16_t>(vertices.size());
+        uint32_t topCenterIndex = static_cast<uint32_t>(vertices.size());
         vertices.push_back({{0.0f, +halfHeight, 0.0f}, {0.5f, 0.5f}});
         for (int i = 0; i <= segments; ++i)
         {
@@ -323,16 +383,16 @@ void Geometory::MakeCylinder()
 
         for (int i = 0; i < segments; ++i)
         {
-                uint16_t i0 = topCenterIndex;
-                uint16_t i1 = static_cast<uint16_t>(topCenterIndex + i + 1);
-                uint16_t i2 = static_cast<uint16_t>(topCenterIndex + i + 2);
+                uint32_t i0 = topCenterIndex;
+                uint32_t i1 = static_cast<uint32_t>(topCenterIndex + i + 1);
+                uint32_t i2 = static_cast<uint32_t>(topCenterIndex + i + 2);
                 indices.push_back(i0);
                 indices.push_back(i1);
                 indices.push_back(i2);
         }
 
         // Bottom cap
-        uint16_t bottomCenterIndex = static_cast<uint16_t>(vertices.size());
+        uint32_t bottomCenterIndex = static_cast<uint32_t>(vertices.size());
         vertices.push_back({{0.0f, -halfHeight, 0.0f}, {0.5f, 0.5f}});
         for (int i = 0; i <= segments; ++i)
         {
@@ -345,41 +405,36 @@ void Geometory::MakeCylinder()
 
         for (int i = 0; i < segments; ++i)
         {
-                uint16_t i0 = bottomCenterIndex;
-                uint16_t i1 = static_cast<uint16_t>(bottomCenterIndex + i + 2);
-                uint16_t i2 = static_cast<uint16_t>(bottomCenterIndex + i + 1);
+                uint32_t i0 = bottomCenterIndex;
+                uint32_t i1 = static_cast<uint32_t>(bottomCenterIndex + i + 2);
+                uint32_t i2 = static_cast<uint32_t>(bottomCenterIndex + i + 1);
                 indices.push_back(i0);
                 indices.push_back(i1);
                 indices.push_back(i2);
         }
 
-        MeshBuffer::Description desc = {};
+        MeshDX::Description desc = {};
         desc.pVtx = vertices.data();
         desc.vtxSize = sizeof(Vertex);
         desc.vtxCount = static_cast<UINT>(vertices.size());
-        desc.isWrite = false;
         desc.pIdx = indices.data();
-        desc.idxSize = sizeof(uint16_t);
+        desc.idxSize = sizeof(uint32_t);
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        m_pCylinder = new MeshBuffer();
-        if (FAILED(m_pCylinder->Create(desc)))
-        {
-                SAFE_DELETE(m_pCylinder);
-        }
+        m_pCylinder = std::make_shared<MeshDX>(desc, 0);
 }
 
 void Geometory::MakeSphere()
 {
-        SAFE_DELETE(m_pSphere);
+        m_pSphere.reset();
 
         const int sliceCount = CIRCLE_DETAIL;
         const int stackCount = CIRCLE_DETAIL / 2;
         const float radius = 0.5f;
 
         std::vector<Vertex> vertices;
-        std::vector<uint16_t> indices;
+        std::vector<uint32_t> indices;
         vertices.reserve((stackCount + 1) * (sliceCount + 1));
 
         for (int stack = 0; stack <= stackCount; ++stack)
@@ -403,10 +458,10 @@ void Geometory::MakeSphere()
         {
                 for (int slice = 0; slice < sliceCount; ++slice)
                 {
-                        uint16_t i0 = static_cast<uint16_t>(stack * (sliceCount + 1) + slice);
-                        uint16_t i1 = static_cast<uint16_t>(i0 + sliceCount + 1);
-                        uint16_t i2 = static_cast<uint16_t>(i0 + 1);
-                        uint16_t i3 = static_cast<uint16_t>(i1 + 1);
+                        uint32_t i0 = static_cast<uint32_t>(stack * (sliceCount + 1) + slice);
+                        uint32_t i1 = static_cast<uint32_t>(i0 + sliceCount + 1);
+                        uint32_t i2 = static_cast<uint32_t>(i0 + 1);
+                        uint32_t i3 = static_cast<uint32_t>(i1 + 1);
 
                         indices.push_back(i0);
                         indices.push_back(i1);
@@ -418,32 +473,20 @@ void Geometory::MakeSphere()
                 }
         }
 
-        MeshBuffer::Description desc = {};
+        MeshDX::Description desc = {};
         desc.pVtx = vertices.data();
         desc.vtxSize = sizeof(Vertex);
         desc.vtxCount = static_cast<UINT>(vertices.size());
-        desc.isWrite = false;
         desc.pIdx = indices.data();
-        desc.idxSize = sizeof(uint16_t);
+        desc.idxSize = sizeof(uint32_t);
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        m_pSphere = new MeshBuffer();
-        if (FAILED(m_pSphere->Create(desc)))
-        {
-                SAFE_DELETE(m_pSphere);
-        }
+        m_pSphere = std::make_shared<MeshDX>(desc, 0);
 }
 void Geometory::MakeLine()
 {
-	m_pLineVtx = new LineVertex[MAX_LINE_NUM * 2];
-	m_lineCnt = 0;
-	MeshBuffer::Description desc = {};
-	desc.pVtx = m_pLineVtx;
-	desc.vtxCount = MAX_LINE_NUM * 2;
-	desc.vtxSize = sizeof(LineVertex);
-	desc.topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-	desc.isWrite = true;
-	m_pLines = new MeshBuffer();
-	m_pLines->Create(desc);
+        m_pLineVtx = new LineVertex[MAX_LINE_NUM * 2];
+        m_lineCnt = 0;
+        m_lineBuffer.Init(m_pLineVtx, sizeof(LineVertex), MAX_LINE_NUM * 2, true);
 }

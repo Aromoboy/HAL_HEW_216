@@ -204,7 +204,7 @@ private:
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
     TimerDisplay m_timerDisplay;
-    Texture* m_numberTexture;
+    std::shared_ptr<Texture2D> m_numberTexture;
 };
 
 #endif // __SCENE_GAME_H__

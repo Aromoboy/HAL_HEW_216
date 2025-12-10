@@ -6,11 +6,11 @@
 #include <string>
 #include <vector>
 #include <DirectXMath.h>
+#include "TextureDX.h"
+#include "TextureCache.h"
 #if defined(_WIN32)
 #include <windows.h>
 #endif
-
-class Texture;
 
 struct HudDisplayData
 {
@@ -59,8 +59,6 @@ public:
     void Draw();
 
 private:
-    class DynamicTexture;
-
     bool CreateTextResources();
     bool CreateGuidelineTexture();
     void DestroyTextResources();
@@ -72,8 +70,8 @@ private:
     std::string BuildHudString(const HudDisplayData& data) const;
 
     HudLayoutConfig m_config{};
-    std::unique_ptr<DynamicTexture> m_texture;
-    std::unique_ptr<Texture> m_guidelineTexture;
+    std::shared_ptr<Texture2D> m_texture;
+    std::shared_ptr<Texture2D> m_guidelineTexture;
     std::vector<uint8_t> m_rgbaBuffer;
     bool m_ready = false;
     bool m_textureDirty = false;
