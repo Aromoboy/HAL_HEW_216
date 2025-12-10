@@ -197,8 +197,9 @@ private:
 	};
 
 
-        std::shared_ptr<VertexShader> vs;
-        std::shared_ptr<PixelShader> ps;
+        std::shared_ptr<VertexShader> m_vertexShader;
+        std::shared_ptr<PixelShader> m_pixelShader;
+        void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
         void DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
         void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix);
         void MeshDraw();
