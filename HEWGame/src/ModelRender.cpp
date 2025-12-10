@@ -7,6 +7,7 @@
 #include "DirectX.h"
 #include "Debug.h"
 #include "TextureCache.h"
+#include "WorldBuffer.h"
 
 #include <cstdint>
 
