@@ -1,3 +1,5 @@
+#include "DirectX.h"
+#include "Core/DXContext.h"
 #include "TextureDX.h"
 #include "RenderStateManager.h"
 #include "Debug.h"
