@@ -68,7 +68,7 @@ namespace
 
         void Bind() const
         {
-            m_vertexBuffer.Bind();
+            m_vertexBuffer.Bind(0, m_vertexBuffer.GetStride(), 0);
             m_indexBuffer.Bind();
         }
 

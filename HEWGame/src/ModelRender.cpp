@@ -270,14 +270,14 @@ void ModelRender::MeshDraw(MeshDX& a_mesh)
             return;
         }
 
-        pContext->IASetInputLayout(s_defaultInputLayout.Get());
-
-        UINT offset = 0;
-
         const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
-        vertexBuffer.Bind(0, offset);
 
+        pContext->IASetInputLayout(s_defaultInputLayout.Get());
         pContext->IASetPrimitiveTopology(a_mesh.GetTopology());
+
+        UINT stride = MeshDX::VertexStride;
+        UINT offset = 0;
+        vertexBuffer.Bind(0, stride, offset);
 
         if (a_mesh.HasIndexBuffer())
         {

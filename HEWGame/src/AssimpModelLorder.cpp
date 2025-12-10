@@ -226,7 +226,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         // 説明構造体
         MeshDX::Description desc{};
         desc.pVtx = vertices.data();
-        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxSize = MeshDX::VertexStride;
         desc.vtxCount = static_cast<unsigned int>(vertices.size());
         desc.pIdx = indices.data();
         desc.idxSize = sizeof(unsigned long);
