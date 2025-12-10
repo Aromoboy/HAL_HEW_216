@@ -205,10 +205,6 @@
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Components\BoxColliderComponent.cpp" />
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\MeshBuffer.cpp" />
-    <ClCompile Include="src\Model.cpp" />
-    <ClCompile Include="src\ModelCache.cpp" />
-    <ClCompile Include="src\ModelRender.cpp" />
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
@@ -243,9 +239,6 @@
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="src\Startup.cpp" />
-    <ClCompile Include="src\TestObject.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
-    <ClCompile Include="src\TextureCache.cpp" />
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
@@ -311,10 +304,6 @@
     <ClInclude Include="include\Input.h" />
     <ClInclude Include="include\Components\BoxColliderComponent.h" />
     <ClInclude Include="include\Main.h" />
-    <ClInclude Include="include\MeshBuffer.h" />
-    <ClInclude Include="include\Model.h" />
-    <ClInclude Include="include\ModelCache.h" />
-    <ClInclude Include="include\ModelRender.h" />
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
     <ClInclude Include="include\ModelDX.h" />
@@ -337,9 +326,6 @@
     <ClInclude Include="include\SoundManagerEX.h" />
     <ClInclude Include="include\SoundSystem.h" />
     <ClInclude Include="include\Sprite.h" />
-    <ClInclude Include="include\TestObject.h" />
-    <ClInclude Include="include\Texture.h" />
-      <ClInclude Include="include\TextureCache.h" />
       <ClInclude Include="include\TextureDX.h" />
       <ClInclude Include="include\UpdatableTimer.h" />
       <ClInclude Include="include\Transform.h" />

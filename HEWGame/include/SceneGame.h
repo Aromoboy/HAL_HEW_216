@@ -3,7 +3,6 @@
 
 #include "Scene.h"
 #include "SceneManager.h"
-#include "Model.h"
 #include "TestObject.h"
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
@@ -132,7 +131,6 @@ private:
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
     std::vector<StageObject> m_stageObjects;
-    std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;

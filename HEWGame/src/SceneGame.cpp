@@ -1248,6 +1248,19 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         });
     }
 
+    m_loader = std::make_shared<AssimpModelLorder>();
+
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    ID3D11Device* device = GetDevice();
+    if (!device)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
+    }
+    else
+    {
+        cache.SetLoader(m_loader, device, TextureCache::Instance());
+    }
+
     m_hudRenderer = std::make_unique<HudRenderer>();
     if (m_hudRenderer && !m_hudRenderer->Initialize(kHudLayoutConfig))
     {
@@ -1303,19 +1316,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     }
 
     m_pManager = std::make_unique<SoundManagerEX>();
-
-    m_loader = std::make_shared<AssimpModelLorder>();
-
-    Render::ModelCache& cache = Render::ModelCache::Instance();
-    ID3D11Device* device = GetDevice();
-    if (!device)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
-    }
-    else
-    {
-        cache.SetLoader(m_loader, device, TextureCache::Instance());
-    }
 
     const auto* fairyDescriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
     if (!fairyDescriptor && !m_playerModel)

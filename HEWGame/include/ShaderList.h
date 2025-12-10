@@ -2,7 +2,6 @@
 #define __SHADER_LIST_H__
 
 #include "Shader.h"
-#include "Model.h"
 #include "MaterialDX.h"
 #include "WorldBuffer.h"
 
@@ -38,7 +37,6 @@ public:
 
         // 定数バッファへの設定
         static void SetWVP(const WorldBuffer& wvp);
-        static void SetMaterial(const Model::Material& material);
         static void SetMaterial(const MaterialDX& material);
         static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
         static void SetCameraPos(const DirectX::XMFLOAT3 pos);
