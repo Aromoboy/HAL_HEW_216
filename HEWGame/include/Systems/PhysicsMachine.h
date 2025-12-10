@@ -78,5 +78,6 @@ namespace Systems
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;
         bool m_loggedFirstTick = false;
+        bool m_syncInProgress = false;
     };
 }

@@ -80,11 +80,6 @@ namespace Systems
         void Box2DPhysicsSystem::OnUpdate(Core::UpdateContext& ctx)
         {
                 Apply(ctx.dt);
-
-                if (m_physicsMachine)
-                {
-                        m_physicsMachine->SyncBodies(ctx.dt);
-                }
         }
 
         void Box2DPhysicsSystem::SetGravity(float gravity)
