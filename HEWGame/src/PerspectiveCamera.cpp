@@ -1,6 +1,6 @@
 #include "PerspectiveCamera.h"
 
-#include "DrawMatrix.h"
+#include "MatrixUtil.h"
 
 #include <algorithm>
 #include <cmath>
@@ -186,7 +186,7 @@ namespace CameraSpace
 
         void PerspectiveCamera::UpdateProjection()
         {
-                DrawMatrix::CreateProjectionMatrix(m_projection, m_fovY, m_aspect, m_nearZ, m_farZ);
+                m_projection = MathUtil::MakeProjectionMatrix(m_fovY, m_aspect, m_nearZ, m_farZ);
                 m_projectionDirty = false;
         }
 

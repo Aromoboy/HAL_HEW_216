@@ -1,11 +1,10 @@
 #include "ModelRender.h"
 
-#include "DrawMatrix.h"
-#include "ShaderList.h"
 #include "Defines.h"
 #include "Vector.h"
 #include "DirectX.h"
 #include "Debug.h"
+#include "MatrixUtil.h"
 #include "TextureCache.h"
 #include "WorldBuffer.h"
 
@@ -55,11 +54,22 @@ struct PS_IN {
         float3 normal : NORMAL0;
         float2 uv : TEXCOORD0;
 };
+cbuffer Material : register(b0) {
+        float4 diffuse;
+        float4 ambient;
+        float4 specular;
+};
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-        return tex.Sample(samp, pin.uv);
+        float3 n = normalize(pin.normal);
+        float3 lightDir = normalize(float3(-1.0f, -1.0f, -1.0f));
+        float lambert = saturate(dot(n, -lightDir));
+        float4 sampled = tex.Sample(samp, pin.uv);
+        float3 base = sampled.rgb * diffuse.rgb;
+        float3 lit = lerp(ambient.rgb * diffuse.rgb, base, lambert);
+        return float4(lit, sampled.a * diffuse.a);
 })EOT";
 
     s_defaultVS = std::make_shared<VertexShader>();
@@ -124,14 +134,11 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     wvp.view = camera->GetView();
     wvp.proj = camera->GetProjection();
 
-    float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
-    DrawMatrix::CreateWorldMatrix(wvp.world, transform.position, transform.scale, radRotation);
+    const float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
+    wvp.world = MathUtil::MakeWorldMatrix(transform.position, transform.scale, radRotation);
     wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
     wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
     wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
-
-    ShaderList::SetWVP(wvp);
-    PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
     for (int i = 0; i < a_model.GetMeshCount(); i++)
     {
@@ -166,42 +173,25 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         std::shared_ptr<MaterialDX> effectiveMaterial = material ? material : m_defaultMaterial;
 
-        if (effectiveMaterial)
+        struct MaterialParams
         {
-            ShaderList::SetMaterial(*effectiveMaterial);
-        }
+            DirectX::XMFLOAT4 diffuse;
+            DirectX::XMFLOAT4 ambient;
+            DirectX::XMFLOAT4 specular;
+        };
 
-        VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
-        bool usingFallbackShaders = false;
+        ID3D11ShaderResourceView* srvRef = effectiveMaterial
+            ? effectiveMaterial->GetTexture()
+            : (m_fallbackTexture ? m_fallbackTexture->Get() : nullptr);
 
-        if (!pPXS && s_defaultPS)
-        {
-            pPXS = s_defaultPS.get();
-        }
+        MaterialParams params{ effectiveMaterial->GetDiffuse(), effectiveMaterial->GetAmbient(), effectiveMaterial->GetSpecular() };
 
-        if (!pVTX && s_defaultVS)
-        {
-            pVTX = s_defaultVS.get();
-        }
+        s_defaultVS->WriteBuffer(0, &wvp);
+        s_defaultPS->WriteBuffer(0, &params);
+        s_defaultPS->SetTexture(0, srvRef);
 
-        usingFallbackShaders = (pPXS == s_defaultPS.get()) || (pVTX == s_defaultVS.get());
-
-        if (!pVTX || !pPXS)
-        {
-            continue;
-        }
-
-        if (usingFallbackShaders)
-        {
-            pVTX->WriteBuffer(0, &wvp);
-            ID3D11ShaderResourceView* srv = effectiveMaterial
-                ? effectiveMaterial->GetTexture()
-                : (m_fallbackTexture ? m_fallbackTexture->Get() : nullptr);
-            pPXS->SetTexture(0, srv);
-        }
-
-        pPXS->Bind();
-        pVTX->Bind();
+        s_defaultPS->Bind();
+        s_defaultVS->Bind();
 
         MeshDraw(*mesh);
     }

@@ -1,9 +1,7 @@
 #include "SpriteRenderer.h"
-#include "ShaderList.h"
 #include "DirectX.h"
-#include "DrawMatrix.h"
 #include "Defines.h"
-//#include "DirectXMath.h"
+#include "MatrixUtil.h"
 
 SpriteRenderer::SpriteRenderer()
         : m_uvPos(0.0f, 0.0f)
@@ -110,7 +108,7 @@ void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const 
         drawRads.y = transform.rotation.y * RAD;
         drawRads.z = transform.rotation.z * RAD;
 
-        DrawMatrix::CreateWorldMatrix(wvp.world, transform.position, transform.scale, drawRads);
+        wvp.world = MathUtil::MakeWorldMatrix(transform.position, transform.scale, drawRads);
 
     wvp.view = camera->GetView();
     wvp.proj = camera->GetProjection();
@@ -121,8 +119,6 @@ void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const 
         param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
         param[1] = DirectX::XMFLOAT4(m_uvPos.x, m_uvPos.y, m_uvScale.x, m_uvScale.y);
         param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-
-        ShaderList::SetWVP(wvp);
 
         vs->WriteBuffer(0, &wvp);
         vs->WriteBuffer(1, param);

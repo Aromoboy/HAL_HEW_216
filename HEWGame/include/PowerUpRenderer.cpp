@@ -1,10 +1,10 @@
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"
-#include "DrawMatrix.h"
 #include "Sprite.h"
 #include "PowerUpTextures.h"
 #include "WorldBuffer.h"
+#include "MatrixUtil.h"
 
 #include <sstream>
 #include <iomanip>
@@ -263,7 +263,7 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	scale.y = kHudCostIconScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(m_cost, world, view, proj);
 }
@@ -287,7 +287,7 @@ void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_
 	scale.y = a_scale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(a_texture, world, view, proj);
 }
@@ -324,7 +324,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kBackFrameScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(m_backFrame, world, view, proj);
 
@@ -338,7 +338,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kFrameScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(m_iconFrame, world, view, proj);
 
@@ -352,7 +352,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kIconScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(data.texture, world, view, proj);
 
@@ -366,7 +366,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostIconScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	DrawSprite(m_cost, world, view, proj);
 	
@@ -383,7 +383,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.z = 1.0f;
 
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	RenderString(data, world, view, proj, NodeName);
 
@@ -397,7 +397,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kInfomationScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	
 
@@ -414,7 +414,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kLevelScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	RenderString(data, world, view, proj, NodeLevel);
 
@@ -427,7 +427,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	scale.y = data.drawScale.y * kCostScaleOffset;
 	scale.z = 1.0f;
 
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	world = MathUtil::MakeWorldMatrix(position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
 	RenderString(data, world, view, proj, NodeCost);
 }

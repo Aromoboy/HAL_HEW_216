@@ -1,12 +1,27 @@
 #include "DebugColliderRenderer.h"
 
 #include <cmath>
+#include <vector>
 #include <DirectXMath.h>
 
-#include "Geometory.h"
+#include "Core/VertexBuffer.h"
+#include "DirectX.h"
+#include "Shader.h"
+#include "WorldBuffer.h"
 
 namespace
 {
+        struct LineVertex
+        {
+                DirectX::XMFLOAT3 pos;
+                DirectX::XMFLOAT4 color;
+        };
+
+        std::vector<LineVertex> g_lines;
+        std::shared_ptr<VertexShader> g_lineVS;
+        std::shared_ptr<PixelShader> g_linePS;
+        Core::VertexBuffer g_lineBuffer;
+
         DirectX::XMFLOAT4 ToFloat4(const Color& c)
         {
                 return DirectX::XMFLOAT4{ c.r, c.g, c.b, c.a };
@@ -15,6 +30,59 @@ namespace
         DirectX::XMFLOAT3 ToFloat3(const float2& point, float z)
         {
                 return DirectX::XMFLOAT3{ point.x, point.y, z };
+        }
+
+        void EnsureLineShaders()
+        {
+                if (g_lineVS && g_linePS)
+                {
+                        return;
+                }
+
+                const char* kVS = R"EOT(
+struct VS_IN {
+        float3 pos : POSITION;
+        float4 color : COLOR0;
+};
+struct VS_OUT {
+        float4 pos : SV_POSITION;
+        float4 color : COLOR0;
+};
+cbuffer WVP : register(b0) {
+        float4x4 world;
+        float4x4 view;
+        float4x4 proj;
+        float4 normalBasis[3];
+};
+VS_OUT main(VS_IN vin) {
+        VS_OUT vout;
+        float4 worldPos = mul(float4(vin.pos, 1.0f), world);
+        float4 viewPos = mul(worldPos, view);
+        vout.pos = mul(viewPos, proj);
+        vout.color = vin.color;
+        return vout;
+})EOT";
+
+                const char* kPS = R"EOT(
+struct PS_IN {
+        float4 pos : SV_POSITION;
+        float4 color : COLOR0;
+};
+float4 main(PS_IN pin) : SV_TARGET
+{
+        return pin.color;
+})EOT";
+
+                g_lineVS = std::make_shared<VertexShader>();
+                g_lineVS->Compile(kVS);
+                g_linePS = std::make_shared<PixelShader>();
+                g_linePS->Compile(kPS);
+        }
+
+        void PushLine(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end, const DirectX::XMFLOAT4& color)
+        {
+                g_lines.push_back(LineVertex{ start, color });
+                g_lines.push_back(LineVertex{ end, color });
         }
 }
 
@@ -29,10 +97,10 @@ namespace DebugColliderRenderer
                 const DirectX::XMFLOAT3 rightDown{ bounds.max.x, bounds.min.y, z };
                 const DirectX::XMFLOAT4 color = ToFloat4(c);
 
-                Geometory::AddLine(leftUp, leftDown, color);
-                Geometory::AddLine(leftUp, rightUp, color);
-                Geometory::AddLine(rightDown, leftDown, color);
-                Geometory::AddLine(rightDown, rightUp, color);
+                PushLine(leftUp, leftDown, color);
+                PushLine(leftUp, rightUp, color);
+                PushLine(rightDown, leftDown, color);
+                PushLine(rightDown, rightUp, color);
         }
 
         void DrawHull(const std::vector<float2>& pts, float z, Color c)
@@ -46,7 +114,7 @@ namespace DebugColliderRenderer
                 for (size_t i = 0; i < pts.size(); ++i)
                 {
                         const size_t next = (i + 1) % pts.size();
-                        Geometory::AddLine(ToFloat3(pts[i], z), ToFloat3(pts[next], z), color);
+                        PushLine(ToFloat3(pts[i], z), ToFloat3(pts[next], z), color);
                 }
         }
 
@@ -68,7 +136,7 @@ namespace DebugColliderRenderer
                                 center.x + std::cos(endAngle) * radius,
                                 center.y + std::sin(endAngle) * radius,
                                 z };
-                        Geometory::AddLine(start, end, color);
+                        PushLine(start, end, color);
                 }
         }
 
@@ -94,8 +162,8 @@ namespace DebugColliderRenderer
                 const float2 b0{ p0.x - offset.x, p0.y - offset.y };
                 const float2 b1{ p1.x - offset.x, p1.y - offset.y };
 
-                Geometory::AddLine(ToFloat3(a0, z), ToFloat3(a1, z), color);
-                Geometory::AddLine(ToFloat3(b0, z), ToFloat3(b1, z), color);
+                PushLine(ToFloat3(a0, z), ToFloat3(a1, z), color);
+                PushLine(ToFloat3(b0, z), ToFloat3(b1, z), color);
 
                 const float startAngle = std::atan2(axis.y, axis.x);
                 const float step = DirectX::XM_PI / 16.0f;
@@ -112,7 +180,7 @@ namespace DebugColliderRenderer
                                 p1.x + std::cos(angle1) * radius,
                                 p1.y + std::sin(angle1) * radius,
                                 z };
-                        Geometory::AddLine(arcStart, arcEnd, color);
+                        PushLine(arcStart, arcEnd, color);
                 }
 
                 for (int i = 0; i <= 16; ++i)
@@ -127,8 +195,50 @@ namespace DebugColliderRenderer
                                 p0.x + std::cos(angle1) * radius,
                                 p0.y + std::sin(angle1) * radius,
                                 z };
-                        Geometory::AddLine(arcStart, arcEnd, color);
+                        PushLine(arcStart, arcEnd, color);
                 }
+        }
+
+        void Flush(const CameraSpace::ICamera& camera)
+        {
+                if (g_lines.empty())
+                {
+                        return;
+                }
+
+                EnsureLineShaders();
+
+                if (!g_lineVS || !g_linePS)
+                {
+                        g_lines.clear();
+                        return;
+                }
+
+                g_lineBuffer.Shutdown();
+                g_lineBuffer.Init(g_lines.data(), sizeof(LineVertex), static_cast<UINT>(g_lines.size()));
+                if (!g_lineBuffer.IsValid())
+                {
+                        g_lines.clear();
+                        return;
+                }
+
+                WorldBuffer wvp{};
+                DirectX::XMStoreFloat4x4(&wvp.world, DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity()));
+                wvp.view = camera.GetView();
+                wvp.proj = camera.GetProjection();
+                wvp.normalBasis[0] = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+                wvp.normalBasis[1] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
+                wvp.normalBasis[2] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+
+                g_lineVS->WriteBuffer(0, &wvp);
+                g_lineVS->Bind();
+                g_linePS->Bind();
+
+                g_lineBuffer.Bind();
+                GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+                GetContext()->Draw(g_lineBuffer.GetCount(), 0);
+
+                g_lines.clear();
         }
 }
 

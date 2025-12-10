@@ -5,6 +5,11 @@
 #include "AABB.h"
 #include "Vector.h"
 
+namespace CameraSpace
+{
+        class ICamera;
+}
+
 struct Color
 {
         float r;
@@ -19,5 +24,6 @@ namespace DebugColliderRenderer
         void DrawHull(const std::vector<float2>& pts, float z, Color c);
         void DrawCircle(float2 center, float radius, float z, Color c);
         void DrawCapsule(float2 p0, float2 p1, float radius, float z, Color c);
+        void Flush(const CameraSpace::ICamera& camera);
 }
 

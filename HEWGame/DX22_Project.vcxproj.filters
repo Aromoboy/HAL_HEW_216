@@ -117,9 +117,6 @@
     <ClCompile Include="src\DirectX.cpp">
       <Filter>Core\DirectX</Filter>
     </ClCompile>
-    <ClCompile Include="src\DrawMatrix.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="src\Entities\CollisionEntity.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
@@ -134,9 +131,6 @@
     </ClCompile>
     <ClCompile Include="src\GameFlow\PhaseManager.cpp">
       <Filter>GameFlow</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Geometory.cpp">
-      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\HudRenderer.cpp">
       <Filter>Rendering</Filter>
@@ -193,15 +187,6 @@
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\Shader.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ShaderCache.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ShaderList.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ShaderProgram.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\SoundManagerEX.cpp">
@@ -365,7 +350,7 @@
     <ClInclude Include="include\DirectX.h">
       <Filter>Core\DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="include\DrawMatrix.h">
+    <ClInclude Include="include\MatrixUtil.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Entities\CollisionEntity.h">
@@ -385,9 +370,6 @@
     </ClInclude>
     <ClInclude Include="include\GameFlow\PhaseManager.h">
       <Filter>GameFlow</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Geometory.h">
-      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\HudRenderer.h">
       <Filter>Rendering</Filter>
@@ -462,15 +444,6 @@
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Shader.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ShaderCache.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ShaderList.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ShaderProgram.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\SoundManagerEX.h">

@@ -1,7 +1,7 @@
 #include "BaseCamera.h"
 
 #include "Defines.h"
-#include "DrawMatrix.h"
+#include "MatrixUtil.h"
 
 #include <cmath>
 
@@ -216,7 +216,7 @@ namespace CameraSpace
                         DirectX::XMVectorGetZ(upVector)
                 };
 
-                DrawMatrix::CreateViewMatrix(m_view, eye, focus, up);
+                m_view = MathUtil::MakeViewMatrix(eye, focus, up);
                 m_viewDirty = false;
 
 #if defined(_DEBUG)
@@ -226,8 +226,7 @@ namespace CameraSpace
 
         void BaseCamera::UpdateProjection()
         {
-                DrawMatrix::CreateProjectionMatrix(
-                        m_projection,
+                m_projection = MathUtil::MakeProjectionMatrix(
                         DirectX::XMConvertToRadians(m_fovYDegrees),
                         m_aspect,
                         m_nearPlane,
