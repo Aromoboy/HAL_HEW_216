@@ -4,12 +4,15 @@
 #include <string>
 
 #include <DirectXMath.h>
-#include "MaterialDX.h"
-#include "MeshDX.h"
-#include "ModelDX.h"
-#include "ModelRender.h"
-#include "TextureCache.h"
-#include "Transform.h"
+
+class MaterialDX;
+class MeshDX;
+class ModelRender;
+class Texture2D;
+namespace Render
+{
+    class Model;
+}
 
 struct BackgroundRendererConfig
 {
