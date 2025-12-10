@@ -179,14 +179,9 @@ AssimpModelLorder::MakeMaterial(
 
         if (!fallbackTexture)
         {
-            static const uint8_t whitePixel[4] = { 255, 255, 255, 255 };
-            const auto generatedKey = TextureCache::NormalizeKey("generated:fallback:white");
-            fallbackTexture = textureCache.LoadFromMemory(generatedKey, device, whitePixel, sizeof(whitePixel), 1, 1);
-
-            if (!fallbackTexture)
-            {
-                DebugMessage("[AssimpModelLorder] Failed to create fallback texture SRV for model '" + modelPath8 + "'. Materials may bind null SRVs.\n");
-            }
+            DebugMessage(
+                "[AssimpModelLorder] Fallback texture '" + fallbackPath8
+                + "' could not be loaded; materials will bind null SRVs when missing textures.\n");
         }
 
         return fallbackTexture;
@@ -224,9 +219,18 @@ AssimpModelLorder::MakeMaterial(
             aiString texPath;
             if (pScene->mMaterials[i]->GetTexture(type, 0, &texPath) != AI_SUCCESS)
             {
+                DebugMessage(
+                    "[AssimpModelLorder] Material " + std::to_string(i)
+                    + " in model '" + modelPath8 + "' has no texture for type "
+                    + std::to_string(static_cast<int>(type)) + ".\n");
+
                 if (allowFallback)
                 {
                     auto fallback = getFallbackTexture();
+                    if (!fallback)
+                    {
+                        DebugMessage("[AssimpModelLorder] No fallback texture available; SRV will be null.\n");
+                    }
                     return { fallback, fallback != nullptr };
                 }
                 return { nullptr, false };
@@ -333,7 +337,20 @@ AssimpModelLorder::MakeMaterial(
             if (!texture && allowFallback)
             {
                 texture = getFallbackTexture();
-                usedFallback = true;
+                usedFallback = texture != nullptr;
+
+                if (usedFallback)
+                {
+                    DebugMessage(
+                        "[AssimpModelLorder] Using fallback texture for material " + std::to_string(i)
+                        + " in model '" + modelPath8 + "'.\n");
+                }
+                else
+                {
+                    DebugMessage(
+                        "[AssimpModelLorder] Fallback requested for material " + std::to_string(i)
+                        + " in model '" + modelPath8 + "', but no fallback texture is available. SRV will be null.\n");
+                }
             }
 
             return { texture, usedFallback };
