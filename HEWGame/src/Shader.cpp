@@ -48,31 +48,41 @@ HRESULT Shader::Load(const char* pFileName)
 }
 HRESULT Shader::Compile(const char *pCode)
 {
-	static const char *pTargetList[] = 
+	static const char *pTargetList[] =
 	{
 		"vs_5_0",
 		"ps_5_0"
 	};
 
 	HRESULT hr;
-	ID3DBlob *pBlob;
-	ID3DBlob *error;
+	ID3DBlob *pBlob = nullptr;
+	ID3DBlob *error = nullptr;
 	UINT compileFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 	hr = D3DCompile(pCode, strlen(pCode), nullptr, nullptr, nullptr,
 		"main", pTargetList[m_kind], compileFlag, 0, &pBlob, &error);
-	if (FAILED(hr)) { return hr; }
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(error);
+		SAFE_RELEASE(pBlob);
+		return hr;
+	}
 
-	ID3D11ShaderResourceView* srv = tex ? tex->GetResource() : nullptr;
-	SetTexture(slot, srv);
+	hr = Make(pBlob->GetBufferPointer(), (UINT)pBlob->GetBufferSize());
+
+	SAFE_RELEASE(error);
+	SAFE_RELEASE(pBlob);
+	return hr;
 }
 
 void Shader::SetTexture(UINT slot, ID3D11ShaderResourceView* srv)
 {
 	if (slot >= m_pTextures.size()) { return; }
 	m_pTextures[slot] = srv;
-	ID3D11ShaderResourceView* pTex = srv;
-	SAFE_RELEASE(error);
-	return hr;
+	switch (m_kind)
+	{
+	case Vertex:	GetContext()->VSSetShaderResources(slot, 1, &srv); break;
+	case Pixel:		GetContext()->PSSetShaderResources(slot, 1, &srv); break;
+	}
 }
 
 void Shader::WriteBuffer(UINT slot, void* pData)
@@ -82,14 +92,8 @@ void Shader::WriteBuffer(UINT slot, void* pData)
 }
 void Shader::SetTexture(UINT slot, Texture* tex)
 {
-	if (!tex || slot >= m_pTextures.size()) { return; }
-	ID3D11ShaderResourceView* pTex = tex->GetResource();
-	m_pTextures[slot] = pTex;
-	switch (m_kind)
-	{
-	case Vertex:	GetContext()->VSSetShaderResources(slot, 1, &pTex); break;
-	case Pixel:		GetContext()->PSSetShaderResources(slot, 1, &pTex); break;
-	}
+	ID3D11ShaderResourceView* pTex = tex ? tex->GetResource() : nullptr;
+	SetTexture(slot, pTex);
 }
 
 HRESULT Shader::Make(void* pData, UINT size)
@@ -240,7 +244,6 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 }
 
 //----------
-}
 PixelShader::PixelShader()
 	: Shader(Shader::Pixel)
 	, m_pPS(nullptr)

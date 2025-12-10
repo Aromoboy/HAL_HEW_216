@@ -7,8 +7,6 @@
 #include <map>
 #include <vector>
 
-	void SetTexture(UINT slot, ID3D11ShaderResourceView* srv);
-#endif
 class Shader
 {
 protected:
@@ -27,9 +25,9 @@ public:
 	// 文字列からシェーダをコンパイル
 	HRESULT Compile(const char* pCode);
 
-
 	// 定数の書き込み
 	void WriteBuffer(UINT slot, void* pData);
+	void SetTexture(UINT slot, ID3D11ShaderResourceView* srv);
 	// テクスチャの設定
 	void SetTexture(UINT slot, Texture* tex);
 	// シェーダーを描画に使用
