@@ -769,10 +769,10 @@ void PowerUpRenderer::DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, 
 
 bool PowerUpRenderer::TryGetViewportSize(float& width, float& height) const
 {
-	RenderTarget* rtv = GetDefaultRTV();
-	if (!rtv)
-	{
-		return false;
+        RenderTargetDX* rtv = GetDefaultRTV();
+        if (!rtv)
+        {
+                return false;
 	}
 
 	width = static_cast<float>(rtv->GetWidth());

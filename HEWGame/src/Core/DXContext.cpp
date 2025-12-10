@@ -4,7 +4,7 @@
 
 #include "Debug.h"
 #include "DirectX.h"
-#include "Texture.h"
+#include "TextureDX.h"
 
 namespace
 {
@@ -52,11 +52,11 @@ namespace Core
         {
                 if (m_defaultRTV)
                 {
-                        m_defaultRTV->Clear(clearColor ? clearColor : kDefaultClearColor);
+                        m_defaultRTV->Clear(m_context.Get(), clearColor ? clearColor : kDefaultClearColor);
                 }
                 if (m_defaultDSV)
                 {
-                        m_defaultDSV->Clear();
+                        m_defaultDSV->Clear(m_context.Get());
                 }
         }
 
@@ -109,7 +109,7 @@ namespace Core
                         return hr;
                 }
 
-                RenderTarget* defaultRTV = GetDefaultRTV();
+                RenderTargetDX* defaultRTV = GetDefaultRTV();
                 SetRenderTargets(1, &defaultRTV, GetDefaultDSV());
 
                 return S_OK;
@@ -146,12 +146,12 @@ namespace Core
                 return m_swapChain.Get();
         }
 
-        RenderTarget* DXContext::GetDefaultRTV() const
+        RenderTargetDX* DXContext::GetDefaultRTV() const
         {
                 return m_defaultRTV.get();
         }
 
-        DepthStencil* DXContext::GetDefaultDSV() const
+        DepthStencilDX* DXContext::GetDefaultDSV() const
         {
                 return m_defaultDSV.get();
         }
@@ -223,8 +223,8 @@ namespace Core
         {
                 ReleaseTargets();
 
-                m_defaultRTV = std::make_unique<RenderTarget>();
-                HRESULT hr = m_defaultRTV->CreateFromScreen();
+                m_defaultRTV = std::make_unique<RenderTargetDX>();
+                HRESULT hr = m_defaultRTV->CreateFromSwapChain(m_device.Get(), m_swapChain.Get());
                 if (FAILED(hr))
                 {
                         DebugMessage("[DXContext] Failed to create default render target from swap chain.\n");
@@ -232,8 +232,8 @@ namespace Core
                         return hr;
                 }
 
-                m_defaultDSV = std::make_unique<DepthStencil>();
-                hr = m_defaultDSV->Create(m_defaultRTV->GetWidth(), m_defaultRTV->GetHeight(), false);
+                m_defaultDSV = std::make_unique<DepthStencilDX>();
+                hr = m_defaultDSV->Create(m_device.Get(), m_defaultRTV->GetWidth(), m_defaultRTV->GetHeight(), false);
                 if (FAILED(hr))
                 {
                         DebugMessage("[DXContext] Failed to create default depth stencil.\n");

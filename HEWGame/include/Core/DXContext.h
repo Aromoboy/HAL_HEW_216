@@ -4,8 +4,8 @@
 #include <wrl/client.h>
 #include <d3d11.h>
 
-class RenderTarget;
-class DepthStencil;
+class RenderTargetDX;
+class DepthStencilDX;
 
 namespace Core
 {
@@ -24,8 +24,8 @@ namespace Core
                 ID3D11Device* GetDevice() const;
                 ID3D11DeviceContext* GetContext() const;
                 IDXGISwapChain* GetSwapChain() const;
-                RenderTarget* GetDefaultRTV() const;
-                DepthStencil* GetDefaultDSV() const;
+                RenderTargetDX* GetDefaultRTV() const;
+                DepthStencilDX* GetDefaultDSV() const;
 
         private:
                 HRESULT CreateDeviceAndSwapChain(HWND hWnd, UINT width, UINT height, bool fullscreen);
@@ -36,8 +36,8 @@ namespace Core
                 Microsoft::WRL::ComPtr<ID3D11Device> m_device;
                 Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
                 Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
-                std::unique_ptr<RenderTarget> m_defaultRTV;
-                std::unique_ptr<DepthStencil> m_defaultDSV;
+                std::unique_ptr<RenderTargetDX> m_defaultRTV;
+                std::unique_ptr<DepthStencilDX> m_defaultDSV;
                 HWND m_windowHandle;
                 UINT m_width;
                 UINT m_height;

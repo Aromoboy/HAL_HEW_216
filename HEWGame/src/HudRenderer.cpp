@@ -223,7 +223,7 @@ void HudRenderer::UploadTexture()
 
 bool HudRenderer::TryGetViewportSize(float& width, float& height) const
 {
-    RenderTarget* rtv = GetDefaultRTV();
+    RenderTargetDX* rtv = GetDefaultRTV();
     if (!rtv)
     {
         return false;

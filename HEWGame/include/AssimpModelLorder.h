@@ -15,7 +15,6 @@
 
 #include "IModelLoader.h"
 
-#include "DirectXTex.h"
 #include <algorithm>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
