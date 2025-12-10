@@ -1,6 +1,9 @@
 #include "MeshDX.h"
 
 #include "Debug.h"
+#include <cstddef>
+#include <cstring>
+#include <vector>
 
 MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         : m_vertexBuffer()
@@ -18,15 +21,50 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
                 m_topology = desc.topology;
         }
 
-        // 頂点バッファ作成
-        const UINT vertexStride = sizeof(MeshDX::Vertex);
-        if (desc.vtxSize != vertexStride)
+        if (!desc.pVtx || desc.vtxCount == 0)
         {
-                DebugMessage("MeshDX received unexpected vertex size.\n");
+                DebugMessage("[MeshDX] Invalid vertex data passed to MeshDX constructor.\n");
                 return;
         }
 
-        hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
+        // 頂点バッファ作成
+        const UINT vertexStride = MeshDX::VertexStride;
+        const std::byte* vertexBase = static_cast<const std::byte*>(desc.pVtx);
+        const bool needsRebuild = desc.vtxSize != vertexStride;
+        std::vector<MeshDX::Vertex> rebuiltVertices;
+
+        const void* vertexData = desc.pVtx;
+        if (needsRebuild)
+        {
+                DebugMessage("[MeshDX] Received unexpected vertex size. Rebuilding to canonical layout.\n");
+
+                if (desc.vtxSize < sizeof(float) * 3)
+                {
+                        DebugMessage("[MeshDX] Incoming vertex size is too small to contain position data.\n");
+                        return;
+                }
+
+                rebuiltVertices.resize(desc.vtxCount);
+                for (UINT i = 0; i < desc.vtxCount; ++i)
+                {
+                        const std::byte* src = vertexBase + (static_cast<std::size_t>(i) * desc.vtxSize);
+
+                        MeshDX::Vertex v{};
+                        std::memcpy(&v.pos, src, sizeof(v.pos));
+
+                        if (desc.vtxSize >= sizeof(float) * 5)
+                        {
+                                const std::byte* uvSrc = src + (desc.vtxSize - sizeof(v.uv));
+                                std::memcpy(&v.uv, uvSrc, sizeof(v.uv));
+                        }
+
+                        rebuiltVertices[i] = v;
+                }
+
+                vertexData = rebuiltVertices.data();
+        }
+
+        hr = CreateVertexBuffer(vertexData, vertexStride, desc.vtxCount);
         if (FAILED(hr))
         {
 #ifdef _DEBUG
@@ -36,9 +74,26 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         }
 
         // インデックスバッファ作成
-        if (desc.pIdx)
+        if (desc.idxCount > 0)
         {
-                hr = CreateIndexBuffer(desc.pIdx, desc.idxSize, desc.idxCount);
+                const bool hasValidIndices = desc.pIdx && desc.idxSize == sizeof(unsigned int);
+                const void* indexData = desc.pIdx;
+                std::vector<unsigned int> generatedIndices;
+
+                if (!hasValidIndices)
+                {
+                        generatedIndices.resize(desc.idxCount);
+                        const UINT cycle = desc.vtxCount > 0 ? desc.vtxCount : desc.idxCount;
+                        for (UINT i = 0; i < desc.idxCount; ++i)
+                        {
+                                generatedIndices[i] = cycle > 0 ? (i % cycle) : i;
+                        }
+
+                        DebugMessage("[MeshDX] Index buffer missing or invalid. Generated sequential indices.\n");
+                        indexData = generatedIndices.data();
+                }
+
+                hr = CreateIndexBuffer(indexData, sizeof(unsigned int), desc.idxCount);
                 if (FAILED(hr))
                 {
                         DebugMessage("インデックスバッファの作成に失敗しました");

@@ -43,7 +43,7 @@ namespace Core
                 return hr;
         }
 
-        void VertexBuffer::Bind(UINT slot, UINT offset) const
+        void VertexBuffer::Bind(UINT slot, UINT stride, UINT offset) const
         {
                 ID3D11Buffer* buffer = m_buffer.Get();
                 if (!buffer)
@@ -52,11 +52,10 @@ namespace Core
                         return;
                 }
 
-		UINT stride = m_stride;
-		if (stride == 0)
-		{
-			DebugMessage("[VertexBuffer] Bind called with zero stride.\n");
-			return;
+                if (stride == 0)
+                {
+                        DebugMessage("[VertexBuffer] Bind called with zero stride.\n");
+                        return;
 		}
 		GetContext()->IASetVertexBuffers(slot, 1, &buffer, &stride, &offset);
 	}
