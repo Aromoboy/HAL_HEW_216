@@ -542,17 +542,20 @@
     <ClInclude Include="include\Texture.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\TextureCache.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\TextureDX.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\TitleScene.h">
-      <Filter>App</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Transform.h">
-      <Filter>Core</Filter>
+      <ClInclude Include="include\TextureCache.h">
+        <Filter>Rendering</Filter>
+      </ClInclude>
+      <ClInclude Include="include\TextureDX.h">
+        <Filter>Rendering</Filter>
+      </ClInclude>
+      <ClInclude Include="include\WorldBuffer.h">
+        <Filter>Rendering</Filter>
+      </ClInclude>
+      <ClInclude Include="include\TitleScene.h">
+        <Filter>App</Filter>
+      </ClInclude>
+      <ClInclude Include="include\Transform.h">
+        <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>

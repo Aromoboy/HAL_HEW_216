@@ -91,7 +91,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -113,7 +113,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,7 +157,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -339,15 +339,16 @@
     <ClInclude Include="include\Sprite.h" />
     <ClInclude Include="include\TestObject.h" />
     <ClInclude Include="include\Texture.h" />
-    <ClInclude Include="include\TextureCache.h" />
-    <ClInclude Include="include\TextureDX.h" />
-    <ClInclude Include="include\UpdatableTimer.h" />
-    <ClInclude Include="include\Transform.h" />
-    <ClInclude Include="include\Vector.h" />
-    <ClInclude Include="include\conioex.h" />
-    <ClInclude Include="include\Sweets\BaseSweets.h" />
-    <ClInclude Include="include\SweetsManager.h" />
-    <ClInclude Include="TimerDisplay.h" />
+      <ClInclude Include="include\TextureCache.h" />
+      <ClInclude Include="include\TextureDX.h" />
+      <ClInclude Include="include\UpdatableTimer.h" />
+      <ClInclude Include="include\Transform.h" />
+      <ClInclude Include="include\Vector.h" />
+      <ClInclude Include="include\WorldBuffer.h" />
+      <ClInclude Include="include\conioex.h" />
+      <ClInclude Include="include\Sweets\BaseSweets.h" />
+      <ClInclude Include="include\SweetsManager.h" />
+      <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
