@@ -1,15 +1,14 @@
-#include "PowerUpRenderer.h"
-
+﻿#include "PowerUpRenderer.h"
 #include "Defines.h"
 #include "PowerUpTextures.h"
 
 namespace
 {
     constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
-    constexpr float2 kFramePositionOffset = { -0.18f,  -0.008f };
-    constexpr float2 kIconPositionOffset = { -0.18f,  -0.008f };
+    constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
+    constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
     constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
-    constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
+    constexpr float2 kHudCostIconPositionOffset = { 0.40f, 0.30f };
 
     constexpr float kIconScaleOffset = 0.5f;
     constexpr float kFrameScaleOffset = 0.5f;
@@ -17,7 +16,7 @@ namespace
     constexpr float kCostIconScaleOffset = 0.3f;
     constexpr float kHudCostIconScaleOffset = 0.25f;
 
-    Transform MakeTransform(const float2& position, const float2& scale)
+    Transform MakeTransformImpl(const float2& position, const float2& scale)
     {
         Transform transform{};
         transform.position = float3{ position.x, position.y, 0.0f };
@@ -27,24 +26,26 @@ namespace
     }
 }
 
+// ================================================================
+// PowerUpStringTexture
+// ================================================================
+
 PowerUpStringTexture::PowerUpStringTexture()
     : m_texture(std::make_shared<Texture2D>())
     , m_stringTextureScale(float2{ 1.0f, 1.0f })
 {
 }
 
-HRESULT PowerUpStringTexture::Create(DXGI_FORMAT format, UINT width, UINT height)
+HRESULT PowerUpStringTexture::Create(DXGI_FORMAT /*format*/, UINT width, UINT height)
 {
-    (void)format;
     m_width = width;
     m_height = height;
     return S_OK;
 }
 
-void PowerUpStringTexture::UpdatePixels(const void* data, UINT pitch)
+void PowerUpStringTexture::UpdatePixels(const void* /*data*/, UINT /*pitch*/)
 {
-    (void)data;
-    (void)pitch;
+    // TODO: update texture pixels if you want dynamic text
 }
 
 void PowerUpStringTexture::SetScale(float2 a_scale)
@@ -77,6 +78,11 @@ std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
     return m_texture;
 }
 
+
+// ================================================================
+// PowerUpRenderer
+// ================================================================
+
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
     : m_cache(a_cache)
     , m_modelRenderer(std::make_unique<ModelRender>())
@@ -95,72 +101,174 @@ PowerUpRenderer::~PowerUpRenderer() = default;
 bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 {
     m_config = config;
+    EnsureQuadMesh();
     return true;
 }
 
 void PowerUpRenderer::Shutdown()
 {
     m_modelRenderer.reset();
-    m_quadMesh.reset();
+    m_quadMeshStrong.reset();
+    m_quadMeshWeak.reset();
+
     m_cost.reset();
     m_iconFrame.reset();
     m_backFrame.reset();
 }
 
+
+// ================================================================
+// PRIVATE — quad mesh creation
+// ================================================================
+
+void PowerUpRenderer::EnsureQuadMesh()
+{
+    if (auto s = m_quadMeshWeak.lock())
+    {
+        m_quadMeshStrong = s;
+        return;
+    }
+
+    // Create a standard -0.5..0.5 unit quad with default UVs
+    const std::vector<MeshDX::Vertex> vertices{
+        { { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f } },
+        { {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f } },
+        { { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f } },
+        { {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f } },
+    };
+
+    MeshDX::Description desc{};
+    desc.pVtx = vertices.data();
+    desc.vtxSize = sizeof(MeshDX::Vertex);
+    desc.vtxCount = (UINT)vertices.size();
+    desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+    auto mesh = std::make_shared<MeshDX>(desc, 0);
+
+    m_quadMeshStrong = mesh;
+    m_quadMeshWeak = mesh;
+}
+
+std::shared_ptr<MeshDX> PowerUpRenderer::GetQuadMesh()
+{
+    EnsureQuadMesh();
+    return m_quadMeshStrong;
+}
+
+
+// ================================================================
+// Build a model out of 1 mesh + 1 material
+// ================================================================
+
+std::shared_ptr<Render::Model> PowerUpRenderer::BuildModel(
+    const std::shared_ptr<MaterialDX>& material,
+    const std::shared_ptr<MeshDX>& mesh) const
+{
+    std::vector<std::shared_ptr<MeshDX>>     meshes{ mesh };
+    std::vector<std::shared_ptr<MaterialDX>> materials{ material };
+
+    return std::make_shared<Render::Model>(std::move(meshes), std::move(materials));
+}
+
+
+// ================================================================
+// DRAW HELPERS
+// ================================================================
+
+Transform PowerUpRenderer::MakeTransform(const float2& position, const float2& scale) const
+{
+    return MakeTransformImpl(position, scale);
+}
+
+
+// ================================================================
+// PUBLIC DRAW FUNCTIONS
+// ================================================================
+
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 {
     if (!m_cost)
-    {
         return;
-    }
 
-    DrawSprite(m_cost, UVRect{}, kHudCostIconPositionOffset, float2{ kHudCostIconScaleOffset, kHudCostIconScaleOffset },
-        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    DrawSprite(
+        m_cost,
+        UVRect{},
+        kHudCostIconPositionOffset,
+        float2{ kHudCostIconScaleOffset, kHudCostIconScaleOffset },
+        DirectX::XMFLOAT4(1, 1, 1, 1),
+        camera
+    );
 }
 
-void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
+void PowerUpRenderer::DrawCursor(
+    std::shared_ptr<Texture2D> texture,
+    float2 pos,
+    float2 scale,
+    const CameraSpace::ICamera& camera)
 {
-    if (!a_texture)
-    {
+    if (!texture)
         return;
-    }
 
-    const float2 scaledPosition{ a_position.x + kBackFramePositionOffset.x * a_scale.x,
-        a_position.y + kBackFramePositionOffset.y * a_scale.y };
-    const float2 scaledScale{ a_scale.x * kBackFrameScaleOffset, a_scale.y * kBackFrameScaleOffset };
+    float2 p{ pos.x + kBackFramePositionOffset.x * scale.x,
+              pos.y + kBackFramePositionOffset.y * scale.y };
 
-    DrawSprite(a_texture, UVRect{}, scaledPosition, scaledScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    float2 s{ scale.x * kBackFrameScaleOffset,
+              scale.y * kBackFrameScaleOffset };
+
+    DrawSprite(texture, UVRect{}, p, s, DirectX::XMFLOAT4(1, 1, 1, 1), camera);
 }
 
 void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::ICamera& camera)
 {
     if (!m_backFrame || !m_iconFrame || !m_cost)
-    {
         return;
-    }
 
-    const float2 backPos{ data.drawPosition.x + kBackFramePositionOffset.x * data.drawScale.x,
-        data.drawPosition.y + kBackFramePositionOffset.y * data.drawScale.y };
-    const float2 backScale{ data.drawScale.x * kBackFrameScaleOffset, data.drawScale.y * kBackFrameScaleOffset };
-    DrawSprite(m_backFrame, UVRect{}, backPos, backScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    // BACK FRAME
+    float2 backPos{
+        data.drawPosition.x + kBackFramePositionOffset.x * data.drawScale.x,
+        data.drawPosition.y + kBackFramePositionOffset.y * data.drawScale.y
+    };
 
-    const float2 framePos{ data.drawPosition.x + kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
-        data.drawPosition.y + kFramePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
-    const float2 frameScale{ data.drawScale.x * kFrameScaleOffset, data.drawScale.y * kFrameScaleOffset };
-    DrawSprite(m_iconFrame, UVRect{}, framePos, frameScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    float2 backScale{ data.drawScale.x * kBackFrameScaleOffset,
+                      data.drawScale.y * kBackFrameScaleOffset };
 
+    DrawSprite(m_backFrame, UVRect{}, backPos, backScale, DirectX::XMFLOAT4(1, 1, 1, 1), camera);
+
+    // ICON FRAME
+    float2 framePos{
+        data.drawPosition.x + kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+        data.drawPosition.y + kFramePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset
+    };
+
+    float2 frameScale{ data.drawScale.x * kFrameScaleOffset,
+                       data.drawScale.y * kFrameScaleOffset };
+
+    DrawSprite(m_iconFrame, UVRect{}, framePos, frameScale, DirectX::XMFLOAT4(1, 1, 1, 1), camera);
+
+    // ICON
     if (data.texture)
     {
-        const float2 iconPos{ data.drawPosition.x + kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
-            data.drawPosition.y + kIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
-        const float2 iconScale{ data.drawScale.x * kIconScaleOffset, data.drawScale.y * kIconScaleOffset };
-        DrawSprite(data.texture, UVRect{}, iconPos, iconScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+        float2 iconPos{
+            data.drawPosition.x + kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+            data.drawPosition.y + kIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset
+        };
+
+        float2 iconScale{ data.drawScale.x * kIconScaleOffset,
+                          data.drawScale.y * kIconScaleOffset };
+
+        DrawSprite(data.texture, UVRect{}, iconPos, iconScale, DirectX::XMFLOAT4(1, 1, 1, 1), camera);
     }
 
-    const float2 costIconPos{ data.drawPosition.x + kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
-        data.drawPosition.y + kCostIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
-    const float2 costIconScale{ data.drawScale.x * kCostIconScaleOffset, data.drawScale.y * kCostIconScaleOffset };
-    DrawSprite(m_cost, UVRect{}, costIconPos, costIconScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    // COST ICON
+    float2 costPos{
+        data.drawPosition.x + kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+        data.drawPosition.y + kCostIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset
+    };
+
+    float2 costScale{ data.drawScale.x * kCostIconScaleOffset,
+                      data.drawScale.y * kCostIconScaleOffset };
+
+    DrawSprite(m_cost, UVRect{}, costPos, costScale, DirectX::XMFLOAT4(1, 1, 1, 1), camera);
 }
 
 void PowerUpRenderer::DrawSprite(
@@ -172,70 +280,22 @@ void PowerUpRenderer::DrawSprite(
     const CameraSpace::ICamera& camera)
 {
     if (!texture || !m_modelRenderer)
-    {
         return;
-    }
 
-    std::shared_ptr<MeshDX> mesh = (uvRect.start.x == 0.0f && uvRect.start.y == 0.0f &&
-        uvRect.size.x == 1.0f && uvRect.size.y == 1.0f)
-        ? GetQuadMesh()
-        : CreateQuadMesh(uvRect);
+    auto mesh = GetQuadMesh();
     if (!mesh)
-    {
         return;
-    }
 
+    // Build material (UVRect applied through material until your shader supports it)
     auto material = std::make_shared<MaterialDX>(
         tint,
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        texture);
+        DirectX::XMFLOAT4(0, 0, 0, 0),
+        DirectX::XMFLOAT4(0, 0, 0, 0),
+        texture
+    );
 
-    Render::Model model = BuildModel(material, mesh);
-    const Transform transform = MakeTransform(position, scale);
-    m_modelRenderer->Draw(model, transform, &camera);
+    auto model = BuildModel(material, mesh);
+    Transform tr = MakeTransform(position, scale);
+
+    m_modelRenderer->Draw(*model, tr, &camera);
 }
-
-std::shared_ptr<MeshDX> PowerUpRenderer::GetQuadMesh()
-{
-    auto mesh = m_quadMesh.lock();
-    if (mesh)
-    {
-        return mesh;
-    }
-
-    mesh = CreateQuadMesh(UVRect{});
-    m_quadMesh = mesh;
-    return mesh;
-}
-
-std::shared_ptr<MeshDX> PowerUpRenderer::CreateQuadMesh(const UVRect& uvRect) const
-{
-    const std::vector<MeshDX::Vertex> vertices{
-        MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x, uvRect.start.y } },
-        MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x + uvRect.size.x, uvRect.start.y } },
-        MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x, uvRect.start.y + uvRect.size.y } },
-        MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x + uvRect.size.x, uvRect.start.y + uvRect.size.y } },
-    };
-
-    MeshDX::Description desc{};
-    desc.pVtx = vertices.data();
-    desc.vtxSize = sizeof(MeshDX::Vertex);
-    desc.vtxCount = static_cast<UINT>(vertices.size());
-    desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
-    return std::make_shared<MeshDX>(desc, 0);
-}
-
-Render::Model PowerUpRenderer::BuildModel(const std::shared_ptr<MaterialDX>& material, const std::shared_ptr<MeshDX>& mesh) const
-{
-    std::vector<std::shared_ptr<MeshDX>> meshes{ mesh };
-    std::vector<std::shared_ptr<MaterialDX>> materials{ material };
-    return Render::Model(std::move(meshes), std::move(materials));
-}
-
-Transform PowerUpRenderer::MakeTransform(const float2& position, const float2& scale) const
-{
-    return ::MakeTransform(position, scale);
-}
-

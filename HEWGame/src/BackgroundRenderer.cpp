@@ -20,15 +20,15 @@ namespace
         struct QuadVertex
         {
             DirectX::XMFLOAT3 pos;
-            DirectX::XMFLOAT2 uv;
             DirectX::XMFLOAT3 normal;
+            DirectX::XMFLOAT2 uv;
         };
 
         const std::array<QuadVertex, 4> vertices{
-            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
-            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+            QuadVertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f } },
+            QuadVertex{ {  0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f } },
+            QuadVertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f } },
+            QuadVertex{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f } },
         };
 
         MeshDX::Description desc{};

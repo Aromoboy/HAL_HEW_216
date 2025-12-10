@@ -57,7 +57,7 @@ public:
 
 private:
     std::shared_ptr<Texture2D> m_texture;
-    float2 m_stringTextureScale;
+    float2 m_stringTextureScale{};
     UINT m_width = 0u;
     UINT m_height = 0u;
 };
@@ -113,8 +113,8 @@ public:
     void Shutdown();
 
     void DrawHud(const CameraSpace::ICamera& camera);
-    void DrawCursor(std::shared_ptr<Texture2D> texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera&);
-    void DrawNode(const NodeRenderData& data, const CameraSpace::ICamera&);
+    void DrawCursor(std::shared_ptr<Texture2D> texture, float2 position, float2 scale, const CameraSpace::ICamera& camera);
+    void DrawNode(const NodeRenderData& data, const CameraSpace::ICamera& camera);
 
     void DrawSprite(
         const std::shared_ptr<Texture2D>& texture,
@@ -126,17 +126,23 @@ public:
 
 private:
     std::shared_ptr<MeshDX> GetQuadMesh();
-    std::shared_ptr<MeshDX> CreateQuadMesh(const UVRect& uvRect) const;
-    Render::Model BuildModel(const std::shared_ptr<MaterialDX>& material, const std::shared_ptr<MeshDX>& mesh) const;
+    void EnsureQuadMesh();
+
+    std::shared_ptr<Render::Model> BuildModel(
+        const std::shared_ptr<MaterialDX>& material,
+        const std::shared_ptr<MeshDX>& mesh) const;
+
     Transform MakeTransform(const float2& position, const float2& scale) const;
 
     TextureCache& m_cache;
     PowerUpHudLayoutConfig m_config{};
+
     std::unique_ptr<ModelRender> m_modelRenderer;
-    std::weak_ptr<MeshDX> m_quadMesh;
+
+    std::shared_ptr<MeshDX> m_quadMeshStrong;
+    std::weak_ptr<MeshDX>    m_quadMeshWeak;
 
     std::shared_ptr<Texture2D> m_cost;
     std::shared_ptr<Texture2D> m_iconFrame;
     std::shared_ptr<Texture2D> m_backFrame;
 };
-
