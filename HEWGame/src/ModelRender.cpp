@@ -13,16 +13,14 @@
 std::shared_ptr<VertexShader> ModelRender::s_defaultVS;
 std::shared_ptr<PixelShader> ModelRender::s_defaultPS;
 
-namespace
+void ModelRender::EnsureDefaultShaders()
 {
-    void EnsureDefaultShaders()
+    if (s_defaultVS && s_defaultPS)
     {
-        if (ModelRender::s_defaultVS && ModelRender::s_defaultPS)
-        {
-            return;
-        }
+        return;
+    }
 
-        const char* kDefaultVS = R"EOT(
+    const char* kDefaultVS = R"EOT(
 struct VS_IN {
         float3 pos : POSITION;
         float2 uv : TEXCOORD0;
@@ -50,7 +48,7 @@ VS_OUT main(VS_IN vin) {
         return vout;
 })EOT";
 
-        const char* kDefaultPS = R"EOT(
+    const char* kDefaultPS = R"EOT(
 struct PS_IN {
         float4 pos : SV_POSITION;
         float3 normal : NORMAL0;
@@ -63,11 +61,10 @@ float4 main(PS_IN pin) : SV_TARGET
         return tex.Sample(samp, pin.uv);
 })EOT";
 
-        ModelRender::s_defaultVS = std::make_shared<VertexShader>();
-        ModelRender::s_defaultVS->Compile(kDefaultVS);
-        ModelRender::s_defaultPS = std::make_shared<PixelShader>();
-        ModelRender::s_defaultPS->Compile(kDefaultPS);
-    }
+    s_defaultVS = std::make_shared<VertexShader>();
+    s_defaultVS->Compile(kDefaultVS);
+    s_defaultPS = std::make_shared<PixelShader>();
+    s_defaultPS->Compile(kDefaultPS);
 }
 
 ModelRender::ModelRender()

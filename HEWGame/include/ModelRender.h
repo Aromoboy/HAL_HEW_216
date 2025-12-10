@@ -20,6 +20,7 @@ public:
 
 private:
     void MeshDraw(MeshDX&);
+    static void EnsureDefaultShaders();
 
     std::unordered_set<int> m_warnedMissingSrvMaterials;
     std::shared_ptr<Texture2D> m_fallbackTexture;
