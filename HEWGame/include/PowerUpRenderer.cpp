@@ -1,697 +1,241 @@
 #include "PowerUpRenderer.h"
-#include "DirectX.h"
+
+#include "Defines.h"
 #include "PowerUpTextures.h"
-
-#include <algorithm>
-#include <sstream>
-
-const std::string kCostTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
-const std::string kFrameTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
-const std::string kBackFrameTextureKey = PowerUpTextures::BuildKey(PowerUpTextures::kBackFramePath);
-constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
-constexpr float2 kFramePositionOffset = { -0.18f,  -0.008f };
-constexpr float2 kIconPositionOffset = { -0.18f,  -0.008f };
-constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
-constexpr float2 kNamePositionOffset = { 0.30f,  0.05f };
-constexpr float2 kInfomationPositionOffset = { 0.210f,  0.000f };
-constexpr float2 kLevelPositionOffset = { 0.50f,  0.045f };
-constexpr float2 kCostPositionOffset = { 0.50f,  -0.060f }; 
-constexpr float kIconScaleOffset = 0.5f;
-constexpr float kFrameScaleOffset = 0.5f;
-constexpr float kBackFrameScaleOffset = 1.8f;
-constexpr float kCostIconScaleOffset = 0.3f;
-constexpr float kNameScaleOffset = 0.08f;
-constexpr float kInfomationScaleOffset = 0.05f;
-constexpr float kLevelScaleOffset = 0.06f;
-constexpr float kCostScaleOffset = 0.07f;
-// テクスチャ名
-constexpr const char* kCostTextureName = "Cost";
-constexpr const char* kFrameTextureName = "Frame";
-constexpr const char* kBackFrameTexturenName = "BackFrame";
-
-
-constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
-constexpr float kHudCostIconScaleOffset = 0.25f;
 
 namespace
 {
-    Transform MakeTransform(const float3& position, const float3& scale)
+    constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
+    constexpr float2 kFramePositionOffset = { -0.18f,  -0.008f };
+    constexpr float2 kIconPositionOffset = { -0.18f,  -0.008f };
+    constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
+    constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
+
+    constexpr float kIconScaleOffset = 0.5f;
+    constexpr float kFrameScaleOffset = 0.5f;
+    constexpr float kBackFrameScaleOffset = 1.8f;
+    constexpr float kCostIconScaleOffset = 0.3f;
+    constexpr float kHudCostIconScaleOffset = 0.25f;
+
+    Transform MakeTransform(const float2& position, const float2& scale)
     {
         Transform transform{};
-        transform.position = position;
+        transform.position = float3{ position.x, position.y, 0.0f };
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-        transform.scale = scale;
+        transform.scale = float3{ scale.x, scale.y, 1.0f };
         return transform;
     }
 }
 
-
 PowerUpStringTexture::PowerUpStringTexture()
-        : m_texture(std::make_shared<Texture2D>())
-        , m_stringTextureScale(float2{ 1.0f, 1.0f })
+    : m_texture(std::make_shared<Texture2D>())
+    , m_stringTextureScale(float2{ 1.0f, 1.0f })
 {
 }
 
 HRESULT PowerUpStringTexture::Create(DXGI_FORMAT format, UINT width, UINT height)
 {
-        ID3D11Device* device = GetDevice();
-        if (!device)
-        {
-                return E_FAIL;
-        }
-
-        if (!m_texture)
-        {
-                m_texture = std::make_shared<Texture2D>();
-        }
-
-        const bool created = m_texture->CreateBlank(device, format, width, height);
-        return created ? S_OK : E_FAIL;
+    (void)format;
+    m_width = width;
+    m_height = height;
+    return S_OK;
 }
 
 void PowerUpStringTexture::UpdatePixels(const void* data, UINT pitch)
 {
-        ID3D11DeviceContext* context = GetContext();
-        if (!context || !m_texture)
-        {
-                return;
-        }
-
-        m_texture->UpdatePixels(context, data, pitch);
+    (void)data;
+    (void)pitch;
 }
 
 void PowerUpStringTexture::SetScale(float2 a_scale)
 {
-        m_stringTextureScale = a_scale;
+    m_stringTextureScale = a_scale;
 }
 
 float2 PowerUpStringTexture::GetScale() const
 {
-        return m_stringTextureScale;
-}
-
-TextBounds& PowerUpStringTexture::GetBound()
-{
-        return bound;
-}
-
-const TextBounds& PowerUpStringTexture::GetBound() const
-{
-        return bound;
+    return m_stringTextureScale;
 }
 
 UINT PowerUpStringTexture::GetWidth() const
 {
-        return m_texture ? m_texture->GetWidth() : 0u;
+    return m_width;
 }
 
 UINT PowerUpStringTexture::GetHeight() const
 {
-        return m_texture ? m_texture->GetHeight() : 0u;
+    return m_height;
 }
 
 ID3D11ShaderResourceView* PowerUpStringTexture::Get() const
 {
-        return m_texture ? m_texture->Get() : nullptr;
+    return m_texture ? m_texture->Get() : nullptr;
 }
 
 std::shared_ptr<Texture2D> PowerUpStringTexture::GetTexture() const
 {
-        return m_texture;
+    return m_texture;
 }
-
 
 PowerUpRenderer::PowerUpRenderer(TextureCache& a_cache)
+    : m_cache(a_cache)
+    , m_modelRenderer(std::make_unique<ModelRender>())
 {
-        m_modelRenderer = std::make_unique<ModelRender>();
+    const std::string costKey = PowerUpTextures::BuildKey(PowerUpTextures::kCostPath);
+    const std::string frameKey = PowerUpTextures::BuildKey(PowerUpTextures::kFramePath);
+    const std::string backFrameKey = PowerUpTextures::BuildKey(PowerUpTextures::kBackFramePath);
 
-        m_cost = a_cache.GetTexture(kCostTextureKey);
-        m_iconFrame = a_cache.GetTexture(kFrameTextureKey);
-        m_backFrame = a_cache.GetTexture(kBackFrameTextureKey);
+    m_cost = m_cache.GetTexture(costKey);
+    m_iconFrame = m_cache.GetTexture(frameKey);
+    m_backFrame = m_cache.GetTexture(backFrameKey);
 }
 
-PowerUpRenderer::~PowerUpRenderer()
-{
-}
+PowerUpRenderer::~PowerUpRenderer() = default;
 
 bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 {
-	m_config = config;
-	m_texture = std::make_shared<PowerUpStringTexture>();
-	HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight);
-	if (FAILED(hr))
-	{
-		return false;
-	}
-
-	const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
-	m_rgbaBuffer.resize(pixelCount * 4);
-
-	if (!CreateTextResources())
-	{
-		Shutdown();
-		return false;
-	}
-
-	if (!CreateGuidelineTexture())
-	{
-		Shutdown();
-		return false;
-	}
-
-	m_ready = true;
-	m_textureDirty = false;
-	return true;
-
-
-
+    m_config = config;
+    return true;
 }
 
 void PowerUpRenderer::Shutdown()
 {
-        DestroyTextResources();
-        m_modelRenderer.reset();
-        m_texture.reset();
-        m_guidelineTexture.reset();
-        m_rgbaBuffer.clear();
-	m_ready = false;
-	m_textureDirty = false;
+    m_modelRenderer.reset();
+    m_quadMesh.reset();
+    m_cost.reset();
+    m_iconFrame.reset();
+    m_backFrame.reset();
 }
-
 
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 {
-        float3 position;
-        float3 scale;
-        float2 offset;
+    if (!m_cost)
+    {
+        return;
+    }
 
-
-	// バックフレーム描画
-	offset.x = kHudCostIconPositionOffset.x;
-	offset.y = kHudCostIconPositionOffset.y;
-	position.x = offset.x;
-	position.y = offset.y;
-	position.z = 1.0f;
-	scale.x = kHudCostIconScaleOffset;
-	scale.y = kHudCostIconScaleOffset;
-	scale.z = 1.0f;
-
-        const Transform transform = MakeTransform(position, scale);
-        DrawQuad(m_cost, transform, camera);
+    DrawSprite(m_cost, UVRect{}, kHudCostIconPositionOffset, float2{ kHudCostIconScaleOffset, kHudCostIconScaleOffset },
+        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
 }
 
 void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
 {
-        float3 position;
-        float3 scale;
-        float2 offset;
+    if (!a_texture)
+    {
+        return;
+    }
 
-	offset.x = kBackFramePositionOffset.x * a_scale.x;
-	offset.y = kBackFramePositionOffset.y * a_scale.y;
-	position.x = a_position.x + offset.x;
-	position.y = a_position.y + offset.y;
-	position.z = 1.0f;
-	scale.x = a_scale.x * kBackFrameScaleOffset;
-	scale.y = a_scale.y * kBackFrameScaleOffset;
-	scale.z = 1.0f;
+    const float2 scaledPosition{ a_position.x + kBackFramePositionOffset.x * a_scale.x,
+        a_position.y + kBackFramePositionOffset.y * a_scale.y };
+    const float2 scaledScale{ a_scale.x * kBackFrameScaleOffset, a_scale.y * kBackFrameScaleOffset };
 
-        const Transform transform = MakeTransform(position, scale);
-        DrawQuad(a_texture, transform, camera);
+    DrawSprite(a_texture, UVRect{}, scaledPosition, scaledScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
 }
-
-
-
-
 
 void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::ICamera& camera)
 {
+    if (!m_backFrame || !m_iconFrame || !m_cost)
+    {
+        return;
+    }
 
-	if (data.dirty)
-	{
-		UpdateBitmap(data);
-		UploadTexture(data);
-	}
+    const float2 backPos{ data.drawPosition.x + kBackFramePositionOffset.x * data.drawScale.x,
+        data.drawPosition.y + kBackFramePositionOffset.y * data.drawScale.y };
+    const float2 backScale{ data.drawScale.x * kBackFrameScaleOffset, data.drawScale.y * kBackFrameScaleOffset };
+    DrawSprite(m_backFrame, UVRect{}, backPos, backScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
 
-        float3 position;
-        float3 scale;
-        float2 offset;
-	
-	
-	// バックフレーム描画
-	offset.x = kBackFramePositionOffset.x * data.drawScale.x;
-	offset.y = kBackFramePositionOffset.y * data.drawScale.y;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kBackFrameScaleOffset;
-	scale.y = data.drawScale.y * kBackFrameScaleOffset;
-	scale.z = 1.0f;
+    const float2 framePos{ data.drawPosition.x + kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+        data.drawPosition.y + kFramePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
+    const float2 frameScale{ data.drawScale.x * kFrameScaleOffset, data.drawScale.y * kFrameScaleOffset };
+    DrawSprite(m_iconFrame, UVRect{}, framePos, frameScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
 
-        Transform transform = MakeTransform(position, scale);
-        DrawQuad(m_backFrame, transform, camera);
+    if (data.texture)
+    {
+        const float2 iconPos{ data.drawPosition.x + kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+            data.drawPosition.y + kIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
+        const float2 iconScale{ data.drawScale.x * kIconScaleOffset, data.drawScale.y * kIconScaleOffset };
+        DrawSprite(data.texture, UVRect{}, iconPos, iconScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
+    }
 
-	// アイコンフレーム描画
-	offset.x = kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kFramePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kFrameScaleOffset;
-	scale.y = data.drawScale.y * kFrameScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-        DrawQuad(m_iconFrame, transform, camera);
-
-	// アイコン描画
-	offset.x = kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kIconScaleOffset;
-	scale.y = data.drawScale.y * kIconScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-        DrawQuad(data.texture, transform, camera);
-
-	// コストアイコン描画
-	offset.x = kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kCostIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kCostIconScaleOffset;
-	scale.y = data.drawScale.y * kCostIconScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-        DrawQuad(m_cost, transform, camera);
-	
-
-
-	// 強化名描画
-	offset.x = kNamePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kNamePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kNameScaleOffset;
-	scale.y = data.drawScale.y * kNameScaleOffset;
-	scale.z = 1.0f;
-
-
-        transform = MakeTransform(position, scale);
-
-        RenderString(data, transform, camera, NodeName);
-
-	// 説明描画
-	offset.x = kInfomationPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kInfomationPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kInfomationScaleOffset;
-	scale.y = data.drawScale.y * kInfomationScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-
-
-        RenderString(data, transform, camera, NodeInfomation);
-
-
-	// コスト描画
-	offset.x = kLevelPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kLevelPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kLevelScaleOffset;
-	scale.y = data.drawScale.y * kLevelScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-
-        RenderString(data, transform, camera, NodeLevel);
-
-	offset.x = kCostPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
-	offset.y = kCostPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
-	position.x = data.drawPosition.x + offset.x;
-	position.y = data.drawPosition.y + offset.y;
-	position.z = 1.0f;
-	scale.x = data.drawScale.x * kCostScaleOffset;
-	scale.y = data.drawScale.y * kCostScaleOffset;
-	scale.z = 1.0f;
-
-        transform = MakeTransform(position, scale);
-
-        RenderString(data, transform, camera, NodeCost);
+    const float2 costIconPos{ data.drawPosition.x + kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset,
+        data.drawPosition.y + kCostIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset };
+    const float2 costIconScale{ data.drawScale.x * kCostIconScaleOffset, data.drawScale.y * kCostIconScaleOffset };
+    DrawSprite(m_cost, UVRect{}, costIconPos, costIconScale, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), camera);
 }
 
-void PowerUpRenderer::DrawQuad(
-        std::shared_ptr<Texture2D> texture,
-        const Transform& transform,
-        const CameraSpace::ICamera& camera,
-        const float2& uvStart,
-        const float2& uvScale)
+void PowerUpRenderer::DrawSprite(
+    const std::shared_ptr<Texture2D>& texture,
+    const UVRect& uvRect,
+    const float2& position,
+    const float2& scale,
+    const DirectX::XMFLOAT4& tint,
+    const CameraSpace::ICamera& camera)
 {
-        if (!texture || !m_modelRenderer)
-        {
-                return;
-        }
+    if (!texture || !m_modelRenderer)
+    {
+        return;
+    }
 
-        const DirectX::XMFLOAT2 dxUvStart(uvStart.x, uvStart.y);
-        const DirectX::XMFLOAT2 dxUvScale(uvScale.x, uvScale.y);
+    std::shared_ptr<MeshDX> mesh = (uvRect.start.x == 0.0f && uvRect.start.y == 0.0f &&
+        uvRect.size.x == 1.0f && uvRect.size.y == 1.0f)
+        ? GetQuadMesh()
+        : CreateQuadMesh(uvRect);
+    if (!mesh)
+    {
+        return;
+    }
 
-        if (!m_quadRenderer.SetTexture(texture))
-        {
-                return;
-        }
+    auto material = std::make_shared<MaterialDX>(
+        tint,
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+        texture);
 
-        m_quadRenderer.Draw(*m_modelRenderer, transform, &camera, dxUvStart, dxUvScale);
+    Render::Model model = BuildModel(material, mesh);
+    const Transform transform = MakeTransform(position, scale);
+    m_modelRenderer->Draw(model, transform, &camera);
 }
 
-bool PowerUpRenderer::CreateTextResources()
+std::shared_ptr<MeshDX> PowerUpRenderer::GetQuadMesh()
 {
-#if !defined(_WIN32)
-	return false;
-#else
-	BITMAPINFO info = {};
-	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	info.bmiHeader.biWidth = static_cast<LONG>(m_config.textureWidth);
-	info.bmiHeader.biHeight = -static_cast<LONG>(m_config.textureHeight);
-	info.bmiHeader.biPlanes = 1;
-	info.bmiHeader.biBitCount = 32;
-	info.bmiHeader.biCompression = BI_RGB;
+    auto mesh = m_quadMesh.lock();
+    if (mesh)
+    {
+        return mesh;
+    }
 
-	m_memoryDC = CreateCompatibleDC(nullptr);
-	if (!m_memoryDC)
-	{
-		return false;
-	}
-
-	m_bitmap = CreateDIBSection(m_memoryDC, &info, DIB_RGB_COLORS, &m_rawBits, nullptr, 0);
-	if (!m_bitmap)
-	{
-		return false;
-	}
-	m_prevBitmap = SelectObject(m_memoryDC, m_bitmap);
-
-	LOGFONTA font = {};
-	font.lfHeight = -static_cast<LONG>(m_config.fontSizePixels);
-	font.lfWeight = FW_SEMIBOLD;
-	strcpy_s(font.lfFaceName, "Segoe UI");
-	m_font = CreateFontIndirectA(&font);
-	if (!m_font)
-	{
-		return false;
-	}
-	m_prevFont = SelectObject(m_memoryDC, m_font);
-
-	SetBkMode(m_memoryDC, TRANSPARENT);
-	SetTextColor(m_memoryDC, RGB(255, 255, 255));
-
-	return true;
-#endif
+    mesh = CreateQuadMesh(UVRect{});
+    m_quadMesh = mesh;
+    return mesh;
 }
 
-bool PowerUpRenderer::CreateGuidelineTexture()
+std::shared_ptr<MeshDX> PowerUpRenderer::CreateQuadMesh(const UVRect& uvRect) const
 {
-        ID3D11Device* device = GetDevice();
-        if (!device)
-        {
-                return false;
-        }
+    const std::vector<MeshDX::Vertex> vertices{
+        MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x, uvRect.start.y } },
+        MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x + uvRect.size.x, uvRect.start.y } },
+        MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x, uvRect.start.y + uvRect.size.y } },
+        MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvRect.start.x + uvRect.size.x, uvRect.start.y + uvRect.size.y } },
+    };
 
-        constexpr size_t kSize = 4;
-        std::array<uint32_t, kSize* kSize> pixels{};
-        for (size_t y = 0; y < kSize; ++y)
-        {
-		for (size_t x = 0; x < kSize; ++x)
-		{
-			const bool opaque = (x % 2) == 0;
-                        pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
-                }
-        }
+    MeshDX::Description desc{};
+    desc.pVtx = vertices.data();
+    desc.vtxSize = sizeof(MeshDX::Vertex);
+    desc.vtxCount = static_cast<UINT>(vertices.size());
+    desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
-        auto texture = std::make_shared<Texture2D>();
-        const bool created = texture->CreateBlank(
-                device,
-                DXGI_FORMAT_R8G8B8A8_UNORM,
-                static_cast<UINT>(kSize),
-                static_cast<UINT>(kSize),
-                pixels.data(),
-                static_cast<UINT>(kSize * sizeof(uint32_t)));
-        if (!created)
-        {
-                return false;
-        }
-
-        m_guidelineTexture = std::move(texture);
-
-        return true;
+    return std::make_shared<MeshDX>(desc, 0);
 }
 
-void PowerUpRenderer::DestroyTextResources()
+Render::Model PowerUpRenderer::BuildModel(const std::shared_ptr<MaterialDX>& material, const std::shared_ptr<MeshDX>& mesh) const
 {
-#if defined(_WIN32)
-	if (m_memoryDC && m_prevFont)
-	{
-		SelectObject(m_memoryDC, m_prevFont);
-	}
-	if (m_font)
-	{
-		DeleteObject(m_font);
-	}
-	m_prevFont = nullptr;
-	m_font = nullptr;
-
-	if (m_memoryDC && m_prevBitmap)
-	{
-		SelectObject(m_memoryDC, m_prevBitmap);
-	}
-	if (m_bitmap)
-	{
-		DeleteObject(m_bitmap);
-	}
-	m_prevBitmap = nullptr;
-	m_bitmap = nullptr;
-	m_rawBits = nullptr;
-
-	if (m_memoryDC)
-	{
-		DeleteDC(m_memoryDC);
-	}
-	m_memoryDC = nullptr;
-#endif
+    std::vector<std::shared_ptr<MeshDX>> meshes{ mesh };
+    std::vector<std::shared_ptr<MaterialDX>> materials{ material };
+    return Render::Model(std::move(meshes), std::move(materials));
 }
 
-void PowerUpRenderer::UploadTexture(const NodeRenderData& data)
+Transform PowerUpRenderer::MakeTransform(const float2& position, const float2& scale) const
 {
-	if (!m_textureDirty || !m_rawBits || m_rgbaBuffer.empty() || !m_texture)
-	{
-		return;
-	}
-
-	const size_t pixelCount = static_cast<size_t>(data.stringTexture->GetWidth()) * static_cast<size_t>(data.stringTexture->GetHeight());
-	uint8_t* src = static_cast<uint8_t*>(m_rawBits);
-	uint8_t* dst = m_rgbaBuffer.data();
-	for (size_t i = 0; i < pixelCount; ++i)
-	{
-		const uint8_t b = src[0];
-		const uint8_t g = src[1];
-		const uint8_t r = src[2];
-		const uint8_t intensity = std::max({ r, g, b });
-		dst[0] = 255;
-		dst[1] = 255;
-		dst[2] = 255;
-		dst[3] = intensity;
-		src += 4;
-		dst += 4;
-	}
-
-	data.stringTexture->UpdatePixels(m_rgbaBuffer.data(), data.stringTexture->GetWidth() * 4);
-	m_textureDirty = false;
-
-	// 文字の書かれている範囲を格納
-	DetectTextBounds(data.stringTexture->GetBound(), m_rgbaBuffer.data(), data.stringTexture->GetWidth(), data.stringTexture->GetHeight());
-	
-	TEXTMETRIC tm;
-	GetTextMetrics(m_memoryDC, &tm);
-
-	
-
-	float quadWidth = static_cast<float>(tm.tmWeight);
-	float quadHeight = static_cast<float>(tm.tmHeight);
-
-	data.stringTexture->SetScale(float2{ quadWidth, quadHeight });
+    return ::MakeTransform(position, scale);
 }
 
-
-void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
-{
-#if defined(_WIN32)
-	if (!m_memoryDC)
-	{
-		return;
-	}
-
-	if(m_config.textureWidth != data.stringTexture->GetWidth() || m_config.textureHeight != data.stringTexture->GetHeight())
-	{
-		return;
-	}
-
-	PatBlt(m_memoryDC, 0, 0, static_cast<int>(data.stringTexture->GetWidth()), static_cast<int>(data.stringTexture->GetHeight()), BLACKNESS);
-
-	const std::string hudText = BuildHudString(data);
-
-	RECT textRect = {};
-	textRect.left = static_cast<LONG>(m_config.innerPaddingPixels);
-	textRect.top = static_cast<LONG>(m_config.innerPaddingPixels);
-	textRect.right = static_cast<LONG>(data.stringTexture->GetWidth()) - static_cast<LONG>(m_config.innerPaddingPixels);
-	textRect.bottom = static_cast<LONG>(data.stringTexture->GetHeight()) - static_cast<LONG>(m_config.innerPaddingPixels);
-
-	RECT shadowRect = textRect;
-	shadowRect.left += static_cast<LONG>(m_config.shadowOffsetX);
-	shadowRect.top += static_cast<LONG>(m_config.shadowOffsetY);
-	shadowRect.right += static_cast<LONG>(m_config.shadowOffsetX);
-	shadowRect.bottom += static_cast<LONG>(m_config.shadowOffsetY);
-
-	SetTextColor(m_memoryDC, RGB(0, 0, 0));
-	DrawTextA(m_memoryDC, hudText.c_str(), -1, &shadowRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
-
-	SetTextColor(m_memoryDC, RGB(255, 255, 255));
-	DrawTextA(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
-
-	GdiFlush();
-	m_textureDirty = true;
-
-
-	TEXTMETRIC tm;
-	GetTextMetrics(m_memoryDC, &tm);
-	
-	textPixelWidth = 300;
-	textPixelHeight = tm.tmHeight;
-	
-	
-#else
-	(void)data;
-#endif
-}
-
-void PowerUpRenderer::RenderString(const NodeRenderData& data, const Transform& transform, const CameraSpace::ICamera& camera, int uvNum)
-{
-        if (!m_guidelineTexture)
-        {
-                return;
-        }
-
-
-	float viewportWidth = 0.0f;
-	float viewportHeight = 0.0f;
-	if (!TryGetViewportSize(viewportWidth, viewportHeight))
-	{
-		return;
-	}
-
-
-	float2 scale = data.stringTexture->GetScale();
-	UVRegion region = ComputeUV(data.stringTexture->GetBound(), data.stringTexture->GetHeight());
-
-
-	uvNum++;
-
-	float uvStartY = (scale.y * uvNum / data.stringTexture->GetHeight() + region.startY);
-	float height = (m_config.fontSizePixels) / data.stringTexture->GetHeight();
-	
-        float2 uvStart = float2{ 0.0f, uvStartY};
-        float2 uvSize = float2{ 1.0f, height};
-
-        float width = static_cast<float>(scale.x / scale.y);
-
-        SetBlendMode(BLEND_ALPHA);
-
-        Transform scaledTransform = transform;
-        scaledTransform.scale.x *= width;
-
-        DrawQuad(data.stringTexture->GetTexture(), scaledTransform, camera, uvStart, uvSize);
-
-}
-
-void PowerUpRenderer::DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, int width, int height)
-{
-	TextBounds result{};
-	result.top = height;     // 初期値は最大
-	result.bottom = 0;       // 初期値は最小
-
-	const int stride = width * 4;
-
-	// 色が塗られている最初のピクセルと最後のピクセルの高さを取得
-	for (int y = 0; y < height; ++y)
-	{
-		const uint8_t* row = rgba + y * stride;
-
-		for (int x = 0; x < width; ++x)
-		{
-			uint8_t alpha = row[x * 4 + 3]; // ← intensity が alpha に入っている前提
-
-			if (alpha > 30)
-			{
-				if (y < result.top) result.top = y;
-				if (y > result.bottom) result.bottom = y;
-			}
-		}
-	}
-
-	// 一文字も描かれてなかった場合の保険
-	if (result.top > result.bottom)
-	{
-		result.top = 0;
-		result.bottom = 0;
-	}
-
-	result.height = (result.bottom - result.top) + 1;
-	bounds = result;
-}
-
-
-
-bool PowerUpRenderer::TryGetViewportSize(float& width, float& height) const
-{
-        RenderTargetDX* rtv = GetDefaultRTV();
-        if (!rtv)
-        {
-                return false;
-	}
-
-	width = static_cast<float>(rtv->GetWidth());
-	height = static_cast<float>(rtv->GetHeight());
-	return width > 0.0f && height > 0.0f;
-}
-std::string PowerUpRenderer::BuildHudString(const NodeRenderData& data) const
-{
-
-	std::ostringstream stream;
-	// ダミー描画
-	stream << 'l' << '\n';
-
-	stream << data.powerUpName << '\n';
-
-	stream << data.powerUpInfomation << '\n';
-
-	stream << "Lv." << data.level << '\n';
-
-	stream << data.cost << '\n';
-
-	return stream.str();
-}
-
-PowerUpRenderer::UVRegion PowerUpRenderer::ComputeUV(const TextBounds& bounds, int textureHeight)
-{
-	UVRegion uv{};
-	uv.startY = float(bounds.top) / float(textureHeight);
-	uv.height = float(bounds.height) / float(textureHeight);
-	return uv;
-}
