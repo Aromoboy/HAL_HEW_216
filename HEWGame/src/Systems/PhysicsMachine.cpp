@@ -328,6 +328,20 @@ namespace Systems
             return;
         }
 
+        if (m_syncInProgress)
+        {
+            DebugTrace("[PhysicsMachine] SyncBodies called re-entrantly; skipping.\n");
+            assert(false && "PhysicsMachine::SyncBodies called re-entrantly.");
+            return;
+        }
+
+        struct SyncScope
+        {
+            bool& flag;
+            explicit SyncScope(bool& f) : flag(f) { flag = true; }
+            ~SyncScope() { flag = false; }
+        } syncScope(m_syncInProgress);
+
         for (Entities::PhysicalEntity* body : m_bodies)
         {
             if (!body)
