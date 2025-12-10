@@ -1,14 +1,16 @@
 #include "PerspectiveCamera.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
+#include <sstream>
 
 namespace
 {
-        constexpr float kDefaultFovDegrees = 60.0f;
-        constexpr float kMinFovDegrees = 1.0f;
-        constexpr float kMaxFovDegrees = 170.0f;
+constexpr float kDefaultFovDegrees = 60.0f;
+constexpr float kMinFovDegrees = 1.0f;
+constexpr float kMaxFovDegrees = 175.0f;
 
         constexpr float kDefaultNearPlane = 0.1f;
         constexpr float kDefaultFarPlane = 1000.0f;
@@ -20,10 +22,32 @@ namespace
                 return static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
         }
 
-        bool IsFinitePositive(float value)
-        {
-                return std::isfinite(value) && value > 0.0f;
-        }
+bool IsFinitePositive(float value)
+{
+return std::isfinite(value) && value > 0.0f;
+}
+
+void DebugTrace(const std::string& message)
+{
+#if defined(_WIN32) && defined(_DEBUG)
+::OutputDebugStringA(message.c_str());
+#else
+(void)message;
+#endif
+}
+
+bool MatrixHasNaN(const DirectX::XMFLOAT4X4& matrix)
+{
+const float* values = &matrix._11;
+for (int i = 0; i < 16; ++i)
+{
+if (!std::isfinite(values[i]))
+{
+return true;
+}
+}
+return false;
+}
 }
 
 namespace CameraSpace
@@ -37,28 +61,25 @@ namespace CameraSpace
                 MarkProjectionDirty();
         }
 
-        void PerspectiveCamera::OnViewportChanged(float width, float height)
-        {
-                if (!IsFinitePositive(width) || !IsFinitePositive(height))
-                {
-                        return;
-                }
+void PerspectiveCamera::OnViewportChanged(float width, float height)
+{
+float rawAspect = DefaultAspectRatio();
+if (IsFinitePositive(width) && IsFinitePositive(height))
+{
+rawAspect = width / height;
+}
 
-                const float newAspect = width / height;
-                if (!std::isfinite(newAspect) || newAspect <= 0.0f)
-                {
-                        return;
-                }
+const float newAspect = NormalizeAspect(rawAspect, "OnViewportChanged.aspect");
+if (std::fabs(newAspect - m_aspect) <= std::numeric_limits<float>::epsilon())
+{
+return;
+}
 
-                if (std::fabs(newAspect - m_aspect) <= std::numeric_limits<float>::epsilon())
-                {
-                        return;
-                }
-
-                m_aspect = newAspect;
-                MarkProjectionDirty();
-                UpdateProjection();
-        }
+m_aspect = newAspect;
+MarkProjectionDirty();
+UpdateProjection();
+BaseCamera::SetPerspective(DirectX::XMConvertToDegrees(m_fovY), m_aspect, m_nearZ, m_farZ);
+}
 
         void PerspectiveCamera::SetFieldOfViewDegrees(float fovYDegrees)
         {
@@ -182,58 +203,127 @@ namespace CameraSpace
                 UpdateProjection();
         }
 
-        void PerspectiveCamera::UpdateProjection()
-        {
-                DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
-                DirectX::XMStoreFloat4x4(&m_projection, DirectX::XMMatrixTranspose(projection));
-                m_projectionDirty = false;
-        }
+void PerspectiveCamera::UpdateProjection()
+{
+DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
+DirectX::XMStoreFloat4x4(&m_projection, projection);
+m_projectionDirty = false;
 
-        float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char* /*contextLabel*/) const
-        {
-                if (!std::isfinite(degrees))
-                {
-                        return DirectX::XMConvertToRadians(kDefaultFovDegrees);
-                }
+#if defined(_DEBUG)
+assert(!MatrixHasNaN(m_projection));
+#endif
+}
 
-                const float clamped = std::clamp(degrees, kMinFovDegrees, kMaxFovDegrees);
-                return DirectX::XMConvertToRadians(clamped);
-        }
+float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char* /*contextLabel*/) const
+{
+float result = degrees;
+bool adjusted = false;
+std::ostringstream oss;
+oss << "[PerspectiveCamera] NormalizeFovDegrees: ";
 
-        float PerspectiveCamera::NormalizeAspect(float aspect, const char* /*contextLabel*/) const
-        {
-                if (!std::isfinite(aspect) || aspect <= kMinAspectRatio)
-                {
-                        const float fallback = DefaultAspectRatio();
-                        return fallback;
-                }
+if (!std::isfinite(result))
+{
+result = kDefaultFovDegrees;
+adjusted = true;
+oss << "nan->" << result << "deg ";
+}
 
-                return aspect;
-        }
+const float clamped = std::clamp(result, kMinFovDegrees, kMaxFovDegrees);
+if (clamped != result)
+{
+adjusted = true;
+oss << "clamped to " << clamped << "deg ";
+}
 
-        float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char* /*contextLabel*/) const
-        {
-                if (!std::isfinite(nearPlane) || nearPlane <= 0.0f)
-                {
-                        return kDefaultNearPlane;
-                }
+if (adjusted)
+{
+oss << '\n';
+DebugTrace(oss.str());
+}
 
-                return std::max(nearPlane, kDefaultNearPlane);
-        }
+return DirectX::XMConvertToRadians(clamped);
+}
 
-        float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char* /*contextLabel*/) const
-        {
-                if (!std::isfinite(farPlane))
-                {
-                        return std::max(kDefaultFarPlane, nearPlane + kMinFarSeparation);
-                }
+float PerspectiveCamera::NormalizeAspect(float aspect, const char* /*contextLabel*/) const
+{
+float result = aspect;
+bool adjusted = false;
+std::ostringstream oss;
+oss << "[PerspectiveCamera] NormalizeAspect: ";
 
-                if (farPlane <= nearPlane + kMinFarSeparation)
-                {
-                        const float adjusted = nearPlane + kMinFarSeparation;
-                        return adjusted;
-                }
+if (!std::isfinite(result) || result <= kMinAspectRatio)
+{
+result = DefaultAspectRatio();
+adjusted = true;
+oss << "reset to " << result << ' ';
+}
 
-                return farPlane;
-        }
+if (adjusted)
+{
+oss << '\n';
+DebugTrace(oss.str());
+}
+
+return result;
+}
+
+float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char* /*contextLabel*/) const
+{
+float result = nearPlane;
+bool adjusted = false;
+std::ostringstream oss;
+oss << "[PerspectiveCamera] NormalizeNearPlane: ";
+
+if (!std::isfinite(result) || result <= 0.0f)
+{
+result = kDefaultNearPlane;
+adjusted = true;
+oss << "reset to " << result << ' ';
+}
+
+result = std::max(result, kDefaultNearPlane);
+if (result != nearPlane)
+{
+adjusted = true;
+oss << "clamped to " << result << ' ';
+}
+
+if (adjusted)
+{
+oss << '\n';
+DebugTrace(oss.str());
+}
+
+return result;
+}
+
+float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char* /*contextLabel*/) const
+{
+float result = farPlane;
+bool adjusted = false;
+std::ostringstream oss;
+oss << "[PerspectiveCamera] NormalizeFarPlane: ";
+
+if (!std::isfinite(result))
+{
+result = std::max(kDefaultFarPlane, nearPlane + kMinFarSeparation);
+adjusted = true;
+oss << "reset to " << result << ' ';
+}
+
+if (result <= nearPlane + kMinFarSeparation)
+{
+result = nearPlane + kMinFarSeparation;
+adjusted = true;
+oss << "raised to " << result << ' ';
+}
+
+if (adjusted)
+{
+oss << '\n';
+DebugTrace(oss.str());
+}
+
+return result;
+}
 }
