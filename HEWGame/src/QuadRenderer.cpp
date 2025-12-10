@@ -11,6 +11,24 @@
 
 namespace
 {
+    std::shared_ptr<MeshDX> CreateQuadMesh(const DirectX::XMFLOAT2& uvStart, const DirectX::XMFLOAT2& uvScale)
+    {
+        const std::array<MeshDX::Vertex, 4> vertices{
+            MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvStart.x, uvStart.y } },
+            MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f,  0.5f, 0.0f }, DirectX::XMFLOAT2{ uvStart.x + uvScale.x, uvStart.y } },
+            MeshDX::Vertex{ DirectX::XMFLOAT3{ -0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvStart.x, uvStart.y + uvScale.y } },
+            MeshDX::Vertex{ DirectX::XMFLOAT3{  0.5f, -0.5f, 0.0f }, DirectX::XMFLOAT2{ uvStart.x + uvScale.x, uvStart.y + uvScale.y } },
+        };
+
+        MeshDX::Description desc{};
+        desc.pVtx = vertices.data();
+        desc.vtxSize = sizeof(MeshDX::Vertex);
+        desc.vtxCount = static_cast<UINT>(vertices.size());
+        desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+        return std::make_shared<MeshDX>(desc, 0);
+    }
+
     std::shared_ptr<MeshDX> CreateQuadMesh()
     {
         const std::array<MeshDX::Vertex, 4> vertices{
@@ -66,10 +84,25 @@ std::shared_ptr<MaterialDX> QuadRenderer::GetMaterial() const
 
 void QuadRenderer::Draw(ModelRender& renderer, const Transform& transform, const CameraSpace::ICamera* camera) const
 {
-    const auto quadMesh = GetSharedQuadMesh();
+    Draw(renderer, transform, camera, DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT2(1.0f, 1.0f));
+}
+
+void QuadRenderer::Draw(
+    ModelRender& renderer,
+    const Transform& transform,
+    const CameraSpace::ICamera* camera,
+    const DirectX::XMFLOAT2& uvStart,
+    const DirectX::XMFLOAT2& uvScale) const
+{
+    auto quadMesh = GetSharedQuadMesh();
     if (!quadMesh || !m_material)
     {
         return;
+    }
+
+    if (uvStart.x != 0.0f || uvStart.y != 0.0f || uvScale.x != 1.0f || uvScale.y != 1.0f)
+    {
+        quadMesh = CreateQuadMesh(uvStart, uvScale);
     }
 
     Render::Model model(

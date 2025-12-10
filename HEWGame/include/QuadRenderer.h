@@ -28,6 +28,12 @@ public:
     std::shared_ptr<MaterialDX> GetMaterial() const;
 
     void Draw(ModelRender& renderer, const Transform& transform, const CameraSpace::ICamera* camera) const;
+    void Draw(
+        ModelRender& renderer,
+        const Transform& transform,
+        const CameraSpace::ICamera* camera,
+        const DirectX::XMFLOAT2& uvStart,
+        const DirectX::XMFLOAT2& uvScale) const;
 
 private:
     static std::shared_ptr<MeshDX> GetSharedQuadMesh();

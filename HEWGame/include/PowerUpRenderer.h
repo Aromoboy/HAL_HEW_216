@@ -15,6 +15,7 @@
 #include "TextureCache.h"
 #include "MeshDX.h"
 #include "TextureDX.h"
+#include "QuadRenderer.h"
 
 
 
@@ -152,45 +153,22 @@ public:
 private:
 	
 
-	struct DrawSpriteData
-	{
-		float2 uvPos;
-		float2 uvScale;
-		float2 projOffset;
-		float2 projScale;
-		float r;
-		float g;
-		float b;
-		float alpha;
-
-
-		DrawSpriteData(float2 a_uvPos = {0.0f, 0.0f}, float2 a_uvScale = { 1.0f, 1.0f }, float2 a_projOffset = { 0.0f, 0.0f }, float2 a_projScale = { 1.0f, 1.0f }, float3 a_rgb = {1.0f,1.0f,1.0f}, float a_alpha = 1.0f)
-			: uvPos(a_uvPos)
-			, uvScale(a_uvScale)
-			, projOffset(a_projOffset)
-			, projScale(a_projScale)
-			, r(a_rgb.x)
-			, g(a_rgb.y)
-			, b(a_rgb.z)
-			, alpha(a_alpha)
-		{}
-	};
-
-	struct UVRegion
-	{
-		float startY;
-		float height;
-	};
+        struct UVRegion
+        {
+                float startY;
+                float height;
+        };
 
 
         void DrawQuad(
             std::shared_ptr<Texture2D> texture,
             const Transform& transform,
             const CameraSpace::ICamera& camera,
-            const DrawSpriteData& drawData);
+            const float2& uvStart = float2{ 0.0f, 0.0f },
+            const float2& uvScale = float2{ 1.0f, 1.0f });
 
-        std::shared_ptr<MeshDX> m_quadMesh;
         std::unique_ptr<ModelRender> m_modelRenderer;
+        QuadRenderer m_quadRenderer;
 
 	// 描画用テクスチャ
 	std::shared_ptr<Texture2D> m_cost;
