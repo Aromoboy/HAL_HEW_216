@@ -207,7 +207,9 @@
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
+    <ClCompile Include="src\ModelCache.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
+    <ClCompile Include="src\ModelRender.cpp" />
     <ClCompile Include="src\Entities\CollisionEntity.cpp" />
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
@@ -306,7 +308,9 @@
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
+    <ClInclude Include="include\ModelCache.h" />
     <ClInclude Include="include\ModelDX.h" />
+    <ClInclude Include="include\ModelRender.h" />
     <ClInclude Include="include\SweetsPrototypeManifest.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
