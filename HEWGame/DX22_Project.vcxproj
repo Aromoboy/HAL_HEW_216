@@ -239,6 +239,7 @@
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="src\Startup.cpp" />
+    <ClCompile Include="src\TextureCache.cpp" />
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />

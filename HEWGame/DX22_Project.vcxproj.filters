@@ -249,6 +249,9 @@
     <ClCompile Include="src\Systems\PhysicsMachineTests.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
+    <ClCompile Include="src\TextureCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\TextureDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
