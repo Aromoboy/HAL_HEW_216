@@ -108,7 +108,23 @@ namespace Systems
                 m_renderables.clear();
                 m_colliderRenderables.clear();
                 m_commands.clear();
+                m_manualCommands.clear();
                 m_colliderCommands.clear();
+        }
+
+        void DrawSystem::QueueManualDraw(Render::Model* model, const Transform& transform, Entities::Entity* source)
+        {
+                if (!model)
+                {
+                        return;
+                }
+
+                if (!ValidateTransform(transform, source))
+                {
+                        return;
+                }
+
+                m_manualCommands.push_back(DrawCommand{ source, model, transform });
         }
 
         void DrawSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -117,7 +133,13 @@ namespace Systems
 
                 m_commands.clear();
                 m_colliderCommands.clear();
-                if (m_renderables.empty())
+                const bool hadManualCommands = !m_manualCommands.empty();
+                if (hadManualCommands)
+                {
+                        m_commands.insert(m_commands.end(), m_manualCommands.begin(), m_manualCommands.end());
+                        m_manualCommands.clear();
+                }
+                if (m_renderables.empty() && !hadManualCommands)
                 {
                         return;
                 }
