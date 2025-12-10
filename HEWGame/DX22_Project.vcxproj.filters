@@ -153,22 +153,10 @@
     <ClCompile Include="src\MaterialDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\MeshBuffer.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="src\MeshDX.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\Model.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ModelCache.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="src\ModelDX.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ModelRender.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\PerspectiveCamera.cpp">
@@ -260,15 +248,6 @@
     </ClCompile>
     <ClCompile Include="src\Systems\PhysicsMachineTests.cpp">
       <Filter>Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TestObject.cpp">
-      <Filter>Entities</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Texture.cpp">
-      <Filter>Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TextureCache.cpp">
-      <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\TextureDX.cpp">
       <Filter>Rendering</Filter>
@@ -422,22 +401,10 @@
     <ClInclude Include="include\MaterialDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\MeshBuffer.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="include\MeshDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\Model.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ModelCache.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="include\ModelDX.h">
-      <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ModelRender.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\PerspectiveCamera.h">
@@ -536,26 +503,17 @@
     <ClInclude Include="include\Systems\PhysicsMachine.h">
       <Filter>Systems</Filter>
     </ClInclude>
-    <ClInclude Include="include\TestObject.h">
-      <Filter>Entities</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Texture.h">
+    <ClInclude Include="include\TextureDX.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-      <ClInclude Include="include\TextureCache.h">
-        <Filter>Rendering</Filter>
-      </ClInclude>
-      <ClInclude Include="include\TextureDX.h">
-        <Filter>Rendering</Filter>
-      </ClInclude>
-      <ClInclude Include="include\WorldBuffer.h">
-        <Filter>Rendering</Filter>
-      </ClInclude>
-      <ClInclude Include="include\TitleScene.h">
-        <Filter>App</Filter>
-      </ClInclude>
-      <ClInclude Include="include\Transform.h">
-        <Filter>Core</Filter>
+    <ClInclude Include="include\WorldBuffer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TitleScene.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Transform.h">
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
