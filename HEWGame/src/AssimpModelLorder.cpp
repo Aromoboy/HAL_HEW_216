@@ -25,7 +25,7 @@
 AssimpModelLorder::AssimpModelLorder() = default;
 
 // モデル読み込み
-std::shared_ptr<ModelDX> AssimpModelLorder::Load(
+std::shared_ptr<Render::Model> AssimpModelLorder::Load(
     const std::string& path,
     ID3D11Device* device,
     TextureCache& textureCache)
@@ -58,7 +58,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, bounds);
+    return std::make_shared<Render::Model>(meshes, materials, bounds);
 }
 
 // メッシュ作成
