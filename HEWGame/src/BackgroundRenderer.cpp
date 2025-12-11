@@ -139,8 +139,12 @@ void BackgroundRenderer::Draw()
 DirectX::XMFLOAT4X4 BackgroundRenderer::MakeOrthoMatrix() const
 {
     DirectX::XMFLOAT4X4 ortho{};
-    const float width = m_swapChainWidth > 0.0f ? m_swapChainWidth : 1.0f;
-    const float height = m_swapChainHeight > 0.0f ? m_swapChainHeight : 1.0f;
+    const float width = m_cachedMeshWidth > 0.0f
+        ? m_cachedMeshWidth
+        : (m_swapChainWidth > 0.0f ? m_swapChainWidth : 1.0f);
+    const float height = m_cachedMeshHeight > 0.0f
+        ? m_cachedMeshHeight
+        : (m_swapChainHeight > 0.0f ? m_swapChainHeight : 1.0f);
     DirectX::XMStoreFloat4x4(
         &ortho,
         DirectX::XMMatrixOrthographicLH(width, height, 0.0f, 1.0f));
@@ -159,11 +163,30 @@ bool BackgroundRenderer::LoadTexture(const std::string& path)
 
 void BackgroundRenderer::UpdateSwapChainSize()
 {
-    if (RenderTargetDX* rtv = GetDefaultRTV())
+    float width = m_swapChainWidth;
+    float height = m_swapChainHeight;
+
+    if (ID3D11DeviceContext* context = GetContext())
     {
-        m_swapChainWidth = static_cast<float>(rtv->GetWidth());
-        m_swapChainHeight = static_cast<float>(rtv->GetHeight());
+        D3D11_VIEWPORT viewport = {};
+        UINT viewportCount = 1;
+        context->RSGetViewports(&viewportCount, &viewport);
+
+        if (viewportCount > 0)
+        {
+            width = viewport.Width;
+            height = viewport.Height;
+        }
     }
+
+    if ((width <= 0.0f || height <= 0.0f) && RenderTargetDX* rtv = GetDefaultRTV())
+    {
+        width = static_cast<float>(rtv->GetWidth());
+        height = static_cast<float>(rtv->GetHeight());
+    }
+
+    m_swapChainWidth = width;
+    m_swapChainHeight = height;
 }
 
 void BackgroundRenderer::RefreshQuadMesh()
