@@ -4,6 +4,7 @@
 #include <memory>
 #include <wrl/client.h>
 #include <DirectXMath.h>
+#include <d3d11.h>
 
 #include "ICamera.h"
 #include "Transform.h"
@@ -24,6 +25,7 @@ public:
         DirectX::XMFLOAT2 uvStart{ 0.0f, 0.0f };
         DirectX::XMFLOAT2 uvSize{ 1.0f, 1.0f };
         DirectX::XMFLOAT4 tint{ 1.0f, 1.0f, 1.0f, 1.0f };
+        D3D11_TEXTURE_ADDRESS_MODE addressMode{ D3D11_TEXTURE_ADDRESS_CLAMP };
         bool enableBlending{ true };
         bool disableDepth{ true };
     };

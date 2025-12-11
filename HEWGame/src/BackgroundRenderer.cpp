@@ -133,7 +133,7 @@ void BackgroundRenderer::Draw()
     stateManager.SetDepthTest(false);
     stateManager.SetBlend(BlendMode::BLEND_ALPHA);
 
-    m_modelRenderer->Draw(*m_model, transform, &screenCamera);
+    m_modelRenderer->Draw(*m_model, transform, &screenCamera, D3D11_TEXTURE_ADDRESS_CLAMP);
 }
 
 DirectX::XMFLOAT4X4 BackgroundRenderer::MakeOrthoMatrix() const

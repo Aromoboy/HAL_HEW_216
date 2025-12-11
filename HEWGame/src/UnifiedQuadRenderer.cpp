@@ -97,7 +97,7 @@ bool UnifiedQuadRenderer::Draw(const DrawParams& params)
     stateManager.SetDepthTest(!params.disableDepth);
     stateManager.SetBlend(params.enableBlending ? BlendMode::BLEND_ALPHA : BlendMode::BLEND_NONE);
     const Transform transform = BuildTransform(params);
-    m_modelRenderer->Draw(model, transform, &m_camera);
+    m_modelRenderer->Draw(model, transform, &m_camera, params.addressMode);
     return true;
 }
 

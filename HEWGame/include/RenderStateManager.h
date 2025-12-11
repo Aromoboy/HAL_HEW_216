@@ -45,6 +45,7 @@ public:
     void SetBlend(BlendMode legacyBlend);
     void SetRasterizer(D3D11_CULL_MODE cullMode);
     void SetSampler(Sampler sampler);
+    void SetSampler(Sampler sampler, D3D11_TEXTURE_ADDRESS_MODE addressMode);
     void SetSampler(SamplerState legacySampler);
 
     bool IsStateStackBalanced() const;
@@ -81,6 +82,8 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerLinear;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerPoint;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerLinearClamp;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerPointClamp;
 
     std::vector<StateSnapshot> m_stateStack;
 };

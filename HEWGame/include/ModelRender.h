@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_set>
 #include <wrl/client.h>
+#include <d3d11.h>
 
 #include "ModelDX.h"
 #include "ICamera.h"
@@ -17,7 +18,11 @@ public:
     ModelRender();
     ~ModelRender();
 
-    void Draw(Render::Model& model, Transform transform, const CameraSpace::ICamera* camera);
+    void Draw(
+        Render::Model& model,
+        Transform transform,
+        const CameraSpace::ICamera* camera,
+        D3D11_TEXTURE_ADDRESS_MODE addressMode = D3D11_TEXTURE_ADDRESS_WRAP);
 
     static void EnsureDefaultShaders();
     static std::shared_ptr<VertexShader> s_defaultVS;

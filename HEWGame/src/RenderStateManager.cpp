@@ -79,6 +79,8 @@ void RenderStateManager::Shutdown()
     m_rasterizerCullBack.Reset();
     m_samplerLinear.Reset();
     m_samplerPoint.Reset();
+    m_samplerLinearClamp.Reset();
+    m_samplerPointClamp.Reset();
     m_stateStack.clear();
 }
 
@@ -178,10 +180,24 @@ void RenderStateManager::SetRasterizer(D3D11_CULL_MODE cullMode)
 
 void RenderStateManager::SetSampler(Sampler sampler)
 {
+    SetSampler(sampler, D3D11_TEXTURE_ADDRESS_WRAP);
+}
+
+void RenderStateManager::SetSampler(Sampler sampler, D3D11_TEXTURE_ADDRESS_MODE addressMode)
+{
     EnsureSamplerStates(GetDevice());
     if (auto* context = GetContext())
     {
-        ID3D11SamplerState* target = sampler == Sampler::Point ? m_samplerPoint.Get() : m_samplerLinear.Get();
+        const bool clamp = addressMode == D3D11_TEXTURE_ADDRESS_CLAMP;
+        ID3D11SamplerState* target = nullptr;
+        if (sampler == Sampler::Point)
+        {
+            target = clamp ? m_samplerPointClamp.Get() : m_samplerPoint.Get();
+        }
+        else
+        {
+            target = clamp ? m_samplerLinearClamp.Get() : m_samplerLinear.Get();
+        }
         context->PSSetSamplers(0, 1, &target);
     }
 }
@@ -285,7 +301,7 @@ void RenderStateManager::EnsureRasterizerStates(ID3D11Device* device)
 
 void RenderStateManager::EnsureSamplerStates(ID3D11Device* device)
 {
-    if (m_samplerLinear && m_samplerPoint)
+    if (m_samplerLinear && m_samplerPoint && m_samplerLinearClamp && m_samplerPointClamp)
     {
         return;
     }
@@ -306,6 +322,16 @@ void RenderStateManager::EnsureSamplerStates(ID3D11Device* device)
 
     sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
     device->CreateSamplerState(&sampler, m_samplerPoint.ReleaseAndGetAddressOf());
+
+    sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+
+    sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    device->CreateSamplerState(&sampler, m_samplerLinearClamp.ReleaseAndGetAddressOf());
+
+    sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    device->CreateSamplerState(&sampler, m_samplerPointClamp.ReleaseAndGetAddressOf());
 }
 
 void RenderStateManager::RunBalanceCheck()
