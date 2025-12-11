@@ -274,6 +274,7 @@ void HudRenderer::RenderGuideline(const HudDisplayData& data)
     params.positionPx = DirectX::XMFLOAT2(0.0f, centerY - (m_config.guidelineThicknessPixels * 0.5f));
     params.sizePx = DirectX::XMFLOAT2(viewportWidth, m_config.guidelineThicknessPixels);
     params.uvSize = DirectX::XMFLOAT2(repeatCount, 1.0f);
+    params.addressMode = D3D11_TEXTURE_ADDRESS_WRAP;
     params.enableBlending = true;
     params.disableDepth = true;
     m_quadRenderer->Draw(params);

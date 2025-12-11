@@ -173,7 +173,11 @@ ModelRender::ModelRender()
 
 ModelRender::~ModelRender() = default;
 
-void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera)
+void ModelRender::Draw(
+    Render::Model& a_model,
+    Transform transform,
+    const CameraSpace::ICamera* camera,
+    D3D11_TEXTURE_ADDRESS_MODE addressMode)
 {
     if (!camera)
     {
@@ -191,7 +195,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     stateManager.SetDepthTest(true);
     stateManager.SetBlend(BlendMode::BLEND_NONE);
     stateManager.SetRasterizer(D3D11_CULL_BACK);
-    stateManager.SetSampler(SAMPLER_LINEAR);
+    stateManager.SetSampler(SAMPLER_LINEAR, addressMode);
 
     struct VSConstants
     {
