@@ -1,6 +1,8 @@
 #include "AssimpModelLorder.h"
 
 #include <DirectXMath.h>
+#include <algorithm>
+#include <cctype>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -193,7 +195,40 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
-            std::string cacheKey = directory + texFile;
+            for (auto& c : texFile)
+                if (c == '/')
+                    c = '\\';
+
+            std::string textureDirectory = directory;
+
+            const size_t lastSeparator = texFile.find_last_of("\\/");
+            const std::string fileName = lastSeparator == std::string::npos
+                ? texFile
+                : texFile.substr(lastSeparator + 1);
+
+            const bool isAbsoluteWindowsPath = texFile.size() >= 3
+                && std::isalpha(static_cast<unsigned char>(texFile[0]))
+                && texFile[1] == ':'
+                && (texFile[2] == '\\' || texFile[2] == '/');
+
+            const auto equalsIgnoreCase = [](const std::string& lhs, const std::string& rhs)
+            {
+                return lhs.size() == rhs.size()
+                    && std::equal(lhs.begin(), lhs.end(), rhs.begin(), [](char l, char r)
+                        {
+                            return std::tolower(static_cast<unsigned char>(l))
+                                == std::tolower(static_cast<unsigned char>(r));
+                        });
+            };
+
+            if (isAbsoluteWindowsPath
+                && (equalsIgnoreCase(fileName, "texture.png") || equalsIgnoreCase(fileName, "texture2.png")))
+            {
+                texFile = fileName;
+                textureDirectory = "Assets\\Texture\\";
+            }
+
+            std::string cacheKey = textureDirectory + texFile;
 
             if (!texFile.empty() && texFile[0] == '*')
             {
@@ -210,7 +245,7 @@ AssimpModelLorder::MakeMaterial(
             }
             else
             {
-                std::string full = directory + texFile;
+                std::string full = textureDirectory + texFile;
                 std::wstring wfull(full.begin(), full.end());
                 texture = textureCache.Load(full, device, wfull);
             }
