@@ -58,7 +58,7 @@ private:
         // bV쐬
         std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds);
 	// }eA̍쐬
-	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, ID3D11Device* device, TextureCache& textureCache);
+        std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, const std::string& modelFilename, ID3D11Device* device, TextureCache& textureCache);
 
 
 
