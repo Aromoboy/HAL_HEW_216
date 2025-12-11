@@ -49,6 +49,7 @@ namespace SweetsSpace
     private:
         bool m_pendingDestroy = false;
         bool m_safeToDelete = true;
+        bool m_missingModelWarned = false;
     };
 }
 
