@@ -4,13 +4,16 @@
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <cstdlib>
 #include <cctype>
 #include <string>
 #include <string_view>
+#include <sstream>
 #include <vector>
+#include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
 #include "ModelDX.h"
@@ -137,7 +140,26 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 {
     Assimp::Importer importer;
     unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
+    const std::string normalizedPath = NormalizePath(path);
+    std::error_code absEc;
+    std::string resolvedFullPath = std::filesystem::absolute(path, absEc).string();
+    if (absEc)
+    {
+        resolvedFullPath = path;
+    }
+    DebugMessage("[AssimpModelLoader][CHECKPOINT A] load start path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
     const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
+    {
+        std::ostringstream oss;
+        oss << "[AssimpModelLoader][CHECKPOINT B] scene=" << (pScene ? "ok" : "null")
+            << " meshes=" << (pScene ? pScene->mNumMeshes : 0)
+            << " materials=" << (pScene ? pScene->mNumMaterials : 0);
+        if (!pScene)
+        {
+            oss << " error='" << importer.GetErrorString() << "'";
+        }
+        DebugMessage(oss.str());
+    }
     if (!pScene)
         return nullptr;
 
@@ -182,22 +204,68 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
+        aiMesh* mesh = pScene->mMeshes[i];
         std::vector<MeshDX::Vertex> vertices;
         std::vector<unsigned long> indices;
 
+        DebugMessage("[AssimpModelLoader][CHECKPOINT F] mesh name=" + std::string(mesh->mName.C_Str()));
+        {
+            const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
+            {
+                if (!node)
+                {
+                    return nullptr;
+                }
+                if (name == node->mName)
+                {
+                    return node;
+                }
+                for (unsigned int childIdx = 0; childIdx < node->mNumChildren; ++childIdx)
+                {
+                    if (const aiNode* found = self(self, node->mChildren[childIdx], name))
+                    {
+                        return found;
+                    }
+                }
+                return nullptr;
+            };
+
+            const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
+            if (matchedNode)
+            {
+                std::ostringstream oss;
+                oss << "[AssimpModelLoader][CHECKPOINT F] node transform for " << mesh->mName.C_Str() << " : ";
+                const aiMatrix4x4& m = matchedNode->mTransformation;
+                oss << "[" << m.a1 << "," << m.a2 << "," << m.a3 << "," << m.a4 << ";"
+                    << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
+                    << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
+                    << m.d1 << "," << m.d2 << "," << m.d3 << "," << m.d4 << "]";
+                DebugMessage(oss.str());
+            }
+            else
+            {
+                DebugMessage("[AssimpModelLoader][CHECKPOINT F] no node found for mesh " + std::string(mesh->mName.C_Str()));
+            }
+        }
+
         // 頂点
-        vertices.resize(pScene->mMeshes[i]->mNumVertices);
+        vertices.resize(mesh->mNumVertices);
+        DebugMessage("[AssimpModelLoader][CHECKPOINT E] mesh index=" + std::to_string(i)
+            + " vertices=" + std::to_string(mesh->mNumVertices)
+            + " faces=" + std::to_string(mesh->mNumFaces)
+            + " bones=" + std::string(mesh->HasBones() ? "yes" : "no"));
+
         for (unsigned int j = 0; j < vertices.size(); ++j)
         {
-            aiVector3D pos = pScene->mMeshes[i]->mVertices[j];
-            aiVector3D normal = pScene->mMeshes[i]->HasNormals()
-                ? pScene->mMeshes[i]->mNormals[j]
+            aiVector3D pos = mesh->mVertices[j];
+            aiVector3D normal = mesh->HasNormals()
+                ? mesh->mNormals[j]
                 : aiVector3D(0, 0, 0);
-            aiVector3D uv = pScene->mMeshes[i]->HasTextureCoords(0)
-                ? pScene->mMeshes[i]->mTextureCoords[0][j]
+            aiVector3D uv = mesh->HasTextureCoords(0)
+                ? mesh->mTextureCoords[0][j]
                 : aiVector3D(0, 0, 0);
-            aiColor4D col = pScene->mMeshes[i]->HasVertexColors(0)
-                ? pScene->mMeshes[i]->mColors[0][j]
+            aiColor4D col = mesh->HasVertexColors(0)
+                ? mesh->mColors[0][j]
                 : aiColor4D(1, 1, 1, 1);
 
             DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
@@ -231,10 +299,10 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         }
 
         // インデックス
-        indices.resize(pScene->mMeshes[i]->mNumFaces * 3);
-        for (unsigned int j = 0; j < pScene->mMeshes[i]->mNumFaces; ++j)
+        indices.resize(mesh->mNumFaces * 3);
+        for (unsigned int j = 0; j < mesh->mNumFaces; ++j)
         {
-            aiFace face = pScene->mMeshes[i]->mFaces[j];
+            aiFace face = mesh->mFaces[j];
             int idx = j * 3;
             indices[idx + 0] = face.mIndices[0];
             indices[idx + 1] = face.mIndices[1];
@@ -242,7 +310,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         }
 
         // マテリアル番号
-        unsigned long materialIndex = pScene->mMeshes[i]->mMaterialIndex;
+        unsigned long materialIndex = mesh->mMaterialIndex;
 
         // 説明構造体
         MeshDX::Description desc{};
@@ -255,6 +323,14 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
         meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
+    }
+
+    if (hasBounds)
+    {
+        std::ostringstream oss;
+        oss << "[AssimpModelLoader][CHECKPOINT E] bounds min(" << minBounds.x << "," << minBounds.y << "," << minBounds.z
+            << ") max(" << maxBounds.x << "," << maxBounds.y << "," << maxBounds.z << ")";
+        DebugMessage(oss.str());
     }
 
     if (hasBounds)
@@ -372,6 +448,14 @@ AssimpModelLorder::MakeMaterial(
                 };
 
                 std::string full = textureDirectory + texFile;
+                aiString baseColorPath;
+                std::string baseColorStr;
+                if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
+                {
+                    baseColorStr = baseColorPath.C_Str();
+                }
+                DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
+                    + " diffuse='" + texFile + "' baseColor='" + baseColorStr + "' modelDir=" + directory + " fullPath=" + full);
                 texture = loadTexture(full);
 
                 if (!texture && texFile == "パイナップル.png")

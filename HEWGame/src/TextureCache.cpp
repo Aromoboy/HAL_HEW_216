@@ -6,6 +6,7 @@
 #include "TextureCache.h"
 #include "Debug.h"
 #include <iostream>
+#include <filesystem>
 
 //============================================================
 // eNX`[hăLbVɓo^
@@ -14,7 +15,15 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 {
     // LbVɂłɑ݂邩mF
     auto it = textures.find(name);
-    if (it != textures.end()) return it->second;
+    if (it != textures.end())
+    {
+        DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' cached hit");
+        return it->second;
+    }
+
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
+    DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' exists=" + (exists ? "yes" : "no") + " cached=no");
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
