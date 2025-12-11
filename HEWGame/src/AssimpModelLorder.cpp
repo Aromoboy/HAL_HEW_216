@@ -359,13 +359,26 @@ AssimpModelLorder::MakeMaterial(
                     texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
-            else
-            {
-                std::string full = textureDirectory + texFile;
-                std::wstring wfull(full.begin(), full.end());
-                texture = textureCache.Load(full, device, wfull);
-            }
-        }
+else
+{
+    const auto loadTexture = [&](const std::string& fullPath)
+    {
+        std::wstring wfull(fullPath.begin(), fullPath.end());
+        return textureCache.Load(fullPath, device, wfull);
+    };
+
+
+    std::string full = textureDirectory + texFile;
+    texture = loadTexture(full);
+
+
+    if (!texture && texFile == u8"パイナップル.png")
+    {
+        const std::string alt = "Assets\\Texture\\" + texFile;
+        texture = loadTexture(alt);
+    }
+}
+
 
         if (!texture)
         {
