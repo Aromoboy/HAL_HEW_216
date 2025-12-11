@@ -154,6 +154,7 @@ private:
     Stage::FoundationPlatform* m_platePlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
+    bool m_activeCameraMissingLogged = false;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
