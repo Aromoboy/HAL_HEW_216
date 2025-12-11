@@ -210,9 +210,19 @@ AssimpModelLorder::MakeMaterial(
             }
             else
             {
+                const auto loadTexture = [&](const std::string& fullPath) {
+                    std::wstring wfull(fullPath.begin(), fullPath.end());
+                    return textureCache.Load(fullPath, device, wfull);
+                };
+
                 std::string full = directory + texFile;
-                std::wstring wfull(full.begin(), full.end());
-                texture = textureCache.Load(full, device, wfull);
+                texture = loadTexture(full);
+
+                if (!texture && texFile == u8"パイナップル.png")
+                {
+                    const std::string alt = std::string("Assets\\Texture\\") + texFile;
+                    texture = loadTexture(alt);
+                }
             }
         }
 
