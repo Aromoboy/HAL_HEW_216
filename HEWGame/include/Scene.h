@@ -21,6 +21,7 @@ class Scene
 public:
 void RootUpdate(Core::StepTimer& timer, Core::Input& input);
 void RootDraw();
+bool HasActiveCamera() const;
 
 Scene();
 virtual ~Scene();

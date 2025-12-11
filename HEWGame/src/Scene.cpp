@@ -88,6 +88,11 @@ void Scene::RootDraw()
         Draw(activeCamera);
 }
 
+bool Scene::HasActiveCamera() const
+{
+        return static_cast<bool>(GetActiveCamera());
+}
+
         void Scene::ConfigureUpdates()
         {
         }

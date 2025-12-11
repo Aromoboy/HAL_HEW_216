@@ -102,7 +102,7 @@ namespace SceneSpace
 
         if (auto* sceneWithCamera = dynamic_cast<SceneSpace::Scene*>(m_activeScene.get()))
         {
-                if (!sceneWithCamera->GetActiveCamera())
+                if (!sceneWithCamera->HasActiveCamera())
                 {
                         std::ostringstream oss;
                         oss << kLogPrefix << "Activated scene missing active camera. scenePtr=" << sceneWithCamera << '\n';
