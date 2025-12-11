@@ -7,19 +7,127 @@
 #include <memory>
 #include <optional>
 #include <cstdlib>
+#include <cctype>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "TextureCache.h"
 #include "TextureDX.h"
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
+#include "SweetsPrototypeManifest.h"
 
 #if defined(_WIN32)
 #    include <windows.h>
 #endif
 
 AssimpModelLorder::AssimpModelLorder() = default;
+
+namespace
+{
+    std::string NormalizePath(std::string value)
+    {
+        for (char& c : value)
+        {
+            if (c == '\\')
+            {
+                c = '/';
+            }
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return value;
+    }
+
+    bool EndsWithPath(const std::string& fullPath, const std::string& suffix)
+    {
+        if (fullPath.size() < suffix.size())
+        {
+            return false;
+        }
+        return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
+
+    std::optional<std::string> MapSweetsTypeToTexture(SweetsSpace::SweetsType type)
+    {
+        using SweetsSpace::SweetsType;
+        switch (type)
+        {
+        case SweetsType::Strawberry:
+            return "Assets/Texture/strawberry.png";
+        case SweetsType::Blueberry:
+            return "Assets/Texture/blueberry.png";
+        case SweetsType::Pineapple:
+            return "Assets/Texture/pineapple.png";
+        case SweetsType::Cake:
+        case SweetsType::Pudding:
+        case SweetsType::Sherbet:
+        case SweetsType::Banana:
+            return "Assets/Texture/cream.png";
+        case SweetsType::Fairy:
+        default:
+            return std::nullopt;
+        }
+    }
+
+    std::optional<std::string> ResolveTextureFromManifest(const std::string& normalizedModelPath)
+    {
+        for (const auto& entry : SweetsSpace::SweetsPrototypeManifest::Instance().Enumerate())
+        {
+            std::string candidate = NormalizePath(entry.descriptor.modelPath);
+            if (candidate.empty())
+            {
+                continue;
+            }
+
+            if (EndsWithPath(normalizedModelPath, candidate))
+            {
+                return MapSweetsTypeToTexture(entry.type);
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> GuessTextureFromFilename(const std::string& normalizedModelPath)
+    {
+        auto contains = [&](std::string_view token)
+        {
+            return normalizedModelPath.find(token) != std::string::npos;
+        };
+
+        if (contains("strawberry"))
+        {
+            return "Assets/Texture/strawberry.png";
+        }
+        if (contains("blueberry"))
+        {
+            return "Assets/Texture/blueberry.png";
+        }
+        if (contains("pineapple"))
+        {
+            return "Assets/Texture/pineapple.png";
+        }
+        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana"))
+        {
+            return "Assets/Texture/cream.png";
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
+    {
+        const std::string normalizedPath = NormalizePath(modelPath);
+
+        if (auto mapped = ResolveTextureFromManifest(normalizedPath))
+        {
+            return mapped;
+        }
+
+        return GuessTextureFromFilename(normalizedPath);
+    }
+}
 
 // モデル読み込み
 std::shared_ptr<ModelDX> AssimpModelLorder::Load(
@@ -40,13 +148,20 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             c = '\\';
     directory = directory.substr(0, directory.find_last_of('\\') + 1);
 
+    std::string filename = path;
+    const auto slashPos = filename.find_last_of("/\\");
+    if (slashPos != std::string::npos)
+    {
+        filename = filename.substr(slashPos + 1);
+    }
+
     // メッシュ作成
     AABB localBounds{};
     bool hasBounds = false;
     auto meshes = MakeMesh(pScene, localBounds, hasBounds);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, device, textureCache);
+    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
@@ -155,6 +270,7 @@ std::vector<std::shared_ptr<MaterialDX>>
 AssimpModelLorder::MakeMaterial(
     const aiScene* ptr,
     const std::string& directory,
+    const std::string& modelFilename,
     ID3D11Device* device,
     TextureCache& textureCache)
 {
@@ -248,6 +364,16 @@ AssimpModelLorder::MakeMaterial(
                 std::string full = textureDirectory + texFile;
                 std::wstring wfull(full.begin(), full.end());
                 texture = textureCache.Load(full, device, wfull);
+            }
+        }
+
+        if (!texture)
+        {
+            const std::string modelPathForFallback = directory + modelFilename;
+            if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
+            {
+                std::wstring wfull(fallback->begin(), fallback->end());
+                texture = textureCache.Load(*fallback, device, wfull);
             }
         }
 
