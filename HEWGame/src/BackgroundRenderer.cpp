@@ -179,10 +179,13 @@ void BackgroundRenderer::UpdateSwapChainSize()
         }
     }
 
-    if ((width <= 0.0f || height <= 0.0f) && RenderTargetDX* rtv = GetDefaultRTV())
+    if (width <= 0.0f || height <= 0.0f)
     {
-        width = static_cast<float>(rtv->GetWidth());
-        height = static_cast<float>(rtv->GetHeight());
+        if (RenderTargetDX* rtv = GetDefaultRTV())
+        {
+            width = static_cast<float>(rtv->GetWidth());
+            height = static_cast<float>(rtv->GetHeight());
+        }
     }
 
     m_swapChainWidth = width;
