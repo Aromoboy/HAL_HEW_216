@@ -1654,6 +1654,33 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         GetDevice(),
         std::wstring(numberTexturePath.begin(), numberTexturePath.end()));
 
+    if (!m_numberTexture)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[TimerDisplay] Failed to load texture '" << numberTexturePath << "'. ";
+
+        if (auto* device = GetDevice())
+        {
+            std::shared_ptr<Texture2D> placeholder = std::make_shared<Texture2D>();
+            const uint32_t whitePixel = 0xFFFFFFFFu;
+            if (placeholder->CreateBlank(device, DXGI_FORMAT_R8G8B8A8_UNORM, 1u, 1u, &whitePixel, sizeof(whitePixel)))
+            {
+                m_numberTexture = std::move(placeholder);
+                oss << "Using 1x1 placeholder texture instead.\n";
+            }
+            else
+            {
+                oss << "Placeholder creation failed; timer display disabled.\n";
+            }
+        }
+        else
+        {
+            oss << "Device missing; timer display disabled.\n";
+        }
+
+        ::DebugTrace(oss.str());
+    }
+
     // タイマー表示を初期化
     m_timerDisplay.Init(m_numberTexture);
     m_timerDisplay.SetPosition(700.0f, 50.0f);  // 画面右上

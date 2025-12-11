@@ -1,6 +1,7 @@
 #include "TimerDisplay.h"
 #include "DirectX.h"
 #include "Defines.h"
+#include "Diagnostics/Logger.h"
 
 #include <algorithm>
 
@@ -40,7 +41,18 @@ void TimerDisplay::SetDigitSize(float width, float height)
 
 void TimerDisplay::Draw(float remainingSeconds)
 {
-    if (!m_ready || !m_quadRenderer || !m_numberTexture)
+    if (!m_ready)
+    {
+        static bool s_loggedNotReady = false;
+        if (!s_loggedNotReady)
+        {
+            Diagnostics::LogDebug("[TimerDisplay] Draw skipped: timer not ready.\n");
+            s_loggedNotReady = true;
+        }
+        return;
+    }
+
+    if (!m_quadRenderer || !m_numberTexture)
     {
         return;
     }
