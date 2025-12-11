@@ -312,8 +312,12 @@ AssimpModelLorder::MakeMaterial(
         {
             std::string texFile = texPath.C_Str();
             for (auto& c : texFile)
+            {
                 if (c == '/')
+                {
                     c = '\\';
+                }
+            }
 
             std::string textureDirectory = directory;
 
@@ -359,27 +363,24 @@ AssimpModelLorder::MakeMaterial(
                     texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
                 }
             }
-else
-{
-    const auto loadTexture = [&](const std::string& fullPath)
-    {
-        std::wstring wfull(fullPath.begin(), fullPath.end());
-        return textureCache.Load(fullPath, device, wfull);
-    };
+            else
+            {
+                const auto loadTexture = [&](const std::string& fullPath)
+                {
+                    std::wstring wfull(fullPath.begin(), fullPath.end());
+                    return textureCache.Load(fullPath, device, wfull);
+                };
 
+                std::string full = textureDirectory + texFile;
+                texture = loadTexture(full);
 
-    std::string full = textureDirectory + texFile;
-    texture = loadTexture(full);
-
-
-    if (!texture && texFile == u8"パイナップル.png")
-    {
-        const std::string alt = "Assets\\Texture\\" + texFile;
-        texture = loadTexture(alt);
-    }
-}
-
-
+                if (!texture && texFile == "パイナップル.png")
+                {
+                    const std::string alt = "Assets\\Texture\\" + texFile;
+                    texture = loadTexture(alt);
+                }
+            }
+        }
         if (!texture)
         {
             const std::string modelPathForFallback = directory + modelFilename;
