@@ -2,8 +2,34 @@
 
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
+#include "Scene.h"
 
 #include <memory>
+#include <sstream>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kLogPrefix = "[SceneManager] ";
+}
 
 namespace SceneSpace
 {
@@ -54,11 +80,11 @@ namespace SceneSpace
         return m_activeScene.get();
     }
 
-    void SceneManager::ActivatePendingScene()
-    {
-        if (!m_pendingScene)
+        void SceneManager::ActivatePendingScene()
         {
-            return;
+                if (!m_pendingScene)
+                {
+                        return;
         }
 
         if (m_activeScene)
@@ -73,5 +99,15 @@ namespace SceneSpace
         m_sceneLoaded = true;
 
         m_activeScene->OnEnter();
-    }
+
+        if (auto* sceneWithCamera = dynamic_cast<SceneSpace::Scene*>(m_activeScene.get()))
+        {
+                if (!sceneWithCamera->GetActiveCamera())
+                {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Activated scene missing active camera. scenePtr=" << sceneWithCamera << '\n';
+                        DebugTrace(oss.str());
+                }
+        }
+        }
 }

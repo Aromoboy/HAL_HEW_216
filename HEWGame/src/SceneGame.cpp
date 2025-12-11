@@ -1299,6 +1299,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     else
     {
         SetActiveCamera(registeredCamera);
+        if (!GetActiveCamera())
+        {
+            DebugTrace(std::string(kLogPrefix) + "Gameplay camera registration lost before draw; active camera is null.\n");
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "Gameplay camera registered and activated.\n");
+        }
     }
 
     if (m_gameCamera)
@@ -2299,11 +2307,59 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                 m_backgroundRenderer->Draw();
         }
 
-        // 描画確認用の数値
-        if (!activeCamera)
+        auto cameraToUse = activeCamera;
+        if (!cameraToUse)
         {
-                DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
-                return;
+                if (!m_activeCameraMissingLogged)
+                {
+                        DebugTrace(std::string(kLogPrefix) + "Active camera missing; using fallback ortho camera.\n");
+                        m_activeCameraMissingLogged = true;
+                }
+
+                struct ScreenSpaceCamera : public CameraSpace::ICamera
+                {
+                        ScreenSpaceCamera(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& proj)
+                                : m_view(view)
+                                , m_proj(proj)
+                        {
+                        }
+
+                        const DirectX::XMFLOAT4X4& GetView() const override { return m_view; }
+                        const DirectX::XMFLOAT4X4& GetProjection() const override { return m_proj; }
+
+                protected:
+                        void RecalculateView() override {}
+
+                private:
+                        DirectX::XMFLOAT4X4 m_view{};
+                        DirectX::XMFLOAT4X4 m_proj{};
+                };
+
+                DirectX::XMFLOAT4X4 view{};
+                DirectX::XMFLOAT4X4 proj{};
+                DirectX::XMStoreFloat4x4(&view, DirectX::XMMatrixIdentity());
+
+                float width = 1.0f;
+                float height = 1.0f;
+                if (auto* rtv = GetDefaultRTV())
+                {
+                        width = static_cast<float>(rtv->GetWidth());
+                        height = static_cast<float>(rtv->GetHeight());
+                }
+
+                DirectX::XMStoreFloat4x4(&proj, DirectX::XMMatrixOrthographicLH(width, height, 0.0f, 1.0f));
+
+                cameraToUse = std::make_shared<ScreenSpaceCamera>(view, proj);
+
+                if (!cameraToUse)
+                {
+                        DebugTrace(std::string(kLogPrefix) + "Draw skipped: failed to allocate fallback camera.\n");
+                        return;
+                }
+        }
+        else
+        {
+                m_activeCameraMissingLogged = false;
         }
 
         if (!m_drawSystem)
@@ -2312,9 +2368,9 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                 return;
         }
 
-        m_drawSystem->RenderQueued(activeCamera);
+        m_drawSystem->RenderQueued(cameraToUse);
 
-        m_drawSystem->DebugDrawQueued(activeCamera);
+        m_drawSystem->DebugDrawQueued(cameraToUse);
 
 #if defined(_DEBUG)
         DrawPhysicsDebugOverlay();
@@ -2337,7 +2393,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                   }
 
                   float guidelineClip = 0.0f;
-                  if (TryGetGuidelineClipY(*activeCamera, guidelineClip))
+                  if (TryGetGuidelineClipY(*cameraToUse, guidelineClip))
                   {
                           hudData.guidelineVisible = true;
                         hudData.guidelineClipY = guidelineClip;

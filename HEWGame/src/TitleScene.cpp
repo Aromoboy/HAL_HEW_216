@@ -6,6 +6,31 @@
 #include "SceneGame.h"
 
 #include <memory>
+#include <sstream>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kLogPrefix = "[TitleScene] ";
+}
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -37,10 +62,16 @@ void TitleScene::OnEnter()
     auto registeredCamera = AddCamera(m_camera);
     if (!registeredCamera)
     {
+        DebugTrace(std::string(kLogPrefix) + "Failed to register title camera.\n");
         return;
     }
 
     SetActiveCamera(registeredCamera);
+
+    if (!GetActiveCamera())
+    {
+        DebugTrace(std::string(kLogPrefix) + "SetActiveCamera failed; no active camera after registration.\n");
+    }
 }
 
 void TitleScene::OnExit()

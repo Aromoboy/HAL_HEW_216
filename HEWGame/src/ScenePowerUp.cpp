@@ -10,6 +10,29 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
+#include <sstream>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+}
 
 constexpr const char* kPowerUpConfigPath = "Assets/Config/PowerUp.cfg";
 constexpr const char* kName = "PowerUpName=";
@@ -90,16 +113,23 @@ namespace SceneSpace
 		m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
 		
-		m_rig->Attach(m_target);
-		
-	
-		auto registeredCamera = AddCamera(m_camera);
-		
-		
-		SetActiveCamera(registeredCamera);
+                m_rig->Attach(m_target);
+
+                auto registeredCamera = AddCamera(m_camera);
+                if (!registeredCamera)
+                {
+                        DebugTrace("[ScenePowerUp] Failed to register camera.\n");
+                }
+
+                SetActiveCamera(registeredCamera ? registeredCamera : m_camera);
+
+                if (!GetActiveCamera())
+                {
+                        DebugTrace("[ScenePowerUp] Active camera missing after setup.\n");
+                }
 
 
-		LoadPowerUpFile();
+                LoadPowerUpFile();
 
 		m_powerUpRenderer->Initialize(PowerUpHudLayoutConfig{ 512u,
 			240u,
