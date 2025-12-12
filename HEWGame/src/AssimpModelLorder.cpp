@@ -224,7 +224,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     if (fileEc || !exists || !isFile || size == 0)
     {
         std::ostringstream oss;
-        oss << "[AssimpModelLoader][ERROR] [CHECKPOINT B] Aborting import: file missing or empty path='" << path
+        oss << "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポート中止: ファイルが無いか空 path='" << path
             << "' resolved='" << resolvedFullPath << "'";
         if (fileEc)
         {
@@ -234,7 +234,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
         return nullptr;
     }
 
-    DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT A] load start path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
+    DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT A] ロード開始 path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
     auto future = std::async(std::launch::async, [path, flag]() -> ImportResult
         {
             ImportResult result;
@@ -251,7 +251,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     if (future.wait_for(kImportTimeout) == std::future_status::timeout)
     {
         DebugLog::DebugMessage(
-            "[AssimpModelLoader][ERROR] [CHECKPOINT B] Import timed out; aborting and falling back. path=" + path);
+            "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消してフォールバック path=" + path);
 
         std::thread([f = std::move(future)]() mutable
             {
@@ -273,9 +273,9 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     const aiScene* pScene = importResult.scene;
     {
         std::ostringstream oss;
-        oss << "[AssimpModelLoader][CHECKPOINT B] scene=" << (pScene ? "ok" : "null")
-            << " meshes=" << (pScene ? pScene->mNumMeshes : 0)
-            << " materials=" << (pScene ? pScene->mNumMaterials : 0);
+        oss << "[AssimpModelLoader][CHECKPOINT B] シーン=" << (pScene ? "ok" : "null")
+            << " メッシュ=" << (pScene ? pScene->mNumMeshes : 0)
+            << " マテリアル=" << (pScene ? pScene->mNumMaterials : 0);
         if (!pScene)
         {
             oss << " error='" << importResult.error << "'";
@@ -343,7 +343,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         float3 meshMax{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
         bool meshHasBounds = false;
 
-        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] mesh name=" + std::string(mesh->mName.C_Str()));
+        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
         aiMatrix4x4 nodeTransform;
         bool hasNodeTransform = false;
         {
@@ -373,7 +373,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                 nodeTransform = matchedNode->mTransformation;
                 hasNodeTransform = true;
                 std::ostringstream oss;
-                oss << "[AssimpModelLoader][CHECKPOINT F] node transform for " << mesh->mName.C_Str() << " : ";
+                oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
                 const aiMatrix4x4& m = matchedNode->mTransformation;
                 oss << "[" << m.a1 << "," << m.a2 << "," << m.a3 << "," << m.a4 << ";"
                     << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
@@ -383,22 +383,22 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             }
             else
             {
-                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] no node found for mesh " + std::string(mesh->mName.C_Str()));
+                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ " + std::string(mesh->mName.C_Str()) + " に対応するノードなし");
             }
         }
 
         const bool applyNodeTransform = hasNodeTransform && mesh->mNumBones == 0;
         if (applyNodeTransform)
         {
-            DebugLog::DebugMessage("[Mesh] Applied node transform to mesh '" + std::string(mesh->mName.C_Str()) + "'");
+            DebugLog::DebugMessage("[Mesh] メッシュ '" + std::string(mesh->mName.C_Str()) + "' にノード行列を適用");
         }
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
-        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT E] mesh index=" + std::to_string(i)
-            + " vertices=" + std::to_string(mesh->mNumVertices)
-            + " faces=" + std::to_string(mesh->mNumFaces)
-            + " bones=" + std::string(mesh->HasBones() ? "yes" : "no"));
+        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT E] メッシュ index=" + std::to_string(i)
+            + " 頂点=" + std::to_string(mesh->mNumVertices)
+            + " 面=" + std::to_string(mesh->mNumFaces)
+            + " ボーン=" + std::string(mesh->HasBones() ? "yes" : "no"));
 
         for (unsigned int j = 0; j < vertices.size(); ++j)
         {
@@ -459,7 +459,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         if (meshHasBounds)
         {
             std::ostringstream oss;
-            oss << "[AssimpModelLoader][CHECKPOINT E] mesh bounds index=" << i
+            oss << "[AssimpModelLoader][CHECKPOINT E] メッシュ境界 index=" << i
                 << " min(" << meshMin.x << ',' << meshMin.y << ',' << meshMin.z
                 << ") max(" << meshMax.x << ',' << meshMax.y << ',' << meshMax.z << ")";
             DebugLog::DebugMessage(oss.str());
@@ -495,7 +495,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
     if (hasBounds)
     {
         std::ostringstream oss;
-        oss << "[AssimpModelLoader][CHECKPOINT E] bounds min(" << minBounds.x << "," << minBounds.y << "," << minBounds.z
+        oss << "[AssimpModelLoader][CHECKPOINT E] 全体境界 min(" << minBounds.x << "," << minBounds.y << "," << minBounds.z
             << ") max(" << maxBounds.x << "," << maxBounds.y << "," << maxBounds.z << ")";
         DebugLog::DebugMessage(oss.str());
     }
@@ -584,8 +584,8 @@ AssimpModelLorder::MakeMaterial(
                 const std::string sanitizedPath = "Assets/Texture/" + fileName;
 
                 DebugLog::DebugMessage(
-                    "[Material] Sanitized texture path from '" + originalTexPath +
-                    "' to '" + sanitizedPath + "'");
+                    "[Material] テクスチャパスを正規化 '" + originalTexPath +
+                    "' -> '" + sanitizedPath + "'");
 
                 if (std::filesystem::exists(sanitizedPath))
                 {
@@ -596,8 +596,8 @@ AssimpModelLorder::MakeMaterial(
                 else
                 {
                     DebugLog::DebugMessage(
-                        "[AssimpModelLoader][WARNING] Sanitized texture path does not exist: '" +
-                        sanitizedPath + "'; skipping texture.");
+                        "[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '" +
+                        sanitizedPath + "' テクスチャをスキップ");
                     skipTextureLoading = true;
                 }
             }
@@ -644,14 +644,14 @@ AssimpModelLorder::MakeMaterial(
                 }
 
                 DebugLog::DebugMessage(
-                    "[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
+                    "[AssimpModelLoader][CHECKPOINT C] マテリアル=" + std::to_string(i)
                     + " diffuse='" + texFile
                     + "' baseColor='" + baseColorStr
                     + "' modelDir=" + directory
                     + " fullPath=" + full
                 );
 
-                // --- fallback / sanitize block ---
+                // --- フォールバックとパス整形 ---
                 const bool hasNonAscii = ContainsNonAscii(texFile);
 
                 std::error_code existEc;
@@ -663,19 +663,19 @@ AssimpModelLorder::MakeMaterial(
                     if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
                     {
                         DebugLog::DebugMessage(
-                            "[Material] Using fallback texture '" + *fallback + "' for invalid path '" + texFile + "'");
+                            "[Material] 無効なパス '" + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
                         full = *fallback;
                         skipTextureLoad = false;
                     }
                     else
                     {
                         DebugLog::DebugMessage(
-                            "[Material][WARNING] No fallback texture found for '" + texFile + "', skipping texture");
+                            "[Material][WARNING] フォールバックテクスチャが見つからない '" + texFile + "' テクスチャをスキップ");
                         skipTextureLoad = true;
                     }
                 }
 
-                // --- actual load ---
+                // --- 実際のロード ---
                 if (!skipTextureLoad)
                 {
                     texture = loadTexture(full);
@@ -693,7 +693,7 @@ AssimpModelLorder::MakeMaterial(
             if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
             {
                 DebugLog::DebugMessage(
-                    "[Material] Applying manifest/name fallback texture '" + *fallback + "' for material " + std::to_string(i));
+                    "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
                 std::wstring wfull(fallback->begin(), fallback->end());
                 texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
             }

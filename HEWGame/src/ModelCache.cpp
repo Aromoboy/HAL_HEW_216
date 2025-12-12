@@ -14,10 +14,10 @@
 #endif
 
 //============================================================
-// MODELCACHE_VERBOSE_LOG を定義すると、キャッシュヒットなどの
-// 頻出ログが DebugMessage へ出力される。通常ビルドでは未定義のままにし、
+// MODELCACHE_VERBOSE_LOG を定義するとキャッシュヒットなどの
+// 頻出ログを DebugMessage へ出力する 通常ビルドでは未定義のままにし
 // デバッグで詳細を追跡したいときだけプロジェクト設定やプリプロセッサ
-// 定義で MODELCACHE_VERBOSE_LOG を追加して有効化する。
+// 定義で MODELCACHE_VERBOSE_LOG を追加して有効化する
 //============================================================
 #if MODELCACHE_ENABLE_LOG && defined(MODELCACHE_VERBOSE_LOG)
 #define MODELCACHE_VERBOSE(message) DebugLog::DebugMessage(std::string(u8"[モデルキャッシュ] ") + message)
@@ -80,7 +80,7 @@ namespace Render
 
         if (reconfiguringWithCachedModels)
         {
-            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアします (Clear が呼ばれていません)");
+            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアする (Clear が呼ばれていない)");
             Clear();
         }
 
@@ -90,17 +90,17 @@ namespace Render
 
         if (!m_loader)
         {
-            MODELCACHE_LOG("ローダーが設定されていません。SetLoader に有効なローダーを渡してください");
+            MODELCACHE_LOG("ローダーが未設定 SetLoader に有効なローダーを渡すこと");
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG("デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください");
+            MODELCACHE_LOG("デバイスが未設定のためモデルをロードできない ID3D11Device* を正しく渡すこと");
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG("テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください");
+            MODELCACHE_LOG("テクスチャキャッシュが未設定 TextureCache のインスタンスを渡すこと");
         }
     }
 
@@ -112,42 +112,42 @@ namespace Render
     {
         const std::string cacheKey = CanonicalizeCacheKey(path);
 
-        Diagnostics::LogInfo(std::string("[ModelCache] request='") + path + "' -> key='" + cacheKey + "'");
+        Diagnostics::LogInfo(std::string("[ModelCache] リクエスト='") + path + "' -> key='" + cacheKey + "'");
 
         // キャッシュに存在するか確認
         auto it = m_models.find(cacheKey);
         if (it != m_models.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' hit");
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ヒット");
             MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path);
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
         if (m_inFlightKeys.find(cacheKey) != m_inFlightKeys.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' blocked: load already in-flight");
-            MODELCACHE_LOG(std::string("ロードをスキップします（現在ロード中のキーへの再入禁止） [パス] ") + path);
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ブロック: ロードが進行中");
+            MODELCACHE_LOG(std::string("ロードをスキップする（現在ロード中のキーへの再入禁止） [パス] ") + path);
             return nullptr;
         }
 
-        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' miss -> load");
+        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ミス -> ロード");
 
         // ローダーが有効かどうか確認
         if (!m_loader)
         {
-            MODELCACHE_LOG(std::string("ローダーが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("ローダーが未設定のためロードを中止 [パス] ") + path);
             return nullptr;  // ローダーが無ければロードできない
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG(std::string("デバイスが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("デバイスが未設定のためロードを中止 [パス] ") + path);
             return nullptr;
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG(std::string("テクスチャキャッシュが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("テクスチャキャッシュが未設定のためロードを中止 [パス] ") + path);
             return nullptr;
         }
 
@@ -178,12 +178,12 @@ namespace Render
         {
             // 成功した場合はキャッシュに保存
             m_models[cacheKey] = model;
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' stored");
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' 格納");
         }
         else
         {
             // 失敗した場合はエラーログ
-            MODELCACHE_LOG(std::string("モデルのロードに失敗しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("モデルのロードに失敗 [パス] ") + path);
         }
 
         return model;  // ロード結果（失敗時は nullptr）
