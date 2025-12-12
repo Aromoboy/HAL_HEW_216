@@ -1107,6 +1107,11 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
     }
 
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
+    // （ローダーやデバイスの切り替え漏れによるハングを防止）。
+    cache.Clear();
+
     NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
@@ -1306,7 +1311,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
     m_loader = std::make_shared<AssimpModelLorder>();
 
-    Render::ModelCache& cache = Render::ModelCache::Instance();
     ID3D11Device* device = GetDevice();
     if (!device)
     {
