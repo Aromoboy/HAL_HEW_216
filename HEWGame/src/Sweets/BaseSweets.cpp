@@ -51,10 +51,8 @@ namespace SweetsSpace
 
     void BaseSweets::OnUpdate(Core::UpdateContext& ctx)
     {
-        SyncTransformFromBox2DBody();
+        SyncFromPhysics();
         Entities::PhysicalEntity::OnUpdate(ctx);
-
-        m_visual.position = m_transform.position;
     }
 
     void BaseSweets::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -76,6 +74,25 @@ namespace SweetsSpace
     Transform BaseSweets::GetRenderTransform() const
     {
         return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+    }
+
+    void BaseSweets::SyncFromPhysics()
+    {
+        if (HasBox2DBody())
+        {
+            const b2Vec2 position = b2Body_GetPosition(GetBox2DBodyId());
+            const float angle = b2Rot_GetAngle(b2Body_GetRotation(GetBox2DBodyId()));
+
+            Transform updatedTransform = m_transform;
+            updatedTransform.position = ToWorldPosition(position);
+            updatedTransform.rotation.z = ToWorldAngle(angle);
+
+            SetTransform(updatedTransform);
+            m_visual.position = updatedTransform.position;
+            return;
+        }
+
+        m_visual.position = m_transform.position;
     }
 }
 
