@@ -3,14 +3,13 @@
 #include <iostream>
 #include "Debug.h"
 
-//============================================================
-        DebugLog::DebugMessage("[ShaderCache] VF[_[̃[hɎs: ");
-//============================================================
 std::shared_ptr<ShaderProgram> ShaderCache::Load(const std::string& name,
     ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
+    DebugLog::DebugMessage("[ShaderCache] VF[_[̃[hɎs: ");
+
     // キャッシュにすでに存在するか確認
     auto it = programs.find(name);
     if (it != programs.end())
