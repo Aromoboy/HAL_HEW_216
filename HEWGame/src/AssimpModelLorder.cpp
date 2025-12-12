@@ -7,12 +7,15 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <chrono>
+#include <future>
 #include <cstdlib>
 #include <cctype>
 #include <string>
 #include <string_view>
 #include <sstream>
 #include <vector>
+#include <thread>
 #include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
@@ -20,6 +23,7 @@
 #include "MeshDX.h"
 #include "MaterialDX.h"
 #include "SweetsPrototypeManifest.h"
+#include "ModelCache.h"
 
 #if defined(_WIN32)
 #    include <windows.h>
@@ -195,6 +199,15 @@ namespace
 
         return candidates.front().string();
     }
+
+    struct ImportResult
+    {
+        std::unique_ptr<Assimp::Importer> importer;
+        const aiScene* scene = nullptr;
+        std::string error;
+    };
+
+    constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
 }
 
 // モデル読み込み
@@ -203,7 +216,6 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     ID3D11Device* device,
     TextureCache& textureCache)
 {
-    Assimp::Importer importer;
     unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
     const std::string normalizedPath = NormalizePath(path);
     std::error_code absEc;
@@ -212,8 +224,61 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     {
         resolvedFullPath = path;
     }
+
+    std::error_code fileEc;
+    const bool exists = std::filesystem::exists(resolvedFullPath, fileEc);
+    const bool isFile = exists && std::filesystem::is_regular_file(resolvedFullPath, fileEc);
+    const std::uintmax_t size = isFile ? std::filesystem::file_size(resolvedFullPath, fileEc) : 0;
+    if (fileEc || !exists || !isFile || size == 0)
+    {
+        std::ostringstream oss;
+        oss << "[AssimpModelLoader][ERROR] [CHECKPOINT B] Aborting import: file missing or empty path='" << path
+            << "' resolved='" << resolvedFullPath << "'";
+        if (fileEc)
+        {
+            oss << " ec='" << fileEc.message() << "'";
+        }
+        DebugLog::DebugMessage(oss.str());
+        return nullptr;
+    }
+
     DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT A] load start path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
-    const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
+    auto future = std::async(std::launch::async, [path, flag]() -> ImportResult
+        {
+            ImportResult result;
+            result.importer = std::make_unique<Assimp::Importer>();
+            result.scene = result.importer->ReadFile(path.c_str(), flag);
+            if (!result.scene)
+            {
+                result.error = result.importer->GetErrorString();
+            }
+            return result;
+        });
+
+    constexpr auto kImportTimeout = std::chrono::milliseconds(400);
+    if (future.wait_for(kImportTimeout) == std::future_status::timeout)
+    {
+        DebugLog::DebugMessage(
+            "[AssimpModelLoader][ERROR] [CHECKPOINT B] Import timed out; aborting and falling back. path=" + path);
+
+        std::thread([f = std::move(future)]() mutable
+            {
+                if (f.valid())
+                {
+                    f.wait();
+                }
+            }).detach();
+
+        if (NormalizePath(path) == NormalizePath(kPlaceholderModelPath))
+        {
+            return nullptr;
+        }
+
+        return Render::ModelCache::Instance().Get(kPlaceholderModelPath);
+    }
+
+    ImportResult importResult = future.get();
+    const aiScene* pScene = importResult.scene;
     {
         std::ostringstream oss;
         oss << "[AssimpModelLoader][CHECKPOINT B] scene=" << (pScene ? "ok" : "null")
@@ -221,12 +286,21 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             << " materials=" << (pScene ? pScene->mNumMaterials : 0);
         if (!pScene)
         {
-            oss << " error='" << importer.GetErrorString() << "'";
+            oss << " error='" << importResult.error << "'";
         }
         DebugLog::DebugMessage(oss.str());
     }
     if (!pScene)
-        return nullptr;
+    {
+        if (NormalizePath(path) == NormalizePath(kPlaceholderModelPath))
+        {
+            return nullptr;
+        }
+        return Render::ModelCache::Instance().Get(kPlaceholderModelPath);
+    }
+
+    auto importer = std::move(importResult.importer);
+    (void)importer;
 
     // ディレクトリ抽出
     std::string directory = path;
