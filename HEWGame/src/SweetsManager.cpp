@@ -1688,7 +1688,11 @@ namespace SweetsSpace
                     return nullptr;
                 }
 
-                Transform scaledTransform = transform;
+                Transform physicsTransform = transform;
+                SweetsVisualTransform visualTransform{};
+                visualTransform.position = physicsTransform.position;
+                visualTransform.rotation = physicsTransform.rotation;
+
                 const auto sampleScale = [&](float minValue, float maxValue)
                 {
                     if (!m_enableRandomScale)
@@ -1713,14 +1717,24 @@ namespace SweetsSpace
                     sampleScale(preset.minScale.z, preset.maxScale.z)
                 };
 
-                scaledTransform.scale.x *= sampledScale.x;
-                scaledTransform.scale.y *= sampledScale.y;
-                scaledTransform.scale.z *= sampledScale.z;
+                visualTransform.scale = float3
+                {
+                    physicsTransform.scale.x * sampledScale.x,
+                    physicsTransform.scale.y * sampledScale.y,
+                    physicsTransform.scale.z * sampledScale.z
+                };
 
-                const auto colliderBuild = BuildColliderForSweets(type, scaledTransform, model);
+                physicsTransform.scale = visualTransform.scale;
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
+                const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
+
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
+
+                if (sweets)
+                {
+                    sweets->SetVisualTransform(visualTransform);
+                }
 
                 return sweets;
             };
