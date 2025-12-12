@@ -45,6 +45,7 @@ namespace SweetsSpace
             phase,
             priority,
             tag)
+        , m_visual{ transform.position, transform.rotation, transform.scale }
     {
     }
 

@@ -8,6 +8,15 @@
 
 namespace SweetsSpace
 {
+    using Vec3 = float3;
+
+    struct SweetsVisualTransform
+    {
+        Vec3 position;
+        Vec3 rotation;
+        Vec3 scale;
+    };
+
     class BaseSweets : public Entities::PhysicalEntity
     {
     public:
@@ -46,10 +55,21 @@ namespace SweetsSpace
             m_safeToDelete = true;
         }
 
+        void SetVisualTransform(const SweetsVisualTransform& visual)
+        {
+            m_visual = visual;
+        }
+
+        const SweetsVisualTransform& GetVisualTransform() const
+        {
+            return m_visual;
+        }
+
     private:
         bool m_pendingDestroy = false;
         bool m_safeToDelete = true;
         bool m_missingModelWarned = false;
+        SweetsVisualTransform m_visual{};
     };
 }
 
