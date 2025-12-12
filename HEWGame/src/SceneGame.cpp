@@ -1350,9 +1350,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     // ModelCacheの設定後、ステージレイアウトをロード
     LoadStageLayout("Assets/StageLayout.csv");
 
-    // 描画テスト用
-    //m_model = cache.Get("Assets/Model/LowPolyNature/Models/OiiaioooooiaiFin.fbx");もう要らないかも
-
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
     {
