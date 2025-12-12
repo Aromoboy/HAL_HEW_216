@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Core/UpdateNode.h"
-
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
+#include <string>
+#include "Core/UpdateNode.h"
 #include "Entities/CollisionEntity.h"
 #include "Transform.h"
 #include "ModelDX.h"
@@ -31,6 +32,8 @@ namespace Systems
                 void RegisterRenderable(Entities::CollisionEntity& entity);
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
+
+                void SetStagePlaneZ(float planeZ);
 
                 void OnUpdate(Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
@@ -61,5 +64,9 @@ namespace Systems
                 std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
+                bool m_hasStagePlaneZ;
+                float m_stagePlaneZ;
+                mutable std::unordered_set<const Entities::Entity*> m_missingModelLogged;
+                mutable std::unordered_set<const Entities::Entity*> m_invalidTransformLogged;
         };
 }

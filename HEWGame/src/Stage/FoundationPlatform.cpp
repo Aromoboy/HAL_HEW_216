@@ -17,11 +17,19 @@
 #include "BoxColliderComponent.h"
 #include "Systems/PhysicsMachine.h"
 
+#if defined(_WIN32) && defined(_DEBUG)
+#    include <windows.h>
+#endif
+
 namespace
 {
     void DebugTrace(const std::string& message)
     {
+#if defined(_WIN32) && defined(_DEBUG)
+        ::OutputDebugStringA(message.c_str());
+#else
         (void)message;
+#endif
     }
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
@@ -238,11 +246,14 @@ namespace Stage
         const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
         if (pivotOffsetY != 0.0f)
         {
-            correctedTransform.position.y += pivotOffsetY;
+            const float halfHeight = correctedTransform.scale.y * 0.5f;
+            const float clampedPivot = std::clamp(pivotOffsetY, -halfHeight, halfHeight);
+            correctedTransform.position.y += clampedPivot;
 
             std::ostringstream oss;
             oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
                 << " offsetY=" << pivotOffsetY
+                << " clamped=" << clampedPivot
                 << " scaleY=" << correctedTransform.scale.y << '\n';
             DebugTrace(oss.str());
         }
