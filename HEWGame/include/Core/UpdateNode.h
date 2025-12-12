@@ -21,7 +21,7 @@ namespace Core
                 void SetPriority(int priority);
                 void Enable(bool value);
 
-                // スケジューラが参照する基本情報。派生先で上書きする必要はない
+                // スケジューラが参照する基本情報 派生先で上書きする必要はない
                 UpdatePhase GetPhase() const override;
                 int GetPriority() const override;
                 bool IsEnabled() const override;

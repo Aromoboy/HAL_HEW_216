@@ -19,8 +19,8 @@ namespace Core
 
         HRESULT Input::Initialize()
         {
-                // 初期化順序: 先に現在のキー状態を取得し、そのスナップショットを前フレームとして保存する。
-                // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える。
+                // 初期化順序: 先に現在のキー状態を取得し、そのスナップショットを前フレームとして保存する 
+                // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える 
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
@@ -32,7 +32,7 @@ namespace Core
 
         void Input::Shutdown()
         {
-                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する。
+                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する 
                 m_initialized = false;
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
@@ -45,7 +45,7 @@ namespace Core
         {
                 if (!m_initialized)
                 {
-                        // OnUpdate 経由での遅延初期化。ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする。
+                        // OnUpdate 経由での遅延初期化 ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする 
                         PollKeyboardState();
                         m_previousKeys = m_currentKeys;
                         PollPadState();
@@ -53,7 +53,7 @@ namespace Core
                 }
                 else
                 {
-                        // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持。
+                        // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持 
                         m_previousKeys = m_currentKeys;
                         PollKeyboardState();
                         PollPadState();

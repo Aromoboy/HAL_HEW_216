@@ -4,13 +4,13 @@
  *
  * @author	HAL名古屋 教務部　浜谷浩彦
  * @date	2009/10/08 (木)
- * @date	2009/10/15 (木) msleep 関数を追加。
- * @date	2010/01/13 (水) playsound 関数で、常に先頭へシーク。
- * @date	2012/12/17 (月) reinport 関数を追加。(by 志水)
- * @date	2018/02/06 (火) inport 関数で、ゲームパッド対応強化。
- * @date	2018/06/07 (木) setcaption 関数の引数型にconstを追加。
- * @date	2021/03/08 (月) x64対応。width 関数、fontsize 関数、setpalette 関数、getpalette 関数追加。
- * @date	2025/02/14 (金) inport 関数のバグ修正。(by 山内陽)
+ * @date	2009/10/15 (木) msleep 関数を追加 
+ * @date	2010/01/13 (水) playsound 関数で、常に先頭へシーク 
+ * @date	2012/12/17 (月) reinport 関数を追加 (by 志水)
+ * @date	2018/02/06 (火) inport 関数で、ゲームパッド対応強化 
+ * @date	2018/06/07 (木) setcaption 関数の引数型にconstを追加 
+ * @date	2021/03/08 (月) x64対応 width 関数、fontsize 関数、setpalette 関数、getpalette 関数追加 
+ * @date	2025/02/14 (金) inport 関数のバグ修正 (by 山内陽)
  * @version	1.06.1
  */
 #ifndef __CONIOEX_H
@@ -967,7 +967,7 @@ void stopsound(INT_PTR hsound)
  * @brief	サウンド再生状態の取得
  *
  * @param	hsound [入力] サウンド ハンドル
- * @return	再生中ならば 0 以外を返す。
+ * @return	再生中ならば 0 以外を返す 
  */
 int checksound(INT_PTR hsound)
 #ifdef CONIOEX

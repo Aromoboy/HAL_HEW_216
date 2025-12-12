@@ -1109,7 +1109,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）。
+    // （ローダーやデバイスの切り替え漏れによるハングを防止） 
     cache.Clear();
 
     NormalizePlayerColliderDefinitions();
@@ -2379,7 +2379,7 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
     m_gameCamera->SetPosition(cameraPosition);
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
-// BaseCamera::RecalculateViewは保護されたメソッドです。GetView はトランスフォームが変更された際に遅延評価で再計算
+// BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
 
     std::ostringstream oss;

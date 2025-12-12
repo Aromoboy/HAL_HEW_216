@@ -30,8 +30,8 @@ namespace Core
                 PostPhysics, // 物理結果を用いた後処理（Transformの正規化など）
                 Gameplay,    // ゲームロジック全般（スコア計算、演出トリガー）
                 Camera,      // カメラ追従、ビュー行列の更新
-                UI,          // UI の状態更新。描画は別フェーズでOK
-                Late,        // 最終調整。依存関係が複雑なものはここに逃がす
+                UI,          // UI の状態更新 描画は別フェーズでOK
+                Late,        // 最終調整 依存関係が複雑なものはここに逃がす
         };
 
         inline const char* ToString(UpdatePhase phase)
@@ -90,7 +90,7 @@ namespace Core
                 virtual UpdatePhase GetPhase() const = 0;
                 virtual int GetPriority() const = 0;
 
-                //有効か無効を切り替えるためのフラグ。重たい処理でもEnable(false)で即停止可能
+                //有効か無効を切り替えるためのフラグ 重たい処理でもEnable(false)で即停止可能
                 virtual bool IsEnabled() const = 0;
         };
 }

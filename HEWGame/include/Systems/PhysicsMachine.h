@@ -12,7 +12,7 @@
 
 namespace Systems
 // PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する
-// UpdateNode。旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける。
+// UpdateNode 旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける 
 {
     struct PhysicsTuningParameters
     {

@@ -94,14 +94,14 @@ namespace
         static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "キャッシュ済みのプロシージャルフェアリーを再利用します。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "キャッシュ済みのプロシージャルフェアリーを再利用します \n");
             return reused;
         }
 
         ID3D11Device* device = GetDevice();
         if (!device)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "プロシージャルフェアリーを生成できません: デバイスが存在しません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "プロシージャルフェアリーを生成できません: デバイスが存在しません \n");
             return nullptr;
         }
 
@@ -259,11 +259,11 @@ namespace Entities
     {
         if (model)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "指定されたプレイヤーモデルを使用します。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "指定されたプレイヤーモデルを使用します \n");
         }
         else
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "プレイヤーモデルが指定されていません。フェアリープロトタイプを解決します。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "プレイヤーモデルが指定されていません フェアリープロトタイプを解決します \n");
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
@@ -273,12 +273,12 @@ namespace Entities
         std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
         if (!descriptor)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタが見つかりません。プレースホルダーにフォールバックします。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタが見つかりません プレースホルダーにフォールバックします \n");
             modelPath = kFairyFallbackPath;
         }
         else if (modelPath.empty())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタのパスが空です。プレースホルダーにフォールバックします。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタのパスが空です プレースホルダーにフォールバックします \n");
             modelPath = kFairyFallbackPath;
         }
         else
@@ -295,14 +295,14 @@ namespace Entities
             m_fairyModel = cache.Get(modelPath);
             if (!m_fairyModel && modelPath != kFairyFallbackPath)
             {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーの一次モデルの読み込みに失敗しました。プレースホルダーを試します。\n");
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーの一次モデルの読み込みに失敗しました プレースホルダーを試します \n");
                 m_fairyModel = cache.Get(kFairyFallbackPath);
             }
         }
 
         if (!m_fairyModel)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フォールバック後も利用可能なフェアリーモデルがありません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フォールバック後も利用可能なフェアリーモデルがありません \n");
             m_missingModelWarned = true;
         }
 
@@ -388,7 +388,7 @@ namespace Entities
         {
             if (!m_missingModelWarned)
             {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "描画をスキップしました: プレイヤーモデルがありません。\n");
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "描画をスキップしました: プレイヤーモデルがありません \n");
                 m_missingModelWarned = true;
             }
             return;
@@ -417,7 +417,7 @@ namespace Entities
 
     void Player::RefreshRenderTransform()
     {
-        // 描画時に再計算せず、最新のビジュアル変換と整合した描画登録を維持します。
+        // 描画時に再計算せず、最新のビジュアル変換と整合した描画登録を維持します 
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 
@@ -430,7 +430,7 @@ namespace Entities
 
         if (!manager && !m_carrieds.empty())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中に SweetsManager が解放されました。強制的にリリースします。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中に SweetsManager が解放されました 強制的にリリースします \n");
             m_carrieds.clear();
         }
 
@@ -451,7 +451,7 @@ namespace Entities
     {
         if (m_carrieds.empty())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中のスイーツの参照をクリアします。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中のスイーツの参照をクリアします \n");
         }
         m_carrieds.clear();
     }
@@ -476,7 +476,7 @@ namespace Entities
     {
         if (!std::isfinite(horizontal) || !std::isfinite(vertical))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の移動速度指定を無視しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の移動速度指定を無視しました \n");
             return;
         }
 
@@ -487,7 +487,7 @@ namespace Entities
         {
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "移動速度を (" << horizontal << ',' << vertical
-                << ") から (" << sanitizedHorizontal << ',' << sanitizedVertical << ") に正規化しました（負値は不可）。\n";
+                << ") から (" << sanitizedHorizontal << ',' << sanitizedVertical << ") に正規化しました（負値は不可） \n";
             PlayerDebugTrace(oss.str());
         }
 
@@ -503,7 +503,7 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "基準移動速度を (" << m_baseHorizontalMoveSpeed
-            << ", " << m_baseVerticalMoveSpeed << ") units/sec に設定しました。\n";
+            << ", " << m_baseVerticalMoveSpeed << ") units/sec に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 
@@ -511,7 +511,7 @@ namespace Entities
     {
         if (!std::isfinite(multiplier))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の速度倍率指定を無視しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の速度倍率指定を無視しました \n");
             return;
         }
 
@@ -525,7 +525,7 @@ namespace Entities
         m_speedMultiplier = sanitizedMultiplier;
 
         std::ostringstream oss;
-        oss << kPlayerLogPrefix << "速度倍率を " << m_speedMultiplier << "x に設定しました。\n";
+        oss << kPlayerLogPrefix << "速度倍率を " << m_speedMultiplier << "x に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 
@@ -548,7 +548,7 @@ namespace Entities
     {
         if (!std::isfinite(minY))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の最小 Y 指定を無視しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の最小 Y 指定を無視しました \n");
             return;
         }
 
@@ -561,7 +561,7 @@ namespace Entities
         m_minimumY = minY;
 
         std::ostringstream oss;
-        oss << kPlayerLogPrefix << "最小 Y を " << m_minimumY << " 単位に設定しました。\n";
+        oss << kPlayerLogPrefix << "最小 Y を " << m_minimumY << " 単位に設定しました \n";
         PlayerDebugTrace(oss.str());
 
         ClampVerticalPosition();
@@ -581,7 +581,7 @@ namespace Entities
     {
         if (!std::isfinite(minX) || !std::isfinite(maxX))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のスクリーン範囲を無視しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のスクリーン範囲を無視しました \n");
             return;
         }
 
@@ -628,7 +628,7 @@ namespace Entities
     {
         if (!std::isfinite(width) || !std::isfinite(height) || !std::isfinite(forwardOffset))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のピックアップボックス指定を無視しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のピックアップボックス指定を無視しました \n");
             return;
         }
 
@@ -653,7 +653,7 @@ namespace Entities
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップボックスを width=" << sanitizedWidth
             << " height=" << sanitizedHeight << " (half=" << m_pickupHalfWidth
-            << ',' << m_pickupHalfHeight << ") forwardOffset=" << m_pickupForwardOffset << " に設定しました。\n";
+            << ',' << m_pickupHalfHeight << ") forwardOffset=" << m_pickupForwardOffset << " に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 
@@ -711,19 +711,19 @@ namespace Entities
     {
         if (!m_sweetsManager)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: SweetsManager がありません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: SweetsManager がありません \n");
             return;
         }
 
         if (!(m_pickupHalfWidth > 0.0f) || !(m_pickupHalfHeight > 0.0f))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップボックスが未設定です。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップボックスが未設定です \n");
             return;
         }
 
         if (!m_colliderFootprint)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: コライダーのフットプリントがありません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: コライダーのフットプリントがありません \n");
             return;
         }
 
@@ -793,13 +793,13 @@ namespace Entities
 
         if (!candidate)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: ピックアップボックス内にスイーツがありません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: ピックアップボックス内にスイーツがありません \n");
             return;
         }
 
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: マネージャーが遷移を拒否しました。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: マネージャーが遷移を拒否しました \n");
             return;
         }
 
@@ -845,12 +845,12 @@ namespace Entities
         {
             if (!m_sweetsManager->ReleaseCarriedSweets(sweets))
             {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ドロップ警告: マネージャーが解放を拒否しました。\n");
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ドロップ警告: マネージャーが解放を拒否しました \n");
             }
         }
         else
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ドロップ警告: SweetsManager がありません。\n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ドロップ警告: SweetsManager がありません \n");
         }
 
         std::ostringstream oss;
@@ -892,7 +892,7 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Y を " << previousY << " から最小 "
-            << m_minimumY << " に制限しました（プラットフォーム境界）。\n";
+            << m_minimumY << " に制限しました（プラットフォーム境界） \n";
         PlayerDebugTrace(oss.str());
     }
 
