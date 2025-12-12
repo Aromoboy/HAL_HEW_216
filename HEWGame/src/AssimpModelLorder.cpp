@@ -408,6 +408,7 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
         {
             std::string texFile = texPath.C_Str();
+            const std::string originalTexPath = texFile;
             for (auto& c : texFile)
             {
                 if (c == '/')
@@ -417,16 +418,47 @@ AssimpModelLorder::MakeMaterial(
             }
 
             std::string textureDirectory = directory;
+            bool skipTextureLoading = false;
 
-            const size_t lastSeparator = texFile.find_last_of("\\/");
-            const std::string fileName = lastSeparator == std::string::npos
-                ? texFile
-                : texFile.substr(lastSeparator + 1);
+            const auto hasParentTraversal = [](const std::string& value)
+            {
+                return value.find("..\\") != std::string::npos || value.find("../") != std::string::npos;
+            };
 
             const bool isAbsoluteWindowsPath = texFile.size() >= 3
                 && std::isalpha(static_cast<unsigned char>(texFile[0]))
                 && texFile[1] == ':'
                 && (texFile[2] == '\\' || texFile[2] == '/');
+
+            const bool needsSanitize = std::filesystem::path(originalTexPath).is_absolute()
+                || isAbsoluteWindowsPath
+                || hasParentTraversal(originalTexPath);
+
+            if (needsSanitize)
+            {
+                const size_t lastSeparator = originalTexPath.find_last_of("\\/");
+                const std::string fileName = lastSeparator == std::string::npos
+                    ? originalTexPath
+                    : originalTexPath.substr(lastSeparator + 1);
+                const std::string sanitizedPath = "Assets/Texture/" + fileName;
+                DebugLog::DebugMessage("[Material] Sanitized texture path from '" + originalTexPath + "' to '" + sanitizedPath + "'");
+
+                if (std::filesystem::exists(sanitizedPath))
+                {
+                    texFile = fileName;
+                    textureDirectory = "Assets/Texture/";
+                }
+                else
+                {
+                    DebugLog::DebugMessage("[AssimpModelLoader][WARNING] Sanitized texture path does not exist: '" + sanitizedPath + "'; skipping texture.");
+                    skipTextureLoading = true;
+                }
+            }
+
+            const size_t lastSeparator = texFile.find_last_of("\\/");
+            const std::string fileName = lastSeparator == std::string::npos
+                ? texFile
+                : texFile.substr(lastSeparator + 1);
 
             const auto equalsIgnoreCase = [](const std::string& lhs, const std::string& rhs)
             {
@@ -462,27 +494,30 @@ AssimpModelLorder::MakeMaterial(
             }
             else
             {
-                const auto loadTexture = [&](const std::string& fullPath)
+                if (!skipTextureLoading)
                 {
-                    std::wstring wfull(fullPath.begin(), fullPath.end());
-                    return textureCache.Load(fullPath, device, wfull);
-                };
+                    const auto loadTexture = [&](const std::string& fullPath)
+                    {
+                        std::wstring wfull(fullPath.begin(), fullPath.end());
+                        return textureCache.Load(fullPath, device, wfull);
+                    };
 
-                std::string full = textureDirectory + texFile;
-                aiString baseColorPath;
-                std::string baseColorStr;
-                if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
-                {
-                    baseColorStr = baseColorPath.C_Str();
-                }
-                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
-                    + " diffuse='" + texFile + "' baseColor='" + baseColorStr + "' modelDir=" + directory + " fullPath=" + full);
-                texture = loadTexture(full);
+                    std::string full = textureDirectory + texFile;
+                    aiString baseColorPath;
+                    std::string baseColorStr;
+                    if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
+                    {
+                        baseColorStr = baseColorPath.C_Str();
+                    }
+                    DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
+                        + " diffuse='" + texFile + "' baseColor='" + baseColorStr + "' modelDir=" + directory + " fullPath=" + full);
+                    texture = loadTexture(full);
 
-                if (!texture && texFile == "パイナップル.png")
-                {
-                    const std::string alt = "Assets\\Texture\\" + texFile;
-                    texture = loadTexture(alt);
+                    if (!texture && texFile == "パイナップル.png")
+                    {
+                        const std::string alt = "Assets\\Texture\\" + texFile;
+                        texture = loadTexture(alt);
+                    }
                 }
             }
         }
