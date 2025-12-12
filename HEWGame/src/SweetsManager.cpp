@@ -220,14 +220,14 @@ namespace
         static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
-            DebugTrace(std::string(kLogPrefix) + "キャッシュしてたフェアリーをそのまま使うよ。\n");
+            DebugTrace(std::string(kLogPrefix) + "キャッシュしてたフェアリーをそのまま使うよ\n");
             return reused;
         }
 
         ID3D11Device* device = GetDevice();
         if (!device)
         {
-            DebugTrace(std::string(kLogPrefix) + "プロシージャルフェアリー作れないや、デバイスが見つからないっぽい。\n");
+            DebugTrace(std::string(kLogPrefix) + "プロシージャルフェアリー作れないや、デバイスが見つからないっぽい\n");
             return nullptr;
         }
 
@@ -592,7 +592,7 @@ namespace
         Physics::BoxColliderComponent colliderComponent{};
         ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
 
-        // コライダー頂点はローカル空間のままにしておく。PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれるよ。
+        // コライダー頂点はローカル空間のままにしておく。PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれる
 
         switch (type)
         {
@@ -655,7 +655,7 @@ namespace
             break;
         }
 
-        // 密度は体積（スケール^3）に合わせて伸ばす。頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね。
+        // 密度は体積（スケール^3）に合わせて伸ばす。頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね
         const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
         result.shapeConfig.density *= densityScale;
         if (result.colliderComponent)
@@ -1106,7 +1106,7 @@ namespace
         if (positions.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "ジオメトリ解析で '" << path << "' の頂点が一つも見つからなかったよ。\n";
+            oss << kLogPrefix << "ジオメトリ解析で '" << path << "' の頂点が一つも見つからなかったよ\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -1464,7 +1464,7 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[10]
-                << "' が知らない形だったから、とりあえず Box にしとくね。\n";
+                << "' が知らない形だったから、とりあえず Box にしとくね\n";
             DebugTrace(oss.str());
             outPreset.colliderPreset.shape = ColliderShape::Box;
         }
@@ -1481,7 +1481,7 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "工場プリセットの CSV が '" << kFactoryPresetCsvPath
-                << "' に見当たらないので、昔のデフォルトに戻すね。\n";
+                << "' に見当たらないので、昔のデフォルトに戻すね\n";
             DebugTrace(oss.str());
             return overrides;
         }
@@ -1647,7 +1647,7 @@ namespace SweetsSpace
 
         if (!Collision::LoadColliderDefinitions(kColliderConfigPath, m_colliderDefinitions))
         {
-            DebugTrace(std::string(kLogPrefix) + "コライダー定義のロードに失敗したから、AABB の代替を使うね。\n");
+            DebugTrace(std::string(kLogPrefix) + "コライダー定義のロードに失敗したから、AABB の代替を使うね\n");
         }
         else
         {
@@ -1678,7 +1678,7 @@ namespace SweetsSpace
         const auto prototypes = manifest.Enumerate();
         if (prototypes.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "スイーツのプロトタイプが一つも登録されてないから、スポナー表は空のままだよ。\n");
+            DebugTrace(std::string(kLogPrefix) + "スイーツのプロトタイプが一つも登録されてないから、スポナー表は空のままだよ\n");
         }
 
         for (const auto& prototype : prototypes)
@@ -1707,7 +1707,7 @@ namespace SweetsSpace
             {
                 std::ostringstream warn;
                 warn << kLogPrefix << "種類 '" << kind
-                    << "' (type=" << ToString(prototype.type) << ") に使える工場プリセットがないから、登録はパスするよ。\n";
+                    << "' (type=" << ToString(prototype.type) << ") に使える工場プリセットがないから、登録はパスするよ\n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -1734,7 +1734,7 @@ namespace SweetsSpace
             const std::string registeredPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
             std::ostringstream oss;
             oss << kLogPrefix << "スイーツの種類 '" << kind
-                << "' をアセット '" << registeredPath << "' と一緒に登録するね。\n";
+                << "' をアセット '" << registeredPath << "' と一緒に登録するね\n";
             DebugTrace(oss.str());
 
             const SweetsType type = prototype.type;
@@ -1752,14 +1752,14 @@ namespace SweetsSpace
                 {
                     std::ostringstream warn;
                     warn << kLogPrefix << "種類 '" << resolvedKind
-                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないから、プレースホルダー '" << kPlaceholderModelPath << "' を使うよ。\n";
+                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないから、プレースホルダー '" << kPlaceholderModelPath << "' を使うよ\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
                 else if (descriptorPath.empty())
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったから、プレースホルダー '" << kPlaceholderModelPath << "' に頼るね。\n";
+                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったから、プレースホルダー '" << kPlaceholderModelPath << "' に頼るね\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
@@ -1791,7 +1791,7 @@ namespace SweetsSpace
                 {
                     std::ostringstream fail;
                     fail << kLogPrefix << "スイーツ '" << descriptorKey
-                        << "' は代替も全部外れでモデルが用意できなかったよ。\n";
+                        << "' は代替も全部外れでモデルが用意できなかったよ\n";
                     DebugTrace(fail.str());
 
                     return nullptr;
