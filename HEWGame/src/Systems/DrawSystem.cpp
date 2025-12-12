@@ -174,7 +174,7 @@ namespace Systems
                                 if (m_missingModelLogged.insert(entity).second)
                                 {
                                         std::ostringstream oss;
-                                        oss << "[DrawSystem] Entity '" << entity->GetTag() << "' missing renderable model; draw command skipped.\n";
+                                        oss << "[DrawSystem] Entity '" << entity->GetTag() << "' 描画モデル欠落のため描画コマンドをスキップ\n";
                                         DebugTrace(oss.str());
                                 }
                                 continue;
@@ -246,8 +246,8 @@ namespace Systems
                         if (m_invalidTransformLogged.insert(source).second)
                         {
                                 std::ostringstream oss;
-                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
-                                        << "' due to non-finite transform values.\n";
+                                oss << "[DrawSystem] 変換値が非有限のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下\n";
                                 DebugTrace(oss.str());
                         }
                         return false;
@@ -263,9 +263,9 @@ namespace Systems
                         if (m_invalidTransformLogged.insert(source).second)
                         {
                                 std::ostringstream oss;
-                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
-                                        << "' due to out-of-range scale (" << transform.scale.x << ','
-                                        << transform.scale.y << ',' << transform.scale.z << ").\n";
+                                oss << "[DrawSystem] スケール範囲外のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 (" << transform.scale.x << ','
+                                        << transform.scale.y << ',' << transform.scale.z << ")\n";
                                 DebugTrace(oss.str());
                         }
                         return false;
@@ -276,8 +276,8 @@ namespace Systems
                         if (m_invalidTransformLogged.insert(source).second)
                         {
                                 std::ostringstream oss;
-                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
-                                        << "' due to extreme Z position " << transform.position.z << ".\n";
+                                oss << "[DrawSystem] Z位置が極端なためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 z=" << transform.position.z << "\n";
                                 DebugTrace(oss.str());
                         }
                         return false;
@@ -288,9 +288,9 @@ namespace Systems
                         if (m_invalidTransformLogged.insert(source).second)
                         {
                                 std::ostringstream oss;
-                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
-                                        << "' behind stage plane (z=" << transform.position.z
-                                        << " planeZ=" << m_stagePlaneZ << ").\n";
+                                oss << "[DrawSystem] ステージ平面より背面のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 (z=" << transform.position.z
+                                        << " planeZ=" << m_stagePlaneZ << ")\n";
                                 DebugTrace(oss.str());
                         }
                         return false;
