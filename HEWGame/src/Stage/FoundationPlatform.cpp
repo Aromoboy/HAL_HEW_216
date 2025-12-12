@@ -336,7 +336,7 @@ namespace Stage
 
     Transform FoundationPlatform::GetRenderTransform() const
     {
-        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+        return m_renderTransform;
     }
 
     Render::Model* FoundationPlatform::GetRenderableModel()
@@ -467,5 +467,12 @@ namespace Stage
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
         m_visual.scale = m_transform.scale;
+        RefreshRenderTransform();
+    }
+
+    void FoundationPlatform::RefreshRenderTransform()
+    {
+        // Keep render calls aligned with the synchronized visual transform without rebuilding at draw time.
+        m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 }

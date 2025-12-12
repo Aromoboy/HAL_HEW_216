@@ -51,9 +51,11 @@ namespace Stage
         void LoadPlatformModel();
         void ApplyColorToModelMaterials();
         void SyncVisualTransform();
+        void RefreshRenderTransform();
 
         Transform m_anchorTransform;
         VisualTransform m_visual{};
+        Transform m_renderTransform{};
         std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
         AABB m_descriptorLocalBounds;
