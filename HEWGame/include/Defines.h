@@ -31,7 +31,7 @@ static const float fFPS = static_cast<float>(FPS);
 static const float GRAVITY = 0.98f;
 
 // タイトル
-static const char* APP_TITLE = "HEW_Team216";
+static const wchar_t* APP_TITLE = L"HEW_Team216";
 
 // 画面サイズ
 static const int SCREEN_WIDTH	= 1280;
