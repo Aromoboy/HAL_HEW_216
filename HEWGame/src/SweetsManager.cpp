@@ -123,6 +123,7 @@ namespace
     using ::SweetsSpace::SweetsTypeHash;
 
     bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon);
+    bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kHorizontalBoundsEpsilon);
 
     float ComputeNormalizationScale(const Render::Model& model, const char* context)
     {
@@ -432,6 +433,13 @@ namespace
         }
 
         return std::fabs(previous - current) > epsilon;
+    }
+
+    bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon)
+    {
+        return HasMeaningfulDifference(a.x, b.x, epsilon)
+            || HasMeaningfulDifference(a.y, b.y, epsilon)
+            || HasMeaningfulDifference(a.z, b.z, epsilon);
     }
 
     float ComputeVolumeScale(const float3& scale)
