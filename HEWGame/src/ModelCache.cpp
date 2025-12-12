@@ -101,7 +101,7 @@ namespace Render
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG("テクスチャキャッシュが未設定 TextureCache のインスタンスを渡すこと");
+            MODELCACHE_LOG("テクスチャキャッシュが未設定 TextureCache のインスタンスを渡すこと\n");
         }
     }
 
@@ -114,47 +114,47 @@ namespace Render
         const std::string cacheKey = CanonicalizeCacheKey(path);
 
         Diagnostics::LogInfo(
-            std::string("[ModelCache] リクエスト='") + path + "' -> key='" + cacheKey + "'");
+            std::string("[ModelCache] リクエスト='") + path + "' -> key='" + cacheKey + "'\n");
 
         // キャッシュに存在するか確認
         auto it = m_models.find(cacheKey);
         if (it != m_models.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ヒット");
-            MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path);
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ヒット\n");
+            MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path + "\n");
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
         if (m_inFlightKeys.find(cacheKey) != m_inFlightKeys.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ブロック: ロードが進行中");
-            MODELCACHE_LOG(std::string("ロードをスキップする（現在ロード中のキーへの再入禁止） [パス] ") + path);
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ブロック: ロードが進行中\n");
+            MODELCACHE_LOG(std::string("ロードをスキップする（現在ロード中のキーへの再入禁止） [パス] ") + path + "\n");
             return nullptr;
         }
 
-        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ミス -> ロード");
+        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ミス -> ロード\n");
 
         // ローダーが有効かどうか確認
         if (!m_loader)
         {
-            MODELCACHE_LOG(std::string("ローダーが未設定のためロードを中止 [パス] ") + path);
+            MODELCACHE_LOG(std::string("ローダーが未設定のためロードを中止 [パス] ") + path + "\n");
             return nullptr;  // ローダーが無ければロードできない
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG(std::string("デバイスが未設定のためロードを中止 [パス] ") + path);
+            MODELCACHE_LOG(std::string("デバイスが未設定のためロードを中止 [パス] ") + path + "\n");
             return nullptr;
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG(std::string("テクスチャキャッシュが未設定のためロードを中止 [パス] ") + path);
+            MODELCACHE_LOG(std::string("テクスチャキャッシュが未設定のためロードを中止 [パス] ") + path + "\n");
             return nullptr;
         }
 
         // キャッシュに無かったのでロードを実行
-        MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path);
+        MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path + "\n");
 
         m_inFlightKeys.insert(cacheKey);
         struct ScopedInFlightRemoval
@@ -180,12 +180,12 @@ namespace Render
         {
             // 成功した場合はキャッシュに保存
             m_models[cacheKey] = model;
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' 格納");
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' 格納\n");
         }
         else
         {
             // 失敗した場合はエラーログ
-            MODELCACHE_LOG(std::string("モデルのロードに失敗 [パス] ") + path);
+            MODELCACHE_LOG(std::string("モデルのロードに失敗 [パス] ") + path + "\n");
         }
 
         return model;  // ロード結果（失敗時は nullptr）

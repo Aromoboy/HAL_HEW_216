@@ -3316,7 +3316,7 @@ namespace SweetsSpace
         oss << kLogPrefix << "ランダム回転の範囲を更新したよ minYawPitchRollDeg="
             << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
             << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
-            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ") \n";
+            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ")\n";
         DebugTrace(oss.str());
     }
 
@@ -3325,7 +3325,7 @@ namespace SweetsSpace
         m_enableRandomScale = enabled;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ランダムスケールは " << (enabled ? "有効" : "無効") << " だよ \n";
+        oss << kLogPrefix << "ランダムスケールは " << (enabled ? "有効" : "無効") << " だよ\n";
         DebugTrace(oss.str());
     }
 
@@ -3339,7 +3339,7 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "同時出現上限は " << (sanitizedCap > 0 ? "設定" : "無効")
             << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
-            << ", liveCount=" << m_lastLiveSweetsCount << ") にしたよ \n";
+            << ", liveCount=" << m_lastLiveSweetsCount << ") にしたよ\n";
         DebugTrace(oss.str());
 
         if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))

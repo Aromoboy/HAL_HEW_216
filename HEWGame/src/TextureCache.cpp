@@ -20,7 +20,7 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
     auto it = textures.find(name);
     if (it != textures.end())
     {
-        Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' ヒット");
+        Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' ヒット\n");
         return it->second;
     }
 
@@ -28,7 +28,7 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
     const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
     Diagnostics::LogInfo(
         "[TextureCache] key='" + cacheKey + "' ミス 存在=" + (exists ? "有" : "無") +
-        " path='" + std::string(path.begin(), path.end()) + "'");
+        " path='" + std::string(path.begin(), path.end()) + "'\n");
 
     // テクスチャ生成
     auto texture = std::make_shared<Texture2D>();
@@ -36,7 +36,7 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 
     // キャッシュへ保存
     textures[name] = std::move(texture);
-    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' 格納");
+    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' 格納\n");
     return textures[name];
 }
 
