@@ -35,7 +35,7 @@ namespace Core
                 HRESULT hr = GetDevice()->CreateBuffer(&desc, data ? &subResource : nullptr, m_buffer.GetAddressOf());
                 if (FAILED(hr))
                 {
-                        DebugMessage("[VertexBuffer] Failed to create buffer.\n");
+                        DebugLog::DebugMessage("[VertexBuffer] Failed to create buffer.\n");
                         Shutdown();
                         return hr;
                 }
@@ -48,7 +48,7 @@ namespace Core
                 ID3D11Buffer* buffer = m_buffer.Get();
                 if (!buffer)
                 {
-                        DebugMessage("[VertexBuffer] Bind called with null buffer.\n");
+                        DebugLog::DebugMessage("[VertexBuffer] Bind called with null buffer.\n");
                         return;
                 }
 

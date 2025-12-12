@@ -20,7 +20,7 @@ namespace Core
         {
                 if (elementSize != 2 && elementSize != 4)
                 {
-                        DebugMessage("[IndexBuffer] Unsupported index element size.\n");
+                        DebugLog::DebugMessage("[IndexBuffer] Unsupported index element size.\n");
                         return E_FAIL;
                 }
 
@@ -38,7 +38,7 @@ namespace Core
                 HRESULT hr = GetDevice()->CreateBuffer(&desc, data ? &subResource : nullptr, m_buffer.GetAddressOf());
                 if (FAILED(hr))
                 {
-                        DebugMessage("[IndexBuffer] Failed to create buffer.\n");
+                        DebugLog::DebugMessage("[IndexBuffer] Failed to create buffer.\n");
                         Shutdown();
                         return hr;
                 }
@@ -51,7 +51,7 @@ namespace Core
                 ID3D11Buffer* buffer = m_buffer.Get();
                 if (!buffer)
                 {
-                        DebugMessage("[IndexBuffer] Bind called with null buffer.\n");
+                        DebugLog::DebugMessage("[IndexBuffer] Bind called with null buffer.\n");
                         return;
                 }
 

@@ -19,7 +19,7 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         if (FAILED(hr))
         {
 #ifdef _DEBUG
-                DebugMessage("頂点バッファの作成に失敗しました");
+                DebugLog::DebugMessage("頂点バッファの作成に失敗しました");
 #endif
                 return;
         }
@@ -29,7 +29,7 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
                 if (FAILED(hr))
                 {
 #ifdef _DEBUG
-                        DebugMessage("インデックスバッファの作成に失敗しました");
+                        DebugLog::DebugMessage("インデックスバッファの作成に失敗しました");
 #endif
 
                         return;

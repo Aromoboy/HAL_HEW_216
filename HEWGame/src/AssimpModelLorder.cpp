@@ -147,7 +147,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     {
         resolvedFullPath = path;
     }
-    DebugMessage("[AssimpModelLoader][CHECKPOINT A] load start path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
+    DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT A] load start path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
     const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
     {
         std::ostringstream oss;
@@ -158,7 +158,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
         {
             oss << " error='" << importer.GetErrorString() << "'";
         }
-        DebugMessage(oss.str());
+        DebugLog::DebugMessage(oss.str());
     }
     if (!pScene)
         return nullptr;
@@ -208,7 +208,11 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         std::vector<MeshDX::Vertex> vertices;
         std::vector<unsigned long> indices;
 
-        DebugMessage("[AssimpModelLoader][CHECKPOINT F] mesh name=" + std::string(mesh->mName.C_Str()));
+        float3 meshMin{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+        float3 meshMax{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+        bool meshHasBounds = false;
+
+        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] mesh name=" + std::string(mesh->mName.C_Str()));
         {
             const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
             {
@@ -240,17 +244,17 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                     << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
                     << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
                     << m.d1 << "," << m.d2 << "," << m.d3 << "," << m.d4 << "]";
-                DebugMessage(oss.str());
+                DebugLog::DebugMessage(oss.str());
             }
             else
             {
-                DebugMessage("[AssimpModelLoader][CHECKPOINT F] no node found for mesh " + std::string(mesh->mName.C_Str()));
+                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] no node found for mesh " + std::string(mesh->mName.C_Str()));
             }
         }
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
-        DebugMessage("[AssimpModelLoader][CHECKPOINT E] mesh index=" + std::to_string(i)
+        DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT E] mesh index=" + std::to_string(i)
             + " vertices=" + std::to_string(mesh->mNumVertices)
             + " faces=" + std::to_string(mesh->mNumFaces)
             + " bones=" + std::string(mesh->HasBones() ? "yes" : "no"));
@@ -296,6 +300,23 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             maxBounds.y = std::max(maxBounds.y, pos.y);
             maxBounds.z = std::max(maxBounds.z, pos.z);
             hasBounds = true;
+
+            meshMin.x = std::min(meshMin.x, pos.x);
+            meshMin.y = std::min(meshMin.y, pos.y);
+            meshMin.z = std::min(meshMin.z, pos.z);
+            meshMax.x = std::max(meshMax.x, pos.x);
+            meshMax.y = std::max(meshMax.y, pos.y);
+            meshMax.z = std::max(meshMax.z, pos.z);
+            meshHasBounds = true;
+        }
+
+        if (meshHasBounds)
+        {
+            std::ostringstream oss;
+            oss << "[AssimpModelLoader][CHECKPOINT E] mesh bounds index=" << i
+                << " min(" << meshMin.x << ',' << meshMin.y << ',' << meshMin.z
+                << ") max(" << meshMax.x << ',' << meshMax.y << ',' << meshMax.z << ")";
+            DebugLog::DebugMessage(oss.str());
         }
 
         // インデックス
@@ -330,7 +351,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         std::ostringstream oss;
         oss << "[AssimpModelLoader][CHECKPOINT E] bounds min(" << minBounds.x << "," << minBounds.y << "," << minBounds.z
             << ") max(" << maxBounds.x << "," << maxBounds.y << "," << maxBounds.z << ")";
-        DebugMessage(oss.str());
+        DebugLog::DebugMessage(oss.str());
     }
 
     if (hasBounds)
@@ -454,7 +475,7 @@ AssimpModelLorder::MakeMaterial(
                 {
                     baseColorStr = baseColorPath.C_Str();
                 }
-                DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
+                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
                     + " diffuse='" + texFile + "' baseColor='" + baseColorStr + "' modelDir=" + directory + " fullPath=" + full);
                 texture = loadTexture(full);
 

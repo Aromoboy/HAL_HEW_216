@@ -14,7 +14,7 @@ TestObject::TestObject(std::string a_szModelKey, float3 a_fPosition, float3 a_fS
 	if (!m_pModel->Load(modelName.c_str(), 0.3f, Model::Flip::None))
 	{
 #ifdef _DEBUG
-		DebugMessage(a_szModelKey + "が読み込めませんでした");
+		DebugLog::DebugMessage(a_szModelKey + "が読み込めませんでした");
 #endif // _DEBUG
 	}
 

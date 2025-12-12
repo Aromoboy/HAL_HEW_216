@@ -5,32 +5,32 @@
 #pragma comment(lib, "d3dcompiler.lib")
 
 //============================================================
-// ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ðƒtƒ@ƒCƒ‹‚©‚çƒ[ƒh
-//============================================================
+        DebugLog::DebugMessage("[Shader] _VF[_[t@CJÜ‚: " + vsPath);
+        DebugLog::DebugMessage("[Shader] sNZVF[_[t@CJÜ‚: " + psPath);
 bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
-    // ’¸“_ƒVƒF[ƒ_[‚ðƒtƒ@ƒCƒ‹‚©‚ç“Ç‚Ýž‚Ý
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰èª­ã¿è¾¼ã¿
     ID3DBlob* vsBlob = nullptr;
     std::wstring wVsPath(vsPath.begin(), vsPath.end());
     if (FAILED(D3DReadFileToBlob(wVsPath.c_str(), &vsBlob)))
     {
-        DebugMessage("[Shader] ’¸“_ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ðŠJ‚¯‚Ü‚¹‚ñ: " + vsPath);
+        DebugMessage("[Shader] é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: " + vsPath);
         return false;
     }
 
-    // ƒsƒNƒZƒ‹ƒVƒF[ƒ_[‚ðƒtƒ@ƒCƒ‹‚©‚ç“Ç‚Ýž‚Ý
+    // ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰èª­ã¿è¾¼ã¿
     ID3DBlob* psBlob = nullptr;
     std::wstring wPsPath(psPath.begin(), psPath.end());
     if (FAILED(D3DReadFileToBlob(wPsPath.c_str(), &psBlob)))
     {
         vsBlob->Release();
-        DebugMessage("[Shader] ƒsƒNƒZƒ‹ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ðŠJ‚¯‚Ü‚¹‚ñ: " + psPath);
+        DebugMessage("[Shader] ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: " + psPath);
         return false;
     }
 
-    // ’¸“_ƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒg‚ðì¬
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆ
     if (FAILED(device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -38,7 +38,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // ƒsƒNƒZƒ‹ƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒg‚ðì¬
+    // ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆ
     if (FAILED(device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -46,7 +46,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // Blob‚ð‰ð•ú
+    // Blobã‚’è§£æ”¾
     vsBlob->Release();
     psBlob->Release();
 
@@ -54,29 +54,29 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
 }
 
 //============================================================
-// ƒVƒF[ƒ_[‚ðƒŒƒ“ƒ_ƒŠƒ“ƒOƒpƒCƒvƒ‰ƒCƒ“‚ÉÝ’è
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã«è¨­å®š
 //============================================================
 void ShaderProgram::Bind(ID3D11DeviceContext* context)
 {
-    // ’¸“_ƒVƒF[ƒ_[‚ÆƒsƒNƒZƒ‹ƒVƒF[ƒ_[‚ðƒRƒ“ƒeƒLƒXƒg‚ÉÝ’è
+    // é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã¨ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã«è¨­å®š
     context->VSSetShader(vertexShader.Get(), nullptr, 0);
     context->PSSetShader(pixelShader.Get(), nullptr, 0);
 }
 
 //============================================================
-// Žg—p—á
+// ä½¿ç”¨ä¾‹
 //============================================================
 /*
-// ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ðì¬
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ä½œæˆ
 ShaderProgram shader;
-// ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ðƒ[ƒhi.cso = ƒRƒ“ƒpƒCƒ‹Ï‚ÝƒVƒF[ƒ_[ƒIƒuƒWƒFƒNƒgj
+// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ï¼ˆ.cso = ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«æ¸ˆã¿ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆï¼‰
 if (shader.LoadFromFiles(device, "shaders/basic_vs.cso", "shaders/basic_ps.cso"))
 {
-    // •`‰æŽž‚ÉƒVƒF[ƒ_[‚ðƒoƒCƒ“ƒh
+    // æç”»æ™‚ã«ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
     shader.Bind(context);
-    // •`‰æˆ—...
+    // æç”»å‡¦ç†...
     context->Draw(...);
 }
-// ’ˆÓF’Êí‚ÍShaderCache‚ðŽg—p‚µ‚ÄƒVƒF[ƒ_[‚ðŠÇ—‚µ‚Ü‚·
-// ShaderProgram‚ð’¼ÚŽg‚¤‚Ì‚Í“Á•Ê‚Èê‡‚Ì‚Ý‚Å‚·
+// æ³¨æ„ï¼šé€šå¸¸ã¯ShaderCacheã‚’ä½¿ç”¨ã—ã¦ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ç®¡ç†ã—ã¾ã™
+// ShaderProgramã‚’ç›´æŽ¥ä½¿ã†ã®ã¯ç‰¹åˆ¥ãªå ´åˆã®ã¿ã§ã™
 */

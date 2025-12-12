@@ -4,61 +4,61 @@
 #include "Debug.h"
 
 //============================================================
-// ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ğƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚É“o˜^
+        DebugLog::DebugMessage("[ShaderCache] VF[_[Ìƒ[hÉs: ");
 //============================================================
 std::shared_ptr<ShaderProgram> ShaderCache::Load(const std::string& name,
     ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
-    // ƒLƒƒƒbƒVƒ…‚É‚·‚Å‚É‘¶İ‚·‚é‚©Šm”F
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ã™ã§ã«å­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
     auto it = programs.find(name);
     if (it != programs.end())
         return it->second;
 
-    // V‚µ‚¢ƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ğì¬
+    // æ–°ã—ã„ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ä½œæˆ
     auto shader = std::make_unique<ShaderProgram>();
     if (!shader->LoadFromFiles(device, vsPath, psPath))
     {
-        DebugMessage("[ShaderCache] ƒVƒF[ƒ_[‚Ìƒ[ƒh‚É¸”s: ");
-        throw std::runtime_error("ƒVƒF[ƒ_[‚Ìƒ[ƒh‚É¸”s: " + name);
+        DebugMessage("[ShaderCache] ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—: ");
+        throw std::runtime_error("ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—: " + name);
     }
 
-    // ƒLƒƒƒbƒVƒ…‚É“o˜^
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç™»éŒ²
     ShaderProgram& ref = *shader;
     programs[name] = std::move(shader);
     return programs[name];
 }
 
 //============================================================
-// ƒLƒƒƒbƒVƒ…‚©‚çƒVƒF[ƒ_[ƒvƒƒOƒ‰ƒ€‚ğæ“¾
+// ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å–å¾—
 //============================================================
 std::shared_ptr<ShaderProgram> ShaderCache::Get(const std::string& name)
 {
     auto it = programs.find(name);
     if (it == programs.end())
-        throw std::runtime_error("ƒVƒF[ƒ_[‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: " + name);
+        throw std::runtime_error("ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: " + name);
 
     return programs[name];
 }
 
 //============================================================
-// g—p—á
+// ä½¿ç”¨ä¾‹
 //============================================================
 /*
-// ƒVƒ“ƒOƒ‹ƒgƒ“‚È‚Ì‚Å‚Ç‚±‚©‚ç‚Å‚àƒAƒNƒZƒX‰Â”\
+// ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ãªã®ã§ã©ã“ã‹ã‚‰ã§ã‚‚ã‚¢ã‚¯ã‚»ã‚¹å¯èƒ½
 
-// ‰Šú‰»FƒVƒF[ƒ_[‚ğƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚É“o˜^
+// åˆæœŸåŒ–æ™‚ï¼šã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¦ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç™»éŒ²
 auto& basicShader = ShaderCache::Instance().Load("basic", device, "shaders/basic_vs.cso", "shaders/basic_ps.cso");
 auto& lightShader = ShaderCache::Instance().Load("light", device, "shaders/light_vs.cso", "shaders/light_ps.cso");
 
-// •`‰æFƒLƒƒƒbƒVƒ…‚©‚çƒVƒF[ƒ_[‚ğæ“¾‚µ‚Äg—p
-auto& shader = ShaderCache::Instance().Get("basic");  // ‚‘¬iƒLƒƒƒbƒVƒ…‚©‚çæ“¾j
-shader.Bind(context);  // ƒVƒF[ƒ_[‚ğƒpƒCƒvƒ‰ƒCƒ“‚Éİ’è
+// æç”»æ™‚ï¼šã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’å–å¾—ã—ã¦ä½¿ç”¨
+auto& shader = ShaderCache::Instance().Get("basic");  // é«˜é€Ÿï¼ˆã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰å–å¾—ï¼‰
+shader.Bind(context);  // ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã«è¨­å®š
 
-// ‚Ü‚½‚Í’¼ÚƒoƒCƒ“ƒh
+// ã¾ãŸã¯ç›´æ¥ãƒã‚¤ãƒ³ãƒ‰
 ShaderCache::Instance().Get("light").Bind(context);
 
-// ’ˆÓF“¯‚¶–¼‘O‚Å‰½“xLoad()‚ğŒÄ‚ñ‚Å‚àAÅ‰‚Ì1‰ñ‚¾‚¯ƒ[ƒh‚³‚ê‚Ü‚·
-// 2‰ñ–ÚˆÈ~‚ÍƒLƒƒƒbƒVƒ…‚³‚ê‚½ƒVƒF[ƒ_[‚ª•Ô‚³‚ê‚Ü‚·
+// æ³¨æ„ï¼šåŒã˜åå‰ã§ä½•åº¦Load()ã‚’å‘¼ã‚“ã§ã‚‚ã€æœ€åˆã®1å›ã ã‘ãƒ­ãƒ¼ãƒ‰ã•ã‚Œã¾ã™
+// 2å›ç›®ä»¥é™ã¯ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã•ã‚ŒãŸã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãŒè¿”ã•ã‚Œã¾ã™
 */
