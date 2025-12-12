@@ -25,51 +25,40 @@
 SoundSystem::SoundSystem()
 {
 #ifdef _DEBUG
-	DebugLog::DebugMessage("SoundSystem͐쒆łAgpȂłB");
+    DebugLog::DebugMessage("SoundSystem initializing.");
 #endif
 
+    m_pAudio2 = nullptr;
+    m_pMasterVoice = nullptr;
+    m_pSourceVoice = nullptr;
 
-
-	m_pAudio2 = nullptr;
-	m_pMasterVoice = nullptr;
-	m_pSourceVoice = nullptr;
-
-    HRESULT result;
-    result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
+    HRESULT result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
     if (FAILED(result))
     {
 #ifdef _DEBUG
-        DebugLog::DebugMessage("COM̏Ɏs");
+        DebugLog::DebugMessage("Failed to initialize COM.");
 #endif // _DEBUG
         return;
     }
 
-
-
-
-        DebugLog::DebugMessage("XAudio̍쐬Ɏs܂B");
-        DebugLog::DebugMessage("XAudio̍쐬Ɏs܂B");
+    result = XAudio2Create(&m_pAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    if (FAILED(result))
     {
 #ifdef _DEBUG
-        DebugMessage("XAudioの作成に失敗しました。");
+        DebugLog::DebugMessage("Failed to create XAudio2 instance.");
 #endif
         return;
     }
 
-	if (FAILED(result = m_pAudio2->CreateMasteringVoice(&m_pMasterVoice))) 
+    result = m_pAudio2->CreateMasteringVoice(&m_pMasterVoice);
+    if (FAILED(result))
     {
 #ifdef _DEBUG
-        DebugMessage("XAudioの作成に失敗しました。");
+        DebugLog::DebugMessage("Failed to create mastering voice.");
 #endif
         return;
     }
-
-
-
-
-    
 }
 
 SoundSystem::~SoundSystem()
@@ -86,32 +75,29 @@ SoundSystem::~SoundSystem()
 
 bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData)
 {
-	// 何か入っていると困るため初期化
-	if (outData)
-	{
-		free(outData->m_soundBuffer);
-	}
-	// nullptrなら返す
-	else return false;
+        // 何か入っていると困るため初期化
+        if (!outData)
+        {
+                return false;
+        }
 
-	HMMIO mmioHandle = nullptr;
+        delete[] outData->m_soundBuffer;
+        outData->m_soundBuffer = nullptr;
 
-	// チャンク情報
-	MMCKINFO chunkInfo{};
+        HMMIO mmioHandle = mmioOpenA(const_cast<LPSTR>(a_wFilePath.c_str()), nullptr, MMIO_READ | MMIO_ALLOCBUF);
+        if (!mmioHandle)
+        {
+#ifdef _DEBUG
+                DebugLog::DebugMessage("Failed to open wave file.");
+#endif
+                return false;
+        }
 
-		DebugLog::DebugMessage("Sound.cpp:Riff`NɐNs܂B");
-		DebugLog::DebugMessage("Sound.cpp:fmt`N݂܂B");
+        // チャンク情報
+        MMCKINFO chunkInfo{};
+        MMCKINFO riffChunkInfo{};
 
-		DebugLog::DebugMessage("Sound.h:ǂݍ݃TCYvĂ܂B");
-		DebugLog::DebugMessage("Sound.cpp:wavetH[}bgG[ł");
-		DebugLog::DebugMessage("Sound.h:fmt`N̑ޏoɎs܂B");
-		DebugLog::DebugMessage("Sound.cpp:data`Nւ̐NɎs܂B");
-		DebugLog::DebugMessage("Sound.cpp:data`N̓ǂݍ݂Ɏs܂B");
-		DebugLog::DebugMessage("SourceVoice̍쐬Ɏs܂B");
-
-	if (!mmioHandle) return false;
-
-	riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
+        riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
 
 	// RIFFチャンクに侵入する
 	if (mmioDescend(
