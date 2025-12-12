@@ -15,12 +15,21 @@
 #include "DebugConsole.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
+#include "Diagnostics/Logger.h"
 
 namespace
 {
         Core::StepTimer g_stepTimer;
         Core::Input g_input;
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
+
+        void LogBootScenario()
+        {
+                Diagnostics::LogInfo(
+                        "[Scenario] startup -> load SceneGame -> spawn 5-10 sweets -> single gameplay loop -> exit request");
+                Diagnostics::LogInfo(
+                        "[Scenario] success: no hangs across 3 runs, platform visible, >=3 sweets types readable, player stable");
+        }
 }
 
 SceneSpace::Scene* g_pScene;
@@ -50,6 +59,8 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
         g_pScene = new SceneSpace::ScenePowerUp;
+
+        LogBootScenario();
 
         return hr;
 }
