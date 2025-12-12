@@ -60,7 +60,6 @@ void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace
 	}
 }
 
-		DebugLog::DebugMessage("Node܂ł");
 int PowerUpManager::GetLevel(int num)
 {
 	if (num >= m_nodes.size()) return -1;
