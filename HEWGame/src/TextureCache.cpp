@@ -26,7 +26,8 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 
     std::error_code ec;
     const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
-    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' ミス 存在=" + (exists ? "有" : "無") +
+    Diagnostics::LogInfo(
+        "[TextureCache] key='" + cacheKey + "' ミス 存在=" + (exists ? "有" : "無") +
         " path='" + std::string(path.begin(), path.end()) + "'");
 
     // テクスチャ生成
