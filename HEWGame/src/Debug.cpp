@@ -3,6 +3,11 @@
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <cstdio>
+
+#if defined(_WIN32)
+#include <io.h>
+#endif
 
 namespace
 {
@@ -33,6 +38,26 @@ void DebugLog::DebugMessage(const std::string& message)
 #if defined(_WIN32)
         ::OutputDebugStringA(formatted.c_str());
 #endif
-        std::cout << formatted;
-        std::cout.flush();
+
+        bool canWriteToConsole = true;
+
+#if defined(_WIN32)
+        HANDLE stdoutHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
+        canWriteToConsole = stdoutHandle != INVALID_HANDLE_VALUE && stdoutHandle != nullptr && _isatty(_fileno(stdout)) != 0;
+
+        if (!canWriteToConsole)
+        {
+                FILE* newStdout = nullptr;
+                if (::AllocConsole() && freopen_s(&newStdout, "CONOUT$", "w", stdout) == 0)
+                {
+                        canWriteToConsole = true;
+                }
+        }
+#endif
+
+        if (canWriteToConsole)
+        {
+                std::cout << formatted;
+                std::cout.flush();
+        }
 }
