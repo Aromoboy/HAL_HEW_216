@@ -109,7 +109,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// Riffチャンクに侵入失敗
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:Riffチャンクに侵入失敗しました。");
+		DebugMessage("Sound.cpp:Riffチャンクに侵入失敗しました");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -126,7 +126,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// fmtチャンクがない
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:fmtチャンクが存在しません。");
+		DebugMessage("Sound.cpp:fmtチャンクが存在しません");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -142,7 +142,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// 読み込みサイズが一致していません
 #ifdef _DEBUG
-		DebugMessage("Sound.h:読み込みサイズが一致していません。");
+		DebugMessage("Sound.h:読み込みサイズが一致していません");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -154,7 +154,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 		// waveフォーマットエラーです
 
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:waveフォーマットエラーです");
+		//DebugMessage("Soundフォーマットエラーです");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -165,7 +165,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// fmtチャンク退出失敗
 #ifdef _DEBUG
-		DebugMessage("Sound.h:fmtチャンクからの退出に失敗しました。");
+		DebugMessage("Sound.h:fmtチャンクからの退出に失敗しました");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -177,7 +177,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// dataチャンク侵入失敗
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataチャンクへの侵入に失敗しました。");
+		DebugMessage("Sound.cpp:dataチャンクへの侵入に失敗しました");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		return false;
@@ -193,7 +193,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 	{
 		// dataチャンク読み込み失敗
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataチャンクの読み込みに失敗しました。");
+		DebugMessage("Sound.cpp:dataチャンクの読み込みに失敗しました");
 #endif
 		mmioClose(mmioHandle, MMIO_FHOPEN);
 		delete[] outData->m_soundBuffer;
@@ -229,7 +229,7 @@ bool SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, 
 	if (FAILED(result))
 	{
 		// SourceVoice作成失敗
-		DebugMessage("SourceVoiceの作成に失敗しました。");
+		DebugMessage("SourceVoiceの作成に失敗しました");
 		return false;
 	}
 
