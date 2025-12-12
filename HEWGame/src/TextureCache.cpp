@@ -5,6 +5,7 @@
 // windowscodecs.lib ̃J[ݒ肪KvłB
 #include "TextureCache.h"
 #include "Debug.h"
+#include "Diagnostics/Logger.h"
 #include <iostream>
 #include <filesystem>
 
@@ -13,17 +14,20 @@
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
+    const std::string cacheKey = name;
+
     // LbVɂłɑ݂邩mF
     auto it = textures.find(name);
     if (it != textures.end())
     {
-        DebugLog::DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' cached hit");
+        Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' hit");
         return it->second;
     }
 
     std::error_code ec;
     const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
-    DebugLog::DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' exists=" + (exists ? "yes" : "no") + " cached=no");
+    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' miss exists=" + (exists ? "yes" : "no") +
+        " path='" + std::string(path.begin(), path.end()) + "'");
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
@@ -31,6 +35,7 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
 
     // LbVɓo^
     textures[name] = std::move(texture);
+    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' stored");
     return textures[name];
 }
 

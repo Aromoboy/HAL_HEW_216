@@ -40,6 +40,7 @@
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
 #include "Entities/PhysicalEntity.h"
+#include "Diagnostics/Logger.h"
 #include <DirectXMath.h>
 
 namespace SweetsSpace
@@ -1750,6 +1751,14 @@ namespace SweetsSpace
                 if (sweets)
                 {
                     sweets->SetVisualTransform(visualTransform);
+
+                    std::ostringstream created;
+                    created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
+                        << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
+                        << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
+                        << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
+                        << ") pivotOffsetY=" << visualOffsetY << '\n';
+                    Diagnostics::LogInfo(created.str());
                 }
 
                 return sweets;

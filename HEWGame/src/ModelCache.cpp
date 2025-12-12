@@ -1,6 +1,7 @@
 #include "ModelCache.h"
 #include "Debug.h"
 #include "TextureCache.h"
+#include "Diagnostics/Logger.h"
 
 #pragma execution_character_set("utf-8")
 
@@ -70,13 +71,18 @@ namespace Render
     //============================================================
     std::shared_ptr<Render::Model> ModelCache::Get(const std::string& path)
     {
+        const std::string cacheKey = path;
+
         // キャッシュに存在するか確認
         auto it = m_models.find(path);
         if (it != m_models.end())
         {
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' hit");
             MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path);
             return it->second;  // キャッシュ済みのモデルを返す
         }
+
+        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' miss -> load");
 
         // ローダーが有効かどうか確認
         if (!m_loader)
@@ -106,6 +112,7 @@ namespace Render
         {
             // 成功した場合はキャッシュに保存
             m_models[path] = model;
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' stored");
         }
         else
         {
