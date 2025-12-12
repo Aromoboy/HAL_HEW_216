@@ -379,18 +379,18 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                     << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
                     << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
                     << m.d1 << "," << m.d2 << "," << m.d3 << "," << m.d4 << "]";
-                DebugLog::DebugMessage(oss.str());
+                DebugLog::DebugMessage(oss.str() + "\n");
             }
             else
             {
-                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし");
+                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
             }
         }
 
         const bool applyNodeTransform = hasNodeTransform && mesh->mNumBones == 0;
         if (applyNodeTransform)
         {
-            DebugLog::DebugMessage("[Mesh] メッシュ '" + std::string(mesh->mName.C_Str()) + "' にノード行列を適用");
+            DebugLog::DebugMessage("[Mesh] メッシュ '" + std::string(mesh->mName.C_Str()) + "' にノード行列を適用\n");
         }
 
         // 頂点
@@ -398,7 +398,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT E] メッシュ index=" + std::to_string(i)
             + " 頂点=" + std::to_string(mesh->mNumVertices)
             + " 面=" + std::to_string(mesh->mNumFaces)
-            + " ボーン=" + std::string(mesh->HasBones() ? "yes" : "no"));
+            + " ボーン=" + std::string(mesh->HasBones() ? "yes" : "no") + "\n");
 
         for (unsigned int j = 0; j < vertices.size(); ++j)
         {
