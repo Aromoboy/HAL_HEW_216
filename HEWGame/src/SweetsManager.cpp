@@ -1060,8 +1060,9 @@ namespace
         if (!scene || !scene->HasMeshes())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "ジオメトリ確認用のモデル読み込みに失敗したよ path='" << path
-                << "' reason='" << (scene ? "メッシュなし" : importer.GetErrorString()) << "'\n";
+            oss << kLogPrefix
+                << "ジオメトリ確認用のモデル読み込みに失敗したよ path='" << path << "'"
+                << " reason='" << (scene ? "メッシュなし" : importer.GetErrorString()) << "'\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -1531,14 +1532,15 @@ namespace SweetsSpace
             overrides[normalizedKey] = preset;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
+            oss << kLogPrefix
+                << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
                 << " resolvedKey='" << resolvedKey << "'"
-                << "' spawnWeight=" << preset.spawnWeight
+                << " spawnWeight=" << preset.spawnWeight
                 << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
                 << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
-                    << " collider=" << ToString(preset.colliderPreset.shape)
-                    << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
-                    << preset.colliderPreset.padding.z << ")\n";
+                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                << preset.colliderPreset.padding.z << ")\n";
             DebugTrace(oss.str());
         }
 
@@ -1719,9 +1721,9 @@ namespace SweetsSpace
             presetLog << kLogPrefix << "種類 '" << resolvedKind << "' の工場プリセットを決めたよ";
             if (isAliasedKind)
             {
-                presetLog << "' (from key '" << kind << "')";
+                presetLog << " (from key '" << kind << "')";
             }
-            presetLog << "' source=" << (hasOverride ? "config" : "fallback")
+            presetLog << " source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
                 << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
                 << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
