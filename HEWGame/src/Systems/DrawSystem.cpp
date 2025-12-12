@@ -135,7 +135,7 @@ namespace Systems
                                 continue;
                         }
 
-                        const Transform& transform = entity->GetTransform();
+                        const Transform transform = entity->GetRenderTransform();
                         if (!ValidateTransform(transform, entity))
                         {
                                 continue;

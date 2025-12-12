@@ -33,6 +33,8 @@ namespace Entities
         Transform& GetTransform();
         const Transform& GetTransform() const;
 
+        virtual Transform GetRenderTransform() const;
+
         std::shared_ptr<Render::Model> GetModel() const;
         const std::string& GetTag() const;
         virtual Render::Model* GetRenderableModel();
