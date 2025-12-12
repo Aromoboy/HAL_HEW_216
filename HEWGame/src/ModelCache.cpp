@@ -80,7 +80,7 @@ namespace Render
 
         if (reconfiguringWithCachedModels)
         {
-            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアします (Clear が呼ばれていません)。");
+            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアします (Clear が呼ばれていません)");
             Clear();
         }
 
