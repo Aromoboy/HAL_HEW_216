@@ -19,7 +19,7 @@ PowerUpManager::PowerUpManager(Core::UpdateScheduler& a_scheduler, TextureCache&
 
 PowerUpManager::~PowerUpManager()
 {
-	// ‘S‚ÄŠJ•ú
+	// å…¨ã¦é–‹æ”¾
 	for (auto& it : m_nodes)
 	{
 		m_scheduler.Unregister(*it.second);
@@ -60,7 +60,7 @@ void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace
 	}
 }
 
-// ƒf[ƒ^o—Í‚É‡‚í‚¹‚ÄŒã‚Å‘‚«Š·‚¦‚é
+		DebugLog::DebugMessage("NodeÂ‚Ü‚Å‚");
 int PowerUpManager::GetLevel(int num)
 {
 	if (num >= m_nodes.size()) return -1;
@@ -82,7 +82,7 @@ std::optional<float2> PowerUpManager::GetDrawPosition(int a_index)
 {
 	if (a_index >= m_nodes.size() || a_index < 0)
 	{
-		DebugMessage("Node‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½");
+		DebugMessage("NodeãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸ");
 		return std::nullopt;
 	}
 	return m_nodes.at(a_index).second->GetDrawPos();

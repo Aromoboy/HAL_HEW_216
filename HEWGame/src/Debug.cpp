@@ -1,14 +1,38 @@
 #include "Debug.h"
 
-HWND g_hwnd;
+#include <iostream>
+#include <mutex>
+#include <string>
 
-void InitDebug(HWND a_hwnd)
+namespace
 {
-	g_hwnd = a_hwnd;
+        std::mutex g_logMutex;
+        HWND g_hwnd = nullptr;
+
+        std::string EnsureNewline(const std::string& message)
+        {
+                if (!message.empty() && message.back() == '\n')
+                {
+                        return message;
+                }
+                return message + '\n';
+        }
 }
 
-void DebugMessage(std::string a_szMessage)
+void DebugLog::Init(HWND hwnd)
 {
-	MessageBox(g_hwnd, a_szMessage.c_str(), "Error!!", MB_OK | MB_ICONERROR);
-	
+        g_hwnd = hwnd;
+        (void)g_hwnd;
+}
+
+void DebugLog::DebugMessage(const std::string& message)
+{
+        const std::string formatted = EnsureNewline(message);
+        std::lock_guard<std::mutex> lock(g_logMutex);
+
+#if defined(_WIN32)
+        ::OutputDebugStringA(formatted.c_str());
+#endif
+        std::cout << formatted;
+        std::cout.flush();
 }

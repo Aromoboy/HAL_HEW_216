@@ -79,7 +79,7 @@ HRESULT MeshBuffer::Write(void* pVtx)
 
         if (!m_vertexBuffer.IsValid())
         {
-                DebugMessage("[MeshBuffer] Write called before vertex buffer initialization.\n");
+                DebugLog::DebugMessage("[MeshBuffer] Write called before vertex buffer initialization.\n");
                 return E_FAIL;
         }
 

@@ -17,13 +17,13 @@ std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Dev
     auto it = textures.find(name);
     if (it != textures.end())
     {
-        DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' cached hit");
+        DebugLog::DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' cached hit");
         return it->second;
     }
 
     std::error_code ec;
     const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
-    DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' exists=" + (exists ? "yes" : "no") + " cached=no");
+    DebugLog::DebugMessage("[TextureCache][CHECKPOINT D] path='" + std::string(path.begin(), path.end()) + "' exists=" + (exists ? "yes" : "no") + " cached=no");
 
     // VeNX`쐬
     auto texture = std::make_shared<Texture2D>();
