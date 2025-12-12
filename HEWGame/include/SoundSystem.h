@@ -19,11 +19,11 @@ struct WaveData
 	char* m_soundBuffer;
 	DWORD m_size;
 
-	WaveData()
-	{
-		m_soundBuffer = nullptr;
-	}
-	~WaveData() { if (m_soundBuffer)delete m_soundBuffer; }
+        WaveData()
+        {
+                m_soundBuffer = nullptr;
+        }
+        ~WaveData() { if (m_soundBuffer) delete[] m_soundBuffer; }
 };
 
 class SoundSystem
