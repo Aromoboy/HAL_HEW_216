@@ -130,6 +130,71 @@ namespace
 
         return GuessTextureFromFilename(normalizedPath);
     }
+
+    bool ContainsNonAscii(const std::string& value)
+    {
+        return std::any_of(value.begin(), value.end(), [](unsigned char c)
+            {
+                return c > 0x7F;
+            });
+    }
+
+    bool EqualsIgnoreCase(const std::string& lhs, const std::string& rhs)
+    {
+        return lhs.size() == rhs.size()
+            && std::equal(lhs.begin(), lhs.end(), rhs.begin(), [](char l, char r)
+                {
+                    return std::tolower(static_cast<unsigned char>(l))
+                        == std::tolower(static_cast<unsigned char>(r));
+                });
+    }
+
+    std::optional<std::string> FindFirstTextureByExtension(const std::string& extension)
+    {
+        if (extension.empty())
+        {
+            return std::nullopt;
+        }
+
+        std::filesystem::path textureDir("Assets/Texture");
+        std::error_code ec;
+        if (!std::filesystem::exists(textureDir, ec) || !std::filesystem::is_directory(textureDir, ec))
+        {
+            return std::nullopt;
+        }
+
+        std::vector<std::filesystem::path> candidates;
+        for (const auto& entry : std::filesystem::directory_iterator(textureDir, ec))
+        {
+            if (ec)
+            {
+                break;
+            }
+
+            if (!entry.is_regular_file())
+            {
+                continue;
+            }
+
+            const std::string candidateExt = entry.path().extension().string();
+            if (EqualsIgnoreCase(candidateExt, extension))
+            {
+                candidates.emplace_back(entry.path());
+            }
+        }
+
+        if (candidates.empty())
+        {
+            return std::nullopt;
+        }
+
+        std::sort(candidates.begin(), candidates.end(), [](const auto& lhs, const auto& rhs)
+            {
+                return lhs.string() < rhs.string();
+            });
+
+        return candidates.front().string();
+    }
 }
 
 // モデル読み込み
@@ -445,48 +510,60 @@ AssimpModelLorder::MakeMaterial(
                 && texFile[1] == ':'
                 && (texFile[2] == '\\' || texFile[2] == '/');
 
-            const bool needsSanitize = std::filesystem::path(originalTexPath).is_absolute()
-                || isAbsoluteWindowsPath
-                || hasParentTraversal(originalTexPath);
+const bool needsSanitize =
+    std::filesystem::path(originalTexPath).is_absolute()
+    || isAbsoluteWindowsPath
+    || hasParentTraversal(originalTexPath);
 
-            if (needsSanitize)
+std::string fileName = texFile;
+
+if (needsSanitize)
+{
+    const size_t lastSeparator = originalTexPath.find_last_of("\\/");
+    fileName = (lastSeparator == std::string::npos)
+        ? originalTexPath
+        : originalTexPath.substr(lastSeparator + 1);
+
+    const std::string sanitizedPath = "Assets/Texture/" + fileName;
+
+    DebugLog::DebugMessage(
+        "[Material] Sanitized texture path from '" + originalTexPath +
+        "' to '" + sanitizedPath + "'");
+
+    if (std::filesystem::exists(sanitizedPath))
+    {
+        texFile = fileName;
+        textureDirectory = "Assets/Texture/";
+    }
+    else
+    {
+        DebugLog::DebugMessage(
+            "[AssimpModelLoader][WARNING] Sanitized texture path does not exist: '" +
+            sanitizedPath + "'; skipping texture.");
+        skipTextureLoading = true;
+    }
+}
+else
+{
+    const size_t lastSeparator = texFile.find_last_of("\\/");
+    fileName = (lastSeparator == std::string::npos)
+        ? texFile
+        : texFile.substr(lastSeparator + 1);
+}
+
+const auto equalsIgnoreCase = [](const std::string& lhs, const std::string& rhs)
+{
+    return lhs.size() == rhs.size()
+        && std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+            [](char l, char r)
             {
-                const size_t lastSeparator = originalTexPath.find_last_of("\\/");
-                const std::string fileName = lastSeparator == std::string::npos
-                    ? originalTexPath
-                    : originalTexPath.substr(lastSeparator + 1);
-                const std::string sanitizedPath = "Assets/Texture/" + fileName;
-                DebugLog::DebugMessage("[Material] Sanitized texture path from '" + originalTexPath + "' to '" + sanitizedPath + "'");
-
-                if (std::filesystem::exists(sanitizedPath))
-                {
-                    texFile = fileName;
-                    textureDirectory = "Assets/Texture/";
-                }
-                else
-                {
-                    DebugLog::DebugMessage("[AssimpModelLoader][WARNING] Sanitized texture path does not exist: '" + sanitizedPath + "'; skipping texture.");
-                    skipTextureLoading = true;
-                }
-            }
-
-            const size_t lastSeparator = texFile.find_last_of("\\/");
-            const std::string fileName = lastSeparator == std::string::npos
-                ? texFile
-                : texFile.substr(lastSeparator + 1);
-
-            const auto equalsIgnoreCase = [](const std::string& lhs, const std::string& rhs)
-            {
-                return lhs.size() == rhs.size()
-                    && std::equal(lhs.begin(), lhs.end(), rhs.begin(), [](char l, char r)
-                        {
-                            return std::tolower(static_cast<unsigned char>(l))
-                                == std::tolower(static_cast<unsigned char>(r));
-                        });
-            };
+                return std::tolower(static_cast<unsigned char>(l))
+                    == std::tolower(static_cast<unsigned char>(r));
+            });
+};
 
             if (isAbsoluteWindowsPath
-                && (equalsIgnoreCase(fileName, "texture.png") || equalsIgnoreCase(fileName, "texture2.png")))
+                && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png")))
             {
                 texFile = fileName;
                 textureDirectory = "Assets\\Texture\\";
@@ -511,22 +588,64 @@ AssimpModelLorder::MakeMaterial(
             {
                 if (!skipTextureLoading)
                 {
-                    const auto loadTexture = [&](const std::string& fullPath)
-                    {
-                        std::wstring wfull(fullPath.begin(), fullPath.end());
-                        return textureCache.Load(fullPath, device, wfull);
-                    };
+const auto loadTexture = [&](const std::string& fullPath)
+{
+    std::wstring wfull(fullPath.begin(), fullPath.end());
+    return textureCache.Load(fullPath, device, wfull);
+};
 
-                    std::string full = textureDirectory + texFile;
-                    aiString baseColorPath;
-                    std::string baseColorStr;
-                    if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
-                    {
-                        baseColorStr = baseColorPath.C_Str();
-                    }
-                    DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
-                        + " diffuse='" + texFile + "' baseColor='" + baseColorStr + "' modelDir=" + directory + " fullPath=" + full);
-                    texture = loadTexture(full);
+std::string full = textureDirectory + texFile;
+
+aiString baseColorPath;
+std::string baseColorStr;
+if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
+{
+    baseColorStr = baseColorPath.C_Str();
+}
+
+DebugLog::DebugMessage(
+    "[AssimpModelLoader][CHECKPOINT C] material=" + std::to_string(i)
+    + " diffuse='" + texFile
+    + "' baseColor='" + baseColorStr
+    + "' modelDir=" + directory
+    + " fullPath=" + full
+);
+
+// --- fallback / sanitize block ---
+const bool hasNonAscii = ContainsNonAscii(texFile);
+
+std::error_code existEc;
+const bool textureExists = std::filesystem::exists(full, existEc);
+bool skipTextureLoad = false;
+
+if (hasNonAscii || !textureExists)
+{
+    const std::string ext = std::filesystem::path(texFile).extension().string();
+
+    if (auto fallback = FindFirstTextureByExtension(ext))
+    {
+        const std::filesystem::path fallbackPath(*fallback);
+        DebugLog::DebugMessage(
+            "[Material] Fallback texture selected '" +
+            fallbackPath.filename().string() +
+            "' for invalid source name");
+
+        full = *fallback;
+    }
+    else
+    {
+        DebugLog::DebugMessage(
+            "[Material][WARNING] No fallback texture found for '" + texFile + "', skipping texture");
+        skipTextureLoad = true;
+    }
+}
+
+// --- actual load ---
+if (!skipTextureLoad)
+{
+    texture = loadTexture(full);
+}
+
 
                     if (!texture && texFile == "パイナップル.png")
                     {
