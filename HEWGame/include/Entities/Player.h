@@ -63,8 +63,10 @@ namespace Entities
         };
 
         void SyncVisualTransformFromPhysics();
+        void RefreshRenderTransform();
 
         VisualTransform m_visual{};
+        Transform m_renderTransform{};
         std::shared_ptr<Render::Model> m_fairyModel;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;

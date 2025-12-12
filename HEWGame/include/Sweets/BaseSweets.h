@@ -52,6 +52,7 @@ namespace SweetsSpace
         void SetVisualTransform(const VisualTransform& visual)
         {
             m_visual = visual;
+            RefreshRenderTransform();
         }
 
         const VisualTransform& GetVisualTransform() const
@@ -61,11 +62,13 @@ namespace SweetsSpace
 
     private:
         void SyncFromPhysics();
+        void RefreshRenderTransform();
 
         bool m_pendingDestroy = false;
         bool m_safeToDelete = true;
         bool m_missingModelWarned = false;
         VisualTransform m_visual{};
+        Transform m_renderTransform{};
     };
 }
 

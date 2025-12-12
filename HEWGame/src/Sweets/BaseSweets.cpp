@@ -47,6 +47,7 @@ namespace SweetsSpace
             tag)
         , m_visual{ transform.position, transform.rotation, transform.scale }
     {
+        RefreshRenderTransform();
     }
 
     void BaseSweets::OnUpdate(Core::UpdateContext& ctx)
@@ -67,13 +68,12 @@ namespace SweetsSpace
             return;
         }
 
-        const Transform visualTransform{ m_visual.position, m_visual.rotation, m_visual.scale };
-        renderer.Draw(*m_model, visualTransform, &camera);
+        renderer.Draw(*m_model, m_renderTransform, &camera);
     }
 
     Transform BaseSweets::GetRenderTransform() const
     {
-        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+        return m_renderTransform;
     }
 
     void BaseSweets::SyncFromPhysics()
@@ -85,10 +85,18 @@ namespace SweetsSpace
 
             SetPosition(worldPosition);
             m_visual.position = worldPosition;
+            RefreshRenderTransform();
             return;
         }
 
         m_visual.position = m_transform.position;
+        RefreshRenderTransform();
+    }
+
+    void BaseSweets::RefreshRenderTransform()
+    {
+        // Keep the cached render transform authoritative to avoid per-draw recomposition.
+        m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 }
 

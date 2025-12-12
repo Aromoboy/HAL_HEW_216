@@ -326,6 +326,7 @@ namespace Entities
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
         m_visual.scale = m_transform.scale;
+        RefreshRenderTransform();
 
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
         Physics::BoxColliderComponent colliderComponent;
@@ -393,13 +394,12 @@ namespace Entities
             return;
         }
 
-        const Transform renderTransform = GetRenderTransform();
-        renderer.Draw(*m_model, renderTransform, &camera);
+        renderer.Draw(*m_model, m_renderTransform, &camera);
     }
 
     Transform Player::GetRenderTransform() const
     {
-        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+        return m_renderTransform;
     }
 
     void Player::SyncVisualTransformFromPhysics()
@@ -412,6 +412,13 @@ namespace Entities
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
         m_visual.scale = m_transform.scale;
+        RefreshRenderTransform();
+    }
+
+    void Player::RefreshRenderTransform()
+    {
+        // Keep render submissions aligned with the latest visual transform without recomputing during draw.
+        m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 
     void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
