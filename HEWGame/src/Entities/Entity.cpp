@@ -36,6 +36,11 @@ namespace Entities
         return m_transform;
     }
 
+    Transform Entity::GetRenderTransform() const
+    {
+        return m_transform;
+    }
+
     std::shared_ptr<Render::Model> Entity::GetModel() const
     {
         return m_model;

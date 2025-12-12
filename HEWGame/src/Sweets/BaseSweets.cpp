@@ -72,5 +72,10 @@ namespace SweetsSpace
         const Transform visualTransform{ m_visual.position, m_visual.rotation, m_visual.scale };
         renderer.Draw(*m_model, visualTransform, &camera);
     }
+
+    Transform BaseSweets::GetRenderTransform() const
+    {
+        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+    }
 }
 

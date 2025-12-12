@@ -34,6 +34,8 @@ namespace SweetsSpace
         void OnUpdate(Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
+        Transform GetRenderTransform() const override;
+
         bool IsPendingDestroy() const noexcept
         {
             return m_pendingDestroy;
