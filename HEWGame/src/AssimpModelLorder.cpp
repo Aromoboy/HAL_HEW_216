@@ -213,6 +213,8 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         bool meshHasBounds = false;
 
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] mesh name=" + std::string(mesh->mName.C_Str()));
+        aiMatrix4x4 nodeTransform;
+        bool hasNodeTransform = false;
         {
             const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
             {
@@ -237,6 +239,8 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
             if (matchedNode)
             {
+                nodeTransform = matchedNode->mTransformation;
+                hasNodeTransform = true;
                 std::ostringstream oss;
                 oss << "[AssimpModelLoader][CHECKPOINT F] node transform for " << mesh->mName.C_Str() << " : ";
                 const aiMatrix4x4& m = matchedNode->mTransformation;
@@ -250,6 +254,12 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             {
                 DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] no node found for mesh " + std::string(mesh->mName.C_Str()));
             }
+        }
+
+        const bool applyNodeTransform = hasNodeTransform && mesh->mNumBones == 0;
+        if (applyNodeTransform)
+        {
+            DebugLog::DebugMessage("[Mesh] Applied node transform to mesh '" + std::string(mesh->mName.C_Str()) + "'");
         }
 
         // 頂点
@@ -271,6 +281,11 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             aiColor4D col = mesh->HasVertexColors(0)
                 ? mesh->mColors[0][j]
                 : aiColor4D(1, 1, 1, 1);
+
+            if (applyNodeTransform)
+            {
+                pos = nodeTransform * pos;
+            }
 
             DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
             const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
