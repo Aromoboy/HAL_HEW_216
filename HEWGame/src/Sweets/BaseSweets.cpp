@@ -62,7 +62,7 @@ namespace SweetsSpace
         {
             if (!m_missingModelWarned)
             {
-                DebugTrace(std::string(kLogPrefix) + "Draw skipped: sweets model missing.\n");
+                DebugTrace(std::string(kLogPrefix) + "描画スキップ: スイーツモデルがない\n");
                 m_missingModelWarned = true;
             }
             return;
@@ -95,7 +95,7 @@ namespace SweetsSpace
 
     void BaseSweets::RefreshRenderTransform()
     {
-        // Keep the cached render transform authoritative to avoid per-draw recomposition.
+        // 描画のたびに合成しないようキャッシュした変換を頼る
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 }
