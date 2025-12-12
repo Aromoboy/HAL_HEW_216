@@ -12,6 +12,7 @@
 #include "MeshDX.h"
 #include "ModelCache.h"
 #include "ModelDX.h"
+#include "ModelPivot.h"
 #include "BoxColliderComponent.h"
 #include "Systems/PhysicsMachine.h"
 
@@ -168,6 +169,21 @@ namespace Stage
     {
         LoadPlatformModel();
 
+        Transform correctedTransform = transform;
+        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
+        if (pivotOffsetY != 0.0f)
+        {
+            correctedTransform.position.y += pivotOffsetY;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
+                << " offsetY=" << pivotOffsetY
+                << " scaleY=" << correctedTransform.scale.y << '\n';
+            DebugTrace(oss.str());
+        }
+
+        m_descriptorLocalBounds = BuildDescriptorLocalBounds(correctedTransform);
+
         Physics::BoxColliderComponent colliderComponent = boxCollider.value_or(Physics::BoxColliderComponent{});
         if (!boxCollider)
         {
@@ -178,7 +194,7 @@ namespace Stage
         const bool modelHasBounds = m_model && m_model->HasLocalBounds();
         if (modelHasBounds)
         {
-            colliderComponent = CreateColliderFromBounds(transform, m_model->GetLocalBounds());
+            colliderComponent = CreateColliderFromBounds(correctedTransform, m_model->GetLocalBounds());
         }
         else
         {
@@ -186,12 +202,12 @@ namespace Stage
             oss << kLogPrefix << "Platform model is unavailable or missing local bounds; using descriptor dimensions for collider.\n";
             DebugTrace(oss.str());
 
-            colliderComponent = CreateColliderFromBounds(transform, m_descriptorLocalBounds);
+            colliderComponent = CreateColliderFromBounds(correctedTransform, m_descriptorLocalBounds);
         }
 
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
-        SetAnchorTransform(transform);
+        SetAnchorTransform(correctedTransform);
 
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;

@@ -4,6 +4,7 @@
 #include "Core/Input.h"
 #include "BoxColliderComponent.h"
 #include "ModelCache.h"
+#include "ModelPivot.h"
 #include "Systems/PhysicsMachine.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
@@ -308,6 +309,18 @@ namespace Entities
         if (!m_model)
         {
             m_model = m_fairyModel;
+        }
+
+        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, m_transform.scale);
+        if (pivotOffsetY != 0.0f)
+        {
+            SetPosition(float3{ m_transform.position.x, m_transform.position.y + pivotOffsetY, m_transform.position.z });
+
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
+                << " offsetY=" << pivotOffsetY
+                << " scaleY=" << m_transform.scale.y << '\n';
+            PlayerDebugTrace(oss.str());
         }
 
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);

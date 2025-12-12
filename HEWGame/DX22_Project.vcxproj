@@ -208,6 +208,7 @@
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
     <ClCompile Include="src\ModelCache.cpp" />
+    <ClCompile Include="src\ModelPivot.cpp" />
     <ClCompile Include="src\ModelRender.cpp" />
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
@@ -314,6 +315,7 @@
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
     <ClInclude Include="include\ModelCache.h" />
+    <ClInclude Include="include\ModelPivot.h" />
     <ClInclude Include="include\ModelRender.h" />
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
