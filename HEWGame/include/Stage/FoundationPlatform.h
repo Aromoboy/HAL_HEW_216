@@ -10,6 +10,7 @@
 #include "Entities/PhysicalEntity.h"
 #include "ModelDX.h"
 #include "Transform.h"
+#include "VisualTransform.h"
 
 namespace Core
 {
@@ -38,6 +39,7 @@ namespace Stage
         const Transform& GetAnchorTransform() const noexcept;
 
         void OnUpdate(Core::UpdateContext& ctx) override;
+        Transform GetRenderTransform() const override;
 
         Render::Model* GetRenderableModel() override;
         const Render::Model* GetRenderableModel() const override;
@@ -48,8 +50,10 @@ namespace Stage
     private:
         void LoadPlatformModel();
         void ApplyColorToModelMaterials();
+        void SyncVisualTransform();
 
         Transform m_anchorTransform;
+        VisualTransform m_visual{};
         std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
         AABB m_descriptorLocalBounds;

@@ -285,6 +285,7 @@ namespace Stage
         SetBoxColliderComponent(std::move(colliderComponent));
         AttachPhysicsMachine(physicsMachine);
         SetGravityScale(0.0f);
+        SyncVisualTransform();
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
@@ -292,6 +293,8 @@ namespace Stage
     {
         m_anchorTransform = transform;
         SetTransform(m_anchorTransform);
+        SyncBox2DBodyFromTransform();
+        SyncVisualTransform();
 
 #if defined(_DEBUG)
         std::ostringstream oss;
@@ -308,7 +311,21 @@ namespace Stage
     void FoundationPlatform::OnUpdate(Core::UpdateContext& ctx)
     {
         (void)ctx;
-        SetTransform(m_anchorTransform);
+        if (HasBox2DBody())
+        {
+            SyncTransformFromBox2DBody();
+        }
+        else
+        {
+            SetTransform(m_anchorTransform);
+        }
+
+        SyncVisualTransform();
+    }
+
+    Transform FoundationPlatform::GetRenderTransform() const
+    {
+        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 
     Render::Model* FoundationPlatform::GetRenderableModel()
@@ -432,5 +449,12 @@ namespace Stage
         oss << kLogPrefix << "Applied debug color to " << appliedCount << '/' << meshCount
             << " materials (" << skippedMeshes << " skipped).\n";
         DebugTrace(oss.str());
+    }
+
+    void FoundationPlatform::SyncVisualTransform()
+    {
+        m_visual.position = m_transform.position;
+        m_visual.rotation = m_transform.rotation;
+        m_visual.scale = m_transform.scale;
     }
 }
