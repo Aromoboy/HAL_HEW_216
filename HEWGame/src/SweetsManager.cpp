@@ -149,6 +149,18 @@ namespace
         return AABB(max, min);
     }
 
+    float ComputeVisualYOffset(const std::shared_ptr<Render::Model>& model, const float3& appliedScale)
+    {
+        if (!model || !model->HasLocalBounds())
+        {
+            return 0.0f;
+        }
+
+        const AABB& bounds = model->GetLocalBounds();
+        const float minY = std::min(bounds.min.y, bounds.max.y);
+        return -minY * appliedScale.y;
+    }
+
     std::shared_ptr<Render::Model> CreateProceduralFairyModel()
     {
         static std::weak_ptr<Render::Model> cached;
@@ -1725,6 +1737,10 @@ namespace SweetsSpace
                 };
 
                 physicsTransform.scale = visualTransform.scale;
+
+                const float visualOffsetY = ComputeVisualYOffset(model, visualTransform.scale);
+                physicsTransform.position.y += visualOffsetY;
+                visualTransform.position.y += visualOffsetY;
 
                 const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
 
