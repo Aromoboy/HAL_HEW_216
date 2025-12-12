@@ -20,6 +20,7 @@ namespace Render
         std::shared_ptr<Render::Model> Get(const std::string& path);
         void SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache);
         void Clear();
+        void Reset();
 
     private:
         ModelCache() = default;

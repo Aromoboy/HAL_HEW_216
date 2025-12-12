@@ -45,8 +45,19 @@ namespace Render
     //============================================================
     void ModelCache::SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache)
     {
-        m_loader = loader;            // シングルトン内にローダーを保持
-        m_device = device;            // 描画デバイス
+        const bool loaderChanged = m_loader && m_loader != loader;
+        const bool deviceChanged = m_device && m_device != device;
+        const bool textureCacheChanged = m_textureCache && m_textureCache != &textureCache;
+        const bool reconfiguringWithCachedModels = (!m_models.empty()) && (loaderChanged || deviceChanged || textureCacheChanged);
+
+        if (reconfiguringWithCachedModels)
+        {
+            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアします (Clear が呼ばれていません)。");
+            Clear();
+        }
+
+        m_loader = loader;              // シングルトン内にローダーを保持
+        m_device = device;              // 描画デバイス
         m_textureCache = &textureCache; // テクスチャキャッシュ
 
         if (!m_loader)
@@ -129,6 +140,18 @@ namespace Render
     //============================================================
     void ModelCache::Clear()
     {
-        m_models.clear();  // キャッシュテーブルを初期化
+        Reset();
+    }
+
+    //============================================================
+    // キャッシュ状態の完全リセット
+    // モデル、ローダー、デバイス、テクスチャキャッシュへの参照を破棄する
+    //============================================================
+    void ModelCache::Reset()
+    {
+        m_models.clear();
+        m_loader.reset();
+        m_device = nullptr;
+        m_textureCache = nullptr;
     }
 }
