@@ -50,17 +50,17 @@ namespace Render
 
         if (!m_loader)
         {
-            MODELCACHE_LOG(u8"ローダーが設定されていません。SetLoader に有効なローダーを渡してください。");
+            MODELCACHE_LOG(u8"ローダーが設定されていません。SetLoader に有効なローダーを渡してください");
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG(u8"デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください。");
+            MODELCACHE_LOG(u8"デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください");
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG(u8"テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください。");
+            MODELCACHE_LOG(u8"テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください");
         }
     }
 
