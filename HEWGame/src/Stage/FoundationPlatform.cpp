@@ -1,6 +1,7 @@
 #include "Stage/FoundationPlatform.h"
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -25,6 +26,11 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/cake_high.fbx";
+    constexpr float kScaleReferenceMeters = 1.0f;
+    constexpr float kMinNormalizationScale = 0.02f;
+    constexpr float kMaxNormalizationScale = 50.0f;
+    constexpr float kMinPlatformScale = 0.25f;
+    constexpr float kMaxPlatformScale = 40.0f;
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
@@ -78,6 +84,60 @@ namespace
         return AABB(
             float3{ kHalfExtent, kHalfExtent, kHalfExtent },
             float3{ -kHalfExtent, -kHalfExtent, -kHalfExtent });
+    }
+
+    float ComputeNormalizationScale(const Render::Model& model)
+    {
+        if (!model.HasLocalBounds())
+        {
+            return 1.0f;
+        }
+
+        const AABB bounds = model.GetLocalBounds();
+        const float3 extents = bounds.Extents();
+        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
+        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
+        {
+            return 1.0f;
+        }
+
+        const float rawScale = kScaleReferenceMeters / largestExtent;
+        if (!std::isfinite(rawScale) || rawScale <= 0.0f)
+        {
+            return 1.0f;
+        }
+
+        const float clamped = std::clamp(rawScale, kMinNormalizationScale, kMaxNormalizationScale);
+        if (std::fabs(clamped - 1.0f) > 0.01f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ScaleNorm] platform extents=(" << extents.x << ',' << extents.y << ',' << extents.z
+                << ") raw=" << rawScale << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return clamped;
+    }
+
+    float3 ClampPlatformScale(const float3& scale)
+    {
+        float3 clamped
+        {
+            std::clamp(scale.x, kMinPlatformScale, kMaxPlatformScale),
+            std::clamp(scale.y, kMinPlatformScale, kMaxPlatformScale),
+            std::clamp(scale.z, kMinPlatformScale, kMaxPlatformScale),
+        };
+
+        if (std::fabs(clamped.x - scale.x) > 1e-3f || std::fabs(clamped.y - scale.y) > 1e-3f || std::fabs(clamped.z - scale.z) > 1e-3f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ScaleNorm] platform scale clamped from (" << scale.x << ',' << scale.y << ',' << scale.z
+                << ") to (" << clamped.x << ',' << clamped.y << ',' << clamped.z << ") bounds="
+                << kMinPlatformScale << "-" << kMaxPlatformScale << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return clamped;
     }
 
     std::vector<std::shared_ptr<MeshDX>> CopyMeshes(const ModelDX& source, unsigned int& maxMaterialId, unsigned int& nullMeshes)
@@ -170,6 +230,11 @@ namespace Stage
         LoadPlatformModel();
 
         Transform correctedTransform = transform;
+        const float normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
+        correctedTransform.scale.x *= normalizationScale;
+        correctedTransform.scale.y *= normalizationScale;
+        correctedTransform.scale.z *= normalizationScale;
+        correctedTransform.scale = ClampPlatformScale(correctedTransform.scale);
         const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
         if (pivotOffsetY != 0.0f)
         {

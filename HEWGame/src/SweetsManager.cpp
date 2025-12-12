@@ -93,6 +93,11 @@ namespace
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
+    constexpr float kScaleReferenceMeters = 1.0f;
+    constexpr float kMinNormalizationScale = 0.02f;
+    constexpr float kMaxNormalizationScale = 50.0f;
+    constexpr float kMinFinalScale = 0.05f;
+    constexpr float kMaxFinalScale = 3.0f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -116,6 +121,64 @@ namespace
     using ::SweetsSpace::SweetsPrototypeManifest;
     using ::SweetsSpace::SweetsType;
     using ::SweetsSpace::SweetsTypeHash;
+
+    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon);
+
+    float ComputeNormalizationScale(const Render::Model& model, const char* context)
+    {
+        if (!model.HasLocalBounds())
+        {
+            return 1.0f;
+        }
+
+        const AABB bounds = model.GetLocalBounds();
+        const float3 extents = bounds.Extents();
+        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
+        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
+        {
+            return 1.0f;
+        }
+
+        const float rawScale = kScaleReferenceMeters / largestExtent;
+        if (!std::isfinite(rawScale) || rawScale <= 0.0f)
+        {
+            return 1.0f;
+        }
+
+        const float clamped = std::clamp(rawScale, kMinNormalizationScale, kMaxNormalizationScale);
+        if (std::fabs(clamped - 1.0f) > 0.01f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' extents=("
+                << extents.x << ',' << extents.y << ',' << extents.z << ") raw=" << rawScale
+                << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return clamped;
+    }
+
+    float3 ClampScaleToGameplayRange(const float3& scale, const char* context)
+    {
+        float3 clamped
+        {
+            std::clamp(scale.x, kMinFinalScale, kMaxFinalScale),
+            std::clamp(scale.y, kMinFinalScale, kMaxFinalScale),
+            std::clamp(scale.z, kMinFinalScale, kMaxFinalScale),
+        };
+
+        if (HasMeaningfulDifference(scale, clamped, 1e-3f))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' scale clamped from ("
+                << scale.x << ',' << scale.y << ',' << scale.z << ") to ("
+                << clamped.x << ',' << clamped.y << ',' << clamped.z << ") bounds="
+                << kMinFinalScale << "-" << kMaxFinalScale << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return clamped;
+    }
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -361,7 +424,7 @@ namespace
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
-    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon)
+    bool HasMeaningfulDifference(float previous, float current, float epsilon)
     {
         if (!std::isfinite(previous) || !std::isfinite(current))
         {
@@ -1719,13 +1782,16 @@ namespace SweetsSpace
                     sampleScale(preset.minScale.z, preset.maxScale.z)
                 };
 
-                visualTransform.scale = float3
+                const float normalizationScale = ComputeNormalizationScale(*model, descriptorKey.c_str());
+                float3 finalScale = float3
                 {
-                    physicsTransform.scale.x * sampledScale.x,
-                    physicsTransform.scale.y * sampledScale.y,
-                    physicsTransform.scale.z * sampledScale.z
+                    physicsTransform.scale.x * sampledScale.x * normalizationScale,
+                    physicsTransform.scale.y * sampledScale.y * normalizationScale,
+                    physicsTransform.scale.z * sampledScale.z * normalizationScale
                 };
 
+                finalScale = ClampScaleToGameplayRange(finalScale, descriptorKey.c_str());
+                visualTransform.scale = finalScale;
                 physicsTransform.scale = visualTransform.scale;
 
                 const float visualOffsetY = Render::ComputePivotOffsetYOriginBottom(model, visualTransform.scale);
