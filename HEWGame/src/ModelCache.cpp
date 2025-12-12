@@ -123,6 +123,13 @@ namespace Render
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
+        if (m_inFlightKeys.find(cacheKey) != m_inFlightKeys.end())
+        {
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' blocked: load already in-flight");
+            MODELCACHE_LOG(std::string("ロードをスキップします（現在ロード中のキーへの再入禁止） [パス] ") + path);
+            return nullptr;
+        }
+
         Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' miss -> load");
 
         // ローダーが有効かどうか確認
@@ -146,6 +153,24 @@ namespace Render
 
         // キャッシュに無かったのでロードを実行
         MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path);
+
+        m_inFlightKeys.insert(cacheKey);
+        struct ScopedInFlightRemoval
+        {
+            ScopedInFlightRemoval(std::unordered_set<std::string>& keys, std::string key)
+                : inFlightKeys(keys), trackedKey(std::move(key))
+            {
+            }
+
+            ~ScopedInFlightRemoval()
+            {
+                inFlightKeys.erase(trackedKey);
+            }
+
+            std::unordered_set<std::string>& inFlightKeys;
+            std::string trackedKey;
+        } inFlightGuard(m_inFlightKeys, cacheKey);
+
         std::shared_ptr<Render::Model> model = m_loader->Load(path, m_device, *m_textureCache);
 
         // ロード結果の判定
@@ -183,5 +208,6 @@ namespace Render
         m_loader.reset();
         m_device = nullptr;
         m_textureCache = nullptr;
+        m_inFlightKeys.clear();
     }
 }

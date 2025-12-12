@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include "ModelDX.h"
 #include "IModelLoader.h"
 
@@ -33,6 +34,7 @@ namespace Render
         ID3D11Device* m_device = nullptr;
         TextureCache* m_textureCache = nullptr;
         std::map<std::string, std::shared_ptr<Render::Model>> m_models;
+        std::unordered_set<std::string> m_inFlightKeys;
     };
 }
 
