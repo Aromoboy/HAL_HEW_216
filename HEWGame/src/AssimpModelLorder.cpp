@@ -527,6 +527,8 @@ AssimpModelLorder::MakeMaterial(
         DirectX::XMFLOAT4 ambient;
         DirectX::XMFLOAT4 specular;
 
+        const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
+
         aiColor3D col;
         float shininess = 0.0f;
 
@@ -558,7 +560,6 @@ AssimpModelLorder::MakeMaterial(
 
             std::string textureDirectory = NormalizeSeparators(directory);
             bool skipTextureLoading = false;
-            const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
 
             const auto hasParentTraversal = [](const std::string& value)
             {
