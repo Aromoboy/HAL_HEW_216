@@ -21,7 +21,7 @@
 #endif
 
 #if MODELCACHE_ENABLE_LOG
-#define MODELCACHE_LOG(message) DebugLog::DebugMessage(std::string(u8"[モデルキャッシュ] ") + message)
+#define MODELCACHE_LOG(message) DebugLog::DebugMessage(std::string("[モデルキャッシュ] ") + message)
 #else
 #define MODELCACHE_LOG(message) ((void)0)
 #endif
@@ -50,17 +50,17 @@ namespace Render
 
         if (!m_loader)
         {
-            MODELCACHE_LOG(u8"ローダーが設定されていません。SetLoader に有効なローダーを渡してください");
+            MODELCACHE_LOG("ローダーが設定されていません。SetLoader に有効なローダーを渡してください");
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG(u8"デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください");
+            MODELCACHE_LOG("デバイスが未設定のため、モデルをロードできません。ID3D11Device* を正しく渡してください");
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG(u8"テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください");
+            MODELCACHE_LOG("テクスチャキャッシュが未設定です。TextureCache のインスタンスを渡してください");
         }
     }
 
@@ -74,31 +74,31 @@ namespace Render
         auto it = m_models.find(path);
         if (it != m_models.end())
         {
-            MODELCACHE_VERBOSE(std::string(u8"キャッシュを利用します [パス] ") + path);
+            MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path);
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
         // ローダーが有効かどうか確認
         if (!m_loader)
         {
-            MODELCACHE_LOG(std::string(u8"ローダーが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("ローダーが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;  // ローダーが無ければロードできない
         }
 
         if (!m_device)
         {
-            MODELCACHE_LOG(std::string(u8"デバイスが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("デバイスが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;
         }
 
         if (!m_textureCache)
         {
-            MODELCACHE_LOG(std::string(u8"テクスチャキャッシュが設定されていないためロードを中止しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("テクスチャキャッシュが設定されていないためロードを中止しました [パス] ") + path);
             return nullptr;
         }
 
         // キャッシュに無かったのでロードを実行
-        MODELCACHE_VERBOSE(std::string(u8"モデルのロードを開始します [パス] ") + path);
+        MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path);
         std::shared_ptr<Render::Model> model = m_loader->Load(path, m_device, *m_textureCache);
 
         // ロード結果の判定
@@ -110,7 +110,7 @@ namespace Render
         else
         {
             // 失敗した場合はエラーログ
-            MODELCACHE_LOG(std::string(u8"モデルのロードに失敗しました [パス] ") + path);
+            MODELCACHE_LOG(std::string("モデルのロードに失敗しました [パス] ") + path);
         }
 
         return model;  // ロード結果（失敗時は nullptr）
