@@ -80,7 +80,8 @@ namespace Render
 
         if (reconfiguringWithCachedModels)
         {
-            MODELCACHE_LOG("ローダー/デバイスの切り替え前にキャッシュをクリアする (Clear が呼ばれていない)");
+            MODELCACHE_LOG(
+                "ローダー/デバイスの切り替え前にキャッシュをクリアする (Clear が呼ばれていない)");
             Clear();
         }
 
@@ -112,7 +113,8 @@ namespace Render
     {
         const std::string cacheKey = CanonicalizeCacheKey(path);
 
-        Diagnostics::LogInfo(std::string("[ModelCache] リクエスト='") + path + "' -> key='" + cacheKey + "'");
+        Diagnostics::LogInfo(
+            std::string("[ModelCache] リクエスト='") + path + "' -> key='" + cacheKey + "'");
 
         // キャッシュに存在するか確認
         auto it = m_models.find(cacheKey);
