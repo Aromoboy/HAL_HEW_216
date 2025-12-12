@@ -1,10 +1,10 @@
 # Factory presets for sweets spawn and collider defaults.
 # key,spawnWeight,minScaleX,minScaleY,minScaleZ,maxScaleX,maxScaleY,maxScaleZ,colliderPreset,padX,padY,padZ
 key,spawnWeight,minScaleX,minScaleY,minScaleZ,maxScaleX,maxScaleY,maxScaleZ,colliderPreset,padX,padY,padZ
-Cake,1.0,0.52,0.52,0.52,0.64,0.64,0.64,box,0.02,0.02,0.02
-Pudding,1.0,0.72,0.72,0.72,0.96,0.96,0.96,box,0.01,0.04,0.01
-Sherbet,1.0,0.22,0.22,0.22,0.30,0.30,0.30,capsule,0.01,0.01,0.01
-Strawberry,1.0,0.16,0.16,0.16,0.224,0.224,0.224,capsule,0.0125,0.0125,0.0125
-Blueberry,1.0,0.12,0.12,0.12,0.18,0.18,0.18,capsule,0.008,0.008,0.008
-Pineapple,0.8,0.42,0.42,0.42,0.56,0.56,0.56,box,0.02,0.05,0.02
-Banana,0.9,0.34,0.34,0.34,0.48,0.48,0.48,capsule,0.015,0.015,0.015
+Cake,1.0,0.60,0.60,0.60,0.78,0.78,0.78,box,0.02,0.02,0.02
+Pudding,1.0,0.55,0.55,0.55,0.70,0.70,0.70,box,0.01,0.04,0.01
+Sherbet,1.0,0.28,0.28,0.28,0.36,0.36,0.36,capsule,0.01,0.01,0.01
+Strawberry,1.0,0.18,0.18,0.18,0.24,0.24,0.24,capsule,0.0125,0.0125,0.0125
+Blueberry,1.0,0.12,0.12,0.12,0.16,0.16,0.16,capsule,0.008,0.008,0.008
+Pineapple,0.8,0.65,0.65,0.65,0.80,0.80,0.80,box,0.02,0.05,0.02
+Banana,0.9,0.45,0.45,0.45,0.60,0.60,0.60,capsule,0.015,0.015,0.015
