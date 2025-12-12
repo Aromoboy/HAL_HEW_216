@@ -150,7 +150,7 @@ namespace
         if (std::fabs(clamped - 1.0f) > 0.01f)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' extents=("
+            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' の extents=("
                 << extents.x << ',' << extents.y << ',' << extents.z << ") raw=" << rawScale
                 << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
             DebugTrace(oss.str());
@@ -171,9 +171,9 @@ namespace
         if (HasMeaningfulDifference(scale, clamped, 1e-3f))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' scale clamped from ("
-                << scale.x << ',' << scale.y << ',' << scale.z << ") to ("
-                << clamped.x << ',' << clamped.y << ',' << clamped.z << ") bounds="
+            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' のスケールを ("
+                << scale.x << ',' << scale.y << ',' << scale.z << ") から ("
+                << clamped.x << ',' << clamped.y << ',' << clamped.z << ") に丸めたよ bounds="
                 << kMinFinalScale << "-" << kMaxFinalScale << "\n";
             DebugTrace(oss.str());
         }
@@ -220,14 +220,14 @@ namespace
         static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
-            DebugTrace(std::string(kLogPrefix) + "Reusing cached procedural fairy.\n");
+            DebugTrace(std::string(kLogPrefix) + "キャッシュしてたフェアリーをそのまま使うよ。\n");
             return reused;
         }
 
         ID3D11Device* device = GetDevice();
         if (!device)
         {
-            DebugTrace(std::string(kLogPrefix) + "Cannot create procedural fairy: device missing.\n");
+            DebugTrace(std::string(kLogPrefix) + "プロシージャルフェアリー作れないや、デバイスが見つからないっぽい。\n");
             return nullptr;
         }
 
@@ -592,7 +592,7 @@ namespace
         Physics::BoxColliderComponent colliderComponent{};
         ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
 
-        // Keep collider vertices in local space; PhysicsMachine::CreateBody applies the sweets transform scale when creating fixtures.
+        // コライダー頂点はローカル空間のままにしておく。PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれるよ。
 
         switch (type)
         {
@@ -655,8 +655,7 @@ namespace
             break;
         }
 
-        // Scale density so that mass grows with volume (scale^3) while collider vertices are
-        // already scaled on the X/Y axes during fixture creation.
+        // 密度は体積（スケール^3）に合わせて伸ばす。頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね。
         const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
         result.shapeConfig.density *= densityScale;
         if (result.colliderComponent)
@@ -810,8 +809,8 @@ namespace
                         }
 
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Failed to parse weight token '" << weightToken
-                            << "' from '" << raw << "': " << ex.what() << "\n";
+                        oss << kLogPrefix << "重量トークン '" << weightToken
+                            << "' (元='" << raw << "') のパースに失敗しちゃった: " << ex.what() << "\n";
                         DebugTrace(oss.str());
                         return {};
                     }
@@ -832,8 +831,8 @@ namespace
                 }
 
                 std::ostringstream oss;
-                oss << kLogPrefix << "Unknown sweets key '" << kind
-                    << "' in weight definition '" << raw << "'.\n";
+                oss << kLogPrefix << "重量指定 '" << raw << "' に知らないスイーツキー '" << kind
+                    << "' が混じってたよ。\n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -1061,8 +1060,8 @@ namespace
         if (!scene || !scene->HasMeshes())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to load model for geometry analysis path='" << path
-                << "' reason='" << (scene ? "No meshes" : importer.GetErrorString()) << "'\n";
+            oss << kLogPrefix << "ジオメトリ確認用のモデル読み込みに失敗したよ path='" << path
+                << "' reason='" << (scene ? "メッシュなし" : importer.GetErrorString()) << "'\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -1097,7 +1096,7 @@ namespace
                     continue;
                 }
 
-                // aiProcess_Triangulate guarantees triangles
+                // aiProcess_Triangulate をかけてるからここは三角形になるよ
                 indices.push_back(baseIndex + face.mIndices[0]);
                 indices.push_back(baseIndex + face.mIndices[1]);
                 indices.push_back(baseIndex + face.mIndices[2]);
@@ -1107,7 +1106,7 @@ namespace
         if (positions.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Geometry analysis found no positions for '" << path << "'.\n";
+            oss << kLogPrefix << "ジオメトリ解析で '" << path << "' の頂点が一つも見つからなかったよ。\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -1149,7 +1148,7 @@ namespace
 
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Analyzed geometry path='" << path
+        oss << kLogPrefix << "ジオメトリ解析したよ path='" << path
             << "' format=" << format
             << " vertices=" << positions.size()
             << " indices=" << indices.size()
@@ -1166,7 +1165,7 @@ namespace
         if (!summary.hull.empty() && summary.bounds.valid)
         {
             std::ostringstream debugHull;
-            debugHull << kLogPrefix << "Hull points (centroid-relative)=";
+            debugHull << kLogPrefix << "凸包ポイント（重心基準）一覧=";
             for (const auto& p : summary.hull)
             {
                 debugHull << '(' << p.x << ',' << p.y << ") ";
@@ -1426,8 +1425,8 @@ namespace SweetsSpace
         if (tokens.size() < 11)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset row on line " << lineNumber
-                << " had " << tokens.size() << " tokens; expected at least 11.\n";
+            oss << kLogPrefix << "工場プリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
+                << "個で足りてないよ（最低11個欲しい）。\n";
             DebugTrace(oss.str());
             return false;
         }
@@ -1464,8 +1463,8 @@ namespace SweetsSpace
         else
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Unknown collider preset '" << tokens[10]
-                << "' on line " << lineNumber << "; defaulting to Box.\n";
+            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[10]
+                << "' が知らない形だったから、とりあえず Box にしとくね。\n";
             DebugTrace(oss.str());
             outPreset.colliderPreset.shape = ColliderShape::Box;
         }
@@ -1481,8 +1480,8 @@ namespace SweetsSpace
         if (!file.is_open())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset CSV missing at '" << kFactoryPresetCsvPath
-                << "'; falling back to legacy defaults.\n";
+            oss << kLogPrefix << "工場プリセットの CSV が '" << kFactoryPresetCsvPath
+                << "' に見当たらないので、昔のデフォルトに戻すね。\n";
             DebugTrace(oss.str());
             return overrides;
         }
@@ -1532,8 +1531,8 @@ namespace SweetsSpace
             overrides[normalizedKey] = preset;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
-                << "' resolvedKey='" << resolvedKey << "'"
+            oss << kLogPrefix << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
+                << " resolvedKey='" << resolvedKey << "'"
                 << "' spawnWeight=" << preset.spawnWeight
                 << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
                 << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
@@ -1648,7 +1647,7 @@ namespace SweetsSpace
 
         if (!Collision::LoadColliderDefinitions(kColliderConfigPath, m_colliderDefinitions))
         {
-            DebugTrace(std::string(kLogPrefix) + "Failed to load collider definitions; using AABB fallbacks.\n");
+            DebugTrace(std::string(kLogPrefix) + "コライダー定義のロードに失敗したから、AABB の代替を使うね。\n");
         }
         else
         {
@@ -1661,8 +1660,8 @@ namespace SweetsSpace
                 if (normalizedKey != entry.first)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Collider definition key normalized from '" << entry.first
-                        << "' to '" << normalizedKey << "'.\n";
+                    oss << kLogPrefix << "コライダー定義のキーを '" << entry.first
+                        << "' から '" << normalizedKey << "' に揃えておいたよ。\n";
                     DebugTrace(oss.str());
                 }
             }
@@ -1679,7 +1678,7 @@ namespace SweetsSpace
         const auto prototypes = manifest.Enumerate();
         if (prototypes.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "No sweets prototypes registered; spawner map will remain empty.\n");
+            DebugTrace(std::string(kLogPrefix) + "スイーツのプロトタイプが一つも登録されてないから、スポナー表は空のままだよ。\n");
         }
 
         for (const auto& prototype : prototypes)
@@ -1688,8 +1687,8 @@ namespace SweetsSpace
             if (!descriptor)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Prototype lookup failed for type '" << ToString(prototype.type)
-                    << "'; skipping.\n";
+                oss << kLogPrefix << "タイプ '" << ToString(prototype.type)
+                    << "' のプロトタイプを探せなかったのでスキップするね。\n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -1707,8 +1706,8 @@ namespace SweetsSpace
             if (!hasOverride && !defaultPreset)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "No factory preset available for kind '" << kind
-                    << "' (type=" << ToString(prototype.type) << "); skipping registration.\n";
+                warn << kLogPrefix << "種類 '" << kind
+                    << "' (type=" << ToString(prototype.type) << ") に使える工場プリセットがないから、登録はパスするよ。\n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -1717,7 +1716,7 @@ namespace SweetsSpace
             m_factoryPresets[normalizedKind] = preset;
 
             std::ostringstream presetLog;
-            presetLog << kLogPrefix << "Resolved factory preset for kind '" << resolvedKind;
+            presetLog << kLogPrefix << "種類 '" << resolvedKind << "' の工場プリセットを決めたよ";
             if (isAliasedKind)
             {
                 presetLog << "' (from key '" << kind << "')";
@@ -1734,8 +1733,8 @@ namespace SweetsSpace
 
             const std::string registeredPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
             std::ostringstream oss;
-            oss << kLogPrefix << "Registering sweets kind '" << kind
-                << "' with asset '" << registeredPath << "'.\n";
+            oss << kLogPrefix << "スイーツの種類 '" << kind
+                << "' をアセット '" << registeredPath << "' と一緒に登録するね。\n";
             DebugTrace(oss.str());
 
             const SweetsType type = prototype.type;
@@ -1752,23 +1751,22 @@ namespace SweetsSpace
                 if (!descriptor)
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "Prototype descriptor missing for kind '" << resolvedKind
-                        << "'" << aliasSuffix << "; using placeholder path '" << kPlaceholderModelPath << "'.\n";
+                    warn << kLogPrefix << "種類 '" << resolvedKind
+                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないから、プレースホルダー '" << kPlaceholderModelPath << "' を使うよ。\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
                 else if (descriptorPath.empty())
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "Descriptor for kind '" << descriptorKey << "' path empty;"
-                        << " falling back to placeholder '" << kPlaceholderModelPath << "'.\n";
+                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったから、プレースホルダー '" << kPlaceholderModelPath << "' に頼るね。\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Resolved prototype for kind '" << descriptorKey << "'"
+                    oss << kLogPrefix << "種類 '" << descriptorKey << "' のプロトタイプを解決したよ"
                         << aliasSuffix << " path='" << descriptor->modelPath << "'.\n";
                     DebugTrace(oss.str());
                 }
@@ -1781,9 +1779,9 @@ namespace SweetsSpace
                     if (!model && primaryPath != kPlaceholderModelPath)
                     {
                         std::ostringstream warn;
-                        warn << kLogPrefix << "Model load failed for sweets kind '" << descriptorKey
-                            << "' path='" << primaryPath << "'; trying placeholder '" << kPlaceholderModelPath
-                            << "'.\n";
+                        warn << kLogPrefix << "スイーツ '" << descriptorKey
+                            << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
+                            << "' を試してみるね。\n";
                         DebugTrace(warn.str());
                         model = cache.Get(kPlaceholderModelPath);
                     }
@@ -1792,8 +1790,8 @@ namespace SweetsSpace
                 if (!model)
                 {
                     std::ostringstream fail;
-                    fail << kLogPrefix << "No model available for sweets kind '" << descriptorKey
-                        << "' after fallbacks.\n";
+                    fail << kLogPrefix << "スイーツ '" << descriptorKey
+                        << "' は代替も全部外れでモデルが用意できなかったよ。\n";
                     DebugTrace(fail.str());
 
                     return nullptr;
@@ -1859,7 +1857,7 @@ namespace SweetsSpace
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
                         << ") pivotOffsetY=" << visualOffsetY
-                        << " policy=" << Render::kPivotPolicyName << '\n';
+                        << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
                 }
 
@@ -1870,8 +1868,8 @@ namespace SweetsSpace
             if (!inserted)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Spawner for kind '" << kind
-                    << "' already existed. New factory ignored.\n";
+                warn << kLogPrefix << "種類 '" << kind
+                    << "' のスポナーはもうあったから、新しいファクトリーは無視したよ。\n";
                 DebugTrace(warn.str());
             }
         }
@@ -1918,8 +1916,8 @@ namespace SweetsSpace
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Purging null sweets entry from state "
-                        << StateToString(bucketState) << "\n";
+                    oss << kLogPrefix << "状態 " << StateToString(bucketState)
+                        << " から null のスイーツを掃除したよ\n";
                     DebugTrace(oss.str());
 #endif
                     it = sweetsList.erase(it);
@@ -1936,9 +1934,8 @@ namespace SweetsSpace
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Purging sweets ptr=" << sweets.get()
-                        << " from state " << StateToString(bucketState)
-                        << " because update node was disabled.\n";
+                    oss << kLogPrefix << "Update 無効化中だったから、状態 " << StateToString(bucketState)
+                        << " から sweets ptr=" << sweets.get() << " を片付けたよ。\n";
                     DebugTrace(oss.str());
 #endif
                     m_lookup.erase(sweets);
@@ -1960,8 +1957,8 @@ namespace SweetsSpace
                     if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Horizontal bounds fallback active; using platform width limit="
-                            << fallbackHorizontalLimit << " (half-width + margin).\n";
+                        oss << kLogPrefix << "水平境界のフォールバックを使うね。幅制限="
+                            << fallbackHorizontalLimit << " (半幅＋マージン)。\n";
                         DebugTrace(oss.str());
                         m_warnedMissingHorizontalBounds = true;
                     }
@@ -1993,7 +1990,7 @@ namespace SweetsSpace
             SetState(change.sweets, change.state);
 #if defined(_DEBUG)
             std::ostringstream oss;
-            oss << kLogPrefix << "State change ptr=" << change.sweets.get()
+            oss << kLogPrefix << "状態変更 ptr=" << change.sweets.get()
                 << " " << StateToString(previousState) << " -> "
                 << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
@@ -2064,10 +2061,9 @@ namespace SweetsSpace
         if (removed > 0 || markedSafe > 0 || stagedThisFrame > 0)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Late prune staged " << stagedThisFrame
-                << " pending entries, marked " << markedSafe
-                << " ready for deletion, removed " << removed
-                << " finalized sweets.\n";
+            oss << kLogPrefix << "後処理で " << stagedThisFrame << " 件を待機、 " << markedSafe
+                << " 件を削除OKにして、 " << removed
+                << " 件のスイーツを消したよ。\n";
             DebugTrace(oss.str());
         }
 #endif
@@ -2164,8 +2160,8 @@ namespace SweetsSpace
             ++m_stackedInBatch;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Stacked sweets progress=" << m_stackedInBatch
-                << '/' << m_batchStackTarget << " tag='" << sweets->GetTag() << "'.\n";
+            oss << kLogPrefix << "積み上げ進捗=" << m_stackedInBatch
+                << '/' << m_batchStackTarget << " tag='" << sweets->GetTag() << "' だよ。\n";
             DebugTrace(oss.str());
         }
     }
@@ -2226,9 +2222,9 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets staged " << staged
-            << " sweets for pending destroy (" << alreadyPending << " already pending) across "
-            << m_byState.size() << " states.\n";
+        oss << kLogPrefix << "ClearAllSweets で " << staged
+            << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
+            << m_byState.size() << " 状態分。\n";
         DebugTrace(oss.str());
     }
 
@@ -2286,7 +2282,7 @@ namespace SweetsSpace
         m_currentPhase = newPhase;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Phase changed to " << m_currentPhase << "\n";
+        oss << kLogPrefix << "フェーズが " << m_currentPhase << " に変わったよ\n";
         DebugTrace(oss.str());
 
         OnPhaseConfigurationChanged(m_currentPhase);
@@ -2297,7 +2293,7 @@ namespace SweetsSpace
         }
         else if (!m_warnedMissingPhaseCallback)
         {
-            DebugTrace(std::string(kLogPrefix) + "Phase change callback missing; spawn layout unchanged.\n");
+            DebugTrace(std::string(kLogPrefix) + "フェーズ変更のコールバックがないので、スポーン配置はそのままにしとくね。\n");
             m_warnedMissingPhaseCallback = true;
         }
     }
@@ -2342,10 +2338,10 @@ namespace SweetsSpace
         if (it == m_spawner.end())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn requested for unknown kind '" << kind
-                << "' (resolved='" << resolvedKind
+            oss << kLogPrefix << "知らない種類 '" << kind << "' でスポーン要求が来たよ"
+                << " (resolved='" << resolvedKind
                 << "' normalizedRaw='" << normalizedKind
-                << "' normalizedResolved='" << normalizedResolvedKind << "'). Registered kinds:";
+                << "' normalizedResolved='" << normalizedResolvedKind << "')。登録済みの種類:";
             if (m_spawner.empty())
             {
                 oss << " (none)";
@@ -2368,7 +2364,7 @@ namespace SweetsSpace
         if (!sweets)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawner for kind '" << kind << "' returned null instance.\n";
+            oss << kLogPrefix << "種類 '" << kind << "' のスポナーが null を返しちゃった。\n";
             DebugTrace(oss.str());
             return nullptr;
         }
@@ -2468,7 +2464,7 @@ namespace SweetsSpace
         if (current != SweetsState::Active && current != SweetsState::Ground)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "TryMarkAsCarried rejected tag='" << sweets->GetTag()
+            oss << kLogPrefix << "TryMarkAsCarried 却下 tag='" << sweets->GetTag()
                 << "' currentState=" << StateToString(current) << "\n";
             DebugTrace(oss.str());
             return false;
@@ -2480,14 +2476,14 @@ namespace SweetsSpace
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
-            DebugTrace(std::string(kLogPrefix) + "TryMarkAsCarried missing physics machine; body may keep simulating.\n");
+            DebugTrace(std::string(kLogPrefix) + "TryMarkAsCarried で物理マシンが見つからないから、このままシミュレーションしちゃうかも。\n");
             m_warnedMissingPhysicsMachine = true;
         }
 
         SetState(sweets, SweetsState::Carried);
 
         std::ostringstream oss;
-        oss << kLogPrefix << "TryMarkAsCarried success tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "TryMarkAsCarried 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
@@ -2508,7 +2504,7 @@ namespace SweetsSpace
         if (it == m_lookup.end() || it->second != SweetsState::Carried)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "ReleaseCarriedSweets rejected tag='" << sweets->GetTag() << "' state="
+            oss << kLogPrefix << "ReleaseCarriedSweets 却下 tag='" << sweets->GetTag() << "' state="
                 << (it == m_lookup.end() ? "<unknown>" : StateToString(it->second)) << "\n";
             DebugTrace(oss.str());
             return false;
@@ -2522,12 +2518,12 @@ namespace SweetsSpace
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
-            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets missing physics machine; body will not simulate.\n");
+            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ。\n");
             m_warnedMissingPhysicsMachine = true;
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ReleaseCarriedSweets success tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
@@ -2556,8 +2552,8 @@ namespace SweetsSpace
         else if (!m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing scheduler registration: scheduler not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' をスケジューラに登録できなかったよ。スケジューラが設定されてないみたい。\n";
             DebugTrace(oss.str());
             m_warnedMissingScheduler = true;
         }
@@ -2573,8 +2569,8 @@ namespace SweetsSpace
             if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Skipping physics registration for sweets '" << sweets->GetTag()
-                    << "': collider configuration missing.\n";
+                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                    << "' の物理登録を飛ばすね。コライダー設定が見当たらない。\n";
                 DebugTrace(oss.str());
                 return;
             }
@@ -2592,8 +2588,8 @@ namespace SweetsSpace
             if (!hasBody || fixtureCount <= 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Physics registration failed for sweets '" << sweets->GetTag()
-                    << "' hasBody=" << std::boolalpha << hasBody
+                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                    << "' の物理登録に失敗。hasBody=" << std::boolalpha << hasBody
                     << " fixtures=" << fixtureCount << "\n";
                 DebugTrace(oss.str());
                 return;
@@ -2604,8 +2600,8 @@ namespace SweetsSpace
         else if (!m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing physics registration: physics machine not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' を物理に登録できなかったよ。物理マシンが設定されてない。\n";
             DebugTrace(oss.str());
             m_warnedMissingPhysicsMachine = true;
         }
@@ -2617,8 +2613,8 @@ namespace SweetsSpace
         else if (!m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing draw registration: draw system not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' を描画登録できなかったよ。ドローシステムが設定されてない。\n";
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
@@ -2638,8 +2634,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister sweets '" << sweets->GetTag()
-                << "': scheduler not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' をスケジューラから外せなかったよ。スケジューラ未設定。\n";
             DebugTrace(oss.str());
             m_warnedMissingScheduler = true;
         }
@@ -2655,8 +2651,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister physics for sweets '" << sweets->GetTag()
-                << "': physics machine not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' の物理登録を外せなかったよ。物理マシン未設定。\n";
             DebugTrace(oss.str());
             m_warnedMissingPhysicsMachine = true;
         }
@@ -2668,8 +2664,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister draw entry for sweets '" << sweets->GetTag()
-                << "': draw system not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' の描画登録を外せなかったよ。ドローシステム未設定。\n";
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
@@ -2715,7 +2711,7 @@ namespace SweetsSpace
             m_pendingTopUpAfterDrop = true;
 
             std::ostringstream oss;
-            oss << kLogPrefix << context << " detected live sweets drop below target; scheduling delayed top-up. live="
+            oss << kLogPrefix << context << " で目標より生存スイーツが減ったから、あとで補充するね。 live="
                 << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
                 << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
                 << " queue=" << m_spawnQueue.size()
@@ -2726,8 +2722,8 @@ namespace SweetsSpace
 #if defined(_DEBUG)
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
-            << "' state=" << StateToString(previousState)
+        oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
+            << "' を削除 state=" << StateToString(previousState)
             << " deleteReason=" << ::SweetsSpace::ToString(reason)
             << " outcome=" << ::SweetsSpace::ToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
@@ -2742,7 +2738,7 @@ namespace SweetsSpace
         if (!file.is_open())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Phase spawn config not found at '" << path << "'. Using defaults.\n";
+            oss << kLogPrefix << "フェーズのスポーン設定が '" << path << "' に見つからないから、デフォルトを使うね。\n";
             DebugTrace(oss.str());
             ApplyDefaultPhaseConfigs();
             return false;
@@ -2796,7 +2792,7 @@ namespace SweetsSpace
             if (delimiterPos == std::string::npos)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Spawn config line " << lineNumber << " missing '=' : " << line << "\n";
+                oss << kLogPrefix << "スポーン設定の" << lineNumber << "行目に '=' がないよ: " << line << "\n";
                 DebugTrace(oss.str());
                 parseError = true;
                 continue;
@@ -2815,8 +2811,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse phase index on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目のフェーズ番号が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                     currentPhase = -1;
@@ -2827,8 +2822,7 @@ namespace SweetsSpace
             if (currentPhase < 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Encountered key '" << key << "' on line " << lineNumber
-                    << " before declaring a phase index.\n";
+                oss << kLogPrefix << "フェーズ番号を決める前にキー '" << key << "' (" << lineNumber << "行目) が来たので無視するね。\n";
                 DebugTrace(oss.str());
                 parseError = true;
                 continue;
@@ -2845,8 +2839,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse interval on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の interval が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2861,8 +2854,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse burst interval on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の burstInterval が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2877,8 +2869,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse simultaneous count on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の simultaneous が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2893,8 +2884,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse simultaneous target on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の simultaneousTarget が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2916,8 +2906,8 @@ namespace SweetsSpace
                     if (!descriptor)
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets type '"
-                            << ToString(entry.kind) << "'.\n";
+                        oss << kLogPrefix << "フェーズ " << currentPhase << " が知らないスイーツタイプ '"
+                            << ToString(entry.kind) << "' を参照してるからスキップするね。\n";
                         DebugTrace(oss.str());
                         continue;
                     }
@@ -2926,8 +2916,8 @@ namespace SweetsSpace
                     if (registeredKindsNormalized.find(normalizedKind) == registeredKindsNormalized.end())
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets kind '"
-                            << descriptor->key << "'.\n";
+                        oss << kLogPrefix << "フェーズ " << currentPhase << " が知らないスイーツ種類 '"
+                            << descriptor->key << "' を参照してるからスキップするね。\n";
                         DebugTrace(oss.str());
                         continue;
                     }
@@ -2946,8 +2936,8 @@ namespace SweetsSpace
                 if (partial.config.weights.empty())
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Phase " << currentPhase
-                        << " weights resolved to zero valid entries; falling back to defaults.\n";
+                    oss << kLogPrefix << "フェーズ " << currentPhase
+                        << " の weight が有効な値ゼロになったからデフォルトに戻すね。\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2959,7 +2949,7 @@ namespace SweetsSpace
             else
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Unknown spawn config key '" << key << "' on line " << lineNumber << "\n";
+                oss << kLogPrefix << "" << lineNumber << "行目のキー '" << key << "' は知らない設定だよ。\n";
                 DebugTrace(oss.str());
             }
         }
@@ -3000,8 +2990,8 @@ namespace SweetsSpace
             if (config.weights.empty())
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Skipping phase " << entry.first
-                    << " because no valid weights were available even after defaults.\n";
+                oss << kLogPrefix << "フェーズ " << entry.first
+                    << " はデフォルト補填しても weight が残らなかったからスキップするよ。\n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -3013,7 +3003,7 @@ namespace SweetsSpace
 
         if (m_phaseConfigs.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "No valid phase configs parsed; applying defaults.\n");
+            DebugTrace(std::string(kLogPrefix) + "有効なフェーズ設定を読み込めなかったので、デフォルトを当てるね。\n");
             ApplyDefaultPhaseConfigs();
             return false;
         }
@@ -3022,8 +3012,8 @@ namespace SweetsSpace
         OnPhaseConfigurationChanged(m_currentPhase);
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Loaded " << m_phaseConfigs.size()
-            << " spawn phases from '" << path << "' (parseError=" << std::boolalpha << parseError << ").\n";
+        oss << kLogPrefix << "'" << path << "' から " << m_phaseConfigs.size()
+            << " 個のスポーンフェーズを読んだよ (parseError=" << std::boolalpha << parseError << ")\n";
         DebugTrace(oss.str());
         return !parseError;
     }
@@ -3073,8 +3063,8 @@ namespace SweetsSpace
         });
 
         std::ostringstream warn;
-        warn << kLogPrefix << "[Spawn] Phase " << phaseIndex
-            << " missing spawn weights for registered kinds:";
+        warn << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
+            << " で登録済みの種類に weight が足りないよ:";
         for (auto missing : missingTypes)
         {
             warn << ' ' << ToString(missing);
@@ -3101,10 +3091,10 @@ namespace SweetsSpace
             presentNormalized.insert(NormalizeKey(ToString(missing)));
 
             std::ostringstream added;
-            added << kLogPrefix << "[Spawn] Phase " << phaseIndex
-                << " auto-added missing kind '" << ToString(missing)
-                << "' with fallback weight=" << std::fixed << std::setprecision(2) << fallbackWeight
-                << " (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
+            added << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
+                << " に不足してた種類 '" << ToString(missing)
+                << "' をフォールバック weight=" << std::fixed << std::setprecision(2) << fallbackWeight
+                << " で自動追加したよ (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
             DebugTrace(added.str());
         }
     }
@@ -3113,7 +3103,7 @@ namespace SweetsSpace
     {
         if (!(std::isfinite(minX) && std::isfinite(maxX)))
         {
-            DebugTrace(std::string(kLogPrefix) + "Ignored horizontal bounds update with non-finite values.\n");
+            DebugTrace(std::string(kLogPrefix) + "有限値じゃない水平境界の更新は無視したよ。\n");
             return;
         }
 
@@ -3140,7 +3130,7 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Horizontal bounds updated to min=" << m_minHorizontalBound
+        oss << kLogPrefix << "水平境界を更新したよ min=" << m_minHorizontalBound
             << " max=" << m_maxHorizontalBound
             << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
         DebugTrace(oss.str());
@@ -3154,14 +3144,14 @@ namespace SweetsSpace
         m_generatedColliderThicknessPadding = sanitized;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Generated collider thickness padding set to " << sanitized
-            << (clamped ? " (clamped to minimum of 1.0)" : "")
-            << "; cached colliders will retain previously generated thickness values until regeneration.\n";
+        oss << kLogPrefix << "自動生成コライダーの厚みパディングを " << sanitized
+            << (clamped ? " (最小1.0に丸めた)" : "")
+            << " にしたよ。キャッシュ済みコライダーは再生成まで前の厚みのまま。\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Thickness padding unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "厚みパディングは前回と同じだよ。\n");
         }
     }
 
@@ -3173,14 +3163,14 @@ namespace SweetsSpace
         m_generatedColliderMinThickness = sanitized;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Generated collider minimum thickness set to " << sanitized
-            << (clamped ? " (clamped to smallest positive float)" : "")
-            << "; new colliders will use flattened thickness.\n";
+        oss << kLogPrefix << "自動生成コライダーの最小厚みを " << sanitized
+            << (clamped ? " (正の最小値に丸めた)" : "")
+            << " にしたよ。新しく作るコライダーはその薄さで使うね。\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Minimum thickness unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "最小厚みは前から変わってないよ。\n");
         }
     }
 
@@ -3211,7 +3201,7 @@ namespace SweetsSpace
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Contact begin between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' が接触し始めたよ。\n";
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
         }
@@ -3244,7 +3234,7 @@ namespace SweetsSpace
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Contact end between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' の接触が終わったよ。\n";
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
         }
@@ -3256,15 +3246,15 @@ namespace SweetsSpace
         m_forceGeneratedColliders = force;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Force-generated colliders " << (force ? "enabled" : "disabled")
-            << "; config collider definitions "
-            << (force ? "will be ignored when generated geometry is available." : "may be used as overrides or fallbacks.")
+        oss << kLogPrefix << "生成コライダー強制 " << (force ? "ON" : "OFF")
+            << "。設定ファイルのコライダー定義は"
+            << (force ? "生成ジオメトリがあるときは無視するね。" : "上書きやフォールバックとして使うかも。")
             << "\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Force-generated collider flag unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "生成コライダー強制フラグは前回と同じだよ。\n");
         }
     }
 
@@ -3274,16 +3264,16 @@ namespace SweetsSpace
         m_colliderConfigOverridesEnabled = enabled;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Collider config overrides " << (enabled ? "enabled" : "disabled")
-            << "; config definitions will "
-            << (enabled ? "replace generated colliders when available (unless force-generated is enabled)."
-                : "only be used when generated colliders are unavailable or forced off.")
+        oss << kLogPrefix << "コライダー設定の上書きは " << (enabled ? "有効" : "無効")
+            << "。"
+            << (enabled ? "生成済みがあっても（強制生成が有効でなければ）そっちに差し替えるよ。"
+                : "生成コライダーがない／オフのときだけ設定を使うよ。")
             << "\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Collider config override flag unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "コライダー設定の上書きフラグは前と変わらないよ。\n");
         }
     }
 
@@ -3296,9 +3286,9 @@ namespace SweetsSpace
 
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
-            << " spawn origins (heightOffset=" << m_spawnHeightOffset
-            << " seed=" << seed << ").\n";
+        oss << kLogPrefix << "スポーン元を " << m_spawnOrigins.size()
+            << " 箇所設定したよ (heightOffset=" << m_spawnHeightOffset
+            << " seed=" << seed << ")。\n";
         DebugTrace(oss.str());
     }
 
@@ -3307,11 +3297,11 @@ namespace SweetsSpace
         m_enableRandomRotation = enabled;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Random rotation " << (enabled ? "enabled" : "disabled")
+        oss << kLogPrefix << "ランダム回転 " << (enabled ? "有効" : "無効")
             << " (minYawPitchRollDeg=" << m_randomRotationMinDegrees.x << ',' << m_randomRotationMinDegrees.y
             << ',' << m_randomRotationMinDegrees.z << " maxYawPitchRollDeg="
             << m_randomRotationMaxDegrees.x << ',' << m_randomRotationMaxDegrees.y << ','
-            << m_randomRotationMaxDegrees.z << ").\n";
+            << m_randomRotationMaxDegrees.z << ")。\n";
         DebugTrace(oss.str());
     }
 
@@ -3321,10 +3311,10 @@ namespace SweetsSpace
         m_randomRotationMaxDegrees = maxDegrees;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Random rotation range updated to minYawPitchRollDeg="
+        oss << kLogPrefix << "ランダム回転の範囲を更新したよ minYawPitchRollDeg="
             << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
             << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
-            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ").\n";
+            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ")。\n";
         DebugTrace(oss.str());
     }
 
@@ -3333,7 +3323,7 @@ namespace SweetsSpace
         m_enableRandomScale = enabled;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Random scale " << (enabled ? "enabled" : "disabled") << ".\n";
+        oss << kLogPrefix << "ランダムスケールは " << (enabled ? "有効" : "無効") << " だよ。\n";
         DebugTrace(oss.str());
     }
 
@@ -3345,9 +3335,9 @@ namespace SweetsSpace
         const bool capActive = (m_liveSweetsCap > 0);
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Live sweets cap " << (sanitizedCap > 0 ? "set" : "disabled")
+        oss << kLogPrefix << "同時出現上限は " << (sanitizedCap > 0 ? "設定" : "無効")
             << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
-            << ", liveCount=" << m_lastLiveSweetsCount << ").\n";
+            << ", liveCount=" << m_lastLiveSweetsCount << ") にしたよ。\n";
         DebugTrace(oss.str());
 
         if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))
@@ -3371,7 +3361,7 @@ namespace SweetsSpace
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Clearing pending spawn queue (" << m_spawnQueue.size() << ").\n";
+            oss << kLogPrefix << "保留中のスポーンキューをクリアするね (" << m_spawnQueue.size() << ")。\n";
             DebugTrace(oss.str());
         }
         m_spawnQueue.clear();
@@ -3580,8 +3570,8 @@ namespace SweetsSpace
         if (enqueued != allowedCount)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn enqueue shortfall: enqueued=" << enqueued
-                << " expected=" << allowedCount << "; queueSize=" << m_spawnQueue.size() << ".\n";
+            oss << kLogPrefix << "スポーンキューへの積み込みが足りなかったよ enqueued=" << enqueued
+                << " expected=" << allowedCount << " queueSize=" << m_spawnQueue.size() << ".\n";
             DebugTrace(oss.str());
         }
 
@@ -3673,8 +3663,8 @@ namespace SweetsSpace
         if (!descriptor)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to resolve descriptor for sweets type '" << ToString(*chosenType)
-                << "' when choosing spawn kind.\n";
+            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ToString(*chosenType)
+                << "' のデスクリプタを見つけられなかったよ。\n";
             DebugTrace(oss.str());
             return {};
         }
@@ -3707,7 +3697,7 @@ namespace SweetsSpace
         m_stackedInBatch = 0;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Phase change primed next batch with interval="
+        oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
             << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
             << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount
             << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
@@ -3750,7 +3740,7 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> baseWeights = BuildDefaultWeights();
         if (baseWeights.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "Cannot build default spawn configs: no sweets registered.\n");
+            DebugTrace(std::string(kLogPrefix) + "デフォルトのスポーン設定を作れないよ。スイーツが何も登録されてない。\n");
             return;
         }
 
@@ -3777,7 +3767,7 @@ namespace SweetsSpace
         ForceSpawnRefresh();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Applied default spawn configs (" << m_phaseConfigs.size() << " phases).\n";
+        oss << kLogPrefix << "デフォルトのスポーン設定を適用したよ (" << m_phaseConfigs.size() << " phases)。\n";
         DebugTrace(oss.str());
     }
 
@@ -3797,16 +3787,16 @@ namespace SweetsSpace
             /*else if (m_warnedMissingFactoryPresetKinds.insert(entry.first).second)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "No factory preset found for kind '" << entry.first
-                    << "' while building default weights; using fallback weight=" << spawnWeight << ".\n";
+                warn << kLogPrefix << "種類 '" << entry.first
+                    << "' に工場プリセットが見つからなかったから、デフォルトウェイト=" << spawnWeight << " で代用するね。\n";
                 DebugTrace(warn.str());
-            }*/ //̃CoOĂ̂ŃRgAEgi~nCj
+            }*/ // ここは足りないプリセットに気付いたとき用のデバッグ痕跡
 
             if (spawnWeight <= 0.0f)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Skipping default spawn weight for kind '" << entry.first
-                    << "' because spawnWeight=" << spawnWeight << "<= 0.\n";
+                warn << kLogPrefix << "種類 '" << entry.first
+                    << "' のデフォルトウェイトが " << spawnWeight << "<= 0 だったのでスキップするね。\n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -3815,8 +3805,8 @@ namespace SweetsSpace
             if (!resolvedType)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Skipping default spawn weight for unknown sweets type key '" << entry.first
-                    << "'.\n";
+                warn << kLogPrefix << "知らないスイーツキー '" << entry.first
+                    << "' のデフォルトウェイトはスキップするよ。\n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -3832,7 +3822,7 @@ namespace SweetsSpace
         {
             if (!m_warnedMissingSpawnOrigins)
             {
-                DebugTrace(std::string(kLogPrefix) + "Spawn origin list is empty; using world origin.\n");
+                DebugTrace(std::string(kLogPrefix) + "スポーン元リストが空だから、ワールド原点を使うね。\n");
                 m_warnedMissingSpawnOrigins = true;
             }
             return float3{ 0.0f, 0.0f, 0.0f };
@@ -3843,9 +3833,9 @@ namespace SweetsSpace
         const float3 origin = m_spawnOrigins[chosenIndex];
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Selected spawn origin index=" << chosenIndex
+        oss << kLogPrefix << "スポーン元インデックス=" << chosenIndex
             << " position=(" << origin.x << ',' << origin.y << ',' << origin.z
-            << ") of " << m_spawnOrigins.size() << " configured origins.\n";
+            << ") / 設定済み " << m_spawnOrigins.size() << " 箇所から選んだよ。\n";
         DebugTrace(oss.str());
 
         return origin;
@@ -3885,7 +3875,7 @@ namespace SweetsSpace
             transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn rotation sampled pitch/yaw/roll(deg)="
+            oss << kLogPrefix << "スポーン回転をサンプリングしたよ pitch/yaw/roll(deg)="
                 << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
                 << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
             DebugTrace(oss.str());
