@@ -51,7 +51,10 @@ namespace SweetsSpace
 
     void BaseSweets::OnUpdate(Core::UpdateContext& ctx)
     {
-        (void)ctx;
+        SyncTransformFromBox2DBody();
+        Entities::PhysicalEntity::OnUpdate(ctx);
+
+        m_visual.position = m_transform.position;
     }
 
     void BaseSweets::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -66,8 +69,8 @@ namespace SweetsSpace
             return;
         }
 
-        SyncTransformFromBox2DBody();
-        renderer.Draw(*m_model, m_transform, &camera);
+        const Transform visualTransform{ m_visual.position, m_visual.rotation, m_visual.scale };
+        renderer.Draw(*m_model, visualTransform, &camera);
     }
 }
 
