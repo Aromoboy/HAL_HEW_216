@@ -434,6 +434,42 @@ namespace
         return std::fabs(previous - current) > epsilon;
     }
 
+    float ComputeVolumeScale(const float3& scale)
+    {
+        if (!(std::isfinite(scale.x) && std::isfinite(scale.y) && std::isfinite(scale.z)))
+        {
+            return 1.0f;
+        }
+
+        return std::max(0.0f, scale.x * scale.y * scale.z);
+    }
+
+    float ComputeAreaScaleXY(const float3& scale, Physics::Box2DShapeConfig::Type shape)
+    {
+        if (!(std::isfinite(scale.x) && std::isfinite(scale.y)))
+        {
+            return 1.0f;
+        }
+
+        switch (shape)
+        {
+        case Physics::Box2DShapeConfig::Type::Circle:
+        {
+            const float axisScale = std::max(scale.x, scale.y);
+            return axisScale * axisScale;
+        }
+        default:
+            return scale.x * scale.y;
+        }
+    }
+
+    float ComputeDensityScale(const float3& scale, Physics::Box2DShapeConfig::Type shape)
+    {
+        const float areaScale = std::max(ComputeAreaScaleXY(scale, shape), std::numeric_limits<float>::min());
+        const float volumeScale = ComputeVolumeScale(scale);
+        return (areaScale > 0.0f) ? (volumeScale / areaScale) : 1.0f;
+    }
+
     struct ColliderBuildResult
     {
         Box2DShapeConfig shapeConfig{};
@@ -611,8 +647,10 @@ namespace
             break;
         }
 
-        const float scaleFactor = transform.scale.x * transform.scale.y * transform.scale.z;
-        result.shapeConfig.density *= scaleFactor;
+        // Scale density so that mass grows with volume (scale^3) while collider vertices are
+        // already scaled on the X/Y axes during fixture creation.
+        const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
+        result.shapeConfig.density *= densityScale;
         if (result.colliderComponent)
         {
             result.colliderComponent->shapeDef.density = result.shapeConfig.density;
