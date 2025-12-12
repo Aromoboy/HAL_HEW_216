@@ -3,17 +3,36 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32) && defined(_DEBUG)
+#    include <windows.h>
+#endif
 
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
 #include "Entities/CollisionEntity.h"
 #include "Collision2D.h"
+#include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
         bool IsFiniteFloat(float value)
         {
                 return std::isfinite(value) != 0;
@@ -23,6 +42,11 @@ namespace
         {
                 return IsFiniteFloat(vec.x) && IsFiniteFloat(vec.y) && IsFiniteFloat(vec.z);
         }
+
+        constexpr float kMinRenderableScale = 1e-3f;
+        constexpr float kMaxRenderableScale = 1.0e4f;
+        constexpr float kMaxDepthMagnitude = 1.0e5f;
+        constexpr float kPlaneZTolerance = 5.0f;
 
         bool ReadDebugColliderCvar()
         {
@@ -46,6 +70,8 @@ namespace Systems
                 , m_renderables()
                 , m_commands()
                 , m_colliderCommands()
+                , m_hasStagePlaneZ(false)
+                , m_stagePlaneZ(0.0f)
         {
         }
 
@@ -109,6 +135,19 @@ namespace Systems
                 m_colliderRenderables.clear();
                 m_commands.clear();
                 m_colliderCommands.clear();
+                m_missingModelLogged.clear();
+                m_invalidTransformLogged.clear();
+        }
+
+        void DrawSystem::SetStagePlaneZ(float planeZ)
+        {
+                if (!std::isfinite(planeZ))
+                {
+                        return;
+                }
+
+                m_stagePlaneZ = planeZ;
+                m_hasStagePlaneZ = true;
         }
 
         void DrawSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -132,6 +171,12 @@ namespace Systems
                         Render::Model* model = entity->GetRenderableModel();
                         if (!model)
                         {
+                                if (m_missingModelLogged.insert(entity).second)
+                                {
+                                        std::ostringstream oss;
+                                        oss << "[DrawSystem] Entity '" << entity->GetTag() << "' missing renderable model; draw command skipped.\n";
+                                        DebugTrace(oss.str());
+                                }
                                 continue;
                         }
 
@@ -196,12 +241,62 @@ namespace Systems
 
         bool DrawSystem::ValidateTransform(const Transform& transform, const Entities::Entity* source) const
         {
-                (void)source;
-                if (IsFiniteVector(transform.position) && IsFiniteVector(transform.rotation) && IsFiniteVector(transform.scale))
+                if (!IsFiniteVector(transform.position) || !IsFiniteVector(transform.rotation) || !IsFiniteVector(transform.scale))
                 {
-                        return true;
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
+                                        << "' due to non-finite transform values.\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
                 }
-                return false;
+
+                const auto scaleInvalid = [](float component)
+                {
+                        return std::fabs(component) < kMinRenderableScale || std::fabs(component) > kMaxRenderableScale;
+                };
+
+                if (scaleInvalid(transform.scale.x) || scaleInvalid(transform.scale.y) || scaleInvalid(transform.scale.z))
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
+                                        << "' due to out-of-range scale (" << transform.scale.x << ','
+                                        << transform.scale.y << ',' << transform.scale.z << ").\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                if (std::fabs(transform.position.z) > kMaxDepthMagnitude)
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
+                                        << "' due to extreme Z position " << transform.position.z << ".\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                if (m_hasStagePlaneZ && transform.position.z < (m_stagePlaneZ - kPlaneZTolerance))
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] Rejecting entity '" << (source ? source->GetTag() : "<null>")
+                                        << "' behind stage plane (z=" << transform.position.z
+                                        << " planeZ=" << m_stagePlaneZ << ").\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                return true;
         }
         void DrawSystem::RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
@@ -209,6 +304,10 @@ namespace Systems
             {
                 return;
             }
+
+            SetBlendMode(BLEND_ALPHA);
+            SetCullingMode(D3D11_CULL_NONE);
+            SetDepthTest(true);
 
             for (const DrawCommand& command : m_commands)
             {

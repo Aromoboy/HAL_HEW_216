@@ -1185,6 +1185,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(physicsParameters);
     m_contactListener = std::make_shared<Systems::Box2DContactListener>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
+    if (m_drawSystem)
+    {
+        m_drawSystem->SetStagePlaneZ(m_stageData.GetPlaneZ());
+    }
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
     if (m_contactListener)
     {
