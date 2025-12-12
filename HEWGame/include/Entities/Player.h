@@ -6,6 +6,7 @@
 
 #include "Entities/PhysicalEntity.h"
 #include "Input.h"
+#include "VisualTransform.h"
 
 namespace SweetsSpace
 {
@@ -52,6 +53,8 @@ namespace Entities
         void SetPickupArea(float width, float height, float forwardOffset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
+        Transform GetRenderTransform() const override;
+
     private:
         struct ColliderFootprint
         {
@@ -59,6 +62,9 @@ namespace Entities
             float3 centerOffset{ 0.0f, 0.0f, 0.0f };
         };
 
+        void SyncVisualTransformFromPhysics();
+
+        VisualTransform m_visual{};
         std::shared_ptr<Render::Model> m_fairyModel;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;

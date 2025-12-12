@@ -1754,7 +1754,7 @@ namespace SweetsSpace
                 }
 
                 Transform physicsTransform = transform;
-                SweetsVisualTransform visualTransform{};
+                VisualTransform visualTransform{};
                 visualTransform.position = physicsTransform.position;
                 visualTransform.rotation = physicsTransform.rotation;
 

@@ -323,6 +323,10 @@ namespace Entities
             PlayerDebugTrace(oss.str());
         }
 
+        m_visual.position = m_transform.position;
+        m_visual.rotation = m_transform.rotation;
+        m_visual.scale = m_transform.scale;
+
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
         Physics::BoxColliderComponent colliderComponent;
         colliderComponent.shapeDef.density = shapeConfig.density;
@@ -336,7 +340,7 @@ namespace Entities
 
     void Player::OnUpdate(Core::UpdateContext& ctx)
     {
-        SyncTransformFromBox2DBody();
+        SyncVisualTransformFromPhysics();
 
         if (!HasBox2DBody())
             return;
@@ -372,10 +376,9 @@ namespace Entities
 
         ClampVerticalPosition();
         ClampScreenBounds();
+        SyncVisualTransformFromPhysics();
         HandleCarryInput(ctx);
         UpdateCarriedSweets();
-
-        SyncTransformFromBox2DBody();
     }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -390,8 +393,25 @@ namespace Entities
             return;
         }
 
-        SyncTransformFromBox2DBody();
-        renderer.Draw(*m_model, m_transform, &camera);
+        const Transform renderTransform = GetRenderTransform();
+        renderer.Draw(*m_model, renderTransform, &camera);
+    }
+
+    Transform Player::GetRenderTransform() const
+    {
+        return Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
+    }
+
+    void Player::SyncVisualTransformFromPhysics()
+    {
+        if (HasBox2DBody())
+        {
+            SyncTransformFromBox2DBody();
+        }
+
+        m_visual.position = m_transform.position;
+        m_visual.rotation = m_transform.rotation;
+        m_visual.scale = m_transform.scale;
     }
 
     void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
@@ -651,8 +671,6 @@ namespace Entities
             return;
         }
 
-        SyncTransformFromBox2DBody();
-
         for (auto& it : m_carrieds)
         {
             const Transform current = it ? it->GetTransform() : Transform{};
@@ -701,8 +719,6 @@ namespace Entities
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Pickup skipped: collider footprint missing.\n");
             return;
         }
-
-        SyncTransformFromBox2DBody();
 
         const float3 colliderCenter
         {
@@ -866,7 +882,6 @@ namespace Entities
         float3 clampedVelocity = bodyVelocity;
         clampedVelocity.y = 0.0f;
         SetLinearVelocity(clampedVelocity);
-        SyncTransformFromBox2DBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Clamped Y from " << previousY << " to minimum "
@@ -907,7 +922,6 @@ namespace Entities
             bodyId,
             ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
             b2Body_GetRotation(bodyId));
-        SyncTransformFromBox2DBody();
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Screen clamp applied prevX=" << originalX
