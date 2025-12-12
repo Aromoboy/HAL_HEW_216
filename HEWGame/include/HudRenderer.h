@@ -23,6 +23,7 @@ struct HudDisplayData
     float guidelineClipY = 0.0f;
     float moveSpeedMultiplier = 1.0f;
     float moveSpeedUnitsPerSecond = 0.0f;
+    int sweetsCount = 0;
 };
 
 struct HudLayoutConfig

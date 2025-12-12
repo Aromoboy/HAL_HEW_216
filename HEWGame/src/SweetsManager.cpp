@@ -87,7 +87,7 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
-    constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
+    constexpr float kDefaultGeneratedThicknessPadding = 1.1f;  
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -1079,6 +1079,16 @@ namespace SweetsSpace
         return (it->second.foundationContacts > 0) || (it->second.sweetsContacts > 0);
     }
 
+   
+    int SweetsManager::GetSweetsCount() const
+    {
+        int count = 0;
+        for (const auto& pair : m_byState)
+        {
+            count += static_cast<int>(pair.second.size());
+        }
+        return count;
+    }
     void SweetsManager::UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other)
     {
         if (!sweets || !other)
@@ -1895,7 +1905,7 @@ namespace SweetsSpace
         {
             return;
         }
-
+        
         sweets->MarkPendingDestroy();
     }
 
@@ -2080,7 +2090,7 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             return nullptr;
         }
-
+    
         SetState(sweets, SweetsState::Active);
         RegisterWithSystems(sweets);
 
@@ -3558,7 +3568,7 @@ namespace SweetsSpace
 
         return origin;
     }
-
+   
     Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
     {
         Transform transform{};

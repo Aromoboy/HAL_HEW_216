@@ -129,6 +129,7 @@ private:
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
     int ComputeScore() const;
+    int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
     std::vector<StageObject> m_stageObjects;
@@ -207,6 +208,7 @@ private:
     PlayerSpawnTransform m_playerSpawnTransform;
     TimerDisplay m_timerDisplay;
     Texture* m_numberTexture;
+    std::unique_ptr<SweetsSpace::SweetsManager> m1_sweetsManager;
 };
 
 #endif // __SCENE_GAME_H__

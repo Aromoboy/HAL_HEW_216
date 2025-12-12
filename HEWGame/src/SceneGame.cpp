@@ -2354,6 +2354,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                   hudData.currentHeight = m_currentTowerHeight;
                   hudData.peakHeight = m_peakTowerHeight;
                   hudData.score = ComputeScore();
+                  hudData.sweetsCount = GetSweetsCount();
                   hudData.timeUp = (m_stageState == StageState::TimeUp)
                       || (m_stageState == StageState::Cleared)
                       || (m_stageState == StageState::ShowingResult);
@@ -3021,6 +3022,14 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
         player->Enable(enabled);
     }
 }
+
+int SceneGame::GetSweetsCount() const
+{
+    if (m_sweetsManager)
+        return m_sweetsManager->GetSweetsCount();
+    return 0;
+}
+
 
 int SceneGame::ComputeScore() const
 {
