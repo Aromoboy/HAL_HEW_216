@@ -34,6 +34,7 @@
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
 #include "ModelCache.h"
+#include "ModelPivot.h"
 #include "BoxColliderComponent.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
@@ -148,18 +149,6 @@ namespace
         }
 
         return AABB(max, min);
-    }
-
-    float ComputeVisualYOffset(const std::shared_ptr<Render::Model>& model, const float3& appliedScale)
-    {
-        if (!model || !model->HasLocalBounds())
-        {
-            return 0.0f;
-        }
-
-        const AABB& bounds = model->GetLocalBounds();
-        const float minY = std::min(bounds.min.y, bounds.max.y);
-        return -minY * appliedScale.y;
     }
 
     std::shared_ptr<Render::Model> CreateProceduralFairyModel()
@@ -1739,7 +1728,7 @@ namespace SweetsSpace
 
                 physicsTransform.scale = visualTransform.scale;
 
-                const float visualOffsetY = ComputeVisualYOffset(model, visualTransform.scale);
+                const float visualOffsetY = Render::ComputePivotOffsetYOriginBottom(model, visualTransform.scale);
                 physicsTransform.position.y += visualOffsetY;
                 visualTransform.position.y += visualOffsetY;
 
@@ -1757,7 +1746,8 @@ namespace SweetsSpace
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
-                        << ") pivotOffsetY=" << visualOffsetY << '\n';
+                        << ") pivotOffsetY=" << visualOffsetY
+                        << " policy=" << Render::kPivotPolicyName << '\n';
                     Diagnostics::LogInfo(created.str());
                 }
 
