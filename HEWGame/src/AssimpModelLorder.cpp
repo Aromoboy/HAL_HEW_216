@@ -383,7 +383,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             }
             else
             {
-                DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ " + std::string(mesh->mName.C_Str()) + " に対応するノードなし");
+                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし");
             }
         }
 
