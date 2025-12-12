@@ -4,13 +4,13 @@
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
 
-//============================================================
-        DebugLog::DebugMessage("[Shader] _VF[_[t@CJ܂: " + vsPath);
-        DebugLog::DebugMessage("[Shader] sNZVF[_[t@CJ܂: " + psPath);
 bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
+    DebugMessage("[Shader] 頂点シェーダーファイルを読み込みます: " + vsPath);
+    DebugMessage("[Shader] ピクセルシェーダーファイルを読み込みます: " + psPath);
+
     // 頂点シェーダーをファイルから読み込み
     ID3DBlob* vsBlob = nullptr;
     std::wstring wVsPath(vsPath.begin(), vsPath.end());
