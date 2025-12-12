@@ -3,6 +3,10 @@
 #include "TextureCache.h"
 #include "Diagnostics/Logger.h"
 
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+
 #pragma execution_character_set("utf-8")
 
 #ifndef MODELCACHE_ENABLE_LOG
@@ -26,6 +30,30 @@
 #else
 #define MODELCACHE_LOG(message) ((void)0)
 #endif
+
+namespace
+{
+    std::string CanonicalizeCacheKey(const std::string& rawPath)
+    {
+        std::filesystem::path fsPath(rawPath);
+        std::filesystem::path normalized = fsPath.lexically_normal();
+
+        std::string key = normalized.generic_string();
+        if (key.empty())
+        {
+            key = rawPath;
+        }
+
+#if defined(_WIN32) || defined(_WIN64)
+        std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+#endif
+
+        return key;
+    }
+}
 
 namespace Render
 {
@@ -82,10 +110,12 @@ namespace Render
     //============================================================
     std::shared_ptr<Render::Model> ModelCache::Get(const std::string& path)
     {
-        const std::string cacheKey = path;
+        const std::string cacheKey = CanonicalizeCacheKey(path);
+
+        Diagnostics::LogInfo(std::string("[ModelCache] request='") + path + "' -> key='" + cacheKey + "'");
 
         // キャッシュに存在するか確認
-        auto it = m_models.find(path);
+        auto it = m_models.find(cacheKey);
         if (it != m_models.end())
         {
             Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' hit");
@@ -122,7 +152,7 @@ namespace Render
         if (model)
         {
             // 成功した場合はキャッシュに保存
-            m_models[path] = model;
+            m_models[cacheKey] = model;
             Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' stored");
         }
         else
