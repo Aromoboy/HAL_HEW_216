@@ -5,6 +5,7 @@
 #include "Physics/ShapeConstants.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -158,6 +159,9 @@ namespace Systems
         , m_contactListener()
         , m_bodies()
         , m_bodyMap()
+        , m_defaultBodyDef()
+        , m_defaultShapeDef()
+        , m_tuning(tuning)
         , m_subStepCount(4)
         , m_loggedMissingSystem(false)
         , m_loggedMissingWorld(false)
@@ -170,6 +174,17 @@ namespace Systems
         m_defaultShapeDef = b2DefaultShapeDef();
         m_defaultShapeDef.material.friction = std::max(0.0f, tuning.defaultFriction);
         m_defaultShapeDef.material.restitution = std::clamp(tuning.defaultRestitution, 0.0f, 1.0f);
+
+        m_tuning.defaultLinearDamping = m_defaultBodyDef.linearDamping;
+        m_tuning.defaultAngularDamping = m_defaultBodyDef.angularDamping;
+        m_tuning.defaultFriction = m_defaultShapeDef.material.friction;
+        m_tuning.defaultRestitution = m_defaultShapeDef.material.restitution;
+        m_tuning.restitutionThreshold = std::max(0.0f, tuning.restitutionThreshold);
+        m_tuning.hitEventThreshold = std::max(0.0f, tuning.hitEventThreshold);
+        m_tuning.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
+        m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
+        m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
+        m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
 
         SetSubStepCount(tuning.subStepCount);
         if (m_box2dSystem)
@@ -583,6 +598,109 @@ namespace Systems
             return std::clamp(value, minValue, maxValue);
         };
 
+        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
+
+        float maxColliderExtent = 0.0f;
+        const auto accumulatePolygonExtent = [&](const std::vector<b2Vec2>& vertices)
+        {
+            if (vertices.size() < 3)
+            {
+                return;
+            }
+
+            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            for (const b2Vec2& vertex : vertices)
+            {
+                min.x = std::min(min.x, vertex.x);
+                min.y = std::min(min.y, vertex.y);
+                max.x = std::max(max.x, vertex.x);
+                max.y = std::max(max.y, vertex.y);
+            }
+
+            const float width = max.x - min.x;
+            const float height = max.y - min.y;
+            maxColliderExtent = std::max(maxColliderExtent, std::max(width, height));
+        };
+
+        const auto accumulateCircleExtent = [&](float radius)
+        {
+            if (radius <= 0.0f)
+            {
+                return;
+            }
+
+            maxColliderExtent = std::max(maxColliderExtent, radius * 2.0f);
+        };
+
+        if (useColliderComponent)
+        {
+            for (const auto& shape : colliderComponent->shapes)
+            {
+                switch (shape.type)
+                {
+                case Physics::ColliderShapeType::Circle:
+                {
+                    const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
+                    accumulateCircleExtent(scaledRadius);
+                    break;
+                }
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    accumulatePolygonExtent(ToBox2DVertices(shape.vertices, transform));
+                    break;
+                }
+                }
+            }
+        }
+
+        if (hasMeshFixtures)
+        {
+            for (const auto& polygon : meshPolygons)
+            {
+                accumulatePolygonExtent(ToBox2DVertices(polygon, transform));
+            }
+        }
+
+        if (hasMeshBoundary)
+        {
+            accumulatePolygonExtent(ToBox2DVertices(meshBoundary, transform));
+        }
+
+        if (hasShapeConfig)
+        {
+            switch (shapeConfig->type)
+            {
+            case Physics::Box2DShapeConfig::Type::Box:
+            {
+                const float hx = ToBox2DLength(0.5f, transform.scale.x, transform);
+                const float hy = ToBox2DLength(0.5f, transform.scale.y, transform);
+                accumulatePolygonExtent({
+                    b2Vec2{ -hx, -hy },
+                    b2Vec2{ hx, -hy },
+                    b2Vec2{ hx, hy },
+                    b2Vec2{ -hx, hy },
+                });
+                break;
+            }
+            case Physics::Box2DShapeConfig::Type::Polygon:
+            {
+                accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
+                break;
+            }
+            case Physics::Box2DShapeConfig::Type::Circle:
+            {
+                const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
+                accumulateCircleExtent(scaledRadius);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
         // BodyDef 設定
         b2BodyDef bodyDef = m_defaultBodyDef;
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
@@ -596,6 +714,43 @@ namespace Systems
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
         bodyDef.userData = &body;
+
+        const bool isDynamicBody = bodyDef.type == b2_dynamicBody;
+        const bool enableSmallDynamicCcd = m_tuning.continuousCollisionForSmallDynamics
+            && isDynamicBody
+            && m_tuning.smallDynamicContinuousThreshold > 0.0f
+            && maxColliderExtent > 0.0f
+            && maxColliderExtent <= Entities::PhysicalEntity::ToBox2DLength(m_tuning.smallDynamicContinuousThreshold);
+
+        bool enableContinuousCollision = false;
+        if (m_tuning.continuousCollisionForSweets && (layer == Collision::CollisionLayer::Sweets || isSweetTag))
+        {
+            enableContinuousCollision = true;
+        }
+
+        if (!enableContinuousCollision && enableSmallDynamicCcd)
+        {
+            enableContinuousCollision = true;
+        }
+
+        if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayerProjectiles)
+        {
+            std::string lowerTag = tag;
+            std::transform(lowerTag.begin(), lowerTag.end(), lowerTag.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+
+            if (lowerTag.find("projectile") != std::string::npos)
+            {
+                enableContinuousCollision = true;
+            }
+        }
+
+        if (enableContinuousCollision)
+        {
+            bodyDef.isBullet = true;
+        }
 
         if (isSweetTag)
         {
@@ -696,7 +851,6 @@ if (isSweetTag)
 }
 
 
-        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
         auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius = 0.0f)
         {
             if (vertices.size() < 3 || isPolygonTooSmall(vertices))

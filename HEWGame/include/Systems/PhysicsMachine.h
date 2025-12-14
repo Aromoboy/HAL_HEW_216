@@ -24,6 +24,10 @@ namespace Systems
         float defaultRestitution = 0.0f;
         float restitutionThreshold = 1.0f;
         float hitEventThreshold = 0.0f;
+        bool continuousCollisionForSweets = false;
+        bool continuousCollisionForSmallDynamics = false;
+        float smallDynamicContinuousThreshold = 0.0f;
+        bool continuousCollisionForPlayerProjectiles = false;
     };
 
     class IPhysicsSystem
@@ -74,6 +78,7 @@ namespace Systems
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
+        PhysicsTuningParameters m_tuning{};
         int m_subStepCount = 4;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;

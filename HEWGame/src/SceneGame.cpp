@@ -705,6 +705,10 @@ namespace
             float defaultRestitution = 0.06f;
             float restitutionThreshold = 5.0f;
             float hitEventThreshold = 0.0f;
+            bool continuousCollisionForSweets = true;
+            bool continuousCollisionForSmallDynamics = false;
+            float smallDynamicContinuousThreshold = 0.6f;
+            bool continuousCollisionForPlayerProjectiles = true;
         };
 
         SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
@@ -860,10 +864,35 @@ namespace
                     << ", defaultRestitution=" << settings.defaultRestitution
                     << ", restitutionThreshold=" << settings.restitutionThreshold
                     << ", hitEventThreshold=" << settings.hitEventThreshold
+                    << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
+                    << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
+                    << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
+                    << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                     << ").\n";
                 ::DebugTrace(oss.str());
                 return settings;
             }
+
+            auto parseBool = [](const std::string& value) -> std::optional<bool>
+            {
+                std::string lower = value;
+                std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c)
+                {
+                    return static_cast<char>(std::tolower(c));
+                });
+
+                if (lower == "1" || lower == "true")
+                {
+                    return true;
+                }
+
+                if (lower == "0" || lower == "false")
+                {
+                    return false;
+                }
+
+                return std::nullopt;
+            };
 
             std::string line;
             size_t lineNumber = 0;
@@ -932,6 +961,52 @@ namespace
                     {
                         settings.hitEventThreshold = std::max(0.0f, std::stof(value));
                     }
+                    else if (key == "ccdSweets")
+                    {
+                        if (auto parsed = parseBool(value))
+                        {
+                            settings.continuousCollisionForSweets = *parsed;
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                                << lineNumber << "\n";
+                            ::DebugTrace(oss.str());
+                        }
+                    }
+                    else if (key == "ccdSmallDynamics")
+                    {
+                        if (auto parsed = parseBool(value))
+                        {
+                            settings.continuousCollisionForSmallDynamics = *parsed;
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                                << lineNumber << "\n";
+                            ::DebugTrace(oss.str());
+                        }
+                    }
+                    else if (key == "ccdSmallDynamicThreshold")
+                    {
+                        settings.smallDynamicContinuousThreshold = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "ccdPlayerProjectiles")
+                    {
+                        if (auto parsed = parseBool(value))
+                        {
+                            settings.continuousCollisionForPlayerProjectiles = *parsed;
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                                << lineNumber << "\n";
+                            ::DebugTrace(oss.str());
+                        }
+                    }
                     else
                     {
                         std::ostringstream oss;
@@ -959,6 +1034,10 @@ namespace
                 << ", defaultRestitution=" << settings.defaultRestitution
                 << ", restitutionThreshold=" << settings.restitutionThreshold
                 << ", hitEventThreshold=" << settings.hitEventThreshold
+                << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
+                << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
+                << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
+                << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -1287,6 +1366,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     physicsParameters.defaultRestitution = tuning.defaultRestitution;
     physicsParameters.restitutionThreshold = tuning.restitutionThreshold;
     physicsParameters.hitEventThreshold = tuning.hitEventThreshold;
+    physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
+    physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
+    physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
+    physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(physicsParameters);
     m_contactListener = std::make_shared<Systems::Box2DContactListener>();
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
