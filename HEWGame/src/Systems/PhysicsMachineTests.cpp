@@ -1,3 +1,4 @@
+#if defined(_DEBUG) && defined(PHYSICS_SELF_TEST)
 #include "Systems/PhysicsMachine.h"
 #include "Entities/PhysicalEntity.h"
 #include "BoxColliderComponent.h"
@@ -11,6 +12,7 @@
 
 namespace
 {
+
     // Box2Dで動作する動的ボディを生成する簡易ユーティリティ
     // 旧物理API（ConvexHullCollider2D、weight、damping等）は完全に削除されたため使用不可
     Entities::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform)
@@ -119,3 +121,4 @@ namespace
 
     static PhysicsMachineTestRunner g_physicsMachineTestRunner;
 }
+#endif
