@@ -87,7 +87,6 @@ namespace Core
 
                 if (m_context)
                 {
-                        DebugMessage("[DXContext] Clearing render targets and shader resources prior to resize.\n");
                         m_context->OMSetRenderTargets(0, nullptr, nullptr);
 
                         ID3D11ShaderResourceView* nullSrvs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
