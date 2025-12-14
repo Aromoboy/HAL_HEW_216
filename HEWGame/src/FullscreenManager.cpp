@@ -43,7 +43,7 @@ namespace FullscreenManager
                         return;
                 }
 
-                // Use the cached window state held by WindowManager to perform the transition.
+                // WindowManagerが保持するキャッシュされたウィンドウ状態を使用して遷移を実行
                 WindowManager::ToggleFullscreen();
         }
 }
