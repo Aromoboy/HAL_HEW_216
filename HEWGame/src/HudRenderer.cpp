@@ -273,7 +273,11 @@ void HudRenderer::RenderGuideline(const HudDisplayData& data)
     const float thicknessClip = (m_config.guidelineThicknessPixels / viewportHeight) * 2.0f;
     const float repeatSpacing = std::max(1.0f, m_config.guidelinePatternPixels);
     const float repeatCount = std::max(1.0f, viewportWidth / repeatSpacing);
-    const float clampedY = std::clamp(data.guidelineClipY, -0.98f, 0.98f);
+    const float halfThicknessClip = thicknessClip * 0.5f;
+    const float clampedY = std::clamp(
+        data.guidelineClipY,
+        -1.0f + halfThicknessClip,
+        1.0f - halfThicknessClip);
 
     
     SetDepthTest(false);
