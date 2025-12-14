@@ -545,18 +545,9 @@ namespace Systems
         const auto& meshBoundary = body.GetBox2DBoundary();
         const bool hasMeshFixtures = !meshPolygons.empty();
         const bool hasMeshBoundary = !meshBoundary.empty();
+        const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
 
-        const std::string& tag = body.GetTag();
-        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
-
-        const b2BodyType intendedBodyType = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
-        const bool isDynamicBodyType = intendedBodyType == b2_dynamicBody;
-        const bool meshAllowedForSweets = !isSweetTag || !isDynamicBodyType || m_tuning.allowMeshFixturesForDynamicSweets;
-        const bool useMeshFixtures = hasMeshFixtures && meshAllowedForSweets;
-        const bool useMeshBoundary = hasMeshBoundary && meshAllowedForSweets;
-        const bool useMeshData = useMeshFixtures || useMeshBoundary;
-
-        if (!hasColliderComponent && !hasShapeConfig && !useMeshData)
+        if (!hasColliderComponent && !hasShapeConfig && !hasMeshData)
         {
             std::ostringstream oss;
             oss << "[PhysicsMachine] Cannot create physics body for tag='" << body.GetTag()
@@ -565,17 +556,8 @@ namespace Systems
             return b2_nullBodyId;
         }
 
-#if defined(_DEBUG)
-        if (!meshAllowedForSweets && hasMeshData)
-        {
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] Mesh fixtures suppressed for tag='" << tag
-                << "' (dynamic sweets require explicit collider definitions).\n";
-            DebugTrace(oss.str());
-        }
-#endif
-
-        const bool useColliderComponent = hasColliderComponent && !useMeshData;
+        const std::string& tag = body.GetTag();
+        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
 
         const float minBox2DDimension = Entities::PhysicalEntity::ToBox2DLength(
             Physics::kMinimumShapeDimensionMeters);
@@ -645,6 +627,8 @@ namespace Systems
             return std::clamp(value, minValue, maxValue);
         };
 
+        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
+
         float maxColliderExtent = 0.0f;
         const auto accumulatePolygonExtent = [&](const std::vector<b2Vec2>& vertices)
         {
@@ -701,7 +685,7 @@ namespace Systems
             }
         }
 
-        if (useMeshFixtures)
+        if (hasMeshFixtures)
         {
             for (const auto& polygon : meshPolygons)
             {
@@ -709,7 +693,7 @@ namespace Systems
             }
         }
 
-        if (useMeshBoundary)
+        if (hasMeshBoundary)
         {
             accumulatePolygonExtent(ToBox2DVertices(meshBoundary, transform));
         }
@@ -749,7 +733,7 @@ namespace Systems
         // BodyDef 設定
         b2BodyDef bodyDef = m_defaultBodyDef;
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
-        bodyDef.type = intendedBodyType;
+        bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
         bodyDef.rotation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
         bodyDef.motionLocks.angularZ = hasShapeConfig ? shapeConfig->fixedRotation : false;
         if (hasShapeConfig && shapeConfig->angularDamping > 0.0f)
@@ -970,9 +954,9 @@ if (isSweetTag)
             return bodyId;
         }
 
-        // モデル由来のメッシュポリゴンがあれば優先的に使う（動的スイーツは除外）
+        // モデル由来のメッシュポリゴンがあれば優先的に使う
         fixtureCount = 0;
-        if (useMeshFixtures)
+        if (hasMeshFixtures)
         {
             colliderComponent->Clear();
             colliderComponent->shapeDef = shapeDef;
@@ -989,7 +973,7 @@ if (isSweetTag)
                 recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform)));
             }
 
-            if (fixtureCount == 0 && useMeshBoundary && meshBoundary.size() >= 3)
+            if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
             {
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
 
