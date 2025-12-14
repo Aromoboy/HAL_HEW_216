@@ -1388,7 +1388,7 @@ namespace Stage
 
         if (m_platforms.empty())
         {
-            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction, kDefaultPlatformPrimaryColor };
+            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction };
             return s_fallback;
         }
 
