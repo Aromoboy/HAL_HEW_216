@@ -175,10 +175,22 @@ namespace
             };
         }
 
+        float2 ApplyBox2DShapeToWorld(const b2Vec2& local, const Transform& transform)
+        {
+            const float3 worldOffset = Entities::PhysicalEntity::ToWorldVector(local);
+            const float cosR = std::cos(transform.rotation.z);
+            const float sinR = std::sin(transform.rotation.z);
+
+            return float2{
+                transform.position.x + (cosR * worldOffset.x - sinR * worldOffset.y),
+                transform.position.y + (sinR * worldOffset.x + cosR * worldOffset.y),
+            };
+        }
+
         void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
             const auto& colliderComponent = entity.GetBoxColliderComponent();
-            if (!colliderComponent)
+            if (!colliderComponent || colliderComponent->shapes.empty())
             {
                 return;
             }
@@ -192,8 +204,9 @@ namespace
                 {
                 case Physics::ColliderShapeType::Circle:
                 {
-                    const float2 center = ApplyTransform2D(float2{ 0.0f, 0.0f }, transform);
-                    const float scaledRadius = shape.radius * std::max(transform.scale.x, transform.scale.y);
+                    const b2Vec2 localCenter = shape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : shape.vertices.front();
+                    const float2 center = ApplyBox2DShapeToWorld(localCenter, transform);
+                    const float scaledRadius = Entities::PhysicalEntity::ToWorldLength(shape.radius);
                     DebugColliderRenderer::DrawCircle(center, scaledRadius, z, color);
                     break;
                 }
@@ -210,7 +223,7 @@ namespace
                     hull.reserve(shape.vertices.size());
                     for (const auto& vertex : shape.vertices)
                     {
-                        hull.push_back(ApplyTransform2D(float2{ vertex.x, vertex.y }, transform));
+                        hull.push_back(ApplyBox2DShapeToWorld(vertex, transform));
                     }
 
                     DebugColliderRenderer::DrawHull(hull, z, color);

@@ -14,6 +14,7 @@
 
 #include "Collision2D.h"
 #include "DebugColliderRenderer.h"
+#include "Entities/PhysicalEntity.h"
 
 namespace
 {
@@ -39,6 +40,68 @@ namespace
         return AreFloat3Equal(lhs.position, rhs.position)
             && AreFloat3Equal(lhs.rotation, rhs.rotation)
             && AreFloat3Equal(lhs.scale, rhs.scale);
+    }
+
+    float2 ApplyBox2DToWorld(const b2Vec2& local, const Transform& transform)
+    {
+        const float3 worldOffset = Entities::PhysicalEntity::ToWorldVector(local);
+        const float cosR = std::cos(transform.rotation.z);
+        const float sinR = std::sin(transform.rotation.z);
+
+        return float2{
+            transform.position.x + (cosR * worldOffset.x - sinR * worldOffset.y),
+            transform.position.y + (sinR * worldOffset.x + cosR * worldOffset.y),
+        };
+    }
+
+    bool DebugDrawBox2DShapes(const Entities::PhysicalEntity& entity, const Color& circleColor, const Color& hullColor, const Color& aabbColor)
+    {
+        const auto& colliderComponent = entity.GetBoxColliderComponent();
+        if (!colliderComponent || colliderComponent->shapes.empty())
+        {
+            return false;
+        }
+
+        const Transform& transform = entity.GetTransform();
+        const float z = transform.position.z;
+
+        DebugColliderRenderer::DrawAABB(entity.GetAABB(), aabbColor);
+
+        for (const auto& shape : colliderComponent->shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+            {
+                const b2Vec2 localCenter = shape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : shape.vertices.front();
+                const float2 center = ApplyBox2DToWorld(localCenter, transform);
+                const float radius = Entities::PhysicalEntity::ToWorldLength(shape.radius);
+                DebugColliderRenderer::DrawCircle(center, radius, z, circleColor);
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                if (shape.vertices.empty())
+                {
+                    break;
+                }
+
+                std::vector<float2> hull;
+                hull.reserve(shape.vertices.size());
+                for (const auto& vertex : shape.vertices)
+                {
+                    hull.push_back(ApplyBox2DToWorld(vertex, transform));
+                }
+
+                DebugColliderRenderer::DrawHull(hull, z, hullColor);
+                break;
+            }
+            }
+        }
+
+        return true;
     }
 }
 
@@ -190,6 +253,14 @@ namespace Entities
     {
         if (!m_collider)
         {
+            if (auto* physical = dynamic_cast<PhysicalEntity*>(this))
+            {
+                if (DebugDrawBox2DShapes(*physical, circleColor, hullColor, aabbColor))
+                {
+                    m_lastBoundsTransform = m_transform;
+                    m_transformDirty = false;
+                }
+            }
             return;
         }
 
