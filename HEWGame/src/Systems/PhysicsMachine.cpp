@@ -282,6 +282,7 @@ namespace Systems
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
     {
+        if (m_bodies.empty()) return;
         auto* bodyPtr = &body;
         auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
         if (it == m_bodies.end())
