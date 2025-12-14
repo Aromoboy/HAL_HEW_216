@@ -19,7 +19,7 @@ namespace SceneSpace
         {
         public:
                 explicit ScenePowerUp(SceneSpace::SceneManager& manager);
-                ~ScenePowerUp();
+                ~ScenePowerUp() = default;
 
                 void Load(Core::Input& input) override;
                 void Update(Core::StepTimer& timer, Core::Input& input) override;
