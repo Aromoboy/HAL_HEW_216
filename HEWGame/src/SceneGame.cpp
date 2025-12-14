@@ -1786,7 +1786,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             DebugTrace(std::string(kLogPrefix) + "[Ground] baseline derived from first descriptor; spawn platform missing.\\n");
         }
 
-        this->m_groundY = computedGround;
+        m_groundY = computedGround;
     }
 
     if (m_sweetsManager)
@@ -2240,7 +2240,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         // World bounds on X
         const float minX = camPos.x - halfWidth;
         const float maxX = camPos.x + halfWidth;
-        const float cameraBottomY = camPos.y - halfHeight - kPlayerMinimumYMargin;
+        const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
 
         // Log bounds if changed
         const bool changed =
@@ -2263,16 +2263,8 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         // Apply to player
         if (player)
         {
-            const bool groundValid = std::isfinite(m_groundY);
-            const float minY = groundValid ? m_groundY : cameraBottomY;
-
             player->SetScreenBounds(minX, maxX, std::nullopt);
             player->SetMinimumY(minY);
-
-            if (!groundValid)
-            {
-                DebugTrace(std::string(kLogPrefix) + "[PlayerBounds] groundY invalid; falling back to camera clamp.\n");
-            }
         }
 
         // Apply to sweets manager
@@ -2283,10 +2275,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_cachedPlayerMinX = minX;
         m_cachedPlayerMaxX = maxX;
         m_cachedPlayerBoundsValid = true;
-    }
-    else if (player)
-    {
-        player->SetMinimumY(m_groundY);
     }
 
     switch (m_stageState)
