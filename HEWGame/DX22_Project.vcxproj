@@ -139,12 +139,13 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;$(ProjectDir)ThirdParty\Effekseer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2dd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
@@ -162,6 +163,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;$(ProjectDir)ThirdParty\Effekseer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -169,13 +171,15 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EffectSystem.cpp" />
+    <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
@@ -263,6 +267,7 @@
     <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
@@ -274,6 +279,8 @@
     <ClInclude Include="include\CameraManager.h" />
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\Core\ActionId.h" />
+    <ClInclude Include="include\Effect.h" />
+    <ClInclude Include="include\EffectTestScene.h" />
     <ClInclude Include="include\PowerUpRenderer.h" />
     <ClInclude Include="include\PowerUpTarget.h" />
     <ClInclude Include="include\Core\IUpdatable.h" />
@@ -361,6 +368,10 @@
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />
+    <ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" />
     <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <ItemGroup>

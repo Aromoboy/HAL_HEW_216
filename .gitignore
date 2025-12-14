@@ -1,26 +1,29 @@
 ## ─────────────────────────────────────────────
-##  Visual Studio Game Project (.vcxproj based)
-##  チーム全体で共有されるビルド設定用
+##  Visual Studio / C++ Game Project
+##  Shared team configuration
 ## ─────────────────────────────────────────────
 
-# ユーザーごとのローカルIDE設定ファイル ─────────────────────────────
+### ローカルIDEユーザ設定（VSが好き勝手に書くゴミ）
 .vs/
 *.user
 *.suo
 *.userosscache
 *.rsuser
+
+### IntelliSense / ブラウズDB（競合とエラーの元）
 *.VC.db
 *.VC.opendb
-*.sdf
-*.cachefile
-*.ncb
+*.VC.db-wal
+*.VC.db-shm
+*.ipch
 
-# 一時ファイル / ビルド成果物（生成物） ─────────────────────────────
+### VS 一時ファイル / ビルド生成物
 [Bb]in/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
 [Tt]emp/
+
 *.log
 *.tlog
 *.pdb
@@ -28,41 +31,41 @@
 *.ilk
 *.idb
 *.obj
-!HEWGame/Assets/Model/SweetsPrototype/*.obj
 *.pch
 *.tmp
 *.rsp
-*.VC.VC.opendb
-*.VC.db
 
-# キャッシュ / ツールの中間データ ───────────────────────────────
-ipch/
+### この例外は現状維持（SweetsPrototype の .obj はアセット扱い）
+!HEWGame/Assets/Model/SweetsPrototype/*.obj
+
+### 対応済みのゴミ
 _ReSharper*/
 *.DotSettings.user
 *.ncrunch*
 *.local.xml
 *.aps
 *.opensdf
-*.VC.db-wal
-*.VC.db-shm
 
-# 自動生成フォルダ / 一時リソース ─────────────────────────────
+### 自動生成/中間ビルドフォルダ
 [Bb]uild/
 [Bb]ld/
 [Dd]ebug*/
 [Rr]elease*/
 x64/
-# DirectXTex のプリビルド済みバイナリを誤って除外しないための例外設定。
+x86/
+
+### 例外: 必要な外部ライブラリのバイナリはホワイトリスト
 !HEWGame/DirectXTex/Win32/Debug/**
 !HEWGame/DirectXTex/Win32/Release/**
 !HEWGame/DirectXTex/x64/Debug/**
 !HEWGame/DirectXTex/x64/Release/**
-x86
 
-# Allow Box2D vendored library
+### Box2D（vendored）必ず含める
 !HEWGame/box2d/
 !HEWGame/box2d/**
 
-
+### Box2D build の余計なサブ依存は除外
 HEWGame/box2d/build/_deps/enkits-src/
 HEWGame/box2d/build/_deps/glfw-src/
+
+!.vsconfig

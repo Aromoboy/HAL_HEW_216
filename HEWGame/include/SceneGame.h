@@ -33,6 +33,7 @@
 #include <deque>
 #include <string>
 #include"SettingScene.h"
+#include "ThirdParty/Effekseer/Effekseer.h"
 
 struct CameraPrototypeSettings
 {
