@@ -30,6 +30,7 @@ namespace Systems
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.0f;
         bool continuousCollisionForPlayerProjectiles = false;
+        bool allowMeshFixturesForDynamicSweets = false;
     };
 
     class IPhysicsSystem

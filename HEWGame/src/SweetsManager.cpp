@@ -559,12 +559,17 @@ namespace
             config.friction = 0.55f;
             config.restitution = 0.08f;
             break;
+        case SweetsType::Fairy:
+            config.type = Box2DShapeConfig::Type::Circle;
+            config.radius = 0.35f;
+            config.allowRotation = false;
+            config.angularDamping = 2.5f;
+            config.density = 0.25f;
+            config.friction = 0.45f;
+            config.restitution = 0.1f;
+            break;
         default:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.9f;
-            config.density = 0.9f;
-            config.friction = 0.6f;
-            config.restitution = 0.05f;
+            config.type = Box2DShapeConfig::Type::None;
             break;
         }
 
@@ -633,24 +638,16 @@ namespace
             });
             result.colliderComponent = colliderComponent;
             break;
+        case SweetsType::Fairy:
+            colliderComponent.AddCircle(0.35f);
+            result.colliderComponent = colliderComponent;
+            break;
         default:
-            if (model && model->HasLocalBounds())
             {
-                const AABB& bounds = model->GetLocalBounds();
-                const float minX = std::min(bounds.min.x, bounds.max.x);
-                const float maxX = std::max(bounds.min.x, bounds.max.x);
-                const float minY = std::min(bounds.min.y, bounds.max.y);
-                const float maxY = std::max(bounds.min.y, bounds.max.y);
-
-                std::vector<b2Vec2> polygon = {
-                    b2Vec2{ minX, minY },
-                    b2Vec2{ maxX, minY },
-                    b2Vec2{ maxX, maxY },
-                    b2Vec2{ minX, maxY },
-                };
-
-                result.meshBoundary = polygon;
-                result.meshPolygons.emplace_back(std::move(polygon));
+                std::ostringstream oss;
+                oss << kLogPrefix << "No collider definition for sweets type '" << ToString(type)
+                    << "'; skipping collider build.\n";
+                DebugTrace(oss.str());
             }
             break;
         }
@@ -1841,13 +1838,18 @@ namespace SweetsSpace
                 physicsTransform.position.y += pivotInfo.offsetY;
                 visualTransform.position.y += pivotInfo.offsetY;
 
-                const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
+                auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
 
                 if (sweets)
                 {
+                    if (colliderBuild.colliderComponent)
+                    {
+                        sweets->SetBoxColliderComponent(std::move(colliderBuild.colliderComponent));
+                    }
+
                     sweets->SetVisualTransform(visualTransform);
 
                     std::ostringstream created;
