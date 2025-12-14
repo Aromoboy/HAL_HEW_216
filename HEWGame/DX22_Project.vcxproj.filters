@@ -228,6 +228,9 @@
     <ClCompile Include="src\Stage\StageData.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
+    <ClCompile Include="src\FullscreenManager.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\Startup.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -565,6 +568,9 @@
     </ClInclude>
     <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FullscreenManager.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\WindowManager.h">
       <Filter>App</Filter>

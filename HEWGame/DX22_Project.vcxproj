@@ -244,6 +244,7 @@
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
+    <ClCompile Include="src\FullscreenManager.cpp" />
     <ClCompile Include="src\Startup.cpp" />
     <ClCompile Include="src\WindowManager.cpp" />
     <ClCompile Include="src\TestObject.cpp" />
@@ -347,6 +348,7 @@
     <ClInclude Include="include\TextureCache.h" />
     <ClInclude Include="include\TextureDX.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
+    <ClInclude Include="include\FullscreenManager.h" />
     <ClInclude Include="include\WindowManager.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
