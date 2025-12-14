@@ -576,16 +576,13 @@ namespace Stage
         m_worldScale = ClampWorldScale(m_transform.scale);
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
-<<<<<<< HEAD
         m_visual.scale = float3{
             m_worldScale.x * m_normalizationScale,
             m_worldScale.y * m_normalizationScale,
             m_worldScale.z * m_normalizationScale,
         };
         m_visual.position.y += m_visualPivotOffset;
-=======
         m_visual.scale = m_worldScale;
->>>>>>> parent of f5c7246 (Revert "Merge pull request #800 from Aromoboy/mihail/fix-m_groundy-declaration-and-alignment-issues")
         RefreshRenderTransform();
     }
 
