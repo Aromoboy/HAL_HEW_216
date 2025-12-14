@@ -33,7 +33,8 @@ namespace Stage
             Systems::PhysicsMachine* physicsMachine = nullptr,
             const DirectX::XMFLOAT4& color = DirectX::XMFLOAT4{ 0.305f, 0.173f, 0.125f, 1.0f },
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
-            int priority = 0);
+            int priority = 0,
+            bool createCollider = false);
 
         void SetAnchorTransform(const Transform& transform);
         const Transform& GetAnchorTransform() const noexcept;
