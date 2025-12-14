@@ -541,23 +541,32 @@ namespace Systems
         const auto shapeConfig = body.GetBox2DShapeConfig();
         const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
 
+        const std::string& tag = body.GetTag();
+        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
+
         const auto& meshPolygons = body.GetBox2DPolygons();
         const auto& meshBoundary = body.GetBox2DBoundary();
         const bool hasMeshFixtures = !meshPolygons.empty();
         const bool hasMeshBoundary = !meshBoundary.empty();
         const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
 
-        if (!hasColliderComponent && !hasShapeConfig && !hasMeshData)
+        if (isSweetTag && !hasShapeConfig)
         {
             std::ostringstream oss;
-            oss << "[PhysicsMachine] Cannot create physics body for tag='" << body.GetTag()
-                << "': collider component, shape config, and mesh data are all missing.\n";
+            oss << "[PhysicsMachine] Skipping physics registration for sweet tag='" << tag
+                << "': missing Box2DShapeConfig.\n";
             DebugTrace(oss.str());
             return b2_nullBodyId;
         }
 
-        const std::string& tag = body.GetTag();
-        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
+        if (!hasColliderComponent && !hasShapeConfig && !hasMeshData)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Cannot create physics body for tag='" << tag
+                << "': collider component, shape config, and mesh data are all missing.\n";
+            DebugTrace(oss.str());
+            return b2_nullBodyId;
+        }
 
         const float minBox2DDimension = Entities::PhysicalEntity::ToBox2DLength(
             Physics::kMinimumShapeDimensionMeters);
@@ -627,7 +636,7 @@ namespace Systems
             return std::clamp(value, minValue, maxValue);
         };
 
-        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
+        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures && !isSweetTag;
 
         float maxColliderExtent = 0.0f;
         const auto accumulatePolygonExtent = [&](const std::vector<b2Vec2>& vertices)
@@ -704,14 +713,21 @@ namespace Systems
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = ToBox2DLength(0.5f, transform.scale.x, transform);
-                const float hy = ToBox2DLength(0.5f, transform.scale.y, transform);
-                accumulatePolygonExtent({
-                    b2Vec2{ -hx, -hy },
-                    b2Vec2{ hx, -hy },
-                    b2Vec2{ hx, hy },
-                    b2Vec2{ -hx, hy },
-                });
+                if (!shapeConfig->vertices.empty())
+                {
+                    accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
+                }
+                else
+                {
+                    const float hx = ToBox2DLength(0.5f, transform.scale.x, transform);
+                    const float hy = ToBox2DLength(0.5f, transform.scale.y, transform);
+                    accumulatePolygonExtent({
+                        b2Vec2{ -hx, -hy },
+                        b2Vec2{ hx, -hy },
+                        b2Vec2{ hx, hy },
+                        b2Vec2{ -hx, hy },
+                    });
+                }
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
@@ -1005,15 +1021,25 @@ if (isSweetTag)
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.x, transform), "Box half-width");
-                const float hy = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.y, transform), "Box half-height");
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, {
-                    b2Vec2{ -hx, -hy },
-                    b2Vec2{ hx, -hy },
-                    b2Vec2{ hx, hy },
-                    b2Vec2{ -hx, hy },
-                } });
-                recordFixture(createPolygonFixture(colliderComponent->shapes.back().vertices));
+                std::vector<b2Vec2> vertices;
+                if (!shapeConfig->vertices.empty())
+                {
+                    vertices = ToBox2DVertices(shapeConfig->vertices, transform);
+                }
+                else
+                {
+                    const float hx = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.x, transform), "Box half-width");
+                    const float hy = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.y, transform), "Box half-height");
+                    vertices = {
+                        b2Vec2{ -hx, -hy },
+                        b2Vec2{ hx, -hy },
+                        b2Vec2{ hx, hy },
+                        b2Vec2{ -hx, hy },
+                    };
+                }
+
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, vertices });
+                recordFixture(createPolygonFixture(vertices));
                 if (fixtureCount > 0)
                 {
                     colliderComponent->createdFixtureCount = fixtureCount;
