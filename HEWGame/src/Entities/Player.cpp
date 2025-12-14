@@ -311,14 +311,15 @@ namespace Entities
             m_model = m_fairyModel;
         }
 
-        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, m_transform.scale);
-        if (pivotOffsetY != 0.0f)
+        const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, m_transform.scale);
+        if (pivotInfo.offsetY != 0.0f)
         {
-            SetPosition(float3{ m_transform.position.x, m_transform.position.y + pivotOffsetY, m_transform.position.z });
+            SetPosition(float3{ m_transform.position.x, m_transform.position.y + pivotInfo.offsetY, m_transform.position.z });
 
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "[ピボット] policy=" << Render::kPivotPolicyName
-                << " offsetY=" << pivotOffsetY
+                << " offsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
+                << " halfHeight=" << pivotInfo.halfHeight
                 << " scaleY=" << m_transform.scale.y << '\n';
             PlayerDebugTrace(oss.str());
         }
