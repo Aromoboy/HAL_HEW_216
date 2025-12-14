@@ -4,14 +4,14 @@
 
 namespace FullscreenManager
 {
-    // Initialize with the window handle and a pointer to the render availability flag.
-    // The flag must remain valid for the application's lifetime.
+    // ウィンドウハンドルとレンダリング可用性フラグへのポインタで初期化
+    // このフラグはアプリケーションの実行期間中、有効な状態を維持する必要
     void Initialize(HWND hWnd, bool* canRenderFlag);
 
-    // Returns whether toggling is safe (window exists, not minimized, renderable).
+    // トグル操作が安全かどうかを返す（ウィンドウが存在し、最小化されておらず、描画可能であること）
     bool CanToggle();
 
-    // Toggle fullscreen while respecting cached window state and render availability.
+    // キャッシュされたウィンドウ状態とレンダリングの可用性を尊重しながら、全画面表示を切り替える
     void Toggle();
 }
 
