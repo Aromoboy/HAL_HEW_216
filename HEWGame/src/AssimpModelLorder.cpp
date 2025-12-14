@@ -520,6 +520,12 @@ AssimpModelLorder::MakeMaterial(
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
+    const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
+
+    if (!textureLoadingEnabled)
+    {
+        DebugLog::DebugMessage("[AssimpModelLoader] Texture loading disabled; materials will use null textures");
+    }
 
     for (unsigned int i = 0; i < materials.size(); ++i)
     {
@@ -552,150 +558,153 @@ AssimpModelLorder::MakeMaterial(
 
         // テクスチャ
         std::shared_ptr<Texture2D> texture = nullptr;
-        aiString texPath;
-        if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+        if (textureLoadingEnabled)
         {
-            std::string texFile = NormalizeSeparators(texPath.C_Str());
-            const std::string originalTexPath = texFile;
-
-            std::string textureDirectory = NormalizeSeparators(directory);
-            bool skipTextureLoading = false;
-
-            const auto hasParentTraversal = [](const std::string& value)
+            aiString texPath;
+            if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
             {
-                return value.find("..\\") != std::string::npos || value.find("../") != std::string::npos;
-            };
+                std::string texFile = NormalizeSeparators(texPath.C_Str());
+                const std::string originalTexPath = texFile;
 
-            const bool isAbsoluteWindowsPath = texFile.size() >= 3
-                && std::isalpha(static_cast<unsigned char>(texFile[0]))
-                && texFile[1] == ':'
-                && (texFile[2] == '\\' || texFile[2] == '/');
+                std::string textureDirectory = NormalizeSeparators(directory);
+                bool skipTextureLoading = false;
 
-            const bool needsSanitize =
-                std::filesystem::path(originalTexPath).is_absolute()
-                || isAbsoluteWindowsPath
-                || hasParentTraversal(originalTexPath);
-
-            std::string fileName = std::filesystem::path(texFile).filename().string();
-            std::string sanitizedFile = fileName;
-
-            if (needsSanitize)
-            {
-                const std::string sanitizedPath = "Assets/Texture/" + fileName;
-
-                DebugLog::DebugMessage(
-                    "[Material] テクスチャパスを正規化 '" + originalTexPath +
-                    "' -> '" + sanitizedPath + "'");
-
-                if (std::filesystem::exists(sanitizedPath))
+                const auto hasParentTraversal = [](const std::string& value)
                 {
-                    texFile = fileName;
-                    textureDirectory = "Assets/Texture/";
-                    sanitizedFile = fileName;
-                }
-                else
-                {
-                    DebugLog::DebugMessage(
-                        "[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '" +
-                        sanitizedPath + "' テクスチャをスキップ");
-                    skipTextureLoading = true;
-                }
-            }
-
-            const std::string cacheKey = NormalizeForKey(textureDirectory + sanitizedFile);
-
-            if (isAbsoluteWindowsPath
-                && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png")))
-            {
-                texFile = fileName;
-                textureDirectory = "Assets\\Texture\\";
-            }
-
-            if (!texFile.empty() && texFile[0] == '*')
-            {
-                const int texIndex = std::atoi(texFile.c_str() + 1);
-                if (texIndex >= 0 && static_cast<unsigned int>(texIndex) < pScene->mNumTextures)
-                {
-                    const aiTexture* embedded = pScene->mTextures[texIndex];
-                    const uint8_t* texData = reinterpret_cast<const uint8_t*>(embedded->pcData);
-                    const size_t byteSize = embedded->mHeight == 0
-                        ? static_cast<size_t>(embedded->mWidth)
-                        : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
-                    texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
-                }
-            }
-            else
-            {
-                const auto loadTexture = [&](const std::string& fullPath)
-                {
-                    const std::string normalizedKey = NormalizeForKey(fullPath);
-                    std::wstring wfull(fullPath.begin(), fullPath.end());
-                    return textureCache.Load(normalizedKey, device, wfull);
+                    return value.find("..\\") != std::string::npos || value.find("../") != std::string::npos;
                 };
 
-                const std::filesystem::path combinedPath = std::filesystem::path(textureDirectory) / texFile;
-                std::string full = NormalizeSeparators(combinedPath.string());
+                const bool isAbsoluteWindowsPath = texFile.size() >= 3
+                    && std::isalpha(static_cast<unsigned char>(texFile[0]))
+                    && texFile[1] == ':'
+                    && (texFile[2] == '\\' || texFile[2] == '/');
 
-                aiString baseColorPath;
-                std::string baseColorStr;
-                if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
+                const bool needsSanitize =
+                    std::filesystem::path(originalTexPath).is_absolute()
+                    || isAbsoluteWindowsPath
+                    || hasParentTraversal(originalTexPath);
+
+                std::string fileName = std::filesystem::path(texFile).filename().string();
+                std::string sanitizedFile = fileName;
+
+                if (needsSanitize)
                 {
-                    baseColorStr = baseColorPath.C_Str();
-                }
+                    const std::string sanitizedPath = "Assets/Texture/" + fileName;
 
-                DebugLog::DebugMessage(
-                    "[AssimpModelLoader][CHECKPOINT C] マテリアル=" + std::to_string(i)
-                    + " diffuse='" + texFile
-                    + "' baseColor='" + baseColorStr
-                    + "' modelDir=" + directory
-                    + " fullPath=" + full
-                );
+                    DebugLog::DebugMessage(
+                        "[Material] テクスチャパスを正規化 '" + originalTexPath +
+                        "' -> '" + sanitizedPath + "'");
 
-                // --- フォールバックとパス整形 ---
-                const bool hasNonAscii = ContainsNonAscii(texFile);
-
-                std::error_code existEc;
-                const bool textureExists = std::filesystem::exists(full, existEc);
-                bool skipTextureLoad = skipTextureLoading;
-
-                if (skipTextureLoad || hasNonAscii || !textureExists)
-                {
-                    if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
+                    if (std::filesystem::exists(sanitizedPath))
                     {
-                        DebugLog::DebugMessage(
-                            "[Material] 無効なパス '" + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
-                        full = *fallback;
-                        skipTextureLoad = false;
+                        texFile = fileName;
+                        textureDirectory = "Assets/Texture/";
+                        sanitizedFile = fileName;
                     }
                     else
                     {
                         DebugLog::DebugMessage(
-                            "[Material][WARNING] フォールバックテクスチャが見つからない '" + texFile + "' テクスチャをスキップ");
-                        skipTextureLoad = true;
+                            "[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '" +
+                            sanitizedPath + "' テクスチャをスキップ");
+                        skipTextureLoading = true;
                     }
                 }
 
-                // --- 実際のロード ---
-                if (!skipTextureLoad)
+                const std::string cacheKey = NormalizeForKey(textureDirectory + sanitizedFile);
+
+                if (isAbsoluteWindowsPath
+                    && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png")))
                 {
-                    texture = loadTexture(full);
+                    texFile = fileName;
+                    textureDirectory = "Assets\\Texture\\";
                 }
 
-                if (!texture && texFile == "パイナップル.png")
+                if (!texFile.empty() && texFile[0] == '*')
                 {
-                    const std::string alt = "Assets\\Texture\\" + texFile;
-                    texture = loadTexture(alt);
+                    const int texIndex = std::atoi(texFile.c_str() + 1);
+                    if (texIndex >= 0 && static_cast<unsigned int>(texIndex) < pScene->mNumTextures)
+                    {
+                        const aiTexture* embedded = pScene->mTextures[texIndex];
+                        const uint8_t* texData = reinterpret_cast<const uint8_t*>(embedded->pcData);
+                        const size_t byteSize = embedded->mHeight == 0
+                            ? static_cast<size_t>(embedded->mWidth)
+                            : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+                        texture = textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                    }
+                }
+                else
+                {
+                    const auto loadTexture = [&](const std::string& fullPath)
+                    {
+                        const std::string normalizedKey = NormalizeForKey(fullPath);
+                        std::wstring wfull(fullPath.begin(), fullPath.end());
+                        return textureCache.Load(normalizedKey, device, wfull);
+                    };
+
+                    const std::filesystem::path combinedPath = std::filesystem::path(textureDirectory) / texFile;
+                    std::string full = NormalizeSeparators(combinedPath.string());
+
+                    aiString baseColorPath;
+                    std::string baseColorStr;
+                    if (pScene->mMaterials[i]->GetTexture(aiTextureType_BASE_COLOR, 0, &baseColorPath) == AI_SUCCESS)
+                    {
+                        baseColorStr = baseColorPath.C_Str();
+                    }
+
+                    DebugLog::DebugMessage(
+                        "[AssimpModelLoader][CHECKPOINT C] マテリアル=" + std::to_string(i)
+                        + " diffuse='" + texFile
+                        + "' baseColor='" + baseColorStr
+                        + "' modelDir=" + directory
+                        + " fullPath=" + full
+                    );
+
+                    // --- フォールバックとパス整形 ---
+                    const bool hasNonAscii = ContainsNonAscii(texFile);
+
+                    std::error_code existEc;
+                    const bool textureExists = std::filesystem::exists(full, existEc);
+                    bool skipTextureLoad = skipTextureLoading;
+
+                    if (skipTextureLoad || hasNonAscii || !textureExists)
+                    {
+                        if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
+                        {
+                            DebugLog::DebugMessage(
+                                "[Material] 無効なパス '" + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
+                            full = *fallback;
+                            skipTextureLoad = false;
+                        }
+                        else
+                        {
+                            DebugLog::DebugMessage(
+                                "[Material][WARNING] フォールバックテクスチャが見つからない '" + texFile + "' テクスチャをスキップ");
+                            skipTextureLoad = true;
+                        }
+                    }
+
+                    // --- 実際のロード ---
+                    if (!skipTextureLoad)
+                    {
+                        texture = loadTexture(full);
+                    }
+
+                    if (!texture && texFile == "パイナップル.png")
+                    {
+                        const std::string alt = "Assets\\Texture\\" + texFile;
+                        texture = loadTexture(alt);
+                    }
                 }
             }
-        }
-        if (!texture)
-        {
-            if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
+            if (!texture)
             {
-                DebugLog::DebugMessage(
-                    "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
-                std::wstring wfull(fallback->begin(), fallback->end());
-                texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
+                if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
+                {
+                    DebugLog::DebugMessage(
+                        "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
+                    std::wstring wfull(fallback->begin(), fallback->end());
+                    texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
+                }
             }
         }
 
