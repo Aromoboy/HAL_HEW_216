@@ -148,6 +148,18 @@ namespace
             return "unknown";
         }
     }
+
+    bool HasPhysicsDefinition(const Entities::PhysicalEntity& body)
+    {
+        const auto& colliderComponent = body.GetBoxColliderComponent();
+        const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
+
+        const auto shapeConfig = body.GetBox2DShapeConfig();
+        const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+
+        const bool hasMeshData = body.HasBox2DMesh() || !body.GetBox2DBoundary().empty();
+        return hasColliderComponent || hasShapeConfig || hasMeshData;
+    }
 }
 
 namespace Systems
@@ -315,12 +327,23 @@ namespace Systems
         const b2BodyId existing = body.GetBox2DBodyId();
         if (b2Body_IsValid(existing))
         {
-            // world の比較はやめる 単一 world 前提で素直に使う 
+            // world の比較はやめる 単一 world 前提で素直に使う
             m_bodies.push_back(bodyPtr);
             m_bodyMap.emplace(bodyPtr, existing);
 #if defined(_DEBUG)
             std::ostringstream oss;
             oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "'\n";
+            DebugTrace(oss.str());
+#endif
+            return;
+        }
+
+        if (!HasPhysicsDefinition(body))
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Deferred body registration for tag='" << body.GetTag()
+                << "' (collider, shape config, and mesh data missing).\n";
             DebugTrace(oss.str());
 #endif
             return;
