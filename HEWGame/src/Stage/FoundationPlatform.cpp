@@ -404,8 +404,7 @@ namespace Stage
     void FoundationPlatform::SetAnchorTransform(const Transform& transform)
     {
         m_anchorTransform = transform;
-        const Transform alignedTransform = GetPivotAlignedTransform(m_anchorTransform);
-        SetTransform(alignedTransform);
+        SetTransform(m_anchorTransform);
         SyncBox2DBodyFromTransform();
         SyncVisualTransform();
 
@@ -430,17 +429,10 @@ namespace Stage
         }
         else
         {
-            SetTransform(GetPivotAlignedTransform(m_anchorTransform));
+            SetTransform(m_anchorTransform);
         }
 
         SyncVisualTransform();
-    }
-
-    Transform FoundationPlatform::GetPivotAlignedTransform(const Transform& transform) const
-    {
-        Transform aligned = transform;
-        aligned.position.y += m_visualPivotOffset;
-        return aligned;
     }
 
     Transform FoundationPlatform::GetRenderTransform() const
@@ -583,6 +575,7 @@ namespace Stage
         };
         m_visual.position.y += m_visualPivotOffset;
         m_visual.scale = m_worldScale;
+        m_visual.position.y += m_visualPivotOffset;
         RefreshRenderTransform();
     }
 
