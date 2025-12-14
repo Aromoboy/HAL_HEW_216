@@ -3,6 +3,7 @@
 #include "DirectX.h"
 #include "PerspectiveCamera.h"
 #include "PowerUpManager.h"
+#include "TitleScene.h"
 #include "TextureCache.h"
 
 #include "Core/Input.h"
@@ -26,11 +27,6 @@ namespace SceneSpace
         ScenePowerUp::ScenePowerUp(SceneSpace::SceneManager& manager)
                 : m_manager(&manager)
         {
-        }
-
-        ScenePowerUp::~ScenePowerUp()
-        {
-                ShutdownPowerUpSystems();
         }
 
         void ScenePowerUp::Load(Core::Input& input)
@@ -84,6 +80,11 @@ namespace SceneSpace
 
         void ScenePowerUp::OnEnter()
         {
+                if (!m_camera)
+                {
+                        return;
+                }
+
                 auto registeredCamera = AddCamera(m_camera);
 
                 if (registeredCamera)
@@ -106,6 +107,8 @@ namespace SceneSpace
                         Register(*input);
                 }
 
+                RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
+
                 if (m_powerUpManager)
                 {
                         Register(*m_powerUpManager);
@@ -123,12 +126,22 @@ namespace SceneSpace
 
         void ScenePowerUp::Update(Core::UpdateContext& ctx)
         {
-                (void)ctx;
-
-                if (m_target && m_cursor && m_powerUpManager)
+                if (ctx.input.IsTrigger(Core::ActionId::Cancel))
                 {
-                        m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
+                        if (m_manager)
+                        {
+                                m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+                        }
+
+                        return;
                 }
+
+                if (!m_target || !m_cursor || !m_powerUpManager)
+                {
+                        return;
+                }
+
+                m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
 
         }
 
