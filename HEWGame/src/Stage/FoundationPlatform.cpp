@@ -36,8 +36,8 @@ namespace
     constexpr const char* kPlatformModelPath = "Assets/Model/cake_high.fbx";
     // モデルを正規化し、最大の完全な次元がこの基準サイズに一致するようにする
     constexpr float kScaleReferenceMeters = 1.0f;
-    constexpr float kMinNormalizationScale = 0.02f;
-    constexpr float kMaxNormalizationScale = 50.0f;
+    constexpr float kMinWorldScale = 0.02f;
+    constexpr float kMaxWorldScale = 50.0f;
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
@@ -113,13 +113,33 @@ namespace
             return 1.0f;
         }
 
-        const float clamped = std::clamp(rawScale, kMinNormalizationScale, kMaxNormalizationScale);
-        if (std::fabs(clamped - 1.0f) > 0.01f)
+        if (std::fabs(rawScale - 1.0f) > 0.01f)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[ScaleNorm] platform extents(full)=(" << (extents.x * 2.0f) << ',' << (extents.y * 2.0f)
-                << ',' << (extents.z * 2.0f) << ") raw=" << rawScale << " clamped=" << clamped
+                << ',' << (extents.z * 2.0f) << ") raw=" << rawScale
                 << " referenceMeters=" << kScaleReferenceMeters << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return rawScale;
+    }
+
+    float3 ClampWorldScale(const float3& scale)
+    {
+        float3 clamped{
+            std::clamp(scale.x, kMinWorldScale, kMaxWorldScale),
+            std::clamp(scale.y, kMinWorldScale, kMaxWorldScale),
+            std::clamp(scale.z, kMinWorldScale, kMaxWorldScale),
+        };
+
+        const bool changed = (clamped.x != scale.x) || (clamped.y != scale.y) || (clamped.z != scale.z);
+        if (changed)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ScaleClamp] world scale from (" << scale.x << ',' << scale.y << ',' << scale.z
+                << ") to (" << clamped.x << ',' << clamped.y << ',' << clamped.z << ") bounds=["
+                << kMinWorldScale << ',' << kMaxWorldScale << "]\n";
             DebugTrace(oss.str());
         }
 
@@ -215,13 +235,15 @@ namespace Stage
     {
         LoadPlatformModel();
 
-        const float normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
-        m_visualScaleMultiplier = normalizationScale;
+        m_normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
+
+        m_worldScale = ClampWorldScale(transform.scale);
+        m_anchorTransform.scale = m_worldScale;
 
         const float3 visualScale{
-            m_anchorTransform.scale.x * m_visualScaleMultiplier,
-            m_anchorTransform.scale.y * m_visualScaleMultiplier,
-            m_anchorTransform.scale.z * m_visualScaleMultiplier,
+            m_worldScale.x * m_normalizationScale,
+            m_worldScale.y * m_normalizationScale,
+            m_worldScale.z * m_normalizationScale,
         };
         const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, visualScale);
         if (pivotOffsetY != 0.0f)
@@ -432,12 +454,13 @@ namespace Stage
 
     void FoundationPlatform::SyncVisualTransform()
     {
+        m_worldScale = ClampWorldScale(m_transform.scale);
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
         m_visual.scale = float3{
-            m_transform.scale.x * m_visualScaleMultiplier,
-            m_transform.scale.y * m_visualScaleMultiplier,
-            m_transform.scale.z * m_visualScaleMultiplier,
+            m_worldScale.x * m_normalizationScale,
+            m_worldScale.y * m_normalizationScale,
+            m_worldScale.z * m_normalizationScale,
         };
         m_visual.position.y += m_visualPivotOffset;
         RefreshRenderTransform();
