@@ -44,6 +44,7 @@ namespace
     constexpr float kDefaultOsaraSpawnOffsetY = 0.0f;
     constexpr std::size_t kRequiredSpawnAnchors = 2;
     constexpr std::size_t kSpawnCoordinatesPerAnchor = 3;
+    constexpr float kSpawnPlaneTolerance = 0.01f;
 
     const float3 kDefaultSpawnPoints[] =
     {
@@ -243,6 +244,8 @@ namespace Stage
         , m_osaraRightOffsetX(kDefaultOsaraRightOffsetX)
         , m_osaraOffsetY(kDefaultOsaraOffsetY)
         , m_osaraSpawnOffsetY(kDefaultOsaraSpawnOffsetY)
+        , m_osaraOffsetsConfigured(false)
+        , m_spawnPointsSuppressed(false)
     {
         ApplyDefaults();
     }
@@ -1000,6 +1003,8 @@ namespace Stage
         assignDefaultOffset(osaraOffsetYSet, osaraOffsetY, kDefaultOsaraOffsetY, "osara_offset_y");
         assignDefaultOffset(osaraSpawnOffsetYSet, osaraSpawnOffsetY, kDefaultOsaraSpawnOffsetY, "osara_spawn_offset_y");
 
+        const bool osaraOffsetsConfigured = osaraLeftOffsetSet || osaraRightOffsetSet || osaraOffsetYSet || osaraSpawnOffsetYSet;
+
         if (!platformWidthFractionSet)
         {
             platformWidthFraction = kDefaultPlatformWidthFraction;
@@ -1247,6 +1252,7 @@ namespace Stage
         }
 
         const std::size_t parsedAnchorCount = spawnPoints.size();
+        bool spawnPointsSuppressed = false;
         if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
         {
             parseError = true;
@@ -1261,9 +1267,83 @@ namespace Stage
 
         if (spawnPoints.empty())
         {
-            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+            if (osaraOffsetsConfigured)
+            {
+                spawnPointsSuppressed = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << "No spawnPoint entries found; Osara offsets configured so spawnPoints will be suppressed"
+                    << " (Osara anchors take precedence).\n";
+                DebugTrace(oss.str());
+            }
+            else
+            {
+                spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+                std::ostringstream oss;
+                oss << kLogPrefix << "No spawnPoint entries found; using defaults.\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        const float osaraPlaneZ = platformDescriptors.empty() ? planeZ : platformDescriptors.front().center.z;
+
+        if (!spawnPoints.empty())
+        {
+            const float spawnPlaneZ = spawnPoints.front().z;
+            bool spawnPlaneConsistent = true;
+            for (const auto& spawn : spawnPoints)
+            {
+                if (std::fabs(spawn.z - spawnPlaneZ) > kSpawnPlaneTolerance)
+                {
+                    spawnPlaneConsistent = false;
+                    break;
+                }
+            }
+
+            if (!spawnPlaneConsistent)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "spawnPoints contain multiple planeZ values; anchors may be misaligned.\n";
+                DebugTrace(oss.str());
+            }
+
+            const float spawnPlaneDelta = std::fabs(spawnPlaneZ - planeZ);
+            if (spawnPlaneDelta > kSpawnPlaneTolerance)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "spawnPoints planeZ=" << spawnPlaneZ
+                    << " differs from configured planeZ=" << planeZ
+                    << " by " << spawnPlaneDelta << "; verify alignment.\n";
+                DebugTrace(oss.str());
+            }
+
+            if (osaraOffsetsConfigured)
+            {
+                const float osaraDelta = std::fabs(spawnPlaneZ - osaraPlaneZ);
+                if (osaraDelta > kSpawnPlaneTolerance)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "spawnPoints planeZ=" << spawnPlaneZ
+                        << " differs from Osara/platform planeZ=" << osaraPlaneZ
+                        << " by " << osaraDelta << "; Osara anchors will override spawnPoints.\n";
+                    DebugTrace(oss.str());
+                }
+            }
+        }
+        else if (osaraOffsetsConfigured && std::fabs(osaraPlaneZ - planeZ) > kSpawnPlaneTolerance)
+        {
             std::ostringstream oss;
-            oss << kLogPrefix << "No spawnPoint entries found; using defaults.\n";
+            oss << kLogPrefix << "Osara/platform planeZ=" << osaraPlaneZ
+                << " differs from stage planeZ=" << planeZ
+                << "; spawnPoints suppressed so Osara anchors must define the spawn plane.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (osaraOffsetsConfigured)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Osara anchors configured; spawnPoints "
+                << (spawnPoints.empty() ? "suppressed" : "available as fallback")
+                << ". Osara anchors will take precedence when present.\n";
             DebugTrace(oss.str());
         }
 
@@ -1433,6 +1513,8 @@ namespace Stage
         m_osaraRightOffsetX = osaraRightOffsetX;
         m_osaraOffsetY = osaraOffsetY;
         m_osaraSpawnOffsetY = osaraSpawnOffsetY;
+        m_osaraOffsetsConfigured = osaraOffsetsConfigured;
+        m_spawnPointsSuppressed = spawnPointsSuppressed;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
 
@@ -1455,6 +1537,8 @@ namespace Stage
             << ", osaraOffsetX(L/R)=(" << m_osaraLeftOffsetX << ',' << m_osaraRightOffsetX << ')'
             << ", osaraOffsetY=" << m_osaraOffsetY
             << ", osaraSpawnOffsetY=" << m_osaraSpawnOffsetY
+            << ", osaraConfigured=" << std::boolalpha << m_osaraOffsetsConfigured
+            << ", spawnPointsSuppressed=" << std::boolalpha << m_spawnPointsSuppressed
             << ", backgroundTexture='" << m_backgroundTexturePath << "'"
             << ", parseError=" << std::boolalpha << parseError << ").\n";
         DebugTrace(oss.str());
@@ -1641,6 +1725,8 @@ namespace Stage
         m_osaraRightOffsetX = kDefaultOsaraRightOffsetX;
         m_osaraOffsetY = kDefaultOsaraOffsetY;
         m_osaraSpawnOffsetY = kDefaultOsaraSpawnOffsetY;
+        m_osaraOffsetsConfigured = false;
+        m_spawnPointsSuppressed = false;
         m_loadedFromFile = false;
         m_sourcePath.clear();
         LogSummary("Defaults", "applied");
@@ -1667,6 +1753,8 @@ namespace Stage
             << " osaraOffsetX(L/R)=(" << m_osaraLeftOffsetX << ',' << m_osaraRightOffsetX << ')'
             << " osaraOffsetY=" << m_osaraOffsetY
             << " osaraSpawnOffsetY=" << m_osaraSpawnOffsetY
+            << " osaraConfigured=" << std::boolalpha << m_osaraOffsetsConfigured
+            << " spawnPointsSuppressed=" << std::boolalpha << m_spawnPointsSuppressed
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
         DebugTrace(oss.str());
