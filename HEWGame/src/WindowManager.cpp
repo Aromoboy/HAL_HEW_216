@@ -1,5 +1,7 @@
 #include "WindowManager.h"
 
+#include "DirectX.h"
+
 namespace
 {
         struct WindowState
@@ -44,16 +46,25 @@ namespace WindowManager
 
                 if (GetMonitorInfo(g_state.monitor, &monitorInfo))
                 {
-                        SetWindowLong(g_state.hWnd, GWL_STYLE, g_state.savedStyle & ~WS_OVERLAPPEDWINDOW);
-                        SetWindowLong(g_state.hWnd, GWL_EXSTYLE, g_state.savedExStyle & ~WS_EX_OVERLAPPEDWINDOW);
+                        SetWindowLong(g_state.hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+                        SetWindowLong(g_state.hWnd, GWL_EXSTYLE, g_state.savedExStyle);
                         SetWindowPos(
                                 g_state.hWnd,
-                                HWND_TOP,
+                                HWND_TOPMOST,
                                 monitorInfo.rcMonitor.left,
                                 monitorInfo.rcMonitor.top,
                                 monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
                                 monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
                                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+                        RECT clientRect = {};
+                        if (GetClientRect(g_state.hWnd, &clientRect))
+                        {
+                                const UINT width = static_cast<UINT>(clientRect.right - clientRect.left);
+                                const UINT height = static_cast<UINT>(clientRect.bottom - clientRect.top);
+                                ResizeDirectX(width, height);
+                        }
+
                         g_state.mode = WindowMode::Fullscreen;
                 }
         }

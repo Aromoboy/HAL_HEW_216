@@ -173,8 +173,10 @@ namespace Core
                 sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
                 sd.BufferCount = 1;
                 sd.OutputWindow = hWnd;
-                sd.Windowed = fullscreen ? FALSE : TRUE;
-                sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+                sd.Windowed = TRUE;
+                sd.Flags = 0;
+
+                static_cast<void>(fullscreen);
 
                 constexpr std::array<D3D_DRIVER_TYPE, 3> driverTypes = {
                         D3D_DRIVER_TYPE_HARDWARE,
