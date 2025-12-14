@@ -118,7 +118,7 @@ namespace
         return AABB(max, min);
     }
 
-    Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale, float originOffsetNormalizedY)
+    Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale)
     {
         Physics::BoxColliderComponent component;
         component.shapeDef.density = 0.0f;
@@ -130,12 +130,11 @@ namespace
         // PhysicsMachine::CreateBody で transform.scale が適用されるため、ここでは world サイズを正規化して保持する
         const float halfWidth = safeWidth * 0.5f / safeWidth;
         const float halfHeight = safeHeight * 0.5f / safeHeight;
-        const float centerY = originOffsetNormalizedY;
 
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ 0.0f, centerY }
+            b2Vec2{ 0.0f, 0.0f }
         );
 
         return component;
@@ -338,10 +337,7 @@ namespace Stage
             }
             else
             {
-                const float pivotOffsetNormalized = (m_worldScale.y != 0.0f)
-                    ? (m_visualPivotOffset / m_worldScale.y)
-                    : 0.0f;
-                colliderComponent = CreateColliderFromWorldDimensions(m_worldScale, pivotOffsetNormalized);
+                colliderComponent = CreateColliderFromWorldDimensions(m_worldScale);
                 colliderComponent.shapeDef.material.friction = 0.8f;
             }
 
