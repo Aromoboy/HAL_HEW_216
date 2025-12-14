@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -120,10 +121,20 @@ namespace
     using ::SweetsSpace::ColliderShape;
     using ::SweetsSpace::SweetsPrototypeManifest;
     using ::SweetsSpace::SweetsType;
+    using ::SweetsSpace::ToString;
     using ::SweetsSpace::SweetsTypeHash;
 
     bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon);
     bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kHorizontalBoundsEpsilon);
+
+    void ReportInvalidBox2DConfig(SweetsType type, const std::string& reason)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ConfigError] type='" << ToString(type) << "' " << reason << "\n";
+        Diagnostics::LogInfo(oss.str());
+
+        assert(false && "Invalid Box2DShapeConfig for sweets type");
+    }
 
     float ComputeNormalizationScale(const Render::Model& model, const char* context)
     {
@@ -553,8 +564,9 @@ namespace
             config.vertices = {
                 b2Vec2{ -0.32f, -0.6f },
                 b2Vec2{ 0.32f, -0.6f },
-                b2Vec2{ 0.32f, 0.6f },
-                b2Vec2{ -0.32f, 0.6f },
+                b2Vec2{ 0.38f, 0.15f },
+                b2Vec2{ 0.0f, 0.65f },
+                b2Vec2{ -0.38f, 0.15f },
             };
             break;
         case SweetsType::Banana:
@@ -570,13 +582,20 @@ namespace
             config.friction = 0.55f;
             config.restitution = 0.08f;
             break;
-        default:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.9f;
-            config.density = 0.9f;
-            config.friction = 0.6f;
-            config.restitution = 0.05f;
+        case SweetsType::Fairy:
+            config.type = Box2DShapeConfig::Type::Circle;
+            config.radius = 0.35f;
+            config.allowRotation = false;
+            config.angularDamping = 2.5f;
+            config.density = 0.55f;
+            config.friction = 0.4f;
+            config.restitution = 0.06f;
             break;
+        }
+
+        if (config.type == Box2DShapeConfig::Type::None)
+        {
+            ReportInvalidBox2DConfig(type, "is missing an explicit collider shape definition");
         }
 
         if (!config.allowRotation)
@@ -588,35 +607,65 @@ namespace
         return config;
     }
 
+    bool ValidateBaseShapeDefinition(SweetsType type)
+    {
+        const auto config = BuildBaseShapeConfig(type);
+
+        if (config.type == Box2DShapeConfig::Type::None)
+        {
+            return false;
+        }
+
+        switch (config.type)
+        {
+        case Box2DShapeConfig::Type::Box:
+        case Box2DShapeConfig::Type::Polygon:
+            if (config.vertices.size() < 3)
+            {
+                ReportInvalidBox2DConfig(type, "requires explicit vertices for its collider definition");
+                return false;
+            }
+            break;
+        case Box2DShapeConfig::Type::Circle:
+            if (!(config.radius > 0.0f))
+            {
+                ReportInvalidBox2DConfig(type, "requires a positive radius for its collider definition");
+                return false;
+            }
+            break;
+        default:
+            break;
+        }
+
+        return true;
+    }
+
     ColliderBuildResult BuildColliderForSweets(SweetsType type, const Transform& transform, const std::shared_ptr<Render::Model>& model)
     {
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
 
+        (void)model;
+
         // コライダー頂点はローカル空間のままにしておく PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれる
 
-        switch (type)
+        if (result.shapeConfig.type == Box2DShapeConfig::Type::None)
         {
-        default:
-            if (model && model->HasLocalBounds())
-            {
-                const AABB& bounds = model->GetLocalBounds();
-                const float minX = std::min(bounds.min.x, bounds.max.x);
-                const float maxX = std::max(bounds.min.x, bounds.max.x);
-                const float minY = std::min(bounds.min.y, bounds.max.y);
-                const float maxY = std::max(bounds.min.y, bounds.max.y);
+            ReportInvalidBox2DConfig(type, "cannot build a collider without a Box2DShapeConfig; registration should abort earlier");
+            return result;
+        }
 
-                std::vector<b2Vec2> polygon = {
-                    b2Vec2{ minX, minY },
-                    b2Vec2{ maxX, minY },
-                    b2Vec2{ maxX, maxY },
-                    b2Vec2{ minX, maxY },
-                };
+        if ((result.shapeConfig.type == Box2DShapeConfig::Type::Box || result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
+            && result.shapeConfig.vertices.size() < 3)
+        {
+            ReportInvalidBox2DConfig(type, "requires explicit vertices instead of mesh-derived bounds");
+            return result;
+        }
 
-                result.meshBoundary = polygon;
-                result.meshPolygons.emplace_back(std::move(polygon));
-            }
-            break;
+        if (result.shapeConfig.type == Box2DShapeConfig::Type::Circle && !(result.shapeConfig.radius > 0.0f))
+        {
+            ReportInvalidBox2DConfig(type, "requires a positive radius instead of mesh-derived bounds");
+            return result;
         }
 
         // 密度は体積（スケール^3）に合わせて伸ばす 頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね
@@ -1707,6 +1756,12 @@ namespace SweetsSpace
 
             const SweetsType type = prototype.type;
 
+            if (!ValidateBaseShapeDefinition(type))
+            {
+                DebugTrace(std::string(kLogPrefix) + "スイーツの形状設定に問題があるから、ファクトリー登録をスキップするね\n");
+                continue;
+            }
+
             auto factory = [this, &cache, kind, type, preset,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
                 -> std::shared_ptr<ActiveSweets>
@@ -1800,6 +1855,12 @@ namespace SweetsSpace
                 visualTransform.position.y += pivotInfo.offsetY;
 
                 const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
+
+                if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
+                {
+                    DebugTrace(std::string(kLogPrefix) + "ボディ形状が無効だから、このスイーツの生成はスキップするね\n");
+                    return nullptr;
+                }
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0);
