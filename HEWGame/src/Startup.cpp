@@ -6,6 +6,7 @@
 #include "DebugConsole.h"
 #include "Diagnostics/Logger.h"
 #include "DirectX.h"
+#include "WindowManager.h"
 
 // timeGetTime周りの使用
 #pragma comment(lib, "winmm.lib")
@@ -53,17 +54,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	DWORD style = WS_CAPTION | WS_SYSMENU;
 	DWORD exStyle = WS_EX_OVERLAPPEDWINDOW;
 	AdjustWindowRectEx(&rect, style, false, exStyle);
-	hWnd = CreateWindowEx(
-		exStyle, wcex.lpszClassName,
-		APP_TITLE, style,
-		CW_USEDEFAULT,CW_USEDEFAULT,
-		rect.right - rect.left, rect.bottom - rect.top,
-		HWND_DESKTOP,
-		NULL, hInstance, NULL
-	);
+        hWnd = CreateWindowEx(
+                exStyle, wcex.lpszClassName,
+                APP_TITLE, style,
+                CW_USEDEFAULT,CW_USEDEFAULT,
+                rect.right - rect.left, rect.bottom - rect.top,
+                HWND_DESKTOP,
+                NULL, hInstance, NULL
+        );
+
+        WindowManager::Initialize(hWnd);
 
 
-	// デバッグコンソールの表示
+        // デバッグコンソールの表示
 #ifdef _DEBUG
 
 	DebugConsole::InitDebugConsole(hWnd);
@@ -175,6 +178,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 g_canRender = (GetActiveWindow() == hWnd);
                 ResizeDirectX(width, height);
+                break;
+        }
+        case WM_SYSKEYDOWN:
+        {
+                if (wParam == VK_RETURN && (lParam & (1 << 29)))
+                {
+                        WindowManager::ToggleFullscreen();
+                        return 0;
+                }
                 break;
         }
         }
