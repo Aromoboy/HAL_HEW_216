@@ -251,6 +251,10 @@ namespace Entities
 
     void CollisionEntity::DebugDraw()
     {
+        const Color aabbColor{ 1.0f, 1.0f, 0.0f, 1.0f };
+        const Color circleColor{ 0.0f, 1.0f, 0.0f, 1.0f };
+        const Color hullColor{ 0.0f, 0.75f, 1.0f, 1.0f };
+
         if (!m_collider)
         {
             if (auto* physical = dynamic_cast<PhysicalEntity*>(this))
@@ -268,10 +272,6 @@ namespace Entities
         {
             SyncColliderBounds();
         }
-
-        const Color aabbColor{ 1.0f, 1.0f, 0.0f, 1.0f };
-        const Color circleColor{ 0.0f, 1.0f, 0.0f, 1.0f };
-        const Color hullColor{ 0.0f, 0.75f, 1.0f, 1.0f };
 
         std::vector<const Collision::ICollider*> colliders;
         colliders.push_back(m_collider.get());
