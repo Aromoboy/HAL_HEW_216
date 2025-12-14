@@ -1816,16 +1816,11 @@ namespace SweetsSpace
 
                 const auto sampleScale = [&](float minValue, float maxValue)
                 {
-                    if (!m_enableRandomScale)
-                    {
-                        return 1.0f;
-                    }
-
                     const float lo = std::min(minValue, maxValue);
                     const float hi = std::max(minValue, maxValue);
-                    if (lo == hi)
+                    if (!m_enableRandomScale || lo == hi)
                     {
-                        return lo;
+                        return (lo + hi) * 0.5f;
                     }
 
                     std::uniform_real_distribution<float> dist(lo, hi);
