@@ -74,10 +74,8 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         g_effectManager->SetTrackRenderer(g_effectRenderer->CreateTrackRenderer());
         g_effectManager->SetModelRenderer(g_effectRenderer->CreateModelRenderer());
 
-        // Specify a texture, model, curve and material loader
-        // It can be extended by yourself. It is loaded from a file on now.
-        // テクスチャ、モデル、カーブ、マテリアルローダーの設定する。
-        // ユーザーが独自で拡張できる。現在はファイルから読み込んでいる。
+        // テクスチャ、モデル、カーブ、マテリアルローダーの設定する
+        // ユーザーが独自で拡張できる。現在はファイルから読み込んでいる
         g_effectManager->SetTextureLoader(g_effectRenderer->CreateTextureLoader());
         g_effectManager->SetModelLoader(g_effectRenderer->CreateModelLoader());
         g_effectManager->SetMaterialLoader(g_effectRenderer->CreateMaterialLoader());
