@@ -59,7 +59,7 @@ namespace
         unsigned int nullMaterials{ 0 };
     };
 
-    Physics::BoxColliderComponent CreateColliderFromBounds(const Transform& transform, const AABB& bounds)
+    Physics::BoxColliderComponent CreateColliderFromBounds(const Transform& transform, const AABB& bounds, float pivotOffsetNormalizedY)
     {
         (void)transform;
 
@@ -76,7 +76,7 @@ namespace
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ center.x, center.y }
+            b2Vec2{ center.x, center.y + pivotOffsetNormalizedY }
         );
 
         return component;
@@ -245,15 +245,15 @@ namespace Stage
             m_worldScale.y * m_normalizationScale,
             m_worldScale.z * m_normalizationScale,
         };
-        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, visualScale);
-        if (pivotOffsetY != 0.0f)
+        const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, visualScale);
+        if (pivotInfo.offsetY != 0.0f)
         {
-            m_visualPivotOffset = std::clamp(pivotOffsetY, -visualScale.y, visualScale.y);
+            m_visualPivotOffset = pivotInfo.offsetY;
 
             std::ostringstream oss;
             oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
-                << " offsetY=" << pivotOffsetY
-                << " clamped=" << m_visualPivotOffset
+                << " offsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
+                << " halfHeight=" << pivotInfo.halfHeight
                 << " scaleY=" << visualScale.y << '\n';
             DebugTrace(oss.str());
         }
@@ -269,7 +269,8 @@ namespace Stage
         oss << kLogPrefix << "Platform collider uses descriptor bounds; model bounds reserved for visual normalization.\n";
         DebugTrace(oss.str());
 
-        colliderComponent = CreateColliderFromBounds(m_anchorTransform, m_descriptorLocalBounds);
+        const float pivotOffsetNormalized = (visualScale.y != 0.0f) ? (pivotInfo.offsetY / visualScale.y) : 0.0f;
+        colliderComponent = CreateColliderFromBounds(m_anchorTransform, m_descriptorLocalBounds, pivotOffsetNormalized);
 
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);

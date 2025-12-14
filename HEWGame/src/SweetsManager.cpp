@@ -1837,9 +1837,9 @@ namespace SweetsSpace
                 visualTransform.scale = finalScale;
                 physicsTransform.scale = visualTransform.scale;
 
-                const float visualOffsetY = Render::ComputePivotOffsetYOriginBottom(model, visualTransform.scale);
-                physicsTransform.position.y += visualOffsetY;
-                visualTransform.position.y += visualOffsetY;
+                const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(model, visualTransform.scale);
+                physicsTransform.position.y += pivotInfo.offsetY;
+                visualTransform.position.y += pivotInfo.offsetY;
 
                 const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
 
@@ -1855,7 +1855,8 @@ namespace SweetsSpace
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
-                        << ") pivotOffsetY=" << visualOffsetY
+                        << ") pivotOffsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
+                        << " halfHeight=" << pivotInfo.halfHeight
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
                 }
