@@ -59,6 +59,7 @@ namespace Stage
         Transform m_renderTransform{};
         std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
+        float3 m_descriptorDimensions{ 1.0f, 1.0f, 1.0f };
         AABB m_descriptorLocalBounds;
         float m_normalizationScale = 1.0f;
         float3 m_worldScale{ 1.0f, 1.0f, 1.0f };

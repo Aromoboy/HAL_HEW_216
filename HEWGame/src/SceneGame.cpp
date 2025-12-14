@@ -1742,25 +1742,36 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         {
             if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
             {
-                const auto& plateTransform = m_spawnHeightPlatform->GetTransform();
                 const float plateTopY = computePlatformTopY(*descriptor);
+                const float platePlaneZ = descriptor->center.z;
                 for (auto& origin : spawnOrigins)
                 {
                     origin.y = plateTopY;
-                    origin.z = plateTransform.position.z;
+                    origin.z = platePlaneZ;
                 }
 
                 std::ostringstream oss;
                 oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
                     << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
-                    << " planeZ=" << plateTransform.position.z << "\n";
+                    << " planeZ=" << platePlaneZ << "\n";
                 DebugTrace(oss.str());
             }
         }
         m_sweetsManager->SetSpawnOrigins(spawnOrigins);
     }
 
-    const float platePlaneZ = m_platePlatform ? m_platePlatform->GetTransform().position.z : m_stageData.GetPlaneZ();
+    float platePlaneZ = m_stageData.GetPlaneZ();
+    if (m_platePlatform)
+    {
+        if (const auto* descriptor = findDescriptorForPlatform(m_platePlatform))
+        {
+            platePlaneZ = descriptor->center.z;
+        }
+        else
+        {
+            platePlaneZ = m_platePlatform->GetTransform().position.z;
+        }
+    }
     std::optional<Physics::BoxColliderComponent> boxColliderComponent;
     std::optional<Physics::Box2DShapeConfig> playerShapeConfig;
     float3 playerColliderHalfExtents{ 0.0f, 0.0f, 0.0f };
