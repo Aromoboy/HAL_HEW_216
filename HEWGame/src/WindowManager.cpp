@@ -78,14 +78,27 @@ namespace WindowManager
 
                 SetWindowLong(g_state.hWnd, GWL_STYLE, g_state.savedStyle);
                 SetWindowLong(g_state.hWnd, GWL_EXSTYLE, g_state.savedExStyle);
+
+                const bool wasTopMost = (g_state.savedExStyle & WS_EX_TOPMOST) != 0;
+                const HWND zOrder = wasTopMost ? HWND_TOPMOST : HWND_NOTOPMOST;
                 SetWindowPos(
                         g_state.hWnd,
-                        HWND_NOTOPMOST,
+                        zOrder,
                         g_state.windowRect.left,
                         g_state.windowRect.top,
                         g_state.windowRect.right - g_state.windowRect.left,
                         g_state.windowRect.bottom - g_state.windowRect.top,
                         SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+                ShowWindow(g_state.hWnd, SW_SHOWNORMAL);
+
+                RECT clientRect = {};
+                if (GetClientRect(g_state.hWnd, &clientRect))
+                {
+                        const UINT width = static_cast<UINT>(clientRect.right - clientRect.left);
+                        const UINT height = static_cast<UINT>(clientRect.bottom - clientRect.top);
+                        ResizeDirectX(width, height);
+                }
 
                 g_state.mode = WindowMode::Windowed;
         }
