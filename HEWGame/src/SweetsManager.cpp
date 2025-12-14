@@ -1626,10 +1626,8 @@ namespace SweetsSpace
         , m_batchCoolingDown(false)
         , m_random(std::random_device{}())
         , m_pendingTopUpAfterDrop(false)
-        , m_enableRandomRotation(false)
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
-        , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
-        , m_enableRandomScale(true)
+        , m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f }
         , m_liveSweetsCap(kDefaultLiveSweetsCap)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
@@ -1814,23 +1812,17 @@ namespace SweetsSpace
                 visualTransform.position = physicsTransform.position;
                 visualTransform.rotation = physicsTransform.rotation;
 
-                const auto sampleScale = [&](float minValue, float maxValue)
+                const auto computeDeterministicScale = [](float minValue, float maxValue)
                 {
                     const float lo = std::min(minValue, maxValue);
                     const float hi = std::max(minValue, maxValue);
-                    if (!m_enableRandomScale || lo == hi)
-                    {
-                        return (lo + hi) * 0.5f;
-                    }
-
-                    std::uniform_real_distribution<float> dist(lo, hi);
-                    return dist(m_random);
+                    return (lo + hi) * 0.5f;
                 };
 
                 const float3 sampledScale{
-                    sampleScale(preset.minScale.x, preset.maxScale.x),
-                    sampleScale(preset.minScale.y, preset.maxScale.y),
-                    sampleScale(preset.minScale.z, preset.maxScale.z)
+                    computeDeterministicScale(preset.minScale.x, preset.maxScale.x),
+                    computeDeterministicScale(preset.minScale.y, preset.maxScale.y),
+                    computeDeterministicScale(preset.minScale.z, preset.maxScale.z)
                 };
 
                 const float normalizationScale = ComputeNormalizationScale(*model, descriptorKey.c_str());
@@ -3299,38 +3291,16 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsManager::SetRandomRotationEnabled(bool enabled)
-    {
-        m_enableRandomRotation = enabled;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "ランダム回転 " << (enabled ? "有効" : "無効")
-            << " (minYawPitchRollDeg=" << m_randomRotationMinDegrees.x << ',' << m_randomRotationMinDegrees.y
-            << ',' << m_randomRotationMinDegrees.z << " maxYawPitchRollDeg="
-            << m_randomRotationMaxDegrees.x << ',' << m_randomRotationMaxDegrees.y << ','
-            << m_randomRotationMaxDegrees.z << ") \n";
-        DebugTrace(oss.str());
-    }
-
     void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_randomRotationMinDegrees = minDegrees;
         m_randomRotationMaxDegrees = maxDegrees;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ランダム回転の範囲を更新したよ minYawPitchRollDeg="
+        oss << kLogPrefix << "スポーン回転の範囲を更新したよ minYawPitchRollDeg="
             << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
             << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
-            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ")\n";
-        DebugTrace(oss.str());
-    }
-
-    void SweetsManager::SetRandomScaleEnabled(bool enabled)
-    {
-        m_enableRandomScale = enabled;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "ランダムスケールは " << (enabled ? "有効" : "無効") << " だよ\n";
+            << maxDegrees.z << " (deterministic midpoint適用中)\n";
         DebugTrace(oss.str());
     }
 
@@ -3861,32 +3831,23 @@ namespace SweetsSpace
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 
-        if (m_enableRandomRotation)
+        const auto computeDeterministicRotation = [](float minDeg, float maxDeg)
         {
-            const auto sampleRotation = [&](float minDeg, float maxDeg)
-            {
-                const float lo = std::min(minDeg, maxDeg);
-                const float hi = std::max(minDeg, maxDeg);
-                if (lo == hi)
-                {
-                    return lo;
-                }
+            const float lo = std::min(minDeg, maxDeg);
+            const float hi = std::max(minDeg, maxDeg);
+            return (lo + hi) * 0.5f;
+        };
 
-                std::uniform_real_distribution<float> dist(lo, hi);
-                return dist(m_random);
-            };
+        const float sampledPitch = computeDeterministicRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
+        const float sampledYaw = computeDeterministicRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
+        const float sampledRoll = computeDeterministicRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
+        transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
 
-            const float sampledPitch = sampleRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
-            const float sampledYaw = sampleRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
-            const float sampledRoll = sampleRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
-            transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "スポーン回転をサンプリングしたよ pitch/yaw/roll(deg)="
-                << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
-                << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
-            DebugTrace(oss.str());
-        }
+        std::ostringstream oss;
+        oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
+            << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+            << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
+        DebugTrace(oss.str());
 
         return transform;
     }
