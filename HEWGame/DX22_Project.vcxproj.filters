@@ -231,6 +231,9 @@
     <ClCompile Include="src\Startup.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\WindowManager.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\Sweets\BaseSweets.cpp">
       <Filter>Sweets</Filter>
     </ClCompile>
@@ -562,6 +565,9 @@
     </ClInclude>
     <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\WindowManager.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Vector.h">
       <Filter>Core</Filter>
