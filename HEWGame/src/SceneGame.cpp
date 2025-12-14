@@ -1134,7 +1134,7 @@ namespace
             Transform result{};
             result.position = float3{
                 stageCenterX + descriptor.center.x,
-                descriptor.center.y,
+                descriptor.center.y + (descriptor.heightWorld * 0.5f),
                 descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
             result.scale = float3{
@@ -1851,7 +1851,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
         }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
-        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.heightWorld * 0.5f);
+        float platformTopY = fallbackPlatform.center.y + fallbackPlatform.heightWorld;
         if (m_spawnHeightPlatform)
         {
             const AABB platformAABB = m_spawnHeightPlatform->GetAABB();
