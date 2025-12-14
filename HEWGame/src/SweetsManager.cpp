@@ -481,7 +481,6 @@ namespace
     struct ColliderBuildResult
     {
         Box2DShapeConfig shapeConfig{};
-        std::optional<Physics::BoxColliderComponent> colliderComponent{};
         std::vector<std::vector<b2Vec2>> meshPolygons;
         std::vector<b2Vec2> meshBoundary;
     };
@@ -501,6 +500,12 @@ namespace
             config.density = 1.2f;
             config.friction = 0.72f;
             config.restitution = 0.03f;
+            config.vertices = {
+                b2Vec2{ -0.5f, -0.5f },
+                b2Vec2{ 0.5f, -0.5f },
+                b2Vec2{ 0.5f, 0.5f },
+                b2Vec2{ -0.5f, 0.5f },
+            };
             break;
         case SweetsType::Pudding:
             config.type = Box2DShapeConfig::Type::Polygon;
@@ -545,6 +550,12 @@ namespace
             config.density = 1.05f;
             config.friction = 0.68f;
             config.restitution = 0.04f;
+            config.vertices = {
+                b2Vec2{ -0.32f, -0.6f },
+                b2Vec2{ 0.32f, -0.6f },
+                b2Vec2{ 0.32f, 0.6f },
+                b2Vec2{ -0.32f, 0.6f },
+            };
             break;
         case SweetsType::Banana:
             config.type = Box2DShapeConfig::Type::Polygon;
@@ -577,62 +588,15 @@ namespace
         return config;
     }
 
-    void ApplyMaterialToCollider(Physics::BoxColliderComponent& component, const Box2DShapeConfig& shapeConfig)
-    {
-        component.shapeDef.density = shapeConfig.density;
-        component.shapeDef.material.friction = shapeConfig.friction;
-        component.shapeDef.material.restitution = shapeConfig.restitution;
-    }
-
     ColliderBuildResult BuildColliderForSweets(SweetsType type, const Transform& transform, const std::shared_ptr<Render::Model>& model)
     {
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
 
-        Physics::BoxColliderComponent colliderComponent{};
-        ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
-
         // コライダー頂点はローカル空間のままにしておく PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれる
 
         switch (type)
         {
-        case SweetsType::Cake:
-            colliderComponent.AddBox(0.5f, 0.5f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Pudding:
-            colliderComponent.AddPolygon({
-                b2Vec2{ -0.5f, -0.45f },
-                b2Vec2{ 0.5f, -0.45f },
-                b2Vec2{ 0.0f, 0.55f },
-            });
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Sherbet:
-            colliderComponent.AddCircle(0.5f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Strawberry:
-            colliderComponent.AddCircle(0.45f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Blueberry:
-            colliderComponent.AddCircle(0.35f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Pineapple:
-            colliderComponent.AddBox(0.32f, 0.6f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Banana:
-            colliderComponent.AddPolygon({
-                b2Vec2{ -0.6f, -0.08f },
-                b2Vec2{ 0.6f, 0.08f },
-                b2Vec2{ 0.55f, 0.24f },
-                b2Vec2{ -0.45f, 0.24f },
-            });
-            result.colliderComponent = colliderComponent;
-            break;
         default:
             if (model && model->HasLocalBounds())
             {
@@ -658,12 +622,6 @@ namespace
         // 密度は体積（スケール^3）に合わせて伸ばす 頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね
         const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
         result.shapeConfig.density *= densityScale;
-        if (result.colliderComponent)
-        {
-            result.colliderComponent->shapeDef.density = result.shapeConfig.density;
-            result.colliderComponent->shapeDef.material.friction = result.shapeConfig.friction;
-            result.colliderComponent->shapeDef.material.restitution = result.shapeConfig.restitution;
-        }
 
         return result;
     }
