@@ -92,7 +92,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
     {
         if (m_manager)
         {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>());
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
         }
         return;
     }

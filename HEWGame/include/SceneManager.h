@@ -43,6 +43,7 @@ namespace SceneSpace
         std::unique_ptr<IScene> m_activeScene;
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;
+        bool m_sceneEntered;
     };
 }
 

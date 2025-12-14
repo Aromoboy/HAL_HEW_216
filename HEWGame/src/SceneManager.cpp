@@ -3,6 +3,7 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 
+#include <cassert>
 #include <memory>
 
 namespace SceneSpace
@@ -11,6 +12,7 @@ namespace SceneSpace
         : m_timer(timer)
         , m_input(input)
         , m_sceneLoaded(false)
+        , m_sceneEntered(false)
     {
     }
 
@@ -32,14 +34,16 @@ namespace SceneSpace
 
         if (m_activeScene)
         {
+            assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Update(m_timer, m_input);
         }
     }
 
     void SceneManager::Draw()
     {
-        if (m_activeScene && m_sceneLoaded)
+        if (m_activeScene)
         {
+            assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Draw();
         }
     }
@@ -63,15 +67,26 @@ namespace SceneSpace
 
         if (m_activeScene)
         {
-            m_activeScene->OnExit();
+            if (m_sceneEntered)
+            {
+                m_activeScene->OnExit();
+                m_sceneEntered = false;
+                m_sceneLoaded = false;
+            }
+            else
+            {
+                assert(false && "Attempted to exit an uninitialized scene");
+            }
         }
 
         m_activeScene = std::move(m_pendingScene);
         m_sceneLoaded = false;
+        m_sceneEntered = false;
 
         m_activeScene->Load(m_input);
         m_sceneLoaded = true;
 
         m_activeScene->OnEnter();
+        m_sceneEntered = true;
     }
 }
