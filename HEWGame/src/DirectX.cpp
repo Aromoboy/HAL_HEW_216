@@ -30,7 +30,12 @@ RenderTarget* GetDefaultRTV()
 }
 DepthStencil* GetDefaultDSV()
 {
-	return g_dxContext.GetDefaultDSV();
+        return g_dxContext.GetDefaultDSV();
+}
+
+bool IsDirectXReady()
+{
+        return g_dxContext.IsReady();
 }
 
 

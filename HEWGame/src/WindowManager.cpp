@@ -58,7 +58,7 @@ namespace WindowManager
                                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
                         RECT clientRect = {};
-                        if (GetClientRect(g_state.hWnd, &clientRect))
+                        if (GetClientRect(g_state.hWnd, &clientRect) && IsDirectXReady())
                         {
                                 const UINT width = static_cast<UINT>(clientRect.right - clientRect.left);
                                 const UINT height = static_cast<UINT>(clientRect.bottom - clientRect.top);
@@ -93,7 +93,7 @@ namespace WindowManager
                 ShowWindow(g_state.hWnd, SW_SHOWNORMAL);
 
                 RECT clientRect = {};
-                if (GetClientRect(g_state.hWnd, &clientRect))
+                if (GetClientRect(g_state.hWnd, &clientRect) && IsDirectXReady())
                 {
                         const UINT width = static_cast<UINT>(clientRect.right - clientRect.left);
                         const UINT height = static_cast<UINT>(clientRect.bottom - clientRect.top);
