@@ -1112,7 +1112,7 @@ namespace
             Transform result{};
             result.position = float3{
                 stageCenterX + descriptor.center.x,
-                descriptor.center.y + (descriptor.heightWorld * 0.5f),
+                descriptor.center.y,
                 descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
             result.scale = float3{
