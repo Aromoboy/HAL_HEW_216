@@ -285,7 +285,8 @@ namespace Stage
         Systems::PhysicsMachine* physicsMachine,
         const DirectX::XMFLOAT4& color,
         Core::UpdatePhase phase,
-        int priority)
+        int priority,
+        bool createCollider)
         : Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
@@ -324,33 +325,46 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
-        Physics::BoxColliderComponent colliderComponent = boxCollider.value_or(Physics::BoxColliderComponent{});
-        if (!boxCollider)
-        {
-            colliderComponent.shapeDef.material.friction = 0.8f;
-        }
-        colliderComponent.shapeDef.density = 0.0f;
-
-        const float pivotOffsetNormalized = (m_worldScale.y != 0.0f)
-            ? (m_visualPivotOffset / m_worldScale.y)
-            : 0.0f;
-        colliderComponent = CreateColliderFromWorldDimensions(m_worldScale, pivotOffsetNormalized);
-
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
         SetAnchorTransform(m_anchorTransform);
 
-        Physics::Box2DShapeConfig shapeConfig{};
-        shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
-        shapeConfig.bodyType = b2_staticBody;
-        shapeConfig.density = 0.0f;
-        shapeConfig.friction = colliderComponent.shapeDef.material.friction;
-        shapeConfig.restitution = colliderComponent.shapeDef.material.restitution;
+        if (createCollider)
+        {
+            Physics::BoxColliderComponent colliderComponent{};
+            if (boxCollider)
+            {
+                colliderComponent = *boxCollider;
+            }
+            else
+            {
+                const float pivotOffsetNormalized = (m_worldScale.y != 0.0f)
+                    ? (m_visualPivotOffset / m_worldScale.y)
+                    : 0.0f;
+                colliderComponent = CreateColliderFromWorldDimensions(m_worldScale, pivotOffsetNormalized);
+                colliderComponent.shapeDef.material.friction = 0.8f;
+            }
 
-        SetBox2DShapeConfig(shapeConfig);
-        SetBoxColliderComponent(std::move(colliderComponent));
-        AttachPhysicsMachine(physicsMachine);
-        SetGravityScale(0.0f);
+            colliderComponent.shapeDef.density = 0.0f;
+
+            Physics::Box2DShapeConfig shapeConfig{};
+            shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
+            shapeConfig.bodyType = b2_staticBody;
+            shapeConfig.density = 0.0f;
+            shapeConfig.friction = colliderComponent.shapeDef.material.friction;
+            shapeConfig.restitution = colliderComponent.shapeDef.material.restitution;
+
+            SetBox2DShapeConfig(shapeConfig);
+            SetBoxColliderComponent(std::move(colliderComponent));
+            AttachPhysicsMachine(physicsMachine);
+            SetGravityScale(0.0f);
+        }
+        else
+        {
+            SetBox2DShapeConfig(std::nullopt);
+            SetBoxColliderComponent(std::nullopt);
+        }
+
         SyncVisualTransform();
         SyncColliderBounds();
 
