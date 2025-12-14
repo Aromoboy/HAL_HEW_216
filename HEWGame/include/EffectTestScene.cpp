@@ -19,7 +19,7 @@ EffectTestScene::EffectTestScene(SceneSpace::SceneManager& manager)
 
 void EffectTestScene::Draw()
 {
-        if (m_effectSystem && m_camera)
+        if (m_effectSystem != nullptr && m_camera != nullptr)
         {
                 m_effectSystem->Draw(m_camera.get());
         }
@@ -73,7 +73,7 @@ void EffectTestScene::OnEnter()
                 SetActiveCamera(registeredCamera);
         }
 
-        if (m_effectSystem)
+        if (m_effectSystem != nullptr)
         {
                 EffectSystem::EffectCreateRequest request(
                         "fly",
@@ -86,12 +86,12 @@ void EffectTestScene::OnEnter()
 
 void EffectTestScene::OnExit()
 {
-        if (m_effectManager)
+        if (m_effectManager != nullptr)
         {
                 m_effectManager->StopAllEffects();
         }
 
-        if (m_effectSystem)
+        if (m_effectSystem != nullptr)
         {
                 Unregister(*m_effectSystem);
         }
@@ -111,7 +111,7 @@ void EffectTestScene::ConfigureUpdates()
 
         RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 
-        if (m_effectSystem)
+        if (m_effectSystem != nullptr)
         {
                 Register(*m_effectSystem);
         }
@@ -123,7 +123,7 @@ void EffectTestScene::InitializeEffectSystem()
         m_renderer = ::EffekseerRendererDX11::Renderer::Create(m_device, 8000);
         m_effectManager = Effekseer::Manager::Create(8000);
 
-        if (!m_renderer || !m_effectManager)
+        if (m_renderer == nullptr || m_effectManager == nullptr)
         {
                 ShutdownEffectSystem();
                 return;
