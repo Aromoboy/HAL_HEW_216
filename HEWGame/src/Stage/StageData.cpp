@@ -1534,9 +1534,7 @@ namespace Stage
             << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
             << descriptor.scale.z << ") depth=" << descriptor.depth
             << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld << ')'
-            << " anchorY=" << (descriptor.center.y + (descriptor.heightWorld * 0.5f))
             << " widthFraction=" << descriptor.widthFraction
-            << " heightFraction=" << descriptor.heightFraction
             << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','
             << descriptor.color.z << ',' << descriptor.color.w << ")\n";
         DebugTrace(oss.str());
