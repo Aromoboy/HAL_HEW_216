@@ -53,6 +53,7 @@ namespace Stage
         void ApplyColorToModelMaterials();
         void SyncVisualTransform();
         void RefreshRenderTransform();
+        Transform GetPivotAlignedTransform(const Transform& transform) const;
 
         Transform m_anchorTransform;
         VisualTransform m_visual{};
