@@ -18,6 +18,7 @@ namespace CameraSpace
 class ModelRender;
 
 extern bool g_DrawColliders;
+extern bool g_DrawColliderBounds;
 
 namespace Systems
 {

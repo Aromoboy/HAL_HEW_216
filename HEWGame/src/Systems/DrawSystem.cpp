@@ -58,9 +58,21 @@ namespace
 
                 return std::atoi(value) != 0;
         }
+
+        bool ReadDebugColliderBoundsCvar()
+        {
+                const char* value = std::getenv("r.DebugColliderBounds");
+                if (!value)
+                {
+                        return false;
+                }
+
+                return std::atoi(value) != 0;
+        }
 }
 
 bool g_DrawColliders = ReadDebugColliderCvar();
+bool g_DrawColliderBounds = ReadDebugColliderBoundsCvar();
 
 namespace Systems
 {
