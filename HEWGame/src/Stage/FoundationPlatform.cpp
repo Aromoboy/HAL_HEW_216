@@ -311,12 +311,15 @@ namespace Stage
 
         m_normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
 
-        const float3 visualScale{
+        const float3 normalizedScale{
             m_worldScale.x * m_normalizationScale,
             m_worldScale.y * m_normalizationScale,
             m_worldScale.z * m_normalizationScale,
         };
-        const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, visualScale);
+        m_worldScale = ClampWorldScale(normalizedScale);
+        m_anchorTransform.scale = m_worldScale;
+
+        const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, m_worldScale);
         if (pivotInfo.offsetY != 0.0f)
         {
             m_visualPivotOffset = pivotInfo.offsetY;
@@ -325,7 +328,7 @@ namespace Stage
             oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
                 << " offsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
                 << " halfHeight=" << pivotInfo.halfHeight
-                << " scaleY=" << visualScale.y << '\n';
+                << " scaleY=" << m_worldScale.y << '\n';
             DebugTrace(oss.str());
         }
 
@@ -568,11 +571,7 @@ namespace Stage
         m_worldScale = ClampWorldScale(m_transform.scale);
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
-        m_visual.scale = float3{
-            m_worldScale.x * m_normalizationScale,
-            m_worldScale.y * m_normalizationScale,
-            m_worldScale.z * m_normalizationScale,
-        };
+        m_visual.scale = m_worldScale;
         m_visual.position.y += m_visualPivotOffset;
         RefreshRenderTransform();
     }
