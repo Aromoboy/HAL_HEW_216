@@ -1581,6 +1581,33 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_drawSystem->SetRenderer(m_render.get());
     }
     const auto& platformDescriptors = m_stageData.GetPlatforms();
+
+    auto computePlatformTopY = [](const Stage::PlatformDescriptor& descriptor)
+    {
+        return descriptor.center.y + (descriptor.heightWorld * 0.5f);
+    };
+
+    auto findDescriptorForPlatform = [&](const Stage::FoundationPlatform* platform) -> const Stage::PlatformDescriptor*
+    {
+        if (!platform)
+        {
+            return nullptr;
+        }
+
+        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
+        {
+            if (m_foundationPlatforms[i].get() == platform)
+            {
+                if (i < platformDescriptors.size())
+                {
+                    return &platformDescriptors[i];
+                }
+                return nullptr;
+            }
+        }
+
+        return nullptr;
+    };
     if (platformDescriptors.empty())
     {
         DebugTrace(std::string(kLogPrefix) + "No platform descriptors available; skipping foundation creation.\n");
@@ -1712,20 +1739,22 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         std::vector<float3> spawnOrigins = m_stageData.GetSpawnPoints();
         if (m_spawnHeightPlatform)
         {
-            const auto& plateTransform = m_spawnHeightPlatform->GetTransform();
-            const AABB plateAABB = m_spawnHeightPlatform->GetAABB();
-            const float plateTopY = plateAABB.max.y;
-            for (auto& origin : spawnOrigins)
+            if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
             {
-                origin.y = plateTopY;
-                origin.z = plateTransform.position.z;
-            }
+                const auto& plateTransform = m_spawnHeightPlatform->GetTransform();
+                const float plateTopY = computePlatformTopY(*descriptor);
+                for (auto& origin : spawnOrigins)
+                {
+                    origin.y = plateTopY;
+                    origin.z = plateTransform.position.z;
+                }
 
-            std::ostringstream oss;
-            oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
-                << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
-                << " planeZ=" << plateTransform.position.z << "\n";
-            DebugTrace(oss.str());
+                std::ostringstream oss;
+                oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
+                    << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
+                    << " planeZ=" << plateTransform.position.z << "\n";
+                DebugTrace(oss.str());
+            }
         }
         m_sweetsManager->SetSpawnOrigins(spawnOrigins);
     }
@@ -1851,11 +1880,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
         }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
-        float platformTopY = fallbackPlatform.center.y + fallbackPlatform.heightWorld;
-        if (m_spawnHeightPlatform)
+        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.heightWorld * 0.5f);
+        if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
         {
-            const AABB platformAABB = m_spawnHeightPlatform->GetAABB();
-            platformTopY = platformAABB.max.y;
+            platformTopY = computePlatformTopY(*descriptor);
         }
         player->SetMinimumY(platformTopY);
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
