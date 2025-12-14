@@ -82,7 +82,7 @@ namespace Components
                 BoxColliderSerialized Serialize() const;
 
         private:
-                Physics::BoxColliderComponent BuildDescriptor() const;
+                Physics::BoxColliderComponent BuildDescriptor(const Transform& transform) const;
                 void ResetHandles();
 
                 Shape m_shapeKind{ Shape::Box };
