@@ -6,7 +6,7 @@
 
 #include <box2d/box2d.h>
 
-#include "BoxColliderComponent.h"
+#include "../BoxColliderComponent.h"
 #include "Transform.h"
 
 namespace Systems
@@ -85,6 +85,8 @@ namespace Components
                 Physics::BoxColliderComponent BuildDescriptor(const Transform& transform) const;
                 void ResetHandles();
 
+                b2BodyId m_body{ b2_nullBodyId };
+                b2ShapeId m_fixture{ b2_nullShapeId };
                 Shape m_shapeKind{ Shape::Box };
                 ShapeData m_shapeData{ BoxShape{} };
                 Material m_material{};

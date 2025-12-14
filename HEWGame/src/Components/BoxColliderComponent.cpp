@@ -220,6 +220,8 @@ namespace Components
 
         void BoxColliderComponent::ResetHandles()
         {
+                m_body = b2_nullBodyId;
+                m_fixture = b2_nullShapeId;
                 m_descriptor.Clear();
         }
 }
