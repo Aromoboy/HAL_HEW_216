@@ -142,7 +142,7 @@ namespace SweetsSpace
         void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
-        void SetSpawnOrigins(const std::vector<float3>& origins);
+        void SetSpawnOrigins(const std::vector<float3>& origins, std::optional<float> spawnHeightOffset = std::nullopt);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetForceGeneratedColliders(bool force);

@@ -1591,33 +1591,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_drawSystem->SetRenderer(m_render.get());
     }
     const auto& platformDescriptors = m_stageData.GetPlatforms();
-
-    auto computePlatformTopY = [](const Stage::PlatformDescriptor& descriptor)
-    {
-        return descriptor.center.y + (descriptor.heightWorld * 0.5f);
-    };
-
-    auto findDescriptorForPlatform = [&](const Stage::FoundationPlatform* platform) -> const Stage::PlatformDescriptor*
-    {
-        if (!platform)
-        {
-            return nullptr;
-        }
-
-        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
-        {
-            if (m_foundationPlatforms[i].get() == platform)
-            {
-                if (i < platformDescriptors.size())
-                {
-                    return &platformDescriptors[i];
-                }
-                return nullptr;
-            }
-        }
-
-        return nullptr;
-    };
     if (platformDescriptors.empty())
     {
         DebugTrace(std::string(kLogPrefix) + "No platform descriptors available; skipping foundation creation.\n");
@@ -1817,9 +1790,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
         if (m_spawnHeightPlatform)
         {
-            if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
+            if (const auto* descriptor = FindDescriptorForPlatform(m_spawnHeightPlatform))
             {
-                computedGround = computePlatformTopY(*descriptor);
+                computedGround = ComputePlatformTopY(*descriptor);
             }
             else
             {
@@ -1833,42 +1806,19 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
         else if (!platformDescriptors.empty())
         {
-            computedGround = computePlatformTopY(platformDescriptors.front());
+            computedGround = ComputePlatformTopY(platformDescriptors.front());
             DebugTrace(std::string(kLogPrefix) + "[Ground] baseline derived from first descriptor; spawn platform missing.\\n");
         }
 
         m_groundY = computedGround;
     }
 
-    if (m_sweetsManager)
-    {
-        std::vector<float3> spawnOrigins = m_stageData.GetSpawnPoints();
-        if (m_spawnHeightPlatform)
-        {
-            if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
-            {
-                const float plateTopY = computePlatformTopY(*descriptor);
-                const float platePlaneZ = descriptor->center.z;
-                for (auto& origin : spawnOrigins)
-                {
-                    origin.y = plateTopY;
-                    origin.z = platePlaneZ;
-                }
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
-                    << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
-                    << " planeZ=" << platePlaneZ << "\n";
-                DebugTrace(oss.str());
-            }
-        }
-        m_sweetsManager->SetSpawnOrigins(spawnOrigins);
-    }
+    RefreshSweetsSpawnOrigins();
 
     float platePlaneZ = m_stageData.GetPlaneZ();
     if (m_platePlatform)
     {
-        if (const auto* descriptor = findDescriptorForPlatform(m_platePlatform))
+        if (const auto* descriptor = FindDescriptorForPlatform(m_platePlatform))
         {
             platePlaneZ = descriptor->center.z;
         }
@@ -2027,6 +1977,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             m_drawSystem->RegisterRenderable(*player);
         }
     }
+
+    RefreshSweetsSpawnOrigins();
 
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
@@ -3147,6 +3099,8 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
     }
 
+    RefreshSweetsSpawnOrigins();
+
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
@@ -3171,6 +3125,89 @@ void SceneGame::ResetPlaySession()
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
     ::DebugTrace(oss.str());
+}
+
+const Stage::PlatformDescriptor* SceneGame::FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const
+{
+    if (!platform)
+    {
+        return nullptr;
+    }
+
+    const auto& platformDescriptors = m_stageData.GetPlatforms();
+    for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
+    {
+        if (m_foundationPlatforms[i].get() == platform)
+        {
+            if (i < platformDescriptors.size())
+            {
+                return &platformDescriptors[i];
+            }
+            return nullptr;
+        }
+    }
+
+    return nullptr;
+}
+
+float SceneGame::ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const
+{
+    return descriptor.center.y + (descriptor.heightWorld * 0.5f);
+}
+
+void SceneGame::RefreshSweetsSpawnOrigins()
+{
+    if (!m_sweetsManager)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[SpawnOrigin] skip: SweetsManager missing.\n");
+        return;
+    }
+
+    std::vector<float3> spawnOrigins;
+    const float osaraSpawnOffsetY = m_stageData.GetOsaraSpawnOffsetY();
+    for (const auto& osara : m_osaraPlates)
+    {
+        if (!osara)
+        {
+            continue;
+        }
+
+        const auto anchor = osara->GetAnchorTransform();
+        spawnOrigins.push_back(float3{ anchor.position.x, anchor.position.y + osaraSpawnOffsetY, anchor.position.z });
+    }
+
+    if (!spawnOrigins.empty())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnOrigin] derived " << spawnOrigins.size()
+            << " origins from Osara anchors offsetY=" << osaraSpawnOffsetY << " (heightOffsetOverride=0)\n";
+        DebugTrace(oss.str());
+        m_sweetsManager->SetSpawnOrigins(spawnOrigins, 0.0f);
+        return;
+    }
+
+    spawnOrigins = m_stageData.GetSpawnPoints();
+    if (m_spawnHeightPlatform)
+    {
+        if (const auto* descriptor = FindDescriptorForPlatform(m_spawnHeightPlatform))
+        {
+            const float plateTopY = ComputePlatformTopY(*descriptor);
+            const float platePlaneZ = descriptor->center.z;
+            for (auto& origin : spawnOrigins)
+            {
+                origin.y = plateTopY;
+                origin.z = platePlaneZ;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
+                << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
+                << " planeZ=" << platePlaneZ << "\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+    m_sweetsManager->SetSpawnOrigins(spawnOrigins);
 }
 
 void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
