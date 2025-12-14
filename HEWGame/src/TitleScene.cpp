@@ -6,6 +6,7 @@
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
 #include "ScenePowerUp.h"
+#include "SettingScene.h"
 #include "EffectTestScene.h"
 #include "DirectX.h"
 
@@ -106,9 +107,21 @@ void TitleScene::Update(Core::UpdateContext& ctx)
         return;
     }
 
+    if (ctx.input.IsTrigger(VK_SPACE))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SettingScene>(*m_manager));
+        }
+        return;
+    }
+
     if (ctx.input.IsTrigger(Core::ActionId::Cancel))
     {
-        PostQuitMessage(0);
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+        }
     }
 
 }
