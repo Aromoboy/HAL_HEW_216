@@ -939,29 +939,46 @@ if (isSweetTag)
 
         if (useColliderComponent)
         {
-            colliderComponent->createdFixtureCount = 0;
-            for (const auto& shape : colliderComponent->shapes)
+            const auto inputShapes = colliderComponent->shapes;
+            colliderComponent->Clear();
+
+            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
+            for (const auto& shape : inputShapes)
             {
+                bool created = false;
                 switch (shape.type)
                 {
                 case Physics::ColliderShapeType::Circle:
                 {
                     const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
-                    recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius")));
+                    created = recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius")));
                     break;
                 }
                 case Physics::ColliderShapeType::Box:
                 case Physics::ColliderShapeType::Polygon:
                 default:
                 {
-                    recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform)));
+                    created = recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform)));
                     break;
                 }
                 }
+
+                if (created)
+                {
+                    createdShapes.push_back(shape);
+                }
             }
 
-            colliderComponent->shapeDef = shapeDef;
-            colliderComponent->createdFixtureCount = fixtureCount;
+            if (fixtureCount > 0)
+            {
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->shapes = std::move(createdShapes);
+                colliderComponent->createdFixtureCount = fixtureCount;
+            }
+            else
+            {
+                colliderComponent->Clear();
+            }
         }
 
         const bool createdFromComponent = useColliderComponent && fixtureCount > 0;
@@ -974,8 +991,7 @@ if (isSweetTag)
         fixtureCount = 0;
         if (hasMeshFixtures)
         {
-            colliderComponent->Clear();
-            colliderComponent->shapeDef = shapeDef;
+            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
 
             for (const auto& polygon : meshPolygons)
             {
@@ -984,22 +1000,27 @@ if (isSweetTag)
                     continue;
                 }
 
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
-
-                recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform)));
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform))))
+                {
+                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
+                }
             }
 
             if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
             {
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
-
-                recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform)));
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform))))
+                {
+                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
+                }
             }
 
-            colliderComponent->createdFixtureCount = fixtureCount;
-
+            colliderComponent->Clear();
             if (fixtureCount > 0)
             {
+                colliderComponent->shapeDef = shapeDef;
+                colliderComponent->shapes = std::move(createdShapes);
+                colliderComponent->createdFixtureCount = fixtureCount;
+
 #if defined(_DEBUG)
                 std::ostringstream oss;
                 oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag() << "'"
@@ -1015,67 +1036,74 @@ if (isSweetTag)
         fixtureCount = 0;
         if (hasShapeConfig)
         {
-            colliderComponent->Clear();
-            colliderComponent->shapeDef = shapeDef;
+            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
+            auto setComponentFromCreatedShapes = [&]
+            {
+                colliderComponent->Clear();
+                if (fixtureCount > 0)
+                {
+                    colliderComponent->shapeDef = shapeDef;
+                    colliderComponent->shapes = std::move(createdShapes);
+                    colliderComponent->createdFixtureCount = fixtureCount;
+                }
+            };
+
             switch (shapeConfig->type)
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                std::vector<b2Vec2> vertices;
+                std::vector<b2Vec2> localVertices;
                 if (!shapeConfig->vertices.empty())
                 {
-                    vertices = ToBox2DVertices(shapeConfig->vertices, transform);
+                    localVertices = shapeConfig->vertices;
                 }
                 else
                 {
-                    const float hx = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.x, transform), "Box half-width");
-                    const float hy = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.y, transform), "Box half-height");
-                    vertices = {
-                        b2Vec2{ -hx, -hy },
-                        b2Vec2{ hx, -hy },
-                        b2Vec2{ hx, hy },
-                        b2Vec2{ -hx, hy },
+                    localVertices = {
+                        b2Vec2{ -0.5f, -0.5f },
+                        b2Vec2{ 0.5f, -0.5f },
+                        b2Vec2{ 0.5f, 0.5f },
+                        b2Vec2{ -0.5f, 0.5f },
                     };
                 }
 
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, vertices });
-                recordFixture(createPolygonFixture(vertices));
-                if (fixtureCount > 0)
+                const std::vector<b2Vec2> box2dVertices = ToBox2DVertices(localVertices, transform);
+                if (recordFixture(createPolygonFixture(box2dVertices)))
                 {
-                    colliderComponent->createdFixtureCount = fixtureCount;
+                    createdShapes.push_back({ Physics::ColliderShapeType::Box, localVertices });
+                    setComponentFromCreatedShapes();
                     return bodyId;
                 }
+                setComponentFromCreatedShapes();
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
-
-                recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform)));
-                if (fixtureCount > 0)
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform))))
                 {
-                    colliderComponent->createdFixtureCount = fixtureCount;
+                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
+                    setComponentFromCreatedShapes();
                     return bodyId;
                 }
+                setComponentFromCreatedShapes();
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Circle:
             {
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
-
                 const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
-                recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius")));
-                if (fixtureCount > 0)
+                if (recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius"))))
                 {
-                    colliderComponent->createdFixtureCount = fixtureCount;
+                    createdShapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
+                    setComponentFromCreatedShapes();
                     return bodyId;
                 }
+                setComponentFromCreatedShapes();
                 break;
             }
             default:
+                setComponentFromCreatedShapes();
                 break;
             }
-            colliderComponent->createdFixtureCount = fixtureCount;
         }
 
         std::ostringstream oss;

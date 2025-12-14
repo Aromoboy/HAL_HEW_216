@@ -178,7 +178,7 @@ namespace
         void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
             const auto& colliderComponent = entity.GetBoxColliderComponent();
-            if (!colliderComponent)
+            if (!colliderComponent || colliderComponent->createdFixtureCount <= 0)
             {
                 return;
             }
