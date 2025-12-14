@@ -5,6 +5,7 @@
 #include <EffekseerRendererDX11.h>
 #include <EffekseerSoundXAudio2.h>
 #include <memory>
+#include <unordered_map>
 //$(ProjectDir)ThirdParty\Effekseer
 #include "ICamera.h"
 #include "Scene.h"
@@ -15,27 +16,29 @@
 class EffectTestScene :public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
-	EffectTestScene(EffekseerRendererDX11::RendererRef, Effekseer::ManagerRef);
-	~EffectTestScene();
+        explicit EffectTestScene(SceneSpace::SceneManager& manager);
+        ~EffectTestScene() override = default;
 
-	
-	virtual void Update(Core::StepTimer& timer, Core::Input& input) override;
-	virtual void Update(Core::UpdateContext& ctx) override;
-	virtual void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
-	virtual void Draw()override;
-	virtual void Load(Core::Input& input) override;
-	void ConfigureUpdates() override;
+
+        void Update(Core::StepTimer& timer, Core::Input& input) override;
+        void Update(Core::UpdateContext& ctx) override;
+        void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
+        void Draw() override;
+        void Load(Core::Input& input) override;
+        void OnEnter() override;
+        void OnExit() override;
+        void ConfigureUpdates() override;
 private:
+        void InitializeEffectSystem();
+        void ShutdownEffectSystem();
 
-	std::unique_ptr<EffectSystem> m_effectSystem;
+        SceneSpace::SceneManager* m_manager;
 
-	std::shared_ptr<CameraSpace::ICamera> camera;
-	::Effekseer::Backend::GraphicsDeviceRef device;
-	::EffekseerRendererDX11::RendererRef render;
-	::Effekseer::ManagerRef manager;
-	int32_t time = 0;
-	Effekseer::Handle efkHandle = 0;
+        std::unique_ptr<EffectSystem> m_effectSystem;
 
-	bool test = true;
-
+        std::shared_ptr<CameraSpace::ICamera> m_camera;
+        ::Effekseer::Backend::GraphicsDeviceRef m_device;
+        ::EffekseerRendererDX11::RendererRef m_renderer;
+        ::Effekseer::ManagerRef m_effectManager;
+        std::unordered_map<std::string, EffectCreateData> m_effectMap;
 };
