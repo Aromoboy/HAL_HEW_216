@@ -38,8 +38,6 @@ namespace
     constexpr float kScaleReferenceMeters = 1.0f;
     constexpr float kMinNormalizationScale = 0.02f;
     constexpr float kMaxNormalizationScale = 50.0f;
-    constexpr float kMinPlatformScale = 0.25f;
-    constexpr float kMaxPlatformScale = 40.0f;
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color)
     {
         auto clampComponent = [](float value)
@@ -122,27 +120,6 @@ namespace
             oss << kLogPrefix << "[ScaleNorm] platform extents(full)=(" << (extents.x * 2.0f) << ',' << (extents.y * 2.0f)
                 << ',' << (extents.z * 2.0f) << ") raw=" << rawScale << " clamped=" << clamped
                 << " referenceMeters=" << kScaleReferenceMeters << "\n";
-            DebugTrace(oss.str());
-        }
-
-        return clamped;
-    }
-
-    float3 ClampPlatformScale(const float3& scale)
-    {
-        float3 clamped
-        {
-            std::clamp(scale.x, kMinPlatformScale, kMaxPlatformScale),
-            std::clamp(scale.y, kMinPlatformScale, kMaxPlatformScale),
-            std::clamp(scale.z, kMinPlatformScale, kMaxPlatformScale),
-        };
-
-        if (std::fabs(clamped.x - scale.x) > 1e-3f || std::fabs(clamped.y - scale.y) > 1e-3f || std::fabs(clamped.z - scale.z) > 1e-3f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] platform scale clamped from (" << scale.x << ',' << scale.y << ',' << scale.z
-                << ") to (" << clamped.x << ',' << clamped.y << ',' << clamped.z << ") bounds="
-                << kMinPlatformScale << "-" << kMaxPlatformScale << "\n";
             DebugTrace(oss.str());
         }
 
@@ -238,27 +215,26 @@ namespace Stage
     {
         LoadPlatformModel();
 
-        Transform correctedTransform = transform;
         const float normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
-        correctedTransform.scale.x *= normalizationScale;
-        correctedTransform.scale.y *= normalizationScale;
-        correctedTransform.scale.z *= normalizationScale;
-        correctedTransform.scale = ClampPlatformScale(correctedTransform.scale);
-        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
+        m_visualScaleMultiplier = normalizationScale;
+
+        const float3 visualScale{
+            m_anchorTransform.scale.x * m_visualScaleMultiplier,
+            m_anchorTransform.scale.y * m_visualScaleMultiplier,
+            m_anchorTransform.scale.z * m_visualScaleMultiplier,
+        };
+        const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, visualScale);
         if (pivotOffsetY != 0.0f)
         {
-            const float clampedPivot = std::clamp(pivotOffsetY, -correctedTransform.scale.y, correctedTransform.scale.y);
-            correctedTransform.position.y += clampedPivot;
+            m_visualPivotOffset = std::clamp(pivotOffsetY, -visualScale.y, visualScale.y);
 
             std::ostringstream oss;
             oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
                 << " offsetY=" << pivotOffsetY
-                << " clamped=" << clampedPivot
-                << " scaleY=" << correctedTransform.scale.y << '\n';
+                << " clamped=" << m_visualPivotOffset
+                << " scaleY=" << visualScale.y << '\n';
             DebugTrace(oss.str());
         }
-
-        m_descriptorLocalBounds = BuildDescriptorLocalBounds(correctedTransform);
 
         Physics::BoxColliderComponent colliderComponent = boxCollider.value_or(Physics::BoxColliderComponent{});
         if (!boxCollider)
@@ -267,23 +243,15 @@ namespace Stage
         }
         colliderComponent.shapeDef.density = 0.0f;
 
-        const bool modelHasBounds = m_model && m_model->HasLocalBounds();
-        if (modelHasBounds)
-        {
-            colliderComponent = CreateColliderFromBounds(correctedTransform, m_model->GetLocalBounds());
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Platform model is unavailable or missing local bounds; using descriptor dimensions for collider.\n";
-            DebugTrace(oss.str());
+        std::ostringstream oss;
+        oss << kLogPrefix << "Platform collider uses descriptor bounds; model bounds reserved for visual normalization.\n";
+        DebugTrace(oss.str());
 
-            colliderComponent = CreateColliderFromBounds(correctedTransform, m_descriptorLocalBounds);
-        }
+        colliderComponent = CreateColliderFromBounds(m_anchorTransform, m_descriptorLocalBounds);
 
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
-        SetAnchorTransform(correctedTransform);
+        SetAnchorTransform(m_anchorTransform);
 
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
@@ -466,7 +434,12 @@ namespace Stage
     {
         m_visual.position = m_transform.position;
         m_visual.rotation = m_transform.rotation;
-        m_visual.scale = m_transform.scale;
+        m_visual.scale = float3{
+            m_transform.scale.x * m_visualScaleMultiplier,
+            m_transform.scale.y * m_visualScaleMultiplier,
+            m_transform.scale.z * m_visualScaleMultiplier,
+        };
+        m_visual.position.y += m_visualPivotOffset;
         RefreshRenderTransform();
     }
 

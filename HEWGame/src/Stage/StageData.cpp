@@ -22,6 +22,8 @@ namespace
     constexpr float kDefaultPlatformCenterY = -1.0f;
     constexpr float kDefaultPlatformWidthFraction = 0.20f;
     constexpr float kDefaultPlatformHeightFraction = 0.05f;
+    constexpr float kPlatformGridWidthCells = 40.0f;
+    constexpr float kPlatformGridHeightCells = 30.0f;
     constexpr float kDefaultPlatformDepth = 4.0f;
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
@@ -47,7 +49,7 @@ namespace
 
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
-    //ミニフェーズ
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
     const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
     const float kDefaultMiniRewardMultipliers[] = { 1.0f };
 
@@ -252,9 +254,9 @@ namespace Stage
         }
 
         std::vector<float> thresholds;
-        std::vector<float> minithresholds; //ミニフェーズ
+        std::vector<float> minithresholds; //繝溘ル繝輔ぉ繝ｼ繧ｺ
         std::vector<float3> spawnPoints;
-        std::vector<float> rewardMultipliers; //ミニフェーズ
+        std::vector<float> rewardMultipliers; //繝溘ル繝輔ぉ繝ｼ繧ｺ
         std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
         float planeZ = kDefaultPlaneZ;
@@ -515,7 +517,7 @@ namespace Stage
                     thresholds.insert(thresholds.end(), parsed.begin(), parsed.end());
                 }
             }
-            //ミニフェーズ
+            //繝溘ル繝輔ぉ繝ｼ繧ｺ
             else if (key == "phaseMiniThresholds")
             {
                 bool error = false;
@@ -568,7 +570,7 @@ namespace Stage
                     rewardMultipliers.insert(rewardMultipliers.end(), parsed.begin(), parsed.end());
                 }
             }
-            //ミニフェーズ
+            //繝溘ル繝輔ぉ繝ｼ繧ｺ
             else if (key == "phaseMiniRewardMultipliers")
             {
                 bool error = false;
@@ -1119,7 +1121,7 @@ namespace Stage
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
             DebugTrace(oss.str());
         }
-        //ミニフェーズ
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
         if (minithresholds.empty())
         {
             minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
@@ -1182,6 +1184,27 @@ namespace Stage
         };
 
         cellSizeWorld = sanitizePositive(cellSizeWorld, kDefaultCellSizeWorld, "cellSizeWorld");
+
+        auto computeWorldDimension = [&](float fraction, float gridCells, float fallback)
+        {
+            if (std::isfinite(fraction) && fraction > 0.0f && std::isfinite(gridCells) && gridCells > 0.0f)
+            {
+                const float worldDimension = cellSizeWorld * gridCells * fraction;
+                if (std::isfinite(worldDimension) && worldDimension > 0.0f)
+                {
+                    return worldDimension;
+                }
+            }
+
+            return std::max(0.01f, fallback);
+        };
+
+        for (auto& descriptor : platformDescriptors)
+        {
+            descriptor.widthWorld = computeWorldDimension(descriptor.widthFraction, kPlatformGridWidthCells, descriptor.scale.x);
+            descriptor.heightWorld = computeWorldDimension(descriptor.heightFraction, kPlatformGridHeightCells, descriptor.scale.y);
+            descriptor.depthWorld = std::max(0.01f, descriptor.depth * cellSizeWorld);
+        }
 
         if (!horizontalSpeedSet && playerMoveSpeedSet)
         {
@@ -1262,18 +1285,18 @@ namespace Stage
         }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
-        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
+        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //繝溘ル繝輔ぉ繝ｼ繧ｺ
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
             kDefaultRewardMultipliers);
-        //ミニフェーズ
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
         EnsureRewardMultiplierCoverage(minirewardMultipliers, minirequiredMultiplierCount,
             kDefaultMiniRewardMultipliers);
 
         m_planeZ = planeZ;
         m_phaseThresholds = thresholds;
         m_phaseRewardMultipliers = rewardMultipliers;
-        m_phaseMiniThresholds = minithresholds;                  //ミニフェーズ
-        m_phaseRewardMiniMultipliers = minirewardMultipliers;    //ミニフェーズ
+        m_phaseMiniThresholds = minithresholds;                  //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        m_phaseRewardMiniMultipliers = minirewardMultipliers;    //繝溘ル繝輔ぉ繝ｼ繧ｺ
         m_spawnPoints = spawnPoints;
         m_platforms = std::move(platformDescriptors);
         m_cellSizeWorld = cellSizeWorld;
@@ -1297,8 +1320,8 @@ namespace Stage
         oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
             << ", thresholds=" << m_phaseThresholds.size()
             << ", multipliers=" << m_phaseRewardMultipliers.size()
-            << ", minithresholds=" << m_phaseMiniThresholds.size()            // ミニフェーズ
-            << ", minimultipliers=" << m_phaseRewardMiniMultipliers.size()    // ミニフェーズ
+            << ", minithresholds=" << m_phaseMiniThresholds.size()            // 繝溘ル繝輔ぉ繝ｼ繧ｺ
+            << ", minimultipliers=" << m_phaseRewardMiniMultipliers.size()    // 繝溘ル繝輔ぉ繝ｼ繧ｺ
             << ", spawnPoints=" << m_spawnPoints.size()
             << ", platforms=" << m_platforms.size()
             << ", cellSizeWorld=" << m_cellSizeWorld
@@ -1330,12 +1353,12 @@ namespace Stage
     {
         return m_phaseRewardMultipliers;
     }
-    //ミニフェーズ
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
     const std::vector<float>& StageData::GetPhaseMiniThresholds() const noexcept
     {
         return m_phaseMiniThresholds;
     }
-    //ミニフェーズ
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
     const std::vector<float>& StageData::GetPhaseRewardMiniMultipliers() const noexcept
     {
         return m_phaseRewardMiniMultipliers;
@@ -1437,9 +1460,9 @@ namespace Stage
         m_planeZ = kDefaultPlaneZ;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
-        //大フェーズ
+        //螟ｧ繝輔ぉ繝ｼ繧ｺ
         EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1, kDefaultRewardMultipliers);
-        //ミニフェーズ
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
         m_phaseMiniThresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
         m_phaseRewardMiniMultipliers.assign(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
         EnsureRewardMultiplierCoverage(m_phaseRewardMiniMultipliers, m_phaseMiniThresholds.size() + 1, kDefaultMiniRewardMultipliers);
@@ -1452,6 +1475,9 @@ namespace Stage
         descriptor.depth = kDefaultPlatformDepth;
         descriptor.widthFraction = kDefaultPlatformWidthFraction;
         descriptor.heightFraction = kDefaultPlatformHeightFraction;
+        descriptor.widthWorld = kDefaultPlatformWidthFraction * kPlatformGridWidthCells * kDefaultCellSizeWorld;
+        descriptor.heightWorld = kDefaultPlatformHeightFraction * kPlatformGridHeightCells * kDefaultCellSizeWorld;
+        descriptor.depthWorld = kDefaultPlatformDepth * kDefaultCellSizeWorld;
         descriptor.color = kDefaultPlatformPrimaryColor;
         m_platforms.push_back(descriptor);
         m_cellSizeWorld = kDefaultCellSizeWorld;
@@ -1479,8 +1505,8 @@ namespace Stage
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
-            << " minithreshold=" << m_phaseMiniThresholds.size()          //ミニフェーズ
-            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //ミニフェーズ
+            << " minithreshold=" << m_phaseMiniThresholds.size()          //繝溘ル繝輔ぉ繝ｼ繧ｺ
+            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //繝溘ル繝輔ぉ繝ｼ繧ｺ
             << " spawnPoints=" << m_spawnPoints.size()
             << " platforms=" << m_platforms.size()
             << " cellSizeWorld=" << m_cellSizeWorld
@@ -1507,6 +1533,7 @@ namespace Stage
         oss << kLogPrefix << " platform[" << index << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
             << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
             << descriptor.scale.z << ") depth=" << descriptor.depth
+            << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld << ')'
             << " widthFraction=" << descriptor.widthFraction
             << " heightFraction=" << descriptor.heightFraction
             << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','
