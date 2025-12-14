@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <sstream>
 
 #include "Systems/Box2DContactListener.h"
 
@@ -43,6 +44,11 @@ namespace Systems
                 }
 
                 SetSubStepCount(tuning.subStepCount);
+                m_maxAccumulatedSteps = std::clamp(tuning.maxAccumulatedSteps, 1, 120);
+                m_maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
+                        ? tuning.maxStepDt
+                        : (1.0f / 60.0f);
+
                 m_worldId = b2CreateWorld(&m_worldDef);
                 if (!b2World_IsValid(m_worldId))
                 {
@@ -68,8 +74,42 @@ namespace Systems
                         return;
                 }
 
-                const float step = std::max(0.0f, dt);
-                b2World_Step(m_worldId, step, m_subStepCount);
+                const float clampedInput = std::max(0.0f, dt);
+                const float maxStep = m_maxStepDt > 0.0f ? m_maxStepDt : clampedInput;
+                if (maxStep <= 0.0f)
+                {
+                        return;
+                }
+
+                const float maxAccumulatedTime = maxStep * static_cast<float>(m_maxAccumulatedSteps);
+                const float accumulatedBeforeClamp = m_stepAccumulator + clampedInput;
+                m_stepAccumulator = std::min(accumulatedBeforeClamp, maxAccumulatedTime);
+
+                int stepsSimulated = 0;
+                while (m_stepAccumulator >= maxStep)
+                {
+                        b2World_Step(m_worldId, maxStep, m_subStepCount);
+                        m_stepAccumulator -= maxStep;
+                        ++stepsSimulated;
+                }
+
+                if (stepsSimulated == 0 && m_stepAccumulator > 0.0f)
+                {
+                        b2World_Step(m_worldId, m_stepAccumulator, m_subStepCount);
+                        m_stepAccumulator = 0.0f;
+                        ++stepsSimulated;
+                }
+
+                if (stepsSimulated > 1 || clampedInput > maxStep || accumulatedBeforeClamp > maxAccumulatedTime)
+                {
+                        std::ostringstream oss;
+                        oss << "[Box2DPhysicsSystem] Clamped dt from " << clampedInput
+                                << " to " << maxStep
+                                << " over " << stepsSimulated << " steps"
+                                << " (accumulator=" << m_stepAccumulator
+                                << "/" << maxAccumulatedTime << ")\n";
+                        DebugTrace(oss.str());
+                }
 
                 if (m_contactListener)
                 {

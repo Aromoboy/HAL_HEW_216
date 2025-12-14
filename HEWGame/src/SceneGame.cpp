@@ -705,6 +705,8 @@ namespace
             float defaultRestitution = 0.06f;
             float restitutionThreshold = 5.0f;
             float hitEventThreshold = 0.0f;
+            float maxStepDt = 1.0f / 60.0f;
+            int maxAccumulatedSteps = 8;
             bool continuousCollisionForSweets = true;
             bool continuousCollisionForSmallDynamics = false;
             float smallDynamicContinuousThreshold = 0.6f;
@@ -864,6 +866,8 @@ namespace
                     << ", defaultRestitution=" << settings.defaultRestitution
                     << ", restitutionThreshold=" << settings.restitutionThreshold
                     << ", hitEventThreshold=" << settings.hitEventThreshold
+                    << ", maxStepDt=" << settings.maxStepDt
+                    << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
                     << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
                     << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                     << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
@@ -961,6 +965,14 @@ namespace
                     {
                         settings.hitEventThreshold = std::max(0.0f, std::stof(value));
                     }
+                    else if (key == "maxStepDt")
+                    {
+                        settings.maxStepDt = std::max(0.0f, std::stof(value));
+                    }
+                    else if (key == "maxAccumulatedSteps")
+                    {
+                        settings.maxAccumulatedSteps = std::max(1, std::stoi(value));
+                    }
                     else if (key == "ccdSweets")
                     {
                         if (auto parsed = parseBool(value))
@@ -1034,6 +1046,8 @@ namespace
                 << ", defaultRestitution=" << settings.defaultRestitution
                 << ", restitutionThreshold=" << settings.restitutionThreshold
                 << ", hitEventThreshold=" << settings.hitEventThreshold
+                << ", maxStepDt=" << settings.maxStepDt
+                << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
                 << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
                 << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
@@ -1366,6 +1380,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     physicsParameters.defaultRestitution = tuning.defaultRestitution;
     physicsParameters.restitutionThreshold = tuning.restitutionThreshold;
     physicsParameters.hitEventThreshold = tuning.hitEventThreshold;
+    physicsParameters.maxStepDt = tuning.maxStepDt;
+    physicsParameters.maxAccumulatedSteps = tuning.maxAccumulatedSteps;
     physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;

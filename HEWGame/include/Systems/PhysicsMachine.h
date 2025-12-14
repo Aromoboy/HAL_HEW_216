@@ -24,6 +24,8 @@ namespace Systems
         float defaultRestitution = 0.0f;
         float restitutionThreshold = 1.0f;
         float hitEventThreshold = 0.0f;
+        float maxStepDt = 1.0f / 60.0f;
+        int maxAccumulatedSteps = 8;
         bool continuousCollisionForSweets = false;
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.0f;

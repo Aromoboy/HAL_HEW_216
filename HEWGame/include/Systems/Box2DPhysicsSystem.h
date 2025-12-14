@@ -35,7 +35,10 @@ namespace Systems
                 b2WorldId m_worldId{ b2_nullWorldId };
                 std::shared_ptr<Box2DContactListener> m_contactListener;
                 PhysicsMachine* m_physicsMachine = nullptr;
+                float m_maxStepDt = 1.0f / 60.0f;
+                float m_stepAccumulator = 0.0f;
                 int m_subStepCount = 4;
+                int m_maxAccumulatedSteps = 8;
                 bool m_loggedMissingWorld = false;
         };
 }
