@@ -13,6 +13,13 @@ namespace GameFlow
     public:
         PhaseManager();
 
+        struct PhaseUpdateResult
+        {
+            bool phaseAdvanced;
+            bool miniPhaseAdvanced;
+            float timeElapsed;
+        };
+
         void Initialize(
             const std::vector<float>& thresholds,
             const std::vector<float>& rewardMultipliers,
@@ -21,7 +28,7 @@ namespace GameFlow
         );
 
         void Reset();
-        bool UpdateHeight(float currentMaxHeight);
+        PhaseUpdateResult UpdateHeight(float currentMaxHeight);
 
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;

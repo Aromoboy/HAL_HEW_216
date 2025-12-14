@@ -2032,7 +2032,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         }
 
         const float stackedHeight = m_maxTowerHeight;
-        if (m_phaseManager.UpdateHeight(stackedHeight))
+        GameFlow::PhaseManager::PhaseUpdateResult advenced =
+            m_phaseManager.UpdateHeight(stackedHeight);
+
+        if (advenced.phaseAdvanced)
         {
             BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
         }

@@ -52,7 +52,8 @@ namespace Stage
     private:
         void ApplyDefaults();
         void LogSummary(const char* prefix, const std::string& detail) const;
-        void EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const;
+        void EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount,
+            const float* defaultMultipliers) const;
         void LogPlatformSummary(std::size_t index, const PlatformDescriptor& descriptor) const;
 
         float m_planeZ;

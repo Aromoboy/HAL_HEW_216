@@ -47,6 +47,9 @@ namespace
 
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
+    //ミニフェーズ
+    const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
+    const float kDefaultMiniRewardMultipliers[] = { 1.0f };
 
     std::string Trim(const std::string& value)
     {
@@ -249,8 +252,10 @@ namespace Stage
         }
 
         std::vector<float> thresholds;
+        std::vector<float> minithresholds; //ミニフェーズ
         std::vector<float3> spawnPoints;
-        std::vector<float> rewardMultipliers;
+        std::vector<float> rewardMultipliers; //ミニフェーズ
+        std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
         float planeZ = kDefaultPlaneZ;
         bool planeZSet = false;
@@ -510,6 +515,21 @@ namespace Stage
                     thresholds.insert(thresholds.end(), parsed.begin(), parsed.end());
                 }
             }
+            //ミニフェーズ
+            else if (key == "phaseMiniThresholds")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    minithresholds.insert(minithresholds.end(), parsed.begin(), parsed.end());
+                }
+            }
+            
             else if (key == "spawnPoint")
             {
                 if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
@@ -546,6 +566,20 @@ namespace Stage
                 else
                 {
                     rewardMultipliers.insert(rewardMultipliers.end(), parsed.begin(), parsed.end());
+                }
+            }
+            //ミニフェーズ
+            else if (key == "phaseMiniRewardMultipliers")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    minirewardMultipliers.insert(minirewardMultipliers.end(), parsed.begin(), parsed.end());
                 }
             }
             else if (key == "platformCenterY")
@@ -1085,6 +1119,32 @@ namespace Stage
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
             DebugTrace(oss.str());
         }
+        //ミニフェーズ
+        if (minithresholds.empty())
+        {
+            minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
+            std::ostringstream oss;
+            oss << kLogPrefix << "No phaseMiniThresholds provided; using defaults.\n";
+            DebugTrace(oss.str());
+        }
+
+        std::sort(minithresholds.begin(), minithresholds.end());
+        minithresholds.erase(
+            std::remove_if(minithresholds.begin(), minithresholds.end(), [](float value)
+                {
+                    return !std::isfinite(value) || value <= 0.0f;
+                }),
+            minithresholds.end());
+
+        minithresholds.erase(std::unique(minithresholds.begin(), minithresholds.end()), minithresholds.end());
+
+        if (minithresholds.empty())
+        {
+            minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
+            std::ostringstream oss;
+            oss << kLogPrefix << "All minithresholds were invalid; falling back to defaults.\n";
+            DebugTrace(oss.str());
+        }
 
         const std::size_t parsedAnchorCount = spawnPoints.size();
         if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
@@ -1202,11 +1262,18 @@ namespace Stage
         }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
-        EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount);
+        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
+        EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
+            kDefaultRewardMultipliers);
+        //ミニフェーズ
+        EnsureRewardMultiplierCoverage(minirewardMultipliers, minirequiredMultiplierCount,
+            kDefaultMiniRewardMultipliers);
 
         m_planeZ = planeZ;
         m_phaseThresholds = thresholds;
         m_phaseRewardMultipliers = rewardMultipliers;
+        m_phaseMiniThresholds = minithresholds;                  //ミニフェーズ
+        m_phaseRewardMiniMultipliers = minirewardMultipliers;    //ミニフェーズ
         m_spawnPoints = spawnPoints;
         m_platforms = std::move(platformDescriptors);
         m_cellSizeWorld = cellSizeWorld;
@@ -1230,6 +1297,8 @@ namespace Stage
         oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
             << ", thresholds=" << m_phaseThresholds.size()
             << ", multipliers=" << m_phaseRewardMultipliers.size()
+            << ", minithresholds=" << m_phaseMiniThresholds.size()            // ミニフェーズ
+            << ", minimultipliers=" << m_phaseRewardMiniMultipliers.size()    // ミニフェーズ
             << ", spawnPoints=" << m_spawnPoints.size()
             << ", platforms=" << m_platforms.size()
             << ", cellSizeWorld=" << m_cellSizeWorld
@@ -1368,7 +1437,13 @@ namespace Stage
         m_planeZ = kDefaultPlaneZ;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
-        EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
+        //大フェーズ
+        EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1, kDefaultRewardMultipliers);
+        //ミニフェーズ
+        m_phaseMiniThresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
+        m_phaseRewardMiniMultipliers.assign(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
+        EnsureRewardMultiplierCoverage(m_phaseRewardMiniMultipliers, m_phaseMiniThresholds.size() + 1, kDefaultMiniRewardMultipliers);
+
         m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
         m_platforms.clear();
         PlatformDescriptor descriptor{};
@@ -1404,6 +1479,8 @@ namespace Stage
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
+            << " minithreshold=" << m_phaseMiniThresholds.size()          //ミニフェーズ
+            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //ミニフェーズ
             << " spawnPoints=" << m_spawnPoints.size()
             << " platforms=" << m_platforms.size()
             << " cellSizeWorld=" << m_cellSizeWorld
@@ -1437,7 +1514,8 @@ namespace Stage
         DebugTrace(oss.str());
     }
 
-    void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const
+    void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount,
+        const float* defaultMultipliers) const
     {
         if (requiredCount == 0)
         {
@@ -1464,6 +1542,7 @@ namespace Stage
             multipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
             std::ostringstream oss;
             oss << kLogPrefix << "No phaseRewardMultipliers provided; using defaults." << "\n";
+
             DebugTrace(oss.str());
         }
 
