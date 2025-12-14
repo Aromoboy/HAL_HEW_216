@@ -211,5 +211,6 @@ namespace Render
         m_device = nullptr;
         m_textureCache = nullptr;
         m_inFlightKeys.clear();
+        m_textureLoadingEnabled = true;
     }
 }

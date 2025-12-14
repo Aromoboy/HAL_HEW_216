@@ -70,6 +70,7 @@ namespace
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
         constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
         constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
+        constexpr const char* kRenderSettingsConfigPath = "Assets/Config/render_settings.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -588,6 +589,79 @@ namespace
             }
 
             return forceConfig;
+        }
+
+        bool LoadModelTextureLoadingSetting()
+        {
+            bool enabled = true;
+            std::ifstream config(kRenderSettingsConfigPath);
+            if (!config.is_open())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[RenderSettings] Missing config; defaulting loadModelTextures="
+                    << std::boolalpha << enabled << " path='" << kRenderSettingsConfigPath << "'\n";
+                DebugTrace(oss.str());
+                return enabled;
+            }
+
+            bool parsed = false;
+            std::string line;
+            std::size_t lineNumber = 0;
+            while (std::getline(config, line))
+            {
+                ++lineNumber;
+                const auto commentPos = line.find_first_of("#;");
+                if (commentPos != std::string::npos)
+                {
+                    line = line.substr(0, commentPos);
+                }
+
+                line = TrimWhitespace(line);
+                if (line.empty())
+                {
+                    continue;
+                }
+
+                const auto delimiterPos = line.find('=');
+                if (delimiterPos == std::string::npos)
+                {
+                    continue;
+                }
+
+                std::string key = TrimWhitespace(line.substr(0, delimiterPos));
+                std::string value = TrimWhitespace(line.substr(delimiterPos + 1));
+                std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+                    { return static_cast<char>(std::tolower(c)); });
+
+                if (key == "loadmodeltextures" || key == "modeltextures")
+                {
+                    if (ParseBool(value, enabled))
+                    {
+                        parsed = true;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[RenderSettings] Parsed loadModelTextures=" << std::boolalpha << enabled
+                            << " from line=" << lineNumber << " path='" << kRenderSettingsConfigPath << "'\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[RenderSettings] Invalid loadModelTextures value='" << value
+                            << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << enabled << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+            }
+
+            if (!parsed)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[RenderSettings] loadModelTextures not found; using default="
+                    << std::boolalpha << enabled << " (path='" << kRenderSettingsConfigPath << "')\n";
+                DebugTrace(oss.str());
+            }
+
+            return enabled;
         }
 
         std::shared_ptr<Collision::ICollider> BuildGeneratedPlayerCollider(
@@ -1109,8 +1183,17 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止） 
+    // （ローダーやデバイスの切り替え漏れによるハングを防止）
     cache.Clear();
+
+    const bool modelTexturesEnabled = LoadModelTextureLoadingSetting();
+    cache.SetTextureLoadingEnabled(modelTexturesEnabled);
+
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Render settings: loadModelTextures=" << std::boolalpha << modelTexturesEnabled << "\n";
+        ::DebugTrace(oss.str());
+    }
 
     NormalizePlayerColliderDefinitions();
 
