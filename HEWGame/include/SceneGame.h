@@ -18,6 +18,7 @@
 #include "Transform.h"
 #include "Stage/StageData.h"
 #include "Stage/FoundationPlatform.h"
+#include "Stage/OsaraPlate.h"
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
 #include "HudRenderer.h"
@@ -151,6 +152,9 @@ private:
     std::vector<std::unique_ptr<Stage::FoundationPlatform>> m_foundationPlatforms;
     std::vector<bool> m_platformUpdateRegistered;
     std::vector<bool> m_platformDrawRegistered;
+    std::vector<std::unique_ptr<Stage::OsaraPlate>> m_osaraPlates;
+    std::vector<bool> m_osaraUpdateRegistered;
+    std::vector<bool> m_osaraDrawRegistered;
     Stage::FoundationPlatform* m_platePlatform = nullptr;
     Stage::FoundationPlatform* m_spawnHeightPlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;

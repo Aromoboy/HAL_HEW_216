@@ -1627,6 +1627,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_foundationPlatforms.resize(platformDescriptors.size());
         m_platformUpdateRegistered.assign(platformDescriptors.size(), false);
         m_platformDrawRegistered.assign(platformDescriptors.size(), false);
+        m_osaraPlates.clear();
+        m_osaraUpdateRegistered.clear();
+        m_osaraDrawRegistered.clear();
 
         for (std::size_t i = 0; i < platformDescriptors.size(); ++i)
         {
@@ -1721,6 +1724,67 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         else
         {
             DebugTrace(std::string(kLogPrefix) + "No plate platform available; player and sweets will use default spawn heights.\n");
+        }
+
+        if (m_platePlatform)
+        {
+            const Transform baseTransform = m_platePlatform->GetTransform();
+            const float leftOffsetX = m_stageData.GetOsaraLeftOffsetX();
+            const float rightOffsetX = m_stageData.GetOsaraRightOffsetX();
+            const float offsetY = m_stageData.GetOsaraOffsetY();
+
+            Transform leftTransform = baseTransform;
+            leftTransform.position.x += leftOffsetX;
+            leftTransform.position.y += offsetY;
+
+            Transform rightTransform = baseTransform;
+            rightTransform.position.x += rightOffsetX;
+            rightTransform.position.y += offsetY;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Osara] basePos=(" << baseTransform.position.x << ',' << baseTransform.position.y << ','
+                << baseTransform.position.z << ") offsets=(L:" << leftOffsetX << ", R:" << rightOffsetX << ", Y:" << offsetY
+                << ") leftPos=(" << leftTransform.position.x << ',' << leftTransform.position.y << ',' << leftTransform.position.z
+                << ") rightPos=(" << rightTransform.position.x << ',' << rightTransform.position.y << ',' << rightTransform.position.z
+                << ")\n";
+            ::DebugTrace(oss.str());
+
+            m_osaraPlates.resize(2);
+            m_osaraUpdateRegistered.assign(2, false);
+            m_osaraDrawRegistered.assign(2, false);
+
+            auto instantiateOsara = [&](std::size_t index, const std::string& tag, const Transform& transform)
+            {
+                auto osara = std::make_unique<Stage::OsaraPlate>(tag, transform, m_physicsMachine.get());
+                if (!osara)
+                {
+                    std::ostringstream createOss;
+                    createOss << kLogPrefix << "[Osara] Failed to create plate '" << tag << "'.\n";
+                    ::DebugTrace(createOss.str());
+                    return;
+                }
+
+                RegisterPhysicsBody(*osara);
+
+                if (m_drawSystem)
+                {
+                    m_drawSystem->RegisterRenderable(*osara);
+                    if (index >= m_osaraDrawRegistered.size())
+                    {
+                        m_osaraDrawRegistered.resize(index + 1, false);
+                    }
+                    m_osaraDrawRegistered[index] = true;
+                }
+
+                if (index >= m_osaraPlates.size())
+                {
+                    m_osaraPlates.resize(index + 1);
+                }
+                m_osaraPlates[index] = std::move(osara);
+            };
+
+            instantiateOsara(0, "OsaraLeft", leftTransform);
+            instantiateOsara(1, "OsaraRight", rightTransform);
         }
 
         auto selectPlatformForHeight = [&]() -> Stage::FoundationPlatform*
@@ -2002,6 +2066,21 @@ SceneGame::~SceneGame()
         }
     }
 
+    for (std::size_t i = 0; i < m_osaraPlates.size(); ++i)
+    {
+        if (i < m_osaraUpdateRegistered.size() && m_osaraUpdateRegistered[i] && m_osaraPlates[i])
+        {
+            Unregister(*m_osaraPlates[i]);
+            m_osaraUpdateRegistered[i] = false;
+        }
+
+        if (i < m_osaraDrawRegistered.size() && m_osaraDrawRegistered[i] && m_drawSystem && m_osaraPlates[i])
+        {
+            m_drawSystem->UnregisterRenderable(*m_osaraPlates[i]);
+            m_osaraDrawRegistered[i] = false;
+        }
+    }
+
     UnregisterAllPhysicsBodies();
     if (m_inputRegistered)
     {
@@ -2058,6 +2137,7 @@ SceneGame::~SceneGame()
     {
         m_drawSystem->ClearRenderables();
         std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
+        std::fill(m_osaraDrawRegistered.begin(), m_osaraDrawRegistered.end(), false);
     }
         if (m_sweetsRegistered && m_sweetsManager)
         {
@@ -2149,6 +2229,38 @@ void SceneGame::ConfigureUpdates()
                         {
                                 m_drawSystem->RegisterRenderable(*platform);
                                 m_platformDrawRegistered[i] = true;
+                        }
+                }
+        }
+
+        for (std::size_t i = 0; i < m_osaraPlates.size(); ++i)
+        {
+                auto* osara = m_osaraPlates[i].get();
+                if (!osara)
+                {
+                        continue;
+                }
+
+                if (i >= m_osaraUpdateRegistered.size())
+                {
+                        m_osaraUpdateRegistered.resize(m_osaraPlates.size(), false);
+                }
+                if (!m_osaraUpdateRegistered[i])
+                {
+                        Register(*osara);
+                        m_osaraUpdateRegistered[i] = true;
+                }
+
+                if (m_drawSystem)
+                {
+                        if (i >= m_osaraDrawRegistered.size())
+                        {
+                                m_osaraDrawRegistered.resize(m_osaraPlates.size(), false);
+                        }
+                        if (!m_osaraDrawRegistered[i])
+                        {
+                                m_drawSystem->RegisterRenderable(*osara);
+                                m_osaraDrawRegistered[i] = true;
                         }
                 }
         }
