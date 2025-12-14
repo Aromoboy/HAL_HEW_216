@@ -574,8 +574,6 @@ namespace Stage
             m_worldScale.z * m_normalizationScale,
         };
         m_visual.position.y += m_visualPivotOffset;
-        m_visual.scale = m_worldScale;
-        m_visual.position.y += m_visualPivotOffset;
         RefreshRenderTransform();
     }
 
