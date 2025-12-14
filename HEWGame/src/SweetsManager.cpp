@@ -489,13 +489,6 @@ namespace
         return (areaScale > 0.0f) ? (volumeScale / areaScale) : 1.0f;
     }
 
-    struct ColliderBuildResult
-    {
-        Box2DShapeConfig shapeConfig{};
-        std::vector<std::vector<b2Vec2>> meshPolygons;
-        std::vector<b2Vec2> meshBoundary;
-    };
-
     Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
     {
         Box2DShapeConfig config{};
@@ -640,14 +633,285 @@ namespace
         return true;
     }
 
-    ColliderBuildResult BuildColliderForSweets(SweetsType type, const Transform& transform, const std::shared_ptr<Render::Model>& model)
+    std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
+    {
+        std::vector<b2Vec2> vertices;
+        vertices.reserve(points.size());
+
+        const float effectiveScale = std::max(scale, 0.0f);
+        for (const auto& pt : points)
+        {
+            float2 scaled{ (pt.x + offset.x) * effectiveScale, (pt.y + offset.y) * effectiveScale };
+            if (std::abs(margin) > 1e-6f)
+            {
+                const float lenSq = (scaled.x * scaled.x) + (scaled.y * scaled.y);
+                if (lenSq > 1e-8f)
+                {
+                    const float invLen = 1.0f / std::sqrt(lenSq);
+                    scaled.x += scaled.x * invLen * margin;
+                    scaled.y += scaled.y * invLen * margin;
+                }
+                else
+                {
+                    scaled.x += margin;
+                }
+            }
+
+            vertices.push_back(b2Vec2{ scaled.x, scaled.y });
+        }
+
+        return vertices;
+    }
+
+    std::vector<b2Vec2> BuildCircleApproximation(float radius, int segments = 14)
+    {
+        std::vector<b2Vec2> vertices;
+        if (!(radius > 0.0f) || segments < 3)
+        {
+            return vertices;
+        }
+
+        vertices.reserve(static_cast<std::size_t>(segments));
+        constexpr float kTwoPi = 6.28318530718f;
+        const float step = kTwoPi / static_cast<float>(segments);
+        for (int i = 0; i < segments; ++i)
+        {
+            const float angle = step * static_cast<float>(i);
+            vertices.push_back(b2Vec2{ radius * std::cos(angle), radius * std::sin(angle) });
+        }
+
+        return vertices;
+    }
+
+    SweetsManager::ColliderBuildResult SweetsManager::BuildColliderForSweets(const std::string& kind,
+        SweetsType type,
+        const Transform& transform,
+        const std::string& modelPath,
+        const std::shared_ptr<Render::Model>& model)
     {
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
 
         (void)model;
 
-        // コライダー頂点はローカル空間のままにしておく PhysicsMachine::CreateBody がボディ作成時にスイーツのスケールを掛けてくれる
+        const std::string resolvedKind = ResolveKindKey(kind);
+        const std::string normalizedKind = NormalizeKey(resolvedKind);
+        const auto definitionIt = FindColliderDefinition(resolvedKind);
+        const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
+            && !IsColliderDefinitionEmpty(definitionIt->second);
+
+        auto acquireGenerated = [&]() -> std::optional<GeneratedCollider>
+        {
+            if (auto cached = m_generatedColliders.find(normalizedKind); cached != m_generatedColliders.end())
+            {
+                return cached->second;
+            }
+
+            if (modelPath.empty())
+            {
+                return std::nullopt;
+            }
+
+            const MeshHullSummary summary = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
+            if (summary.hull.empty())
+            {
+                return std::nullopt;
+            }
+
+            GeneratedCollider generated{};
+            generated.hull = summary.hull;
+            generated.centroidOffset = summary.centroidOffset;
+            generated.thickness = summary.thickness;
+            m_generatedColliders[normalizedKind] = generated;
+            return generated;
+        };
+
+        std::optional<GeneratedCollider> generated;
+        if (m_forceGeneratedColliders || !m_colliderConfigOverridesEnabled || !hasConfigDefinition)
+        {
+            generated = acquireGenerated();
+        }
+
+        const bool hasGenerated = generated && !generated->hull.empty();
+
+        auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
+        {
+            std::vector<b2Vec2> hullVertices = BuildHullVertices(hull, centroidOffset, 1.0f, 0.0f);
+            if (hullVertices.size() >= 3)
+            {
+                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                result.shapeConfig.vertices = hullVertices;
+                result.meshPolygons.clear();
+                result.meshPolygons.push_back(hullVertices);
+                result.shapeConfig.polygonRadius = std::max(0.0f, thickness * 0.5f);
+                result.thickness = thickness;
+                result.centroidOffset = centroidOffset;
+            }
+        };
+
+        if (m_forceGeneratedColliders)
+        {
+            if (hasGenerated)
+            {
+                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
+                result.source = ColliderSource::Generated;
+            }
+        }
+        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
+        {
+            const auto& definition = definitionIt->second;
+            switch (definition.type)
+            {
+            case Collision::ColliderKind::Circle:
+            {
+                const float effectiveRadius = std::max(0.0f, (definition.radius * definition.scale) + definition.margin);
+                result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
+                result.shapeConfig.radius = effectiveRadius;
+                result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f);
+                result.thickness = definition.thickness;
+                result.source = ColliderSource::Config;
+                break;
+            }
+            case Collision::ColliderKind::Hull:
+            {
+                result.meshPolygons.clear();
+                result.meshBoundary.clear();
+                result.shapeConfig.vertices = BuildHullVertices(definition.points, definition.offset, definition.scale, definition.margin);
+                if (result.shapeConfig.vertices.size() >= 3)
+                {
+                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f);
+                    result.thickness = definition.thickness;
+                    result.source = ColliderSource::Config;
+                }
+                break;
+            }
+            case Collision::ColliderKind::Compound:
+            {
+                result.meshPolygons.clear();
+                float maxThickness = 0.0f;
+                for (const auto& child : definition.children)
+                {
+                    switch (child.type)
+                    {
+                    case Collision::ColliderKind::Circle:
+                    {
+                        const float radius = std::max(0.0f, (child.radius * child.scale) + child.margin);
+                        auto circlePoly = BuildCircleApproximation(radius);
+                        if (circlePoly.size() >= 3)
+                        {
+                            result.meshPolygons.push_back(std::move(circlePoly));
+                        }
+                        break;
+                    }
+                    case Collision::ColliderKind::Hull:
+                    {
+                        auto hullVertices = BuildHullVertices(child.points, child.offset, child.scale, child.margin);
+                        if (hullVertices.size() >= 3)
+                        {
+                            result.meshPolygons.push_back(std::move(hullVertices));
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+
+                    maxThickness = std::max(maxThickness, child.thickness);
+                }
+
+                if (!result.meshPolygons.empty())
+                {
+                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, maxThickness * 0.5f);
+                    result.thickness = maxThickness;
+                    result.source = ColliderSource::Config;
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        else if (hasGenerated)
+        {
+            applyHull(generated->hull, generated->centroidOffset, generated->thickness);
+            result.source = ColliderSource::Generated;
+        }
+        else if (hasConfigDefinition)
+        {
+            const auto& definition = definitionIt->second;
+            switch (definition.type)
+            {
+            case Collision::ColliderKind::Circle:
+            {
+                const float effectiveRadius = std::max(0.0f, (definition.radius * definition.scale) + definition.margin);
+                result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
+                result.shapeConfig.radius = effectiveRadius;
+                result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f);
+                result.thickness = definition.thickness;
+                result.source = ColliderSource::Config;
+                break;
+            }
+            case Collision::ColliderKind::Hull:
+            {
+                result.shapeConfig.vertices = BuildHullVertices(definition.points, definition.offset, definition.scale, definition.margin);
+                if (result.shapeConfig.vertices.size() >= 3)
+                {
+                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f);
+                    result.thickness = definition.thickness;
+                    result.source = ColliderSource::Config;
+                }
+                break;
+            }
+            case Collision::ColliderKind::Compound:
+            {
+                float maxThickness = 0.0f;
+                for (const auto& child : definition.children)
+                {
+                    if (child.type == Collision::ColliderKind::Hull)
+                    {
+                        auto hullVertices = BuildHullVertices(child.points, child.offset, child.scale, child.margin);
+                        if (hullVertices.size() >= 3)
+                        {
+                            result.meshPolygons.push_back(std::move(hullVertices));
+                        }
+                    }
+                    else if (child.type == Collision::ColliderKind::Circle)
+                    {
+                        auto circlePoly = BuildCircleApproximation(std::max(0.0f, (child.radius * child.scale) + child.margin));
+                        if (circlePoly.size() >= 3)
+                        {
+                            result.meshPolygons.push_back(std::move(circlePoly));
+                        }
+                    }
+
+                    maxThickness = std::max(maxThickness, child.thickness);
+                }
+
+                if (!result.meshPolygons.empty())
+                {
+                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, maxThickness * 0.5f);
+                    result.thickness = maxThickness;
+                    result.source = ColliderSource::Config;
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        else if (!hasGenerated)
+        {
+            generated = acquireGenerated();
+            if (generated && !generated->hull.empty())
+            {
+                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
+                result.source = ColliderSource::Generated;
+            }
+        }
 
         if (result.shapeConfig.type == Box2DShapeConfig::Type::None)
         {
@@ -656,7 +920,7 @@ namespace
         }
 
         if ((result.shapeConfig.type == Box2DShapeConfig::Type::Box || result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
-            && result.shapeConfig.vertices.size() < 3)
+            && result.shapeConfig.vertices.size() < 3 && result.meshPolygons.empty())
         {
             ReportInvalidBox2DConfig(type, "requires explicit vertices instead of mesh-derived bounds");
             return result;
@@ -668,7 +932,6 @@ namespace
             return result;
         }
 
-        // 密度は体積（スケール^3）に合わせて伸ばす 頂点はフィクスチャ生成時に X/Y スケールがもう掛かってるからね
         const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
         result.shapeConfig.density *= densityScale;
 
@@ -1854,7 +2117,7 @@ namespace SweetsSpace
                 physicsTransform.position.y += pivotInfo.offsetY;
                 visualTransform.position.y += pivotInfo.offsetY;
 
-                const auto colliderBuild = BuildColliderForSweets(type, physicsTransform, model);
+                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model);
 
                 if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
                 {
@@ -1867,7 +2130,21 @@ namespace SweetsSpace
 
                 if (sweets)
                 {
+                    sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
                     sweets->SetVisualTransform(visualTransform);
+
+                    const char* sourceLabel = "fallback";
+                    switch (colliderBuild.source)
+                    {
+                    case ColliderSource::Config:
+                        sourceLabel = "config";
+                        break;
+                    case ColliderSource::Generated:
+                        sourceLabel = "mesh";
+                        break;
+                    default:
+                        break;
+                    }
 
                     std::ostringstream created;
                     created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
@@ -1876,6 +2153,7 @@ namespace SweetsSpace
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
                         << ") pivotOffsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
                         << " halfHeight=" << pivotInfo.halfHeight
+                        << " colliderSource=" << sourceLabel
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
                 }

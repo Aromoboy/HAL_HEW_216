@@ -35,6 +35,7 @@ namespace Physics
         bool allowRotation{ true };
         std::vector<b2Vec2> vertices{};
         float radius{ 0.0f };
+        float polygonRadius{ 0.0f };
         float density{ 1.0f };
         float friction{ 0.6f };
         float restitution{ 0.0f };
