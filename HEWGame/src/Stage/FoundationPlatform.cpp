@@ -141,7 +141,7 @@ namespace
         return component;
     }
 
-    AABB BuildDescriptorLocalBounds(const Transform& transform)
+    AABB BuildDescriptorLocalBounds(const float3& worldDimensions)
     {
         auto computeHalfExtent = [](float worldDimension)
         {
@@ -150,9 +150,9 @@ namespace
         };
 
         const float3 halfExtents{
-            computeHalfExtent(transform.scale.x),
-            computeHalfExtent(transform.scale.y),
-            computeHalfExtent(transform.scale.z),
+            computeHalfExtent(worldDimensions.x),
+            computeHalfExtent(worldDimensions.y),
+            computeHalfExtent(worldDimensions.z),
         };
 
         return AABB(halfExtents, float3{ -halfExtents.x, -halfExtents.y, -halfExtents.z });
@@ -289,7 +289,7 @@ namespace Stage
         : Entities::PhysicalEntity(tag,
             transform.position,
             transform.rotation,
-            transform.scale,
+            ClampWorldScale(transform.scale),
             std::nullopt,
             Collision::CollisionLayer::Floor,
             phase,
@@ -297,14 +297,14 @@ namespace Stage
         , m_anchorTransform(transform)
         , m_model(nullptr)
         , m_debugColor(SanitizeColor(color))
-        , m_descriptorLocalBounds(BuildDescriptorLocalBounds(transform))
     {
+        m_worldScale = ClampWorldScale(transform.scale);
+        m_anchorTransform.scale = m_worldScale;
+        m_descriptorLocalBounds = BuildDescriptorLocalBounds(m_worldScale);
+
         LoadPlatformModel();
 
         m_normalizationScale = (m_model) ? ComputeNormalizationScale(*m_model) : 1.0f;
-
-        m_worldScale = ClampWorldScale(transform.scale);
-        m_anchorTransform.scale = m_worldScale;
 
         const float3 visualScale{
             m_worldScale.x * m_normalizationScale,
