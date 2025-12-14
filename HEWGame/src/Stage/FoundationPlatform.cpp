@@ -118,7 +118,7 @@ namespace
         return AABB(max, min);
     }
 
-    Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale)
+   Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale)
     {
         Physics::BoxColliderComponent component;
         component.shapeDef.density = 0.0f;
@@ -134,7 +134,7 @@ namespace
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ 0.0f, 0.0f }
+            b2Vec2{ 0.0f, halfHeight }
         );
 
         return component;
@@ -573,7 +573,7 @@ namespace Stage
             m_worldScale.y * m_normalizationScale,
             m_worldScale.z * m_normalizationScale,
         };
-        m_visual.position.y += m_visualPivotOffset;
+        m_visual.position.y = m_visualPivotOffset;
         RefreshRenderTransform();
     }
 

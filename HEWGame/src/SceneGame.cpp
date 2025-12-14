@@ -1104,7 +1104,7 @@ namespace
             true,
             0.0f,
             //カメラ設定
-            float3{ 0.0f, 3.5f, -25.0f },
+            float3{ 0.0f, 5.5f, -25.0f },
             45.0f,
             DirectX::XMConvertToRadians(0.0f),
             DirectX::XMConvertToRadians(-10.0f)
@@ -1136,7 +1136,7 @@ namespace
             Transform result{};
             result.position = float3{
                 stageCenterX + descriptor.center.x,
-                descriptor.center.y + (descriptor.heightWorld * 0.5f),
+                descriptor.center.y,
                 descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
             result.scale = float3{
