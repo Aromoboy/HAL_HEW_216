@@ -160,30 +160,40 @@ namespace Entities
 
         if (m_boxColliderComponent)
         {
-            for (const auto& polygon : m_boxColliderComponent->polygons)
+            for (const auto& shape : m_boxColliderComponent->shapes)
             {
-                for (int i = 0; i < polygon.count; ++i)
+                switch (shape.type)
                 {
-                    const float3 point{
-                        transform.position.x + polygon.vertices[i].x * transform.scale.x,
-                        transform.position.y + polygon.vertices[i].y * transform.scale.y,
+                case Physics::ColliderShapeType::Circle:
+                {
+                    const b2Vec2 centerOffset = shape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : shape.vertices.front();
+                    const float radius = shape.radius * std::max(transform.scale.x, transform.scale.y);
+                    const float3 center{
+                        transform.position.x + centerOffset.x * transform.scale.x,
+                        transform.position.y + centerOffset.y * transform.scale.y,
                         transform.position.z,
                     };
-                    accumulatePoint(point);
+
+                    accumulate(center.x - radius, center.y - radius, center.z);
+                    accumulate(center.x + radius, center.y + radius, center.z);
+                    break;
                 }
-            }
-
-            for (const auto& circle : m_boxColliderComponent->circles)
-            {
-                const float radius = circle.radius * std::max(transform.scale.x, transform.scale.y);
-                const float3 center{
-                    transform.position.x + circle.center.x * transform.scale.x,
-                    transform.position.y + circle.center.y * transform.scale.y,
-                    transform.position.z,
-                };
-
-                accumulate(center.x - radius, center.y - radius, center.z);
-                accumulate(center.x + radius, center.y + radius, center.z);
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    for (const auto& vertex : shape.vertices)
+                    {
+                        const float3 point{
+                            transform.position.x + vertex.x * transform.scale.x,
+                            transform.position.y + vertex.y * transform.scale.y,
+                            transform.position.z,
+                        };
+                        accumulatePoint(point);
+                    }
+                    break;
+                }
+                }
             }
         }
 
