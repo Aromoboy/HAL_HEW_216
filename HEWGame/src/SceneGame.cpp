@@ -80,6 +80,7 @@ namespace
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
+        constexpr float kPlayerMinimumYMargin = 1.0f;
         constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
         constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
         constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
@@ -1879,13 +1880,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         {
             player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
         }
-        const auto& fallbackPlatform = m_stageData.GetPlatform(0);
-        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.heightWorld * 0.5f);
-        if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
-        {
-            platformTopY = computePlatformTopY(*descriptor);
-        }
-        player->SetMinimumY(platformTopY);
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
@@ -2176,10 +2170,12 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         // Visible half-width
         const float halfWidth = d * std::tan(fovX * 0.5f);
+        const float halfHeight = d * std::tan(fovY * 0.5f);
 
         // World bounds on X
         const float minX = camPos.x - halfWidth;
         const float maxX = camPos.x + halfWidth;
+        const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
 
         // Log bounds if changed
         const bool changed =
@@ -2203,6 +2199,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         if (player)
         {
             player->SetScreenBounds(minX, maxX, std::nullopt);
+            player->SetMinimumY(minY);
         }
 
         // Apply to sweets manager
