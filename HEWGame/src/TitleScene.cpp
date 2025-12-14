@@ -101,22 +101,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
     {
         if (m_manager)
         {
-            auto effectDevice = ::EffekseerRendererDX11::CreateGraphicsDevice(GetDevice(), GetContext());
-            auto effectRenderer = ::EffekseerRendererDX11::Renderer::Create(effectDevice, 8000);
-            auto effectManager = Effekseer::Manager::Create(8000);
-
-            effectManager->SetSpriteRenderer(effectRenderer->CreateSpriteRenderer());
-            effectManager->SetRibbonRenderer(effectRenderer->CreateRibbonRenderer());
-            effectManager->SetRingRenderer(effectRenderer->CreateRingRenderer());
-            effectManager->SetTrackRenderer(effectRenderer->CreateTrackRenderer());
-            effectManager->SetModelRenderer(effectRenderer->CreateModelRenderer());
-
-            effectManager->SetTextureLoader(effectRenderer->CreateTextureLoader());
-            effectManager->SetModelLoader(effectRenderer->CreateModelLoader());
-            effectManager->SetMaterialLoader(effectRenderer->CreateMaterialLoader());
-            effectManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
-
-            m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(effectRenderer, effectManager));
+            m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(*m_manager));
         }
         return;
     }
