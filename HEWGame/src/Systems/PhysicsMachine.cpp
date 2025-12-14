@@ -185,8 +185,13 @@ namespace Systems
         m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
+        m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
+            ? tuning.maxStepDt
+            : (1.0f / 60.0f);
+        m_tuning.maxAccumulatedSteps = std::clamp(tuning.maxAccumulatedSteps, 1, 120);
 
         SetSubStepCount(tuning.subStepCount);
+        m_tuning.subStepCount = m_subStepCount;
         if (m_box2dSystem)
         {
             m_box2dSystem->SetPhysicsMachine(this);
@@ -248,6 +253,7 @@ namespace Systems
     void PhysicsMachine::SetSubStepCount(int subStepCount)
     {
         m_subStepCount = std::clamp(subStepCount, 1, 24);
+        m_tuning.subStepCount = m_subStepCount;
         if (m_box2dSystem)
         {
             m_box2dSystem->SetSubStepCount(m_subStepCount);
