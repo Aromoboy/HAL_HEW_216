@@ -90,5 +90,7 @@ namespace Stage
         float m_osaraRightOffsetX;
         float m_osaraOffsetY;
         float m_osaraSpawnOffsetY;
+        bool m_osaraOffsetsConfigured;
+        bool m_spawnPointsSuppressed;
     };
 }
