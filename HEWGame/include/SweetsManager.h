@@ -143,9 +143,7 @@ namespace SweetsSpace
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
         void SetSpawnOrigins(const std::vector<float3>& origins);
-        void SetRandomRotationEnabled(bool enabled);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
-        void SetRandomScaleEnabled(bool enabled);
         void SetLiveSweetsCap(int cap);
         void SetForceGeneratedColliders(bool force);
         void SetColliderConfigOverridesEnabled(bool enabled);
@@ -219,10 +217,8 @@ namespace SweetsSpace
         mutable std::mt19937 m_random;
         bool m_pendingTopUpAfterDrop;
 
-        bool m_enableRandomRotation;
         float3 m_randomRotationMinDegrees;
         float3 m_randomRotationMaxDegrees;
-        bool m_enableRandomScale;
         int m_liveSweetsCap;
 
         bool m_warnedMissingDrawSystem;
