@@ -5,29 +5,29 @@
 
 #pragma comment(lib, "d3d11.lib")
 
-#define SAFE_DELETE(p)			do{if(p){delete p; p = nullptr;}}while(0)
-#define SAFE_DELETE_ARRAY(p)	do{if(p){delete[] p; p = nullptr;}}while(0)
-#define SAFE_RELEASE(p)			do{if(p){p->Release(); p = nullptr;}}while(0)
+#define SAFE_DELETE(p)                  do{if(p){delete p; p = nullptr;}}while(0)
+#define SAFE_DELETE_ARRAY(p)    do{if(p){delete[] p; p = nullptr;}}while(0)
+#define SAFE_RELEASE(p)                 do{if(p){p->Release(); p = nullptr;}}while(0)
 
 class RenderTarget;
 class DepthStencil;
 
 enum BlendMode
 {
-	BLEND_NONE,
-	BLEND_ALPHA,
-	BLEND_ADD,
-	BLEND_ADDALPHA,
-	BLEND_SUB,
-	BLEND_SCREEN,
-	BLEND_MAX
+        BLEND_NONE,
+        BLEND_ALPHA,
+        BLEND_ADD,
+        BLEND_ADDALPHA,
+        BLEND_SUB,
+        BLEND_SCREEN,
+        BLEND_MAX
 };
 
 enum SamplerState
 {
-	SAMPLER_LINEAR,
-	SAMPLER_POINT,
-	SAMPLER_MAX
+        SAMPLER_LINEAR,
+        SAMPLER_POINT,
+        SAMPLER_MAX
 };
 
 ID3D11Device* GetDevice();
@@ -41,6 +41,7 @@ void UninitDirectX();
 void BeginDrawDirectX();
 void EndDrawDirectX();
 HRESULT ResizeDirectX(UINT width, UINT height);
+bool IsDirectXReady();
 
 void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView);
 void SetCullingMode(D3D11_CULL_MODE cull);

@@ -179,6 +179,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
 
                 g_canRender = (GetActiveWindow() == hWnd);
+                if (!IsDirectXReady())
+                {
+                        break;
+                }
                 ResizeDirectX(width, height);
                 break;
         }

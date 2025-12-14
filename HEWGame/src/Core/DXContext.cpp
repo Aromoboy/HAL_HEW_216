@@ -17,6 +17,7 @@ namespace Core
                 : m_windowHandle(nullptr)
                 , m_width(0)
                 , m_height(0)
+                , m_ready(false)
         {
         }
 
@@ -27,6 +28,7 @@ namespace Core
 
         HRESULT DXContext::Init(HWND hWnd, UINT width, UINT height, bool fullscreen)
         {
+                m_ready = false;
                 m_windowHandle = hWnd;
                 m_width = width;
                 m_height = height;
@@ -38,10 +40,13 @@ namespace Core
                         return hr;
                 }
 
+                m_ready = true;
+
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))
                 {
                         DebugMessage("[DXContext] Failed to create default render targets.\n");
+                        m_ready = false;
                         return hr;
                 }
 
@@ -75,10 +80,9 @@ namespace Core
                         return S_OK;
                 }
 
-                if (!m_swapChain)
+                if (!m_ready)
                 {
-                        DebugMessage("[DXContext] Resize requested before swap chain creation.\n");
-                        return E_FAIL;
+                        return S_OK;
                 }
 
                 if (m_context)
@@ -123,6 +127,7 @@ namespace Core
         void DXContext::Shutdown()
         {
                 ReleaseTargets();
+                m_ready = false;
                 if (m_context)
                 {
                         m_context->ClearState();
@@ -257,4 +262,3 @@ namespace Core
                 m_defaultRTV.reset();
         }
 }
-
