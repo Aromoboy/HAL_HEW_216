@@ -3,19 +3,51 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <utility>
 
 #include <box2d/box2d.h>
 #include <box2d/math_functions.h>
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
 
 #include "Systems/PhysicsMachine.h"
 #include "Physics/ShapeConstants.h"
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
     bool AreFloat3Equal(const float3& lhs, const float3& rhs)
     {
         return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    }
+
+    bool HasPhysicsDefinition(const Entities::PhysicalEntity& entity)
+    {
+        const auto& collider = entity.GetBoxColliderComponent();
+        const bool hasCollider = collider && !collider->Empty();
+
+        const auto shapeConfig = entity.GetBox2DShapeConfig();
+        const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+
+        const bool hasMeshData = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
+        return hasCollider || hasShapeConfig || hasMeshData;
     }
 }
 
@@ -487,7 +519,19 @@ namespace Entities
         {
             if (m_physicsMachine && !m_physical.HasBody())
             {
-                m_physicsMachine->RegisterBody(*this);
+                if (HasPhysicsDefinition(*this))
+                {
+                    m_physicsMachine->RegisterBody(*this);
+                }
+                else
+                {
+#if defined(_DEBUG)
+                    std::ostringstream oss;
+                    oss << "[PhysicalEntity] Deferring physics registration for tag='" << GetTag()
+                        << "' until collider/shape/mesh is ready.\n";
+                    DebugTrace(oss.str());
+#endif
+                }
             }
             return;
         }
@@ -502,7 +546,19 @@ namespace Entities
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->RegisterBody(*this);
+            if (HasPhysicsDefinition(*this))
+            {
+                m_physicsMachine->RegisterBody(*this);
+            }
+            else
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicalEntity] Deferring physics registration for tag='" << GetTag()
+                    << "' until collider/shape/mesh is ready.\n";
+                DebugTrace(oss.str());
+#endif
+            }
         }
     }
 
