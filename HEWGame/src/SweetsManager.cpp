@@ -688,6 +688,9 @@ namespace
 namespace SweetsSpace
 {
 
+    std::string NormalizeKey(const std::string& key);
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding, float minThickness);
+
 
     SweetsManager::ColliderBuildResult SweetsManager::BuildColliderForSweets(const std::string& kind,
         SweetsType type,
