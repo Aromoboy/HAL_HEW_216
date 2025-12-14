@@ -1662,15 +1662,36 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         {
             DebugTrace(std::string(kLogPrefix) + "No plate platform available; player and sweets will use default spawn heights.\n");
         }
+
+        auto selectPlatformForHeight = [&]() -> Stage::FoundationPlatform*
+        {
+            if (m_platePlatform)
+            {
+                return m_platePlatform;
+            }
+
+            for (auto& platform : m_foundationPlatforms)
+            {
+                if (platform)
+                {
+                    return platform.get();
+                }
+            }
+
+            return nullptr;
+        };
+
+        m_spawnHeightPlatform = selectPlatformForHeight();
     }
 
     if (m_sweetsManager)
     {
         std::vector<float3> spawnOrigins = m_stageData.GetSpawnPoints();
-        if (m_platePlatform)
+        if (m_spawnHeightPlatform)
         {
-            const auto& plateTransform = m_platePlatform->GetTransform();
-            const float plateTopY = plateTransform.position.y + (plateTransform.scale.y * 0.5f);
+            const auto& plateTransform = m_spawnHeightPlatform->GetTransform();
+            const AABB plateAABB = m_spawnHeightPlatform->GetAABB();
+            const float plateTopY = plateAABB.max.y;
             for (auto& origin : spawnOrigins)
             {
                 origin.y = plateTopY;
@@ -1679,7 +1700,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
             std::ostringstream oss;
             oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
-                << m_platePlatform->GetTag() << "' topY=" << plateTopY
+                << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
                 << " planeZ=" << plateTransform.position.z << "\n";
             DebugTrace(oss.str());
         }
@@ -1808,10 +1829,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
         float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.heightWorld * 0.5f);
-        if (m_platePlatform)
+        if (m_spawnHeightPlatform)
         {
-            const auto& platformXform = m_platePlatform->GetTransform();
-            platformTopY = platformXform.position.y + (platformXform.scale.y * 0.5f);
+            const AABB platformAABB = m_spawnHeightPlatform->GetAABB();
+            platformTopY = platformAABB.max.y;
         }
         player->SetMinimumY(platformTopY);
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);

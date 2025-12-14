@@ -152,6 +152,7 @@ private:
     std::vector<bool> m_platformUpdateRegistered;
     std::vector<bool> m_platformDrawRegistered;
     Stage::FoundationPlatform* m_platePlatform = nullptr;
+    Stage::FoundationPlatform* m_spawnHeightPlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
     bool m_inputRegistered = false;
