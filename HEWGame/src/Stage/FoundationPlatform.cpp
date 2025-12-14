@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -58,6 +59,64 @@ namespace
         unsigned int nullMeshes{ 0 };
         unsigned int nullMaterials{ 0 };
     };
+
+    AABB ComputeWorldAABB(const AABB& localBounds, const Transform& transform)
+    {
+        const float3 localMin{
+            std::min(localBounds.min.x, localBounds.max.x),
+            std::min(localBounds.min.y, localBounds.max.y),
+            std::min(localBounds.min.z, localBounds.max.z),
+        };
+        const float3 localMax{
+            std::max(localBounds.min.x, localBounds.max.x),
+            std::max(localBounds.min.y, localBounds.max.y),
+            std::max(localBounds.min.z, localBounds.max.z),
+        };
+
+        const float3 scale{
+            std::fabs(transform.scale.x),
+            std::fabs(transform.scale.y),
+            std::fabs(transform.scale.z),
+        };
+
+        float3 min{
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+        };
+        float3 max{
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+        };
+
+        auto accumulate = [&](float localX, float localY, float localZ)
+            {
+                const float3 world{
+                    transform.position.x + localX * scale.x,
+                    transform.position.y + localY * scale.y,
+                    transform.position.z + localZ * scale.z,
+                };
+
+                min.x = std::min(min.x, world.x);
+                min.y = std::min(min.y, world.y);
+                min.z = std::min(min.z, world.z);
+                max.x = std::max(max.x, world.x);
+                max.y = std::max(max.y, world.y);
+                max.z = std::max(max.z, world.z);
+            };
+
+        accumulate(localMin.x, localMin.y, localMin.z);
+        accumulate(localMin.x, localMin.y, localMax.z);
+        accumulate(localMin.x, localMax.y, localMin.z);
+        accumulate(localMin.x, localMax.y, localMax.z);
+        accumulate(localMax.x, localMin.y, localMin.z);
+        accumulate(localMax.x, localMin.y, localMax.z);
+        accumulate(localMax.x, localMax.y, localMin.z);
+        accumulate(localMax.x, localMax.y, localMax.z);
+
+        return AABB(max, min);
+    }
 
     Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale, float originOffsetNormalizedY)
     {
@@ -293,6 +352,37 @@ namespace Stage
         AttachPhysicsMachine(physicsMachine);
         SetGravityScale(0.0f);
         SyncVisualTransform();
+        SyncColliderBounds();
+
+#if defined(_DEBUG)
+        std::ostringstream boundsOss;
+        const Transform renderTransform = GetRenderTransform();
+        const bool hasModelBounds = m_model && m_model->HasLocalBounds();
+        const AABB& visualSourceBounds = hasModelBounds ? m_model->GetLocalBounds() : m_descriptorLocalBounds;
+        const AABB visualWorldBounds = ComputeWorldAABB(visualSourceBounds, renderTransform);
+        const float3 visualSize{
+            visualWorldBounds.max.x - visualWorldBounds.min.x,
+            visualWorldBounds.max.y - visualWorldBounds.min.y,
+            visualWorldBounds.max.z - visualWorldBounds.min.z,
+        };
+
+        const AABB colliderBounds = GetAABB();
+        const float3 colliderSize{
+            colliderBounds.max.x - colliderBounds.min.x,
+            colliderBounds.max.y - colliderBounds.min.y,
+            colliderBounds.max.z - colliderBounds.min.z,
+        };
+
+        boundsOss << kLogPrefix << "[WorldAABB] visualSize="
+            << visualSize.x << ',' << visualSize.y << ',' << visualSize.z
+            << " minY=" << visualWorldBounds.min.y
+            << " colliderSize="
+            << colliderSize.x << ',' << colliderSize.y << ',' << colliderSize.z
+            << " minY=" << colliderBounds.min.y
+            << " source=" << (hasModelBounds ? "model" : "descriptor")
+            << '\n';
+        DebugTrace(boundsOss.str());
+#endif
         DebugTrace(std::string(kLogPrefix) + "Initialized foundation platform.\n");
     }
 
