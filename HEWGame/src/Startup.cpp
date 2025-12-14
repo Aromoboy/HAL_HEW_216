@@ -13,6 +13,11 @@
 //--- プロトタイプ宣言
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+namespace
+{
+        bool g_canRender = true;
+}
+
 
 // エントリポイント
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -106,25 +111,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 			DWORD nowTime = timeGetTime();
 			float diff = static_cast<float>(nowTime - preExecTime);
-			if (diff >= 1000.0f / fFPS)
-			{
-				
+                        if (diff >= 1000.0f / fFPS)
+                        {
+                                if (g_canRender)
+                                {
+                                        Update();
+                                        Draw();
 
-				Update();
-				Draw();
+                                        if (nowTime - fpsOldTime >= 1000)
+                                        {
+                                                processingTime = static_cast<float>(timeGetTime() - nowTime);
+                                        }
 
-				if (nowTime - fpsOldTime >= 1000)
-				{
-					processingTime = static_cast<float>(timeGetTime() - nowTime);
-				}
+                                        fpsCount++;
+                                }
 
-				
-				preExecTime = nowTime;
-				fpsCount++;
-			}
-			if (nowTime - fpsOldTime >= 1000)
-			{
-				fpsCount = 0;
+                                preExecTime = nowTime;
+                        }
+                        if (nowTime - fpsOldTime >= 1000)
+                        {
+                                fpsCount = 0;
 				fpsOldTime = nowTime;
 			}
 		}
@@ -147,6 +153,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
                 PostQuitMessage(0);
                 break;
+        case WM_ACTIVATEAPP:
+                g_canRender = (wParam != FALSE) && !IsIconic(hWnd);
+                break;
+        case WM_ACTIVATE:
+        {
+                const WORD state = LOWORD(wParam);
+                g_canRender = (state != WA_INACTIVE) && !IsIconic(hWnd);
+                break;
+        }
         case WM_SIZE:
         {
                 const UINT width = LOWORD(lParam);
@@ -154,9 +169,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 if (wParam == SIZE_MINIMIZED || width == 0 || height == 0)
                 {
+                        g_canRender = false;
                         break;
                 }
 
+                g_canRender = (GetActiveWindow() == hWnd);
                 ResizeDirectX(width, height);
                 break;
         }
