@@ -9,6 +9,7 @@
 #include <box2d/math_functions.h>
 
 #include "Systems/PhysicsMachine.h"
+#include "Physics/ShapeConstants.h"
 
 namespace
 {
@@ -192,8 +193,8 @@ namespace Entities
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = std::max(0.01f, 0.5f * transform.scale.x);
-                const float hy = std::max(0.01f, 0.5f * transform.scale.y);
+                const float hx = std::max(Physics::kMinimumShapeDimensionMeters, 0.5f * transform.scale.x);
+                const float hy = std::max(Physics::kMinimumShapeDimensionMeters, 0.5f * transform.scale.y);
                 accumulate(transform.position.x - hx, transform.position.y - hy, transform.position.z);
                 accumulate(transform.position.x + hx, transform.position.y + hy, transform.position.z);
                 break;
@@ -213,7 +214,7 @@ namespace Entities
             }
             case Physics::Box2DShapeConfig::Type::Circle:
             {
-                const float radius = std::max(0.01f, m_box2dShapeConfig->radius * std::max(transform.scale.x, transform.scale.y));
+                const float radius = std::max(Physics::kMinimumShapeDimensionMeters, m_box2dShapeConfig->radius * std::max(transform.scale.x, transform.scale.y));
                 accumulate(transform.position.x - radius, transform.position.y - radius, transform.position.z);
                 accumulate(transform.position.x + radius, transform.position.y + radius, transform.position.z);
                 break;

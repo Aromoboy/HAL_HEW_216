@@ -6,6 +6,7 @@
 
 #include "Systems/Box2DPhysicsSystem.h"
 #include "Entities/PhysicalEntity.h"
+#include "Physics/ShapeConstants.h"
 
 namespace
 {
@@ -183,7 +184,7 @@ namespace Components
                 {
                         const CircleShape* circleShape = std::get_if<CircleShape>(&m_shapeData);
                         const float radius = circleShape ? circleShape->radius : 0.5f;
-                        const float scaledRadius = ToBox2DLength(std::max(0.001f, radius), std::max(transform.scale.x, transform.scale.y), transform);
+                        const float scaledRadius = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, radius), std::max(transform.scale.x, transform.scale.y), transform);
                         descriptor.AddCircle(scaledRadius);
                         break;
                 }
@@ -207,8 +208,8 @@ namespace Components
                 default:
                 {
                         const BoxShape box = std::get<BoxShape>(m_shapeData);
-                        const float hx = ToBox2DLength(std::max(0.001f, box.size.x * 0.5f), transform.scale.x, transform);
-                        const float hy = ToBox2DLength(std::max(0.001f, box.size.y * 0.5f), transform.scale.y, transform);
+                        const float hx = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, box.size.x * 0.5f), transform.scale.x, transform);
+                        const float hy = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, box.size.y * 0.5f), transform.scale.y, transform);
                         descriptor.AddBox(hx, hy);
                         break;
                 }

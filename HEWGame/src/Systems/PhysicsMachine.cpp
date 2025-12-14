@@ -2,6 +2,8 @@
 #include "Systems/Box2DPhysicsSystem.h"
 #include "Systems/Box2DContactListener.h"
 
+#include "Physics/ShapeConstants.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -513,6 +515,69 @@ namespace Systems
         const std::string& tag = body.GetTag();
         const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
 
+        const float minBox2DDimension = Entities::PhysicalEntity::ToBox2DLength(
+            Physics::kMinimumShapeDimensionMeters);
+
+        const auto enforceMinimumDimension = [&](float length, const char* context)
+        {
+            if (!(length > 0.0f))
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] " << context << " invalid or zero for tag='" << tag
+                    << "'; raising to minimum dimension=" << minBox2DDimension << "\n";
+                DebugTrace(oss.str());
+#endif
+                return minBox2DDimension;
+            }
+
+            if (length < minBox2DDimension)
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] " << context << " below minimum for tag='" << tag
+                    << "': " << length << " < " << minBox2DDimension << " (clamped)\n";
+                DebugTrace(oss.str());
+#endif
+                return minBox2DDimension;
+            }
+
+            return length;
+        };
+
+        const auto isPolygonTooSmall = [&](const std::vector<b2Vec2>& vertices)
+        {
+            if (vertices.size() < 3)
+            {
+                return true;
+            }
+
+            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            for (const b2Vec2& vertex : vertices)
+            {
+                min.x = std::min(min.x, vertex.x);
+                min.y = std::min(min.y, vertex.y);
+                max.x = std::max(max.x, vertex.x);
+                max.y = std::max(max.y, vertex.y);
+            }
+
+            const float width = max.x - min.x;
+            const float height = max.y - min.y;
+            const bool tooSmall = width < minBox2DDimension || height < minBox2DDimension;
+#if defined(_DEBUG)
+            if (tooSmall)
+            {
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Polygon collider rejected for tag='" << tag
+                    << "' (width=" << width << ", height=" << height
+                    << ") below minimum dimension=" << minBox2DDimension << "\n";
+                DebugTrace(oss.str());
+            }
+#endif
+            return tooSmall;
+        };
+
         const auto clampRange = [](float value, float minValue, float maxValue)
         {
             return std::clamp(value, minValue, maxValue);
@@ -634,7 +699,7 @@ if (isSweetTag)
         const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
         auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius = 0.0f)
         {
-            if (vertices.size() < 3)
+            if (vertices.size() < 3 || isPolygonTooSmall(vertices))
             {
                 return b2_nullShapeId;
             }
@@ -656,7 +721,8 @@ if (isSweetTag)
                 return b2_nullShapeId;
             }
 
-            const b2Circle circle{ b2Vec2{0.0f, 0.0f}, radius };
+            const float clamped = enforceMinimumDimension(radius, "Circle radius");
+            const b2Circle circle{ b2Vec2{0.0f, 0.0f}, clamped };
             return b2CreateCircleShape(bodyId, &shapeDef, &circle);
         };
 
@@ -682,7 +748,7 @@ if (isSweetTag)
                 case Physics::ColliderShapeType::Circle:
                 {
                     const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
-                    recordFixture(createCircleFixture(scaledRadius));
+                    recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius")));
                     break;
                 }
                 case Physics::ColliderShapeType::Box:
@@ -756,8 +822,8 @@ if (isSweetTag)
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = ToBox2DLength(std::max(0.01f, 0.5f), transform.scale.x, transform);
-                const float hy = ToBox2DLength(std::max(0.01f, 0.5f), transform.scale.y, transform);
+                const float hx = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.x, transform), "Box half-width");
+                const float hy = enforceMinimumDimension(ToBox2DLength(0.5f, transform.scale.y, transform), "Box half-height");
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, {
                     b2Vec2{ -hx, -hy },
                     b2Vec2{ hx, -hy },
@@ -786,11 +852,10 @@ if (isSweetTag)
             }
             case Physics::Box2DShapeConfig::Type::Circle:
             {
-                const float radius = std::max(0.01f, shapeConfig->radius);
-                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Circle, {}, radius });
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
 
-                const float scaledRadius = ToBox2DLength(radius, std::max(transform.scale.x, transform.scale.y), transform);
-                recordFixture(createCircleFixture(scaledRadius));
+                const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
+                recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius")));
                 if (fixtureCount > 0)
                 {
                     colliderComponent->createdFixtureCount = fixtureCount;
