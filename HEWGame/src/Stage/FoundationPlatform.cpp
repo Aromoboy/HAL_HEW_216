@@ -298,9 +298,14 @@ namespace Stage
         , m_model(nullptr)
         , m_debugColor(SanitizeColor(color))
     {
-        m_worldScale = ClampWorldScale(transform.scale);
+        m_descriptorDimensions = float3{
+            std::fabs(transform.scale.x),
+            std::fabs(transform.scale.y),
+            std::fabs(transform.scale.z),
+        };
+        m_worldScale = ClampWorldScale(m_descriptorDimensions);
         m_anchorTransform.scale = m_worldScale;
-        m_descriptorLocalBounds = BuildDescriptorLocalBounds(m_worldScale);
+        m_descriptorLocalBounds = BuildDescriptorLocalBounds(m_descriptorDimensions);
 
         LoadPlatformModel();
 
