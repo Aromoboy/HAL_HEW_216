@@ -683,6 +683,12 @@ namespace
         return vertices;
     }
 
+}
+
+namespace SweetsSpace
+{
+
+
     SweetsManager::ColliderBuildResult SweetsManager::BuildColliderForSweets(const std::string& kind,
         SweetsType type,
         const Transform& transform,
@@ -1514,10 +1520,7 @@ namespace
         return expand;
     }
 
-}
-
-namespace SweetsSpace
-{
+    
     const char* ToString(DeleteReason reason)
     {
         switch (reason)
