@@ -31,6 +31,42 @@ namespace
     constexpr uint16_t kPlayerCategory = 0x0002;
     constexpr uint16_t kFloorCategory = 0x0004;
     constexpr uint16_t kSweetsCategory = 0x0008;
+    constexpr float kScaleAssertionEpsilon = 0.0001f;
+
+    float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
+    {
+#if defined(_DEBUG)
+        assert(std::isfinite(renderLength));
+        assert(std::isfinite(axisScale));
+        const float scaleX = transform.scale.x;
+        const float scaleY = transform.scale.y;
+        const float uniformScale = std::max(scaleX, scaleY);
+        const bool matchesAxis = std::fabs(axisScale - scaleX) <= kScaleAssertionEpsilon
+            || std::fabs(axisScale - scaleY) <= kScaleAssertionEpsilon
+            || std::fabs(axisScale - uniformScale) <= kScaleAssertionEpsilon;
+        assert(matchesAxis && "Render-space collider length must be scaled by transform.scale before Box2D conversion.");
+#endif
+        return Entities::PhysicalEntity::ToBox2DLength(renderLength * axisScale);
+    }
+
+    b2Vec2 ToBox2DPosition(const b2Vec2& renderPosition, const Transform& transform)
+    {
+        return b2Vec2{
+            ToBox2DLength(renderPosition.x, transform.scale.x, transform),
+            ToBox2DLength(renderPosition.y, transform.scale.y, transform),
+        };
+    }
+
+    std::vector<b2Vec2> ToBox2DVertices(const std::vector<b2Vec2>& renderVertices, const Transform& transform)
+    {
+        std::vector<b2Vec2> scaledVertices = renderVertices;
+        for (auto& vertex : scaledVertices)
+        {
+            vertex = ToBox2DPosition(vertex, transform);
+        }
+
+        return scaledVertices;
+    }
 
     void DebugTrace(const std::string& message)
     {
@@ -645,8 +681,7 @@ if (isSweetTag)
                 {
                 case Physics::ColliderShapeType::Circle:
                 {
-                    const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
-                        shape.radius * std::max(transform.scale.x, transform.scale.y));
+                    const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
                     recordFixture(createCircleFixture(scaledRadius));
                     break;
                 }
@@ -654,14 +689,7 @@ if (isSweetTag)
                 case Physics::ColliderShapeType::Polygon:
                 default:
                 {
-                    std::vector<b2Vec2> scaledVertices = shape.vertices;
-                    for (auto& vertex : scaledVertices)
-                    {
-                        vertex.x = Entities::PhysicalEntity::ToBox2DLength(vertex.x * transform.scale.x);
-                        vertex.y = Entities::PhysicalEntity::ToBox2DLength(vertex.y * transform.scale.y);
-                    }
-
-                    recordFixture(createPolygonFixture(std::move(scaledVertices)));
+                    recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform)));
                     break;
                 }
                 }
@@ -693,28 +721,14 @@ if (isSweetTag)
 
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
 
-                std::vector<b2Vec2> scaled = polygon;
-                for (auto& v : scaled)
-                {
-                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                }
-
-                recordFixture(createPolygonFixture(std::move(scaled)));
+                recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform)));
             }
 
             if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
             {
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
 
-                std::vector<b2Vec2> scaled = meshBoundary;
-                for (auto& v : scaled)
-                {
-                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                }
-
-                recordFixture(createPolygonFixture(std::move(scaled)));
+                recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform)));
             }
 
             colliderComponent->createdFixtureCount = fixtureCount;
@@ -742,8 +756,8 @@ if (isSweetTag)
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
-                const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
+                const float hx = ToBox2DLength(std::max(0.01f, 0.5f), transform.scale.x, transform);
+                const float hy = ToBox2DLength(std::max(0.01f, 0.5f), transform.scale.y, transform);
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, {
                     b2Vec2{ -hx, -hy },
                     b2Vec2{ hx, -hy },
@@ -762,14 +776,7 @@ if (isSweetTag)
             {
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
 
-                std::vector<b2Vec2> scaled = shapeConfig->vertices;
-                for (auto& v : scaled)
-                {
-                    v.x = Entities::PhysicalEntity::ToBox2DLength(v.x * transform.scale.x);
-                    v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
-                }
-
-                recordFixture(createPolygonFixture(std::move(scaled)));
+                recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform)));
                 if (fixtureCount > 0)
                 {
                     colliderComponent->createdFixtureCount = fixtureCount;
@@ -782,8 +789,7 @@ if (isSweetTag)
                 const float radius = std::max(0.01f, shapeConfig->radius);
                 colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Circle, {}, radius });
 
-                const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
-                    radius * std::max(transform.scale.x, transform.scale.y));
+                const float scaledRadius = ToBox2DLength(radius, std::max(transform.scale.x, transform.scale.y), transform);
                 recordFixture(createCircleFixture(scaledRadius));
                 if (fixtureCount > 0)
                 {

@@ -1,9 +1,40 @@
 #include "Components/BoxColliderComponent.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 #include "Systems/Box2DPhysicsSystem.h"
+#include "Entities/PhysicalEntity.h"
+
+namespace
+{
+        constexpr float kScaleAssertionEpsilon = 0.0001f;
+
+        float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
+        {
+#if defined(_DEBUG)
+                assert(std::isfinite(renderLength));
+                assert(std::isfinite(axisScale));
+                const float scaleX = transform.scale.x;
+                const float scaleY = transform.scale.y;
+                const float uniformScale = std::max(scaleX, scaleY);
+                const bool matchesAxis = std::fabs(axisScale - scaleX) <= kScaleAssertionEpsilon
+                        || std::fabs(axisScale - scaleY) <= kScaleAssertionEpsilon
+                        || std::fabs(axisScale - uniformScale) <= kScaleAssertionEpsilon;
+                assert(matchesAxis && "Render-space collider length must be scaled by transform.scale before Box2D conversion.");
+#endif
+                return Entities::PhysicalEntity::ToBox2DLength(renderLength * axisScale);
+        }
+
+        b2Vec2 ToBox2DPosition(const b2Vec2& renderPosition, const Transform& transform)
+        {
+                return b2Vec2{
+                    ToBox2DLength(renderPosition.x, transform.scale.x, transform),
+                    ToBox2DLength(renderPosition.y, transform.scale.y, transform),
+                };
+        }
+}
 
 namespace
 {
@@ -28,7 +59,7 @@ namespace Components
         {
                 (void)physicsSystem;
                 (void)transform;
-                m_descriptor = BuildDescriptor();
+                m_descriptor = BuildDescriptor(transform);
                 return !m_descriptor.Empty();
         }
 
@@ -139,7 +170,7 @@ namespace Components
                 return data;
         }
 
-        Physics::BoxColliderComponent BoxColliderComponent::BuildDescriptor() const
+        Physics::BoxColliderComponent BoxColliderComponent::BuildDescriptor(const Transform& transform) const
         {
                 Physics::BoxColliderComponent descriptor{};
                 descriptor.shapeDef.density = SanitizeDensity(m_material.density);
@@ -152,7 +183,8 @@ namespace Components
                 {
                         const CircleShape* circleShape = std::get_if<CircleShape>(&m_shapeData);
                         const float radius = circleShape ? circleShape->radius : 0.5f;
-                        descriptor.AddCircle(std::max(0.001f, radius));
+                        const float scaledRadius = ToBox2DLength(std::max(0.001f, radius), std::max(transform.scale.x, transform.scale.y), transform);
+                        descriptor.AddCircle(scaledRadius);
                         break;
                 }
                 case Shape::Polygon:
@@ -160,7 +192,14 @@ namespace Components
                         const PolygonShape* polygonShape = std::get_if<PolygonShape>(&m_shapeData);
                         if (polygonShape && polygonShape->vertices.size() >= 3)
                         {
-                                descriptor.AddPolygon(polygonShape->vertices);
+                                std::vector<b2Vec2> scaledVertices{};
+                                scaledVertices.reserve(polygonShape->vertices.size());
+                                for (const auto& vertex : polygonShape->vertices)
+                                {
+                                        scaledVertices.emplace_back(ToBox2DPosition(vertex, transform));
+                                }
+
+                                descriptor.AddPolygon(scaledVertices);
                         }
                         break;
                 }
@@ -168,8 +207,8 @@ namespace Components
                 default:
                 {
                         const BoxShape box = std::get<BoxShape>(m_shapeData);
-                        const float hx = std::max(0.001f, box.size.x * 0.5f);
-                        const float hy = std::max(0.001f, box.size.y * 0.5f);
+                        const float hx = ToBox2DLength(std::max(0.001f, box.size.x * 0.5f), transform.scale.x, transform);
+                        const float hy = ToBox2DLength(std::max(0.001f, box.size.y * 0.5f), transform.scale.y, transform);
                         descriptor.AddBox(hx, hy);
                         break;
                 }
