@@ -65,7 +65,8 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
-        constexpr const char* kStageConfigPath = "Assets/Config/stage_default.cfg";
+        constexpr const char* kStageChecklistConfigPath = "Assets/Config/stage_checklist.cfg";
+        constexpr const char* kStageDefaultConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
         constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
@@ -1233,7 +1234,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
 
-    const bool stageLoaded = m_stageData.LoadFromFile(kStageConfigPath);
+    bool stageLoaded = m_stageData.LoadFromFile(kStageChecklistConfigPath);
+    const char* stageConfigPathUsed = kStageChecklistConfigPath;
+    if (!stageLoaded)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Checklist stage config missing; falling back to default stage.\n");
+        stageConfigPathUsed = kStageDefaultConfigPath;
+        stageLoaded = m_stageData.LoadFromFile(stageConfigPathUsed);
+    }
     m_phaseManager.Initialize(
         m_stageData.GetPhaseThresholds(),
         m_stageData.GetPhaseRewardMultipliers(),
@@ -1269,6 +1277,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
+            << " from '" << stageConfigPathUsed << "'"
             << " planeZ=" << m_stageData.GetPlaneZ()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
@@ -1733,6 +1742,38 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         };
 
         m_spawnHeightPlatform = selectPlatformForHeight();
+    }
+
+    {
+        float computedGround = 0.0f;
+        auto computeTopFromTransform = [](const Transform& transform)
+        {
+            return transform.position.y + (transform.scale.y * 0.5f);
+        };
+
+        if (m_spawnHeightPlatform)
+        {
+            if (const auto* descriptor = findDescriptorForPlatform(m_spawnHeightPlatform))
+            {
+                computedGround = computePlatformTopY(*descriptor);
+            }
+            else
+            {
+                computedGround = computeTopFromTransform(m_spawnHeightPlatform->GetTransform());
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Ground] checklist baseline set to platform '"
+                << m_spawnHeightPlatform->GetTag() << "' topY=" << computedGround << "\\n";
+            DebugTrace(oss.str());
+        }
+        else if (!platformDescriptors.empty())
+        {
+            computedGround = computePlatformTopY(platformDescriptors.front());
+            DebugTrace(std::string(kLogPrefix) + "[Ground] baseline derived from first descriptor; spawn platform missing.\\n");
+        }
+
+        m_groundY = computedGround;
     }
 
     if (m_sweetsManager)
