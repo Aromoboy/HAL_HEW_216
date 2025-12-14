@@ -135,6 +135,9 @@ private:
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
+    const Stage::PlatformDescriptor* FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const;
+    float ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const;
+    void RefreshSweetsSpawnOrigins();
     std::vector<StageObject> m_stageObjects;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;

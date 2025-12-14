@@ -3296,10 +3296,14 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
+    void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins, std::optional<float> spawnHeightOffset)
     {
         m_spawnOrigins = origins;
         m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+        if (spawnHeightOffset.has_value())
+        {
+            m_spawnHeightOffset = *spawnHeightOffset;
+        }
         const auto seed = std::random_device{}();
         m_random.seed(seed);
 
