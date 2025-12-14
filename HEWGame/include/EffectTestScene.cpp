@@ -1,6 +1,8 @@
 #include "EffectTestScene.h"
 
 #include "DirectX.h"
+#include "Core/ActionId.h"
+#include "Core/Input.h"
 
 #include "Defines.h"
 #include "PerspectiveCamera.h"
