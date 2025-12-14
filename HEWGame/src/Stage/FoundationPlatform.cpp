@@ -59,24 +59,24 @@ namespace
         unsigned int nullMaterials{ 0 };
     };
 
-    Physics::BoxColliderComponent CreateColliderFromBounds(const Transform& transform, const AABB& bounds, float pivotOffsetNormalizedY)
+    Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale, float originOffsetNormalizedY)
     {
-        (void)transform;
-
         Physics::BoxColliderComponent component;
         component.shapeDef.density = 0.0f;
         component.shapeDef.material.friction = 0.8f;
 
-        const float3 center = bounds.Center();
-        const float3 extents = bounds.Extents();
-        // 生のメッシュ範囲を保持する。PhysicsMachine::CreateBodyはBox2Dフィクスチャ構築時にエンティティのtransform.scaleを適用する
-        const float halfWidth  = std::max(0.01f, extents.x);
-        const float halfHeight = std::max(0.01f, extents.y);
+        const float safeWidth = std::max(0.01f, std::fabs(worldScale.x));
+        const float safeHeight = std::max(0.01f, std::fabs(worldScale.y));
+
+        // PhysicsMachine::CreateBody で transform.scale が適用されるため、ここでは world サイズを正規化して保持する
+        const float halfWidth = safeWidth * 0.5f / safeWidth;
+        const float halfHeight = safeHeight * 0.5f / safeHeight;
+        const float centerY = originOffsetNormalizedY;
 
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ center.x, center.y + pivotOffsetNormalizedY }
+            b2Vec2{ 0.0f, centerY }
         );
 
         return component;
@@ -272,12 +272,10 @@ namespace Stage
         }
         colliderComponent.shapeDef.density = 0.0f;
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Platform collider uses descriptor bounds; model bounds reserved for visual normalization.\n";
-        DebugTrace(oss.str());
-
-        const float pivotOffsetNormalized = (visualScale.y != 0.0f) ? (pivotInfo.offsetY / visualScale.y) : 0.0f;
-        colliderComponent = CreateColliderFromBounds(m_anchorTransform, m_descriptorLocalBounds, pivotOffsetNormalized);
+        const float pivotOffsetNormalized = (m_worldScale.y != 0.0f)
+            ? (m_visualPivotOffset / m_worldScale.y)
+            : 0.0f;
+        colliderComponent = CreateColliderFromWorldDimensions(m_worldScale, pivotOffsetNormalized);
 
         SetCollisionLayer(Collision::CollisionLayer::Floor);
         SetDebugColor(m_debugColor);
