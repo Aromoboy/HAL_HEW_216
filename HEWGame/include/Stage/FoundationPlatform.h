@@ -59,5 +59,7 @@ namespace Stage
         std::shared_ptr<Render::Model> m_model;
         DirectX::XMFLOAT4 m_debugColor;
         AABB m_descriptorLocalBounds;
+        float m_visualScaleMultiplier = 1.0f;
+        float m_visualPivotOffset = 0.0f;
     };
 }

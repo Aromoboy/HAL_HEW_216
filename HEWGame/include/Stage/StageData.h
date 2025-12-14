@@ -15,6 +15,9 @@ namespace Stage
         float depth = 1.0f;
         float widthFraction = 1.0f;
         float heightFraction = 1.0f;
+        float widthWorld = 1.0f;
+        float heightWorld = 1.0f;
+        float depthWorld = 1.0f;
         DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
@@ -29,7 +32,7 @@ namespace Stage
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
-        //ミニフェーズ
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
         const std::vector<float>& GetPhaseMiniThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPoints() const noexcept;
@@ -60,8 +63,8 @@ namespace Stage
         std::vector<PlatformDescriptor> m_platforms;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
-        std::vector<float> m_phaseMiniThresholds;        //ミニフェーズ
-        std::vector<float> m_phaseRewardMiniMultipliers; //ミニフェーズ
+        std::vector<float> m_phaseMiniThresholds;        //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        std::vector<float> m_phaseRewardMiniMultipliers; //繝溘ル繝輔ぉ繝ｼ繧ｺ
         std::vector<float3> m_spawnPoints;
         std::string m_sourcePath;
         bool m_loadedFromFile;

@@ -1087,18 +1087,7 @@ namespace
         };
 
         constexpr float kStageCenterX = 0.0f;
-        constexpr float kPlatformGridWidthMeters = 40.0f;
-        constexpr float kPlatformGridHeightMeters = 30.0f;
         constexpr float kCameraStateEpsilon = 1e-4f;
-
-        float ComputeGridDimension(float fraction, float gridDimension, float fallback)
-        {
-            if (std::isfinite(fraction) && fraction > 0.0f && std::isfinite(gridDimension) && gridDimension > 0.0f)
-            {
-                return fraction * gridDimension;
-            }
-            return fallback;
-        }
 
         bool HasMeaningfulDifference(float previous, float current, float epsilon = kCameraStateEpsilon)
         {
@@ -1123,12 +1112,10 @@ namespace
             Transform result{};
             result.position = float3{ stageCenterX + descriptor.center.x, descriptor.center.y, descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
-            const float targetWidth = ComputeGridDimension(descriptor.widthFraction, kPlatformGridWidthMeters, descriptor.scale.x);
-            const float targetHeight = ComputeGridDimension(descriptor.heightFraction, kPlatformGridHeightMeters, descriptor.scale.y);
             result.scale = float3{
-                targetWidth,
-                targetHeight,
-                std::max(0.01f, descriptor.depth)
+                descriptor.widthWorld,
+                descriptor.heightWorld,
+                std::max(0.01f, descriptor.depthWorld)
             };
             return result;
         }
@@ -1274,6 +1261,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             oss << kLogPrefix << " PlatformDesc[" << i << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
                 << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
                 << descriptor.scale.z << ") depth=" << descriptor.depth
+                << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld
+                << ")"
                 << " widthFraction=" << descriptor.widthFraction
                 << " heightFraction=" << descriptor.heightFraction << "\n";
         }
