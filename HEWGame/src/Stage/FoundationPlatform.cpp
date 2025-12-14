@@ -34,6 +34,8 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/cake_high.fbx";
+    // Normalize models so their largest full dimension matches this reference size before
+    // applying descriptor-provided world scales derived from the screenshot grid.
     constexpr float kScaleReferenceMeters = 1.0f;
     constexpr float kMinNormalizationScale = 0.02f;
     constexpr float kMaxNormalizationScale = 50.0f;
@@ -103,13 +105,13 @@ namespace
 
         const AABB bounds = model.GetLocalBounds();
         const float3 extents = bounds.Extents();
-        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
-        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
+        const float largestDimension = std::max({ extents.x, extents.y, extents.z }) * 2.0f; // convert half-extent to full size
+        if (!std::isfinite(largestDimension) || largestDimension <= 0.0f)
         {
             return 1.0f;
         }
 
-        const float rawScale = kScaleReferenceMeters / largestExtent;
+        const float rawScale = kScaleReferenceMeters / largestDimension;
         if (!std::isfinite(rawScale) || rawScale <= 0.0f)
         {
             return 1.0f;
@@ -119,8 +121,9 @@ namespace
         if (std::fabs(clamped - 1.0f) > 0.01f)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] platform extents=(" << extents.x << ',' << extents.y << ',' << extents.z
-                << ") raw=" << rawScale << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
+            oss << kLogPrefix << "[ScaleNorm] platform extents(full)=(" << (extents.x * 2.0f) << ',' << (extents.y * 2.0f)
+                << ',' << (extents.z * 2.0f) << ") raw=" << rawScale << " clamped=" << clamped
+                << " referenceMeters=" << kScaleReferenceMeters << "\n";
             DebugTrace(oss.str());
         }
 
@@ -246,8 +249,7 @@ namespace Stage
         const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
         if (pivotOffsetY != 0.0f)
         {
-            const float halfHeight = correctedTransform.scale.y * 0.5f;
-            const float clampedPivot = std::clamp(pivotOffsetY, -halfHeight, halfHeight);
+            const float clampedPivot = std::clamp(pivotOffsetY, -correctedTransform.scale.y, correctedTransform.scale.y);
             correctedTransform.position.y += clampedPivot;
 
             std::ostringstream oss;
