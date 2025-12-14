@@ -228,6 +228,9 @@
     <ClCompile Include="src\Stage\FoundationPlatform.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
+    <ClCompile Include="src\Stage\OsaraPlate.cpp">
+      <Filter>Stage</Filter>
+    </ClCompile>
     <ClCompile Include="src\Stage\StageData.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
@@ -524,6 +527,9 @@
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\FoundationPlatform.h">
+      <Filter>Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stage\OsaraPlate.h">
       <Filter>Stage</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\StageData.h">
