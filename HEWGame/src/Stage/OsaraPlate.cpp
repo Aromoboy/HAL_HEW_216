@@ -141,15 +141,14 @@ namespace Stage
         Systems::PhysicsMachine* physicsMachine,
         Core::UpdatePhase phase,
         int priority)
-        : Entities::PhysicalEntity(tag,
-            anchor.position,
-            anchor.rotation,
-            ClampWorldScale(anchor.scale),
+        : Entities::PhysicalEntity(Transform{ anchor.position, anchor.rotation, ClampWorldScale(anchor.scale) },
             std::nullopt,
             Collision::CollisionLayer::Floor,
+            nullptr,
             physicsMachine,
             phase,
-            priority)
+            priority,
+            tag)
         , m_anchorTransform(anchor)
     {
         m_worldScale = ClampWorldScale(anchor.scale);
