@@ -34,6 +34,7 @@ namespace
 
     constexpr const char* kLogPrefix = "[FoundationPlatform] ";
     constexpr const char* kPlatformModelPath = "Assets/Model/cake_high.fbx";
+    // モデルを正規化し、最大の完全な次元がこの基準サイズに一致するようにする
     constexpr float kScaleReferenceMeters = 1.0f;
     constexpr float kMinNormalizationScale = 0.02f;
     constexpr float kMaxNormalizationScale = 50.0f;
@@ -70,8 +71,7 @@ namespace
 
         const float3 center = bounds.Center();
         const float3 extents = bounds.Extents();
-        // Preserve raw mesh extents; PhysicsMachine::CreateBody applies the entity's transform.scale
-        // when it builds Box2D fixtures.
+        // 生のメッシュ範囲を保持する。PhysicsMachine::CreateBodyはBox2Dフィクスチャ構築時にエンティティのtransform.scaleを適用する
         const float halfWidth  = std::max(0.01f, extents.x);
         const float halfHeight = std::max(0.01f, extents.y);
 
@@ -103,13 +103,13 @@ namespace
 
         const AABB bounds = model.GetLocalBounds();
         const float3 extents = bounds.Extents();
-        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
-        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
+        const float largestDimension = std::max({ extents.x, extents.y, extents.z }) * 2.0f; // ハーフエクステントをフルサイズに変換する
+        if (!std::isfinite(largestDimension) || largestDimension <= 0.0f)
         {
             return 1.0f;
         }
 
-        const float rawScale = kScaleReferenceMeters / largestExtent;
+        const float rawScale = kScaleReferenceMeters / largestDimension;
         if (!std::isfinite(rawScale) || rawScale <= 0.0f)
         {
             return 1.0f;
@@ -119,8 +119,9 @@ namespace
         if (std::fabs(clamped - 1.0f) > 0.01f)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] platform extents=(" << extents.x << ',' << extents.y << ',' << extents.z
-                << ") raw=" << rawScale << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
+            oss << kLogPrefix << "[ScaleNorm] platform extents(full)=(" << (extents.x * 2.0f) << ',' << (extents.y * 2.0f)
+                << ',' << (extents.z * 2.0f) << ") raw=" << rawScale << " clamped=" << clamped
+                << " referenceMeters=" << kScaleReferenceMeters << "\n";
             DebugTrace(oss.str());
         }
 
@@ -246,8 +247,7 @@ namespace Stage
         const float pivotOffsetY = Render::ComputePivotOffsetYOriginBottom(m_model, correctedTransform.scale);
         if (pivotOffsetY != 0.0f)
         {
-            const float halfHeight = correctedTransform.scale.y * 0.5f;
-            const float clampedPivot = std::clamp(pivotOffsetY, -halfHeight, halfHeight);
+            const float clampedPivot = std::clamp(pivotOffsetY, -correctedTransform.scale.y, correctedTransform.scale.y);
             correctedTransform.position.y += clampedPivot;
 
             std::ostringstream oss;
@@ -472,7 +472,7 @@ namespace Stage
 
     void FoundationPlatform::RefreshRenderTransform()
     {
-        // Keep render calls aligned with the synchronized visual transform without rebuilding at draw time.
+        // 描画時に再構築せずに、レンダリング呼び出しを同期化された視覚変換と整合させる
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 }
