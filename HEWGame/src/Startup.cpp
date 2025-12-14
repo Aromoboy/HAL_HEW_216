@@ -5,6 +5,7 @@
 #include <string>
 #include "DebugConsole.h"
 #include "Diagnostics/Logger.h"
+#include "DirectX.h"
 
 // timeGetTime周りの使用
 #pragma comment(lib, "winmm.lib")
@@ -141,11 +142,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 // ウィンドウプロシージャ
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message)
-	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	}
-	return DefWindowProc(hWnd, message, wParam, lParam);
+        switch (message)
+        {
+        case WM_DESTROY:
+                PostQuitMessage(0);
+                break;
+        case WM_SIZE:
+        {
+                const UINT width = LOWORD(lParam);
+                const UINT height = HIWORD(lParam);
+
+                if (wParam == SIZE_MINIMIZED || width == 0 || height == 0)
+                {
+                        break;
+                }
+
+                ResizeDirectX(width, height);
+                break;
+        }
+        }
+        return DefWindowProc(hWnd, message, wParam, lParam);
 }
