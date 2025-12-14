@@ -17,6 +17,7 @@ namespace Core
                 : m_windowHandle(nullptr)
                 , m_width(0)
                 , m_height(0)
+                , m_ready(false)
         {
         }
 
@@ -27,6 +28,7 @@ namespace Core
 
         HRESULT DXContext::Init(HWND hWnd, UINT width, UINT height, bool fullscreen)
         {
+                m_ready = false;
                 m_windowHandle = hWnd;
                 m_width = width;
                 m_height = height;
@@ -38,10 +40,13 @@ namespace Core
                         return hr;
                 }
 
+                m_ready = true;
+
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))
                 {
-                        DebugLog::DebugMessage("[DXContext] Failed to create default render targets.\n");
+                        DebugMessage("[DXContext] Failed to create default render targets.\n");
+                        m_ready = false;
                         return hr;
                 }
 
@@ -70,18 +75,18 @@ namespace Core
 
         HRESULT DXContext::Resize(UINT width, UINT height)
         {
-                if (!m_swapChain)
+                if (width == 0 || height == 0)
                 {
-                        DebugLog::DebugMessage("[DXContext] Resize requested before swap chain creation.\n");
-                        return E_FAIL;
+                        return S_OK;
                 }
 
-                m_width = width;
-                m_height = height;
+                if (!m_ready)
+                {
+                        return S_OK;
+                }
 
                 if (m_context)
                 {
-                        DebugLog::DebugMessage("[DXContext] Clearing render targets and shader resources prior to resize.\n");
                         m_context->OMSetRenderTargets(0, nullptr, nullptr);
 
                         ID3D11ShaderResourceView* nullSrvs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
@@ -102,6 +107,9 @@ namespace Core
                         return hr;
                 }
 
+                m_width = width;
+                m_height = height;
+
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))
                 {
@@ -118,6 +126,7 @@ namespace Core
         void DXContext::Shutdown()
         {
                 ReleaseTargets();
+                m_ready = false;
                 if (m_context)
                 {
                         m_context->ClearState();
@@ -168,8 +177,10 @@ namespace Core
                 sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
                 sd.BufferCount = 1;
                 sd.OutputWindow = hWnd;
-                sd.Windowed = fullscreen ? FALSE : TRUE;
-                sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+                sd.Windowed = TRUE;
+                sd.Flags = 0;
+
+                static_cast<void>(fullscreen);
 
                 constexpr std::array<D3D_DRIVER_TYPE, 3> driverTypes = {
                         D3D_DRIVER_TYPE_HARDWARE,
@@ -250,4 +261,3 @@ namespace Core
                 m_defaultRTV.reset();
         }
 }
-

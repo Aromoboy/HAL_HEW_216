@@ -16,6 +16,7 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 #include "Diagnostics/Logger.h"
+#include "FullscreenManager.h"
 
 namespace
 {
@@ -87,6 +88,11 @@ void Update()
 #ifdef _DEBUG
         if (g_input.IsTrigger(Core::ActionId::DebugConsole)) DebugConsole::ToggleConsole();
 #endif
+
+        if (g_input.IsTrigger(Core::ActionId::ToggleFullscreen))
+        {
+                FullscreenManager::Toggle();
+        }
 }
 
 void Draw()

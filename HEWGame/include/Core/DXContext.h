@@ -21,6 +21,8 @@ namespace Core
                 HRESULT Resize(UINT width, UINT height);
                 void Shutdown();
 
+                bool IsReady() const { return m_ready; }
+
                 ID3D11Device* GetDevice() const;
                 ID3D11DeviceContext* GetContext() const;
                 IDXGISwapChain* GetSwapChain() const;
@@ -41,6 +43,7 @@ namespace Core
                 HWND m_windowHandle;
                 UINT m_width;
                 UINT m_height;
+                bool m_ready;
         };
 }
 

@@ -50,6 +50,7 @@ namespace Core
         m_bindings[ActionId::Pause] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
         m_bindings[ActionId::Retry] = MakeBinding('R', 0, -1, 1.0f);
         m_bindings[ActionId::DebugConsole] = MakeBinding(VK_F1, 0, -1, 1.0f);
+        m_bindings[ActionId::ToggleFullscreen] = MakeBinding(VK_F11, 0, -1, 1.0f);
         m_bindings[ActionId::CameraToggle] = MakeBinding(VK_RETURN, 0, -1, 1.0f);
         m_bindings[ActionId::CameraHeightToggle] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
         m_bindings[ActionId::SpeedBoost] = MakeBinding('1', 0, -1, 1.0f);
@@ -66,6 +67,7 @@ namespace Core
         m_actionKeys[ActionId::Pause] = { VK_SPACE };
         m_actionKeys[ActionId::Retry] = { static_cast<unsigned char>('R') };
         m_actionKeys[ActionId::DebugConsole] = { VK_F1 };
+        m_actionKeys[ActionId::ToggleFullscreen] = { VK_F11 };
         m_actionKeys[ActionId::CameraToggle] = { VK_RETURN };
         m_actionKeys[ActionId::CameraHeightToggle] = { VK_SPACE };
         m_actionKeys[ActionId::SpeedBoost] = { static_cast<unsigned char>('1') };

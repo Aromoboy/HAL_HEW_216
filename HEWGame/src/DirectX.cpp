@@ -30,7 +30,12 @@ RenderTarget* GetDefaultRTV()
 }
 DepthStencil* GetDefaultDSV()
 {
-	return g_dxContext.GetDefaultDSV();
+        return g_dxContext.GetDefaultDSV();
+}
+
+bool IsDirectXReady()
+{
+        return g_dxContext.IsReady();
 }
 
 
@@ -156,6 +161,11 @@ void BeginDrawDirectX()
 void EndDrawDirectX()
 {
         g_dxContext.EndDraw();
+}
+
+HRESULT ResizeDirectX(UINT width, UINT height)
+{
+        return g_dxContext.Resize(width, height);
 }
 
 

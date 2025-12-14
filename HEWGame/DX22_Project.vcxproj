@@ -201,6 +201,7 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\BaseCamera.cpp" />
+    <ClCompile Include="src\SettingScene.cpp" />
     <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
     <ClCompile Include="src\BackgroundRenderer.cpp" />
@@ -229,6 +230,7 @@
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
+    <ClCompile Include="src\TitleRenderer.cpp" />
     <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\ScenePowerUp.cpp" />
     <ClCompile Include="src\SpriteRenderer.cpp" />
@@ -247,7 +249,9 @@
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
+    <ClCompile Include="src\FullscreenManager.cpp" />
     <ClCompile Include="src\Startup.cpp" />
+    <ClCompile Include="src\WindowManager.cpp" />
     <ClCompile Include="src\TestObject.cpp" />
     <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\TextureCache.cpp" />
@@ -285,6 +289,7 @@
     <ClInclude Include="include\Core\VertexBuffer.h" />
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugColliderRenderer.h" />
+    <ClInclude Include="include\SettingScene.h" />
     <ClInclude Include="include\Systems\Box2DContactListener.h" />
     <ClInclude Include="include\PowerUpCursor.h" />
     <ClInclude Include="include\PowerUpManager.h" />
@@ -329,6 +334,7 @@
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneManager.h" />
     <ClInclude Include="include\SelectScene.h" />
+    <ClInclude Include="include\TitleRenderer.h" />
     <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
@@ -348,6 +354,8 @@
     <ClInclude Include="include\TextureCache.h" />
     <ClInclude Include="include\TextureDX.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
+    <ClInclude Include="include\FullscreenManager.h" />
+    <ClInclude Include="include\WindowManager.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
