@@ -1,3 +1,4 @@
 # meshPath,posX,posY,posZ,rotX,rotY,rotZ,scaleX,scaleY,scaleZ,spinEnabled,spinAxisX,spinAxisY,spinAxisZ,spinSpeed
 ,,,,,,,,,,,,,,
 #ó·ÅFAssets/Model/LowPolyNature/Models/Tree_01.fbx,0,0,3,0,0,0,0.01,0.01,0.01,FALSE,0,1,0,0
+Assets/Model/Osara.fbx,0,0,0,0,0,0,1,1,1,FALSE,0,1,0,0
