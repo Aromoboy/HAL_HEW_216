@@ -2581,7 +2581,7 @@ namespace SweetsSpace
                 m_physicsMachine->RegisterBody(*sweets);
             }
 
-            const int fixtureCount = colliderComponent ? static_cast<int>(colliderComponent->fixtures.size()) : 0;
+            const int fixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
             const bool hasBody = sweets->HasBox2DBody();
 
             if (!hasBody || fixtureCount <= 0)

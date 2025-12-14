@@ -184,28 +184,37 @@ namespace
             const Transform& transform = entity.GetTransform();
             const float z = transform.position.z;
 
-            for (const auto& polygon : colliderComponent->polygons)
+            for (const auto& shape : colliderComponent->shapes)
             {
-                if (polygon.count <= 0)
+                switch (shape.type)
                 {
-                    continue;
-                }
-
-                std::vector<float2> hull;
-                hull.reserve(static_cast<std::size_t>(polygon.count));
-                for (int i = 0; i < polygon.count; ++i)
+                case Physics::ColliderShapeType::Circle:
                 {
-                    hull.push_back(ApplyTransform2D(float2{ polygon.vertices[i].x, polygon.vertices[i].y }, transform));
+                    const float2 center = ApplyTransform2D(float2{ 0.0f, 0.0f }, transform);
+                    const float scaledRadius = shape.radius * std::max(transform.scale.x, transform.scale.y);
+                    DebugColliderRenderer::DrawCircle(center, scaledRadius, z, color);
+                    break;
                 }
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    if (shape.vertices.empty())
+                    {
+                        continue;
+                    }
 
-                DebugColliderRenderer::DrawHull(hull, z, color);
-            }
+                    std::vector<float2> hull;
+                    hull.reserve(shape.vertices.size());
+                    for (const auto& vertex : shape.vertices)
+                    {
+                        hull.push_back(ApplyTransform2D(float2{ vertex.x, vertex.y }, transform));
+                    }
 
-            for (const auto& circle : colliderComponent->circles)
-            {
-                const float2 center = ApplyTransform2D(float2{ circle.center.x, circle.center.y }, transform);
-                const float scaledRadius = circle.radius * std::max(transform.scale.x, transform.scale.y);
-                DebugColliderRenderer::DrawCircle(center, scaledRadius, z, color);
+                    DebugColliderRenderer::DrawHull(hull, z, color);
+                    break;
+                }
+                }
             }
         }
 
@@ -2567,7 +2576,7 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 
     {
         const bool hasBody = entity.HasBox2DBody();
-        const int fixtureCount = boxColliderComponent ? static_cast<int>(boxColliderComponent->fixtures.size()) : 0;
+        const int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
         std::ostringstream oss;
         oss << kLogPrefix << "Physics registration complete for tag='" << entity.GetTag()
             << "' hasBody=" << std::boolalpha << hasBody

@@ -154,7 +154,7 @@ namespace Systems
 
 #if defined(_DEBUG)
         {
-            std::ostringstream oss;
+        std::ostringstream oss;
             oss << "[PhysicsMachine] SetSystem called. previous=" << m_system.get()
                 << " new=" << (system ? system.get() : nullptr) << "\n";
             DebugTrace(oss.str());
@@ -555,7 +555,7 @@ namespace Systems
 // Debug info for any body (all shapes/types)
 #if defined(_DEBUG)
 {
-    std::ostringstream oss;
+        std::ostringstream oss;
     oss << "[PhysicsMachine] Creating body tag='" << body.GetTag() << "'"
         << " bodyType=" << ToString(bodyDef.type)
         << " lockAngularZ=" << std::boolalpha << bodyDef.motionLocks.angularZ
@@ -596,75 +596,102 @@ if (isSweetTag)
 
 
         const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures;
-        bool createdFixtures = false;
+        auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius = 0.0f)
+        {
+            if (vertices.size() < 3)
+            {
+                return b2_nullShapeId;
+            }
+
+            const b2Hull hull = b2ComputeHull(vertices.data(), static_cast<int>(vertices.size()));
+            if (!b2ValidateHull(&hull))
+            {
+                return b2_nullShapeId;
+            }
+
+            const b2Polygon polygon = b2MakePolygon(&hull, radius);
+            return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
+        };
+
+        auto createCircleFixture = [&](float radius)
+        {
+            if (radius <= 0.0f)
+            {
+                return b2_nullShapeId;
+            }
+
+            const b2Circle circle{ b2Vec2{0.0f, 0.0f}, radius };
+            return b2CreateCircleShape(bodyId, &shapeDef, &circle);
+        };
+
+        int fixtureCount = 0;
+
+        auto recordFixture = [&](b2ShapeId id)
+        {
+            if (b2Shape_IsValid(id))
+            {
+                ++fixtureCount;
+                return true;
+            }
+            return false;
+        };
 
         if (useColliderComponent)
         {
-            colliderComponent->Destroy(worldId);
-            auto originalPolygons = std::move(colliderComponent->polygons);
-            auto originalCircles = std::move(colliderComponent->circles);
-
-            std::vector<b2Polygon> scaledPolygons;
-            scaledPolygons.reserve(originalPolygons.size());
-            for (const auto& polygon : originalPolygons)
+            colliderComponent->createdFixtureCount = 0;
+            for (const auto& shape : colliderComponent->shapes)
             {
-                std::vector<b2Vec2> scaledVertices;
-                scaledVertices.reserve(static_cast<std::size_t>(polygon.count));
-
-                for (int i = 0; i < polygon.count; ++i)
+                switch (shape.type)
                 {
-                    scaledVertices.push_back(b2Vec2{
-                        Entities::PhysicalEntity::ToBox2DLength(polygon.vertices[i].x * transform.scale.x),
-                        Entities::PhysicalEntity::ToBox2DLength(polygon.vertices[i].y * transform.scale.y),
-                    });
+                case Physics::ColliderShapeType::Circle:
+                {
+                    const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
+                        shape.radius * std::max(transform.scale.x, transform.scale.y));
+                    recordFixture(createCircleFixture(scaledRadius));
+                    break;
                 }
-
-                if (scaledVertices.size() >= 3)
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
                 {
-                    const b2Hull hull = b2ComputeHull(scaledVertices.data(), static_cast<int>(scaledVertices.size()));
-                    if (b2ValidateHull(&hull))
+                    std::vector<b2Vec2> scaledVertices = shape.vertices;
+                    for (auto& vertex : scaledVertices)
                     {
-                        scaledPolygons.push_back(b2MakePolygon(&hull, polygon.radius));
+                        vertex.x = Entities::PhysicalEntity::ToBox2DLength(vertex.x * transform.scale.x);
+                        vertex.y = Entities::PhysicalEntity::ToBox2DLength(vertex.y * transform.scale.y);
                     }
+
+                    recordFixture(createPolygonFixture(std::move(scaledVertices)));
+                    break;
+                }
                 }
             }
 
-            std::vector<b2Circle> scaledCircles;
-            scaledCircles.reserve(originalCircles.size());
-            for (const auto& circle : originalCircles)
-            {
-                const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
-                    circle.radius * std::max(transform.scale.x, transform.scale.y));
-                const b2Vec2 scaledCenter{
-                    Entities::PhysicalEntity::ToBox2DLength(circle.center.x * transform.scale.x),
-                    Entities::PhysicalEntity::ToBox2DLength(circle.center.y * transform.scale.y)
-                };
-                scaledCircles.push_back(b2Circle{ scaledCenter, scaledRadius });
-            }
-
-            colliderComponent->polygons = std::move(scaledPolygons);
-            colliderComponent->circles = std::move(scaledCircles);
             colliderComponent->shapeDef = shapeDef;
+            colliderComponent->createdFixtureCount = fixtureCount;
+        }
 
-            colliderComponent->CreateFixtures(bodyId, shapeDef);
-
-            colliderComponent->polygons = std::move(originalPolygons);
-            colliderComponent->circles = std::move(originalCircles);
-            createdFixtures = !colliderComponent->fixtures.empty();
+        const bool createdFromComponent = useColliderComponent && fixtureCount > 0;
+        if (createdFromComponent)
+        {
+            return bodyId;
         }
 
         // モデル由来のメッシュポリゴンがあれば優先的に使う
-        int meshShapes = 0;
+        fixtureCount = 0;
         if (hasMeshFixtures)
         {
-            colliderComponent->Destroy(worldId);
             colliderComponent->Clear();
+            colliderComponent->shapeDef = shapeDef;
+
             for (const auto& polygon : meshPolygons)
             {
                 if (polygon.size() < 3)
                 {
                     continue;
                 }
+
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
 
                 std::vector<b2Vec2> scaled = polygon;
                 for (auto& v : scaled)
@@ -673,19 +700,13 @@ if (isSweetTag)
                     v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                 }
 
-                const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
-                if (!b2ValidateHull(&hull))
-                {
-                    continue;
-                }
-
-                const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
-                colliderComponent->polygons.push_back(shape);
-                ++meshShapes;
+                recordFixture(createPolygonFixture(std::move(scaled)));
             }
 
-            if (meshShapes == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
+            if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
             {
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
+
                 std::vector<b2Vec2> scaled = meshBoundary;
                 for (auto& v : scaled)
                 {
@@ -693,38 +714,29 @@ if (isSweetTag)
                     v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                 }
 
-                const b2Hull boundaryHull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
-                if (b2ValidateHull(&boundaryHull))
-                {
-                    const b2Polygon shape = b2MakePolygon(&boundaryHull, 0.0f);
-                    colliderComponent->polygons.push_back(shape);
-                    ++meshShapes;
-                }
+                recordFixture(createPolygonFixture(std::move(scaled)));
             }
 
-            if (meshShapes > 0)
+            colliderComponent->createdFixtureCount = fixtureCount;
+
+            if (fixtureCount > 0)
             {
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->CreateFixtures(bodyId, shapeDef);
 #if defined(_DEBUG)
                 std::ostringstream oss;
-                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag()
-                    << "' polygons=" << meshPolygons.size()
+                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag() << "'"
+                    << " polygons=" << meshPolygons.size()
                     << " boundaryPoints=" << meshBoundary.size() << "\n";
                 DebugTrace(oss.str());
 #endif
-                createdFixtures = !colliderComponent->fixtures.empty();
+                return bodyId;
             }
         }
 
-        if (createdFixtures)
-        {
-            return bodyId;
-        }
-
         // ShapeConfig から形状を作る
+        fixtureCount = 0;
         if (hasShapeConfig)
         {
+            colliderComponent->Clear();
             colliderComponent->shapeDef = shapeDef;
             switch (shapeConfig->type)
             {
@@ -732,20 +744,24 @@ if (isSweetTag)
             {
                 const float hx = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.x));
                 const float hy = Entities::PhysicalEntity::ToBox2DLength(std::max(0.01f, 0.5f * transform.scale.y));
-                const b2Polygon box = b2MakeBox(hx, hy);
-                colliderComponent->Clear();
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->polygons.push_back(box);
-                colliderComponent->CreateFixtures(bodyId, shapeDef);
-                createdFixtures = !colliderComponent->fixtures.empty();
-                if (createdFixtures)
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Box, {
+                    b2Vec2{ -hx, -hy },
+                    b2Vec2{ hx, -hy },
+                    b2Vec2{ hx, hy },
+                    b2Vec2{ -hx, hy },
+                } });
+                recordFixture(createPolygonFixture(colliderComponent->shapes.back().vertices));
+                if (fixtureCount > 0)
                 {
+                    colliderComponent->createdFixtureCount = fixtureCount;
                     return bodyId;
                 }
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
+
                 std::vector<b2Vec2> scaled = shapeConfig->vertices;
                 for (auto& v : scaled)
                 {
@@ -753,38 +769,25 @@ if (isSweetTag)
                     v.y = Entities::PhysicalEntity::ToBox2DLength(v.y * transform.scale.y);
                 }
 
-                if (scaled.size() >= 3)
+                recordFixture(createPolygonFixture(std::move(scaled)));
+                if (fixtureCount > 0)
                 {
-                    const b2Hull hull = b2ComputeHull(scaled.data(), static_cast<int>(scaled.size()));
-                    if (b2ValidateHull(&hull))
-                    {
-                        const b2Polygon shape = b2MakePolygon(&hull, 0.0f);
-                        colliderComponent->Clear();
-                        colliderComponent->shapeDef = shapeDef;
-                        colliderComponent->polygons.push_back(shape);
-                        colliderComponent->CreateFixtures(bodyId, shapeDef);
-                        createdFixtures = !colliderComponent->fixtures.empty();
-                        if (createdFixtures)
-                        {
-                            return bodyId;
-                        }
-                    }
+                    colliderComponent->createdFixtureCount = fixtureCount;
+                    return bodyId;
                 }
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Circle:
             {
                 const float radius = std::max(0.01f, shapeConfig->radius);
+                colliderComponent->shapes.push_back({ Physics::ColliderShapeType::Circle, {}, radius });
+
                 const float scaledRadius = Entities::PhysicalEntity::ToBox2DLength(
                     radius * std::max(transform.scale.x, transform.scale.y));
-                const b2Circle circle{ b2Vec2{0.0f, 0.0f}, scaledRadius };
-                colliderComponent->Clear();
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->circles.push_back(circle);
-                colliderComponent->CreateFixtures(bodyId, shapeDef);
-                createdFixtures = !colliderComponent->fixtures.empty();
-                if (createdFixtures)
+                recordFixture(createCircleFixture(scaledRadius));
+                if (fixtureCount > 0)
                 {
+                    colliderComponent->createdFixtureCount = fixtureCount;
                     return bodyId;
                 }
                 break;
@@ -792,13 +795,13 @@ if (isSweetTag)
             default:
                 break;
             }
+            colliderComponent->createdFixtureCount = fixtureCount;
         }
 
         std::ostringstream oss;
         oss << "[PhysicsMachine] Failed to build fixtures for tag='" << body.GetTag() << "'.\n";
         DebugTrace(oss.str());
 
-        colliderComponent->Destroy(worldId);
         colliderComponent->Clear();
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);
@@ -819,19 +822,11 @@ if (isSweetTag)
             if (b2World_IsValid(bodyWorld))
             {
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
-                const bool colliderOwnsBody =
-                    colliderComponent &&
-                    B2_ID_EQUALS(colliderComponent->bodyId, it->second);
-
                 if (colliderComponent)
                 {
-                    colliderComponent->Destroy(bodyWorld);
                     colliderComponent->Clear();
                 }
-                if (!colliderOwnsBody)
-                {
-                    b2DestroyBody(it->second);
-                }
+                b2DestroyBody(it->second);
             }
         }
 
