@@ -158,6 +158,11 @@ void EndDrawDirectX()
         g_dxContext.EndDraw();
 }
 
+HRESULT ResizeDirectX(UINT width, UINT height)
+{
+        return g_dxContext.Resize(width, height);
+}
+
 
 
 void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView)

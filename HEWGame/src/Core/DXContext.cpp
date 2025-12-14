@@ -70,14 +70,16 @@ namespace Core
 
         HRESULT DXContext::Resize(UINT width, UINT height)
         {
+                if (width == 0 || height == 0)
+                {
+                        return S_OK;
+                }
+
                 if (!m_swapChain)
                 {
                         DebugMessage("[DXContext] Resize requested before swap chain creation.\n");
                         return E_FAIL;
                 }
-
-                m_width = width;
-                m_height = height;
 
                 if (m_context)
                 {
@@ -101,6 +103,9 @@ namespace Core
                         DebugMessage("[DXContext] ResizeBuffers failed.\n");
                         return hr;
                 }
+
+                m_width = width;
+                m_height = height;
 
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))

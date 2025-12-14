@@ -40,6 +40,7 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen);
 void UninitDirectX();
 void BeginDrawDirectX();
 void EndDrawDirectX();
+HRESULT ResizeDirectX(UINT width, UINT height);
 
 void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView);
 void SetCullingMode(D3D11_CULL_MODE cull);
