@@ -5,7 +5,9 @@
 
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
-#include "SettingScene.h"
+#include "ScenePowerUp.h"
+#include "EffectTestScene.h"
+#include "DirectX.h"
 
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
@@ -77,22 +79,51 @@ void TitleScene::ConfigureUpdates()
 
 void TitleScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Confirm))//Corfirm ← Enterkeyで、タイトルシーンからゲームシーンに入る
+    if (ctx.input.IsTrigger(Core::ActionId::Confirm))
     {
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneGame>());
         }
+        return;
     }
-    
 
-    if (ctx.input.IsTrigger(Core::ActionId::Pause))  //Pause ← spacekeyで、タイトルシーンから設定シーンに入る
+    if (ctx.input.IsTrigger('P'))
     {
         if (m_manager)
         {
-            m_manager->RequestSceneChange( std::make_unique<SceneSpace::SettingScene>(*m_manager)
-            );
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>());
         }
+        return;
+    }
+
+    if (ctx.input.IsTrigger(VK_F1))
+    {
+        if (m_manager)
+        {
+            auto effectDevice = ::EffekseerRendererDX11::CreateGraphicsDevice(GetDevice(), GetContext());
+            auto effectRenderer = ::EffekseerRendererDX11::Renderer::Create(effectDevice, 8000);
+            auto effectManager = Effekseer::Manager::Create(8000);
+
+            effectManager->SetSpriteRenderer(effectRenderer->CreateSpriteRenderer());
+            effectManager->SetRibbonRenderer(effectRenderer->CreateRibbonRenderer());
+            effectManager->SetRingRenderer(effectRenderer->CreateRingRenderer());
+            effectManager->SetTrackRenderer(effectRenderer->CreateTrackRenderer());
+            effectManager->SetModelRenderer(effectRenderer->CreateModelRenderer());
+
+            effectManager->SetTextureLoader(effectRenderer->CreateTextureLoader());
+            effectManager->SetModelLoader(effectRenderer->CreateModelLoader());
+            effectManager->SetMaterialLoader(effectRenderer->CreateMaterialLoader());
+            effectManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
+
+            m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(effectRenderer, effectManager));
+        }
+        return;
+    }
+
+    if (ctx.input.IsTrigger(Core::ActionId::Cancel))
+    {
+        PostQuitMessage(0);
     }
 
 }
