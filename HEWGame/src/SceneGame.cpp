@@ -1266,8 +1266,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 << descriptor.scale.z << ") depth=" << descriptor.depth
                 << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld
                 << ")"
-                << " widthFraction=" << descriptor.widthFraction
-                << " heightFraction=" << descriptor.heightFraction << "\n";
+                << " widthFraction=" << descriptor.widthFraction << "\n";
         }
         ::DebugTrace(oss.str());
     }
