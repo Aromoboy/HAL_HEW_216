@@ -112,6 +112,23 @@ namespace SweetsSpace
 
         using PhaseChangeCallback = std::function<void(int)>;
 
+        enum class ColliderSource
+        {
+            Config,
+            Generated,
+            Fallback,
+        };
+
+        struct ColliderBuildResult
+        {
+            Physics::Box2DShapeConfig shapeConfig{};
+            std::vector<std::vector<b2Vec2>> meshPolygons;
+            std::vector<b2Vec2> meshBoundary;
+            ColliderSource source{ ColliderSource::Fallback };
+            float thickness{ 0.0f };
+            float2 centroidOffset{ 0.0f, 0.0f };
+        };
+
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
@@ -280,6 +297,11 @@ namespace SweetsSpace
         static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
         std::string ResolveKindKey(const std::string& key) const;
         std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
+        ColliderBuildResult BuildColliderForSweets(const std::string& kind,
+            SweetsType type,
+            const Transform& transform,
+            const std::string& modelPath,
+            const std::shared_ptr<Render::Model>& model);
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;

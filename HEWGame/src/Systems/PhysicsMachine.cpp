@@ -896,7 +896,14 @@ if (isSweetTag)
 }
 
 
-        auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius = 0.0f)
+        const float configuredPolygonRadius = hasShapeConfig
+            ? std::max(0.0f, shapeConfig->polygonRadius)
+            : 0.0f;
+        const float box2dPolygonRadius = configuredPolygonRadius > 0.0f
+            ? ToBox2DLength(configuredPolygonRadius, std::max(transform.scale.x, transform.scale.y), transform)
+            : 0.0f;
+
+        auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius)
         {
             if (vertices.size() < 3 || isPolygonTooSmall(vertices))
             {
@@ -909,7 +916,8 @@ if (isSweetTag)
                 return b2_nullShapeId;
             }
 
-            const b2Polygon polygon = b2MakePolygon(&hull, radius);
+            const float clampedRadius = enforceMinimumDimension(radius, "Polygon radius");
+            const b2Polygon polygon = b2MakePolygon(&hull, clampedRadius);
             return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         };
 
@@ -958,7 +966,7 @@ if (isSweetTag)
                 case Physics::ColliderShapeType::Polygon:
                 default:
                 {
-                    created = recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform)));
+                    created = recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform), 0.0f));
                     break;
                 }
                 }
@@ -1000,7 +1008,7 @@ if (isSweetTag)
                     continue;
                 }
 
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform))))
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform), box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
                 }
@@ -1008,7 +1016,7 @@ if (isSweetTag)
 
             if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
             {
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform))))
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform), box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
                 }
@@ -1068,7 +1076,7 @@ if (isSweetTag)
                 }
 
                 const std::vector<b2Vec2> box2dVertices = ToBox2DVertices(localVertices, transform);
-                if (recordFixture(createPolygonFixture(box2dVertices)))
+                if (recordFixture(createPolygonFixture(box2dVertices, box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Box, localVertices });
                     setComponentFromCreatedShapes();
@@ -1079,7 +1087,7 @@ if (isSweetTag)
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform))))
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform), box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
                     setComponentFromCreatedShapes();
