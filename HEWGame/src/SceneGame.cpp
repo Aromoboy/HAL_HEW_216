@@ -25,6 +25,7 @@
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
 #include "DebugColliderRenderer.h"
+#include <cassert>
 #include <algorithm>
 #include <cctype>
 #include <initializer_list>
@@ -1813,7 +1814,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_groundY = computedGround;
     }
 
-    RefreshSweetsSpawnOrigins();
+    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
 
     float platePlaneZ = m_stageData.GetPlaneZ();
     if (m_platePlatform)
@@ -1978,7 +1979,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
     }
 
-    RefreshSweetsSpawnOrigins();
+    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
 
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
@@ -3099,7 +3100,7 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
     }
 
-    RefreshSweetsSpawnOrigins();
+    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
 
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
@@ -3155,7 +3156,7 @@ float SceneGame::ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor
     return descriptor.center.y + (descriptor.heightWorld * 0.5f);
 }
 
-void SceneGame::RefreshSweetsSpawnOrigins()
+void SceneGame::RefreshSweetsSpawnOrigins(bool requireOsaraReady)
 {
     if (!m_sweetsManager)
     {
@@ -3165,6 +3166,20 @@ void SceneGame::RefreshSweetsSpawnOrigins()
 
     std::vector<float3> spawnOrigins;
     const float osaraSpawnOffsetY = m_stageData.GetOsaraSpawnOffsetY();
+    const bool platePlatformAvailable = static_cast<bool>(m_platePlatform);
+    const bool osaraAvailable = std::any_of(
+        m_osaraPlates.begin(),
+        m_osaraPlates.end(),
+        [](const std::unique_ptr<Stage::OsaraPlate>& plate) { return static_cast<bool>(plate); });
+
+    if (requireOsaraReady && platePlatformAvailable && !osaraAvailable)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnOrigin] abort: plate platform present but Osara instances missing.\n";
+        ::DebugTrace(oss.str());
+        assert(false && "Osara plates are required before wiring spawn origins");
+        return;
+    }
     for (const auto& osara : m_osaraPlates)
     {
         if (!osara)
