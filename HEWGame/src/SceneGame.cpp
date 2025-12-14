@@ -1807,7 +1807,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
         }
         const auto& fallbackPlatform = m_stageData.GetPlatform(0);
-        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.scale.y * 0.5f);
+        float platformTopY = fallbackPlatform.center.y + (fallbackPlatform.heightWorld * 0.5f);
         if (m_platePlatform)
         {
             const auto& platformXform = m_platePlatform->GetTransform();
