@@ -220,6 +220,28 @@ namespace
 
         void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
+            const auto& colliderComponent = entity.GetBoxColliderComponent();
+            if (colliderComponent && !colliderComponent->shapes.empty())
+            {
+                const AABB bounds = entity.GetAABB();
+                const float2 corners[4] = {
+                    float2{ bounds.min.x, bounds.min.y },
+                    float2{ bounds.max.x, bounds.min.y },
+                    float2{ bounds.max.x, bounds.max.y },
+                    float2{ bounds.min.x, bounds.max.y },
+                };
+
+                std::vector<float2> worldCorners;
+                worldCorners.reserve(4u);
+                for (const auto& corner : corners)
+                {
+                    worldCorners.push_back(corner);
+                }
+
+                DebugColliderRenderer::DrawHull(worldCorners, entity.GetTransform().position.z, color);
+                return;
+            }
+
             const Render::Model* model = entity.GetRenderableModel();
             if (!model || !model->HasLocalBounds())
             {
@@ -1584,7 +1606,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 m_physicsMachine.get(),
                 descriptor.color,
                 Core::UpdatePhase::PrePhysics,
-                -100 - static_cast<int>(i));
+                -100 - static_cast<int>(i),
+                true);
 
             if (!platform)
             {
