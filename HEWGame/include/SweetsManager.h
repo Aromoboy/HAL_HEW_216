@@ -167,7 +167,7 @@ namespace SweetsSpace
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         bool HasSupportingContact(const ActiveSweets& sweets) const;
-
+        int GetSweetsCount() const;
     private:
         struct SweetsStateHash
         {

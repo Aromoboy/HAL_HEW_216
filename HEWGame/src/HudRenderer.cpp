@@ -352,7 +352,7 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
     stream << std::fixed << std::setprecision(0);
     stream << "Score " << data.score;
     stream << "  (Enter=Confirm  R=Retry)";
-
+    stream << "\nSweets " << data.sweetsCount;
     return stream.str();
 }
 
