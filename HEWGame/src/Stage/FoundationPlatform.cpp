@@ -84,12 +84,19 @@ namespace
 
     AABB BuildDescriptorLocalBounds(const Transform& transform)
     {
-        (void)transform;
+        auto computeHalfExtent = [](float worldDimension)
+        {
+            const float clamped = std::max(0.01f, std::fabs(worldDimension));
+            return (clamped * 0.5f) / clamped;
+        };
 
-        constexpr float kHalfExtent = 0.5f;
-        return AABB(
-            float3{ kHalfExtent, kHalfExtent, kHalfExtent },
-            float3{ -kHalfExtent, -kHalfExtent, -kHalfExtent });
+        const float3 halfExtents{
+            computeHalfExtent(transform.scale.x),
+            computeHalfExtent(transform.scale.y),
+            computeHalfExtent(transform.scale.z),
+        };
+
+        return AABB(halfExtents, float3{ -halfExtents.x, -halfExtents.y, -halfExtents.z });
     }
 
     float ComputeNormalizationScale(const Render::Model& model)
