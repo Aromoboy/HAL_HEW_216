@@ -2347,6 +2347,15 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                         << (g_DrawColliders ? 1 : 0) << " (F4).\n";
                 DebugTrace(oss.str());
         }
+
+        if (input.IsTrigger(VK_F5))
+        {
+                g_DrawColliderBounds = !g_DrawColliderBounds;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ColliderDebug] r.DebugColliderBounds="
+                        << (g_DrawColliderBounds ? 1 : 0) << " (F5).\n";
+                DebugTrace(oss.str());
+        }
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
@@ -2388,7 +2397,7 @@ void SceneGame::DrawPhysicsDebugOverlay()
     }
 
     const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
-    const Color modelColor = MakeColor(0.0f, 0.9f, 0.9f, 1.0f);
+    const Color boundsColor = MakeColor(0.0f, 0.7f, 1.0f, 1.0f);
 
     const auto drawEntity = [&](Entities::PhysicalEntity* entity)
     {
@@ -2397,7 +2406,10 @@ void SceneGame::DrawPhysicsDebugOverlay()
             return;
         }
 
-        DrawModelBoundsOverlay(*entity, modelColor);
+        if (g_DrawColliderBounds)
+        {
+            DrawModelBoundsOverlay(*entity, boundsColor);
+        }
         DrawColliderOverlay(*entity, fixtureColor);
     };
 
