@@ -21,6 +21,9 @@ namespace Stage
         DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
+    float ComputePlatformBaselineY(const PlatformDescriptor& descriptor);
+    float ComputePlatformAlignedCenterY(const PlatformDescriptor& descriptor);
+
     class StageData
     {
     public:
