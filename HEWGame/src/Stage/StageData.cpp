@@ -218,24 +218,6 @@ namespace
 
 namespace Stage
 {
-    float ComputePlatformBaselineY(const PlatformDescriptor& descriptor)
-    {
-        const float safeHeightWorld = std::max(0.01f, std::fabs(descriptor.heightWorld));
-        const float clampedFraction = std::clamp(
-            std::isfinite(descriptor.heightFraction) ? descriptor.heightFraction : 1.0f,
-            0.01f,
-            1.0f);
-        const float canonicalWorldHeight = safeHeightWorld / clampedFraction;
-        return -0.5f * canonicalWorldHeight;
-    }
-
-    float ComputePlatformAlignedCenterY(const PlatformDescriptor& descriptor)
-    {
-        const float safeHeightWorld = std::max(0.01f, std::fabs(descriptor.heightWorld));
-        const float bottomY = ComputePlatformBaselineY(descriptor) + descriptor.center.y;
-        return bottomY + (safeHeightWorld * 0.5f);
-    }
-
     StageData::StageData()
         : m_planeZ(kDefaultPlaneZ)
         , m_loadedFromFile(false)
@@ -1547,14 +1529,12 @@ namespace Stage
 
     void StageData::LogPlatformSummary(std::size_t index, const PlatformDescriptor& descriptor) const
     {
-        const float alignedCenterY = ComputePlatformAlignedCenterY(descriptor);
-
         std::ostringstream oss;
         oss << kLogPrefix << " platform[" << index << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
             << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
             << descriptor.scale.z << ") depth=" << descriptor.depth
             << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld << ')'
-            << " alignedCenterY=" << alignedCenterY
+            << " anchorY=" << (descriptor.center.y + (descriptor.heightWorld * 0.5f))
             << " widthFraction=" << descriptor.widthFraction
             << " heightFraction=" << descriptor.heightFraction
             << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','

@@ -1110,8 +1110,10 @@ namespace
             float stageCenterX)
         {
             Transform result{};
-            const float centerY = Stage::ComputePlatformAlignedCenterY(descriptor);
-            result.position = float3{ stageCenterX + descriptor.center.x, centerY, descriptor.center.z };
+            result.position = float3{
+                stageCenterX + descriptor.center.x,
+                descriptor.center.y + (descriptor.heightWorld * 0.5f),
+                descriptor.center.z };
             result.rotation = float3{ 0.0f, 0.0f, 0.0f };
             result.scale = float3{
                 descriptor.widthWorld,
