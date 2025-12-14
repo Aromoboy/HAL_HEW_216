@@ -12,6 +12,7 @@ namespace Core
         Pause,
         Retry,
         DebugConsole,
+        ToggleFullscreen,
         CameraToggle,
         CameraHeightToggle,
         SpeedBoost,

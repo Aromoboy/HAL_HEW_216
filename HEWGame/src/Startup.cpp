@@ -7,6 +7,7 @@
 #include "Diagnostics/Logger.h"
 #include "DirectX.h"
 #include "WindowManager.h"
+#include "FullscreenManager.h"
 
 // timeGetTime周りの使用
 #pragma comment(lib, "winmm.lib")
@@ -53,7 +54,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	RECT rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	DWORD style = WS_CAPTION | WS_SYSMENU;
 	DWORD exStyle = WS_EX_OVERLAPPEDWINDOW;
-	AdjustWindowRectEx(&rect, style, false, exStyle);
+        AdjustWindowRectEx(&rect, style, false, exStyle);
         hWnd = CreateWindowEx(
                 exStyle, wcex.lpszClassName,
                 APP_TITLE, style,
@@ -64,6 +65,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         );
 
         WindowManager::Initialize(hWnd);
+        FullscreenManager::Initialize(hWnd, &g_canRender);
 
 
         // デバッグコンソールの表示
@@ -184,7 +186,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
                 if (wParam == VK_RETURN && (lParam & (1 << 29)))
                 {
-                        WindowManager::ToggleFullscreen();
+                        FullscreenManager::Toggle();
                         return 0;
                 }
                 break;
