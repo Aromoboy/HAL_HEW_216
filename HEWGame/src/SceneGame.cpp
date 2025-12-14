@@ -300,7 +300,7 @@ namespace
                         continue;
                     }
 
-                    // aiProcess_Triangulate guarantees triangles
+                    // aiProcess_Triangulateは三角形を保証
                     indices.push_back(baseIndex + face.mIndices[0]);
                     indices.push_back(baseIndex + face.mIndices[1]);
                     indices.push_back(baseIndex + face.mIndices[2]);
@@ -911,8 +911,6 @@ namespace
         };
 
         constexpr float kStageCenterX = 0.0f;
-        // Visual spec: screenshot grid spans 40m (width) x 30m (height), so 20%/5% coverage
-        // yields the desired 8m x 1.5m platform footprint.
         constexpr float kPlatformGridWidthMeters = 40.0f;
         constexpr float kPlatformGridHeightMeters = 30.0f;
         constexpr float kCameraStateEpsilon = 1e-4f;
