@@ -120,7 +120,7 @@ namespace
         return AABB(max, min);
     }
 
-   Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale)
+   Physics::BoxColliderComponent CreateColliderFromWorldDimensions(const float3& worldScale, float pivotOffsetY)
     {
         Physics::BoxColliderComponent component;
         component.shapeDef.density = 0.0f;
@@ -135,7 +135,7 @@ namespace
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ 0.0f, 0.0f }
+            b2Vec2{ 0.0f, Entities::PhysicalEntity::ToBox2DLength(pivotOffsetY) }
         );
 
         return component;
@@ -318,10 +318,9 @@ namespace Stage
             m_worldScale.z * m_normalizationScale,
         };
         const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, visualScale);
+        m_visualPivotOffset = pivotInfo.offsetY;
         if (pivotInfo.offsetY != 0.0f)
         {
-            m_visualPivotOffset = pivotInfo.offsetY;
-
             std::ostringstream oss;
             oss << kLogPrefix << "[Pivot] policy=" << Render::kPivotPolicyName
                 << " offsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
@@ -343,7 +342,7 @@ namespace Stage
             }
             else
             {
-                colliderComponent = CreateColliderFromWorldDimensions(m_worldScale);
+                colliderComponent = CreateColliderFromWorldDimensions(m_worldScale, m_visualPivotOffset);
                 colliderComponent.shapeDef.material.friction = 0.8f;
             }
 
@@ -582,6 +581,7 @@ namespace Stage
             pivotOffsetY = pivotInfo.offsetY;
         }
 
+        m_visualPivotOffset = pivotOffsetY;
         m_visual.position.y += pivotOffsetY;
         RefreshRenderTransform();
     }

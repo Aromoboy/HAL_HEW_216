@@ -106,7 +106,7 @@ namespace
         return std::max(box2dLength, minimum) * Entities::PhysicalEntity::GetBox2DToWorldScale();
     }
 
-    Physics::BoxColliderComponent BuildPlateCollider(const float3& worldScale)
+    Physics::BoxColliderComponent BuildPlateCollider(const float3& worldScale, float pivotOffsetY)
     {
         Physics::BoxColliderComponent component{};
         component.shapeDef.density = 0.0f;
@@ -118,20 +118,22 @@ namespace
         const float footHalfWidth = SanitizeDimensionUsingBox2D(worldScale.x * 0.20f);
         const float footHeight = SanitizeDimensionUsingBox2D(worldScale.y * 0.20f);
 
+        const float yOffset = Entities::PhysicalEntity::ToBox2DLength(pivotOffsetY);
+
         // Rim / plate surface
         component.AddPolygon({
-            b2Vec2{ -halfWidth, 0.0f },
-            b2Vec2{ halfWidth, 0.0f },
-            b2Vec2{ halfWidth * 0.85f, rimHeight },
-            b2Vec2{ -halfWidth * 0.85f, rimHeight },
+            b2Vec2{ -halfWidth, yOffset },
+            b2Vec2{ halfWidth, yOffset },
+            b2Vec2{ halfWidth * 0.85f, yOffset + rimHeight },
+            b2Vec2{ -halfWidth * 0.85f, yOffset + rimHeight },
         });
 
         // Foot
         component.AddPolygon({
-            b2Vec2{ -footHalfWidth, -footHeight },
-            b2Vec2{ footHalfWidth, -footHeight },
-            b2Vec2{ footHalfWidth * 1.1f, 0.0f },
-            b2Vec2{ -footHalfWidth * 1.1f, 0.0f },
+            b2Vec2{ -footHalfWidth, yOffset - footHeight },
+            b2Vec2{ footHalfWidth, yOffset - footHeight },
+            b2Vec2{ footHalfWidth * 1.1f, yOffset },
+            b2Vec2{ -footHalfWidth * 1.1f, yOffset },
         });
 
         return component;
@@ -313,13 +315,34 @@ namespace Stage
             m_visualPivotOffset = pivotInfo.offsetY;
             m_renderTransform.position.y += m_visualPivotOffset;
         }
+        else
+        {
+            m_visualPivotOffset = 0.0f;
+        }
 
         RefreshRenderTransform();
     }
 
     void OsaraPlate::RebuildCollider()
     {
-        Physics::BoxColliderComponent colliderComponent = BuildPlateCollider(m_worldScale);
+        float pivotOffsetY = 0.0f;
+        if (m_model)
+        {
+            const float3 visualScale{
+                m_worldScale.x * m_normalizationScale,
+                m_worldScale.y * m_normalizationScale,
+                m_worldScale.z * m_normalizationScale,
+            };
+            const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, visualScale);
+            pivotOffsetY = pivotInfo.offsetY;
+            m_visualPivotOffset = pivotOffsetY;
+        }
+        else
+        {
+            m_visualPivotOffset = 0.0f;
+        }
+
+        Physics::BoxColliderComponent colliderComponent = BuildPlateCollider(m_worldScale, pivotOffsetY);
         Physics::Box2DShapeConfig shapeConfig{};
         shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
         shapeConfig.bodyType = b2_staticBody;
