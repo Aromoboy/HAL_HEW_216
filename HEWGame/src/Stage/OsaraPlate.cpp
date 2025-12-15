@@ -1,6 +1,7 @@
 #include "Stage/OsaraPlate.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <optional>
@@ -24,7 +25,10 @@
 namespace
 {
     constexpr const char* kLogPrefix = "[OsaraPlate] ";
-    constexpr const char* kPlateModelPath = "Assets/Model/Osara.fbx";
+    constexpr std::array<const char*, 2> kPlateModelPaths{
+        "Assets/Model/Osara_low.fbx",
+        "Assets/Model/Osara.fbx",
+    };
     constexpr float kScaleReferenceMeters = 1.0f;
     constexpr float kMinWorldScale = 0.02f;
     constexpr float kMaxWorldScale = 50.0f;
@@ -132,6 +136,15 @@ namespace
 
         return component;
     }
+
+    AABB BuildFallbackLocalBounds()
+    {
+        constexpr float kHalfWidth = 0.5f;
+        constexpr float kHalfHeight = 0.05f;
+        return AABB(
+            float3{ kHalfWidth, kHalfHeight, kHalfWidth },
+            float3{ -kHalfWidth, -kHalfHeight, -kHalfWidth });
+    }
 }
 
 namespace Stage
@@ -227,19 +240,42 @@ namespace Stage
     void OsaraPlate::LoadPlateModel()
     {
         Render::ModelCache& cache = Render::ModelCache::Instance();
-        m_model = cache.Get(kPlateModelPath);
-        if (!m_model)
+        std::shared_ptr<Render::Model> model;
+        std::string resolvedPath;
+        for (const char* path : kPlateModelPaths)
+        {
+            model = cache.Get(path);
+            if (model)
+            {
+                resolvedPath = path;
+                break;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Failed to load render model at '" << path << "'; trying fallback.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!model)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to load render model at '" << kPlateModelPath << "'.\n";
+            oss << kLogPrefix << "Failed to load any render model for Osara plate.\n";
             DebugTrace(oss.str());
             return;
         }
 
+        m_model = std::move(model);
+
         if (!m_model->HasLocalBounds())
         {
+            const AABB fallbackBounds = BuildFallbackLocalBounds();
+            m_model->SetLocalBounds(fallbackBounds);
+
+            const float3 extents = fallbackBounds.Extents();
             std::ostringstream oss;
-            oss << kLogPrefix << "Render model missing local bounds; scale normalization may be skipped.\n";
+            oss << kLogPrefix << "Render model missing local bounds; applied fallback extents(full)=("
+                << (extents.x * 2.0f) << ',' << (extents.y * 2.0f) << ',' << (extents.z * 2.0f)
+                << ") for pivot and normalization.\n";
             DebugTrace(oss.str());
         }
         else
@@ -249,6 +285,13 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "Loaded plate model with extents(full)=(" << (extents.x * 2.0f) << ','
                 << (extents.y * 2.0f) << ',' << (extents.z * 2.0f) << ").\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!resolvedPath.empty())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Using plate model path '" << resolvedPath << "'.\n";
             DebugTrace(oss.str());
         }
     }
