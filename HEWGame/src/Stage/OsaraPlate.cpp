@@ -118,22 +118,23 @@ namespace
         const float footHalfWidth = SanitizeDimensionUsingBox2D(worldScale.x * 0.20f);
         const float footHeight = SanitizeDimensionUsingBox2D(worldScale.y * 0.20f);
 
-        const float yOffset = Entities::PhysicalEntity::ToBox2DLength(pivotOffsetY);
+        const float pivotOffset = Entities::PhysicalEntity::ToBox2DLength(pivotOffsetY);
+        const float rimBaseY = -pivotOffset;
 
         // Rim / plate surface
         component.AddPolygon({
-            b2Vec2{ -halfWidth, yOffset },
-            b2Vec2{ halfWidth, yOffset },
-            b2Vec2{ halfWidth * 0.85f, yOffset + rimHeight },
-            b2Vec2{ -halfWidth * 0.85f, yOffset + rimHeight },
+            b2Vec2{ -halfWidth, rimBaseY },
+            b2Vec2{ halfWidth, rimBaseY },
+            b2Vec2{ halfWidth * 0.85f, rimBaseY + rimHeight },
+            b2Vec2{ -halfWidth * 0.85f, rimBaseY + rimHeight },
         });
 
         // Foot
         component.AddPolygon({
-            b2Vec2{ -footHalfWidth, yOffset - footHeight },
-            b2Vec2{ footHalfWidth, yOffset - footHeight },
-            b2Vec2{ footHalfWidth * 1.1f, yOffset },
-            b2Vec2{ -footHalfWidth * 1.1f, yOffset },
+            b2Vec2{ -footHalfWidth, rimBaseY - footHeight },
+            b2Vec2{ footHalfWidth, rimBaseY - footHeight },
+            b2Vec2{ footHalfWidth * 1.1f, rimBaseY },
+            b2Vec2{ -footHalfWidth * 1.1f, rimBaseY },
         });
 
         return component;
