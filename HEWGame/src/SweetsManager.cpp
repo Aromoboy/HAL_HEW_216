@@ -1004,7 +1004,11 @@ namespace SweetsSpace
                 return ::SweetsSpace::SweetsState::Active;
             }
 
-            return ::SweetsSpace::SweetsState::Stacked;
+            // Keep previously stacked sweets stacked, but leave newly supported sweets Active so
+            // pickup eligibility is not blocked by contact flags alone.
+            return currentState == ::SweetsSpace::SweetsState::Stacked
+                ? ::SweetsSpace::SweetsState::Stacked
+                : ::SweetsSpace::SweetsState::Active;
         }
 
         return ::SweetsSpace::SweetsState::Active;
@@ -2782,17 +2786,6 @@ namespace SweetsSpace
 
         if (sweets->IsPendingDestroy())
         {
-            return false;
-        }
-
-        auto it = m_lookup.find(sweets);
-        const SweetsState current = (it != m_lookup.end()) ? it->second : SweetsState::Active;
-        if (current != SweetsState::Active && current != SweetsState::Ground && current != SweetsState::Stacked)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "TryMarkAsCarried 却下 tag='" << sweets->GetTag()
-                << "' currentState=" << StateToString(current) << "\n";
-            DebugTrace(oss.str());
             return false;
         }
 
