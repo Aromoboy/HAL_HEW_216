@@ -2608,9 +2608,9 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        const float stackedHeight = m_maxTowerHeight;
+        const float timeStep = std::max(deltaTime, 0.0f);
         GameFlow::PhaseManager::PhaseUpdateResult advenced =
-            m_phaseManager.UpdateHeight(stackedHeight);
+            m_phaseManager.UpdateTime(timeStep);
 
         if (advenced.phaseAdvanced)
         {

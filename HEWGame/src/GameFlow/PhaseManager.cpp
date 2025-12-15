@@ -13,6 +13,7 @@ namespace GameFlow
         , m_currentMiniPhase(0)
         , m_initialized(false)
         , m_lastReportedHeight(0.0f)
+        , m_elapsedSeconds(0.0f)
     {
     }
 
@@ -78,6 +79,7 @@ namespace GameFlow
         m_currentMiniPhase = 0; //Mini Phase
         m_initialized = true;
         m_lastReportedHeight = 0.0f;
+        m_elapsedSeconds = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
 
         std::ostringstream oss;
@@ -114,6 +116,7 @@ namespace GameFlow
         m_nextMiniThresholdIndex = 0;
         m_currentMiniPhase = 0;
         m_lastReportedHeight = 0.0f;
+        m_elapsedSeconds = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
 
         std::ostringstream oss;
@@ -168,9 +171,9 @@ namespace GameFlow
             ++m_currentPhase;
             phaseupdate.phaseAdvanced = true;
             phaseupdate.timeElapsed += GetRewardMultiplierForPhase(m_currentPhase);
-            LogPhaseAdvance(threshold, m_lastReportedHeight);
+            LogPhaseAdvance(threshold, m_lastReportedHeight, "height");
         }
-       
+
         //Mini Phase
         while (m_nextMiniThresholdIndex < m_minithresholds.size()
             && m_lastReportedHeight >= m_minithresholds[m_nextMiniThresholdIndex])
@@ -180,11 +183,61 @@ namespace GameFlow
             ++m_currentMiniPhase;
             phaseupdate.miniPhaseAdvanced = true;
             phaseupdate.timeElapsed += GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
-            LogPhaseAdvance(minithreshold, m_lastReportedHeight);
+            LogPhaseAdvance(minithreshold, m_lastReportedHeight, "height");
         }
-       
+
         return phaseupdate;
 
+    }
+
+    PhaseManager::PhaseUpdateResult PhaseManager::UpdateTime(float deltaSeconds)
+    {
+        PhaseUpdateResult phaseupdate = {};
+
+        phaseupdate.phaseAdvanced = false;
+        phaseupdate.miniPhaseAdvanced = false;
+        phaseupdate.timeElapsed = 0.0f;
+
+        if (!m_initialized)
+        {
+            return phaseupdate;
+        }
+
+        if (!std::isfinite(deltaSeconds))
+        {
+            return phaseupdate;
+        }
+
+        if (deltaSeconds <= 0.0f)
+        {
+            return phaseupdate;
+        }
+
+        m_elapsedSeconds += deltaSeconds;
+
+        while (m_nextThresholdIndex < m_thresholds.size()
+            && m_elapsedSeconds >= m_thresholds[m_nextThresholdIndex])
+        {
+            const float threshold = m_thresholds[m_nextThresholdIndex];
+            ++m_nextThresholdIndex;
+            ++m_currentPhase;
+            phaseupdate.phaseAdvanced = true;
+            phaseupdate.timeElapsed += GetRewardMultiplierForPhase(m_currentPhase);
+            LogPhaseAdvance(threshold, m_elapsedSeconds, "time");
+        }
+
+        while (m_nextMiniThresholdIndex < m_minithresholds.size()
+            && m_elapsedSeconds >= m_minithresholds[m_nextMiniThresholdIndex])
+        {
+            const float minithreshold = m_minithresholds[m_nextMiniThresholdIndex];
+            ++m_nextMiniThresholdIndex;
+            ++m_currentMiniPhase;
+            phaseupdate.miniPhaseAdvanced = true;
+            phaseupdate.timeElapsed += GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
+            LogPhaseAdvance(minithreshold, m_elapsedSeconds, "time");
+        }
+
+        return phaseupdate;
     }
     
     int PhaseManager::GetCurrentPhase() const noexcept
@@ -203,7 +256,7 @@ namespace GameFlow
         return GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
     }
 
-    void PhaseManager::LogPhaseAdvance(float threshold, float currentHeight) const
+    void PhaseManager::LogPhaseAdvance(float threshold, float currentValue, const char* metricLabel) const
     {
         const auto now = std::chrono::steady_clock::now();
         const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_startTime).count();
@@ -211,7 +264,7 @@ namespace GameFlow
         std::ostringstream oss;
         oss << kLogPrefix << "{\"phaseupdate\":" << m_currentPhase
             << ",\"threshold\":" << threshold
-            << ",\"height\":" << currentHeight
+            << ",\"" << (metricLabel ? metricLabel : "value") << "\":" << currentValue
             << ",\"multiplier\":" << GetRewardMultiplier()
             << ",\"timeMs\":" << elapsedMs << "}\n";
         DebugTrace(oss.str());
