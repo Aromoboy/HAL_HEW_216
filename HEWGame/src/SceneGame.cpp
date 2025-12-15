@@ -35,6 +35,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <cstdlib>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -88,6 +89,18 @@ namespace
         constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
         constexpr float3 kDefaultPlayerFallbackOffset{ 0.0f, 0.05f, 0.0f };
         constexpr float3 kDefaultPlayerFallbackSize{ 0.6f, 0.9f, 0.12f };
+        bool ReadOsaraColliderDebugFlag()
+        {
+                const char* value = std::getenv("r.DebugOsaraColliders");
+                if (!value)
+                {
+                        return false;
+                }
+
+                return std::atoi(value) != 0;
+        }
+
+        bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
         const HudLayoutConfig kHudLayoutConfig
         {
             512u,
@@ -1773,14 +1786,17 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 if (m_drawSystem)
                 {
                     m_drawSystem->RegisterRenderable(*osara);
-                    m_drawSystem->RegisterCollider(*osara);
+                    if (g_RegisterOsaraColliders)
+                    {
+                        m_drawSystem->RegisterCollider(*osara);
+                    }
                     if (index >= m_osaraDrawRegistered.size())
                     {
                         m_osaraDrawRegistered.resize(index + 1, false);
                     }
                     m_osaraDrawRegistered[index] = true;
 
-                    if (g_DrawColliders)
+                    if (g_DrawColliders && g_RegisterOsaraColliders)
                     {
                         std::ostringstream colliderOss;
                         colliderOss << kLogPrefix << "[Osara] Debug collider registered for '" << tag
@@ -2389,7 +2405,10 @@ void SceneGame::ConfigureUpdates()
                         if (!m_osaraDrawRegistered[i])
                         {
                                 m_drawSystem->RegisterRenderable(*osara);
-                                m_drawSystem->RegisterCollider(*osara);
+                                if (g_RegisterOsaraColliders)
+                                {
+                                        m_drawSystem->RegisterCollider(*osara);
+                                }
                                 m_osaraDrawRegistered[i] = true;
                         }
                 }
