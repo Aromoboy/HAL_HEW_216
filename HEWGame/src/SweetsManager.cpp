@@ -2747,6 +2747,7 @@ namespace SweetsSpace
 
         scanState(SweetsState::Ground);
         scanState(SweetsState::Active);
+        scanState(SweetsState::Stacked);
 
         return best;
     }
@@ -2765,7 +2766,7 @@ namespace SweetsSpace
 
         auto it = m_lookup.find(sweets);
         const SweetsState current = (it != m_lookup.end()) ? it->second : SweetsState::Active;
-        if (current != SweetsState::Active && current != SweetsState::Ground)
+        if (current != SweetsState::Active && current != SweetsState::Ground && current != SweetsState::Stacked)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "TryMarkAsCarried 却下 tag='" << sweets->GetTag()
@@ -2773,6 +2774,8 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             return false;
         }
+
+        ClearContactState(sweets.get());
 
         if (m_physicsMachine)
         {
