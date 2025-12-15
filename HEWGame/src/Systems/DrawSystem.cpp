@@ -411,7 +411,7 @@ namespace Systems
                         }
                 }
 
-                if (!colliderComponent->shapes.empty())
+                if (g_DrawColliderBounds && !colliderComponent->shapes.empty())
                 {
                         const AABB bounds = entity.GetAABB();
                         DebugColliderRenderer::DrawHull(
