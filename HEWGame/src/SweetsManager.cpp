@@ -970,7 +970,8 @@ namespace SweetsSpace
             return ::SweetsSpace::SweetsState::Active;
         }
 
-        bool touching = manager.HasSupportingContact(sweets);
+        bool foundationOnly = false;
+        bool touching = manager.HasSupportingContact(sweets, &foundationOnly);
         if (!touching)
         {
             if (auto* physicsMachine = sweets.GetPhysicsMachine())
@@ -998,6 +999,11 @@ namespace SweetsSpace
 
         if (touching)
         {
+            if (foundationOnly)
+            {
+                return ::SweetsSpace::SweetsState::Active;
+            }
+
             return ::SweetsSpace::SweetsState::Stacked;
         }
 
@@ -1571,15 +1577,27 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets) const
+    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
     {
+        if (foundationOnly)
+        {
+            *foundationOnly = false;
+        }
+
         auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
         if (it == m_contactStates.end())
         {
             return false;
         }
 
-        return (it->second.foundationContacts > 0) || (it->second.sweetsContacts > 0);
+        const bool hasFoundation = it->second.foundationContacts > 0;
+        const bool hasSweetsContact = it->second.sweetsContacts > 0;
+        if (foundationOnly)
+        {
+            *foundationOnly = hasFoundation && !hasSweetsContact;
+        }
+
+        return hasFoundation || hasSweetsContact;
     }
 
    
