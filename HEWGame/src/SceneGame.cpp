@@ -1743,11 +1743,20 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 if (m_drawSystem)
                 {
                     m_drawSystem->RegisterRenderable(*osara);
+                    m_drawSystem->RegisterCollider(*osara);
                     if (index >= m_osaraDrawRegistered.size())
                     {
                         m_osaraDrawRegistered.resize(index + 1, false);
                     }
                     m_osaraDrawRegistered[index] = true;
+
+                    if (g_DrawColliders)
+                    {
+                        std::ostringstream colliderOss;
+                        colliderOss << kLogPrefix << "[Osara] Debug collider registered for '" << tag
+                                    << "' (visible when r.DebugColliders!=0).\n";
+                        DebugTrace(colliderOss.str());
+                    }
                 }
 
                 if (index >= m_osaraPlates.size())
@@ -2213,6 +2222,7 @@ void SceneGame::ConfigureUpdates()
                         if (!m_osaraDrawRegistered[i])
                         {
                                 m_drawSystem->RegisterRenderable(*osara);
+                                m_drawSystem->RegisterCollider(*osara);
                                 m_osaraDrawRegistered[i] = true;
                         }
                 }
