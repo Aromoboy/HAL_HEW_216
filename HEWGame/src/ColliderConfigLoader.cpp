@@ -84,6 +84,107 @@ namespace
                 }
         }
 
+        std::optional<float3> ParseFloat3(const std::string& token)
+        {
+                const auto firstComma = token.find(',');
+                if (firstComma == std::string::npos)
+                {
+                        return std::nullopt;
+                }
+
+                const auto secondComma = token.find(',', firstComma + 1);
+                if (secondComma == std::string::npos)
+                {
+                        return std::nullopt;
+                }
+
+                try
+                {
+                        float x = std::stof(token.substr(0, firstComma));
+                        float y = std::stof(token.substr(firstComma + 1, secondComma - firstComma - 1));
+                        float z = std::stof(token.substr(secondComma + 1));
+                        return float3{ x, y, z };
+                }
+                catch (...)
+                {
+                        return std::nullopt;
+                }
+        }
+
+        std::optional<float2> ParseMarginVector2(const std::string& value)
+        {
+                if (value.find(',') == std::string::npos)
+                {
+                        return std::nullopt;
+                }
+
+                if (auto parsed = ParseFloat2(value))
+                {
+                        return parsed;
+                }
+
+                return std::nullopt;
+        }
+
+        std::optional<float3> ParseMarginVector3(const std::string& value)
+        {
+                if (value.find(',') == std::string::npos)
+                {
+                        return std::nullopt;
+                }
+
+                if (auto parsed = ParseFloat3(value))
+                {
+                        return parsed;
+                }
+
+                return std::nullopt;
+        }
+
+        std::optional<float2> SumOptional(const std::optional<float2>& lhs, const std::optional<float2>& rhs)
+        {
+                if (!lhs && !rhs)
+                {
+                        return std::nullopt;
+                }
+
+                float2 result{ 0.0f, 0.0f };
+                if (lhs)
+                {
+                        result.x += lhs->x;
+                        result.y += lhs->y;
+                }
+                if (rhs)
+                {
+                        result.x += rhs->x;
+                        result.y += rhs->y;
+                }
+                return result;
+        }
+
+        std::optional<float3> SumOptional(const std::optional<float3>& lhs, const std::optional<float3>& rhs)
+        {
+                if (!lhs && !rhs)
+                {
+                        return std::nullopt;
+                }
+
+                float3 result{ 0.0f, 0.0f, 0.0f };
+                if (lhs)
+                {
+                        result.x += lhs->x;
+                        result.y += lhs->y;
+                        result.z += lhs->z;
+                }
+                if (rhs)
+                {
+                        result.x += rhs->x;
+                        result.y += rhs->y;
+                        result.z += rhs->z;
+                }
+                return result;
+        }
+
         std::vector<float2> ParsePoints(const std::string& raw)
         {
                 std::vector<float2> points;
@@ -125,6 +226,40 @@ namespace
 
         void ApplyScalarOption(const std::string& key, const std::string& value, Collision::ColliderDefinition& outDef)
         {
+                if (key == "margin")
+                {
+                        if (const auto vector3 = ParseMarginVector3(value))
+                        {
+                                outDef.margin = (*vector3).x;
+                                outDef.margin3 = vector3;
+                                outDef.margin2 = float2{ vector3->x, vector3->y };
+                                return;
+                        }
+
+                        if (const auto vector2 = ParseMarginVector2(value))
+                        {
+                                outDef.margin = (*vector2).x;
+                                outDef.margin2 = vector2;
+                                outDef.margin3.reset();
+                                return;
+                        }
+
+                        try
+                        {
+                                outDef.margin = std::stof(value);
+                                outDef.margin2.reset();
+                                outDef.margin3.reset();
+                        }
+                        catch (...)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "Ignoring invalid margin value '" << value
+                                        << "'; expected scalar or comma-separated components.\n";
+                                Logging::LogWarning(oss.str());
+                        }
+                        return;
+                }
+
                 try
                 {
                         const float parsed = std::stof(value);
@@ -140,10 +275,6 @@ namespace
                                 }
 #endif
                                 outDef.scale = sanitized;
-                        }
-                        else if (key == "margin")
-                        {
-                                outDef.margin = parsed;
                         }
                 }
                 catch (...)
@@ -455,25 +586,45 @@ namespace Collision
                 const Transform& transform,
                 Collision::CollisionLayer layer,
                 float inheritedScale,
-                float inheritedMargin)
+                float inheritedMargin,
+                std::optional<float2> inheritedMargin2,
+                std::optional<float3> inheritedMargin3)
         {
                 const float effectiveScale = std::max(0.0f, definition.scale * inheritedScale);
-                const float effectiveMargin = definition.margin + inheritedMargin;
+                const bool hasOwnAxisMargin = definition.margin2 || definition.margin3;
+                const auto effectiveMargin2 = SumOptional(definition.margin2, inheritedMargin2);
+                const auto effectiveMargin3 = SumOptional(definition.margin3, inheritedMargin3);
+                const bool hasAxisMargin = hasOwnAxisMargin || effectiveMargin2 || effectiveMargin3;
+                const float effectiveMargin = (hasOwnAxisMargin ? 0.0f : definition.margin) + inheritedMargin;
 
                 switch (definition.type)
                 {
                 case ColliderKind::Circle:
                 {
-                        const float scaledRadius = std::max(0.0f, definition.radius * effectiveScale + effectiveMargin);
+                        const float2 axisMargin = effectiveMargin2
+                                ? *effectiveMargin2
+                                : (effectiveMargin3 ? float2{ effectiveMargin3->x, effectiveMargin3->y } : float2{ 0.0f, 0.0f });
+                        const float circleMargin = effectiveMargin + (hasAxisMargin ? axisMargin.x : 0.0f);
+
+                        if (hasAxisMargin && std::abs(axisMargin.y - axisMargin.x) > 1e-4f)
+                        {
+                                std::ostringstream oss;
+                                oss << kLogPrefix
+                                        << "Circle collider received non-uniform margin; using X component only ("
+                                        << axisMargin.x << ", " << axisMargin.y << ").\n";
+                                Logging::LogWarning(oss.str());
+                        }
+
+                        const float scaledRadius = std::max(0.0f, definition.radius * effectiveScale + circleMargin);
                         const float2 scaledOffset{ definition.offset.x * effectiveScale, definition.offset.y * effectiveScale };
 
 #if defined(_DEBUG)
-                        if (std::abs(effectiveScale - 1.0f) > 1e-4f || std::abs(effectiveMargin) > 1e-4f)
+                        if (std::abs(effectiveScale - 1.0f) > 1e-4f || std::abs(circleMargin) > 1e-4f)
                         {
                                 std::ostringstream oss;
                                 oss << kLogPrefix << "Circle scale/margin applied: base radius=" << definition.radius
                                         << ", offset=(" << definition.offset.x << ", " << definition.offset.y << ")"
-                                        << ", effectiveScale=" << effectiveScale << ", margin=" << effectiveMargin
+                                        << ", effectiveScale=" << effectiveScale << ", margin=" << circleMargin
                                         << ", final radius=" << scaledRadius
                                         << ", final offset=(" << scaledOffset.x << ", " << scaledOffset.y << ")\n";
                                 Logging::DebugTrace(oss.str());
@@ -502,7 +653,17 @@ namespace Collision
                         for (const auto& p : definition.points)
                         {
                                 float2 scaled{ p.x * effectiveScale, p.y * effectiveScale };
-                                if (std::abs(effectiveMargin) > 1e-6f)
+                                if (hasAxisMargin)
+                                {
+                                        const float2 axisMargin = effectiveMargin2
+                                                ? *effectiveMargin2
+                                                : float2{ effectiveMargin3 ? effectiveMargin3->x : 0.0f,
+                                                          effectiveMargin3 ? effectiveMargin3->y : 0.0f };
+                                        const float2 compositeMargin{ axisMargin.x + effectiveMargin, axisMargin.y + effectiveMargin };
+                                        scaled.x += (scaled.x >= 0.0f ? compositeMargin.x : -compositeMargin.x);
+                                        scaled.y += (scaled.y >= 0.0f ? compositeMargin.y : -compositeMargin.y);
+                                }
+                                else if (std::abs(effectiveMargin) > 1e-6f)
                                 {
                                         const float lenSq = (scaled.x * scaled.x) + (scaled.y * scaled.y);
                                         if (lenSq > 1e-8f)
@@ -543,7 +704,14 @@ namespace Collision
                         children.reserve(definition.children.size());
                         for (const auto& childDef : definition.children)
                         {
-                                auto child = BuildColliderFromDefinition(childDef, transform, layer, effectiveScale, effectiveMargin);
+                                auto child = BuildColliderFromDefinition(
+                                        childDef,
+                                        transform,
+                                        layer,
+                                        effectiveScale,
+                                        effectiveMargin,
+                                        effectiveMargin2,
+                                        effectiveMargin3);
                                 if (child)
                                 {
                                         children.push_back(child);
