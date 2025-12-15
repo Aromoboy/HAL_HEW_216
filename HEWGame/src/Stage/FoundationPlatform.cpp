@@ -16,6 +16,8 @@
 #include "ModelDX.h"
 #include "ModelPivot.h"
 #include "BoxColliderComponent.h"
+#include "Entities/PhysicalEntity.h"
+#include "Physics/ShapeConstants.h"
 #include "Systems/PhysicsMachine.h"
 
 #if defined(_WIN32) && defined(_DEBUG)
@@ -124,17 +126,16 @@ namespace
         component.shapeDef.density = 0.0f;
         component.shapeDef.material.friction = 0.8f;
 
-        const float safeWidth = std::max(0.01f, std::fabs(worldScale.x));
-        const float safeHeight = std::max(0.01f, std::fabs(worldScale.y));
+        const float safeWidth = std::max(Physics::kMinimumShapeDimensionMeters, std::fabs(worldScale.x));
+        const float safeHeight = std::max(Physics::kMinimumShapeDimensionMeters, std::fabs(worldScale.y));
 
-        // PhysicsMachine::CreateBody で transform.scale が適用されるため、ここでは world サイズを正規化して保持する
-        const float halfWidth = safeWidth * 0.5f / safeWidth;
-        const float halfHeight = safeHeight * 0.5f / safeHeight;
+        const float halfWidth = Entities::PhysicalEntity::ToBox2DLength(safeWidth * 0.5f);
+        const float halfHeight = Entities::PhysicalEntity::ToBox2DLength(safeHeight * 0.5f);
 
         component.AddBox(
             halfWidth,
             halfHeight,
-            b2Vec2{ 0.0f, halfHeight }
+            b2Vec2{ 0.0f, 0.0f }
         );
 
         return component;
