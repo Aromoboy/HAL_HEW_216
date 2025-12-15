@@ -29,6 +29,7 @@ namespace GameFlow
 
         void Reset();
         PhaseUpdateResult UpdateHeight(float currentMaxHeight);
+        PhaseUpdateResult UpdateTime(float deltaSeconds);
 
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
@@ -63,10 +64,11 @@ namespace GameFlow
 
         bool m_initialized;
         float m_lastReportedHeight;
+        float m_elapsedSeconds;
 
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
         float GetRewardMiniMultiplierForPhase(int phaseminiIndex) const noexcept;
 
-        void LogPhaseAdvance(float threshold, float currentHeight) const;
+        void LogPhaseAdvance(float threshold, float currentValue, const char* metricLabel) const;
     };
 }
