@@ -7,6 +7,7 @@
 #include <string>
 #include "Core/UpdateNode.h"
 #include "Entities/CollisionEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include "Transform.h"
 #include "ModelDX.h"
 
@@ -31,6 +32,7 @@ namespace Systems
                 void SetRenderer(ModelRender* renderer);
                 void RegisterRenderable(Entities::Entity& entity);
                 void RegisterRenderable(Entities::CollisionEntity& entity);
+                void RegisterCollider(Entities::PhysicalEntity& entity);
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
 
@@ -52,17 +54,20 @@ namespace Systems
 
                 struct DrawColliderCommand
                 {
-                    Entities::CollisionEntity* source;
+                    Entities::CollisionEntity* collisionEntity;
+                    Entities::PhysicalEntity* physicalEntity;
                 };
 
                 bool ValidateTransform(const Transform& transform, const Entities::Entity* source) const;
                 void RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera);
+                void RenderColliderComponent(const Entities::PhysicalEntity& entity) const;
 
 
                 ModelRender* m_renderer;
                 std::vector<Entities::Entity*> m_renderables;
                 std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
+                std::unordered_set<Entities::PhysicalEntity*> m_physicalColliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
                 bool m_hasStagePlaneZ;

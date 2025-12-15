@@ -13,11 +13,13 @@
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
 #include "Entities/CollisionEntity.h"
+#include "Entities/PhysicalEntity.h"
 #include "Collision2D.h"
 #include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
+#include "DebugColliderRenderer.h"
 
 namespace
 {
@@ -47,6 +49,19 @@ namespace
         constexpr float kMaxRenderableScale = 1.0e4f;
         constexpr float kMaxDepthMagnitude = 1.0e5f;
         constexpr float kPlaneZTolerance = 5.0f;
+
+        float2 ApplyTransform2D(const float2& local, const Transform& transform)
+        {
+                const float scaledX = local.x * transform.scale.x;
+                const float scaledY = local.y * transform.scale.y;
+                const float cosR = std::cos(transform.rotation.z);
+                const float sinR = std::sin(transform.rotation.z);
+
+                return float2{
+                        transform.position.x + (cosR * scaledX - sinR * scaledY),
+                        transform.position.y + (sinR * scaledX + cosR * scaledY),
+                };
+        }
 
         bool ReadDebugColliderCvar()
         {
@@ -126,6 +141,11 @@ namespace Systems
                     m_colliderRenderables.erase(colIt);
                 }
 
+                if (auto* physical = dynamic_cast<Entities::PhysicalEntity*>(entityPtr))
+                {
+                        m_physicalColliderRenderables.erase(physical);
+                }
+
         }
 
         void DrawSystem::RegisterRenderable(Entities::CollisionEntity& entity)
@@ -141,10 +161,16 @@ namespace Systems
             m_colliderRenderables[entityPtr] = entityPtr->GetCollider();
         }
 
+        void DrawSystem::RegisterCollider(Entities::PhysicalEntity& entity)
+        {
+                m_physicalColliderRenderables.insert(&entity);
+        }
+
         void DrawSystem::ClearRenderables()
         {
                 m_renderables.clear();
                 m_colliderRenderables.clear();
+                m_physicalColliderRenderables.clear();
                 m_commands.clear();
                 m_colliderCommands.clear();
                 m_missingModelLogged.clear();
@@ -209,8 +235,25 @@ namespace Systems
                         continue;
                     }
 
-                    m_colliderCommands.push_back(DrawColliderCommand{ collisionEntity });
+                    m_colliderCommands.push_back(DrawColliderCommand{ collisionEntity, nullptr });
 
+                }
+
+                for (auto* physical : m_physicalColliderRenderables)
+                {
+                        if (!physical)
+                        {
+                                continue;
+                        }
+
+                        const auto& boxCollider = physical->GetBoxColliderComponent();
+                        const bool hasCollider = boxCollider && (!boxCollider->Empty() || boxCollider->createdFixtureCount > 0);
+                        if (!hasCollider)
+                        {
+                                continue;
+                        }
+
+                        m_colliderCommands.push_back(DrawColliderCommand{ nullptr, physical });
                 }
         }
 
@@ -345,15 +388,81 @@ namespace Systems
 
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
-                if (!command.source)
+                if (command.collisionEntity)
                 {
-                    continue;
+                        command.collisionEntity->DebugDraw();
+                        continue;
                 }
 
-                command.source->DebugDraw();
+                if (command.physicalEntity)
+                {
+                        RenderColliderComponent(*command.physicalEntity);
+                }
             }
 
             m_colliderCommands.clear();
             Geometory::DrawLines();
+        }
+
+        void DrawSystem::RenderColliderComponent(const Entities::PhysicalEntity& entity) const
+        {
+                const auto& colliderComponent = entity.GetBoxColliderComponent();
+                if (!colliderComponent || colliderComponent->createdFixtureCount <= 0)
+                {
+                        return;
+                }
+
+                constexpr Color kColliderColor{ 0.9f, 0.3f, 0.3f, 1.0f };
+                constexpr Color kBoundsColor{ 1.0f, 1.0f, 0.0f, 1.0f };
+
+                const Transform& transform = entity.GetTransform();
+                const float z = transform.position.z;
+
+                for (const auto& shape : colliderComponent->shapes)
+                {
+                        switch (shape.type)
+                        {
+                        case Physics::ColliderShapeType::Circle:
+                        {
+                                const float2 center = ApplyTransform2D(float2{ 0.0f, 0.0f }, transform);
+                                const float scaledRadius = shape.radius * std::max(transform.scale.x, transform.scale.y);
+                                DebugColliderRenderer::DrawCircle(center, scaledRadius, z, kColliderColor);
+                                break;
+                        }
+                        case Physics::ColliderShapeType::Box:
+                        case Physics::ColliderShapeType::Polygon:
+                        default:
+                        {
+                                if (shape.vertices.empty())
+                                {
+                                        continue;
+                                }
+
+                                std::vector<float2> hull;
+                                hull.reserve(shape.vertices.size());
+                                for (const auto& vertex : shape.vertices)
+                                {
+                                        hull.push_back(ApplyTransform2D(float2{ vertex.x, vertex.y }, transform));
+                                }
+
+                                DebugColliderRenderer::DrawHull(hull, z, kColliderColor);
+                                break;
+                        }
+                        }
+                }
+
+                if (!colliderComponent->shapes.empty())
+                {
+                        const AABB bounds = entity.GetAABB();
+                        DebugColliderRenderer::DrawHull(
+                                {
+                                        float2{ bounds.min.x, bounds.min.y },
+                                        float2{ bounds.max.x, bounds.min.y },
+                                        float2{ bounds.max.x, bounds.max.y },
+                                        float2{ bounds.min.x, bounds.max.y },
+                                },
+                                transform.position.z,
+                                kBoundsColor);
+                }
         }
 }
