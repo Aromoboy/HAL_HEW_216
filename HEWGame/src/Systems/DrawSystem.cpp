@@ -12,7 +12,6 @@
 
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
-#include "Entities/CollisionEntity.h"
 #include "Entities/PhysicalEntity.h"
 #include "Collision2D.h"
 #include "DirectX.h"
@@ -134,31 +133,11 @@ namespace Systems
 
                 m_renderables.erase(it, m_renderables.end());
 
-                std::unordered_map<Entities::Entity*, Collision::ICollider*>::iterator colIt = m_colliderRenderables.find(entityPtr);
-
-                if (colIt != m_colliderRenderables.end())
-                {
-                    m_colliderRenderables.erase(colIt);
-                }
-
                 if (auto* physical = dynamic_cast<Entities::PhysicalEntity*>(entityPtr))
                 {
                         m_physicalColliderRenderables.erase(physical);
                 }
 
-        }
-
-        void DrawSystem::RegisterRenderable(Entities::CollisionEntity& entity)
-        {
-            Entities::CollisionEntity* entityPtr = &entity;
-            if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
-            {
-                return;
-            }
-
-            m_renderables.push_back(entityPtr);
-
-            m_colliderRenderables[entityPtr] = entityPtr->GetCollider();
         }
 
         void DrawSystem::RegisterCollider(Entities::PhysicalEntity& entity)
@@ -169,7 +148,6 @@ namespace Systems
         void DrawSystem::ClearRenderables()
         {
                 m_renderables.clear();
-                m_colliderRenderables.clear();
                 m_physicalColliderRenderables.clear();
                 m_commands.clear();
                 m_colliderCommands.clear();
@@ -227,18 +205,6 @@ namespace Systems
                         m_commands.push_back(DrawCommand{ entity, model, transform });
                 }
 
-                for (auto it : m_colliderRenderables)
-                {
-                    auto* collisionEntity = dynamic_cast<Entities::CollisionEntity*>(it.first);
-                    if (!collisionEntity || !it.second)
-                    {
-                        continue;
-                    }
-
-                    m_colliderCommands.push_back(DrawColliderCommand{ collisionEntity, nullptr });
-
-                }
-
                 for (auto* physical : m_physicalColliderRenderables)
                 {
                         if (!physical)
@@ -253,7 +219,7 @@ namespace Systems
                                 continue;
                         }
 
-                        m_colliderCommands.push_back(DrawColliderCommand{ nullptr, physical });
+                        m_colliderCommands.push_back(DrawColliderCommand{ physical });
                 }
         }
 
@@ -388,12 +354,6 @@ namespace Systems
 
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
-                if (command.collisionEntity)
-                {
-                        command.collisionEntity->DebugDraw();
-                        continue;
-                }
-
                 if (command.physicalEntity)
                 {
                         RenderColliderComponent(*command.physicalEntity);

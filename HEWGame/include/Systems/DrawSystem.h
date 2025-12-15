@@ -2,11 +2,9 @@
 
 #include <memory>
 #include <vector>
-#include <unordered_map>
 #include <unordered_set>
 #include <string>
 #include "Core/UpdateNode.h"
-#include "Entities/CollisionEntity.h"
 #include "Entities/PhysicalEntity.h"
 #include "Transform.h"
 #include "ModelDX.h"
@@ -31,7 +29,6 @@ namespace Systems
 
                 void SetRenderer(ModelRender* renderer);
                 void RegisterRenderable(Entities::Entity& entity);
-                void RegisterRenderable(Entities::CollisionEntity& entity);
                 void RegisterCollider(Entities::PhysicalEntity& entity);
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
@@ -54,7 +51,6 @@ namespace Systems
 
                 struct DrawColliderCommand
                 {
-                    Entities::CollisionEntity* collisionEntity;
                     Entities::PhysicalEntity* physicalEntity;
                 };
 
@@ -66,7 +62,6 @@ namespace Systems
 
                 ModelRender* m_renderer;
                 std::vector<Entities::Entity*> m_renderables;
-                std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
                 std::unordered_set<Entities::PhysicalEntity*> m_physicalColliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
