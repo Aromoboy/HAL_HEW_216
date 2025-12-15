@@ -42,6 +42,7 @@
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
 #include "Entities/PhysicalEntity.h"
+#include "Physics/ShapeConstants.h"
 #include "Diagnostics/Logger.h"
 #include <DirectXMath.h>
 
@@ -99,6 +100,7 @@ namespace
     constexpr float kMaxNormalizationScale = 50.0f;
     constexpr float kMinFinalScale = 0.05f;
     constexpr float kMaxFinalScale = 3.0f;
+    constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -380,10 +382,10 @@ namespace
     {
         if (!std::isfinite(value) || value <= 0.0f)
         {
-            return std::numeric_limits<float>::min();
+            return kMinimumColliderThickness;
         }
 
-        return std::max(value, std::numeric_limits<float>::min());
+        return std::max(value, kMinimumColliderThickness);
     }
 
     float ApplyThicknessEpsilon(float thickness, float minThickness)
@@ -1919,7 +1921,7 @@ namespace SweetsSpace
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
-        , m_generatedColliderMinThickness(SanitizeMinThickness(0.0f))
+        , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
         , m_forceGeneratedColliders(false)
         , m_colliderConfigOverridesEnabled(false)
         , m_warnedMissingHorizontalBounds(false)
@@ -3467,7 +3469,7 @@ namespace SweetsSpace
 
         std::ostringstream oss;
         oss << kLogPrefix << "自動生成コライダーの最小厚みを " << sanitized
-            << (clamped ? " (正の最小値に丸めた)" : "")
+            << (clamped ? " (物理下限に丸めた)" : "")
             << " にしたよ 新しく作るコライダーはその薄さで使うね \n";
         DebugTrace(oss.str());
 
