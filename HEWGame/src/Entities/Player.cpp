@@ -791,6 +791,7 @@ namespace Entities
 
         considerState(SweetsSpace::SweetsState::Ground);
         considerState(SweetsSpace::SweetsState::Active);
+        considerState(SweetsSpace::SweetsState::Stacked);
 
         if (!candidate)
         {
