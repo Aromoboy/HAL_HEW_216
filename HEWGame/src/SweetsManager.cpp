@@ -735,7 +735,7 @@ namespace SweetsSpace
             GeneratedCollider generated{};
             generated.hull = summary.hull;
             generated.centroidOffset = summary.centroidOffset;
-            generated.thickness = summary.thickness;
+            generated.thickness = std::clamp(summary.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
             m_generatedColliders[normalizedKind] = generated;
             return generated;
         };
@@ -751,6 +751,7 @@ namespace SweetsSpace
         auto applyConfigDefinition = [&](const Collision::ColliderDefinition& definition, const char* reason) -> bool
         {
             bool applied = false;
+            const float clampedThickness = std::clamp(definition.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
             switch (definition.type)
             {
             case Collision::ColliderKind::Circle:
@@ -758,8 +759,8 @@ namespace SweetsSpace
                 const float effectiveRadius = std::max(0.0f, ((definition.radius * definition.scale) + definition.margin) * uniformColliderScale);
                 result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
                 result.shapeConfig.radius = effectiveRadius;
-                result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f * uniformColliderScale);
-                result.thickness = definition.thickness * uniformColliderScale;
+                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
+                result.thickness = clampedThickness * uniformColliderScale;
                 result.source = ColliderSource::Config;
                 applied = true;
                 break;
@@ -783,8 +784,8 @@ namespace SweetsSpace
                 if (result.shapeConfig.vertices.size() >= 3)
                 {
                     result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                    result.shapeConfig.polygonRadius = std::max(0.0f, definition.thickness * 0.5f * uniformColliderScale);
-                    result.thickness = definition.thickness * uniformColliderScale;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
+                    result.thickness = clampedThickness * uniformColliderScale;
                     result.source = ColliderSource::Config;
                     applied = true;
                 }
@@ -796,6 +797,7 @@ namespace SweetsSpace
                 float maxThickness = 0.0f;
                 for (const auto& child : definition.children)
                 {
+                    const float clampedChildThickness = std::clamp(child.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
                     switch (child.type)
                     {
                     case Collision::ColliderKind::Circle:
@@ -833,7 +835,7 @@ namespace SweetsSpace
                         break;
                     }
 
-                    maxThickness = std::max(maxThickness, child.thickness * uniformColliderScale);
+                    maxThickness = std::max(maxThickness, clampedChildThickness * uniformColliderScale);
                 }
 
                 if (!result.meshPolygons.empty())
@@ -863,6 +865,7 @@ namespace SweetsSpace
 
         auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
         {
+            const float clampedThickness = std::clamp(thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
             std::vector<float2> scaledHull;
             scaledHull.reserve(hull.size());
             for (const auto& pt : hull)
@@ -879,8 +882,8 @@ namespace SweetsSpace
                 result.shapeConfig.vertices = hullVertices;
                 result.meshPolygons.clear();
                 result.meshPolygons.push_back(hullVertices);
-                result.shapeConfig.polygonRadius = std::max(0.0f, thickness * 0.5f * uniformColliderScale);
-                result.thickness = thickness * uniformColliderScale;
+                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
+                result.thickness = clampedThickness * uniformColliderScale;
                 result.centroidOffset = scaledOffset;
             }
         };
