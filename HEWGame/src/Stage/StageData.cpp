@@ -38,10 +38,10 @@ namespace
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
-    constexpr float kDefaultOsaraLeftOffsetX = 0.0f;
-    constexpr float kDefaultOsaraRightOffsetX = 0.0f;
-    constexpr float kDefaultOsaraOffsetY = 0.0f;
-    constexpr float kDefaultOsaraSpawnOffsetY = 0.0f;
+    constexpr float kDefaultOsaraLeftOffsetX = -3.0f;
+    constexpr float kDefaultOsaraRightOffsetX = 3.0f;
+    constexpr float kDefaultOsaraOffsetY = 2.0f;
+    constexpr float kDefaultOsaraSpawnOffsetY = 2.0f;
     constexpr std::size_t kRequiredSpawnAnchors = 2;
     constexpr std::size_t kSpawnCoordinatesPerAnchor = 3;
     constexpr float kSpawnPlaneTolerance = 0.01f;
