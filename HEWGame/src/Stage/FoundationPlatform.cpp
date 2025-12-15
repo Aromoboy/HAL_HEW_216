@@ -574,7 +574,15 @@ namespace Stage
             m_worldScale.y * m_normalizationScale,
             m_worldScale.z * m_normalizationScale,
         };
-        m_visual.position.y = m_visualPivotOffset;
+
+        float pivotOffsetY = m_visualPivotOffset;
+        if (m_model)
+        {
+            const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, m_visual.scale);
+            pivotOffsetY = pivotInfo.offsetY;
+        }
+
+        m_visual.position.y += pivotOffsetY;
         RefreshRenderTransform();
     }
 
