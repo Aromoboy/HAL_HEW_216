@@ -2796,25 +2796,17 @@ namespace SweetsSpace
         return sweets;
     }
 
-    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(
+    PickupQueryResult SweetsManager::FindNearestCarryable(
         const float3& pickupCenter,
         float halfWidth,
         float halfHeight,
         float halfDepth,
         float depthThreshold,
         const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
-        float maxDistance,
-        float* outDistance) const
+        float maxDistance) const
     {
-        if (outDistance)
-        {
-            *outDistance = std::numeric_limits<float>::quiet_NaN();
-        }
-
-        if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
-        {
-            return nullptr;
-        }
+        PickupQueryResult result{};
+        result.failReason = PickupFailReason::InvalidConfiguration;
 
         const auto sanitizeCoordinate = [](float value)
         {
@@ -2827,6 +2819,10 @@ namespace SweetsSpace
             sanitizeCoordinate(pickupCenter.y),
             sanitizeCoordinate(pickupCenter.z),
         };
+        if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
+        {
+            return result;
+        }
         const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
         const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
             ? depthThreshold
@@ -2841,12 +2837,12 @@ namespace SweetsSpace
         const float broadPhaseHalfDepth = std::max(sanitizedHalfDepth, sanitizedDepthThreshold);
 
         AABB pickupBounds{};
-        pickupBounds.min.x = sanitizedCenter.x - halfWidth;
-        pickupBounds.max.x = sanitizedCenter.x + halfWidth;
-        pickupBounds.min.y = sanitizedCenter.y - halfHeight;
-        pickupBounds.max.y = sanitizedCenter.y + halfHeight;
-        pickupBounds.min.z = sanitizedCenter.z - sanitizedHalfDepth;
-        pickupBounds.max.z = sanitizedCenter.z + sanitizedHalfDepth;
+        pickupBounds.min.x = sanitizedCenter.x - broadPhaseHalfWidth;
+        pickupBounds.max.x = sanitizedCenter.x + broadPhaseHalfWidth;
+        pickupBounds.min.y = sanitizedCenter.y - broadPhaseHalfHeight;
+        pickupBounds.max.y = sanitizedCenter.y + broadPhaseHalfHeight;
+        pickupBounds.min.z = sanitizedCenter.z - broadPhaseHalfDepth;
+        pickupBounds.max.z = sanitizedCenter.z + broadPhaseHalfDepth;
 
         const auto intersects = [&](const AABB& bounds)
         {
@@ -2856,6 +2852,14 @@ namespace SweetsSpace
             return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
         };
 
+        const auto computeDepthDelta = [&](const AABB& bounds)
+        {
+            const float frontExcess = bounds.min.z - (sanitizedCenter.z + sanitizedHalfDepth);
+            const float backExcess = (sanitizedCenter.z - sanitizedHalfDepth) - bounds.max.z;
+            const float outside = std::max(frontExcess, backExcess);
+            return outside > 0.0f ? outside : 0.0f;
+        };
+
         const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
         {
             return std::find(exclude.begin(), exclude.end(), sweets) != exclude.end();
@@ -2863,7 +2867,6 @@ namespace SweetsSpace
 
         std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
-        float nearestMeasuredDistanceSq = std::numeric_limits<float>::max();
         float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
 
         const auto scanState = [&](SweetsState state)
@@ -2902,6 +2905,7 @@ namespace SweetsSpace
                 {
                     bestDistanceSq = distanceSq;
                     best = sweets;
+                    nearestMeasuredDepthDelta = computeDepthDelta(bounds);
                 }
             }
         };
@@ -2912,34 +2916,30 @@ namespace SweetsSpace
 
         if (bestDistanceSq == std::numeric_limits<float>::max())
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "拾えるスイーツが見つかりませんでした: center=("
-                << sanitizedCenter.x << ',' << sanitizedCenter.y << ',' << sanitizedCenter.z
-                << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
-                << " maxDistance=" << sanitizedMaxDistance << "\n";
-            DebugTrace(oss.str());
-            return nullptr;
+            result.failReason = PickupFailReason::NoCandidates;
+            return result;
         }
 
         const float bestDistance = std::sqrt(bestDistanceSq);
-        if (outDistance)
-        {
-            *outDistance = bestDistance;
-        }
+        result.distance = bestDistance;
+        result.depthDelta = nearestMeasuredDepthDelta;
 
         if (bestDistance > sanitizedMaxDistance)
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "最寄りのスイーツが距離制限を超過: distance=" << bestDistance
-                << " > maxDistance=" << sanitizedMaxDistance
-                << " center=(" << sanitizedCenter.x << ',' << sanitizedCenter.y << ',' << sanitizedCenter.z
-                << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
-                << ")\n";
-            DebugTrace(oss.str());
-            return nullptr;
+            result.failReason = PickupFailReason::DistanceExceeded;
+            return result;
         }
 
-        return best;
+        if (nearestMeasuredDepthDelta > sanitizedDepthThreshold)
+        {
+            result.failReason = PickupFailReason::DepthExceeded;
+            return result;
+        }
+
+        result.result = PickupResult::Success;
+        result.failReason = PickupFailReason::None;
+        result.sweets = best;
+        return result;
     }
 
     bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)

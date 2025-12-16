@@ -7,12 +7,14 @@
 #include "Entities/PhysicalEntity.h"
 #include "Input.h"
 #include "PickupConfig.h"
+#include "SweetsManager.h"
 #include "VisualTransform.h"
 
 namespace SweetsSpace
 {
     class BaseSweets;
     class SweetsManager;
+    struct PickupQueryResult;
 }
 
 namespace Entities
@@ -55,6 +57,8 @@ namespace Entities
         void SetPickupMaxDistance(float maxDistance);
         void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
+
+        const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
         Transform GetRenderTransform() const override;
 
@@ -102,6 +106,7 @@ namespace Entities
         bool m_hasMaximumY;
         float m_maximumY;
         std::optional<ColliderFootprint> m_colliderFootprint;
+        SweetsSpace::PickupQueryResult m_lastPickupResult;
 
         float3 ComputeCarryAnchor() const;
         PickupOrigin ComputePickupOrigin() const;

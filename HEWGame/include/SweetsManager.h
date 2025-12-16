@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <limits>
 
 #include "Core/UpdateNode.h"
 #include "ICamera.h"
@@ -90,6 +91,38 @@ namespace SweetsSpace
     {
         Hit,
         Miss,
+    };
+
+    enum class PickupResult : std::uint8_t
+    {
+        Success,
+        Failure,
+    };
+
+    enum class PickupFailReason : std::uint8_t
+    {
+        None,
+        MissingSweetsManager,
+        MissingSystems,
+        InvalidConfiguration,
+        NoCandidates,
+        DistanceExceeded,
+        DepthExceeded,
+        StateTransitionFailed,
+    };
+
+    struct PickupQueryResult
+    {
+        PickupResult result{ PickupResult::Failure };
+        PickupFailReason failReason{ PickupFailReason::None };
+        std::shared_ptr<ActiveSweets> sweets;
+        float distance{ std::numeric_limits<float>::quiet_NaN() };
+        float depthDelta{ std::numeric_limits<float>::quiet_NaN() };
+
+        bool Succeeded() const noexcept
+        {
+            return result == PickupResult::Success && sweets != nullptr;
+        }
     };
 
     struct DeleteBatchContext
@@ -172,15 +205,14 @@ namespace SweetsSpace
         std::vector<std::pair<std::string, FactoryPreset>> EnumerateFactoryPresets() const;
 
         std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
-        std::shared_ptr<ActiveSweets> FindNearestCarryable(
+        PickupQueryResult FindNearestCarryable(
             const float3& pickupCenter,
             float halfWidth,
             float halfHeight,
             float halfDepth,
             float depthThreshold,
             const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
-            float maxDistance,
-            float* outDistance = nullptr) const;
+            float maxDistance) const;
         bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
