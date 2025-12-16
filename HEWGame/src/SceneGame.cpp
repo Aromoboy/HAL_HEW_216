@@ -3034,6 +3034,7 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     if (!m_physicsMachine)
         return;
 
+    const bool isPlayerEntity = (player && player.get() == &entity);
     const auto& boxColliderComponent = entity.GetBoxColliderComponent();
     const bool hasBoxColliderComponent = boxColliderComponent && !boxColliderComponent->Empty();
     const auto& shapeConfig = entity.GetBox2DShapeConfig();
@@ -3062,10 +3063,19 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     {
         const bool hasBody = entity.HasBox2DBody();
         const int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+        float gravityScale = hasBody ? entity.GetGravityScale() : 0.0f;
+        if (isPlayerEntity && hasBody && std::fabs(gravityScale - 0.0f) > std::numeric_limits<float>::epsilon())
+        {
+            entity.SetGravityScale(0.0f);
+            gravityScale = entity.GetGravityScale();
+            DebugTrace(std::string(kLogPrefix) + "Player gravity disabled to prevent unintended falling.\n");
+        }
+
         std::ostringstream oss;
         oss << kLogPrefix << "Physics registration complete for tag='" << entity.GetTag()
             << "' hasBody=" << std::boolalpha << hasBody
             << " fixtures=" << fixtureCount
+            << " gravityScale=" << gravityScale
             << ((hasBody && fixtureCount > 0) ? "" : " (incomplete)") << "\n";
         ::DebugTrace(oss.str());
 
