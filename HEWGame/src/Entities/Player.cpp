@@ -285,6 +285,7 @@ namespace Entities
         , m_pickupHalfHeight(0.0f)
         , m_pickupOffset{}
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupDepthThreshold(kDefaultPickupDepthThreshold)
         , m_pickupOriginOffset(float3{ 0.0f, 0.0f, 0.0f })
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
@@ -758,6 +759,26 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void Player::SetPickupDepthThreshold(float depthThreshold)
+    {
+        if (!std::isfinite(depthThreshold) || depthThreshold < 0.0f)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "無効なピックアップ深度しきい値を無視しました \n");
+            return;
+        }
+
+        if (std::fabs(m_pickupDepthThreshold - depthThreshold) < std::numeric_limits<float>::epsilon())
+        {
+            return;
+        }
+
+        m_pickupDepthThreshold = depthThreshold;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "ピックアップ深度しきい値を " << m_pickupDepthThreshold << " に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
     void Player::SetPickupOriginOffset(const float3& offset)
     {
         if (!std::isfinite(offset.x) || !std::isfinite(offset.y) || !std::isfinite(offset.z))
@@ -861,10 +882,17 @@ namespace Entities
 
     void Player::TryPickupNearest()
     {
+        SweetsSpace::PickupQueryResult pickupResult{};
         std::shared_ptr<SweetsSpace::ActiveSweets> candidate;
         Transform candidateTransform{};
         AABB sweetsBounds{};
         float sweetsZ = std::numeric_limits<float>::quiet_NaN();
+
+        PickupOrigin pickupOrigin{};
+        float3 pickupCenter = pickupOrigin.center;
+        float halfDepth = pickupOrigin.halfDepth;
+        float depthThreshold = m_pickupDepthThreshold;
+        bool pickupVolumeValid = false;
 
         if (!m_sweetsManager)
         {
@@ -876,87 +904,79 @@ namespace Entities
         }
         else
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップ距離のしきい値が無効です \n");
-            return;
-        }
-        const PickupOrigin pickupOrigin = ComputePickupOrigin();
-        const float halfDepth = pickupOrigin.halfDepth;
-        const float depthThreshold = kDefaultPickupDepthThreshold;
-        float3 pickupOffset{ 0.0f, 0.0f, 0.0f };
+            pickupOrigin = ComputePickupOrigin();
+            halfDepth = pickupOrigin.halfDepth;
+            depthThreshold = m_pickupDepthThreshold;
 
-switch (m_pickupOffset.mode)
-{
-case Stage::PickupOffsetMode::FacingDirection:
-    pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
-    pickupOffset.y = m_pickupOffset.localOffset.y;
-    pickupOffset.z = m_pickupOffset.localOffset.z;
-    break;
-
-case Stage::PickupOffsetMode::WorldX:
-    pickupOffset = m_pickupOffset.localOffset;
-    break;
-
-case Stage::PickupOffsetMode::None:
-default:
-    break;
-}
-
-const float3 pickupCenter{
-    pickupOrigin.center.x + pickupOffset.x,
-    pickupOrigin.center.y + pickupOffset.y,
-    pickupOrigin.center.z + pickupOffset.z
-};
-
-
-        assert(std::isfinite(halfDepth) && halfDepth > 0.0f);
-        assert(std::isfinite(depthThreshold) && depthThreshold >= 0.0f);
-        if (!std::isfinite(halfDepth) || halfDepth <= 0.0f || !std::isfinite(depthThreshold) || depthThreshold < 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "ピックアップボリュームが無効です halfDepth=" << halfDepth
-                << " depthThreshold=" << depthThreshold << "\n";
-            PlayerDebugTrace(oss.str());
-            return;
-        }
-
-        float nearestDistance = std::numeric_limits<float>::quiet_NaN();
-        const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
-            m_sweetsManager->FindNearestCarryable(
-                pickupCenter,
-                m_pickupHalfWidth,
-                m_pickupHalfHeight,
-                halfDepth,
-                depthThreshold,
-                m_carrieds,
-                m_pickupMaxDistance);
-
-            if (pickupResult.Succeeded())
+            float3 pickupOffset{ 0.0f, 0.0f, 0.0f };
+            switch (m_pickupOffset.mode)
             {
-                oss << " (最短距離=" << nearestDistance << ')';
+            case Stage::PickupOffsetMode::FacingDirection:
+                pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
+                pickupOffset.y = m_pickupOffset.localOffset.y;
+                pickupOffset.z = m_pickupOffset.localOffset.z;
+                break;
+
+            case Stage::PickupOffsetMode::WorldX:
+                pickupOffset = m_pickupOffset.localOffset;
+                break;
+
+            case Stage::PickupOffsetMode::None:
+            default:
+                break;
             }
-            oss << " origin=" << pickupOrigin.source
-                << " center=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
-                << " halfDepth=" << halfDepth
-                << " depthThreshold=" << depthThreshold;
-            oss << "\n";
-            PlayerDebugTrace(oss.str());
-            return;
-        }
 
-                if (!m_sweetsManager->TryMarkAsCarried(candidate))
-                {
-                    pickupResult.result = SweetsSpace::PickupResult::Failure;
-                    pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
-                }
-                else
-                {
-                    Transform updated = candidateTransform;
-                    updated.position = ComputeCarryAnchor();
-                    updated.rotation = m_transform.rotation;
-                    candidate->SetTransformViaPhysics(updated.position, updated.rotation);
-                    candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+            pickupCenter = float3
+            {
+                pickupOrigin.center.x + pickupOffset.x,
+                pickupOrigin.center.y + pickupOffset.y,
+                pickupOrigin.center.z + pickupOffset.z
+            };
 
-                    m_carrieds.push_back(candidate);
+            pickupVolumeValid = std::isfinite(halfDepth) && halfDepth > 0.0f
+                && std::isfinite(depthThreshold) && depthThreshold >= 0.0f;
+
+            if (!pickupVolumeValid)
+            {
+                std::ostringstream oss;
+                oss << kPlayerLogPrefix << "ピックアップボリュームが無効です halfDepth=" << halfDepth
+                    << " depthThreshold=" << depthThreshold << "\n";
+                PlayerDebugTrace(oss.str());
+            }
+            else
+            {
+                pickupResult = m_sweetsManager->FindNearestCarryable(
+                    pickupCenter,
+                    m_pickupHalfWidth,
+                    m_pickupHalfHeight,
+                    halfDepth,
+                    depthThreshold,
+                    m_carrieds,
+                    m_pickupMaxDistance);
+
+                candidate = pickupResult.sweets;
+                if (pickupResult.Succeeded())
+                {
+                    candidateTransform = candidate->GetTransform();
+                    sweetsBounds = candidate->GetAABB();
+                    sweetsZ = candidateTransform.position.z;
+
+                    if (!m_sweetsManager->TryMarkAsCarried(candidate))
+                    {
+                        pickupResult.result = SweetsSpace::PickupResult::Failure;
+                        pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                        candidate.reset();
+                    }
+                    else
+                    {
+                        Transform updated = candidateTransform;
+                        updated.position = ComputeCarryAnchor();
+                        updated.rotation = m_transform.rotation;
+                        candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                        candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+
+                        m_carrieds.push_back(candidate);
+                    }
                 }
             }
         }
@@ -964,27 +984,36 @@ const float3 pickupCenter{
         m_lastPickupResult = pickupResult;
 
         std::ostringstream oss;
-            oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
-                << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
-                << ") offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
-                << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
-                << ',' << m_pickupOffset.localOffset.z << ')'
-                << " maxDistance=" << m_pickupMaxDistance
-                << " origin=" << pickupOrigin.source
+        oss << kPlayerLogPrefix << "ピックアップ結果 result=" << PickupResultName(pickupResult.result)
+            << " reason=" << PickupFailReasonName(pickupResult.failReason)
+            << " boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight << ")"
+            << " offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
+            << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
+            << ',' << m_pickupOffset.localOffset.z << ")"
+            << " maxDistance=" << m_pickupMaxDistance;
+
+        if (pickupVolumeValid)
+        {
+            oss << " origin=" << pickupOrigin.source
                 << " originCenter=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
                 << " originHalfDepth=" << halfDepth
                 << " depthThreshold=" << depthThreshold
-                << " pickupZ=" << pickupCenter.z
-                << " sweetsZ=" << sweetsZ
-                << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
-        if (std::isfinite(nearestDistance))
-        {
-            oss << " depthDelta=" << pickupResult.depthDelta;
+                << " pickupCenterZ=" << pickupCenter.z;
         }
+
         if (candidate)
         {
             oss << " tag='" << candidate->GetTag() << "'"
+                << " sweetsZ=" << sweetsZ
                 << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
+        }
+        if (std::isfinite(pickupResult.distance))
+        {
+            oss << " distance=" << pickupResult.distance;
+        }
+        if (std::isfinite(pickupResult.depthDelta))
+        {
+            oss << " depthDelta=" << pickupResult.depthDelta;
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
