@@ -2657,7 +2657,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
 
         HandleManualRetryInput(ctx);
-        fRads.z += 0.001f * RAD;
+        fRads.z += 0.001f;
 
         if (m_cameraAnchor && !m_pObjects.empty())
         {
