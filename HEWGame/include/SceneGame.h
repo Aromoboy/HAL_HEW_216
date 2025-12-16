@@ -20,7 +20,6 @@
 #include "Stage/FoundationPlatform.h"
 #include "Stage/OsaraPlate.h"
 #include "GameFlow/PhaseManager.h"
-#include "SweetsManager.h"
 #include "HudRenderer.h"
 #include "TimerDisplay.h"
 #include "BackgroundRenderer.h"
@@ -220,7 +219,6 @@ private:
     PlayerSpawnTransform m_playerSpawnTransform;
     TimerDisplay m_timerDisplay;
     Texture* m_numberTexture;
-    std::unique_ptr<SweetsSpace::SweetsManager> m1_sweetsManager;
 };
 
 #endif // __SCENE_GAME_H__
