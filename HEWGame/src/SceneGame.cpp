@@ -2119,6 +2119,24 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         DebugTrace(oss.str());
     }
 
+    m_playerPickupOriginOffset = playerColliderOffset;
+    if (!std::isfinite(m_playerPickupOriginOffset.x) || !std::isfinite(m_playerPickupOriginOffset.y) || !std::isfinite(m_playerPickupOriginOffset.z))
+    {
+        m_playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
+    }
+    else if (std::fabs(m_playerPickupOriginOffset.x) < std::numeric_limits<float>::epsilon()
+        && std::fabs(m_playerPickupOriginOffset.y) < std::numeric_limits<float>::epsilon()
+        && std::fabs(m_playerPickupOriginOffset.z) < std::numeric_limits<float>::epsilon())
+    {
+        const float2 colliderScale{ trans.scale.x, trans.scale.y };
+        m_playerPickupOriginOffset = float3
+        {
+            m_playerColliderTuning.fallbackOffset.x * colliderScale.x,
+            m_playerColliderTuning.fallbackOffset.y * colliderScale.y,
+            m_playerColliderTuning.fallbackOffset.z,
+        };
+    }
+
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
@@ -2148,6 +2166,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
@@ -3294,6 +3313,7 @@ void SceneGame::ResetPlaySession()
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
     InitializeStageAnchors();

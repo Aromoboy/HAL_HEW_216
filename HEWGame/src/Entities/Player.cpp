@@ -244,6 +244,7 @@ namespace Entities
         , m_pickupHalfHeight(0.0f)
         , m_pickupForwardOffset(0.0f)
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupOriginOffset(float3{ 0.0f, 0.0f, 0.0f })
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
@@ -680,6 +681,30 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void Player::SetPickupOriginOffset(const float3& offset)
+    {
+        if (!std::isfinite(offset.x) || !std::isfinite(offset.y) || !std::isfinite(offset.z))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のピックアップ基準オフセットを無視しました \n");
+            return;
+        }
+
+        const bool unchanged = std::fabs(m_pickupOriginOffset.x - offset.x) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_pickupOriginOffset.y - offset.y) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_pickupOriginOffset.z - offset.z) < std::numeric_limits<float>::epsilon();
+        if (unchanged)
+        {
+            return;
+        }
+
+        m_pickupOriginOffset = offset;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "ピックアップ基準を transform オフセット(" << m_pickupOriginOffset.x
+            << ',' << m_pickupOriginOffset.y << ',' << m_pickupOriginOffset.z << ") で更新しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
     float3 Player::ComputeCarryAnchor() const
     {
         if (HasBox2DBody())
@@ -692,6 +717,33 @@ namespace Entities
             m_transform.position.x + m_carryOffset.x,
             m_transform.position.y + m_carryOffset.y,
             m_transform.position.z + m_carryOffset.z };
+    }
+
+    Player::PickupOrigin Player::ComputePickupOrigin() const
+    {
+        PickupOrigin origin{};
+
+        const float3 basePosition = HasBox2DBody()
+            ? ToWorldPosition(b2Body_GetPosition(GetBox2DBodyId()))
+            : m_transform.position;
+
+        origin.center = float3{ basePosition.x + m_pickupOriginOffset.x, basePosition.y + m_pickupOriginOffset.y, basePosition.z + m_pickupOriginOffset.z };
+        origin.halfDepth = 0.05f;
+        origin.source = "TransformOffset";
+
+        if (m_colliderFootprint)
+        {
+            origin.center = float3
+            {
+                basePosition.x + m_colliderFootprint->centerOffset.x,
+                basePosition.y + m_colliderFootprint->centerOffset.y,
+                basePosition.z + m_colliderFootprint->centerOffset.z,
+            };
+            origin.halfDepth = std::max(0.05f, m_colliderFootprint->halfExtents.z + 0.05f);
+            origin.source = "ColliderFootprint";
+        }
+
+        return origin;
     }
 
     void Player::UpdateCarriedSweets()
@@ -749,32 +801,17 @@ namespace Entities
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップ距離のしきい値が無効です \n");
             return;
         }
-
-        if (!m_colliderFootprint)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: コライダーのフットプリントがありません \n");
-            return;
-        }
-
-        const float3 colliderCenter
-        {
-            m_transform.position.x + m_colliderFootprint->centerOffset.x,
-            m_transform.position.y + m_colliderFootprint->centerOffset.y,
-            m_transform.position.z + m_colliderFootprint->centerOffset.z,
-        };
-
-        const float halfDepth = m_colliderFootprint->halfExtents.z + 0.05f;
-
-        const float3 pickupCenter{ colliderCenter.x + m_pickupForwardOffset, colliderCenter.y, colliderCenter.z };
+        const PickupOrigin pickupOrigin = ComputePickupOrigin();
+        const float3 pickupCenter{ pickupOrigin.center.x + m_pickupForwardOffset, pickupOrigin.center.y, pickupOrigin.center.z };
 
         float nearestDistance = std::numeric_limits<float>::quiet_NaN();
         const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
             m_sweetsManager->FindNearestCarryable(
-                colliderCenter,
+                pickupOrigin.center,
                 m_pickupHalfWidth,
                 m_pickupHalfHeight,
                 m_pickupForwardOffset,
-                halfDepth,
+                pickupOrigin.halfDepth,
                 m_carrieds,
                 m_pickupMaxDistance,
                 &nearestDistance);
@@ -788,6 +825,9 @@ namespace Entities
             {
                 oss << " (最短距離=" << nearestDistance << ')';
             }
+            oss << " origin=" << pickupOrigin.source
+                << " center=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
+                << " halfDepth=" << pickupOrigin.halfDepth;
             oss << "\n";
             PlayerDebugTrace(oss.str());
             return;
@@ -815,13 +855,16 @@ namespace Entities
         m_carrieds.push_back(candidate);
 
         std::ostringstream oss;
-        oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
-            << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
-            << ") forwardOffset=" << m_pickupForwardOffset
-            << " maxDistance=" << m_pickupMaxDistance
-            << " pickupZ=" << pickupCenter.z
-            << " sweetsZ=" << sweetsZ
-            << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
+            oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
+                << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
+                << ") forwardOffset=" << m_pickupForwardOffset
+                << " maxDistance=" << m_pickupMaxDistance
+                << " origin=" << pickupOrigin.source
+                << " originCenter=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
+                << " originHalfDepth=" << pickupOrigin.halfDepth
+                << " pickupZ=" << pickupCenter.z
+                << " sweetsZ=" << sweetsZ
+                << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
         if (std::isfinite(nearestDistance))
         {
             oss << " distance=" << nearestDistance;
