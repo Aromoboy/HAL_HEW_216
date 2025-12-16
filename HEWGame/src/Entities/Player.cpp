@@ -846,16 +846,38 @@ namespace Entities
             return;
         }
         const PickupOrigin pickupOrigin = ComputePickupOrigin();
-        const float3 pickupCenter{ pickupOrigin.center.x + m_pickupForwardOffset, pickupOrigin.center.y, pickupOrigin.center.z };
+
+        float3 pickupOffset{};
+        switch (m_pickupOffset.mode)
+        {
+        case Stage::PickupOffsetMode::FacingDirection:
+            pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
+            pickupOffset.y = m_pickupOffset.localOffset.y;
+            pickupOffset.z = m_pickupOffset.localOffset.z;
+            break;
+        case Stage::PickupOffsetMode::WorldX:
+            pickupOffset = m_pickupOffset.localOffset;
+            break;
+        case Stage::PickupOffsetMode::None:
+        default:
+            break;
+        }
+
+        const float3 pickupCenter
+        {
+            pickupOrigin.center.x + pickupOffset.x,
+            pickupOrigin.center.y + pickupOffset.y,
+            pickupOrigin.center.z + pickupOffset.z,
+        };
 
         float nearestDistance = std::numeric_limits<float>::quiet_NaN();
         const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
             m_sweetsManager->FindNearestCarryable(
-                pickupOrigin.center,
+                pickupCenter,
                 m_pickupHalfWidth,
                 m_pickupHalfHeight,
-                m_pickupForwardOffset,
                 pickupOrigin.halfDepth,
+                kDefaultPickupDepthThreshold,
                 m_carrieds,
                 m_pickupMaxDistance,
                 &nearestDistance);
@@ -872,6 +894,10 @@ namespace Entities
             oss << " origin=" << pickupOrigin.source
                 << " center=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
                 << " halfDepth=" << pickupOrigin.halfDepth;
+            oss << " offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
+                << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
+                << ',' << m_pickupOffset.localOffset.z << ')'
+                << " pickupCenter=(" << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z << ')';
             oss << "\n";
             PlayerDebugTrace(oss.str());
             return;
@@ -901,7 +927,9 @@ namespace Entities
         std::ostringstream oss;
             oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
                 << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
-                << ") forwardOffset=" << m_pickupForwardOffset
+                << ") offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
+                << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
+                << ',' << m_pickupOffset.localOffset.z << ')'
                 << " maxDistance=" << m_pickupMaxDistance
                 << " origin=" << pickupOrigin.source
                 << " originCenter=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
