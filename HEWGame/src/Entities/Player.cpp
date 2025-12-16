@@ -739,59 +739,15 @@ namespace Entities
 
         const float3 pickupCenter{ colliderCenter.x + m_pickupForwardOffset, colliderCenter.y, colliderCenter.z };
 
-        AABB pickupBounds{};
-        pickupBounds.min.x = pickupCenter.x - m_pickupHalfWidth;
-        pickupBounds.max.x = pickupCenter.x + m_pickupHalfWidth;
-        pickupBounds.min.y = pickupCenter.y - m_pickupHalfHeight;
-        pickupBounds.max.y = pickupCenter.y + m_pickupHalfHeight;
-        pickupBounds.min.z = pickupCenter.z - halfDepth;
-        pickupBounds.max.z = pickupCenter.z + halfDepth;
 
-        std::shared_ptr<SweetsSpace::ActiveSweets> candidate;
-        float bestDistanceSq = std::numeric_limits<float>::max();
-
-        const auto considerState = [&](SweetsSpace::SweetsState state)
-            {
-                const auto& sweetsList = m_sweetsManager->GetByState(state);
-                for (const auto& sweets : sweetsList)
-                {
-                    if (!sweets || sweets->IsPendingDestroy())
-                    {
-                        continue;
-                    }
-
-                    if (std::find(m_carrieds.begin(), m_carrieds.end(), sweets) != m_carrieds.end())
-                    {
-                        continue;
-                    }
-
-                    sweets->SyncColliderBounds();
-                    const AABB sweetsBounds = sweets->GetAABB();
-                    if (!sweetsBounds.Intersects(pickupBounds))
-                    {
-                        continue;
-                    }
-
-                    const float sweetsCenterX = (sweetsBounds.min.x + sweetsBounds.max.x) * 0.5f;
-                    const float sweetsCenterY = (sweetsBounds.min.y + sweetsBounds.max.y) * 0.5f;
-                    const float sweetsCenterZ = (sweetsBounds.min.z + sweetsBounds.max.z) * 0.5f;
-
-                    const float dx = sweetsCenterX - pickupCenter.x;
-                    const float dy = sweetsCenterY - pickupCenter.y;
-                    const float dz = sweetsCenterZ - pickupCenter.z;
-                    const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
-
-                    if (distanceSq <= bestDistanceSq)
-                    {
-                        bestDistanceSq = distanceSq;
-                        candidate = sweets;
-                    }
-                }
-            };
-
-        considerState(SweetsSpace::SweetsState::Ground);
-        considerState(SweetsSpace::SweetsState::Active);
-        considerState(SweetsSpace::SweetsState::Stacked);
+        const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
+            m_sweetsManager->FindNearestCarryable(
+                colliderCenter,
+                m_pickupHalfWidth,
+                m_pickupHalfHeight,
+                m_pickupForwardOffset,
+                halfDepth,
+                m_carrieds);
 
         if (!candidate)
         {

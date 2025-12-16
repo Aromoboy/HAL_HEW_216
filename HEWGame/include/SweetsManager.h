@@ -172,7 +172,13 @@ namespace SweetsSpace
         std::vector<std::pair<std::string, FactoryPreset>> EnumerateFactoryPresets() const;
 
         std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
-        std::shared_ptr<ActiveSweets> FindNearestCarryable(const float3& position, float halfWidth, float halfHeight) const;
+        std::shared_ptr<ActiveSweets> FindNearestCarryable(
+            const float3& position,
+            float halfWidth,
+            float halfHeight,
+            float forwardOffset = 0.0f,
+            float halfDepth = 0.0f,
+            const std::vector<std::shared_ptr<ActiveSweets>>& exclude = {}) const;
         bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
