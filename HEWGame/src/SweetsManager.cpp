@@ -2881,7 +2881,7 @@ namespace SweetsSpace
         };
 
         std::shared_ptr<ActiveSweets> best;
-        float bestMarginSq = std::numeric_limits<float>::max();
+        float bestDistanceSq = std::numeric_limits<float>::max();
         float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
         bool bestOverlapsBase = false;
 
@@ -2914,14 +2914,12 @@ namespace SweetsSpace
 
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
-                const float dx = std::fabs(centerX - sanitizedCenter.x) - halfWidth;
-                const float dy = std::fabs(centerY - sanitizedCenter.y) - halfHeight;
-                const float clampedDx = dx > 0.0f ? dx : 0.0f;
-                const float clampedDy = dy > 0.0f ? dy : 0.0f;
-                const float marginSq = (clampedDx * clampedDx) + (clampedDy * clampedDy);
-                if (marginSq <= bestMarginSq)
+                const float dx = centerX - sanitizedCenter.x;
+                const float dy = centerY - sanitizedCenter.y;
+                const float distanceSq = (dx * dx) + (dy * dy);
+                if (distanceSq <= bestDistanceSq)
                 {
-                    bestMarginSq = marginSq;
+                    bestDistanceSq = distanceSq;
                     best = sweets;
                     nearestMeasuredDepthDelta = computeDepthDelta(bounds);
                     bestOverlapsBase = intersectsBase(bounds);
@@ -2933,13 +2931,13 @@ namespace SweetsSpace
         scanState(SweetsState::Active);
         scanState(SweetsState::Stacked);
 
-        if (bestMarginSq == std::numeric_limits<float>::max())
+        if (bestDistanceSq == std::numeric_limits<float>::max())
         {
             result.failReason = PickupFailReason::NoCandidates;
             return result;
         }
 
-        const float bestDistance = std::sqrt(bestMarginSq);
+        const float bestDistance = std::sqrt(bestDistanceSq);
         result.distance = bestDistance;
         result.depthDelta = nearestMeasuredDepthDelta;
 
