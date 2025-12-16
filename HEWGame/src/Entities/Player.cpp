@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cassert>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -846,29 +847,44 @@ namespace Entities
             return;
         }
         const PickupOrigin pickupOrigin = ComputePickupOrigin();
+        const float halfDepth = pickupOrigin.halfDepth;
+        const float depthThreshold = kDefaultPickupDepthThreshold;
+        float3 pickupOffset{ 0.0f, 0.0f, 0.0f };
 
-        float3 pickupOffset{};
-        switch (m_pickupOffset.mode)
+switch (m_pickupOffset.mode)
+{
+case Stage::PickupOffsetMode::FacingDirection:
+    pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
+    pickupOffset.y = m_pickupOffset.localOffset.y;
+    pickupOffset.z = m_pickupOffset.localOffset.z;
+    break;
+
+case Stage::PickupOffsetMode::WorldX:
+    pickupOffset = m_pickupOffset.localOffset;
+    break;
+
+case Stage::PickupOffsetMode::None:
+default:
+    break;
+}
+
+const float3 pickupCenter{
+    pickupOrigin.center.x + pickupOffset.x,
+    pickupOrigin.center.y + pickupOffset.y,
+    pickupOrigin.center.z + pickupOffset.z
+};
+
+
+        assert(std::isfinite(halfDepth) && halfDepth > 0.0f);
+        assert(std::isfinite(depthThreshold) && depthThreshold >= 0.0f);
+        if (!std::isfinite(halfDepth) || halfDepth <= 0.0f || !std::isfinite(depthThreshold) || depthThreshold < 0.0f)
         {
-        case Stage::PickupOffsetMode::FacingDirection:
-            pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
-            pickupOffset.y = m_pickupOffset.localOffset.y;
-            pickupOffset.z = m_pickupOffset.localOffset.z;
-            break;
-        case Stage::PickupOffsetMode::WorldX:
-            pickupOffset = m_pickupOffset.localOffset;
-            break;
-        case Stage::PickupOffsetMode::None:
-        default:
-            break;
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "ピックアップボリュームが無効です halfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold << "\n";
+            PlayerDebugTrace(oss.str());
+            return;
         }
-
-        const float3 pickupCenter
-        {
-            pickupOrigin.center.x + pickupOffset.x,
-            pickupOrigin.center.y + pickupOffset.y,
-            pickupOrigin.center.z + pickupOffset.z,
-        };
 
         float nearestDistance = std::numeric_limits<float>::quiet_NaN();
         const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
@@ -876,8 +892,8 @@ namespace Entities
                 pickupCenter,
                 m_pickupHalfWidth,
                 m_pickupHalfHeight,
-                pickupOrigin.halfDepth,
-                kDefaultPickupDepthThreshold,
+                halfDepth,
+                depthThreshold,
                 m_carrieds,
                 m_pickupMaxDistance,
                 &nearestDistance);
@@ -893,11 +909,8 @@ namespace Entities
             }
             oss << " origin=" << pickupOrigin.source
                 << " center=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
-                << " halfDepth=" << pickupOrigin.halfDepth;
-            oss << " offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
-                << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
-                << ',' << m_pickupOffset.localOffset.z << ')'
-                << " pickupCenter=(" << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z << ')';
+                << " halfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold;
             oss << "\n";
             PlayerDebugTrace(oss.str());
             return;
@@ -933,7 +946,8 @@ namespace Entities
                 << " maxDistance=" << m_pickupMaxDistance
                 << " origin=" << pickupOrigin.source
                 << " originCenter=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
-                << " originHalfDepth=" << pickupOrigin.halfDepth
+                << " originHalfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold
                 << " pickupZ=" << pickupCenter.z
                 << " sweetsZ=" << sweetsZ
                 << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
