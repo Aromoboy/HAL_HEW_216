@@ -1,4 +1,4 @@
-#include "ShaderList.h"
+ï»¿#include "ShaderList.h"
 
 
 VertexShader* ShaderList::m_pVS[VS_KIND_MAX];
@@ -169,7 +169,7 @@ VS_OUT main(VS_IN vin) {
 	vout.wPos = vout.pos;
 	vout.pos = mul(vout.pos, view);
 	vout.pos = mul(vout.pos, proj);
-	vout.normal = mul(vin.normal, (float3x3)world);
+	vout.normal = normalize(mul(vin.normal, (float3x3)world));
 	vout.uv = vin.uv;
 	vout.color = vin.color;
 	return vout;
@@ -250,26 +250,20 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	if(objAmbient.a >= 1.0f)
-		color = tex.Sample(samp, pin.uv);
-	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
-	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	// –{—ˆ‚ÌLambertŠgU”½Ëiv‚Á‚½•\Œ»‚ªo—ˆ‚È‚©‚Á‚½‚Ì‚ÅÌ—p‚¹‚¸
-	// color.rgb *= saturate(diffuse * dotNL + ambient);
-	// ŠÂ‹«Œõ‚ÅŠgU”½Ë•”•ª‚ÌF‚ª•Ï‚í‚ç‚È‚¢‚æ‚¤‚Élerp(ŠÂ‹«Œõ,diffuse,dotNL)‚ÅŒvZ
-	// ŠÂ‹«Œõ‚ªã‚¯‚ê‚Î•(æZ)A‹­‚¯‚ê‚Î”’(‰ÁZ)‚Æ‚È‚é‚æ‚¤‚ÉAŠeŒvZ‚ğüŒ`‚Å•âŠÔ
-	diffuse *= color.rgb;
-	color.rgb = saturate(lerp(
-		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
-		diffuse, dotNL));
-	// –{—ˆ‚È‚ç•K—v‚È‚¢‹¾–Ê”½ËALambertŒü‚¯‚ÉáŠ±‚¾‚¯“K—p
-	color.rgb += specular * pow(saturate(dotNL), max(0.01f, objSpecular.a) * 0.5f) * 0.5f;
-	return color;
+    float4 texColor = tex.Sample(samp, pin.uv);
+    texColor.a = 1.0f;
+
+    float3 N = normalize(pin.normal);
+    float3 L = normalize(-lightDir.xyz);
+
+    float lambert = saturate(dot(N, L));
+
+    float3 ambient = objAmbient.rgb * texColor.rgb;
+    float3 diffuse = lambert * texColor.rgb;
+
+    float3 finalColor = ambient + diffuse;
+    float shade = 0.85f; //çµ¶å¯¾ã«è§¦ã‚‰ãªã„ã»ã†ãŒã„ã„ã€€ãƒ‰ãƒ­ã‚¹ã‚ˆã‚Š
+    return float4(texColor.rgb * shade, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
@@ -307,7 +301,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objAmbient.a >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
+	float3 L = normalize(-lightDir.xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 	float3 R = reflect(-V, N);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
@@ -315,7 +309,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	// Lambert‚ÌŒvZ‚ğQl
+	// Lambertã®è¨ˆç®—ã‚’å‚è€ƒ
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, dotNL));
@@ -354,12 +348,12 @@ float4 main(PS_IN pin) : SV_TARGET
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
-	float dotNL = dot(N, L); // ƒ}ƒCƒiƒX‚ÅŒvZ
+	float dotNL = dot(N, L); // ãƒã‚¤ãƒŠã‚¹è¾¼ã§è¨ˆç®—
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // ‰A‚Ì‹«–Ú‚ğ_‚ç‚©‚­
-	// Lambert‚ÌŒvZ‚ğQl
+	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // é™°ã®å¢ƒç›®ã‚’æŸ”ã‚‰ã‹ã
+	// Lambertã®è¨ˆç®—ã‚’å‚è€ƒ
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, toonNL));

@@ -1,4 +1,4 @@
-#include "ModelRender.h"
+﻿#include "ModelRender.h"
 
 #include "DrawMatrix.h"
 #include "ShaderList.h"
@@ -7,7 +7,6 @@
 #include "DirectX.h"
 
 ModelRender::ModelRender() = default;
-
 ModelRender::~ModelRender() = default;
 
 void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera)
@@ -21,10 +20,21 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     wvp[1] = camera->GetView();
     wvp[2] = camera->GetProjection();
 
-    float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
-    DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, radRotation);
+    float3 radRotation = {
+        transform.rotation.x * RAD,
+        transform.rotation.y * RAD,
+        transform.rotation.z * RAD
+    };
+
+    DrawMatrix::CreateWorldMatrix(
+        wvp[0],
+        transform.position,
+        transform.scale,
+        radRotation
+    );
 
     ShaderList::SetWVP(wvp);
+
     VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
@@ -41,13 +51,24 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             continue;
         }
 
-        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
+        std::shared_ptr<MaterialDX> material =
+            a_model.GetMaterial(mesh->GetMaterialID()).lock();
+
         if (material)
         {
+            // 1️⃣ Константы материала
             ShaderList::SetMaterial(*material);
+
+            // 2️⃣ БИНД ТЕКСТУРЫ В PS (ЭТОГО НЕ ХВАТАЛО)
+            if (context)
+            {
+                ID3D11ShaderResourceView* srv = material->GetTexture();
+                context->PSSetShaderResources(0, 1, &srv);
+            }
         }
         else
         {
+            // 3️⃣ Если материала нет — чистим слот
             if (context)
             {
                 ID3D11ShaderResourceView* nullView = nullptr;
@@ -57,34 +78,36 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         MeshDraw(*mesh);
     }
-}
 
-//void ModelRender::Draw(ModelDX& a_model, const CameraSpace::ICamera* camera)
-//{
-//
-//}
+    // 4️⃣ После отрисовки — подчистить слот (DX любит порядок)
+    if (context)
+    {
+        ID3D11ShaderResourceView* nullView = nullptr;
+        context->PSSetShaderResources(0, 1, &nullView);
+    }
+}
 
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {
-        ID3D11DeviceContext* pContext = GetContext();
-        UINT offset = 0;
+    ID3D11DeviceContext* pContext = GetContext();
+    UINT offset = 0;
 
-        const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
-        vertexBuffer.Bind(0, offset);
+    const Core::VertexBuffer& vertexBuffer = a_mesh.GetVertexBuffer();
+    vertexBuffer.Bind(0, offset);
 
-        pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        if (a_mesh.HasIndexBuffer())
+    if (a_mesh.HasIndexBuffer())
+    {
+        const Core::IndexBuffer* indexBuffer = a_mesh.GetIndexBuffer();
+        if (indexBuffer)
         {
-                const Core::IndexBuffer* indexBuffer = a_mesh.GetIndexBuffer();
-                if (indexBuffer)
-                {
-                        indexBuffer->Bind();
-                        pContext->DrawIndexed(a_mesh.GetIndexCount(), 0, 0);
-                }
+            indexBuffer->Bind();
+            pContext->DrawIndexed(a_mesh.GetIndexCount(), 0, 0);
         }
-        else
-        {
-                pContext->Draw(vertexBuffer.GetCount(), 0);
-        }
+    }
+    else
+    {
+        pContext->Draw(vertexBuffer.GetCount(), 0);
+    }
 }
