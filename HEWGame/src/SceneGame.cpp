@@ -1298,7 +1298,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
-    m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
+    m_playerPickupOffset = m_stageData.GetPickupOffset();
     m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
@@ -1320,9 +1320,18 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
     m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
-    m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
+        const auto pickupOffsetModeName = [](Stage::PickupOffsetMode mode)
+        {
+            switch (mode)
+            {
+            case Stage::PickupOffsetMode::None: return "none";
+            case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
+            case Stage::PickupOffsetMode::WorldX: return "world-x";
+            default: return "unknown";
+            }
+        };
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
             << " from '" << stageConfigPathUsed << "'"
@@ -1334,7 +1343,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
             << " pickupMaxDistance=" << m_playerPickupMaxDistance
-            << " pickupOffset=" << m_playerPickupForwardOffset
+            << " pickupOffsetMode=" << pickupOffsetModeName(m_playerPickupOffset.mode)
+            << " pickupOffsetLocalWorld=(" << m_playerPickupOffset.localOffset.x << ','
+            << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -2164,7 +2175,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         RegisterPhysicsBody(*player);
@@ -3311,7 +3322,7 @@ void SceneGame::ResetPlaySession()
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
 
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }

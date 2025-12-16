@@ -2,6 +2,8 @@
 
 #include "AABB.h"
 #include "Core/Input.h"
+#include "Entities/Player.h"
+
 #include "BoxColliderComponent.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
@@ -55,6 +57,17 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+
+    const char* PickupOffsetModeName(Stage::PickupOffsetMode mode)
+    {
+        switch (mode)
+        {
+        case Stage::PickupOffsetMode::None: return "none";
+        case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
+        case Stage::PickupOffsetMode::WorldX: return "world-x";
+        default: return "unknown";
+        }
+    }
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -242,7 +255,7 @@ namespace Entities
         , m_maxCarry(kDefaultMaxCarry)
         , m_pickupHalfWidth(0.0f)
         , m_pickupHalfHeight(0.0f)
-        , m_pickupForwardOffset(0.0f)
+        , m_pickupOffset{}
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
         , m_pickupOriginOffset(float3{ 0.0f, 0.0f, 0.0f })
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
@@ -251,6 +264,7 @@ namespace Entities
         , m_baseHorizontalMoveSpeed(0.0f)
         , m_baseVerticalMoveSpeed(0.0f)
         , m_speedMultiplier(1.0f)
+        , m_facingSign(1.0f)
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
         , m_missingModelWarned(false)
@@ -354,6 +368,15 @@ namespace Entities
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
         const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+
+        if (horizontal > 0.0f)
+        {
+            m_facingSign = 1.0f;
+        }
+        else if (horizontal < 0.0f)
+        {
+            m_facingSign = -1.0f;
+        }
 
         const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
         const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
@@ -625,26 +648,44 @@ namespace Entities
 
     void Player::SetPickupBox(float width, float height)
     {
-        SetPickupArea(width, height, m_pickupForwardOffset);
+        SetPickupArea(width, height, m_pickupOffset);
     }
 
-    void Player::SetPickupArea(float width, float height, float forwardOffset)
+    void Player::SetPickupArea(float width, float height, const Stage::PickupOffset& offset)
     {
-        if (!std::isfinite(width) || !std::isfinite(height) || !std::isfinite(forwardOffset))
+        if (!std::isfinite(width) || !std::isfinite(height)
+            || !std::isfinite(offset.localOffset.x)
+            || !std::isfinite(offset.localOffset.y)
+            || !std::isfinite(offset.localOffset.z))
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のピックアップボックス指定を無視しました \n");
             return;
         }
 
+        Stage::PickupOffset sanitizedOffset = offset;
+        switch (sanitizedOffset.mode)
+        {
+        case Stage::PickupOffsetMode::None:
+        case Stage::PickupOffsetMode::FacingDirection:
+        case Stage::PickupOffsetMode::WorldX:
+            break;
+        default:
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "未知のピックアップオフセットモードを WorldX にフォールバックします \n");
+            sanitizedOffset.mode = Stage::PickupOffsetMode::WorldX;
+            break;
+        }
+
         const float sanitizedWidth = std::max(0.0f, width);
         const float sanitizedHeight = std::max(0.0f, height);
-        const float sanitizedForwardOffset = std::max(0.0f, forwardOffset);
         const float halfWidth = sanitizedWidth * 0.5f;
         const float halfHeight = sanitizedHeight * 0.5f;
 
         const bool unchanged = std::fabs(m_pickupHalfWidth - halfWidth) < std::numeric_limits<float>::epsilon()
             && std::fabs(m_pickupHalfHeight - halfHeight) < std::numeric_limits<float>::epsilon()
-            && std::fabs(m_pickupForwardOffset - sanitizedForwardOffset) < std::numeric_limits<float>::epsilon();
+            && m_pickupOffset.mode == sanitizedOffset.mode
+            && std::fabs(m_pickupOffset.localOffset.x - sanitizedOffset.localOffset.x) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_pickupOffset.localOffset.y - sanitizedOffset.localOffset.y) < std::numeric_limits<float>::epsilon()
+            && std::fabs(m_pickupOffset.localOffset.z - sanitizedOffset.localOffset.z) < std::numeric_limits<float>::epsilon();
         if (unchanged)
         {
             return;
@@ -652,12 +693,14 @@ namespace Entities
 
         m_pickupHalfWidth = halfWidth;
         m_pickupHalfHeight = halfHeight;
-        m_pickupForwardOffset = sanitizedForwardOffset;
+        m_pickupOffset = sanitizedOffset;
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップボックスを width=" << sanitizedWidth
             << " height=" << sanitizedHeight << " (half=" << m_pickupHalfWidth
-            << ',' << m_pickupHalfHeight << ") forwardOffset=" << m_pickupForwardOffset << " に設定しました \n";
+            << ',' << m_pickupHalfHeight << ") offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
+            << " localOffset=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
+            << ',' << m_pickupOffset.localOffset.z << ") に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 

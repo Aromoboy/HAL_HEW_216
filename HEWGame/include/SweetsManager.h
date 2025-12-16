@@ -173,10 +173,9 @@ namespace SweetsSpace
 
         std::shared_ptr<ActiveSweets> Spawn(const std::string& kind, const Transform& transform);
         std::shared_ptr<ActiveSweets> FindNearestCarryable(
-            const float3& position,
+            const float3& pickupCenter,
             float halfWidth,
             float halfHeight,
-            float forwardOffset,
             float halfDepth,
             const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
             float maxDistance,
