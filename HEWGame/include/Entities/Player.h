@@ -53,6 +53,7 @@ namespace Entities
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);
+        void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
         Transform GetRenderTransform() const override;
@@ -62,6 +63,13 @@ namespace Entities
         {
             float3 halfExtents{ 0.0f, 0.0f, 0.0f };
             float3 centerOffset{ 0.0f, 0.0f, 0.0f };
+        };
+
+        struct PickupOrigin
+        {
+            float3 center{ 0.0f, 0.0f, 0.0f };
+            float halfDepth = 0.05f;
+            const char* source = "Unknown";
         };
 
         void SyncVisualTransformFromPhysics();
@@ -77,6 +85,7 @@ namespace Entities
         float m_pickupHalfHeight;
         Stage::PickupOffset m_pickupOffset;
         float m_pickupMaxDistance;
+        float3 m_pickupOriginOffset;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
@@ -95,6 +104,7 @@ namespace Entities
         std::optional<ColliderFootprint> m_colliderFootprint;
 
         float3 ComputeCarryAnchor() const;
+        PickupOrigin ComputePickupOrigin() const;
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
         void TryPickupNearest();

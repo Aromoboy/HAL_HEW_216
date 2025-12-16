@@ -195,6 +195,7 @@ private:
     float m_playerPickupBoxHeight = 0.0f;
     Stage::PickupOffset m_playerPickupOffset{};
     float m_playerPickupMaxDistance = 0.0f;
+    float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
     struct PendingTimeBonus
     {
