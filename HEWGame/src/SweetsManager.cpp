@@ -2717,12 +2717,35 @@ namespace SweetsSpace
         return sweets;
     }
 
-    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(const float3& position, float halfWidth, float halfHeight) const
+    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(
+        const float3& position,
+        float halfWidth,
+        float halfHeight,
+        float forwardOffset,
+        float halfDepth,
+        const std::vector<std::shared_ptr<ActiveSweets>>& exclude) const
     {
         if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
         {
             return nullptr;
         }
+
+        const float sanitizedForward = std::isfinite(forwardOffset) ? forwardOffset : 0.0f;
+        const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
+        const float3 pickupCenter{ position.x + sanitizedForward, position.y, position.z };
+
+        AABB pickupBounds{};
+        pickupBounds.min.x = pickupCenter.x - halfWidth;
+        pickupBounds.max.x = pickupCenter.x + halfWidth;
+        pickupBounds.min.y = pickupCenter.y - halfHeight;
+        pickupBounds.max.y = pickupCenter.y + halfHeight;
+        pickupBounds.min.z = pickupCenter.z - sanitizedHalfDepth;
+        pickupBounds.max.z = pickupCenter.z + sanitizedHalfDepth;
+
+        const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
+        {
+            return std::find(exclude.begin(), exclude.end(), sweets) != exclude.end();
+        };
 
         std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
@@ -2742,26 +2765,23 @@ namespace SweetsSpace
                     continue;
                 }
 
+                if (isExcluded(sweets))
+                {
+                    continue;
+                }
+
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                const float minX = position.x - halfWidth;
-                const float maxX = position.x + halfWidth;
-                const float minY = position.y - halfHeight;
-                const float maxY = position.y + halfHeight;
-
-                const bool overlaps = !(bounds.max.x < minX || bounds.min.x > maxX || bounds.max.y < minY || bounds.min.y > maxY);
-                if (!overlaps)
+                if (!bounds.Intersects(pickupBounds))
                 {
                     continue;
                 }
 
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
-                const float centerZ = (bounds.min.z + bounds.max.z) * 0.5f;
-                const float dx = centerX - position.x;
-                const float dy = centerY - position.y;
-                const float dz = centerZ - position.z;
-                const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+                const float dx = centerX - pickupCenter.x;
+                const float dy = centerY - pickupCenter.y;
+                const float distanceSq = (dx * dx) + (dy * dy);
                 if (distanceSq <= bestDistanceSq)
                 {
                     bestDistanceSq = distanceSq;
@@ -2773,6 +2793,16 @@ namespace SweetsSpace
         scanState(SweetsState::Ground);
         scanState(SweetsState::Active);
         scanState(SweetsState::Stacked);
+
+        if (!best)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "拾えるスイーツが見つかりませんでした: center=("
+                << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
+                << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
+                << ") forwardOffset=" << sanitizedForward << "\n";
+            DebugTrace(oss.str());
+        }
 
         return best;
     }
