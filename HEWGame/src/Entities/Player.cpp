@@ -793,6 +793,10 @@ namespace Entities
             return;
         }
 
+        const Transform candidateTransform = candidate->GetTransform();
+        const float sweetsZ = candidateTransform.position.z;
+        const AABB sweetsBounds = candidate->GetAABB();
+
         if (!m_sweetsManager->TryMarkAsCarried(candidate))
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: マネージャーが遷移を拒否しました \n");
@@ -814,7 +818,10 @@ namespace Entities
         oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
             << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
             << ") forwardOffset=" << m_pickupForwardOffset
-            << " maxDistance=" << m_pickupMaxDistance;
+            << " maxDistance=" << m_pickupMaxDistance
+            << " pickupZ=" << pickupCenter.z
+            << " sweetsZ=" << sweetsZ
+            << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
         if (std::isfinite(nearestDistance))
         {
             oss << " distance=" << nearestDistance;

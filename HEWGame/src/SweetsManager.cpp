@@ -2753,6 +2753,13 @@ namespace SweetsSpace
         pickupBounds.min.z = pickupCenter.z - sanitizedHalfDepth;
         pickupBounds.max.z = pickupCenter.z + sanitizedHalfDepth;
 
+        const auto intersectsXY = [&](const AABB& bounds)
+        {
+            const float overlapX = std::min(bounds.max.x, pickupBounds.max.x) - std::max(bounds.min.x, pickupBounds.min.x);
+            const float overlapY = std::min(bounds.max.y, pickupBounds.max.y) - std::max(bounds.min.y, pickupBounds.min.y);
+            return overlapX >= 0.0f && overlapY >= 0.0f;
+        };
+
         const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
         {
             return std::find(exclude.begin(), exclude.end(), sweets) != exclude.end();
@@ -2783,7 +2790,7 @@ namespace SweetsSpace
 
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                if (!bounds.Intersects(pickupBounds))
+                if (!intersectsXY(bounds))
                 {
                     continue;
                 }
