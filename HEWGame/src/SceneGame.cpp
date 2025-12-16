@@ -901,6 +901,7 @@ namespace
                     oss << kLogPrefix << "[PlayerTransform] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
                     DebugTrace(oss.str());
                 }
+                
             }
 
             result.loadedFromFile = true;
