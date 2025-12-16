@@ -176,9 +176,11 @@ namespace SweetsSpace
             const float3& position,
             float halfWidth,
             float halfHeight,
-            float forwardOffset = 0.0f,
-            float halfDepth = 0.0f,
-            const std::vector<std::shared_ptr<ActiveSweets>>& exclude = {}) const;
+            float forwardOffset,
+            float halfDepth,
+            const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
+            float maxDistance,
+            float* outDistance = nullptr) const;
         bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 

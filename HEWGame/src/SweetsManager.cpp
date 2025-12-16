@@ -2723,8 +2723,15 @@ namespace SweetsSpace
         float halfHeight,
         float forwardOffset,
         float halfDepth,
-        const std::vector<std::shared_ptr<ActiveSweets>>& exclude) const
+        const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
+        float maxDistance,
+        float* outDistance) const
     {
+        if (outDistance)
+        {
+            *outDistance = std::numeric_limits<float>::quiet_NaN();
+        }
+
         if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
         {
             return nullptr;
@@ -2732,6 +2739,10 @@ namespace SweetsSpace
 
         const float sanitizedForward = std::isfinite(forwardOffset) ? forwardOffset : 0.0f;
         const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
+        const float sanitizedMaxDistance = (std::isfinite(maxDistance) && maxDistance > 0.0f)
+            ? maxDistance
+            : std::numeric_limits<float>::infinity();
+        const float maxDistanceSq = sanitizedMaxDistance * sanitizedMaxDistance;
         const float3 pickupCenter{ position.x + sanitizedForward, position.y, position.z };
 
         AABB pickupBounds{};
@@ -2794,14 +2805,34 @@ namespace SweetsSpace
         scanState(SweetsState::Active);
         scanState(SweetsState::Stacked);
 
-        if (!best)
+        if (bestDistanceSq == std::numeric_limits<float>::max())
         {
             std::ostringstream oss;
             oss << kLogPrefix << "拾えるスイーツが見つかりませんでした: center=("
                 << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
                 << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
+                << ") forwardOffset=" << sanitizedForward
+                << " maxDistance=" << sanitizedMaxDistance << "\n";
+            DebugTrace(oss.str());
+            return nullptr;
+        }
+
+        const float bestDistance = std::sqrt(bestDistanceSq);
+        if (outDistance)
+        {
+            *outDistance = bestDistance;
+        }
+
+        if (bestDistance > sanitizedMaxDistance)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "最寄りのスイーツが距離制限を超過: distance=" << bestDistance
+                << " > maxDistance=" << sanitizedMaxDistance
+                << " center=(" << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
+                << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
                 << ") forwardOffset=" << sanitizedForward << "\n";
             DebugTrace(oss.str());
+            return nullptr;
         }
 
         return best;

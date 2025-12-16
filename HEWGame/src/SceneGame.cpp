@@ -80,6 +80,7 @@ namespace
         constexpr float kPlayerSpeedBoostStep = 1.2f;
         constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
         constexpr float kFallbackPlayerMoveSpeed = 10.0f;
+        constexpr float kDefaultPickupMaxDistance = 0.5f;
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
@@ -1298,6 +1299,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
     m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
+    m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
         if (std::isfinite(value) && value > 0.0f)
@@ -1317,6 +1319,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const float pickupFallback = std::max(m_stageData.GetCellSizeWorld(), 1.0f);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
+    m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
     m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
@@ -1330,6 +1333,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
+            << " pickupMaxDistance=" << m_playerPickupMaxDistance
             << " pickupOffset=" << m_playerPickupForwardOffset
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
@@ -2143,6 +2147,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
@@ -3288,6 +3293,7 @@ void SceneGame::ResetPlaySession()
         }
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
     }
 
     InitializeStageAnchors();

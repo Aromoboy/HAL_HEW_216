@@ -47,6 +47,7 @@ namespace Stage
         float GetCellSizeWorld() const noexcept;
         float GetPickupBoxWidthWorld() const noexcept;
         float GetPickupBoxHeightWorld() const noexcept;
+        float GetPickupMaxDistance() const noexcept;
         float GetGuidelineHeight() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
@@ -81,6 +82,7 @@ namespace Stage
         float m_pickupBoxHeightCells;
         float m_pickupBoxWidthWorld;
         float m_pickupBoxHeightWorld;
+        float m_pickupMaxDistance;
         float m_playerMoveSpeed;
         float m_guidelineHeight;
         std::string m_backgroundTexturePath;
