@@ -871,9 +871,6 @@ namespace Systems
 
 if (isSweetTag)
 {
-    shapeDef.material.friction = clampRange(shapeDef.material.friction, 0.6f, 0.8f);
-    shapeDef.material.restitution = clampRange(shapeDef.material.restitution, 0.1f, 0.25f);
-
     auto toBodyTypeString = [](b2BodyType type)
     {
         switch (type)
