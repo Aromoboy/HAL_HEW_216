@@ -81,15 +81,24 @@ namespace SweetsSpace
         if (HasBox2DBody())
         {
             const b2Vec2 position = b2Body_GetPosition(GetBox2DBodyId());
+            const float angle = b2Rot_GetAngle(b2Body_GetRotation(GetBox2DBodyId()));
             const float3 worldPosition = ToWorldPosition(position);
+            const float worldAngle = ToWorldAngle(angle);
 
-            SetPosition(worldPosition);
-            m_visual.position = worldPosition;
+            Transform updatedTransform = m_transform;
+            updatedTransform.position = worldPosition;
+            updatedTransform.rotation.z = worldAngle;
+
+            SetTransform(updatedTransform);
+
+            m_visual.position = updatedTransform.position;
+            m_visual.rotation = updatedTransform.rotation;
             RefreshRenderTransform();
             return;
         }
 
         m_visual.position = m_transform.position;
+        m_visual.rotation = m_transform.rotation;
         RefreshRenderTransform();
     }
 

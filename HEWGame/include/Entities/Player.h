@@ -6,6 +6,7 @@
 
 #include "Entities/PhysicalEntity.h"
 #include "Input.h"
+#include "PickupConfig.h"
 #include "VisualTransform.h"
 
 namespace SweetsSpace
@@ -50,9 +51,9 @@ namespace Entities
         bool HasMinimumY() const;
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
         void SetPickupBox(float width, float height);
-        void SetPickupArea(float width, float height, float forwardOffset);
+        void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);
-        void SetPickupDepthThreshold(float depthThreshold);
+        void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
         Transform GetRenderTransform() const override;
@@ -62,6 +63,13 @@ namespace Entities
         {
             float3 halfExtents{ 0.0f, 0.0f, 0.0f };
             float3 centerOffset{ 0.0f, 0.0f, 0.0f };
+        };
+
+        struct PickupOrigin
+        {
+            float3 center{ 0.0f, 0.0f, 0.0f };
+            float halfDepth = 0.05f;
+            const char* source = "Unknown";
         };
 
         void SyncVisualTransformFromPhysics();
@@ -75,15 +83,16 @@ namespace Entities
         int m_maxCarry;
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
-        float m_pickupForwardOffset;
+        Stage::PickupOffset m_pickupOffset;
         float m_pickupMaxDistance;
-        float m_pickupDepthThreshold;
+        float3 m_pickupOriginOffset;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
         float m_baseHorizontalMoveSpeed;
         float m_baseVerticalMoveSpeed;
         float m_speedMultiplier;
+        float m_facingSign;
         bool m_hasMinimumY;
         float m_minimumY;
         bool m_missingModelWarned;
@@ -95,6 +104,7 @@ namespace Entities
         std::optional<ColliderFootprint> m_colliderFootprint;
 
         float3 ComputeCarryAnchor() const;
+        PickupOrigin ComputePickupOrigin() const;
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
         void TryPickupNearest();

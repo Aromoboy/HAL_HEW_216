@@ -1299,7 +1299,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
     m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
-    m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
+    m_playerPickupOffset = m_stageData.GetPickupOffset();
     m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
     m_playerPickupDepthThreshold = m_stageData.GetPickupDepthThreshold();
     const auto sanitizePositive = [](float value, float fallback, const char* label)
@@ -1343,13 +1343,18 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
     m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
-    m_playerPickupDepthThreshold = sanitizeDepthThreshold(
-        m_playerPickupDepthThreshold,
-        kDefaultPickupDepthThreshold,
-        "Player pickup depth threshold");
-    m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
+        const auto pickupOffsetModeName = [](Stage::PickupOffsetMode mode)
+        {
+            switch (mode)
+            {
+            case Stage::PickupOffsetMode::None: return "none";
+            case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
+            case Stage::PickupOffsetMode::WorldX: return "world-x";
+            default: return "unknown";
+            }
+        };
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
             << " from '" << stageConfigPathUsed << "'"
@@ -1361,8 +1366,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
             << " pickupMaxDistance=" << m_playerPickupMaxDistance
-            << " pickupDepthThreshold=" << m_playerPickupDepthThreshold
-            << " pickupOffset=" << m_playerPickupForwardOffset
+            << " pickupOffsetMode=" << pickupOffsetModeName(m_playerPickupOffset.mode)
+            << " pickupOffsetLocalWorld=(" << m_playerPickupOffset.localOffset.x << ','
+            << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
@@ -2147,6 +2153,24 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         DebugTrace(oss.str());
     }
 
+    m_playerPickupOriginOffset = playerColliderOffset;
+    if (!std::isfinite(m_playerPickupOriginOffset.x) || !std::isfinite(m_playerPickupOriginOffset.y) || !std::isfinite(m_playerPickupOriginOffset.z))
+    {
+        m_playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
+    }
+    else if (std::fabs(m_playerPickupOriginOffset.x) < std::numeric_limits<float>::epsilon()
+        && std::fabs(m_playerPickupOriginOffset.y) < std::numeric_limits<float>::epsilon()
+        && std::fabs(m_playerPickupOriginOffset.z) < std::numeric_limits<float>::epsilon())
+    {
+        const float2 colliderScale{ trans.scale.x, trans.scale.y };
+        m_playerPickupOriginOffset = float3
+        {
+            m_playerColliderTuning.fallbackOffset.x * colliderScale.x,
+            m_playerColliderTuning.fallbackOffset.y * colliderScale.y,
+            m_playerColliderTuning.fallbackOffset.z,
+        };
+    }
+
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
@@ -2174,9 +2198,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
         player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
-        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
@@ -3321,9 +3345,9 @@ void SceneGame::ResetPlaySession()
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
 
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
-        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
     InitializeStageAnchors();

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "PickupConfig.h"
 #include "Vector.h"
 
 namespace Stage
@@ -48,7 +49,7 @@ namespace Stage
         float GetPickupBoxWidthWorld() const noexcept;
         float GetPickupBoxHeightWorld() const noexcept;
         float GetPickupMaxDistance() const noexcept;
-        float GetPickupDepthThreshold() const noexcept;
+        const PickupOffset& GetPickupOffset() const noexcept;
         float GetGuidelineHeight() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
@@ -84,7 +85,7 @@ namespace Stage
         float m_pickupBoxWidthWorld;
         float m_pickupBoxHeightWorld;
         float m_pickupMaxDistance;
-        float m_pickupDepthThreshold;
+        PickupOffset m_pickupOffset;
         float m_playerMoveSpeed;
         float m_guidelineHeight;
         std::string m_backgroundTexturePath;
