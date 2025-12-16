@@ -51,6 +51,7 @@ namespace Entities
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, float forwardOffset);
+        void SetPickupMaxDistance(float maxDistance);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
         Transform GetRenderTransform() const override;
@@ -74,6 +75,7 @@ namespace Entities
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
         float m_pickupForwardOffset;
+        float m_pickupMaxDistance;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;
@@ -99,4 +101,3 @@ namespace Entities
         void ClampScreenBounds();
     };
 }
-

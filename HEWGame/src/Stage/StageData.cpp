@@ -33,6 +33,7 @@ namespace
     constexpr float kDefaultVerticalSpeedCellsPerSec = 12.0f;
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
+    constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 20.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
@@ -235,6 +236,7 @@ namespace Stage
         , m_pickupBoxHeightCells(kDefaultPickupBoxHeightCells)
         , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
         , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
+        , m_pickupMaxDistance(kDefaultPickupMaxDistance)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
@@ -292,6 +294,7 @@ namespace Stage
         bool pickupBoxWidthSet = false;
         float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         bool pickupBoxHeightSet = false;
+        float pickupMaxDistance = kDefaultPickupMaxDistance;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
@@ -760,6 +763,21 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupBoxHeightCells on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupMaxDistance")
+            {
+                try
+                {
+                    pickupMaxDistance = std::stof(rawValue);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -1444,6 +1462,11 @@ namespace Stage
             kDefaultPickupBoxHeightCells,
             "pickupBoxHeightCells");
 
+        pickupMaxDistance = sanitizePositive(
+            pickupMaxDistance,
+            kDefaultPickupMaxDistance,
+            "pickupMaxDistance");
+
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
         if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
@@ -1504,6 +1527,7 @@ namespace Stage
         m_pickupBoxHeightCells = pickupBoxHeightCells;
         m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
         m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
+        m_pickupMaxDistance = pickupMaxDistance;
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
         m_heightBonusThreshold = heightBonusThreshold;
@@ -1531,6 +1555,7 @@ namespace Stage
             << ", playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
             << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
+            << ", pickupMaxDistance=" << m_pickupMaxDistance
             << ", guidelineHeight=" << m_guidelineHeight
             << ", heightBonusThreshold=" << m_heightBonusThreshold
             << ", heightBonusSeconds=" << m_heightBonusSeconds
@@ -1642,6 +1667,11 @@ namespace Stage
         return m_pickupBoxHeightWorld;
     }
 
+    float StageData::GetPickupMaxDistance() const noexcept
+    {
+        return m_pickupMaxDistance;
+    }
+
     float StageData::GetGuidelineHeight() const noexcept
     {
         return m_guidelineHeight;
@@ -1716,6 +1746,7 @@ namespace Stage
         m_pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
         m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
+        m_pickupMaxDistance = kDefaultPickupMaxDistance;
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
@@ -1747,6 +1778,7 @@ namespace Stage
             << " playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
             << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
+            << " pickupMaxDistance=" << m_pickupMaxDistance
             << " guidelineHeight=" << m_guidelineHeight
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds

@@ -54,6 +54,7 @@ namespace
     constexpr float kCarryForwardOffset = 0.5f;
 
     constexpr int kDefaultMaxCarry = 3;
+    constexpr float kDefaultPickupMaxDistance = 0.5f;
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -242,6 +243,7 @@ namespace Entities
         , m_pickupHalfWidth(0.0f)
         , m_pickupHalfHeight(0.0f)
         , m_pickupForwardOffset(0.0f)
+        , m_pickupMaxDistance(kDefaultPickupMaxDistance)
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
@@ -658,6 +660,26 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void Player::SetPickupMaxDistance(float maxDistance)
+    {
+        if (!std::isfinite(maxDistance) || maxDistance <= 0.0f)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "無効なピックアップ距離を無視しました \n");
+            return;
+        }
+
+        if (std::fabs(m_pickupMaxDistance - maxDistance) < std::numeric_limits<float>::epsilon())
+        {
+            return;
+        }
+
+        m_pickupMaxDistance = maxDistance;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "ピックアップ最大距離を " << m_pickupMaxDistance << " に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
     float3 Player::ComputeCarryAnchor() const
     {
         if (HasBox2DBody())
@@ -722,6 +744,12 @@ namespace Entities
             return;
         }
 
+        if (!(m_pickupMaxDistance > 0.0f))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップ距離のしきい値が無効です \n");
+            return;
+        }
+
         if (!m_colliderFootprint)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: コライダーのフットプリントがありません \n");
@@ -739,7 +767,7 @@ namespace Entities
 
         const float3 pickupCenter{ colliderCenter.x + m_pickupForwardOffset, colliderCenter.y, colliderCenter.z };
 
-
+        float nearestDistance = std::numeric_limits<float>::quiet_NaN();
         const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
             m_sweetsManager->FindNearestCarryable(
                 colliderCenter,
@@ -747,11 +775,21 @@ namespace Entities
                 m_pickupHalfHeight,
                 m_pickupForwardOffset,
                 halfDepth,
-                m_carrieds);
+                m_carrieds,
+                m_pickupMaxDistance,
+                &nearestDistance);
 
         if (!candidate)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: ピックアップボックス内にスイーツがありません \n");
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "ピックアップに失敗しました: 最大距離 " << m_pickupMaxDistance
+                << " 以内のスイーツが見つかりません";
+            if (std::isfinite(nearestDistance))
+            {
+                oss << " (最短距離=" << nearestDistance << ')';
+            }
+            oss << "\n";
+            PlayerDebugTrace(oss.str());
             return;
         }
 
@@ -775,7 +813,13 @@ namespace Entities
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
             << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
-            << ") forwardOffset=" << m_pickupForwardOffset << "\n";
+            << ") forwardOffset=" << m_pickupForwardOffset
+            << " maxDistance=" << m_pickupMaxDistance;
+        if (std::isfinite(nearestDistance))
+        {
+            oss << " distance=" << nearestDistance;
+        }
+        oss << "\n";
         PlayerDebugTrace(oss.str());
     }
 
