@@ -2202,6 +2202,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         RegisterPhysicsBody(*player);
         {
@@ -3349,6 +3350,7 @@ void SceneGame::ResetPlaySession()
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 

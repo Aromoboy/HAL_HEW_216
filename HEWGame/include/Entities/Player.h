@@ -55,6 +55,7 @@ namespace Entities
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);
+        void SetPickupDepthThreshold(float depthThreshold);
         void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
@@ -89,6 +90,7 @@ namespace Entities
         float m_pickupHalfHeight;
         Stage::PickupOffset m_pickupOffset;
         float m_pickupMaxDistance;
+        float m_pickupDepthThreshold;
         float3 m_pickupOriginOffset;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
