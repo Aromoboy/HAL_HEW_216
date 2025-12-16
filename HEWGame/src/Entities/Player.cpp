@@ -55,6 +55,7 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -244,6 +245,7 @@ namespace Entities
         , m_pickupHalfHeight(0.0f)
         , m_pickupForwardOffset(0.0f)
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupDepthThreshold(kDefaultPickupDepthThreshold)
         , m_carryOffset(float3{ 0, kCarryVerticalOffset, kCarryForwardOffset })
         , m_dropUpwardBoost(4.0f)
         , m_isKinematic(kinematic)
@@ -680,6 +682,37 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void Player::SetPickupDepthThreshold(float depthThreshold)
+    {
+        const bool infiniteDepth = std::isinf(depthThreshold);
+        if ((!std::isfinite(depthThreshold) && !infiniteDepth) || depthThreshold < 0.0f)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "無効なピックアップ深度しきい値を無視しました \n");
+            return;
+        }
+
+        const float sanitized = infiniteDepth ? std::numeric_limits<float>::infinity() : depthThreshold;
+        if (std::fabs(m_pickupDepthThreshold - sanitized) < std::numeric_limits<float>::epsilon())
+        {
+            return;
+        }
+
+        m_pickupDepthThreshold = sanitized;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "ピックアップ深度しきい値を ";
+        if (std::isfinite(m_pickupDepthThreshold))
+        {
+            oss << m_pickupDepthThreshold;
+        }
+        else
+        {
+            oss << "inf";
+        }
+        oss << " に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
     float3 Player::ComputeCarryAnchor() const
     {
         if (HasBox2DBody())
@@ -764,6 +797,9 @@ namespace Entities
         };
 
         const float halfDepth = m_colliderFootprint->halfExtents.z + 0.05f;
+        const float depthThreshold = (std::isfinite(m_pickupDepthThreshold) && m_pickupDepthThreshold >= 0.0f)
+            ? m_pickupDepthThreshold
+            : std::numeric_limits<float>::infinity();
 
         const float3 pickupCenter{ colliderCenter.x + m_pickupForwardOffset, colliderCenter.y, colliderCenter.z };
 
@@ -775,6 +811,7 @@ namespace Entities
                 m_pickupHalfHeight,
                 m_pickupForwardOffset,
                 halfDepth,
+                depthThreshold,
                 m_carrieds,
                 m_pickupMaxDistance,
                 &nearestDistance);
@@ -787,6 +824,14 @@ namespace Entities
             if (std::isfinite(nearestDistance))
             {
                 oss << " (最短距離=" << nearestDistance << ')';
+            }
+            if (std::isfinite(depthThreshold))
+            {
+                oss << " depthThreshold=" << depthThreshold;
+            }
+            else
+            {
+                oss << " depthThreshold=inf";
             }
             oss << "\n";
             PlayerDebugTrace(oss.str());
@@ -818,8 +863,16 @@ namespace Entities
         oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
             << "' boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight
             << ") forwardOffset=" << m_pickupForwardOffset
-            << " maxDistance=" << m_pickupMaxDistance
-            << " pickupZ=" << pickupCenter.z
+            << " maxDistance=" << m_pickupMaxDistance;
+        if (std::isfinite(depthThreshold))
+        {
+            oss << " depthThreshold=" << depthThreshold;
+        }
+        else
+        {
+            oss << " depthThreshold=inf";
+        }
+        oss << " pickupZ=" << pickupCenter.z
             << " sweetsZ=" << sweetsZ
             << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
         if (std::isfinite(nearestDistance))

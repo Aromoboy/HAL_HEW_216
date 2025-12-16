@@ -2802,6 +2802,7 @@ namespace SweetsSpace
         float halfHeight,
         float forwardOffset,
         float halfDepth,
+        float depthThreshold,
         const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
         float maxDistance,
         float* outDistance) const
@@ -2818,25 +2819,33 @@ namespace SweetsSpace
 
         const float sanitizedForward = std::isfinite(forwardOffset) ? forwardOffset : 0.0f;
         const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
+        const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
+            ? depthThreshold
+            : std::numeric_limits<float>::infinity();
         const float sanitizedMaxDistance = (std::isfinite(maxDistance) && maxDistance > 0.0f)
             ? maxDistance
             : std::numeric_limits<float>::infinity();
         const float maxDistanceSq = sanitizedMaxDistance * sanitizedMaxDistance;
         const float3 pickupCenter{ position.x + sanitizedForward, position.y, position.z };
 
-        AABB pickupBounds{};
-        pickupBounds.min.x = pickupCenter.x - halfWidth;
-        pickupBounds.max.x = pickupCenter.x + halfWidth;
-        pickupBounds.min.y = pickupCenter.y - halfHeight;
-        pickupBounds.max.y = pickupCenter.y + halfHeight;
-        pickupBounds.min.z = pickupCenter.z - sanitizedHalfDepth;
-        pickupBounds.max.z = pickupCenter.z + sanitizedHalfDepth;
+        const float broadPhaseHalfWidth = halfWidth + sanitizedMaxDistance;
+        const float broadPhaseHalfHeight = halfHeight + sanitizedMaxDistance;
+        const float broadPhaseHalfDepth = std::max(sanitizedHalfDepth, sanitizedDepthThreshold);
 
-        const auto intersectsXY = [&](const AABB& bounds)
+        AABB pickupBounds{};
+        pickupBounds.min.x = pickupCenter.x - broadPhaseHalfWidth;
+        pickupBounds.max.x = pickupCenter.x + broadPhaseHalfWidth;
+        pickupBounds.min.y = pickupCenter.y - broadPhaseHalfHeight;
+        pickupBounds.max.y = pickupCenter.y + broadPhaseHalfHeight;
+        pickupBounds.min.z = pickupCenter.z - broadPhaseHalfDepth;
+        pickupBounds.max.z = pickupCenter.z + broadPhaseHalfDepth;
+
+        const auto intersects = [&](const AABB& bounds)
         {
             const float overlapX = std::min(bounds.max.x, pickupBounds.max.x) - std::max(bounds.min.x, pickupBounds.min.x);
             const float overlapY = std::min(bounds.max.y, pickupBounds.max.y) - std::max(bounds.min.y, pickupBounds.min.y);
-            return overlapX >= 0.0f && overlapY >= 0.0f;
+            const float overlapZ = std::min(bounds.max.z, pickupBounds.max.z) - std::max(bounds.min.z, pickupBounds.min.z);
+            return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
         };
 
         const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
@@ -2846,6 +2855,8 @@ namespace SweetsSpace
 
         std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
+        float nearestMeasuredDistanceSq = std::numeric_limits<float>::max();
+        float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
 
         const auto scanState = [&](SweetsState state)
         {
@@ -2869,16 +2880,34 @@ namespace SweetsSpace
 
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                if (!intersectsXY(bounds))
+                if (!intersects(bounds))
                 {
                     continue;
                 }
 
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
+                const float centerZ = (bounds.min.z + bounds.max.z) * 0.5f;
                 const float dx = centerX - pickupCenter.x;
                 const float dy = centerY - pickupCenter.y;
-                const float distanceSq = (dx * dx) + (dy * dy);
+                const float dz = centerZ - pickupCenter.z;
+                const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+                const float depthDelta = std::fabs(dz);
+
+                if (distanceSq < nearestMeasuredDistanceSq)
+                {
+                    nearestMeasuredDistanceSq = distanceSq;
+                    nearestMeasuredDepthDelta = depthDelta;
+                }
+
+                const bool withinDepthThreshold = !std::isfinite(sanitizedDepthThreshold)
+                    || depthDelta <= sanitizedDepthThreshold;
+                const bool withinMaxDistance = distanceSq <= maxDistanceSq;
+                if (!(withinDepthThreshold && withinMaxDistance))
+                {
+                    continue;
+                }
+
                 if (distanceSq <= bestDistanceSq)
                 {
                     bestDistanceSq = distanceSq;
@@ -2898,7 +2927,23 @@ namespace SweetsSpace
                 << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
                 << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
                 << ") forwardOffset=" << sanitizedForward
-                << " maxDistance=" << sanitizedMaxDistance << "\n";
+                << " maxDistance=" << sanitizedMaxDistance
+                << " depthThreshold=";
+            if (std::isfinite(sanitizedDepthThreshold))
+            {
+                oss << sanitizedDepthThreshold;
+            }
+            else
+            {
+                oss << "inf";
+            }
+            oss << " broadPhaseHalf=(" << broadPhaseHalfWidth << ',' << broadPhaseHalfHeight << ',' << broadPhaseHalfDepth << ')';
+            if (nearestMeasuredDistanceSq < std::numeric_limits<float>::max())
+            {
+                oss << " nearestDistance=" << std::sqrt(nearestMeasuredDistanceSq)
+                    << " nearestDepthDelta=" << nearestMeasuredDepthDelta;
+            }
+            oss << "\n";
             DebugTrace(oss.str());
             return nullptr;
         }
@@ -2916,7 +2961,17 @@ namespace SweetsSpace
                 << " > maxDistance=" << sanitizedMaxDistance
                 << " center=(" << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
                 << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
-                << ") forwardOffset=" << sanitizedForward << "\n";
+                << ") forwardOffset=" << sanitizedForward
+                << " depthThreshold=";
+            if (std::isfinite(sanitizedDepthThreshold))
+            {
+                oss << sanitizedDepthThreshold;
+            }
+            else
+            {
+                oss << "inf";
+            }
+            oss << "\n";
             DebugTrace(oss.str());
             return nullptr;
         }

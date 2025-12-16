@@ -195,6 +195,7 @@ private:
     float m_playerPickupBoxHeight = 0.0f;
     float m_playerPickupForwardOffset = 0.0f;
     float m_playerPickupMaxDistance = 0.0f;
+    float m_playerPickupDepthThreshold = 0.0f;
     float m_playerSpeedMultiplier = 1.0f;
     struct PendingTimeBonus
     {

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -34,6 +35,7 @@ namespace
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 20.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
@@ -237,6 +239,7 @@ namespace Stage
         , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
         , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupDepthThreshold(kDefaultPickupDepthThreshold)
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
@@ -295,6 +298,7 @@ namespace Stage
         float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         bool pickupBoxHeightSet = false;
         float pickupMaxDistance = kDefaultPickupMaxDistance;
+        float pickupDepthThreshold = kDefaultPickupDepthThreshold;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
@@ -778,6 +782,21 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupDepthThreshold")
+            {
+                try
+                {
+                    pickupDepthThreshold = std::stof(rawValue);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupDepthThreshold on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -1379,6 +1398,33 @@ namespace Stage
             return fallback;
         };
 
+        auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
+        {
+            if (std::isfinite(value))
+            {
+                if (value >= 0.0f)
+                {
+                    return value;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " value " << value
+                    << " invalid; using fallback " << fallback << "\n";
+                DebugTrace(oss.str());
+                return fallback;
+            }
+
+            if (std::isinf(value))
+            {
+                return value;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " invalid; using fallback " << fallback << "\n";
+            DebugTrace(oss.str());
+            return fallback;
+        };
+
         cellSizeWorld = sanitizePositive(cellSizeWorld, kDefaultCellSizeWorld, "cellSizeWorld");
 
         auto sanitizeOffsetMeters = [](float value, float fallback, const char* label)
@@ -1467,6 +1513,11 @@ namespace Stage
             kDefaultPickupMaxDistance,
             "pickupMaxDistance");
 
+        pickupDepthThreshold = sanitizeDepthThreshold(
+            pickupDepthThreshold,
+            kDefaultPickupDepthThreshold,
+            "pickupDepthThreshold");
+
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
         if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
@@ -1528,6 +1579,7 @@ namespace Stage
         m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
         m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
         m_pickupMaxDistance = pickupMaxDistance;
+        m_pickupDepthThreshold = pickupDepthThreshold;
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
         m_heightBonusThreshold = heightBonusThreshold;
@@ -1556,6 +1608,7 @@ namespace Stage
             << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << ", pickupMaxDistance=" << m_pickupMaxDistance
+            << ", pickupDepthThreshold=" << m_pickupDepthThreshold
             << ", guidelineHeight=" << m_guidelineHeight
             << ", heightBonusThreshold=" << m_heightBonusThreshold
             << ", heightBonusSeconds=" << m_heightBonusSeconds
@@ -1672,6 +1725,11 @@ namespace Stage
         return m_pickupMaxDistance;
     }
 
+    float StageData::GetPickupDepthThreshold() const noexcept
+    {
+        return m_pickupDepthThreshold;
+    }
+
     float StageData::GetGuidelineHeight() const noexcept
     {
         return m_guidelineHeight;
@@ -1747,6 +1805,7 @@ namespace Stage
         m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
         m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
         m_pickupMaxDistance = kDefaultPickupMaxDistance;
+        m_pickupDepthThreshold = kDefaultPickupDepthThreshold;
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
@@ -1779,6 +1838,7 @@ namespace Stage
             << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << " pickupMaxDistance=" << m_pickupMaxDistance
+            << " pickupDepthThreshold=" << m_pickupDepthThreshold
             << " guidelineHeight=" << m_guidelineHeight
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds

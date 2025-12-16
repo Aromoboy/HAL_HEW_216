@@ -52,6 +52,7 @@ namespace Entities
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, float forwardOffset);
         void SetPickupMaxDistance(float maxDistance);
+        void SetPickupDepthThreshold(float depthThreshold);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
         Transform GetRenderTransform() const override;
@@ -76,6 +77,7 @@ namespace Entities
         float m_pickupHalfHeight;
         float m_pickupForwardOffset;
         float m_pickupMaxDistance;
+        float m_pickupDepthThreshold;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
         bool m_isKinematic;

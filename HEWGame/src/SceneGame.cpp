@@ -81,6 +81,7 @@ namespace
         constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
         constexpr float kFallbackPlayerMoveSpeed = 10.0f;
         constexpr float kDefaultPickupMaxDistance = 0.5f;
+        constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
@@ -1300,9 +1301,31 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
     m_playerPickupForwardOffset = m_stageData.GetCellSizeWorld() * 0.5f;
     m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
+    m_playerPickupDepthThreshold = m_stageData.GetPickupDepthThreshold();
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
         if (std::isfinite(value) && value > 0.0f)
+        {
+            return value;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << label << " " << value
+            << " invalid; using fallback " << fallback << "\n";
+        ::DebugTrace(oss.str());
+        return fallback;
+    };
+
+    const auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
+    {
+        if (std::isfinite(value))
+        {
+            if (value >= 0.0f)
+            {
+                return value;
+            }
+        }
+        else if (std::isinf(value))
         {
             return value;
         }
@@ -1320,6 +1343,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
     m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
+    m_playerPickupDepthThreshold = sanitizeDepthThreshold(
+        m_playerPickupDepthThreshold,
+        kDefaultPickupDepthThreshold,
+        "Player pickup depth threshold");
     m_playerPickupForwardOffset = std::max(0.0f, m_playerPickupForwardOffset);
     m_playerSpeedMultiplier = 1.0f;
     {
@@ -1334,6 +1361,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
             << " pickupMaxDistance=" << m_playerPickupMaxDistance
+            << " pickupDepthThreshold=" << m_playerPickupDepthThreshold
             << " pickupOffset=" << m_playerPickupForwardOffset
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
@@ -2148,6 +2176,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         RegisterPhysicsBody(*player);
         {
             std::ostringstream oss;
@@ -3294,6 +3323,7 @@ void SceneGame::ResetPlaySession()
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupForwardOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
     }
 
     InitializeStageAnchors();
