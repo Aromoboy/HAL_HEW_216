@@ -35,6 +35,7 @@ namespace
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
     constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
@@ -283,6 +284,7 @@ namespace Stage
         , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
         , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupDepthThreshold(kDefaultPickupDepthThreshold)
         , m_pickupOffset{ kDefaultPickupOffsetMode,
             float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
             kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
@@ -345,6 +347,7 @@ namespace Stage
         float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         bool pickupBoxHeightSet = false;
         float pickupMaxDistance = kDefaultPickupMaxDistance;
+        float pickupDepthThreshold = kDefaultPickupDepthThreshold;
         Stage::PickupOffsetMode pickupOffsetMode = kDefaultPickupOffsetMode;
         float3 pickupOffsetLocalCells = kDefaultPickupOffsetLocalCells;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
@@ -830,6 +833,21 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupDepthThreshold")
+            {
+                try
+                {
+                    pickupDepthThreshold = std::stof(rawValue);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupDepthThreshold on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -1577,6 +1595,10 @@ namespace Stage
             pickupMaxDistance,
             kDefaultPickupMaxDistance,
             "pickupMaxDistance");
+        pickupDepthThreshold = sanitizeDepthThreshold(
+            pickupDepthThreshold,
+            kDefaultPickupDepthThreshold,
+            "pickupDepthThreshold");
 
         auto sanitizeVectorFinite = [](const float3& value, const float3& fallback, const char* label)
         {
@@ -1684,6 +1706,7 @@ namespace Stage
         m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
         m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
         m_pickupMaxDistance = pickupMaxDistance;
+        m_pickupDepthThreshold = pickupDepthThreshold;
         m_pickupOffset = pickupOffset;
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
@@ -1713,6 +1736,7 @@ namespace Stage
             << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << ", pickupMaxDistance=" << m_pickupMaxDistance
+            << ", pickupDepthThreshold=" << m_pickupDepthThreshold
             << ", pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
             << ", pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
@@ -1832,6 +1856,11 @@ namespace Stage
         return m_pickupMaxDistance;
     }
 
+    float StageData::GetPickupDepthThreshold() const noexcept
+    {
+        return m_pickupDepthThreshold;
+    }
+
     const PickupOffset& StageData::GetPickupOffset() const noexcept
     {
         return m_pickupOffset;
@@ -1912,6 +1941,7 @@ namespace Stage
         m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
         m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
         m_pickupMaxDistance = kDefaultPickupMaxDistance;
+        m_pickupDepthThreshold = kDefaultPickupDepthThreshold;
         m_pickupOffset = PickupOffset
         {
             kDefaultPickupOffsetMode,
@@ -1951,6 +1981,7 @@ namespace Stage
             << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << " pickupMaxDistance=" << m_pickupMaxDistance
+            << " pickupDepthThreshold=" << m_pickupDepthThreshold
             << " pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
             << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'

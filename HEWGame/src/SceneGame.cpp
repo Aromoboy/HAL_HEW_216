@@ -1343,6 +1343,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
     m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
     m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
+    m_playerPickupDepthThreshold = sanitizeDepthThreshold(m_playerPickupDepthThreshold, kDefaultPickupDepthThreshold, "Player pickup depth threshold");
     m_playerSpeedMultiplier = 1.0f;
     {
         const auto pickupOffsetModeName = [](Stage::PickupOffsetMode mode)
@@ -1366,6 +1367,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
             << " pickupMaxDistance=" << m_playerPickupMaxDistance
+            << " pickupDepthThreshold=" << m_playerPickupDepthThreshold
             << " pickupOffsetMode=" << pickupOffsetModeName(m_playerPickupOffset.mode)
             << " pickupOffsetLocalWorld=(" << m_playerPickupOffset.localOffset.x << ','
             << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
