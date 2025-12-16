@@ -2797,10 +2797,9 @@ namespace SweetsSpace
     }
 
     std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(
-        const float3& position,
+        const float3& pickupCenter,
         float halfWidth,
         float halfHeight,
-        float forwardOffset,
         float halfDepth,
         const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
         float maxDistance,
@@ -2816,21 +2815,30 @@ namespace SweetsSpace
             return nullptr;
         }
 
-        const float sanitizedForward = std::isfinite(forwardOffset) ? forwardOffset : 0.0f;
+        const auto sanitizeCoordinate = [](float value)
+        {
+            return std::isfinite(value) ? value : 0.0f;
+        };
+
+        const float3 sanitizedCenter
+        {
+            sanitizeCoordinate(pickupCenter.x),
+            sanitizeCoordinate(pickupCenter.y),
+            sanitizeCoordinate(pickupCenter.z),
+        };
         const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
         const float sanitizedMaxDistance = (std::isfinite(maxDistance) && maxDistance > 0.0f)
             ? maxDistance
             : std::numeric_limits<float>::infinity();
         const float maxDistanceSq = sanitizedMaxDistance * sanitizedMaxDistance;
-        const float3 pickupCenter{ position.x + sanitizedForward, position.y, position.z };
 
         AABB pickupBounds{};
-        pickupBounds.min.x = pickupCenter.x - halfWidth;
-        pickupBounds.max.x = pickupCenter.x + halfWidth;
-        pickupBounds.min.y = pickupCenter.y - halfHeight;
-        pickupBounds.max.y = pickupCenter.y + halfHeight;
-        pickupBounds.min.z = pickupCenter.z - sanitizedHalfDepth;
-        pickupBounds.max.z = pickupCenter.z + sanitizedHalfDepth;
+        pickupBounds.min.x = sanitizedCenter.x - halfWidth;
+        pickupBounds.max.x = sanitizedCenter.x + halfWidth;
+        pickupBounds.min.y = sanitizedCenter.y - halfHeight;
+        pickupBounds.max.y = sanitizedCenter.y + halfHeight;
+        pickupBounds.min.z = sanitizedCenter.z - sanitizedHalfDepth;
+        pickupBounds.max.z = sanitizedCenter.z + sanitizedHalfDepth;
 
         const auto intersectsXY = [&](const AABB& bounds)
         {
@@ -2876,8 +2884,8 @@ namespace SweetsSpace
 
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
-                const float dx = centerX - pickupCenter.x;
-                const float dy = centerY - pickupCenter.y;
+                const float dx = centerX - sanitizedCenter.x;
+                const float dy = centerY - sanitizedCenter.y;
                 const float distanceSq = (dx * dx) + (dy * dy);
                 if (distanceSq <= bestDistanceSq)
                 {
@@ -2895,9 +2903,8 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "拾えるスイーツが見つかりませんでした: center=("
-                << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
+                << sanitizedCenter.x << ',' << sanitizedCenter.y << ',' << sanitizedCenter.z
                 << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
-                << ") forwardOffset=" << sanitizedForward
                 << " maxDistance=" << sanitizedMaxDistance << "\n";
             DebugTrace(oss.str());
             return nullptr;
@@ -2914,9 +2921,9 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "最寄りのスイーツが距離制限を超過: distance=" << bestDistance
                 << " > maxDistance=" << sanitizedMaxDistance
-                << " center=(" << pickupCenter.x << ',' << pickupCenter.y << ',' << pickupCenter.z
+                << " center=(" << sanitizedCenter.x << ',' << sanitizedCenter.y << ',' << sanitizedCenter.z
                 << ") half=(" << halfWidth << ',' << halfHeight << ',' << sanitizedHalfDepth
-                << ") forwardOffset=" << sanitizedForward << "\n";
+                << ")\n";
             DebugTrace(oss.str());
             return nullptr;
         }

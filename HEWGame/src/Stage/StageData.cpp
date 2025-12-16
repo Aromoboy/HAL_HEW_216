@@ -34,6 +34,8 @@ namespace
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
+    const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 20.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
@@ -114,6 +116,49 @@ namespace
             *outError = true;
         }
         return values;
+    }
+
+    std::string ToLowerCopy(const std::string& value)
+    {
+        std::string lowered = value;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+        return lowered;
+    }
+
+    bool TryParsePickupOffsetMode(const std::string& rawValue, Stage::PickupOffsetMode& outMode)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "none")
+        {
+            outMode = Stage::PickupOffsetMode::None;
+            return true;
+        }
+        if (lowered == "facing" || lowered == "facingdirection" || lowered == "facing-direction")
+        {
+            outMode = Stage::PickupOffsetMode::FacingDirection;
+            return true;
+        }
+        if (lowered == "worldx" || lowered == "world-x" || lowered == "world_x")
+        {
+            outMode = Stage::PickupOffsetMode::WorldX;
+            return true;
+        }
+
+        return false;
+    }
+
+    const char* PickupOffsetModeToString(Stage::PickupOffsetMode mode)
+    {
+        switch (mode)
+        {
+        case Stage::PickupOffsetMode::None: return "none";
+        case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
+        case Stage::PickupOffsetMode::WorldX: return "world-x";
+        default: return "unknown";
+        }
     }
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color, const DirectX::XMFLOAT4& fallback, const std::string& label)
@@ -237,6 +282,10 @@ namespace Stage
         , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
         , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
         , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupOffset{ kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
+            kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
+            kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld } }
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
@@ -295,6 +344,8 @@ namespace Stage
         float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         bool pickupBoxHeightSet = false;
         float pickupMaxDistance = kDefaultPickupMaxDistance;
+        Stage::PickupOffsetMode pickupOffsetMode = kDefaultPickupOffsetMode;
+        float3 pickupOffsetLocalCells = kDefaultPickupOffsetLocalCells;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
@@ -779,6 +830,38 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
                         << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupOffsetMode")
+            {
+                Stage::PickupOffsetMode parsedMode{};
+                if (TryParsePickupOffsetMode(rawValue, parsedMode))
+                {
+                    pickupOffsetMode = parsedMode;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "pickupOffsetMode on line " << lineNumber
+                        << " is invalid ('" << rawValue << "'); expected none/facing-direction/world-x.\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupOffsetLocalCells")
+            {
+                auto parsed = ParseFloatList(rawValue, nullptr);
+                if (parsed.size() == 3)
+                {
+                    pickupOffsetLocalCells = float3{ parsed[0], parsed[1], parsed[2] };
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "pickupOffsetLocalCells on line " << lineNumber
+                        << " must contain three floats. Raw='" << rawValue << "'\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -1467,6 +1550,51 @@ namespace Stage
             kDefaultPickupMaxDistance,
             "pickupMaxDistance");
 
+        auto sanitizeVectorFinite = [](const float3& value, const float3& fallback, const char* label)
+        {
+            if (std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z))
+            {
+                return value;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " contains non-finite component; using fallback ("
+                << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
+            DebugTrace(oss.str());
+            return fallback;
+        };
+
+        pickupOffsetLocalCells = sanitizeVectorFinite(
+            pickupOffsetLocalCells,
+            kDefaultPickupOffsetLocalCells,
+            "pickupOffsetLocalCells");
+
+        const float3 pickupOffsetLocalWorld
+        {
+            pickupOffsetLocalCells.x * cellSizeWorld,
+            pickupOffsetLocalCells.y * cellSizeWorld,
+            pickupOffsetLocalCells.z * cellSizeWorld,
+        };
+
+        Stage::PickupOffset pickupOffset
+        {
+            pickupOffsetMode,
+            pickupOffsetLocalWorld,
+        };
+
+        const Stage::PickupOffset defaultPickupOffsetWorld
+        {
+            kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * cellSizeWorld,
+                kDefaultPickupOffsetLocalCells.y * cellSizeWorld,
+                kDefaultPickupOffsetLocalCells.z * cellSizeWorld },
+        };
+
+        pickupOffset.localOffset = sanitizeVectorFinite(
+            pickupOffset.localOffset,
+            defaultPickupOffsetWorld.localOffset,
+            "pickupOffsetLocalWorld");
+
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
         if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
@@ -1528,6 +1656,7 @@ namespace Stage
         m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
         m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
         m_pickupMaxDistance = pickupMaxDistance;
+        m_pickupOffset = pickupOffset;
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
         m_heightBonusThreshold = heightBonusThreshold;
@@ -1556,6 +1685,9 @@ namespace Stage
             << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << ", pickupMaxDistance=" << m_pickupMaxDistance
+            << ", pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
+            << ", pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
+            << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << ", guidelineHeight=" << m_guidelineHeight
             << ", heightBonusThreshold=" << m_heightBonusThreshold
             << ", heightBonusSeconds=" << m_heightBonusSeconds
@@ -1672,6 +1804,11 @@ namespace Stage
         return m_pickupMaxDistance;
     }
 
+    const PickupOffset& StageData::GetPickupOffset() const noexcept
+    {
+        return m_pickupOffset;
+    }
+
     float StageData::GetGuidelineHeight() const noexcept
     {
         return m_guidelineHeight;
@@ -1747,6 +1884,13 @@ namespace Stage
         m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
         m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
         m_pickupMaxDistance = kDefaultPickupMaxDistance;
+        m_pickupOffset = PickupOffset
+        {
+            kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
+                kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
+                kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld },
+        };
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
@@ -1779,6 +1923,9 @@ namespace Stage
             << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
             << " pickupMaxDistance=" << m_pickupMaxDistance
+            << " pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
+            << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
+            << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_guidelineHeight
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds

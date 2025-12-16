@@ -6,6 +6,7 @@
 
 #include "Entities/PhysicalEntity.h"
 #include "Input.h"
+#include "PickupConfig.h"
 #include "VisualTransform.h"
 
 namespace SweetsSpace
@@ -50,7 +51,7 @@ namespace Entities
         bool HasMinimumY() const;
         void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
         void SetPickupBox(float width, float height);
-        void SetPickupArea(float width, float height, float forwardOffset);
+        void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
 
@@ -74,7 +75,7 @@ namespace Entities
         int m_maxCarry;
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
-        float m_pickupForwardOffset;
+        Stage::PickupOffset m_pickupOffset;
         float m_pickupMaxDistance;
         float3 m_carryOffset;
         float m_dropUpwardBoost;
@@ -82,6 +83,7 @@ namespace Entities
         float m_baseHorizontalMoveSpeed;
         float m_baseVerticalMoveSpeed;
         float m_speedMultiplier;
+        float m_facingSign;
         bool m_hasMinimumY;
         float m_minimumY;
         bool m_missingModelWarned;
