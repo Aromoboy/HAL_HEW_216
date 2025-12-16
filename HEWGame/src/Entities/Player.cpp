@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cassert>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -846,7 +847,20 @@ namespace Entities
             return;
         }
         const PickupOrigin pickupOrigin = ComputePickupOrigin();
+        const float halfDepth = pickupOrigin.halfDepth;
+        const float depthThreshold = kDefaultPickupDepthThreshold;
         const float3 pickupCenter{ pickupOrigin.center.x + m_pickupForwardOffset, pickupOrigin.center.y, pickupOrigin.center.z };
+
+        assert(std::isfinite(halfDepth) && halfDepth > 0.0f);
+        assert(std::isfinite(depthThreshold) && depthThreshold >= 0.0f);
+        if (!std::isfinite(halfDepth) || halfDepth <= 0.0f || !std::isfinite(depthThreshold) || depthThreshold < 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "ピックアップボリュームが無効です halfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold << "\n";
+            PlayerDebugTrace(oss.str());
+            return;
+        }
 
         float nearestDistance = std::numeric_limits<float>::quiet_NaN();
         const std::shared_ptr<SweetsSpace::ActiveSweets> candidate =
@@ -854,8 +868,8 @@ namespace Entities
                 pickupOrigin.center,
                 m_pickupHalfWidth,
                 m_pickupHalfHeight,
-                m_pickupForwardOffset,
-                pickupOrigin.halfDepth,
+                halfDepth,
+                depthThreshold,
                 m_carrieds,
                 m_pickupMaxDistance,
                 &nearestDistance);
@@ -871,7 +885,8 @@ namespace Entities
             }
             oss << " origin=" << pickupOrigin.source
                 << " center=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
-                << " halfDepth=" << pickupOrigin.halfDepth;
+                << " halfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold;
             oss << "\n";
             PlayerDebugTrace(oss.str());
             return;
@@ -905,7 +920,8 @@ namespace Entities
                 << " maxDistance=" << m_pickupMaxDistance
                 << " origin=" << pickupOrigin.source
                 << " originCenter=(" << pickupOrigin.center.x << ',' << pickupOrigin.center.y << ',' << pickupOrigin.center.z << ')'
-                << " originHalfDepth=" << pickupOrigin.halfDepth
+                << " originHalfDepth=" << halfDepth
+                << " depthThreshold=" << depthThreshold
                 << " pickupZ=" << pickupCenter.z
                 << " sweetsZ=" << sweetsZ
                 << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
