@@ -702,6 +702,7 @@ namespace SweetsSpace
     {
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
+        static bool s_loggedPolygonFallback = false;
 
         (void)model;
 
@@ -947,6 +948,84 @@ namespace SweetsSpace
 
         const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
         result.shapeConfig.density *= densityScale;
+
+        auto computeScaledDimensions = [&](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
+        {
+            if (vertices.size() < 3)
+            {
+                return std::nullopt;
+            }
+
+            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            for (const auto& vertex : vertices)
+            {
+                const float scaledX = vertex.x * colliderScale.x;
+                const float scaledY = vertex.y * colliderScale.y;
+                min.x = std::min(min.x, scaledX);
+                min.y = std::min(min.y, scaledY);
+                max.x = std::max(max.x, scaledX);
+                max.y = std::max(max.y, scaledY);
+            }
+
+            return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
+        };
+
+        auto scaleVertices = [](std::vector<b2Vec2>& vertices, float factor)
+        {
+            for (auto& vertex : vertices)
+            {
+                vertex.x *= factor;
+                vertex.y *= factor;
+            }
+        };
+
+        const float minDimension = Physics::kMinimumShapeDimensionMeters;
+        if (result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
+        {
+            if (const auto dimensions = computeScaledDimensions(result.shapeConfig.vertices))
+            {
+                const float width = dimensions->first;
+                const float height = dimensions->second;
+                const float smallest = std::min(width, height);
+                if (!(smallest >= minDimension))
+                {
+                    if (smallest <= 0.0f)
+                    {
+                        result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
+                        result.shapeConfig.radius = std::max(minDimension * 0.5f, result.shapeConfig.radius);
+                        result.shapeConfig.polygonRadius = 0.0f;
+                        result.shapeConfig.vertices.clear();
+                        result.meshPolygons.clear();
+                    }
+                    else
+                    {
+                        const float scaleFactor = minDimension / smallest;
+                        scaleVertices(result.shapeConfig.vertices, scaleFactor);
+                        for (auto& polygon : result.meshPolygons)
+                        {
+                            scaleVertices(polygon, scaleFactor);
+                        }
+                        result.shapeConfig.polygonRadius *= scaleFactor;
+                        result.thickness *= scaleFactor;
+                        result.centroidOffset.x *= scaleFactor;
+                        result.centroidOffset.y *= scaleFactor;
+                    }
+
+                    if (!s_loggedPolygonFallback)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Collider for kind='" << resolvedKind
+                            << "' resized to meet Box2D min dimension (width=" << width
+                            << ", height=" << height << ") target=" << minDimension << "\n";
+                        Diagnostics::LogInfo(oss.str());
+                        s_loggedPolygonFallback = true;
+                    }
+
+                    result.source = ColliderSource::Fallback;
+                }
+            }
+        }
 
         return result;
     }
