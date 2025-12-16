@@ -321,6 +321,59 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     return std::make_shared<ModelDX>(meshes, materials, bounds);
 }
 
+void AssimpModelLorder::MakeBone(const aiScene*)
+{
+    // 再帰処理でAssimpのノード情報を読み取り
+    using FuncRecurciveMakeNodes = std::function<NodeIndex(aiNode*, NodeIndex, DirectX::XMMATRIX)>;
+    FuncRecurciveMakeNodes func = [&func, this](aiNode* assimpNode, NodeIndex parent, DirectX::XMMATRIX mat)
+        {
+            // assimp側で階層情報が細かく分割されている場合の処理
+            std::string name = assimpNode->mName.data;
+            if (name.find("$AssimpFbx") != std::string::npos)
+            {
+                // 分割前のノードに到達するまで、各行列を掛け合わせていく
+                DirectX::XMMATRIX transform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
+                mat = transform * mat;
+                return func(assimpNode->mChildren[0], parent, mat);
+            }
+
+            // Assimpのノード情報を格納
+            Node node;
+            node.name = name;
+            node.parent = parent;
+            node.children.resize(assimpNode->mNumChildren);
+            node.mat = mat;
+
+            // ノードの一覧に追加
+            m_nodes.push_back(node);
+            NodeIndex nodeIndex = static_cast<NodeIndex>(m_nodes.size() - 1);
+
+            // 子要素の情報を追加
+            for (UINT i = 0; i < assimpNode->mNumChildren; ++i)
+            {
+                m_nodes[nodeIndex].children[i] =
+                    func(assimpNode->mChildren[i], nodeIndex, DirectX::XMMatrixIdentity());
+            }
+
+            return nodeIndex;
+        };
+
+    // ノード作成
+    const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
+    func(pScene->mRootNode, NODE_NONE, DirectX::XMMatrixIdentity());
+
+    // アニメーション計算領域に、ノード数分の初期データを作成
+    AnimeTransform init = {
+        DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+        DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
+    };
+    for (int i = 0; i < MAX_ANIMEPATTERN; ++i)
+    {
+        m_animeTransform[i].resize(m_nodes.size(), init);
+    }
+}
+
 // メッシュ作成
 std::vector<std::shared_ptr<MeshDX>>
 AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds)

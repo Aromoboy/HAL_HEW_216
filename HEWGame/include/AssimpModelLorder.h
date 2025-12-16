@@ -55,6 +55,9 @@ private:
 	
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
+
+		void MakeBone(const aiScene*);
+
         // bV쐬
         std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds);
 	// }eA̍쐬
