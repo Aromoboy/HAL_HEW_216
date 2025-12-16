@@ -71,6 +71,32 @@ namespace
         }
     }
 
+    const char* PickupResultName(SweetsSpace::PickupResult result)
+    {
+        switch (result)
+        {
+        case SweetsSpace::PickupResult::Success: return "success";
+        case SweetsSpace::PickupResult::Failure: return "failure";
+        default: return "unknown";
+        }
+    }
+
+    const char* PickupFailReasonName(SweetsSpace::PickupFailReason reason)
+    {
+        switch (reason)
+        {
+        case SweetsSpace::PickupFailReason::None: return "none";
+        case SweetsSpace::PickupFailReason::MissingSweetsManager: return "missing-sweets-manager";
+        case SweetsSpace::PickupFailReason::MissingSystems: return "missing-systems";
+        case SweetsSpace::PickupFailReason::InvalidConfiguration: return "invalid-configuration";
+        case SweetsSpace::PickupFailReason::NoCandidates: return "no-candidates";
+        case SweetsSpace::PickupFailReason::DistanceExceeded: return "distance-exceeded";
+        case SweetsSpace::PickupFailReason::DepthExceeded: return "depth-exceeded";
+        case SweetsSpace::PickupFailReason::StateTransitionFailed: return "state-transition-failed";
+        default: return "unknown";
+        }
+    }
+
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
         if (vertices.empty())
@@ -275,6 +301,7 @@ namespace Entities
         , m_maxScreenX(0.0f)
         , m_hasMaximumY(false)
         , m_maximumY(0.0f)
+        , m_lastPickupResult{}
     {
         if (model)
         {
@@ -429,6 +456,11 @@ namespace Entities
     Transform Player::GetRenderTransform() const
     {
         return m_renderTransform;
+    }
+
+    const SweetsSpace::PickupQueryResult& Player::GetLastPickupResult() const noexcept
+    {
+        return m_lastPickupResult;
     }
 
     void Player::SyncVisualTransformFromPhysics()
@@ -829,19 +861,20 @@ namespace Entities
 
     void Player::TryPickupNearest()
     {
+        std::shared_ptr<SweetsSpace::ActiveSweets> candidate;
+        Transform candidateTransform{};
+        AABB sweetsBounds{};
+        float sweetsZ = std::numeric_limits<float>::quiet_NaN();
+
         if (!m_sweetsManager)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: SweetsManager がありません \n");
-            return;
+            pickupResult.failReason = SweetsSpace::PickupFailReason::MissingSweetsManager;
         }
-
-        if (!(m_pickupHalfWidth > 0.0f) || !(m_pickupHalfHeight > 0.0f))
+        else if (!(m_pickupHalfWidth > 0.0f) || !(m_pickupHalfHeight > 0.0f) || !(m_pickupMaxDistance > 0.0f))
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップボックスが未設定です \n");
-            return;
+            pickupResult.failReason = SweetsSpace::PickupFailReason::InvalidConfiguration;
         }
-
-        if (!(m_pickupMaxDistance > 0.0f))
+        else
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップをスキップしました: ピックアップ距離のしきい値が無効です \n");
             return;
@@ -895,15 +928,9 @@ const float3 pickupCenter{
                 halfDepth,
                 depthThreshold,
                 m_carrieds,
-                m_pickupMaxDistance,
-                &nearestDistance);
+                m_pickupMaxDistance);
 
-        if (!candidate)
-        {
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "ピックアップに失敗しました: 最大距離 " << m_pickupMaxDistance
-                << " 以内のスイーツが見つかりません";
-            if (std::isfinite(nearestDistance))
+            if (pickupResult.Succeeded())
             {
                 oss << " (最短距離=" << nearestDistance << ')';
             }
@@ -916,26 +943,25 @@ const float3 pickupCenter{
             return;
         }
 
-        const Transform candidateTransform = candidate->GetTransform();
-        const float sweetsZ = candidateTransform.position.z;
-        const AABB sweetsBounds = candidate->GetAABB();
+                if (!m_sweetsManager->TryMarkAsCarried(candidate))
+                {
+                    pickupResult.result = SweetsSpace::PickupResult::Failure;
+                    pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                }
+                else
+                {
+                    Transform updated = candidateTransform;
+                    updated.position = ComputeCarryAnchor();
+                    updated.rotation = m_transform.rotation;
+                    candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                    candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
-        if (!m_sweetsManager->TryMarkAsCarried(candidate))
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "ピックアップに失敗しました: マネージャーが遷移を拒否しました \n");
-            return;
+                    m_carrieds.push_back(candidate);
+                }
+            }
         }
 
-        candidate->SyncColliderBounds();
-        const Transform current = candidate->GetTransform();
-        Transform updated = current;
-        updated.position = ComputeCarryAnchor();
-        updated.rotation = m_transform.rotation;
-        candidate->SetTransformViaPhysics(updated.position, updated.rotation);
-
-        candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
-
-        m_carrieds.push_back(candidate);
+        m_lastPickupResult = pickupResult;
 
         std::ostringstream oss;
             oss << kPlayerLogPrefix << "ピックアップ成功 tag='" << candidate->GetTag()
@@ -953,7 +979,12 @@ const float3 pickupCenter{
                 << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
         if (std::isfinite(nearestDistance))
         {
-            oss << " distance=" << nearestDistance;
+            oss << " depthDelta=" << pickupResult.depthDelta;
+        }
+        if (candidate)
+        {
+            oss << " tag='" << candidate->GetTag() << "'"
+                << " sweetsAABBZ=[" << sweetsBounds.min.z << ',' << sweetsBounds.max.z << ']';
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
