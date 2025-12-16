@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -1458,6 +1459,33 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << label << " value " << value
                 << " invalid; using fallback " << fallback << "\n";
+            DebugTrace(oss.str());
+            return fallback;
+        };
+
+        auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
+        {
+            if (std::isfinite(value))
+            {
+                if (value >= 0.0f)
+                {
+                    return value;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " value " << value
+                    << " invalid; using fallback " << fallback << "\n";
+                DebugTrace(oss.str());
+                return fallback;
+            }
+
+            if (std::isinf(value))
+            {
+                return value;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " invalid; using fallback " << fallback << "\n";
             DebugTrace(oss.str());
             return fallback;
         };

@@ -177,6 +177,7 @@ namespace SweetsSpace
             float halfWidth,
             float halfHeight,
             float halfDepth,
+            float depthThreshold,
             const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
             float maxDistance,
             float* outDistance = nullptr) const;

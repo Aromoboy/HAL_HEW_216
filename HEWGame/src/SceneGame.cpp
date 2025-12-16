@@ -81,6 +81,7 @@ namespace
         constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
         constexpr float kFallbackPlayerMoveSpeed = 10.0f;
         constexpr float kDefaultPickupMaxDistance = 0.5f;
+        constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
@@ -1300,9 +1301,31 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
     m_playerPickupOffset = m_stageData.GetPickupOffset();
     m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
+    m_playerPickupDepthThreshold = m_stageData.GetPickupDepthThreshold();
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
         if (std::isfinite(value) && value > 0.0f)
+        {
+            return value;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << label << " " << value
+            << " invalid; using fallback " << fallback << "\n";
+        ::DebugTrace(oss.str());
+        return fallback;
+    };
+
+    const auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
+    {
+        if (std::isfinite(value))
+        {
+            if (value >= 0.0f)
+            {
+                return value;
+            }
+        }
+        else if (std::isinf(value))
         {
             return value;
         }

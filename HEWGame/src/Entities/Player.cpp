@@ -57,6 +57,7 @@ namespace
 
     constexpr int kDefaultMaxCarry = 3;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
 
     const char* PickupOffsetModeName(Stage::PickupOffsetMode mode)
     {

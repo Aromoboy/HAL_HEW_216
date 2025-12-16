@@ -2801,6 +2801,7 @@ namespace SweetsSpace
         float halfWidth,
         float halfHeight,
         float halfDepth,
+        float depthThreshold,
         const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
         float maxDistance,
         float* outDistance) const
@@ -2827,10 +2828,17 @@ namespace SweetsSpace
             sanitizeCoordinate(pickupCenter.z),
         };
         const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
+        const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
+            ? depthThreshold
+            : std::numeric_limits<float>::infinity();
         const float sanitizedMaxDistance = (std::isfinite(maxDistance) && maxDistance > 0.0f)
             ? maxDistance
             : std::numeric_limits<float>::infinity();
         const float maxDistanceSq = sanitizedMaxDistance * sanitizedMaxDistance;
+
+        const float broadPhaseHalfWidth = halfWidth + sanitizedMaxDistance;
+        const float broadPhaseHalfHeight = halfHeight + sanitizedMaxDistance;
+        const float broadPhaseHalfDepth = std::max(sanitizedHalfDepth, sanitizedDepthThreshold);
 
         AABB pickupBounds{};
         pickupBounds.min.x = sanitizedCenter.x - halfWidth;
@@ -2840,11 +2848,12 @@ namespace SweetsSpace
         pickupBounds.min.z = sanitizedCenter.z - sanitizedHalfDepth;
         pickupBounds.max.z = sanitizedCenter.z + sanitizedHalfDepth;
 
-        const auto intersectsXY = [&](const AABB& bounds)
+        const auto intersects = [&](const AABB& bounds)
         {
             const float overlapX = std::min(bounds.max.x, pickupBounds.max.x) - std::max(bounds.min.x, pickupBounds.min.x);
             const float overlapY = std::min(bounds.max.y, pickupBounds.max.y) - std::max(bounds.min.y, pickupBounds.min.y);
-            return overlapX >= 0.0f && overlapY >= 0.0f;
+            const float overlapZ = std::min(bounds.max.z, pickupBounds.max.z) - std::max(bounds.min.z, pickupBounds.min.z);
+            return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
         };
 
         const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
@@ -2854,6 +2863,8 @@ namespace SweetsSpace
 
         std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
+        float nearestMeasuredDistanceSq = std::numeric_limits<float>::max();
+        float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
 
         const auto scanState = [&](SweetsState state)
         {
@@ -2877,7 +2888,7 @@ namespace SweetsSpace
 
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                if (!intersectsXY(bounds))
+                if (!intersects(bounds))
                 {
                     continue;
                 }
