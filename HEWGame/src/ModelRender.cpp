@@ -20,17 +20,11 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     wvp[1] = camera->GetView();
     wvp[2] = camera->GetProjection();
 
-    float3 radRotation = {
-        transform.rotation.x * RAD,
-        transform.rotation.y * RAD,
-        transform.rotation.z * RAD
-    };
-
     DrawMatrix::CreateWorldMatrix(
         wvp[0],
         transform.position,
         transform.scale,
-        radRotation
+        transform.rotation
     );
 
     ShaderList::SetWVP(wvp);
