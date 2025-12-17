@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "Collision2D.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelCache.h"
@@ -17,6 +16,7 @@
 #include "ModelPivot.h"
 #include "BoxColliderComponent.h"
 #include "Entities/PhysicalEntity.h"
+#include "CollisionLayer.h"
 #include "Physics/ShapeConstants.h"
 #include "Systems/PhysicsMachine.h"
 

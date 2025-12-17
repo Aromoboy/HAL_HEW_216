@@ -78,9 +78,6 @@
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Collision2D.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="src\Components\BoxColliderComponent.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -122,9 +119,6 @@
     </ClCompile>
     <ClCompile Include="src\DrawMatrix.cpp">
       <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Entities\CollisionEntity.cpp">
-      <Filter>Entities</Filter>
     </ClCompile>
     <ClCompile Include="src\Entities\Entity.cpp">
       <Filter>Entities</Filter>
@@ -337,12 +331,6 @@
     <ClInclude Include="include\Collision\ConvexHullBuilder.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\Collision2D.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\CollisionEntity.h">
-      <Filter>Entities</Filter>
-    </ClInclude>
     <ClInclude Include="include\CollisionLayer.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -406,9 +394,6 @@
     <ClInclude Include="include\DrawMatrix.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\Entities\CollisionEntity.h">
-      <Filter>Entities</Filter>
-    </ClInclude>
     <ClInclude Include="include\Entities\Entity.h">
       <Filter>Entities</Filter>
     </ClInclude>
@@ -432,9 +417,6 @@
     </ClInclude>
     <ClInclude Include="include\ICamera.h">
       <Filter>Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ICollider.h">
-      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\IModelLoader.h">
       <Filter>Rendering</Filter>

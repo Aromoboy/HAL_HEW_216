@@ -43,11 +43,6 @@ namespace Entities
     class PhysicalEntity;
 }
 
-namespace Collision
-{
-    class ICollider;
-}
-
 namespace SweetsSpace
 {
     class BaseSweets;
