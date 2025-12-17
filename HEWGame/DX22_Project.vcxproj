@@ -238,8 +238,6 @@
     <ClCompile Include="src\ScenePowerUp.cpp" />
     <ClCompile Include="src\SpriteRenderer.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
-    <ClCompile Include="src\Stage\OsaraPlate.cpp" />
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
     <ClCompile Include="src\Systems\Box2DContactListener.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
@@ -342,8 +340,6 @@
     <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
-    <ClInclude Include="include\Stage\OsaraPlate.h" />
-    <ClInclude Include="include\Stage\FoundationPlatform.h" />
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
     <ClInclude Include="include\Systems\IntegrateSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />

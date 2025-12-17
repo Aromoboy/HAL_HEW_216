@@ -1652,271 +1652,11 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
         m_drawSystem->SetRenderer(m_render.get());
     }
-    const auto& platformDescriptors = m_stageData.GetPlatforms();
-    if (platformDescriptors.empty())
-    {
-        DebugTrace(std::string(kLogPrefix) + "No platform descriptors available; skipping foundation creation.\n");
-    }
-    else
-    {
-        m_foundationPlatforms.resize(platformDescriptors.size());
-        m_platformUpdateRegistered.assign(platformDescriptors.size(), false);
-        m_platformDrawRegistered.assign(platformDescriptors.size(), false);
-        m_osaraPlates.clear();
-        m_osaraUpdateRegistered.clear();
-        m_osaraDrawRegistered.clear();
-
-        for (std::size_t i = 0; i < platformDescriptors.size(); ++i)
-        {
-            const auto& descriptor = platformDescriptors[i];
-            Transform platformTransform = BuildPlatformTransformFromDescriptor(descriptor, kStageCenterX);
-
-            std::ostringstream tagStream;
-            tagStream << "StageFoundation" << i;
-
-            auto platform = std::make_unique<Stage::FoundationPlatform>(
-                tagStream.str(),
-                platformTransform,
-                std::nullopt,
-                m_physicsMachine.get(),
-                descriptor.color,
-                Core::UpdatePhase::PrePhysics,
-                -100 - static_cast<int>(i),
-                true);
-
-            if (!platform)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Failed to allocate foundation platform at index " << i << " (tag='"
-                    << tagStream.str() << "').\n";
-                ::DebugTrace(oss.str());
-                continue;
-            }
-
-            m_foundationPlatforms[i] = std::move(platform);
-        }
-
-        RefreshPlatformAnchor(true);
-
-        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
-        {
-            auto& platform = m_foundationPlatforms[i];
-            if (!platform)
-            {
-                continue;
-            }
-
-            RegisterPhysicsBody(*platform);
-
-            const auto& scale = platform->GetTransform().scale;
-            const auto& pos = platform->GetTransform().position;
-            std::ostringstream oss;
-            oss << kLogPrefix << "Stage foundation[" << i << "] initialized at ("
-                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-                << scale.x << ',' << scale.y << ',' << scale.z << ") color=("
-                << platform->GetDebugColor().x << ','
-                << platform->GetDebugColor().y << ','
-                << platform->GetDebugColor().z << ") tag='" << platform->GetTag() << "'.\n";
-            ::DebugTrace(oss.str());
-
-            if (m_drawSystem)
-            {
-                m_drawSystem->RegisterRenderable(*platform);
-                m_platformDrawRegistered[i] = true;
-                std::ostringstream drawOss;
-                drawOss << kLogPrefix << "Stage foundation[" << i << "] registered with DrawSystem.\n";
-                DebugTrace(drawOss.str());
-            }
-        }
-
-        auto selectPlatform = [&](std::size_t preferredIndex) -> Stage::FoundationPlatform*
-        {
-            if (preferredIndex < m_foundationPlatforms.size() && m_foundationPlatforms[preferredIndex])
-            {
-                return m_foundationPlatforms[preferredIndex].get();
-            }
-            for (auto& platform : m_foundationPlatforms)
-            {
-                if (platform)
-                {
-                    return platform.get();
-                }
-            }
-            return nullptr;
-        };
-
-        m_platePlatform = selectPlatform(platformDescriptors.size() > 1 ? 1 : 0);
-        if (m_platePlatform)
-        {
-            const auto& pos = m_platePlatform->GetTransform().position;
-            const auto& scale = m_platePlatform->GetTransform().scale;
-            std::ostringstream oss;
-            oss << kLogPrefix << "Plate platform selected tag='" << m_platePlatform->GetTag() << "' pos=("
-                << pos.x << ',' << pos.y << ',' << pos.z << ") scale=("
-                << scale.x << ',' << scale.y << ',' << scale.z << ").\n";
-            DebugTrace(oss.str());
-        }
-        else
-        {
-            DebugTrace(std::string(kLogPrefix) + "No plate platform available; player and sweets will use default spawn heights.\n");
-        }
-
-        if (m_platePlatform)
-        {
-            const Transform baseTransform = m_platePlatform->GetTransform();
-            const float leftOffsetX = m_stageData.GetOsaraLeftOffsetX();
-            const float rightOffsetX = m_stageData.GetOsaraRightOffsetX();
-            const float offsetY = m_stageData.GetOsaraOffsetY();
-
-            Transform leftTransform = baseTransform;
-            leftTransform.position.x += leftOffsetX;
-            leftTransform.position.y += offsetY;
-
-            Transform rightTransform = baseTransform;
-            rightTransform.position.x += rightOffsetX;
-            rightTransform.position.y += offsetY;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[Osara] basePos=(" << baseTransform.position.x << ',' << baseTransform.position.y << ','
-                << baseTransform.position.z << ") offsets=(L:" << leftOffsetX << ", R:" << rightOffsetX << ", Y:" << offsetY
-                << ") leftPos=(" << leftTransform.position.x << ',' << leftTransform.position.y << ',' << leftTransform.position.z
-                << ") rightPos=(" << rightTransform.position.x << ',' << rightTransform.position.y << ',' << rightTransform.position.z
-                << ")\n";
-            ::DebugTrace(oss.str());
-
-            m_osaraPlates.resize(2);
-            m_osaraUpdateRegistered.assign(2, false);
-            m_osaraDrawRegistered.assign(2, false);
-
-            auto instantiateOsara = [&](std::size_t index, const std::string& tag, const Transform& transform)
-            {
-                auto osara = std::make_unique<Stage::OsaraPlate>(tag, transform, m_physicsMachine.get());
-                if (!osara)
-                {
-                    std::ostringstream createOss;
-                    createOss << kLogPrefix << "[Osara] Failed to create plate '" << tag << "'.\n";
-                    ::DebugTrace(createOss.str());
-                    return;
-                }
-
-                RegisterPhysicsBody(*osara);
-
-                if (m_drawSystem)
-                {
-                    m_drawSystem->RegisterRenderable(*osara);
-                    if (g_RegisterOsaraColliders)
-                    {
-                        m_drawSystem->RegisterCollider(*osara);
-                    }
-                    if (index >= m_osaraDrawRegistered.size())
-                    {
-                        m_osaraDrawRegistered.resize(index + 1, false);
-                    }
-                    m_osaraDrawRegistered[index] = true;
-
-                    if (g_DrawColliders && g_RegisterOsaraColliders)
-                    {
-                        std::ostringstream colliderOss;
-                        colliderOss << kLogPrefix << "[Osara] Debug collider registered for '" << tag
-                                    << "' (visible when r.DebugColliders!=0).\n";
-                        DebugTrace(colliderOss.str());
-                    }
-                }
-
-                if (index >= m_osaraPlates.size())
-                {
-                    m_osaraPlates.resize(index + 1);
-                }
-                m_osaraPlates[index] = std::move(osara);
-            };
-
-            instantiateOsara(0, "OsaraLeft", leftTransform);
-            instantiateOsara(1, "OsaraRight", rightTransform);
-        }
-
-        auto selectPlatformForHeight = [&]() -> Stage::FoundationPlatform*
-        {
-            if (m_platePlatform)
-            {
-                return m_platePlatform;
-            }
-
-            for (auto& platform : m_foundationPlatforms)
-            {
-                if (platform)
-                {
-                    return platform.get();
-                }
-            }
-
-            return nullptr;
-        };
-
-        m_spawnHeightPlatform = selectPlatformForHeight();
-    }
-
-    {
-        float computedGround = 0.0f;
-        auto computeTopFromTransform = [](const Transform& transform)
-        {
-            return transform.position.y + (transform.scale.y * 0.5f);
-        };
-
-        if (m_spawnHeightPlatform)
-        {
-            if (const auto* descriptor = FindDescriptorForPlatform(m_spawnHeightPlatform))
-            {
-                computedGround = ComputePlatformTopY(*descriptor);
-            }
-            else
-            {
-                computedGround = computeTopFromTransform(m_spawnHeightPlatform->GetTransform());
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[Ground] checklist baseline set to platform '"
-                << m_spawnHeightPlatform->GetTag() << "' topY=" << computedGround << "\\n";
-            DebugTrace(oss.str());
-        }
-        else if (!platformDescriptors.empty())
-        {
-            computedGround = ComputePlatformTopY(platformDescriptors.front());
-            DebugTrace(std::string(kLogPrefix) + "[Ground] baseline derived from first descriptor; spawn platform missing.\\n");
-        }
-
-        m_groundY = computedGround;
-    }
-
-    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
-
-    float platePlaneZ = m_stageData.GetPlaneZ();
-    if (m_platePlatform)
-    {
-        if (const auto* descriptor = FindDescriptorForPlatform(m_platePlatform))
-        {
-            platePlaneZ = descriptor->center.z;
-        }
-        else
-        {
-            platePlaneZ = m_platePlatform->GetTransform().position.z;
-        }
-    }
     std::optional<Physics::BoxColliderComponent> boxColliderComponent;
     std::optional<Physics::Box2DShapeConfig> playerShapeConfig;
     float3 playerColliderHalfExtents{ 0.0f, 0.0f, 0.0f };
     float3 playerColliderOffset{ 0.0f, 0.0f, 0.0f };
     Transform trans = m_playerSpawnTransform.transform;
-    trans.position.z += platePlaneZ;
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerSpawn] transform(model+collider) position=(" << trans.position.x << ',' << trans.position.y << ',' << trans.position.z << ')'
-            << " rotationRad=(" << trans.rotation.x << ',' << trans.rotation.y << ',' << trans.rotation.z << ')'
-            << " scale=(" << trans.scale.x << ',' << trans.scale.y << ',' << trans.scale.z << ')'
-            << " planeZ=" << platePlaneZ
-            << " configLoaded=" << std::boolalpha << m_playerSpawnTransform.loadedFromFile
-            << " rotationSource=" << (m_playerSpawnTransform.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
-        DebugTrace(oss.str());
-    }
 
     const bool playerIsKinematic = false;
     const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
@@ -2054,8 +1794,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         }
     }
 
-    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
-
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
@@ -2077,36 +1815,6 @@ SceneGame::~SceneGame()
     {
         m_hudRenderer->Shutdown();
         m_hudRenderer.reset();
-    }
-
-    for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
-    {
-        if (i < m_platformUpdateRegistered.size() && m_platformUpdateRegistered[i] && m_foundationPlatforms[i])
-        {
-            Unregister(*m_foundationPlatforms[i]);
-            m_platformUpdateRegistered[i] = false;
-        }
-
-        if (i < m_platformDrawRegistered.size() && m_platformDrawRegistered[i] && m_drawSystem && m_foundationPlatforms[i])
-        {
-            m_drawSystem->UnregisterRenderable(*m_foundationPlatforms[i]);
-            m_platformDrawRegistered[i] = false;
-        }
-    }
-
-    for (std::size_t i = 0; i < m_osaraPlates.size(); ++i)
-    {
-        if (i < m_osaraUpdateRegistered.size() && m_osaraUpdateRegistered[i] && m_osaraPlates[i])
-        {
-            Unregister(*m_osaraPlates[i]);
-            m_osaraUpdateRegistered[i] = false;
-        }
-
-        if (i < m_osaraDrawRegistered.size() && m_osaraDrawRegistered[i] && m_drawSystem && m_osaraPlates[i])
-        {
-            m_drawSystem->UnregisterRenderable(*m_osaraPlates[i]);
-            m_osaraDrawRegistered[i] = false;
-        }
     }
 
     UnregisterAllPhysicsBodies();
@@ -2164,8 +1872,6 @@ SceneGame::~SceneGame()
     if (m_drawSystem)
     {
         m_drawSystem->ClearRenderables();
-        std::fill(m_platformDrawRegistered.begin(), m_platformDrawRegistered.end(), false);
-        std::fill(m_osaraDrawRegistered.begin(), m_osaraDrawRegistered.end(), false);
     }
         if (m_sweetsRegistered && m_sweetsManager)
         {
@@ -2226,74 +1932,6 @@ void SceneGame::ConfigureUpdates()
                 {
                         GetUpdateScheduler().Register(*lateNode);
                         m_sweetsLateRegistered = true;
-                }
-        }
-
-        for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
-        {
-                auto* platform = m_foundationPlatforms[i].get();
-                if (!platform)
-                {
-                        continue;
-                }
-
-                if (i >= m_platformUpdateRegistered.size())
-                {
-                        m_platformUpdateRegistered.resize(m_foundationPlatforms.size(), false);
-                }
-                if (!m_platformUpdateRegistered[i])
-                {
-                        Register(*platform);
-                        m_platformUpdateRegistered[i] = true;
-                }
-
-                if (m_drawSystem)
-                {
-                        if (i >= m_platformDrawRegistered.size())
-                        {
-                                m_platformDrawRegistered.resize(m_foundationPlatforms.size(), false);
-                        }
-                        if (!m_platformDrawRegistered[i])
-                        {
-                                m_drawSystem->RegisterRenderable(*platform);
-                                m_platformDrawRegistered[i] = true;
-                        }
-                }
-        }
-
-        for (std::size_t i = 0; i < m_osaraPlates.size(); ++i)
-        {
-                auto* osara = m_osaraPlates[i].get();
-                if (!osara)
-                {
-                        continue;
-                }
-
-                if (i >= m_osaraUpdateRegistered.size())
-                {
-                        m_osaraUpdateRegistered.resize(m_osaraPlates.size(), false);
-                }
-                if (!m_osaraUpdateRegistered[i])
-                {
-                        Register(*osara);
-                        m_osaraUpdateRegistered[i] = true;
-                }
-
-                if (m_drawSystem)
-                {
-                        if (i >= m_osaraDrawRegistered.size())
-                        {
-                                m_osaraDrawRegistered.resize(m_osaraPlates.size(), false);
-                        }
-                        if (!m_osaraDrawRegistered[i])
-                        {
-                                m_drawSystem->RegisterRenderable(*osara);
-                                if (g_RegisterOsaraColliders)
-                                {
-                                        m_drawSystem->RegisterCollider(*osara);
-                                }
-                                m_osaraDrawRegistered[i] = true;
-                        }
                 }
         }
 
@@ -2617,11 +2255,6 @@ void SceneGame::DrawPhysicsDebugOverlay()
 
     drawEntity(player.get());
 
-    for (const auto& platform : m_foundationPlatforms)
-    {
-        drawEntity(platform.get());
-    }
-
     if (m_sweetsManager)
     {
         const auto drawState = [&](SweetsSpace::SweetsState state)
@@ -2890,42 +2523,6 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
     }
     ::DebugTrace(oss.str());
 
-    RefreshPlatformAnchor(true);
-}
-
-void SceneGame::RefreshPlatformAnchor(bool forceRecompute)
-{
-    if (m_foundationPlatforms.empty())
-    {
-        return;
-    }
-
-    if (!forceRecompute && m_platformAnchorInitialized)
-    {
-        return;
-    }
-
-    const auto& platformDescriptors = m_stageData.GetPlatforms();
-    const std::size_t platformCount = std::min(m_foundationPlatforms.size(), platformDescriptors.size());
-    if (platformCount == 0)
-    {
-        return;
-    }
-
-    for (std::size_t i = 0; i < platformCount; ++i)
-    {
-        auto& platform = m_foundationPlatforms[i];
-        if (!platform)
-        {
-            continue;
-        }
-
-        const auto& descriptor = platformDescriptors[i];
-        Transform updated = BuildPlatformTransformFromDescriptor(descriptor, kStageCenterX);
-        platform->SetAnchorTransform(updated);
-    }
-
-    m_platformAnchorInitialized = true;
 }
 
 void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
@@ -3249,8 +2846,6 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
     }
 
-    RefreshSweetsSpawnOrigins(m_platePlatform != nullptr);
-
     m_countdownTimer.Reset();
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
@@ -3275,103 +2870,6 @@ void SceneGame::ResetPlaySession()
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
     ::DebugTrace(oss.str());
-}
-
-const Stage::PlatformDescriptor* SceneGame::FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const
-{
-    if (!platform)
-    {
-        return nullptr;
-    }
-
-    const auto& platformDescriptors = m_stageData.GetPlatforms();
-    for (std::size_t i = 0; i < m_foundationPlatforms.size(); ++i)
-    {
-        if (m_foundationPlatforms[i].get() == platform)
-        {
-            if (i < platformDescriptors.size())
-            {
-                return &platformDescriptors[i];
-            }
-            return nullptr;
-        }
-    }
-
-    return nullptr;
-}
-
-float SceneGame::ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const
-{
-    return descriptor.center.y + (descriptor.heightWorld * 0.5f);
-}
-
-void SceneGame::RefreshSweetsSpawnOrigins(bool requireOsaraReady)
-{
-    if (!m_sweetsManager)
-    {
-        DebugTrace(std::string(kLogPrefix) + "[SpawnOrigin] skip: SweetsManager missing.\n");
-        return;
-    }
-
-    std::vector<float3> spawnOrigins;
-    const float osaraSpawnOffsetY = m_stageData.GetOsaraSpawnOffsetY();
-    const bool platePlatformAvailable = static_cast<bool>(m_platePlatform);
-    const bool osaraAvailable = std::any_of(
-        m_osaraPlates.begin(),
-        m_osaraPlates.end(),
-        [](const std::unique_ptr<Stage::OsaraPlate>& plate) { return static_cast<bool>(plate); });
-
-    if (requireOsaraReady && platePlatformAvailable && !osaraAvailable)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[SpawnOrigin] abort: plate platform present but Osara instances missing.\n";
-        ::DebugTrace(oss.str());
-        assert(false && "Osara plates are required before wiring spawn origins");
-        return;
-    }
-    for (const auto& osara : m_osaraPlates)
-    {
-        if (!osara)
-        {
-            continue;
-        }
-
-        const auto anchor = osara->GetAnchorTransform();
-        spawnOrigins.push_back(float3{ anchor.position.x, anchor.position.y + osaraSpawnOffsetY, anchor.position.z });
-    }
-
-    if (!spawnOrigins.empty())
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[SpawnOrigin] derived " << spawnOrigins.size()
-            << " origins from Osara anchors offsetY=" << osaraSpawnOffsetY << " (heightOffsetOverride=0)\n";
-        DebugTrace(oss.str());
-        m_sweetsManager->SetSpawnOrigins(spawnOrigins, 0.0f);
-        return;
-    }
-
-    spawnOrigins = m_stageData.GetSpawnPoints();
-    if (m_spawnHeightPlatform)
-    {
-        if (const auto* descriptor = FindDescriptorForPlatform(m_spawnHeightPlatform))
-        {
-            const float plateTopY = ComputePlatformTopY(*descriptor);
-            const float platePlaneZ = descriptor->center.z;
-            for (auto& origin : spawnOrigins)
-            {
-                origin.y = plateTopY;
-                origin.z = platePlaneZ;
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[SpawnOrigin] aligned " << spawnOrigins.size() << " origins to plate '"
-                << m_spawnHeightPlatform->GetTag() << "' topY=" << plateTopY
-                << " planeZ=" << platePlaneZ << "\n";
-            DebugTrace(oss.str());
-        }
-    }
-
-    m_sweetsManager->SetSpawnOrigins(spawnOrigins);
 }
 
 void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)

@@ -17,8 +17,6 @@
 #include "Vector.h"
 #include "Transform.h"
 #include "Stage/StageData.h"
-#include "Stage/FoundationPlatform.h"
-#include "Stage/OsaraPlate.h"
 #include "GameFlow/PhaseManager.h"
 #include "HudRenderer.h"
 #include "TimerDisplay.h"
@@ -134,7 +132,6 @@ private:
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
-    const Stage::PlatformDescriptor* FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const;
     float ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const;
     void RefreshSweetsSpawnOrigins(bool requireOsaraReady = false);
     std::vector<StageObject> m_stageObjects;
@@ -151,14 +148,6 @@ private:
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
-    std::vector<std::unique_ptr<Stage::FoundationPlatform>> m_foundationPlatforms;
-    std::vector<bool> m_platformUpdateRegistered;
-    std::vector<bool> m_platformDrawRegistered;
-    std::vector<std::unique_ptr<Stage::OsaraPlate>> m_osaraPlates;
-    std::vector<bool> m_osaraUpdateRegistered;
-    std::vector<bool> m_osaraDrawRegistered;
-    Stage::FoundationPlatform* m_platePlatform = nullptr;
-    Stage::FoundationPlatform* m_spawnHeightPlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
     bool m_inputRegistered = false;
