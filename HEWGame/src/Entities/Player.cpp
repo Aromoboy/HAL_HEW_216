@@ -251,7 +251,7 @@ namespace
     Physics::Box2DShapeConfig BuildDefaultPlayerShapeConfig(const Transform& transform, bool isKinematic)
     {
         Physics::Box2DShapeConfig config{};
-        config.type = Physics::Box2DShapeConfig::Type::Polygon;
+        config.type = Physics::Box2DShapeConfig::Type::None;
         config.bodyType = isKinematic ? b2_kinematicBody : b2_dynamicBody;
         config.fixedRotation = true;
         config.allowRotation = false;
@@ -259,16 +259,6 @@ namespace
         config.density = 0.5f;
         config.friction = 0.35f;
         config.restitution = 0.05f;
-
-        const float halfWidth = 0.35f;
-        const float halfHeight = 0.5f;
-
-        config.vertices = {
-            b2Vec2{ -halfWidth, -halfHeight },
-            b2Vec2{ halfWidth, -halfHeight },
-            b2Vec2{ halfWidth, halfHeight },
-            b2Vec2{ -halfWidth, halfHeight },
-        };
 
         return config;
     }
@@ -381,12 +371,9 @@ namespace Entities
 
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
         Physics::BoxColliderComponent colliderComponent;
-        colliderComponent.shapeDef.density = shapeConfig.density;
-        colliderComponent.shapeDef.material.friction = shapeConfig.friction;
-        colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
-        colliderComponent.AddPolygon(shapeConfig.vertices);
+        colliderComponent.colliderId = descriptor ? descriptor->key : std::string{ "Fairy" };
 
-        SetBoxColliderComponent(colliderComponent);
+        SetBoxColliderComponent(std::move(colliderComponent));
         SetBox2DShapeConfig(shapeConfig);
     }
 
