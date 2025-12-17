@@ -908,12 +908,32 @@ namespace SweetsSpace
         }
         else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
         {
-            const auto& definition = definitionIt->second;
-            const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
-            if (!appliedConfig && hasGenerated)
+            const bool preferGeneratedOverride = (type == SweetsType::Blueberry) && hasGenerated;
+            bool appliedGeneratedOverride = false;
+            if (preferGeneratedOverride)
             {
                 applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                result.source = ColliderSource::Generated;
+                if (result.shapeConfig.type != Box2DShapeConfig::Type::None)
+                {
+                    result.source = ColliderSource::Generated;
+                    appliedGeneratedOverride = true;
+
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "オーバーライド中だけどブルーベリーはメッシュ凸包を使うよ kind='"
+                        << resolvedKind << "' verts=" << result.shapeConfig.vertices.size() << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            if (!appliedGeneratedOverride)
+            {
+                const auto& definition = definitionIt->second;
+                const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
+                if (!appliedConfig && hasGenerated)
+                {
+                    applyHull(generated->hull, generated->centroidOffset, generated->thickness);
+                    result.source = ColliderSource::Generated;
+                }
             }
         }
         else if (hasGenerated)
@@ -2372,6 +2392,15 @@ namespace SweetsSpace
                     DebugTrace(fail.str());
 
                     return nullptr;
+                }
+
+                static std::unordered_set<std::string> s_loggedModelLoads;
+                if (s_loggedModelLoads.insert(primaryPath).second)
+                {
+                    std::ostringstream modelLog;
+                    modelLog << kLogPrefix << "[SpawnModel] kind='" << descriptorKey
+                        << "' path='" << primaryPath << "' loaded=" << std::boolalpha << static_cast<bool>(model) << "\n";
+                    Diagnostics::LogInfo(modelLog.str());
                 }
 
                 Transform physicsTransform = transform;
@@ -4463,6 +4492,11 @@ namespace SweetsSpace
                 DebugTrace(warn.str());
                 continue;
             }
+
+            std::ostringstream resolved;
+            resolved << kLogPrefix << "[SpawnWeights] key='" << entry.first << "' -> type="
+                << ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
+            Diagnostics::LogInfo(resolved.str());
 
             weights.push_back({ *resolvedType, spawnWeight });
         }
