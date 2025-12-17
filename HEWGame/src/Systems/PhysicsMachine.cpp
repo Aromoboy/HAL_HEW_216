@@ -315,6 +315,22 @@ namespace Systems
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
+        if (body.HasBodyCreationFailed() && !body.CanAttemptBodyCreation())
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Skipping registration for tag='" << body.GetTag()
+                << "' due to previous creation failure.\n";
+            DebugTrace(oss.str());
+#endif
+            return;
+        }
+
+        if (body.HasBodyCreationFailed())
+        {
+            body.ResetBodyCreationFailure();
+        }
+
         if (std::find(m_bodies.begin(), m_bodies.end(), bodyPtr) != m_bodies.end())
         {
 #if defined(_DEBUG)
@@ -361,6 +377,7 @@ namespace Systems
         }
 
         m_bodies.pop_back();
+        body.MarkBodyCreationFailed();
     }
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
@@ -480,13 +497,15 @@ namespace Systems
             return;
         }
 
-        for (Entities::PhysicalEntity* body : m_bodies)
+        for (auto it = m_bodies.begin(); it != m_bodies.end();)
         {
+            Entities::PhysicalEntity* body = *it;
             if (!body)
             {
 #if defined(_DEBUG)
                 DebugTrace("[PhysicsMachine] Encountered null body pointer before step.\n");
 #endif
+                ++it;
                 continue;
             }
 
@@ -494,6 +513,17 @@ namespace Systems
             const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
             if (!hasBody)
             {
+                if (body->HasBodyCreationFailed() && !body->CanAttemptBodyCreation())
+                {
+                    ++it;
+                    continue;
+                }
+
+                if (body->HasBodyCreationFailed())
+                {
+                    body->ResetBodyCreationFailure();
+                }
+
                 const b2BodyId bodyId = CreateBody(*body);
                 if (!b2Body_IsValid(bodyId))
                 {
@@ -502,13 +532,20 @@ namespace Systems
                     oss << "[PhysicsMachine] Unable to create Box2D body before step for tag='" << body->GetTag() << "'\n";
                     DebugTrace(oss.str());
 #endif
-                    assert(false && "Failed to create Box2D body before physics step.");
+                    body->MarkBodyCreationFailed();
+                    if (mapIt != m_bodyMap.end())
+                    {
+                        m_bodyMap.erase(mapIt);
+                    }
+                    it = m_bodies.erase(it);
                     continue;
                 }
 
                 body->SetBox2DBodyId(bodyId);
                 m_bodyMap[body] = bodyId;
             }
+
+            ++it;
         }
 
         m_system->Apply(ctx.dt);

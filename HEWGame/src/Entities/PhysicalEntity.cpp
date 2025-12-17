@@ -382,6 +382,37 @@ namespace Entities
         }
     }
 
+    bool PhysicalEntity::HasBodyCreationFailed() const
+    {
+        return m_bodyCreationFailed;
+    }
+
+    bool PhysicalEntity::CanAttemptBodyCreation() const
+    {
+        return !m_bodyCreationFailed || m_bodyCreationFailedRevision != m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::ResetBodyCreationFailure()
+    {
+        m_bodyCreationFailed = false;
+        m_bodyCreationFailedRevision = m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::MarkBodyCreationFailed()
+    {
+        m_bodyCreationFailed = true;
+        m_bodyCreationFailedRevision = m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::MarkPhysicsDefinitionChanged()
+    {
+        ++m_physicsDefinitionRevision;
+        if (m_bodyCreationFailed && m_bodyCreationFailedRevision != m_physicsDefinitionRevision)
+        {
+            ResetBodyCreationFailure();
+        }
+    }
+
     void PhysicalEntity::SyncTransformFromBox2DBody()
     {
         if (!HasBox2DBody())
@@ -559,6 +590,7 @@ namespace Entities
 
         if (m_physicsMachine)
         {
+            ResetBodyCreationFailure();
             if (HasPhysicsDefinition(*this))
             {
                 m_physicsMachine->RegisterBody(*this);
@@ -589,6 +621,8 @@ namespace Entities
 
     void PhysicalEntity::RecreateBox2DBody()
     {
+        MarkPhysicsDefinitionChanged();
+
         if (!m_physicsMachine)
         {
             return;
@@ -600,6 +634,7 @@ namespace Entities
             m_physical.Reset();
         }
 
+        ResetBodyCreationFailure();
         m_physicsMachine->RegisterBody(*this);
     }
 }
