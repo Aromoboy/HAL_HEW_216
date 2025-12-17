@@ -15,6 +15,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <span>
 
 #include <box2d/box2d.h>
 #include <box2d/collision.h>
@@ -1217,18 +1218,26 @@ if (isSweetTag)
 
         if (b2Body_IsValid(it->second))
         {
+            std::vector<b2ShapeId> shapes;
+
             const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
             if (b2World_IsValid(bodyWorld))
             {
                 const int shapeCount = b2Body_GetShapeCount(it->second);
                 if (shapeCount > 0)
                 {
-                    std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
+                    shapes.resize(static_cast<size_t>(shapeCount));
                     const int writtenShapes = b2Body_GetShapes(it->second, shapes.data(), shapeCount);
+                    shapes.resize(static_cast<size_t>(writtenShapes));
                     for (int i = 0; i < writtenShapes; ++i)
                     {
                         b2Shape_SetUserData(shapes[static_cast<size_t>(i)], nullptr);
                     }
+                }
+
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
                 }
 
                 b2Body_SetUserData(it->second, nullptr);
@@ -1242,6 +1251,11 @@ if (isSweetTag)
             }
             else
             {
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
+                }
+
                 b2Body_SetUserData(it->second, nullptr);
 
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();

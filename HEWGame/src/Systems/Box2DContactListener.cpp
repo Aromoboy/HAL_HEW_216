@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <sstream>
+#include <span>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <box2d/collision.h>
 #include <box2d/id.h>
@@ -53,9 +56,85 @@ namespace Systems
                 int loggedMeshContacts = 0;
                 int loggedDroppedEvents = 0;
 
+                struct ShapeValidationResult
+                {
+                        bool valid{ false };
+                        const char* reason{ nullptr };
+                        uint64_t bodyKey{ 0 };
+                };
+
+                struct DroppedEventKey
+                {
+                        uint64_t bodyA = 0;
+                        uint64_t bodyB = 0;
+                        std::string eventType{};
+                        std::string reason{};
+
+                        bool operator==(const DroppedEventKey& other) const noexcept
+                        {
+                                return bodyA == other.bodyA
+                                    && bodyB == other.bodyB
+                                    && eventType == other.eventType
+                                    && reason == other.reason;
+                        }
+                };
+
+                struct DroppedEventKeyHash
+                {
+                        size_t operator()(const DroppedEventKey& key) const noexcept
+                        {
+                                size_t hash = std::hash<uint64_t>{}(key.bodyA);
+                                hash ^= std::hash<uint64_t>{}(key.bodyB) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                hash ^= std::hash<std::string>{}(key.eventType) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                hash ^= std::hash<std::string>{}(key.reason) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                return hash;
+                        }
+                };
+
+                struct DroppedEventLog
+                {
+                        std::string message;
+                        int count = 0;
+                };
+
+                std::unordered_map<DroppedEventKey, DroppedEventLog, DroppedEventKeyHash> droppedEventLogs;
+
                 const auto validateShapeAndBody = [&](b2ShapeId shapeId)
                     {
-                        return b2Shape_IsValid(shapeId) && b2Body_IsValid(b2Shape_GetBody(shapeId));
+                        ShapeValidationResult result{};
+                        if (!b2Shape_IsValid(shapeId))
+                        {
+                                result.reason = "invalid shape";
+                                return result;
+                        }
+
+                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                        if (b2Body_IsValid(bodyId))
+                        {
+                                result.bodyKey = b2StoreBodyId(bodyId);
+                        }
+
+                        const uint64_t shapeKey = b2StoreShapeId(shapeId);
+                        if (m_destroyedShapeIds.contains(shapeKey))
+                        {
+                                result.reason = "destroyed shape";
+                                return result;
+                        }
+
+                        if (!b2Body_IsValid(bodyId))
+                        {
+                                result.reason = "invalid body";
+                                return result;
+                        }
+
+                        if (m_destroyedBodyIds.contains(result.bodyKey))
+                        {
+                                result.reason = "destroyed body";
+                                return result;
+                        }
+
+                        result.valid = true;
+                        return result;
                     };
 
                 const auto shapeMatchesEntity = [&](Entities::PhysicalEntity* entity, b2ShapeId shapeId)
@@ -93,42 +172,70 @@ namespace Systems
                         return createdFixtures > 0;
                     };
 
-                const auto logDroppedEvent = [&](const char* eventType, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
-                                                 const char* reason)
+                const auto recordDroppedEvent = [&](const char* eventType, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
+                                                std::string reason, uint64_t bodyKeyA, uint64_t bodyKeyB)
                     {
-                        if (loggedDroppedEvents >= kMaxDroppedEventLogsPerFrame)
+                        if (!m_logDroppedEvents)
                         {
-                            return;
+                                return;
                         }
 
-                        std::ostringstream oss;
-                        oss << "[Box2DContactListener][Error] Dropped " << eventType
-                            << " contact event for shapes=";
-                        if (b2Shape_IsValid(shapeIdA))
-                        {
-                                oss << b2StoreShapeId(shapeIdA);
-                        }
-                        else
-                        {
-                                oss << "<invalid>";
-                        }
-                        oss << ",";
-                        if (b2Shape_IsValid(shapeIdB))
-                        {
-                                oss << b2StoreShapeId(shapeIdB);
-                        }
-                        else
-                        {
-                                oss << "<invalid>";
-                        }
-                        if (reason)
-                        {
-                                oss << " reason=" << reason;
-                        }
-                        oss << "\n";
+                        const uint64_t orderedA = std::min(bodyKeyA, bodyKeyB);
+                        const uint64_t orderedB = std::max(bodyKeyA, bodyKeyB);
+                        DroppedEventKey key{ orderedA, orderedB, eventType ? eventType : "", std::move(reason) };
+                        auto [it, inserted] = droppedEventLogs.try_emplace(std::move(key));
+                        ++it->second.count;
 
-                        DebugTrace(oss.str());
-                        ++loggedDroppedEvents;
+                        if (inserted)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DContactListener][Error] Dropped " << eventType
+                                    << " contact event for shapes=";
+                                if (b2Shape_IsValid(shapeIdA))
+                                {
+                                        oss << b2StoreShapeId(shapeIdA);
+                                }
+                                else
+                                {
+                                        oss << "<invalid>";
+                                }
+                                oss << ",";
+                                if (b2Shape_IsValid(shapeIdB))
+                                {
+                                        oss << b2StoreShapeId(shapeIdB);
+                                }
+                                else
+                                {
+                                        oss << "<invalid>";
+                                }
+                                if (!it->first.reason.empty())
+                                {
+                                        oss << " reason=" << it->first.reason;
+                                }
+
+                                it->second.message = oss.str();
+                        }
+                    };
+
+                const auto flushDroppedEventLogs = [&]()
+                    {
+                        for (const auto& [key, log] : droppedEventLogs)
+                        {
+                                if (loggedDroppedEvents >= kMaxDroppedEventLogsPerFrame)
+                                {
+                                        break;
+                                }
+
+                                std::ostringstream oss;
+                                oss << log.message;
+                                if (log.count > 1)
+                                {
+                                        oss << " occurrences=" << log.count;
+                                }
+                                oss << "\n";
+                                DebugTrace(oss.str());
+                                ++loggedDroppedEvents;
+                        }
                     };
 
                 const std::span<const b2ContactBeginTouchEvent> beginEvents =
@@ -138,10 +245,15 @@ namespace Systems
                         : std::span<const b2ContactBeginTouchEvent>();
                 for (const b2ContactBeginTouchEvent& evt : beginEvents)
                 {
-                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
-                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
-                        if (!shapeAValid || !shapeBValid)
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 continue;
                         }
 
@@ -158,8 +270,8 @@ namespace Systems
                         {
                                 if (bodiesMatchShapes)
                                 {
-                                        logDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
-                                            "missing body or fixtures");
+                                        recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 }
                                 continue;
                         }
@@ -185,10 +297,15 @@ namespace Systems
                         : std::span<const b2ContactEndTouchEvent>();
                 for (const b2ContactEndTouchEvent& evt : endEvents)
                 {
-                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
-                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
-                        if (!shapeAValid || !shapeBValid)
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 continue;
                         }
 
@@ -205,8 +322,8 @@ namespace Systems
                         {
                                 if (bodiesMatchShapes)
                                 {
-                                        logDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
-                                            "missing body or fixtures");
+                                        recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 }
                                 continue;
                         }
@@ -217,6 +334,10 @@ namespace Systems
                 // Contact hit events are intentionally ignored for now; Box2D owns the buffer.
                 (void)events.hitEvents;
                 (void)events.hitCount;
+
+                flushDroppedEventLogs();
+                m_destroyedBodyIds.clear();
+                m_destroyedShapeIds.clear();
 
         }
 
@@ -235,6 +356,11 @@ namespace Systems
                 m_logMeshContacts = enabled;
         }
 
+        void Box2DContactListener::EnableDroppedEventLogging(bool enabled)
+        {
+                m_logDroppedEvents = enabled;
+        }
+
         void Box2DContactListener::SetWorld(b2WorldId worldId)
         {
                 m_worldId = worldId;
@@ -243,6 +369,22 @@ namespace Systems
         void Box2DContactListener::SetPhysicsMachine(PhysicsMachine* physicsMachine)
         {
                 m_physicsMachine = physicsMachine;
+        }
+
+        void Box2DContactListener::NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes)
+        {
+                if (b2Body_IsValid(bodyId))
+                {
+                        m_destroyedBodyIds.insert(b2StoreBodyId(bodyId));
+                }
+
+                for (const b2ShapeId shapeId : shapes)
+                {
+                        if (b2Shape_IsValid(shapeId))
+                        {
+                                m_destroyedShapeIds.insert(b2StoreShapeId(shapeId));
+                        }
+                }
         }
 
         void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
