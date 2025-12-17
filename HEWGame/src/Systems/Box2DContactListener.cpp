@@ -49,71 +49,36 @@ namespace Systems
                 // valid until the next world step. They must not be freed by the listener.
 
                 constexpr int kMaxLogsPerFrame = 4;
-                constexpr int kMaxUnknownShapeLogsPerFrame = 8;
                 constexpr int kMaxDroppedEventLogsPerFrame = 8;
                 int loggedMeshContacts = 0;
-                int loggedUnknownShapes = 0;
                 int loggedDroppedEvents = 0;
-
-                const auto logUnknownShape = [&](b2ShapeId shapeId)
-                    {
-                        if (loggedUnknownShapes >= kMaxUnknownShapeLogsPerFrame)
-                        {
-                            return;
-                        }
-
-                        const bool shapeIsValid = b2Shape_IsValid(shapeId);
-
-                        std::ostringstream oss;
-                        oss << "[Box2DContactListener] Contact event received for unknown shape id=";
-                        if (shapeIsValid)
-                        {
-                                oss << b2StoreShapeId(shapeId);
-                        }
-                        else
-                        {
-                                oss << "<invalid>";
-                        }
-
-                        if (shapeIsValid)
-                        {
-                                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                                oss << " bodyId=";
-                                if (b2Body_IsValid(bodyId))
-                                {
-                                        oss << b2StoreBodyId(bodyId);
-                                }
-                                else
-                                {
-                                        oss << "<invalid>";
-                                }
-                        }
-                        else
-                        {
-                                oss << " (invalid shape)";
-                        }
-
-                        oss << "\n";
-                        DebugTrace(oss.str());
-                        ++loggedUnknownShapes;
-                    };
 
                 const auto validateShapeAndBody = [&](b2ShapeId shapeId)
                     {
+                        return b2Shape_IsValid(shapeId) && b2Body_IsValid(b2Shape_GetBody(shapeId));
+                    };
+
+                const auto shapeMatchesEntity = [&](Entities::PhysicalEntity* entity, b2ShapeId shapeId)
+                    {
+                        if (!entity)
+                        {
+                            return false;
+                        }
+
                         if (!b2Shape_IsValid(shapeId))
                         {
-                            logUnknownShape(shapeId);
                             return false;
                         }
 
-                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                        if (!b2Body_IsValid(bodyId))
+                        const b2BodyId shapeBodyId = b2Shape_GetBody(shapeId);
+                        const b2BodyId entityBodyId = entity->GetBox2DBodyId();
+                        if (!b2Body_IsValid(shapeBodyId) || !b2Body_IsValid(entityBodyId))
                         {
-                            logUnknownShape(shapeId);
                             return false;
                         }
 
-                        return true;
+                        return entity->HasBox2DBody()
+                            && b2StoreBodyId(shapeBodyId) == b2StoreBodyId(entityBodyId);
                     };
 
                 const auto hasValidFixtures = [](Entities::PhysicalEntity* entity)
@@ -183,25 +148,19 @@ namespace Systems
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
-                        if (!entityA)
-                        {
-                                logUnknownShape(evt.shapeIdA);
-                        }
-                        if (!entityB)
-                        {
-                                logUnknownShape(evt.shapeIdB);
-                        }
-
                         const bool entitiesValid = (entityA && entityB);
-                        const bool bodiesValid = entitiesValid
-                            && entityA->HasBox2DBody()
-                            && entityB->HasBox2DBody();
-                        const bool fixturesValid = bodiesValid && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
 
                         if (!fixturesValid)
                         {
-                                logDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
-                                    entitiesValid ? "missing body or fixtures" : "shape->entity mapping not found");
+                                if (bodiesMatchShapes)
+                                {
+                                        logDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures");
+                                }
                                 continue;
                         }
 
@@ -236,25 +195,19 @@ namespace Systems
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
-                        if (!entityA)
-                        {
-                                logUnknownShape(evt.shapeIdA);
-                        }
-                        if (!entityB)
-                        {
-                                logUnknownShape(evt.shapeIdB);
-                        }
-
                         const bool entitiesValid = (entityA && entityB);
-                        const bool bodiesValid = entitiesValid
-                            && entityA->HasBox2DBody()
-                            && entityB->HasBox2DBody();
-                        const bool fixturesValid = bodiesValid && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
 
                         if (!fixturesValid)
                         {
-                                logDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
-                                    entitiesValid ? "missing body or fixtures" : "shape->entity mapping not found");
+                                if (bodiesMatchShapes)
+                                {
+                                        logDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures");
+                                }
                                 continue;
                         }
 
