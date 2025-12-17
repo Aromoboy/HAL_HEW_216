@@ -359,27 +359,12 @@ namespace Systems
                         return;
                 }
 
-                Systems::PhysicsMachine* physicsMachine = entity.GetPhysicsMachine();
-                if (!physicsMachine)
+                b2Transform bodyTransform{};
+                std::vector<b2ShapeId> shapes;
+                if (!entity.CollectBox2DShapes(shapes, bodyTransform))
                 {
                         return;
                 }
-
-                const b2BodyId bodyId = physicsMachine->FindBody(entity);
-                if (!b2Body_IsValid(bodyId))
-                {
-                        return;
-                }
-
-                const int shapeCount = b2Body_GetShapeCount(bodyId);
-                if (shapeCount <= 0)
-                {
-                        return;
-                }
-
-                std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
-                const int writtenShapes = b2Body_GetShapes(bodyId, shapes.data(), shapeCount);
-                shapes.resize(static_cast<size_t>(std::max(0, writtenShapes)));
 
                 if (shapes.empty())
                 {
@@ -391,8 +376,6 @@ namespace Systems
 
                 const Transform& transform = entity.GetTransform();
                 const float z = transform.position.z;
-
-                const b2Transform bodyTransform = b2Body_GetTransform(bodyId);
 
                 auto toWorldFloat2 = [](const b2Vec2& v)
                 {

@@ -191,60 +191,81 @@ namespace
 
         void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
-            const auto& colliderComponent = entity.GetBoxColliderComponent();
-            if (!colliderComponent || colliderComponent->createdFixtureCount <= 0)
+            b2Transform bodyTransform{};
+            std::vector<b2ShapeId> shapes;
+            if (!entity.CollectBox2DShapes(shapes, bodyTransform))
             {
                 return;
             }
 
-            const Transform& transform = entity.GetTransform();
-            const float z = transform.position.z;
+            const float z = entity.GetTransform().position.z;
 
-            for (const auto& shape : colliderComponent->shapes)
+            const auto toWorldFloat2 = [](const b2Vec2& v)
             {
-                switch (shape.type)
+                const float3 world = Entities::PhysicalEntity::ToWorldVector(v);
+                return float2{ world.x, world.y };
+            };
+
+            for (const b2ShapeId shapeId : shapes)
+            {
+                switch (b2Shape_GetType(shapeId))
                 {
-                case Physics::ColliderShapeType::Circle:
+                case b2_circleShape:
                 {
-                    const float2 center = ApplyTransform2D(float2{ 0.0f, 0.0f }, transform);
-                    const float scaledRadius = shape.radius * std::max(transform.scale.x, transform.scale.y);
-                    DebugColliderRenderer::DrawCircle(center, scaledRadius, z, color);
+                    const b2Circle circle = b2Shape_GetCircle(shapeId);
+                    const b2Vec2 worldCenter = b2TransformPoint(bodyTransform, circle.center);
+                    const float2 center = toWorldFloat2(worldCenter);
+                    const float radius = Entities::PhysicalEntity::ToWorldLength(circle.radius);
+                    DebugColliderRenderer::DrawCircle(center, radius, z, color);
                     break;
                 }
-                case Physics::ColliderShapeType::Box:
-                case Physics::ColliderShapeType::Polygon:
-                default:
+                case b2_polygonShape:
                 {
-                    if (shape.vertices.empty())
+                    const b2Polygon polygon = b2Shape_GetPolygon(shapeId);
+                    if (polygon.count < 2)
                     {
-                        continue;
+                        break;
                     }
 
                     std::vector<float2> hull;
-                    hull.reserve(shape.vertices.size());
-                    for (const auto& vertex : shape.vertices)
+                    hull.reserve(static_cast<size_t>(polygon.count));
+
+                    for (int i = 0; i < polygon.count; ++i)
                     {
-                        hull.push_back(ApplyTransform2D(float2{ vertex.x, vertex.y }, transform));
+                        const b2Vec2 worldVertex = b2TransformPoint(bodyTransform, polygon.vertices[i]);
+                        hull.push_back(toWorldFloat2(worldVertex));
                     }
 
                     DebugColliderRenderer::DrawHull(hull, z, color);
                     break;
                 }
+                case b2_capsuleShape:
+                {
+                    const b2Capsule capsule = b2Shape_GetCapsule(shapeId);
+                    const b2Vec2 worldP0 = b2TransformPoint(bodyTransform, capsule.center1);
+                    const b2Vec2 worldP1 = b2TransformPoint(bodyTransform, capsule.center2);
+                    const float radius = Entities::PhysicalEntity::ToWorldLength(capsule.radius);
+                    DebugColliderRenderer::DrawCapsule(toWorldFloat2(worldP0), toWorldFloat2(worldP1), radius, z, color);
+                    break;
+                }
+                default:
+                    break;
                 }
             }
         }
 
         void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
-            const auto& colliderComponent = entity.GetBoxColliderComponent();
-            if (colliderComponent && !colliderComponent->shapes.empty())
+            b2AABB bodyAabb{};
+            if (entity.GetBox2DBodyAABB(bodyAabb))
             {
-                const AABB bounds = entity.GetAABB();
+                const float3 lower = Entities::PhysicalEntity::ToWorldVector(bodyAabb.lowerBound);
+                const float3 upper = Entities::PhysicalEntity::ToWorldVector(bodyAabb.upperBound);
                 const float2 corners[4] = {
-                    float2{ bounds.min.x, bounds.min.y },
-                    float2{ bounds.max.x, bounds.min.y },
-                    float2{ bounds.max.x, bounds.max.y },
-                    float2{ bounds.min.x, bounds.max.y },
+                    float2{ lower.x, lower.y },
+                    float2{ upper.x, lower.y },
+                    float2{ upper.x, upper.y },
+                    float2{ lower.x, upper.y },
                 };
 
                 std::vector<float2> worldCorners;

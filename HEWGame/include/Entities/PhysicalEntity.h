@@ -102,6 +102,8 @@ namespace Entities
         virtual void SetBox2DBodyId(b2BodyId bodyId);
         virtual b2BodyId GetBox2DBodyId() const;
         bool HasBox2DBody() const;
+        bool CollectBox2DShapes(std::vector<b2ShapeId>& outShapes, b2Transform& outBodyTransform, b2BodyId* outBodyId = nullptr) const;
+        bool GetBox2DBodyAABB(b2AABB& outAabb) const;
 
         float3 GetLinearVelocity() const;
         void SetLinearVelocity(const float3& velocity);
