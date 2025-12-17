@@ -1,5 +1,6 @@
 #include "Entities/PhysicalEntity.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -197,7 +198,15 @@ namespace Entities
 
         const Transform& transform = m_transform;
 
-        if (m_boxColliderComponent)
+        b2AABB bodyAabb{};
+        if (GetBox2DBodyAABB(bodyAabb))
+        {
+            const float3 lower = ToWorldVector(bodyAabb.lowerBound);
+            const float3 upper = ToWorldVector(bodyAabb.upperBound);
+            accumulate(lower.x, lower.y, transform.position.z);
+            accumulate(upper.x, upper.y, transform.position.z);
+        }
+        else if (m_boxColliderComponent)
         {
             for (const auto& shape : m_boxColliderComponent->shapes)
             {
@@ -341,6 +350,62 @@ namespace Entities
     bool PhysicalEntity::HasBox2DBody() const
     {
         return m_physical.HasBody();
+    }
+
+    bool PhysicalEntity::CollectBox2DShapes(std::vector<b2ShapeId>& outShapes, b2Transform& outBodyTransform, b2BodyId* outBodyId) const
+    {
+        Systems::PhysicsMachine* physicsMachine = GetPhysicsMachine();
+        if (!physicsMachine)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = physicsMachine->FindBody(*this);
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        const int shapeCount = b2Body_GetShapeCount(bodyId);
+        if (shapeCount <= 0)
+        {
+            return false;
+        }
+
+        outShapes.resize(static_cast<size_t>(shapeCount));
+        const int writtenShapes = b2Body_GetShapes(bodyId, outShapes.data(), shapeCount);
+        outShapes.resize(static_cast<size_t>(std::max(0, writtenShapes)));
+
+        if (outShapes.empty())
+        {
+            return false;
+        }
+
+        outBodyTransform = b2Body_GetTransform(bodyId);
+        if (outBodyId)
+        {
+            *outBodyId = bodyId;
+        }
+
+        return true;
+    }
+
+    bool PhysicalEntity::GetBox2DBodyAABB(b2AABB& outAabb) const
+    {
+        Systems::PhysicsMachine* physicsMachine = GetPhysicsMachine();
+        if (!physicsMachine)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = physicsMachine->FindBody(*this);
+        if (!b2Body_IsValid(bodyId) || b2Body_GetShapeCount(bodyId) <= 0)
+        {
+            return false;
+        }
+
+        outAabb = b2Body_ComputeAABB(bodyId);
+        return true;
     }
 
     float3 PhysicalEntity::GetLinearVelocity() const
