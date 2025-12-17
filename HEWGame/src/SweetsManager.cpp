@@ -34,7 +34,6 @@
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
 #include "ModelCache.h"
-#include "ModelPivot.h"
 #include "BoxColliderComponent.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
@@ -97,11 +96,6 @@ namespace
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
-    constexpr float kScaleReferenceMeters = 1.0f;
-    constexpr float kMinNormalizationScale = 0.02f;
-    constexpr float kMaxNormalizationScale = 50.0f;
-    constexpr float kMinFinalScale = 0.05f;
-    constexpr float kMaxFinalScale = 3.0f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr float kMinimumBerryColliderRadius = 0.15f;
     constexpr float kMinimumBlueberryColliderRadius = 0.2f;
@@ -140,62 +134,6 @@ namespace
         Diagnostics::LogInfo(oss.str());
 
         assert(false && "Invalid Box2DShapeConfig for sweets type");
-    }
-
-    float ComputeNormalizationScale(const Render::Model& model, const char* context)
-    {
-        if (!model.HasLocalBounds())
-        {
-            return 1.0f;
-        }
-
-        const AABB bounds = model.GetLocalBounds();
-        const float3 extents = bounds.Extents();
-        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
-        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
-        {
-            return 1.0f;
-        }
-
-        const float rawScale = kScaleReferenceMeters / largestExtent;
-        if (!std::isfinite(rawScale) || rawScale <= 0.0f)
-        {
-            return 1.0f;
-        }
-
-        const float clamped = std::clamp(rawScale, kMinNormalizationScale, kMaxNormalizationScale);
-        if (std::fabs(clamped - 1.0f) > 0.01f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' の extents=("
-                << extents.x << ',' << extents.y << ',' << extents.z << ") raw=" << rawScale
-                << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
-            DebugTrace(oss.str());
-        }
-
-        return clamped;
-    }
-
-    float3 ClampScaleToGameplayRange(const float3& scale, const char* context)
-    {
-        float3 clamped
-        {
-            std::clamp(scale.x, kMinFinalScale, kMaxFinalScale),
-            std::clamp(scale.y, kMinFinalScale, kMaxFinalScale),
-            std::clamp(scale.z, kMinFinalScale, kMaxFinalScale),
-        };
-
-        if (HasMeaningfulDifference(scale, clamped, 1e-3f))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' のスケールを ("
-                << scale.x << ',' << scale.y << ',' << scale.z << ") から ("
-                << clamped.x << ',' << clamped.y << ',' << clamped.z << ") に丸めたよ bounds="
-                << kMinFinalScale << "-" << kMaxFinalScale << "\n";
-            DebugTrace(oss.str());
-        }
-
-        return clamped;
     }
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
@@ -457,42 +395,6 @@ namespace
         return HasMeaningfulDifference(a.x, b.x, epsilon)
             || HasMeaningfulDifference(a.y, b.y, epsilon)
             || HasMeaningfulDifference(a.z, b.z, epsilon);
-    }
-
-    float ComputeVolumeScale(const float3& scale)
-    {
-        if (!(std::isfinite(scale.x) && std::isfinite(scale.y) && std::isfinite(scale.z)))
-        {
-            return 1.0f;
-        }
-
-        return std::max(0.0f, scale.x * scale.y * scale.z);
-    }
-
-    float ComputeAreaScaleXY(const float3& scale, Physics::Box2DShapeConfig::Type shape)
-    {
-        if (!(std::isfinite(scale.x) && std::isfinite(scale.y)))
-        {
-            return 1.0f;
-        }
-
-        switch (shape)
-        {
-        case Physics::Box2DShapeConfig::Type::Circle:
-        {
-            const float axisScale = std::max(scale.x, scale.y);
-            return axisScale * axisScale;
-        }
-        default:
-            return scale.x * scale.y;
-        }
-    }
-
-    float ComputeDensityScale(const float3& scale, Physics::Box2DShapeConfig::Type shape)
-    {
-        const float areaScale = std::max(ComputeAreaScaleXY(scale, shape), std::numeric_limits<float>::min());
-        const float volumeScale = ComputeVolumeScale(scale);
-        return (areaScale > 0.0f) ? (volumeScale / areaScale) : 1.0f;
     }
 
     Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
@@ -2057,46 +1959,12 @@ namespace SweetsSpace
                 VisualTransform visualTransform{};
                 visualTransform.position = physicsTransform.position;
                 visualTransform.rotation = physicsTransform.rotation;
-
-                const auto computeDeterministicScale = [](float minValue, float maxValue)
-                {
-                    const float lo = std::min(minValue, maxValue);
-                    const float hi = std::max(minValue, maxValue);
-                    return (lo + hi) * 0.5f;
-                };
-
-                const float3 sampledScale{
-                    computeDeterministicScale(preset.minScale.x, preset.maxScale.x),
-                    computeDeterministicScale(preset.minScale.y, preset.maxScale.y),
-                    computeDeterministicScale(preset.minScale.z, preset.maxScale.z)
-                };
-
-                const float normalizationScale = ComputeNormalizationScale(*model, descriptorKey.c_str());
-                float3 finalScale = float3
-                {
-                    physicsTransform.scale.x * sampledScale.x * normalizationScale,
-                    physicsTransform.scale.y * sampledScale.y * normalizationScale,
-                    physicsTransform.scale.z * sampledScale.z * normalizationScale
-                };
-
-                finalScale = ClampScaleToGameplayRange(finalScale, descriptorKey.c_str());
-                visualTransform.scale = finalScale;
+                visualTransform.scale = physicsTransform.scale;
                 physicsTransform.scale = visualTransform.scale;
-
-                const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(model, visualTransform.scale);
-                float appliedPivotOffsetY = pivotInfo.offsetY;
-                if ((type == SweetsType::Strawberry || type == SweetsType::Blueberry) && pivotInfo.rawOffsetY < 0.0f)
-                {
-                    appliedPivotOffsetY = std::max(pivotInfo.offsetY, 0.0f);
-                }
-
-                physicsTransform.position.y += appliedPivotOffsetY;
-                visualTransform.position.y += appliedPivotOffsetY;
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
                 auto shapeConfig = BuildBaseShapeConfig(type);
-                shapeConfig.density *= ComputeDensityScale(physicsTransform.scale, shapeConfig.type);
 
                 Physics::BoxColliderComponent colliderComponent{};
                 colliderComponent.colliderId = resolvedKind;
@@ -2115,7 +1983,6 @@ namespace SweetsSpace
                     colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
                         << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
                         << ") colliderId='" << colliderIdForLog << "'"
-                        << " pivotAppliedY=" << appliedPivotOffsetY
                         << "\n";
                     DebugTrace(colliderLog.str());
 #endif
@@ -2125,8 +1992,6 @@ namespace SweetsSpace
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
-                        << ") pivotOffsetY(raw/clamped/applied)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY << '/' << appliedPivotOffsetY
-                        << " halfHeight=" << pivotInfo.halfHeight
                         << " colliderId='" << resolvedKind << "'"
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
