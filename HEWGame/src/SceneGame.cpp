@@ -1522,6 +1522,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
         m_physicsMachine->SetContactListener(m_contactListener);
         m_contactListener->EnableMeshContactLogging(true);
+#if defined(_DEBUG)
+        m_contactListener->EnableDroppedEventLogging(true);
+#endif
     }
 
     if (m_sweetsManager)

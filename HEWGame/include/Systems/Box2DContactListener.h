@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <memory>
+#include <span>
+#include <unordered_set>
 
 #include <box2d/box2d.h>
 
@@ -28,7 +30,9 @@ namespace Systems
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
                 void EnableMeshContactLogging(bool enabled);
+                void EnableDroppedEventLogging(bool enabled);
                 void SetPhysicsMachine(PhysicsMachine* physicsMachine);
+                void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
 
         private:
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
@@ -41,7 +45,10 @@ namespace Systems
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
                 bool m_logMeshContacts = false;
+                bool m_logDroppedEvents = false;
                 PhysicsMachine* m_physicsMachine = nullptr;
+                std::unordered_set<uint64_t> m_destroyedBodyIds;
+                std::unordered_set<uint64_t> m_destroyedShapeIds;
         };
 }
 
