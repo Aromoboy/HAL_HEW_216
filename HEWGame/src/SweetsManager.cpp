@@ -981,10 +981,10 @@ namespace SweetsSpace
                 return generated && !generated->hull.empty();
             };
             if (meshCollidersAllowed
+                && !hasConfigDefinition
                 && (m_forceGeneratedColliders
                     || preferGeneratedCollider
-                    || !m_colliderConfigOverridesEnabled
-                    || !hasConfigDefinition))
+                    || !m_colliderConfigOverridesEnabled))
             {
                 generated = acquireGenerated();
             }
@@ -1206,55 +1206,39 @@ namespace SweetsSpace
             return applied;
         };
 
-        bool appliedGeneratedHull = false;
+        if (hasConfigDefinition)
+        {
+            const auto& definition = definitionIt->second;
+            const bool appliedConfig = applyConfigDefinition(definition, "config");
+            if (!appliedConfig)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
+                    << "' colliders_sweets.cfg entry failed to apply; abort collider build\n";
+                Diagnostics::LogInfo(oss.str());
 
-        if (meshCollidersAllowed && m_forceGeneratedColliders)
+                result.shapeConfig.type = Box2DShapeConfig::Type::None;
+                return result;
+            }
+        }
+        else if (meshCollidersAllowed && m_forceGeneratedColliders)
         {
             if (hasGenerated())
             {
-                appliedGeneratedHull = tryApplyGeneratedHull(*generated, "force-generated");
-            }
-        }
-        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition && !preferGeneratedCollider)
-        {
-            const auto& definition = definitionIt->second;
-            const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
-            if (!appliedConfig)
-            {
-                if (meshCollidersAllowed && !hasGenerated())
-                {
-                    generated = acquireGenerated();
-                }
-
-                if (meshCollidersAllowed && hasGenerated())
-                {
-                    appliedGeneratedHull = tryApplyGeneratedHull(*generated, "override-generated-fallback");
-                }
+                tryApplyGeneratedHull(*generated, "force-generated");
             }
         }
         else if (meshCollidersAllowed && hasGenerated())
         {
-            appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-default");
-        }
-        else if (hasConfigDefinition)
-        {
-            const auto& definition = definitionIt->second;
-            applyConfigDefinition(definition, "fallback-config");
+            tryApplyGeneratedHull(*generated, "generated-default");
         }
         else if (meshCollidersAllowed && !hasGenerated())
         {
             generated = acquireGenerated();
             if (hasGenerated())
             {
-                appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-late");
+                tryApplyGeneratedHull(*generated, "generated-late");
             }
-        }
-
-        if (!appliedGeneratedHull && hasConfigDefinition && result.source != ColliderSource::Config
-            && (!preferGeneratedCollider || !hasGenerated()))
-        {
-            const auto& definition = definitionIt->second;
-            applyConfigDefinition(definition, "generated-fallback-config");
         }
 
         if (colliderPreset && !appliedConfigDefinition)
