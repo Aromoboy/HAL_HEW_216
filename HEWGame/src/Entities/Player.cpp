@@ -305,6 +305,7 @@ namespace Entities
         , m_hasMaximumY(false)
         , m_maximumY(0.0f)
         , m_lastPickupResult{}
+        , m_lastCarryInputLoggedCount(m_carrieds.size())
     {
         if (model)
         {
@@ -886,6 +887,10 @@ namespace Entities
         const bool dropTriggered = input.IsTrigger(Core::ActionId::Drop);
         const bool confirmTriggered = input.IsTrigger(Core::ActionId::Confirm);
 
+        const bool carriedChanged = m_carrieds.size() != m_lastCarryInputLoggedCount;
+        const bool shouldLogEntry = carriedChanged || dropTriggered || confirmTriggered;
+
+        if (shouldLogEntry)
         {
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "HandleCarryInput enter carried=" << m_carrieds.size()
@@ -893,6 +898,8 @@ namespace Entities
                 << " dropTrigger=" << dropTriggered
                 << " confirmTrigger=" << confirmTriggered << "\n";
             PlayerDebugTrace(oss.str());
+
+            m_lastCarryInputLoggedCount = m_carrieds.size();
         }
 
         if (dropTriggered)

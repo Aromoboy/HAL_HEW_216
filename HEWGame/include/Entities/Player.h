@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -110,6 +111,7 @@ namespace Entities
         float m_maximumY;
         std::optional<ColliderFootprint> m_colliderFootprint;
         SweetsSpace::PickupQueryResult m_lastPickupResult;
+        size_t m_lastCarryInputLoggedCount;
 
         float3 ComputeCarryAnchor() const;
         PickupOrigin ComputePickupOrigin() const;
