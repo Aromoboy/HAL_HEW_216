@@ -57,6 +57,7 @@ namespace
     constexpr float kCarryForwardOffset = 0.5f;
 
     constexpr int kDefaultMaxCarry = 3;
+    constexpr float kDefaultPickupHalfExtent = 0.5f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
 
@@ -938,11 +939,27 @@ namespace Entities
         float depthThreshold = m_pickupDepthThreshold;
         bool pickupVolumeValid = false;
 
+        const auto clampPickupExtent = [](float value)
+        {
+            const float sanitized = std::isfinite(value) ? value : kDefaultPickupHalfExtent;
+            return std::max(sanitized, kDefaultPickupHalfExtent);
+        };
+
+        const auto clampPickupDistance = [](float value)
+        {
+            const float sanitized = std::isfinite(value) ? value : kDefaultPickupMaxDistance;
+            return std::max(sanitized, kDefaultPickupMaxDistance);
+        };
+
+        const float pickupHalfWidth = clampPickupExtent(m_pickupHalfWidth);
+        const float pickupHalfHeight = clampPickupExtent(m_pickupHalfHeight);
+        const float pickupMaxDistance = clampPickupDistance(m_pickupMaxDistance);
+
         if (!m_sweetsManager)
         {
             pickupResult.failReason = SweetsSpace::PickupFailReason::MissingSweetsManager;
         }
-        else if (!(m_pickupHalfWidth > 0.0f) || !(m_pickupHalfHeight > 0.0f) || !(m_pickupMaxDistance > 0.0f))
+        else if (!(pickupHalfWidth > 0.0f) || !(pickupHalfHeight > 0.0f) || !(pickupMaxDistance > 0.0f))
         {
             pickupResult.failReason = SweetsSpace::PickupFailReason::InvalidConfiguration;
         }
@@ -997,12 +1014,12 @@ namespace Entities
             {
                 pickupResult = m_sweetsManager->FindNearestCarryable(
                     pickupCenter,
-                    m_pickupHalfWidth,
-                    m_pickupHalfHeight,
+                    pickupHalfWidth,
+                    pickupHalfHeight,
                     halfDepth,
                     depthThreshold,
                     m_carrieds,
-                    m_pickupMaxDistance);
+                    pickupMaxDistance);
 
                 candidate = pickupResult.sweets;
                 if (pickupResult.Succeeded())
@@ -1028,6 +1045,77 @@ namespace Entities
                         m_carrieds.push_back(candidate);
                     }
                 }
+                else
+                {
+                    std::shared_ptr<SweetsSpace::ActiveSweets> nearest;
+                    float nearestDistanceSq = std::numeric_limits<float>::max();
+
+                    const auto evaluateList = [&](const SweetsSpace::SweetsManager::SweetsList& list)
+                    {
+                        for (const auto& sweets : list)
+                        {
+                            if (!sweets || sweets->IsPendingDestroy())
+                            {
+                                continue;
+                            }
+
+                            if (std::find(m_carrieds.begin(), m_carrieds.end(), sweets) != m_carrieds.end())
+                            {
+                                continue;
+                            }
+
+                            const Transform sweetsTransform = sweets->GetTransform();
+                            const float dx = sweetsTransform.position.x - pickupCenter.x;
+                            const float dy = sweetsTransform.position.y - pickupCenter.y;
+                            const float distanceSq = (dx * dx) + (dy * dy);
+                            if (distanceSq < nearestDistanceSq)
+                            {
+                                nearestDistanceSq = distanceSq;
+                                nearest = sweets;
+                            }
+                        }
+                    };
+
+                    evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
+                    evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
+
+                    if (nearest)
+                    {
+                        const float nearestDistance = std::sqrt(nearestDistanceSq);
+                        pickupResult.distance = nearestDistance;
+
+                        if (nearestDistance <= pickupMaxDistance)
+                        {
+                            pickupResult.result = SweetsSpace::PickupResult::Success;
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::None;
+                            candidate = nearest;
+                            candidateTransform = candidate->GetTransform();
+                            sweetsBounds = candidate->GetAABB();
+                            sweetsZ = candidateTransform.position.z;
+
+                            if (!m_sweetsManager->TryMarkAsCarried(candidate))
+                            {
+                                pickupResult.result = SweetsSpace::PickupResult::Failure;
+                                pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                                candidate.reset();
+                            }
+                            else
+                            {
+                                Transform updated = candidateTransform;
+                                updated.position = ComputeCarryAnchor();
+                                updated.rotation = m_transform.rotation;
+                                candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                                candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+
+                                m_carrieds.push_back(candidate);
+                            }
+                        }
+                        else if (pickupResult.failReason == SweetsSpace::PickupFailReason::NoCandidates)
+                        {
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::DistanceExceeded;
+                        }
+                    }
+                }
             }
         }
 
@@ -1036,11 +1124,11 @@ namespace Entities
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップ結果 result=" << PickupResultName(pickupResult.result)
             << " reason=" << PickupFailReasonName(pickupResult.failReason)
-            << " boxHalf=(" << m_pickupHalfWidth << ',' << m_pickupHalfHeight << ")"
+            << " boxHalf=(" << pickupHalfWidth << ',' << pickupHalfHeight << ")"
             << " offsetMode=" << PickupOffsetModeName(m_pickupOffset.mode)
             << " offsetLocal=(" << m_pickupOffset.localOffset.x << ',' << m_pickupOffset.localOffset.y
             << ',' << m_pickupOffset.localOffset.z << ")"
-            << " maxDistance=" << m_pickupMaxDistance;
+            << " maxDistance=" << pickupMaxDistance;
 
         if (pickupVolumeValid)
         {
