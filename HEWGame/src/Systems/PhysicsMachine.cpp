@@ -341,6 +341,8 @@ namespace Systems
             return;
         }
 
+        body.MarkFixtureBuildFailure(false);
+
         const b2BodyId existing = body.GetBox2DBodyId();
         if (b2Body_IsValid(existing))
         {
@@ -388,9 +390,12 @@ namespace Systems
         if (it == m_bodies.end())
         {
 #if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
-            DebugTrace(oss.str());
+            if (!body.HasFixtureBuildFailure())
+            {
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
+                DebugTrace(oss.str());
+            }
 #endif
             DestroyBody(body);
             return;
@@ -1195,6 +1200,7 @@ if (isSweetTag)
             << "'; destroying body.\n";
         DebugTrace(oss.str());
 
+        body.MarkFixtureBuildFailure(true);
         colliderComponent->Clear();
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);

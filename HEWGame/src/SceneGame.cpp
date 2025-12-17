@@ -3202,12 +3202,19 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
         return;
     }
 
+    const bool fixtureBuildFailed = entity->HasFixtureBuildFailure();
+
     const auto tracked = m_registeredPhysicsBodies.find(entity);
     if (tracked == m_registeredPhysicsBodies.end())
     {
-        std::ostringstream oss;
-        oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
-        ::DebugTrace(oss.str());
+        if (!fixtureBuildFailed)
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
+            ::DebugTrace(oss.str());
+#endif
+        }
     }
     else
     {
@@ -3220,7 +3227,12 @@ void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
+        if (!fixtureBuildFailed)
+        {
+#if defined(_DEBUG)
+            DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
+#endif
+        }
     }
 }
 
