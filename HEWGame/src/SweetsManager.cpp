@@ -101,6 +101,7 @@ namespace
     constexpr float kMinFinalScale = 0.05f;
     constexpr float kMaxFinalScale = 3.0f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
+    constexpr float kMinimumBerryColliderRadius = 0.15f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -1025,6 +1026,43 @@ namespace SweetsSpace
                     result.source = ColliderSource::Fallback;
                 }
             }
+        }
+
+        auto enforceMinimumCircleRadius = [&](float minRadius)
+        {
+            if (result.shapeConfig.type != Box2DShapeConfig::Type::Circle)
+            {
+                return;
+            }
+
+            const float currentRadius = result.shapeConfig.radius;
+            if (!(currentRadius > 0.0f) || currentRadius >= minRadius)
+            {
+                return;
+            }
+
+            const float scaleFactor = minRadius / currentRadius;
+            result.shapeConfig.radius = minRadius;
+            result.shapeConfig.polygonRadius *= scaleFactor;
+            result.thickness *= scaleFactor;
+            result.centroidOffset.x *= scaleFactor;
+            result.centroidOffset.y *= scaleFactor;
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Collider for kind='" << resolvedKind
+                << "' radius clamped to min playable size from " << currentRadius
+                << " to " << minRadius << "\n";
+            DebugTrace(oss.str());
+        };
+
+        switch (type)
+        {
+        case SweetsType::Strawberry:
+        case SweetsType::Blueberry:
+            enforceMinimumCircleRadius(kMinimumBerryColliderRadius);
+            break;
+        default:
+            break;
         }
 
         return result;
