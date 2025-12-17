@@ -50,8 +50,10 @@ namespace Systems
 
                 constexpr int kMaxLogsPerFrame = 4;
                 constexpr int kMaxUnknownShapeLogsPerFrame = 8;
+                constexpr int kMaxDroppedEventLogsPerFrame = 8;
                 int loggedMeshContacts = 0;
                 int loggedUnknownShapes = 0;
+                int loggedDroppedEvents = 0;
 
                 const auto logUnknownShape = [&](b2ShapeId shapeId)
                     {
@@ -114,6 +116,56 @@ namespace Systems
                         return true;
                     };
 
+                const auto hasValidFixtures = [](Entities::PhysicalEntity* entity)
+                    {
+                        if (!entity)
+                        {
+                            return false;
+                        }
+
+                        const auto& colliderComponent = entity->GetBoxColliderComponent();
+                        const int createdFixtures = colliderComponent ? colliderComponent->createdFixtureCount : 0;
+                        return createdFixtures > 0;
+                    };
+
+                const auto logDroppedEvent = [&](const char* eventType, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
+                                                 const char* reason)
+                    {
+                        if (loggedDroppedEvents >= kMaxDroppedEventLogsPerFrame)
+                        {
+                            return;
+                        }
+
+                        std::ostringstream oss;
+                        oss << "[Box2DContactListener][Error] Dropped " << eventType
+                            << " contact event for shapes=";
+                        if (b2Shape_IsValid(shapeIdA))
+                        {
+                                oss << b2StoreShapeId(shapeIdA);
+                        }
+                        else
+                        {
+                                oss << "<invalid>";
+                        }
+                        oss << ",";
+                        if (b2Shape_IsValid(shapeIdB))
+                        {
+                                oss << b2StoreShapeId(shapeIdB);
+                        }
+                        else
+                        {
+                                oss << "<invalid>";
+                        }
+                        if (reason)
+                        {
+                                oss << " reason=" << reason;
+                        }
+                        oss << "\n";
+
+                        DebugTrace(oss.str());
+                        ++loggedDroppedEvents;
+                    };
+
                 const std::span<const b2ContactBeginTouchEvent> beginEvents =
                     (events.beginEvents && events.beginCount > 0)
                         ? std::span<const b2ContactBeginTouchEvent>(
@@ -139,6 +191,20 @@ namespace Systems
                         {
                                 logUnknownShape(evt.shapeIdB);
                         }
+
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesValid = entitiesValid
+                            && entityA->HasBox2DBody()
+                            && entityB->HasBox2DBody();
+                        const bool fixturesValid = bodiesValid && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
+                        {
+                                logDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
+                                    entitiesValid ? "missing body or fixtures" : "shape->entity mapping not found");
+                                continue;
+                        }
+
                         BeginContact(entityA, entityB);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
@@ -178,6 +244,20 @@ namespace Systems
                         {
                                 logUnknownShape(evt.shapeIdB);
                         }
+
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesValid = entitiesValid
+                            && entityA->HasBox2DBody()
+                            && entityB->HasBox2DBody();
+                        const bool fixturesValid = bodiesValid && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
+                        {
+                                logDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
+                                    entitiesValid ? "missing body or fixtures" : "shape->entity mapping not found");
+                                continue;
+                        }
+
                         EndContact(entityA, entityB);
                 }
 
