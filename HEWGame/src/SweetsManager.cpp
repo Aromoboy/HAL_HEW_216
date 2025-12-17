@@ -43,6 +43,7 @@
 #include "Physics/ShapeConstants.h"
 #include "Diagnostics/Logger.h"
 #include <DirectXMath.h>
+#include <ModelPivot.h>
 
 namespace SweetsSpace
 {
