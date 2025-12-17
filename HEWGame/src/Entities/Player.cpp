@@ -296,6 +296,7 @@ namespace Entities
         , m_facingSign(1.0f)
         , m_hasMinimumY(false)
         , m_minimumY(0.0f)
+        , m_missingBodyLogged(false)
         , m_missingModelWarned(false)
         , m_hasScreenBounds(false)
         , m_minScreenX(0.0f)
@@ -391,10 +392,14 @@ namespace Entities
     {
         SyncVisualTransformFromPhysics();
 
-        if (!HasBox2DBody())
-            return;
-
         Core::Input& input = ctx.input;
+
+        const bool hasBody = HasBox2DBody();
+        if (!hasBody && !m_missingBodyLogged)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "[Fatal] Missing Box2D body; falling back to transform-based update for pickups to continue.\n");
+            m_missingBodyLogged = true;
+        }
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
         const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
@@ -415,7 +420,7 @@ namespace Entities
         {
             if (horizontal != 0.0f || vertical != 0.0f)
             {
-                if (HasBox2DBody())
+                if (hasBody)
                 {
                     const float3 desired{
                         horizontal * effectiveHorizontalSpeed,
@@ -425,8 +430,17 @@ namespace Entities
 
                     SetLinearVelocity(desired);
                 }
+                else
+                {
+                    const float3 delta{
+                        horizontal * effectiveHorizontalSpeed * ctx.dt,
+                        vertical * effectiveVerticalSpeed * ctx.dt,
+                        0.0f
+                    };
+                    ApplyTranslation(delta);
+                }
             }
-            else if (HasBox2DBody())
+            else if (hasBody)
             {
                 SetLinearVelocity(float3{ 0,0,0 });
             }

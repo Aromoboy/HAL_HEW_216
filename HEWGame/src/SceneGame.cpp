@@ -2491,6 +2491,23 @@ void SceneGame::ConfigureUpdates()
                             << std::boolalpha << isKinematic << ").\n";
                         ::DebugTrace(oss.str());
                 }
+
+                const int playerFixtureCount = player->GetBoxColliderComponent()
+                    ? player->GetBoxColliderComponent()->createdFixtureCount
+                    : 0;
+                if (!player->HasBox2DBody() || playerFixtureCount <= 0)
+                {
+                        DebugTrace(std::string(kLogPrefix) + "Player Box2D body missing after registration; attempting repair.\n");
+                        RegisterPhysicsBody(*player);
+
+                        const int repairedFixtures = player->GetBoxColliderComponent()
+                            ? player->GetBoxColliderComponent()->createdFixtureCount
+                            : 0;
+                        if (!player->HasBox2DBody() || repairedFixtures <= 0)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
+                        }
+                }
         }
 
         SetStageState(StageState::Playing);
@@ -3122,8 +3139,43 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
     entity.AttachPhysicsMachine(m_physicsMachine.get());
 
     {
-        const bool hasBody = entity.HasBox2DBody();
-        const int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+        bool hasBody = entity.HasBox2DBody();
+        int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+        if (!hasBody || fixtureCount <= 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Physics body incomplete for tag='" << entity.GetTag()
+                << "' (hasBody=" << std::boolalpha << hasBody
+                << ", fixtures=" << fixtureCount << "); attempting immediate rebuild.\n";
+            ::DebugTrace(oss.str());
+
+            entity.DetachPhysicsMachine();
+            entity.AttachPhysicsMachine(m_physicsMachine.get());
+
+            const bool rebuiltHasBody = entity.HasBox2DBody();
+            const int rebuiltFixtures = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+            if (!rebuiltHasBody || rebuiltFixtures <= 0)
+            {
+                std::ostringstream errorOss;
+                errorOss << kLogPrefix << "Failed to create physics body for tag='" << entity.GetTag()
+                    << "' even after rebuild attempt (hasBody=" << std::boolalpha << rebuiltHasBody
+                    << ", fixtures=" << rebuiltFixtures << ").\n";
+                ::DebugTrace(errorOss.str());
+
+                entity.DetachPhysicsMachine();
+                m_registeredPhysicsBodies.erase(&entity);
+                return;
+            }
+
+            hasBody = rebuiltHasBody;
+            fixtureCount = rebuiltFixtures;
+
+            std::ostringstream recovered;
+            recovered << kLogPrefix << "Recovered physics body for tag='" << entity.GetTag()
+                << "' (fixtures=" << rebuiltFixtures << ").\n";
+            ::DebugTrace(recovered.str());
+        }
+
         float gravityScale = hasBody ? entity.GetGravityScale() : 0.0f;
         if (isPlayerEntity && hasBody && std::fabs(gravityScale - 0.0f) > std::numeric_limits<float>::epsilon())
         {
@@ -3139,13 +3191,6 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
             << " gravityScale=" << gravityScale
             << ((hasBody && fixtureCount > 0) ? "" : " (incomplete)") << "\n";
         ::DebugTrace(oss.str());
-
-        if (!hasBody || fixtureCount <= 0)
-        {
-            DebugTrace(std::string(kLogPrefix) + "Physics registration aborted due to missing body or fixtures; detaching.\n");
-            entity.DetachPhysicsMachine();
-            m_registeredPhysicsBodies.erase(&entity);
-        }
     }
 }
 
