@@ -2212,7 +2212,7 @@ namespace SweetsSpace
         }
     }
 
-    std::optional<SweetsManager::ColliderPrimitive> SweetsManager::BuildDefaultColliderPrimitive(SweetsType type)
+    std::optional<ColliderPrimitive> SweetsManager::BuildDefaultColliderPrimitive(SweetsType type)
     {
         ColliderPrimitive primitive{};
 
@@ -2308,7 +2308,7 @@ namespace SweetsSpace
         return !parseError;
     }
 
-    std::map<std::string, SweetsManager::ColliderPrimitive> SweetsManager::LoadColliderPrimitives(bool* parseError)
+    std::map<std::string, ColliderPrimitive> SweetsManager::LoadColliderPrimitives(bool* parseError)
     {
         std::map<std::string, ColliderPrimitive> overrides;
         std::ifstream file(kColliderConfigPath);
