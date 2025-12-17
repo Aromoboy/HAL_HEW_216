@@ -748,7 +748,11 @@ namespace SweetsSpace
         };
 
         std::optional<GeneratedCollider> generated;
-        if (m_forceGeneratedColliders || !m_colliderConfigOverridesEnabled || !hasConfigDefinition)
+        const bool needsGeneratedForOverrides = (type == SweetsType::Blueberry);
+        if (m_forceGeneratedColliders
+            || !m_colliderConfigOverridesEnabled
+            || !hasConfigDefinition
+            || needsGeneratedForOverrides)
         {
             generated = acquireGenerated();
         }
