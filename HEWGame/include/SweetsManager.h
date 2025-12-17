@@ -358,6 +358,7 @@ namespace SweetsSpace
             const Transform& transform,
             const std::string& modelPath,
             const std::shared_ptr<Render::Model>& model,
+            const float2& colliderCenter,
             bool allowMeshPhysics);
 
         bool m_spawnPausedDueToLiveSweets;

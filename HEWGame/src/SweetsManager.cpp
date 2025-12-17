@@ -689,6 +689,34 @@ namespace
         return vertices;
     }
 
+    void ApplyColliderOffset(SweetsManager::ColliderBuildResult& result, const float2& colliderCenter)
+    {
+        const float2 finalOffset
+        {
+            result.centroidOffset.x + colliderCenter.x,
+            result.centroidOffset.y + colliderCenter.y,
+        };
+
+        auto translateVertices = [&](std::vector<b2Vec2>& vertices)
+        {
+            for (auto& vertex : vertices)
+            {
+                vertex.x += finalOffset.x;
+                vertex.y += finalOffset.y;
+            }
+        };
+
+        translateVertices(result.shapeConfig.vertices);
+        for (auto& polygon : result.meshPolygons)
+        {
+            translateVertices(polygon);
+        }
+        translateVertices(result.meshBoundary);
+
+        result.centroidOffset = finalOffset;
+        result.shapeConfig.offset = b2Vec2{ finalOffset.x, finalOffset.y };
+    }
+
     struct ColliderDimensionNormalization
     {
         float radius{ 0.0f };
@@ -750,6 +778,7 @@ namespace SweetsSpace
         const Transform& transform,
         const std::string& modelPath,
         const std::shared_ptr<Render::Model>& model,
+        const float2& colliderCenter,
         bool allowMeshPhysics)
     {
         ColliderBuildResult result{};
@@ -1034,10 +1063,9 @@ namespace SweetsSpace
                         scaledPoints.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
                     }
 
-                    const float2 scaledOffset{ definition.offset.x * colliderScale.x, definition.offset.y * colliderScale.y };
                     const float scaledMargin = definition.margin * uniformColliderScale;
 
-                    result.shapeConfig.vertices = BuildHullVertices(scaledPoints, scaledOffset, definition.scale, scaledMargin);
+                    result.shapeConfig.vertices = BuildHullVertices(scaledPoints, float2{ 0.0f, 0.0f }, definition.scale, scaledMargin);
                     if (result.shapeConfig.vertices.size() >= 3)
                     {
                         const auto dimensions = computePolygonDimensions(result.shapeConfig.vertices);
@@ -1056,6 +1084,7 @@ namespace SweetsSpace
                         result.thickness = normalized.thickness;
                         result.source = ColliderSource::Config;
                         applied = true;
+                        result.centroidOffset = float2{ definition.offset.x * colliderScale.x, definition.offset.y * colliderScale.y };
                     }
                     break;
                 }
@@ -1160,9 +1189,9 @@ namespace SweetsSpace
                 scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
             }
 
-            float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
+            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
 
-            std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, scaledOffset, 1.0f, 0.0f);
+            std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, float2{ 0.0f, 0.0f }, 1.0f, 0.0f);
             if (hullVertices.size() >= 3)
             {
                 const auto dimensions = computePolygonDimensions(hullVertices);
@@ -1458,6 +1487,8 @@ namespace SweetsSpace
         default:
             break;
         }
+
+        ApplyColliderOffset(result, colliderCenter);
 
         if (!meshCollidersAllowed)
         {
@@ -2027,15 +2058,22 @@ namespace SweetsSpace
         return halfExtents;
     }
 
-    float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
+    float2 ComputeColliderCenter(const std::shared_ptr<Render::Model>& model, const float3& scale, const Render::PivotInfo& pivotInfo)
     {
-        const float3 scaledMin = ScaleVector(bounds.min, scale);
-        const float3 scaledMax = ScaleVector(bounds.max, scale);
-        return float3{
-            (scaledMax.x + scaledMin.x) * 0.5f,
-            (scaledMax.y + scaledMin.y) * 0.5f,
-            (scaledMax.z + scaledMin.z) * 0.5f,
-        };
+        float2 center{ 0.0f, 0.0f };
+
+        if (model && model->HasLocalBounds())
+        {
+            const AABB& bounds = model->GetLocalBounds();
+            center.x = (bounds.min.x + bounds.max.x) * 0.5f * scale.x;
+            center.y = (bounds.min.y + bounds.max.y) * 0.5f * scale.y;
+        }
+        else if (pivotInfo.halfHeight > 0.0f || pivotInfo.rawOffsetY != 0.0f)
+        {
+            center.y = pivotInfo.halfHeight - pivotInfo.rawOffsetY;
+        }
+
+        return center;
     }
 
     float3 ComputeExpandFromHalfExtents(const float3& halfExtents, const float3& transformScale)
@@ -2879,8 +2917,10 @@ namespace SweetsSpace
                 physicsTransform.position.y += appliedPivotOffsetY;
                 visualTransform.position.y += appliedPivotOffsetY;
 
+                const float2 colliderCenter = ComputeColliderCenter(model, visualTransform.scale, pivotInfo);
+
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
-                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model, allowMeshPhysics);
+                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model, colliderCenter, allowMeshPhysics);
 
                 if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
                 {
