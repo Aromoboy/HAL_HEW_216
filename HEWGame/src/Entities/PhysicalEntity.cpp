@@ -59,11 +59,12 @@ namespace
 
 namespace Entities
 {
-    PhysicalEntity::PhysicalEntity(const Transform& transform, std::optional<Physics::Box2DShapeConfig> shapeConfig, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag)
+    PhysicalEntity::PhysicalEntity(const Transform& transform, std::optional<Physics::Box2DShapeConfig> shapeConfig, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag, bool allowMeshPhysics)
         : Entity(transform, std::move(model), phase, priority, std::move(tag))
         , m_physical()
         , m_physicsMachine(physicsMachine)
         , m_collisionLayer(layer)
+        , m_allowMeshPhysics(allowMeshPhysics)
     {
         m_box2dShapeConfig = std::move(shapeConfig);
         SyncColliderBounds();
@@ -78,8 +79,9 @@ namespace Entities
         std::optional<Physics::Box2DShapeConfig> shapeConfig,
         Collision::CollisionLayer layer,
         Core::UpdatePhase phase,
-        int priority)
-        : PhysicalEntity(Transform{ pos, rot, scl }, std::move(shapeConfig), layer, nullptr, nullptr, phase, priority, tag)
+        int priority,
+        bool allowMeshPhysics)
+        : PhysicalEntity(Transform{ pos, rot, scl }, std::move(shapeConfig), layer, nullptr, nullptr, phase, priority, tag, allowMeshPhysics)
     {
     }
 
@@ -164,6 +166,17 @@ namespace Entities
         MarkTransformDirty();
         m_transform.scale = scale;
         SyncColliderBounds();
+    }
+
+    void PhysicalEntity::SetAllowMeshPhysics(bool allow)
+    {
+        if (m_allowMeshPhysics == allow)
+        {
+            return;
+        }
+
+        m_allowMeshPhysics = allow;
+        RecreateBox2DBody();
     }
 
     void PhysicalEntity::SyncColliderBounds()

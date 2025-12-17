@@ -25,6 +25,7 @@ namespace SweetsSpace
         std::string key;
         std::string modelPath;
         std::string description;
+        bool allowMeshPhysics{ false };
     };
 
     struct SweetsPrototypeEntry
@@ -60,7 +61,7 @@ namespace SweetsSpace
 
         void ApplyDefaults();
         bool LoadOverridesFromCsv(const std::string& csvPath);
-        void Register(SweetsType type, std::string key, std::string relativePath, std::string description);
+        void Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
         void RegisterAlias(SweetsType type, const std::string& aliasKey);
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;

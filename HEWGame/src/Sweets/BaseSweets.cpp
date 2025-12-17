@@ -36,7 +36,8 @@ namespace SweetsSpace
         Collision::CollisionLayer layer,
         Systems::PhysicsMachine* physicsMachine,
         Core::UpdatePhase phase,
-        int priority)
+        int priority,
+        bool allowMeshPhysics)
         : Entities::PhysicalEntity(transform,
             std::move(shapeConfig),
             layer,
@@ -44,7 +45,8 @@ namespace SweetsSpace
             physicsMachine,
             phase,
             priority,
-            tag)
+            tag,
+            allowMeshPhysics)
         , m_visual{ transform.position, transform.rotation, transform.scale }
     {
         RefreshRenderTransform();

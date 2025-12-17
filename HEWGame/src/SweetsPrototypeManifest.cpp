@@ -120,12 +120,13 @@ namespace SweetsSpace
         RegisterAlias(SweetsType::Fairy, "Player");
     }
 
-    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description)
+    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
+        descriptor.allowMeshPhysics = allowMeshPhysics;
 
         const std::string normalized = NormalizeKey(descriptor.key);
         m_lookup[normalized] = type;
@@ -218,14 +219,36 @@ namespace SweetsSpace
 
             const std::string& key = tokens[0];
             const std::string& modelPath = tokens[1];
+            bool allowMeshPhysics = false;
+            std::size_t descriptionEnd = tokens.size();
+            if (tokens.size() >= 3)
+            {
+                const std::string& maybeFlag = tokens.back();
+                const std::string normalizedFlag = NormalizeKey(maybeFlag);
+                if (normalizedFlag == "true" || normalizedFlag == "1")
+                {
+                    allowMeshPhysics = true;
+                    descriptionEnd = tokens.size() - 1;
+                }
+                else if (normalizedFlag == "false" || normalizedFlag == "0")
+                {
+                    allowMeshPhysics = false;
+                    descriptionEnd = tokens.size() - 1;
+                }
+            }
+
             std::string description;
             if (tokens.size() >= 3)
             {
-                description = tokens[2];
-                for (std::size_t i = 3; i < tokens.size(); ++i)
+                const std::size_t startIndex = 2;
+                if (descriptionEnd > startIndex)
                 {
-                    description.append(",");
-                    description.append(tokens[i]);
+                    description = tokens[startIndex];
+                    for (std::size_t i = startIndex + 1; i < descriptionEnd; ++i)
+                    {
+                        description.append(",");
+                        description.append(tokens[i]);
+                    }
                 }
             }
 
@@ -274,7 +297,7 @@ namespace SweetsSpace
             const std::string canonicalKey = ToString(*mappedType);
             const std::string registerKey = isPlayerAlias ? canonicalKey : key;
 
-            Register(*mappedType, registerKey, resolvedPath, description);
+            Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
             if (isPlayerAlias)
             {
                 RegisterAlias(*mappedType, key);

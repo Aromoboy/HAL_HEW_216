@@ -19,7 +19,8 @@ namespace SweetsSpace
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
-            int priority = 0);
+            int priority = 0,
+            bool allowMeshPhysics = true);
 
         ~BaseSweets() override = default;
 

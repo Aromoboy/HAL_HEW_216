@@ -341,7 +341,8 @@ namespace SweetsSpace
             SweetsType type,
             const Transform& transform,
             const std::string& modelPath,
-            const std::shared_ptr<Render::Model>& model);
+            const std::shared_ptr<Render::Model>& model,
+            bool allowMeshPhysics);
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
@@ -354,7 +355,8 @@ namespace SweetsSpace
             const std::optional<Physics::Box2DShapeConfig>& shapeConfig,
             Collision::CollisionLayer layer,
             Core::UpdatePhase phase,
-            int priority)
+            int priority,
+            bool allowMeshPhysics)
         {
             if (!model)
                 return nullptr;
@@ -367,7 +369,8 @@ namespace SweetsSpace
                 layer,
                 m_physicsMachine,
                 phase,
-                priority
+                priority,
+                allowMeshPhysics
             );
 
             if (!sweets)
