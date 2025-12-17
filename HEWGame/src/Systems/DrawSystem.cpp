@@ -13,7 +13,6 @@
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
 #include "Entities/PhysicalEntity.h"
-#include "Collision2D.h"
 #include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"

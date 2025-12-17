@@ -1,7 +1,5 @@
-#include "Collision2D.h"
 #include "Transform.h"
 #include "SceneGame.h"
-#include "Collision2D.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
 #include "Vector.h"
@@ -741,28 +739,6 @@ namespace
             }
 
             return enabled;
-        }
-
-        std::shared_ptr<Collision::ICollider> BuildGeneratedPlayerCollider(
-            const PlayerColliderGeometry& geometry,
-            const SceneGame::PlayerColliderTuning& tuning,
-            const Transform& transform)
-        {
-            if (!geometry.bounds.valid)
-            {
-                return nullptr;
-            }
-
-            const float clampedThickness = std::max(geometry.paddedThickness * transform.scale.z, kMinGeneratedThickness);
-            const float2 offset2D{ tuning.offset.x, tuning.offset.y };
-            const float2 centroid2D{ geometry.centroidOffset.x, geometry.centroidOffset.y };
-            auto hull = BuildPaddedHull(geometry, tuning, transform.scale);
-
-            std::vector<float2> hullPointsRelativeToPivot = hull;
-
-            auto collider = std::make_shared<Collision::ConvexHullCollider2D>(hullPointsRelativeToPivot, offset2D, clampedThickness, Collision::CollisionLayer::Player, centroid2D);
-            collider->UpdateBounds(transform);
-            return collider;
         }
 
         struct PhysicsTuningSettings

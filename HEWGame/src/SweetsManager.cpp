@@ -30,7 +30,6 @@
 #include "DirectX.h"
 #include "AABB.h"
 #include "ColliderRegistry.h"
-#include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
