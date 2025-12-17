@@ -975,10 +975,10 @@ namespace SweetsSpace
             }
 
             constexpr int kArcSegments = 6;
-            const float startRight = -b2_pi * 0.5f;
-            const float endRight = b2_pi * 0.5f;
-            const float startLeft = b2_pi * 0.5f;
-            const float endLeft = b2_pi * 1.5f;
+            const float startRight = -B2_PI * 0.5f;
+            const float endRight = B2_PI * 0.5f;
+            const float startLeft = B2_PI * 0.5f;
+            const float endLeft = B2_PI * 1.5f;
 
             const float offsetX = horizontal ? spine : 0.0f;
             const float offsetY = horizontal ? 0.0f : spine;
