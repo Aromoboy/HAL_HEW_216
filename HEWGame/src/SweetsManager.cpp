@@ -548,7 +548,7 @@ namespace
             break;
         case SweetsType::Blueberry:
             config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.35f;
+            config.radius = 0.5f;
             config.angularDamping = 2.25f;
             config.density = 0.7f;
             config.friction = 0.42f;
@@ -2276,7 +2276,7 @@ namespace SweetsSpace
             return primitive;
         case SweetsType::Blueberry:
             primitive.shape = ColliderShape::Circle;
-            primitive.radius = 0.35f;
+            primitive.radius = 0.5f;
             primitive.height = 0.0f;
             return primitive;
         case SweetsType::Pineapple:
