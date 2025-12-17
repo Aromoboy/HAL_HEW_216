@@ -54,7 +54,8 @@ namespace Entities
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0,
-            std::string tag = {});
+            std::string tag = {},
+            bool allowMeshPhysics = true);
 
         PhysicalEntity(const std::string& tag,
             const float3& pos,
@@ -63,7 +64,8 @@ namespace Entities
             std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
-            int priority = 0);
+            int priority = 0,
+            bool allowMeshPhysics = true);
 
         ~PhysicalEntity() override;
 
@@ -79,6 +81,9 @@ namespace Entities
         void SetPosition(const float3& position);
         void SetRotation(const float3& rotation);
         void SetScale(const float3& scale);
+
+        void SetAllowMeshPhysics(bool allow);
+        bool IsMeshPhysicsAllowed() const noexcept { return m_allowMeshPhysics; }
 
         void SyncColliderBounds();
         void MarkTransformDirty();
@@ -166,6 +171,7 @@ namespace Entities
 
         std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
+        bool m_allowMeshPhysics{ true };
 
     private:
         void RecreateBox2DBody();

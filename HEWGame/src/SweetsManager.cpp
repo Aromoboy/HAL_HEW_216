@@ -700,7 +700,8 @@ namespace SweetsSpace
         SweetsType type,
         const Transform& transform,
         const std::string& modelPath,
-        const std::shared_ptr<Render::Model>& model)
+        const std::shared_ptr<Render::Model>& model,
+        bool allowMeshPhysics)
     {
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
@@ -717,13 +718,21 @@ namespace SweetsSpace
         const auto definitionIt = FindColliderDefinition(resolvedKind);
         const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
             && !IsColliderDefinitionEmpty(definitionIt->second);
-        const bool preferGeneratedCollider = (type == SweetsType::Blueberry) && m_colliderConfigOverridesEnabled;
+        const bool preferGeneratedCollider = allowMeshPhysics
+            && (type == SweetsType::Blueberry)
+            && m_colliderConfigOverridesEnabled;
 
         const float2 colliderScale{ transform.scale.x, transform.scale.y };
         const float uniformColliderScale = std::max(std::abs(colliderScale.x), std::abs(colliderScale.y));
+        const bool meshCollidersAllowed = allowMeshPhysics;
 
         auto acquireGenerated = [&]() -> std::optional<GeneratedCollider>
         {
+            if (!meshCollidersAllowed)
+            {
+                return std::nullopt;
+            }
+
             if (auto cached = m_generatedColliders.find(normalizedKind); cached != m_generatedColliders.end())
             {
                 return cached->second;
@@ -753,10 +762,11 @@ namespace SweetsSpace
         {
             return generated && !generated->hull.empty();
         };
-        if (m_forceGeneratedColliders
-            || preferGeneratedCollider
-            || !m_colliderConfigOverridesEnabled
-            || !hasConfigDefinition)
+        if (meshCollidersAllowed
+            && (m_forceGeneratedColliders
+                || preferGeneratedCollider
+                || !m_colliderConfigOverridesEnabled
+                || !hasConfigDefinition))
         {
             generated = acquireGenerated();
         }
@@ -973,7 +983,7 @@ namespace SweetsSpace
 
         bool appliedGeneratedHull = false;
 
-        if (m_forceGeneratedColliders)
+        if (meshCollidersAllowed && m_forceGeneratedColliders)
         {
             if (hasGenerated())
             {
@@ -986,18 +996,18 @@ namespace SweetsSpace
             const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
             if (!appliedConfig)
             {
-                if (!hasGenerated())
+                if (meshCollidersAllowed && !hasGenerated())
                 {
                     generated = acquireGenerated();
                 }
 
-                if (hasGenerated())
+                if (meshCollidersAllowed && hasGenerated())
                 {
                     appliedGeneratedHull = tryApplyGeneratedHull(*generated, "override-generated-fallback");
                 }
             }
         }
-        else if (hasGenerated())
+        else if (meshCollidersAllowed && hasGenerated())
         {
             appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-default");
         }
@@ -1006,7 +1016,7 @@ namespace SweetsSpace
             const auto& definition = definitionIt->second;
             applyConfigDefinition(definition, "fallback-config");
         }
-        else if (!hasGenerated())
+        else if (meshCollidersAllowed && !hasGenerated())
         {
             generated = acquireGenerated();
             if (hasGenerated())
@@ -1271,6 +1281,16 @@ namespace SweetsSpace
             break;
         default:
             break;
+        }
+
+        if (!meshCollidersAllowed)
+        {
+            result.meshPolygons.clear();
+            result.meshBoundary.clear();
+            if (result.source == ColliderSource::Generated)
+            {
+                result.source = ColliderSource::Fallback;
+            }
         }
 
         return result;
@@ -2489,7 +2509,8 @@ namespace SweetsSpace
                 physicsTransform.position.y += appliedPivotOffsetY;
                 visualTransform.position.y += appliedPivotOffsetY;
 
-                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model);
+                const bool allowMeshPhysics = descriptor->allowMeshPhysics;
+                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model, allowMeshPhysics);
 
                 if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
                 {
@@ -2498,7 +2519,7 @@ namespace SweetsSpace
                 }
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
-                    Core::UpdatePhase::Physics, 0);
+                    Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
                 if (sweets)
                 {

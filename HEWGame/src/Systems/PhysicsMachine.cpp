@@ -543,11 +543,13 @@ namespace Systems
 
         const std::string& tag = body.GetTag();
         const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
+        const bool allowMeshPhysics = body.IsMeshPhysicsAllowed();
+        const bool meshPhysicsAllowed = !isSweetTag || allowMeshPhysics;
 
         const auto& meshPolygons = body.GetBox2DPolygons();
         const auto& meshBoundary = body.GetBox2DBoundary();
-        const bool hasMeshFixtures = !meshPolygons.empty();
-        const bool hasMeshBoundary = !meshBoundary.empty();
+        const bool hasMeshFixtures = meshPhysicsAllowed && !meshPolygons.empty();
+        const bool hasMeshBoundary = meshPhysicsAllowed && !meshBoundary.empty();
         const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
 
         if (isSweetTag && !hasShapeConfig)
