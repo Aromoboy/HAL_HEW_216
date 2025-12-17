@@ -87,6 +87,7 @@ namespace SweetsSpace
         ColliderShape shape{ ColliderShape::Circle };
         float radius{ 0.0f };
         float height{ 0.0f };
+        float3 offset{ 0.0f, 0.0f, 0.0f };
     };
 
     enum class DeleteReason : std::uint8_t
