@@ -877,89 +877,6 @@ namespace SweetsSpace
             return applied;
         };
 
-        auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
-        {
-            const float clampedThickness = std::clamp(thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
-            std::vector<float2> scaledHull;
-            scaledHull.reserve(hull.size());
-            for (const auto& pt : hull)
-            {
-                scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
-            }
-
-            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
-
-            std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, scaledOffset, 1.0f, 0.0f);
-            if (hullVertices.size() >= 3)
-            {
-                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                result.shapeConfig.vertices = hullVertices;
-                result.meshPolygons.clear();
-                result.meshPolygons.push_back(hullVertices);
-                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                result.thickness = clampedThickness * uniformColliderScale;
-                result.centroidOffset = scaledOffset;
-            }
-        };
-
-        if (m_forceGeneratedColliders)
-        {
-            if (hasGenerated)
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                result.source = ColliderSource::Generated;
-            }
-        }
-        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
-        {
-            const bool preferGeneratedOverride = (type == SweetsType::Blueberry) && hasGenerated;
-            bool appliedGeneratedOverride = false;
-            if (preferGeneratedOverride)
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                if (result.shapeConfig.type != Box2DShapeConfig::Type::None)
-                {
-                    result.source = ColliderSource::Generated;
-                    appliedGeneratedOverride = true;
-
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "オーバーライド中だけどブルーベリーはメッシュ凸包を使うよ kind='"
-                        << resolvedKind << "' verts=" << result.shapeConfig.vertices.size() << "\n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-            if (!appliedGeneratedOverride)
-            {
-                const auto& definition = definitionIt->second;
-                const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
-                if (!appliedConfig && hasGenerated)
-                {
-                    applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                    result.source = ColliderSource::Generated;
-                }
-            }
-        }
-        else if (hasGenerated)
-        {
-            applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-            result.source = ColliderSource::Generated;
-        }
-        else if (hasConfigDefinition)
-        {
-            const auto& definition = definitionIt->second;
-            applyConfigDefinition(definition, "fallback-config");
-        }
-        else if (!hasGenerated)
-        {
-            generated = acquireGenerated();
-            if (generated && !generated->hull.empty())
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                result.source = ColliderSource::Generated;
-            }
-        }
-
         const auto computePolygonDimensions = [](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
         {
             if (vertices.size() < 3)
@@ -979,6 +896,138 @@ namespace SweetsSpace
 
             return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
         };
+
+        auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness, const char* context)
+        {
+            const float clampedThickness = std::clamp(thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
+            std::vector<float2> scaledHull;
+            scaledHull.reserve(hull.size());
+            for (const auto& pt : hull)
+            {
+                scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
+            }
+
+            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
+
+            std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, scaledOffset, 1.0f, 0.0f);
+            if (hullVertices.size() >= 3)
+            {
+                if (const auto dimensions = computePolygonDimensions(hullVertices))
+                {
+                    const float width = dimensions->first;
+                    const float height = dimensions->second;
+                    const float minDimension = Physics::kMinimumShapeDimensionMeters;
+                    if (width < minDimension || height < minDimension)
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Generated hull rejected for kind='" << resolvedKind
+                            << "' context='" << (context ? context : "")
+                            << "' width=" << width << " height=" << height
+                            << " below minimum dimension=" << minDimension << "\n";
+                        Diagnostics::LogInfo(oss.str());
+                        return false;
+                    }
+                }
+
+                const b2Hull hullSummary = b2ComputeHull(hullVertices.data(), static_cast<int>(hullVertices.size()));
+                if (!b2ValidateHull(&hullSummary))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Generated hull rejected for kind='" << resolvedKind
+                        << "' context='" << (context ? context : "")
+                        << "' verts=" << hullVertices.size() << " failed Box2D validation\n";
+                    Diagnostics::LogInfo(oss.str());
+                    return false;
+                }
+
+                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                result.shapeConfig.vertices = hullVertices;
+                result.meshPolygons.clear();
+                result.meshPolygons.push_back(hullVertices);
+                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
+                result.thickness = clampedThickness * uniformColliderScale;
+                result.centroidOffset = scaledOffset;
+                return true;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "Generated hull rejected for kind='" << resolvedKind
+                << "' context='" << (context ? context : "")
+                << "' not enough vertices (" << hullVertices.size() << ")\n";
+            Diagnostics::LogInfo(oss.str());
+            return false;
+        };
+
+        auto tryApplyGeneratedHull = [&](const GeneratedCollider& collider, const char* context) -> bool
+        {
+            const bool applied = applyHull(collider.hull, collider.centroidOffset, collider.thickness, context);
+            if (applied)
+            {
+                result.source = ColliderSource::Generated;
+            }
+            return applied;
+        };
+
+        bool appliedGeneratedHull = false;
+
+        if (m_forceGeneratedColliders)
+        {
+            if (hasGenerated)
+            {
+                appliedGeneratedHull = tryApplyGeneratedHull(*generated, "force-generated");
+            }
+        }
+        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
+        {
+            const bool preferGeneratedOverride = (type == SweetsType::Blueberry) && hasGenerated;
+            bool appliedGeneratedOverride = false;
+            if (preferGeneratedOverride)
+            {
+                appliedGeneratedOverride = tryApplyGeneratedHull(*generated, "override-generated");
+                appliedGeneratedHull = appliedGeneratedHull || appliedGeneratedOverride;
+
+                if (appliedGeneratedOverride)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "オーバーライド中だけどブルーベリーはメッシュ凸包を使うよ kind='"
+                        << resolvedKind << "' verts=" << result.shapeConfig.vertices.size() << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+
+            if (!appliedGeneratedOverride)
+            {
+                const auto& definition = definitionIt->second;
+                const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
+                if (!appliedConfig && hasGenerated)
+                {
+                    appliedGeneratedHull = tryApplyGeneratedHull(*generated, "override-generated-fallback");
+                }
+            }
+        }
+        else if (hasGenerated)
+        {
+            appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-default");
+        }
+        else if (hasConfigDefinition)
+        {
+            const auto& definition = definitionIt->second;
+            applyConfigDefinition(definition, "fallback-config");
+        }
+        else if (!hasGenerated)
+        {
+            generated = acquireGenerated();
+            if (generated && !generated->hull.empty())
+            {
+                appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-late");
+            }
+        }
+
+        if (!appliedGeneratedHull && hasConfigDefinition && result.source != ColliderSource::Config)
+        {
+            const auto& definition = definitionIt->second;
+            applyConfigDefinition(definition, "generated-fallback-config");
+        }
 
         const auto buildCapsuleVertices = [](float width, float height) -> std::vector<b2Vec2>
         {
