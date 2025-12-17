@@ -1246,6 +1246,17 @@ namespace SweetsSpace
             }
         }
 
+        if (configColliderAvailable && result.source != ColliderSource::Config)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
+                << "' は colliders_sweets.cfg にエントリがあるのに Config 以外のソースを使おうとしているよ\n";
+            Diagnostics::LogInfo(oss.str());
+
+            result.shapeConfig.type = Box2DShapeConfig::Type::None;
+            return result;
+        }
+
         if (colliderPreset && !appliedConfigDefinition)
         {
             std::optional<std::pair<float, float>> dimensions;
@@ -2384,26 +2395,21 @@ namespace SweetsSpace
         {
             localParseError = true;
             std::ostringstream oss;
-            oss << kLogPrefix << "コライダープリセットの CSV が '" << kColliderConfigPath
-                << "' に見当たらないので、デフォルトに戻すね\n";
-            DebugTrace(oss.str());
-        }
-
-        if (overrides.empty())
-        {
-            for (SweetsType type : { SweetsType::Cake, SweetsType::Pudding, SweetsType::Sherbet, SweetsType::Strawberry,
-                SweetsType::Blueberry, SweetsType::Pineapple, SweetsType::Banana, SweetsType::Fairy })
-            {
-                if (auto primitive = BuildDefaultColliderPrimitive(type))
-                {
-                    overrides[NormalizeKey(ToString(type))] = *primitive;
-                }
-            }
+            oss << kLogPrefix << "[ConfigError] コライダープリセットの CSV '" << kColliderConfigPath
+                << "' が開けなかったから読み込みを中断するね\n";
+            Diagnostics::LogInfo(oss.str());
         }
 
         if (parseError)
         {
             *parseError = localParseError;
+        }
+
+        if (localParseError)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ConfigError] colliders_sweets.cfg の読み込みに失敗したので初期化を続行できないよ\n";
+            Diagnostics::LogInfo(oss.str());
         }
 
         return overrides;
@@ -2637,6 +2643,14 @@ namespace SweetsSpace
 
         bool colliderParseError = false;
         m_colliderPrimitives = LoadColliderPrimitives(&colliderParseError);
+
+        if (colliderParseError)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ConfigError] colliders_sweets.cfg の読み込みに失敗したから SweetsManager の初期化を中断するね\n";
+            Diagnostics::LogInfo(oss.str());
+            return;
+        }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsPrototypeManifest::Instance();
