@@ -1078,41 +1078,35 @@ namespace Entities
 
                     evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
                     evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
+                    evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
 
                     if (nearest)
                     {
                         const float nearestDistance = std::sqrt(nearestDistanceSq);
                         pickupResult.distance = nearestDistance;
 
-                        if (nearestDistance <= pickupMaxDistance)
+                        pickupResult.result = SweetsSpace::PickupResult::Success;
+                        pickupResult.failReason = SweetsSpace::PickupFailReason::None;
+                        candidate = nearest;
+                        candidateTransform = candidate->GetTransform();
+                        sweetsBounds = candidate->GetAABB();
+                        sweetsZ = candidateTransform.position.z;
+
+                        if (!m_sweetsManager->TryMarkAsCarried(candidate))
                         {
-                            pickupResult.result = SweetsSpace::PickupResult::Success;
-                            pickupResult.failReason = SweetsSpace::PickupFailReason::None;
-                            candidate = nearest;
-                            candidateTransform = candidate->GetTransform();
-                            sweetsBounds = candidate->GetAABB();
-                            sweetsZ = candidateTransform.position.z;
-
-                            if (!m_sweetsManager->TryMarkAsCarried(candidate))
-                            {
-                                pickupResult.result = SweetsSpace::PickupResult::Failure;
-                                pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
-                                candidate.reset();
-                            }
-                            else
-                            {
-                                Transform updated = candidateTransform;
-                                updated.position = ComputeCarryAnchor();
-                                updated.rotation = m_transform.rotation;
-                                candidate->SetTransformViaPhysics(updated.position, updated.rotation);
-                                candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
-
-                                m_carrieds.push_back(candidate);
-                            }
+                            pickupResult.result = SweetsSpace::PickupResult::Failure;
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                            candidate.reset();
                         }
-                        else if (pickupResult.failReason == SweetsSpace::PickupFailReason::NoCandidates)
+                        else
                         {
-                            pickupResult.failReason = SweetsSpace::PickupFailReason::DistanceExceeded;
+                            Transform updated = candidateTransform;
+                            updated.position = ComputeCarryAnchor();
+                            updated.rotation = m_transform.rotation;
+                            candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                            candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+
+                            m_carrieds.push_back(candidate);
                         }
                     }
                 }
