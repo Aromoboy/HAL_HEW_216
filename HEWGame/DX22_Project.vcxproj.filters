@@ -72,6 +72,9 @@
     <ClCompile Include="src\ColliderConfigLoader.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\ColliderRegistry.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -326,6 +329,9 @@
       <Filter>Camera</Filter>
     </ClInclude>
     <ClInclude Include="include\ColliderConfigLoader.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ColliderRegistry.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Collision\ConvexHullBuilder.h">

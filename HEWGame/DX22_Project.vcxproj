@@ -181,6 +181,7 @@
     <ClCompile Include="EffectSystem.cpp" />
     <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
+    <ClCompile Include="src\ColliderRegistry.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
     <ClCompile Include="include\PowerUpRenderer.cpp" />
@@ -271,6 +272,7 @@
     <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
+    <ClInclude Include="include\ColliderRegistry.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
     <ClInclude Include="include\Collision2D.h" />
     <ClInclude Include="include\CollisionEntity.h" />

@@ -3,6 +3,7 @@
 #include "Systems/Box2DContactListener.h"
 
 #include "Physics/ShapeConstants.h"
+#include "ColliderRegistry.h"
 
 #include <algorithm>
 #include <cctype>
@@ -179,6 +180,8 @@ namespace
 
         if (colliderComponent)
         {
+            HashCombine(seed, colliderComponent->colliderId);
+            HashVec2(seed, colliderComponent->colliderOffset);
             HashCombine(seed, colliderComponent->shapeDef.material.friction);
             HashCombine(seed, colliderComponent->shapeDef.material.restitution);
             HashCombine(seed, colliderComponent->shapeDef.density);
@@ -688,6 +691,45 @@ namespace Systems
             return tooSmall;
         };
 
+        const auto registryDefinition = (!colliderComponent->colliderId.empty() && colliderComponent->shapes.empty())
+            ? Physics::ColliderRegistry::Instance().Find(colliderComponent->colliderId)
+            : std::nullopt;
+
+        if (registryDefinition)
+        {
+            colliderComponent->shapes = registryDefinition->shapes;
+
+            const b2ShapeDef defaultShapeDef = b2DefaultShapeDef();
+            const auto applyIfDefault = [&](float& target, float defaultValue, float source)
+            {
+                constexpr float kMaterialEpsilon = 1e-4f;
+                if (std::fabs(target - defaultValue) <= kMaterialEpsilon)
+                {
+                    target = source;
+                }
+            };
+
+            applyIfDefault(
+                colliderComponent->shapeDef.material.friction,
+                defaultShapeDef.material.friction,
+                registryDefinition->shapeDef.material.friction);
+            applyIfDefault(
+                colliderComponent->shapeDef.material.restitution,
+                defaultShapeDef.material.restitution,
+                registryDefinition->shapeDef.material.restitution);
+            applyIfDefault(
+                colliderComponent->shapeDef.density,
+                defaultShapeDef.density,
+                registryDefinition->shapeDef.density);
+        }
+        else if (!colliderComponent->colliderId.empty() && colliderComponent->shapes.empty())
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Collider id='" << colliderComponent->colliderId
+                << "' could not be resolved; falling back to defaults.\n";
+            DebugTrace(oss.str());
+        }
+
         float maxColliderExtent = 0.0f;
         const auto accumulatePolygonExtent = [&](const std::vector<b2Vec2>& vertices)
         {
@@ -774,6 +816,44 @@ namespace Systems
         };
 
         std::vector<Physics::ColliderShapeDescriptor> sourceShapes = colliderComponent->shapes;
+        const b2Vec2 colliderOffset = colliderComponent->colliderOffset;
+        if (colliderOffset.x != 0.0f || colliderOffset.y != 0.0f)
+        {
+            for (auto& shape : sourceShapes)
+            {
+                switch (shape.type)
+                {
+                case Physics::ColliderShapeType::Circle:
+                {
+                    if (shape.vertices.empty())
+                    {
+                        shape.vertices.push_back(colliderOffset);
+                    }
+                    else
+                    {
+                        for (auto& vertex : shape.vertices)
+                        {
+                            vertex.x += colliderOffset.x;
+                            vertex.y += colliderOffset.y;
+                        }
+                    }
+                    break;
+                }
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    for (auto& vertex : shape.vertices)
+                    {
+                        vertex.x += colliderOffset.x;
+                        vertex.y += colliderOffset.y;
+                    }
+                    break;
+                }
+                }
+            }
+        }
+
         std::vector<ScaledShape> scaledShapes;
         scaledShapes.reserve(sourceShapes.size());
         for (const auto& shape : sourceShapes)

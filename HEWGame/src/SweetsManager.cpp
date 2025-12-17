@@ -29,7 +29,7 @@
 #include <vector>
 #include "DirectX.h"
 #include "AABB.h"
-#include "ColliderConfigLoader.h"
+#include "ColliderRegistry.h"
 #include "Collision2D.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
@@ -90,7 +90,8 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
+    constexpr const char* kColliderConfigPath = ""; // Legacy collider config no longer used
+    constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kPlatformWidth = 12.0f;
@@ -1256,7 +1257,7 @@ namespace SweetsSpace
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
-                    << "' colliders_sweets.cfg entry failed to apply; abort collider build\n";
+                    << "' collider config entry failed to apply; abort collider build\n";
                 Diagnostics::LogInfo(oss.str());
 
                 result.shapeConfig.type = Box2DShapeConfig::Type::None;
@@ -1287,7 +1288,7 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
-                << "' は colliders_sweets.cfg にエントリがあるのに Config 以外のソースを使おうとしているよ\n";
+                << "' は collider config にエントリがあるのに Config 以外のソースを使おうとしているよ\n";
             Diagnostics::LogInfo(oss.str());
 
             result.shapeConfig.type = Box2DShapeConfig::Type::None;
@@ -2492,7 +2493,7 @@ namespace SweetsSpace
         if (localParseError)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ConfigError] colliders_sweets.cfg の読み込みに失敗したので初期化を続行できないよ\n";
+            oss << kLogPrefix << "[ConfigError] collider preset CSV の読み込みに失敗したので初期化を続行できないよ\n";
             Diagnostics::LogInfo(oss.str());
         }
 
@@ -2725,15 +2726,12 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Ground, SweetsList{});
         m_byState.emplace(SweetsState::Carried, SweetsList{});
 
-        bool colliderParseError = false;
-        m_colliderPrimitives = LoadColliderPrimitives(&colliderParseError);
-
-        if (colliderParseError)
+        if (!Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ConfigError] colliders_sweets.cfg の読み込みに失敗したから SweetsManager の初期化を中断するね\n";
+            oss << kLogPrefix << "[ConfigError] collider registry '" << kColliderRegistryPath
+                << "' を読み込めなかったからデフォルト形状に頼るかもしれないよ\n";
             Diagnostics::LogInfo(oss.str());
-            return;
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
@@ -2922,53 +2920,43 @@ namespace SweetsSpace
                 const float2 colliderCenter = ComputeColliderCenter(model, visualTransform.scale, pivotInfo);
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
-                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model, colliderCenter, allowMeshPhysics);
 
-                if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
-                {
-                    DebugTrace(std::string(kLogPrefix) + "ボディ形状が無効だから、このスイーツの生成はスキップするね\n");
-                    return nullptr;
-                }
+                auto shapeConfig = BuildBaseShapeConfig(type);
+                shapeConfig.density *= ComputeDensityScale(physicsTransform.scale, shapeConfig.type);
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
+                Physics::BoxColliderComponent colliderComponent{};
+                colliderComponent.colliderId = resolvedKind;
+                colliderComponent.colliderOffset = b2Vec2{ colliderCenter.x, colliderCenter.y };
+                colliderComponent.shapeDef.material.friction = shapeConfig.friction;
+                colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
+                colliderComponent.shapeDef.density = shapeConfig.density;
+
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
                 if (sweets)
                 {
-                    sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
+                    const std::string colliderIdForLog = colliderComponent.colliderId;
+                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
                     sweets->SetVisualTransform(visualTransform);
 
 #if defined(_DEBUG)
-                    const float2 finalColliderOffset = colliderBuild.centroidOffset;
                     const float2 colliderWorldCenter
                     {
-                        physicsTransform.position.x + finalColliderOffset.x,
-                        physicsTransform.position.y + finalColliderOffset.y,
+                        physicsTransform.position.x + colliderCenter.x,
+                        physicsTransform.position.y + colliderCenter.y,
                     };
 
                     std::ostringstream colliderLog;
                     colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
                         << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
                         << ") colliderCenterLocal=(" << colliderCenter.x << ',' << colliderCenter.y
-                        << ") centroidOffset=(" << finalColliderOffset.x << ',' << finalColliderOffset.y
                         << ") worldCenter=(" << colliderWorldCenter.x << ',' << colliderWorldCenter.y
-                        << ") pivotAppliedY=" << appliedPivotOffsetY
+                        << ") colliderId='" << colliderIdForLog << "'"
+                        << " pivotAppliedY=" << appliedPivotOffsetY
                         << "\n";
                     DebugTrace(colliderLog.str());
 #endif
-
-                    const char* sourceLabel = "fallback";
-                    switch (colliderBuild.source)
-                    {
-                    case ColliderSource::Config:
-                        sourceLabel = "config";
-                        break;
-                    case ColliderSource::Generated:
-                        sourceLabel = "mesh";
-                        break;
-                    default:
-                        break;
-                    }
 
                     std::ostringstream created;
                     created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
@@ -2977,7 +2965,7 @@ namespace SweetsSpace
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
                         << ") pivotOffsetY(raw/clamped/applied)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY << '/' << appliedPivotOffsetY
                         << " halfHeight=" << pivotInfo.halfHeight
-                        << " colliderSource=" << sourceLabel
+                        << " colliderId='" << resolvedKind << "'"
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
                 }
