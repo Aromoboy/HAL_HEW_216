@@ -101,6 +101,7 @@ namespace Entities
         float m_facingSign;
         bool m_hasMinimumY;
         float m_minimumY;
+        bool m_missingBodyLogged;
         bool m_missingModelWarned;
         bool m_hasScreenBounds;
         float m_minScreenX;
