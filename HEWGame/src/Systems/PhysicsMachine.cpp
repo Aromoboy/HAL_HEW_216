@@ -40,29 +40,6 @@ namespace
     constexpr uint16_t kFloorCategory = 0x0004;
     constexpr uint16_t kSweetsCategory = 0x0008;
     constexpr float kScaleAssertionEpsilon = 0.0001f;
-    constexpr int kFixtureFailureLogInterval = 10;
-
-    template <class T>
-    void HashCombine(std::size_t& seed, const T& value)
-    {
-        std::hash<T> hasher;
-        seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
-
-    void HashVec2(std::size_t& seed, const b2Vec2& value)
-    {
-        HashCombine(seed, value.x);
-        HashCombine(seed, value.y);
-    }
-
-    void HashVertices(std::size_t& seed, const std::vector<b2Vec2>& vertices)
-    {
-        HashCombine(seed, vertices.size());
-        for (const auto& vertex : vertices)
-        {
-            HashVec2(seed, vertex);
-        }
-    }
 
     void DebugTrace(const std::string& message)
     {
@@ -130,42 +107,11 @@ namespace
         const auto& colliderComponent = body.GetBoxColliderComponent();
         return static_cast<bool>(colliderComponent);
     }
-
-    std::size_t ComputeColliderConfigHash(
-        const Entities::PhysicalEntity& body,
-        const std::optional<Physics::BoxColliderComponent>& colliderComponent)
-    {
-        std::size_t seed = 0;
-        const Transform& transform = body.GetTransform();
-
-        HashCombine(seed, static_cast<int>(body.GetCollisionLayer()));
-
-        if (colliderComponent)
-        {
-            HashCombine(seed, colliderComponent->colliderId);
-            HashVec2(seed, colliderComponent->colliderOffset);
-            HashCombine(seed, colliderComponent->shapeDef.material.friction);
-            HashCombine(seed, colliderComponent->shapeDef.material.restitution);
-            HashCombine(seed, colliderComponent->shapeDef.density);
-            HashCombine(seed, colliderComponent->shapeDef.enableContactEvents);
-            HashCombine(seed, colliderComponent->shapeDef.enableHitEvents);
-            HashCombine(seed, colliderComponent->shapeDef.filter.categoryBits);
-            HashCombine(seed, colliderComponent->shapeDef.filter.maskBits);
-
-            HashCombine(seed, colliderComponent->shapes.size());
-            for (const auto& shape : colliderComponent->shapes)
-            {
-                HashCombine(seed, static_cast<int>(shape.type));
-                HashVertices(seed, shape.vertices);
-                HashCombine(seed, shape.radius);
-            }
-        }
-        return seed;
-    }
 }
 
 namespace Systems
 {
+    
     PhysicsMachine::PhysicsMachine(const PhysicsTuningParameters& tuning)
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
         , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(tuning))
@@ -180,7 +126,6 @@ namespace Systems
         , m_loggedMissingSystem(false)
         , m_loggedMissingWorld(false)
         , m_loggedFirstTick(false)
-        , m_missingShapeLogCount(0)
     {
         m_defaultBodyDef = b2DefaultBodyDef();
         m_defaultBodyDef.linearDamping = std::max(0.0f, tuning.defaultLinearDamping);
@@ -590,67 +535,29 @@ namespace Systems
         const auto shapeConfig = body.GetBox2DShapeConfig();
         const std::string& tag = body.GetTag();
 
-        const float minBox2DDimension = Entities::PhysicalEntity::ToBox2DLength(
-            Physics::kMinimumShapeDimensionMeters);
-
-        const auto enforceMinimumDimension = [&](float length, const char* context)
+        auto failBodyCreation = [&](const std::string& reason)
         {
-            if (!(length > 0.0f))
+            colliderComponent->createdFixtureCount = 0;
+
+            if (!body.HasBodyCreationFailed())
             {
-#if defined(_DEBUG)
                 std::ostringstream oss;
-                oss << "[PhysicsMachine] " << context << " invalid or zero for tag='" << tag
-                    << "'; raising to minimum dimension=" << minBox2DDimension << "\n";
+                oss << "[PhysicsMachine] " << reason << " tag='" << tag << "'\n";
                 DebugTrace(oss.str());
-#endif
-                return minBox2DDimension;
             }
 
-            if (length < minBox2DDimension)
-            {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] " << context << " below minimum for tag='" << tag
-                    << "': " << length << " < " << minBox2DDimension << " (clamped)\n";
-                DebugTrace(oss.str());
-#endif
-                return minBox2DDimension;
-            }
-
-            return length;
+            body.MarkBodyCreationFailed();
+            return b2_nullBodyId;
         };
 
-        const auto isPolygonTooSmall = [&](const std::vector<b2Vec2>& vertices)
+        constexpr float kDimensionEpsilon = std::numeric_limits<float>::epsilon();
+        const auto isFinite = [](float value)
         {
-            if (vertices.size() < 3)
-            {
-                return true;
-            }
-
-            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-            for (const b2Vec2& vertex : vertices)
-            {
-                min.x = std::min(min.x, vertex.x);
-                min.y = std::min(min.y, vertex.y);
-                max.x = std::max(max.x, vertex.x);
-                max.y = std::max(max.y, vertex.y);
-            }
-
-            const float width = max.x - min.x;
-            const float height = max.y - min.y;
-            const bool tooSmall = width < minBox2DDimension || height < minBox2DDimension;
-#if defined(_DEBUG)
-            if (tooSmall)
-            {
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Polygon collider rejected for tag='" << tag
-                    << "' (width=" << width << ", height=" << height
-                    << ") below minimum dimension=" << minBox2DDimension << "\n";
-                DebugTrace(oss.str());
-            }
-#endif
-            return tooSmall;
+            return std::isfinite(value);
+        };
+        const auto isFiniteVec2 = [&](const b2Vec2& value)
+        {
+            return isFinite(value.x) && isFinite(value.y);
         };
 
         const auto registryDefinition = (!colliderComponent->colliderId.empty() && colliderComponent->shapes.empty())
@@ -688,8 +595,18 @@ namespace Systems
         {
             std::ostringstream oss;
             oss << "[PhysicsMachine] Collider id='" << colliderComponent->colliderId
-                << "' could not be resolved; falling back to defaults.\n";
+                << "' could not be resolved; collider will not be created.\n";
             DebugTrace(oss.str());
+        }
+
+        if (!isFiniteVec2(colliderComponent->colliderOffset))
+        {
+            return failBodyCreation("Collider offset is not finite for");
+        }
+
+        if (colliderComponent->Empty())
+        {
+            return failBodyCreation("Collider shapes missing for");
         }
 
         float maxColliderExtent = 0.0f;
@@ -724,41 +641,6 @@ namespace Systems
 
             maxColliderExtent = std::max(maxColliderExtent, radius * 2.0f);
         };
-
-        if (colliderComponent->Empty())
-        {
-            const int warningCount = ++m_missingShapeLogCount;
-            if (warningCount == 1 || (warningCount % kFixtureFailureLogInterval) == 0)
-            {
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Collider shapes missing for tag='" << tag
-                    << "'; applying unit box fallback.\n";
-                DebugTrace(oss.str());
-            }
-
-            colliderComponent->AddBox(0.5f, 0.5f);
-        }
-
-        const std::size_t colliderConfigHash = ComputeColliderConfigHash(body, colliderComponent);
-
-        auto markFixtureSuccess = [&](Physics::BoxColliderComponent& component)
-        {
-            component.fixtureBuildFailures = 0;
-            component.lastFailureConfigHash.reset();
-        };
-
-        const bool configurationChanged = !colliderComponent->lastFailureConfigHash
-            || colliderComponent->lastFailureConfigHash.value() != colliderConfigHash;
-        if (!configurationChanged && colliderComponent->fixtureBuildFailures > 0)
-        {
-            return b2_nullBodyId;
-        }
-
-        if (configurationChanged && colliderComponent->fixtureBuildFailures > 0)
-        {
-            colliderComponent->fixtureBuildFailures = 0;
-            colliderComponent->lastFailureConfigHash.reset();
-        }
 
         struct ScaledShape
         {
@@ -820,13 +702,47 @@ namespace Systems
             switch (shape.type)
             {
             case Physics::ColliderShapeType::Circle:
+                if (!(shape.radius > kDimensionEpsilon) || !isFinite(shape.radius) || !isFiniteVec2(shape.center))
+                {
+                    return failBodyCreation("Collider circle is invalid for");
+                }
+
                 accumulateCircleExtent(shape.radius);
                 break;
             case Physics::ColliderShapeType::Box:
             case Physics::ColliderShapeType::Polygon:
             default:
+            {
+                if (shape.vertices.size() < 3)
+                {
+                    return failBodyCreation("Polygon collider has insufficient vertices for");
+                }
+
+                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                for (const b2Vec2& vertex : shape.vertices)
+                {
+                    if (!isFiniteVec2(vertex))
+                    {
+                        return failBodyCreation("Polygon collider contains non-finite vertex for");
+                    }
+
+                    min.x = std::min(min.x, vertex.x);
+                    min.y = std::min(min.y, vertex.y);
+                    max.x = std::max(max.x, vertex.x);
+                    max.y = std::max(max.y, vertex.y);
+                }
+
+                const float width = max.x - min.x;
+                const float height = max.y - min.y;
+                if (!(width > kDimensionEpsilon) || !(height > kDimensionEpsilon))
+                {
+                    return failBodyCreation("Polygon collider dimension too small for");
+                }
+
                 accumulatePolygonExtent(shape.vertices);
                 break;
+            }
             }
         }
 
@@ -936,7 +852,7 @@ namespace Systems
 
         auto createPolygonFixture = [&](std::vector<b2Vec2> vertices)
         {
-            if (vertices.size() < 3 || isPolygonTooSmall(vertices))
+            if (vertices.size() < 3)
             {
                 return b2_nullShapeId;
             }
@@ -983,22 +899,12 @@ namespace Systems
                 return b2_nullShapeId;
             }
 
-            const float clamped = enforceMinimumDimension(radius, "Circle radius");
-            const b2Circle circle{ center, clamped };
+            const b2Circle circle{ center, radius };
             return b2CreateCircleShape(bodyId, &shapeDef, &circle);
         };
 
         int fixtureCount = 0;
-
-        auto recordFixture = [&](b2ShapeId id)
-        {
-            if (b2Shape_IsValid(id))
-            {
-                ++fixtureCount;
-                return true;
-            }
-            return false;
-        };
+        bool allFixturesCreated = true;
 
 
         colliderComponent->createdFixtureCount = 0;
@@ -1015,16 +921,16 @@ namespace Systems
             {
             case Physics::ColliderShapeType::Circle:
             {
-                created = recordFixture(createCircleFixture(
-                    enforceMinimumDimension(scaled.radius, "Collider circle radius"),
-                    scaled.center));
+                const b2ShapeId shapeId = createCircleFixture(scaled.radius, scaled.center);
+                created = b2Shape_IsValid(shapeId);
                 break;
             }
             case Physics::ColliderShapeType::Box:
             case Physics::ColliderShapeType::Polygon:
             default:
             {
-                created = recordFixture(createPolygonFixture(scaled.vertices));
+                const b2ShapeId shapeId = createPolygonFixture(scaled.vertices);
+                created = b2Shape_IsValid(shapeId);
                 break;
             }
             }
@@ -1032,39 +938,28 @@ namespace Systems
             if (created)
             {
                 createdShapes.push_back(original);
+                ++fixtureCount;
+            }
+            else
+            {
+                allFixturesCreated = false;
+                break;
             }
         }
 
-        if (fixtureCount > 0)
+        if (allFixturesCreated && fixtureCount > 0)
         {
             colliderComponent->shapeDef = shapeDef;
             colliderComponent->shapes = std::move(createdShapes);
             colliderComponent->createdFixtureCount = fixtureCount;
-            markFixtureSuccess(*colliderComponent);
             return bodyId;
-        }
-
-        const int failureCount = ++colliderComponent->fixtureBuildFailures;
-        colliderComponent->lastFailureConfigHash = colliderConfigHash;
-
-        if (failureCount == 1 || (failureCount % kFixtureFailureLogInterval) == 0)
-        {
-            std::ostringstream oss;
-            oss << "[PhysicsMachine][Error] Failed to build fixtures for tag='" << body.GetTag() << "'";
-            if (failureCount > 1)
-            {
-                oss << " (repeated x" << failureCount << ")";
-            }
-            oss << "; destroying body.\n";
-            DebugTrace(oss.str());
         }
 
         colliderComponent->createdFixtureCount = 0;
         body.MarkFixtureBuildFailure(true);
-        colliderComponent->Clear();
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);
-        return b2_nullBodyId;
+        return failBodyCreation("Failed to build fixtures for");
     }
 
     void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body)
