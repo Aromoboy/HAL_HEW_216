@@ -87,12 +87,12 @@ namespace
         };
     }
 
-    std::vector<b2Vec2> ToBox2DVertices(const std::vector<b2Vec2>& renderVertices, const Transform& transform)
+    std::vector<b2Vec2> ToBox2DVertices(const std::vector<b2Vec2>& renderVertices, const Transform& transform, const b2Vec2& offset = b2Vec2{ 0.0f, 0.0f })
     {
         std::vector<b2Vec2> scaledVertices = renderVertices;
         for (auto& vertex : scaledVertices)
         {
-            vertex = ToBox2DPosition(vertex, transform);
+            vertex = ToBox2DPosition(b2Vec2{ vertex.x + offset.x, vertex.y + offset.y }, transform);
         }
 
         return scaledVertices;
@@ -866,24 +866,24 @@ namespace Systems
             {
                 if (!shapeConfig->vertices.empty())
                 {
-                    accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
+                    accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform, shapeConfig->offset));
                 }
                 else
                 {
                     const float hx = ToBox2DLength(0.5f, transform.scale.x, transform);
                     const float hy = ToBox2DLength(0.5f, transform.scale.y, transform);
                     accumulatePolygonExtent({
-                        b2Vec2{ -hx, -hy },
-                        b2Vec2{ hx, -hy },
-                        b2Vec2{ hx, hy },
-                        b2Vec2{ -hx, hy },
+                        b2Vec2{ -hx + shapeConfig->offset.x, -hy + shapeConfig->offset.y },
+                        b2Vec2{ hx + shapeConfig->offset.x, -hy + shapeConfig->offset.y },
+                        b2Vec2{ hx + shapeConfig->offset.x, hy + shapeConfig->offset.y },
+                        b2Vec2{ -hx + shapeConfig->offset.x, hy + shapeConfig->offset.y },
                     });
                 }
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
-                accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
+                accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform, shapeConfig->offset));
                 break;
             }
             case Physics::Box2DShapeConfig::Type::Circle:
@@ -1108,7 +1108,7 @@ if (isSweetTag)
             return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         };
 
-        auto createCircleFixture = [&](float radius)
+        auto createCircleFixture = [&](float radius, const b2Vec2& center)
         {
             if (radius <= 0.0f)
             {
@@ -1116,7 +1116,7 @@ if (isSweetTag)
             }
 
             const float clamped = enforceMinimumDimension(radius, "Circle radius");
-            const b2Circle circle{ b2Vec2{0.0f, 0.0f}, clamped };
+            const b2Circle circle{ center, clamped };
             return b2CreateCircleShape(bodyId, &shapeDef, &circle);
         };
 
@@ -1147,7 +1147,7 @@ if (isSweetTag)
                 case Physics::ColliderShapeType::Circle:
                 {
                     const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
-                    created = recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius")));
+                    created = recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius"), b2Vec2{ 0.0f, 0.0f }));
                     break;
                 }
                 case Physics::ColliderShapeType::Box:
@@ -1280,7 +1280,7 @@ if (isSweetTag)
                     };
                 }
 
-                const std::vector<b2Vec2> box2dVertices = ToBox2DVertices(localVertices, transform);
+                const std::vector<b2Vec2> box2dVertices = ToBox2DVertices(localVertices, transform, shapeConfig->offset);
                 if (recordFixture(createPolygonFixture(box2dVertices, box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Box, localVertices });
@@ -1293,7 +1293,7 @@ if (isSweetTag)
             }
             case Physics::Box2DShapeConfig::Type::Polygon:
             {
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform), box2dPolygonRadius)))
+                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform, shapeConfig->offset), box2dPolygonRadius)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
                     setComponentFromCreatedShapes();
@@ -1306,7 +1306,8 @@ if (isSweetTag)
             case Physics::Box2DShapeConfig::Type::Circle:
             {
                 const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
-                if (recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius"))))
+                const b2Vec2 center = ToBox2DPosition(shapeConfig->offset, transform);
+                if (recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius"), center)))
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
                     setComponentFromCreatedShapes();
