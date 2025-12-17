@@ -767,7 +767,10 @@ namespace SweetsSpace
         const auto definitionIt = FindColliderDefinition(resolvedKind);
         const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
             && !IsColliderDefinitionEmpty(definitionIt->second);
+        const bool forceConfigCollider = m_forceConfigColliders
+            || (m_forceConfigColliderKinds.find(normalizedKind) != m_forceConfigColliderKinds.end());
         const bool preferGeneratedCollider = allowMeshPhysics
+            && !forceConfigCollider
             && (type == SweetsType::Blueberry)
             && m_colliderConfigOverridesEnabled;
 
@@ -886,6 +889,7 @@ namespace SweetsSpace
 
         const bool requiresPrimitive = type == SweetsType::Pudding;
         const bool hasPrimitiveOverride = primitiveIt != m_colliderPrimitives.end();
+        const bool configColliderAvailable = hasConfigDefinition || hasPrimitiveOverride;
         if (requiresPrimitive && !appliedPrimitive)
         {
             if (!hasPrimitiveOverride)
@@ -982,6 +986,7 @@ namespace SweetsSpace
             };
             if (meshCollidersAllowed
                 && !hasConfigDefinition
+                && (!forceConfigCollider || !configColliderAvailable)
                 && (m_forceGeneratedColliders
                     || preferGeneratedCollider
                     || !m_colliderConfigOverridesEnabled))
@@ -1221,18 +1226,18 @@ namespace SweetsSpace
                 return result;
             }
         }
-        else if (meshCollidersAllowed && m_forceGeneratedColliders)
+        else if (meshCollidersAllowed && !forceConfigCollider && m_forceGeneratedColliders)
         {
             if (hasGenerated())
             {
                 tryApplyGeneratedHull(*generated, "force-generated");
             }
         }
-        else if (meshCollidersAllowed && hasGenerated())
+        else if (meshCollidersAllowed && !forceConfigCollider && hasGenerated())
         {
             tryApplyGeneratedHull(*generated, "generated-default");
         }
-        else if (meshCollidersAllowed && !hasGenerated())
+        else if (meshCollidersAllowed && !forceConfigCollider && !hasGenerated())
         {
             generated = acquireGenerated();
             if (hasGenerated())
@@ -2618,6 +2623,8 @@ namespace SweetsSpace
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
         , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
         , m_forceGeneratedColliders(false)
+        , m_forceConfigColliders(false)
+        , m_forceConfigColliderKinds()
         , m_colliderConfigOverridesEnabled(true)
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
@@ -4346,6 +4353,49 @@ namespace SweetsSpace
         if (!changed)
         {
             DebugTrace(std::string(kLogPrefix) + "生成コライダー強制フラグは前回と同じだよ \n");
+        }
+    }
+
+    void SweetsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    {
+        std::unordered_set<std::string> normalizedKinds;
+        normalizedKinds.reserve(kinds.size());
+        for (const auto& kind : kinds)
+        {
+            const auto resolved = ResolveKindKey(kind);
+            normalizedKinds.insert(NormalizeKey(resolved));
+        }
+
+        const bool changed = (m_forceConfigColliders != force) || (normalizedKinds != m_forceConfigColliderKinds);
+        m_forceConfigColliders = force;
+        m_forceConfigColliderKinds = std::move(normalizedKinds);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "設定コライダー強制 " << (force ? "ON" : "OFF")
+            << " kindOverrides=";
+        if (m_forceConfigColliderKinds.empty())
+        {
+            oss << "<none>";
+        }
+        else
+        {
+            bool first = true;
+            for (const auto& kind : m_forceConfigColliderKinds)
+            {
+                if (!first)
+                {
+                    oss << ',';
+                }
+                oss << kind;
+                first = false;
+            }
+        }
+        oss << " 設定ファイルの形状があるなら必ず使うね\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "設定コライダー強制フラグは前と同じだよ \n");
         }
     }
 
