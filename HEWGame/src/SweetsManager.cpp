@@ -3268,8 +3268,12 @@ namespace SweetsSpace
             return nullptr;
         }
     
+        if (!RegisterWithSystems(sweets))
+        {
+            return nullptr;
+        }
+
         SetState(sweets, SweetsState::Active);
-        RegisterWithSystems(sweets);
 
         if (m_physicsMachine && sweets)
         {
@@ -3514,12 +3518,31 @@ namespace SweetsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
-    void SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
+    bool SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
-            return;
+            return false;
         }
+
+        const auto cleanupFailedRegistration = [&](const std::string& reason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Error] " << reason << '\n';
+            DebugTrace(oss.str());
+
+            ClearContactState(sweets.get());
+            sweets->MarkPendingDestroy();
+            sweets->Enable(false);
+            UnregisterSweetsFromSystems(sweets, "RegisterWithSystems", false);
+
+            for (auto& entry : m_byState)
+            {
+                entry.second.remove(sweets);
+            }
+            m_lookup.erase(sweets);
+            return false;
+        };
 
         if (m_scheduler)
         {
@@ -3545,10 +3568,8 @@ namespace SweetsSpace
             if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
-                    << "' の物理登録を飛ばすね コライダー設定が見当たらない \n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
+                return cleanupFailedRegistration(oss.str());
             }
 
             const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
@@ -3564,11 +3585,9 @@ namespace SweetsSpace
             if (!hasBody || fixtureCount <= 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
-                    << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
-                    << " fixtures=" << fixtureCount << "\n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
+                    << " fixtures=" << fixtureCount;
+                return cleanupFailedRegistration(oss.str());
             }
 
             m_registeredPhysicsBodies.insert(sweets.get());
@@ -3594,6 +3613,8 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
+
+        return true;
     }
 
     void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings)

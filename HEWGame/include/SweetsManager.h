@@ -315,7 +315,7 @@ namespace SweetsSpace
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
-        void RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
+        bool RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         int CountLiveSweets() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;

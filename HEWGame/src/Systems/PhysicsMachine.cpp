@@ -1114,7 +1114,8 @@ if (isSweetTag)
         }
 
         std::ostringstream oss;
-        oss << "[PhysicsMachine] Failed to build fixtures for tag='" << body.GetTag() << "'.\n";
+        oss << "[PhysicsMachine][Error] Failed to build fixtures for tag='" << body.GetTag()
+            << "'; destroying body.\n";
         DebugTrace(oss.str());
 
         colliderComponent->Clear();
