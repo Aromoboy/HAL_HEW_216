@@ -41,13 +41,7 @@ namespace
     bool HasPhysicsDefinition(const Entities::PhysicalEntity& entity)
     {
         const auto& collider = entity.GetBoxColliderComponent();
-        const bool hasCollider = collider && !collider->Empty();
-
-        const auto shapeConfig = entity.GetBox2DShapeConfig();
-        const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-
-        const bool hasMeshData = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
-        return hasCollider || hasShapeConfig || hasMeshData;
+        return static_cast<bool>(collider);
     }
 }
 

@@ -3781,12 +3781,9 @@ namespace SweetsSpace
         if (m_physicsMachine)
         {
             const auto& colliderComponent = sweets->GetBoxColliderComponent();
-            const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
-            const auto shapeConfig = sweets->GetBox2DShapeConfig();
-            const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-            const bool hasMeshFixtures = sweets->HasBox2DMesh() || !sweets->GetBox2DBoundary().empty();
+            const bool hasColliderComponent = static_cast<bool>(colliderComponent);
 
-            if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
+            if (!hasColliderComponent)
             {
                 std::ostringstream oss;
                 oss << "スイーツ '" << sweets->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
