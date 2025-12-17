@@ -917,7 +917,46 @@ if (isSweetTag)
             }
 
             const float clampedRadius = enforceMinimumDimension(radius, "Polygon radius");
-            const b2Polygon polygon = b2MakePolygon(&hull, clampedRadius);
+
+            float maxHullRadius = std::numeric_limits<float>::max();
+            if (hull.count >= 3)
+            {
+                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                float minEdgeLength = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < hull.count; ++i)
+                {
+                    const b2Vec2& current = hull.points[i];
+                    const b2Vec2& next = hull.points[(i + 1) % hull.count];
+                    min.x = std::min(min.x, current.x);
+                    min.y = std::min(min.y, current.y);
+                    max.x = std::max(max.x, current.x);
+                    max.y = std::max(max.y, current.y);
+
+                    const float edgeLength = std::hypot(next.x - current.x, next.y - current.y);
+                    minEdgeLength = std::min(minEdgeLength, edgeLength);
+                }
+
+                const float minExtent = std::min(max.x - min.x, max.y - min.y);
+                const float minFeature = std::min(minEdgeLength, minExtent);
+                maxHullRadius = 0.5f * minFeature;
+            }
+
+            float hullSafeRadius = clampedRadius;
+            if (maxHullRadius > 0.0f && clampedRadius > maxHullRadius)
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Polygon radius clamped for tag='" << tag
+                    << "' due to thin hull: requested=" << clampedRadius
+                    << " hullMax=" << maxHullRadius << "\n";
+                DebugTrace(oss.str());
+#endif
+                hullSafeRadius = maxHullRadius;
+            }
+
+            const b2Polygon polygon = b2MakePolygon(&hull, hullSafeRadius);
             return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         };
 
