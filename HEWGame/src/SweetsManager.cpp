@@ -710,6 +710,10 @@ namespace SweetsSpace
 
         const std::string resolvedKind = ResolveKindKey(kind);
         const std::string normalizedKind = NormalizeKey(resolvedKind);
+        const auto presetIt = m_factoryPresets.find(normalizedKind);
+        const ColliderPreset* colliderPreset = presetIt != m_factoryPresets.end()
+            ? &presetIt->second.colliderPreset
+            : nullptr;
         const auto definitionIt = FindColliderDefinition(resolvedKind);
         const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
             && !IsColliderDefinitionEmpty(definitionIt->second);
@@ -750,6 +754,7 @@ namespace SweetsSpace
         }
 
         const bool hasGenerated = generated && !generated->hull.empty();
+        bool appliedConfigDefinition = false;
 
         auto applyConfigDefinition = [&](const Collision::ColliderDefinition& definition, const char* reason) -> bool
         {
@@ -863,6 +868,8 @@ namespace SweetsSpace
                 DebugTrace(oss.str());
             }
 
+            appliedConfigDefinition = appliedConfigDefinition || applied;
+
             return applied;
         };
 
@@ -929,11 +936,143 @@ namespace SweetsSpace
             }
         }
 
+        const auto computePolygonDimensions = [](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
+        {
+            if (vertices.size() < 3)
+            {
+                return std::nullopt;
+            }
+
+            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            for (const auto& vertex : vertices)
+            {
+                min.x = std::min(min.x, vertex.x);
+                min.y = std::min(min.y, vertex.y);
+                max.x = std::max(max.x, vertex.x);
+                max.y = std::max(max.y, vertex.y);
+            }
+
+            return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
+        };
+
+        const auto buildCapsuleVertices = [](float width, float height) -> std::vector<b2Vec2>
+        {
+            std::vector<b2Vec2> vertices;
+            if (!(width > 0.0f) || !(height > 0.0f))
+            {
+                return vertices;
+            }
+
+            const float halfWidth = width * 0.5f;
+            const float halfHeight = height * 0.5f;
+            const bool horizontal = halfWidth >= halfHeight;
+            const float radius = horizontal ? halfHeight : halfWidth;
+            const float spine = (horizontal ? halfWidth : halfHeight) - radius;
+            if (!(radius > 0.0f))
+            {
+                return vertices;
+            }
+
+            constexpr int kArcSegments = 6;
+            const float startRight = -b2_pi * 0.5f;
+            const float endRight = b2_pi * 0.5f;
+            const float startLeft = b2_pi * 0.5f;
+            const float endLeft = b2_pi * 1.5f;
+
+            const float offsetX = horizontal ? spine : 0.0f;
+            const float offsetY = horizontal ? 0.0f : spine;
+
+            auto appendArc = [&](float cx, float cy, float start, float end, bool skipFirst)
+            {
+                const float step = (end - start) / static_cast<float>(kArcSegments);
+                for (int i = 0; i <= kArcSegments; ++i)
+                {
+                    if (skipFirst && i == 0)
+                    {
+                        continue;
+                    }
+
+                    const float angle = start + (step * static_cast<float>(i));
+                    vertices.push_back(b2Vec2{ cx + (radius * std::cos(angle)), cy + (radius * std::sin(angle)) });
+                }
+            };
+
+            appendArc(offsetX, offsetY, startRight, endRight, false);
+            appendArc(-offsetX, -offsetY, startLeft, endLeft, true);
+
+            return vertices;
+        };
+
+        if (colliderPreset && !appliedConfigDefinition)
+        {
+            std::optional<std::pair<float, float>> dimensions;
+            if (!result.shapeConfig.vertices.empty())
+            {
+                dimensions = computePolygonDimensions(result.shapeConfig.vertices);
+            }
+            else if (!result.meshPolygons.empty())
+            {
+                dimensions = computePolygonDimensions(result.meshPolygons.front());
+            }
+            else if (result.shapeConfig.type == Box2DShapeConfig::Type::Circle && (result.shapeConfig.radius > 0.0f))
+            {
+                const float diameter = result.shapeConfig.radius * 2.0f;
+                dimensions = std::make_optional(std::make_pair(diameter, diameter));
+            }
+
+            const float width = std::max(dimensions ? dimensions->first : Physics::kMinimumShapeDimensionMeters, Physics::kMinimumShapeDimensionMeters);
+            const float height = std::max(dimensions ? dimensions->second : Physics::kMinimumShapeDimensionMeters, Physics::kMinimumShapeDimensionMeters);
+
+            const float paddedWidth = width + (colliderPreset->padding.x * 2.0f * uniformColliderScale);
+            const float paddedHeight = height + (colliderPreset->padding.y * 2.0f * uniformColliderScale);
+            const float thickness = std::max({ result.thickness, colliderPreset->padding.z * uniformColliderScale, Physics::kMinimumShapeDimensionMeters });
+
+            std::vector<b2Vec2> presetVertices;
+            switch (colliderPreset->shape)
+            {
+            case ColliderShape::Capsule:
+                presetVertices = buildCapsuleVertices(paddedWidth, paddedHeight);
+                break;
+            case ColliderShape::Box:
+            default:
+                presetVertices = {
+                    b2Vec2{ -paddedWidth * 0.5f, -paddedHeight * 0.5f },
+                    b2Vec2{ paddedWidth * 0.5f, -paddedHeight * 0.5f },
+                    b2Vec2{ paddedWidth * 0.5f, paddedHeight * 0.5f },
+                    b2Vec2{ -paddedWidth * 0.5f, paddedHeight * 0.5f },
+                };
+                break;
+            }
+
+            if (presetVertices.size() >= 3)
+            {
+                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                result.shapeConfig.vertices = presetVertices;
+                result.meshPolygons.clear();
+                result.meshPolygons.push_back(presetVertices);
+                result.meshBoundary = presetVertices;
+                result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, thickness * 0.5f);
+                result.thickness = thickness;
+                result.centroidOffset = float2{ 0.0f, 0.0f };
+                result.source = ColliderSource::Config;
+            }
+        }
+
         if (result.shapeConfig.type == Box2DShapeConfig::Type::None)
         {
             ReportInvalidBox2DConfig(type, "cannot build a collider without a Box2DShapeConfig; registration should abort earlier");
             return result;
         }
+
+        const auto isInvalidPolygon = [](const std::vector<b2Vec2>& vertices)
+        {
+            return vertices.size() < 3;
+        };
+
+        result.meshPolygons.erase(
+            std::remove_if(result.meshPolygons.begin(), result.meshPolygons.end(), isInvalidPolygon),
+            result.meshPolygons.end());
 
         if ((result.shapeConfig.type == Box2DShapeConfig::Type::Box || result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
             && result.shapeConfig.vertices.size() < 3 && result.meshPolygons.empty())
