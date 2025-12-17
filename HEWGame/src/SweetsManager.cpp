@@ -397,101 +397,43 @@ namespace
             || HasMeaningfulDifference(a.z, b.z, epsilon);
     }
 
+    Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
+    {
+        if (shapes.empty())
+        {
+            return Box2DShapeConfig::Type::None;
+        }
+
+        switch (shapes.front().type)
+        {
+        case Physics::ColliderShapeType::Box:
+            return Box2DShapeConfig::Type::Box;
+        case Physics::ColliderShapeType::Polygon:
+            return Box2DShapeConfig::Type::Polygon;
+        case Physics::ColliderShapeType::Circle:
+            return Box2DShapeConfig::Type::Circle;
+        default:
+            return Box2DShapeConfig::Type::None;
+        }
+    }
+
     Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
     {
         Box2DShapeConfig config{};
         config.allowRotation = true;
         config.angularDamping = 0.2f;
 
-        switch (type)
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (registryDefinition)
         {
-        case SweetsType::Cake:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.allowRotation = false;
-            config.angularDamping = 6.0f;
-            config.density = 1.2f;
-            config.friction = 0.72f;
-            config.restitution = 0.03f;
-            config.vertices = {
-                b2Vec2{ -0.5f, -0.5f },
-                b2Vec2{ 0.5f, -0.5f },
-                b2Vec2{ 0.5f, 0.5f },
-                b2Vec2{ -0.5f, 0.5f },
-            };
-            break;
-        case SweetsType::Pudding:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.5f, -0.45f },
-                b2Vec2{ 0.5f, -0.45f },
-                b2Vec2{ 0.0f, 0.55f },
-            };
-            config.allowRotation = false;
-            config.angularDamping = 0.65f;
-            config.density = 0.95f;
-            config.friction = 0.6f;
-            config.restitution = 0.06f;
-            break;
-        case SweetsType::Sherbet:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.5f;
-            config.angularDamping = 0.75f;
-            config.density = 0.75f;
-            config.friction = 0.35f;
-            config.restitution = 0.28f;
-            break;
-        case SweetsType::Strawberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.45f;
-            config.angularDamping = 2.5f;
-            config.density = 0.85f;
-            config.friction = 0.5f;
-            config.restitution = 0.12f;
-            break;
-        case SweetsType::Blueberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.5f;
-            config.angularDamping = 2.25f;
-            config.density = 0.7f;
-            config.friction = 0.42f;
-            config.restitution = 0.18f;
-            break;
-        case SweetsType::Pineapple:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.5f;
-            config.density = 1.05f;
-            config.friction = 0.68f;
-            config.restitution = 0.04f;
-            config.vertices = {
-                b2Vec2{ -0.32f, -0.6f },
-                b2Vec2{ 0.32f, -0.6f },
-                b2Vec2{ 0.38f, 0.15f },
-                b2Vec2{ 0.0f, 0.65f },
-                b2Vec2{ -0.38f, 0.15f },
-            };
-            break;
-        case SweetsType::Banana:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.6f, -0.08f },
-                b2Vec2{ 0.6f, 0.08f },
-                b2Vec2{ 0.55f, 0.24f },
-                b2Vec2{ -0.45f, 0.24f },
-            };
-            config.angularDamping = 0.65f;
-            config.density = 0.9f;
-            config.friction = 0.55f;
-            config.restitution = 0.08f;
-            break;
-        case SweetsType::Fairy:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.35f;
-            config.allowRotation = false;
-            config.angularDamping = 2.5f;
-            config.density = 0.55f;
-            config.friction = 0.4f;
-            config.restitution = 0.06f;
-            break;
+            config.type = InferShapeType(registryDefinition->shapes);
+            config.density = std::max(0.0f, registryDefinition->shapeDef.density);
+            config.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+            config.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+        }
+        else
+        {
+            ReportInvalidBox2DConfig(type, "is missing a collider registry definition");
         }
 
         if (config.type == Box2DShapeConfig::Type::None)
@@ -510,35 +452,44 @@ namespace
 
     bool ValidateBaseShapeDefinition(SweetsType type)
     {
-        const auto config = BuildBaseShapeConfig(type);
-
-        if (config.type == Box2DShapeConfig::Type::None)
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (!registryDefinition)
         {
+            ReportInvalidBox2DConfig(type, "cannot resolve collider registry entry");
             return false;
         }
 
-        switch (config.type)
+        if (registryDefinition->shapes.empty())
         {
-        case Box2DShapeConfig::Type::Box:
-        case Box2DShapeConfig::Type::Polygon:
-            if (config.vertices.size() < 3)
-            {
-                ReportInvalidBox2DConfig(type, "requires explicit vertices for its collider definition");
-                return false;
-            }
-            break;
-        case Box2DShapeConfig::Type::Circle:
-            if (!(config.radius > 0.0f))
-            {
-                ReportInvalidBox2DConfig(type, "requires a positive radius for its collider definition");
-                return false;
-            }
-            break;
-        default:
-            break;
+            ReportInvalidBox2DConfig(type, "collider registry entry is missing shapes");
+            return false;
         }
 
-        return true;
+        for (const auto& shape : registryDefinition->shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+                if (!(shape.radius > 0.0f))
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry circle has non-positive radius");
+                    return false;
+                }
+                break;
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+                if (shape.vertices.size() < 3)
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry polygon/box is missing vertices");
+                    return false;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+
+        return InferShapeType(registryDefinition->shapes) != Box2DShapeConfig::Type::None;
     }
 
     std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
@@ -1967,7 +1918,36 @@ namespace SweetsSpace
                 auto shapeConfig = BuildBaseShapeConfig(type);
 
                 Physics::BoxColliderComponent colliderComponent{};
-                colliderComponent.colliderId = resolvedKind;
+                std::string colliderLookupId = resolvedKind;
+                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+                if (!registryDefinition && resolvedKind != ToString(type))
+                {
+                    colliderLookupId = ToString(type);
+                    registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+                }
+
+                if (registryDefinition)
+                {
+                    colliderComponent.colliderId = colliderLookupId;
+                    colliderComponent.shapes = registryDefinition->shapes;
+                    colliderComponent.shapeDef = registryDefinition->shapeDef;
+
+                    shapeConfig.type = InferShapeType(registryDefinition->shapes);
+                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+                }
+                else
+                {
+                    colliderComponent.colliderId = resolvedKind;
+                    if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "colliderId='" << resolvedKind
+                            << "' のレジストリエントリが見つからないから、フィクスチャの構築はスキップされるかも\n";
+                        DebugTrace(warn.str());
+                    }
+                }
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
