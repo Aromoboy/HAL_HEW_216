@@ -2541,7 +2541,6 @@ namespace SweetsSpace
         }
 
         ApplyDefaultPhaseConfigs();
-        ApplyDefaultPhaseConfigs();
 
     }
 
@@ -3483,7 +3482,6 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "フェーズのスポーン設定が '" << path << "' に見つからないから、デフォルトを使うね \n";
             DebugTrace(oss.str());
-            ApplyDefaultPhaseConfigs();
             return false;
         }
 
