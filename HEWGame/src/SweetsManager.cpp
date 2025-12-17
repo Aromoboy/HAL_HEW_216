@@ -748,16 +748,17 @@ namespace SweetsSpace
         };
 
         std::optional<GeneratedCollider> generated;
-        const bool needsGeneratedForOverrides = (type == SweetsType::Blueberry);
+        auto hasGenerated = [&]() -> bool
+        {
+            return generated && !generated->hull.empty();
+        };
         if (m_forceGeneratedColliders
             || !m_colliderConfigOverridesEnabled
-            || !hasConfigDefinition
-            || needsGeneratedForOverrides)
+            || !hasConfigDefinition)
         {
             generated = acquireGenerated();
         }
 
-        const bool hasGenerated = generated && !generated->hull.empty();
         bool appliedConfigDefinition = false;
 
         auto applyConfigDefinition = [&](const Collision::ColliderDefinition& definition, const char* reason) -> bool
@@ -972,40 +973,29 @@ namespace SweetsSpace
 
         if (m_forceGeneratedColliders)
         {
-            if (hasGenerated)
+            if (hasGenerated())
             {
                 appliedGeneratedHull = tryApplyGeneratedHull(*generated, "force-generated");
             }
         }
         else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
         {
-            const bool preferGeneratedOverride = (type == SweetsType::Blueberry) && hasGenerated;
-            bool appliedGeneratedOverride = false;
-            if (preferGeneratedOverride)
+            const auto& definition = definitionIt->second;
+            const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
+            if (!appliedConfig)
             {
-                appliedGeneratedOverride = tryApplyGeneratedHull(*generated, "override-generated");
-                appliedGeneratedHull = appliedGeneratedHull || appliedGeneratedOverride;
-
-                if (appliedGeneratedOverride)
+                if (!hasGenerated())
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "オーバーライド中だけどブルーベリーはメッシュ凸包を使うよ kind='"
-                        << resolvedKind << "' verts=" << result.shapeConfig.vertices.size() << "\n";
-                    DebugTrace(oss.str());
+                    generated = acquireGenerated();
                 }
-            }
 
-            if (!appliedGeneratedOverride)
-            {
-                const auto& definition = definitionIt->second;
-                const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
-                if (!appliedConfig && hasGenerated)
+                if (hasGenerated())
                 {
                     appliedGeneratedHull = tryApplyGeneratedHull(*generated, "override-generated-fallback");
                 }
             }
         }
-        else if (hasGenerated)
+        else if (hasGenerated())
         {
             appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-default");
         }
@@ -1014,10 +1004,10 @@ namespace SweetsSpace
             const auto& definition = definitionIt->second;
             applyConfigDefinition(definition, "fallback-config");
         }
-        else if (!hasGenerated)
+        else if (!hasGenerated())
         {
             generated = acquireGenerated();
-            if (generated && !generated->hull.empty())
+            if (hasGenerated())
             {
                 appliedGeneratedHull = tryApplyGeneratedHull(*generated, "generated-late");
             }
