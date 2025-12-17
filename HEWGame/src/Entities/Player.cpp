@@ -977,11 +977,17 @@ namespace Entities
                 pickupOrigin.center.z + pickupOffset.z
             };
 
+            const bool depthThresholdValid = std::isfinite(depthThreshold)
+                ? depthThreshold >= 0.0f
+                : std::isinf(depthThreshold);
+
             pickupVolumeValid = std::isfinite(halfDepth) && halfDepth > 0.0f
-                && std::isfinite(depthThreshold) && depthThreshold >= 0.0f;
+                && depthThresholdValid;
 
             if (!pickupVolumeValid)
             {
+                pickupResult.failReason = SweetsSpace::PickupFailReason::InvalidConfiguration;
+
                 std::ostringstream oss;
                 oss << kPlayerLogPrefix << "ピックアップボリュームが無効です halfDepth=" << halfDepth
                     << " depthThreshold=" << depthThreshold << "\n";
