@@ -1,5 +1,7 @@
 #include "Systems/Box2DPhysicsSystem.h"
 
+#include "Core/StepTimer.h"
+
 #include <algorithm>
 #include <cmath>
 #include <string>
