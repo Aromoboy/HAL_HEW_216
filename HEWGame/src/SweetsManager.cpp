@@ -689,6 +689,53 @@ namespace
         return vertices;
     }
 
+    struct ColliderDimensionNormalization
+    {
+        float radius{ 0.0f };
+        float width{ 0.0f };
+        float height{ 0.0f };
+        float thickness{ Physics::kMinimumShapeDimensionMeters };
+        float scale{ 1.0f };
+    };
+
+    ColliderDimensionNormalization NormalizeColliderDimensions(float radius, float width, float height, float thickness)
+    {
+        ColliderDimensionNormalization normalized{};
+        normalized.radius = radius;
+        normalized.width = width;
+        normalized.height = height;
+        normalized.thickness = thickness;
+
+        const float minDimension = Physics::kMinimumShapeDimensionMeters;
+        auto accumulateScale = [&](float dimension)
+        {
+            if (dimension > 0.0f && dimension < minDimension)
+            {
+                normalized.scale = std::max(normalized.scale, minDimension / dimension);
+            }
+        };
+
+        accumulateScale(radius);
+        accumulateScale(width);
+        accumulateScale(height);
+
+        normalized.radius = std::max(radius * normalized.scale, minDimension);
+        normalized.width = width > 0.0f ? std::max(width * normalized.scale, minDimension) : width;
+        normalized.height = height > 0.0f ? std::max(height * normalized.scale, minDimension) : height;
+        normalized.thickness = std::max(thickness * normalized.scale, minDimension);
+
+        return normalized;
+    }
+
+    void ScaleVertices(std::vector<b2Vec2>& vertices, float factor)
+    {
+        for (auto& vertex : vertices)
+        {
+            vertex.x *= factor;
+            vertex.y *= factor;
+        }
+    }
+
 }
 
 namespace SweetsSpace
@@ -781,30 +828,38 @@ namespace SweetsSpace
 
         if (primitiveIt != m_colliderPrimitives.end())
         {
-            const float minDimension = Physics::kMinimumShapeDimensionMeters;
             const auto applyPrimitiveCollider = [&](const ColliderPrimitive& primitive) -> bool
             {
-                const float scaledRadius = std::max(primitive.radius * uniformColliderScale, minDimension * 0.5f);
+                const float scaledRadius = primitive.radius * uniformColliderScale;
+                const auto normalized = NormalizeColliderDimensions(
+                    scaledRadius,
+                    scaledRadius * 2.0f,
+                    scaledRadius * 2.0f,
+                    result.thickness);
 
                 switch (primitive.shape)
                 {
                 case ColliderShape::Circle:
                 {
                     result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
-                    result.shapeConfig.radius = scaledRadius;
-                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, minDimension * 0.5f);
+                    result.shapeConfig.radius = normalized.radius;
+                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalized.thickness * 0.5f);
                     result.meshPolygons.clear();
                     result.meshBoundary.clear();
-                    result.thickness = std::max(result.thickness, minDimension);
+                    result.thickness = std::max(result.thickness, normalized.thickness);
                     result.centroidOffset = float2{ 0.0f, 0.0f };
                     result.source = ColliderSource::Config;
                     return true;
                 }
                 case ColliderShape::Capsule:
                 {
-                    float scaledHeight = std::max(primitive.height * uniformColliderScale, minDimension);
-                    scaledHeight = std::max(scaledHeight, scaledRadius * 2.0f);
-                    auto vertices = buildCapsuleVertices(scaledRadius * 2.0f, scaledHeight);
+                    float scaledHeight = std::max(primitive.height * uniformColliderScale, scaledRadius * 2.0f);
+                    const auto normalizedCapsule = NormalizeColliderDimensions(
+                        scaledRadius,
+                        scaledRadius * 2.0f,
+                        scaledHeight,
+                        result.thickness);
+                    auto vertices = buildCapsuleVertices(normalizedCapsule.width, normalizedCapsule.height);
                     if (vertices.size() < 3)
                     {
                         return false;
@@ -815,8 +870,8 @@ namespace SweetsSpace
                     result.meshPolygons.clear();
                     result.meshPolygons.push_back(vertices);
                     result.meshBoundary = vertices;
-                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, minDimension * 0.5f);
-                    result.thickness = std::max(result.thickness, minDimension);
+                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalizedCapsule.thickness * 0.5f);
+                    result.thickness = std::max(result.thickness, normalizedCapsule.thickness);
                     result.centroidOffset = float2{ 0.0f, 0.0f };
                     result.source = ColliderSource::Config;
                     return true;
@@ -859,7 +914,7 @@ namespace SweetsSpace
                 GeneratedCollider generated{};
                 generated.hull = summary.hull;
                 generated.centroidOffset = summary.centroidOffset;
-                generated.thickness = std::clamp(summary.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
+                generated.thickness = NormalizeColliderDimensions(0.0f, 0.0f, 0.0f, summary.thickness).thickness;
                 m_generatedColliders[normalizedKind] = generated;
                 return generated;
             };
@@ -881,16 +936,21 @@ namespace SweetsSpace
             auto applyConfigDefinition = [&](const Collision::ColliderDefinition& definition, const char* reason) -> bool
             {
                 bool applied = false;
-                const float clampedThickness = std::clamp(definition.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
+                const float scaledThickness = definition.thickness * uniformColliderScale;
                 switch (definition.type)
                 {
                 case Collision::ColliderKind::Circle:
                 {
                     const float effectiveRadius = std::max(0.0f, ((definition.radius * definition.scale) + definition.margin) * uniformColliderScale);
+                    const auto normalized = NormalizeColliderDimensions(
+                        effectiveRadius,
+                        effectiveRadius * 2.0f,
+                        effectiveRadius * 2.0f,
+                        scaledThickness);
                     result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
-                    result.shapeConfig.radius = effectiveRadius;
-                    result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                    result.thickness = clampedThickness * uniformColliderScale;
+                    result.shapeConfig.radius = normalized.radius;
+                    result.shapeConfig.polygonRadius = std::max(0.0f, normalized.thickness * 0.5f);
+                    result.thickness = normalized.thickness;
                     result.source = ColliderSource::Config;
                     applied = true;
                     break;
@@ -913,9 +973,20 @@ namespace SweetsSpace
                     result.shapeConfig.vertices = BuildHullVertices(scaledPoints, scaledOffset, definition.scale, scaledMargin);
                     if (result.shapeConfig.vertices.size() >= 3)
                     {
+                        const auto dimensions = computePolygonDimensions(result.shapeConfig.vertices);
+                        const auto normalized = NormalizeColliderDimensions(
+                            0.0f,
+                            dimensions ? dimensions->first : 0.0f,
+                            dimensions ? dimensions->second : 0.0f,
+                            scaledThickness);
+                        if (normalized.scale > 1.0f)
+                        {
+                            ScaleVertices(result.shapeConfig.vertices, normalized.scale);
+                        }
+
                         result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                        result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                        result.thickness = clampedThickness * uniformColliderScale;
+                        result.shapeConfig.polygonRadius = std::max(0.0f, normalized.thickness * 0.5f);
+                        result.thickness = normalized.thickness;
                         result.source = ColliderSource::Config;
                         applied = true;
                     }
@@ -927,16 +998,22 @@ namespace SweetsSpace
                     float maxThickness = 0.0f;
                     for (const auto& child : definition.children)
                     {
-                        const float clampedChildThickness = std::clamp(child.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
+                        const float scaledChildThickness = child.thickness * uniformColliderScale;
                         switch (child.type)
                         {
                         case Collision::ColliderKind::Circle:
                         {
                             const float radius = std::max(0.0f, ((child.radius * child.scale) + child.margin) * uniformColliderScale);
-                            auto circlePoly = BuildCircleApproximation(radius);
+                            const auto normalized = NormalizeColliderDimensions(
+                                radius,
+                                radius * 2.0f,
+                                radius * 2.0f,
+                                scaledChildThickness);
+                            auto circlePoly = BuildCircleApproximation(normalized.radius);
                             if (circlePoly.size() >= 3)
                             {
                                 result.meshPolygons.push_back(std::move(circlePoly));
+                                maxThickness = std::max(maxThickness, normalized.thickness);
                                 applied = true;
                             }
                             break;
@@ -956,7 +1033,19 @@ namespace SweetsSpace
                             auto hullVertices = BuildHullVertices(scaledPoints, scaledOffset, child.scale, scaledMargin);
                             if (hullVertices.size() >= 3)
                             {
+                                const auto childDimensions = computePolygonDimensions(hullVertices);
+                                const auto normalized = NormalizeColliderDimensions(
+                                    0.0f,
+                                    childDimensions ? childDimensions->first : 0.0f,
+                                    childDimensions ? childDimensions->second : 0.0f,
+                                    scaledChildThickness);
+                                if (normalized.scale > 1.0f)
+                                {
+                                    ScaleVertices(hullVertices, normalized.scale);
+                                }
+
                                 result.meshPolygons.push_back(std::move(hullVertices));
+                                maxThickness = std::max(maxThickness, normalized.thickness);
                                 applied = true;
                             }
                             break;
@@ -965,14 +1054,14 @@ namespace SweetsSpace
                             break;
                         }
 
-                        maxThickness = std::max(maxThickness, clampedChildThickness * uniformColliderScale);
                     }
 
                     if (!result.meshPolygons.empty())
                     {
                         result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                        result.shapeConfig.polygonRadius = std::max(0.0f, maxThickness * 0.5f);
-                        result.thickness = maxThickness;
+                        const float minThickness = NormalizeColliderDimensions(0.0f, 0.0f, 0.0f, maxThickness).thickness;
+                        result.shapeConfig.polygonRadius = std::max(0.0f, minThickness * 0.5f);
+                        result.thickness = minThickness;
                         result.source = ColliderSource::Config;
                     }
                     break;
@@ -1017,7 +1106,6 @@ namespace SweetsSpace
 
         auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness, const char* context)
         {
-            const float clampedThickness = std::clamp(thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
             std::vector<float2> scaledHull;
             scaledHull.reserve(hull.size());
             for (const auto& pt : hull)
@@ -1025,26 +1113,22 @@ namespace SweetsSpace
                 scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
             }
 
-            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
+            float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
 
             std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, scaledOffset, 1.0f, 0.0f);
             if (hullVertices.size() >= 3)
             {
-                if (const auto dimensions = computePolygonDimensions(hullVertices))
+                const auto dimensions = computePolygonDimensions(hullVertices);
+                const auto normalized = NormalizeColliderDimensions(
+                    0.0f,
+                    dimensions ? dimensions->first : 0.0f,
+                    dimensions ? dimensions->second : 0.0f,
+                    thickness * uniformColliderScale);
+                if (normalized.scale > 1.0f)
                 {
-                    const float width = dimensions->first;
-                    const float height = dimensions->second;
-                    const float minDimension = Physics::kMinimumShapeDimensionMeters;
-                    if (width < minDimension || height < minDimension)
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Generated hull rejected for kind='" << resolvedKind
-                            << "' context='" << (context ? context : "")
-                            << "' width=" << width << " height=" << height
-                            << " below minimum dimension=" << minDimension << "\n";
-                        Diagnostics::LogInfo(oss.str());
-                        return false;
-                    }
+                    ScaleVertices(hullVertices, normalized.scale);
+                    scaledOffset.x *= normalized.scale;
+                    scaledOffset.y *= normalized.scale;
                 }
 
                 const b2Hull hullSummary = b2ComputeHull(hullVertices.data(), static_cast<int>(hullVertices.size()));
@@ -1062,8 +1146,8 @@ namespace SweetsSpace
                 result.shapeConfig.vertices = hullVertices;
                 result.meshPolygons.clear();
                 result.meshPolygons.push_back(hullVertices);
-                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                result.thickness = clampedThickness * uniformColliderScale;
+                result.shapeConfig.polygonRadius = std::max(0.0f, normalized.thickness * 0.5f);
+                result.thickness = normalized.thickness;
                 result.centroidOffset = scaledOffset;
                 return true;
             }
@@ -1247,15 +1331,6 @@ namespace SweetsSpace
             return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
         };
 
-        auto scaleVertices = [](std::vector<b2Vec2>& vertices, float factor)
-        {
-            for (auto& vertex : vertices)
-            {
-                vertex.x *= factor;
-                vertex.y *= factor;
-            }
-        };
-
         const float minDimension = Physics::kMinimumShapeDimensionMeters;
         if (!appliedPrimitive && result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
         {
@@ -1277,10 +1352,10 @@ namespace SweetsSpace
                     else
                     {
                         const float scaleFactor = minDimension / smallest;
-                        scaleVertices(result.shapeConfig.vertices, scaleFactor);
+                        ScaleVertices(result.shapeConfig.vertices, scaleFactor);
                         for (auto& polygon : result.meshPolygons)
                         {
-                            scaleVertices(polygon, scaleFactor);
+                            ScaleVertices(polygon, scaleFactor);
                         }
                         result.shapeConfig.polygonRadius *= scaleFactor;
                         result.thickness *= scaleFactor;
