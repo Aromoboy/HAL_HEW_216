@@ -9,7 +9,9 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -36,6 +38,29 @@ namespace
     constexpr uint16_t kFloorCategory = 0x0004;
     constexpr uint16_t kSweetsCategory = 0x0008;
     constexpr float kScaleAssertionEpsilon = 0.0001f;
+    constexpr int kFixtureFailureLogInterval = 10;
+
+    template <class T>
+    void HashCombine(std::size_t& seed, const T& value)
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
+    void HashVec2(std::size_t& seed, const b2Vec2& value)
+    {
+        HashCombine(seed, value.x);
+        HashCombine(seed, value.y);
+    }
+
+    void HashVertices(std::size_t& seed, const std::vector<b2Vec2>& vertices)
+    {
+        HashCombine(seed, vertices.size());
+        for (const auto& vertex : vertices)
+        {
+            HashVec2(seed, vertex);
+        }
+    }
 
     float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
     {
@@ -160,6 +185,65 @@ namespace
 
         const bool hasMeshData = body.HasBox2DMesh() || !body.GetBox2DBoundary().empty();
         return hasColliderComponent || hasShapeConfig || hasMeshData;
+    }
+
+    std::size_t ComputeColliderConfigHash(
+        const Entities::PhysicalEntity& body,
+        const std::optional<Physics::BoxColliderComponent>& colliderComponent,
+        const std::optional<Physics::Box2DShapeConfig>& shapeConfig,
+        const std::vector<std::vector<b2Vec2>>& meshPolygons,
+        const std::vector<b2Vec2>& meshBoundary)
+    {
+        std::size_t seed = 0;
+        const Transform& transform = body.GetTransform();
+
+        HashCombine(seed, transform.scale.x);
+        HashCombine(seed, transform.scale.y);
+        HashCombine(seed, transform.scale.z);
+        HashCombine(seed, static_cast<int>(body.GetCollisionLayer()));
+        HashCombine(seed, body.IsMeshPhysicsAllowed());
+
+        if (colliderComponent)
+        {
+            HashCombine(seed, colliderComponent->shapeDef.material.friction);
+            HashCombine(seed, colliderComponent->shapeDef.material.restitution);
+            HashCombine(seed, colliderComponent->shapeDef.density);
+            HashCombine(seed, colliderComponent->shapeDef.enableContactEvents);
+            HashCombine(seed, colliderComponent->shapeDef.enableHitEvents);
+            HashCombine(seed, colliderComponent->shapeDef.filter.categoryBits);
+            HashCombine(seed, colliderComponent->shapeDef.filter.maskBits);
+
+            HashCombine(seed, colliderComponent->shapes.size());
+            for (const auto& shape : colliderComponent->shapes)
+            {
+                HashCombine(seed, static_cast<int>(shape.type));
+                HashVertices(seed, shape.vertices);
+                HashCombine(seed, shape.radius);
+            }
+        }
+
+        if (shapeConfig)
+        {
+            HashCombine(seed, static_cast<int>(shapeConfig->type));
+            HashCombine(seed, static_cast<int>(shapeConfig->bodyType));
+            HashCombine(seed, shapeConfig->fixedRotation);
+            HashCombine(seed, shapeConfig->allowRotation);
+            HashVertices(seed, shapeConfig->vertices);
+            HashCombine(seed, shapeConfig->radius);
+            HashCombine(seed, shapeConfig->polygonRadius);
+            HashCombine(seed, shapeConfig->density);
+            HashCombine(seed, shapeConfig->friction);
+            HashCombine(seed, shapeConfig->restitution);
+        }
+
+        HashCombine(seed, meshPolygons.size());
+        for (const auto& polygon : meshPolygons)
+        {
+            HashVertices(seed, polygon);
+        }
+
+        HashVertices(seed, meshBoundary);
+        return seed;
     }
 }
 
@@ -552,6 +636,27 @@ namespace Systems
         const bool hasMeshFixtures = meshPhysicsAllowed && !meshPolygons.empty();
         const bool hasMeshBoundary = meshPhysicsAllowed && !meshBoundary.empty();
         const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
+
+        const std::size_t colliderConfigHash = ComputeColliderConfigHash(body, colliderComponent, shapeConfig, meshPolygons, meshBoundary);
+
+        auto markFixtureSuccess = [&](Physics::BoxColliderComponent& component)
+        {
+            component.fixtureBuildFailures = 0;
+            component.lastFailureConfigHash.reset();
+        };
+
+        const bool configurationChanged = !colliderComponent->lastFailureConfigHash
+            || colliderComponent->lastFailureConfigHash.value() != colliderConfigHash;
+        if (!configurationChanged && colliderComponent->fixtureBuildFailures > 0)
+        {
+            return b2_nullBodyId;
+        }
+
+        if (configurationChanged && colliderComponent->fixtureBuildFailures > 0)
+        {
+            colliderComponent->fixtureBuildFailures = 0;
+            colliderComponent->lastFailureConfigHash.reset();
+        }
 
         if (isSweetTag && !hasShapeConfig)
         {
@@ -948,7 +1053,8 @@ if (isSweetTag)
         if (useColliderComponent)
         {
             const auto inputShapes = colliderComponent->shapes;
-            colliderComponent->Clear();
+            const auto inputShapeDef = colliderComponent->shapeDef;
+            colliderComponent->createdFixtureCount = 0;
 
             std::vector<Physics::ColliderShapeDescriptor> createdShapes;
             for (const auto& shape : inputShapes)
@@ -982,10 +1088,12 @@ if (isSweetTag)
                 colliderComponent->shapeDef = shapeDef;
                 colliderComponent->shapes = std::move(createdShapes);
                 colliderComponent->createdFixtureCount = fixtureCount;
+                markFixtureSuccess(*colliderComponent);
             }
             else
             {
-                colliderComponent->Clear();
+                colliderComponent->shapeDef = inputShapeDef;
+                colliderComponent->shapes = inputShapes;
             }
         }
 
@@ -999,6 +1107,8 @@ if (isSweetTag)
         fixtureCount = 0;
         if (hasMeshFixtures)
         {
+            const auto priorShapes = colliderComponent->shapes;
+            const auto priorShapeDef = colliderComponent->shapeDef;
             std::vector<Physics::ColliderShapeDescriptor> createdShapes;
 
             for (const auto& polygon : meshPolygons)
@@ -1022,12 +1132,12 @@ if (isSweetTag)
                 }
             }
 
-            colliderComponent->Clear();
             if (fixtureCount > 0)
             {
                 colliderComponent->shapeDef = shapeDef;
                 colliderComponent->shapes = std::move(createdShapes);
                 colliderComponent->createdFixtureCount = fixtureCount;
+                markFixtureSuccess(*colliderComponent);
 
 #if defined(_DEBUG)
                 std::ostringstream oss;
@@ -1038,6 +1148,12 @@ if (isSweetTag)
 #endif
                 return bodyId;
             }
+            else
+            {
+                colliderComponent->shapeDef = priorShapeDef;
+                colliderComponent->shapes = priorShapes;
+                colliderComponent->createdFixtureCount = 0;
+            }
         }
 
         // ShapeConfig から形状を作る
@@ -1045,14 +1161,21 @@ if (isSweetTag)
         if (hasShapeConfig)
         {
             std::vector<Physics::ColliderShapeDescriptor> createdShapes;
+            const auto priorShapes = colliderComponent->shapes;
+            const auto priorShapeDef = colliderComponent->shapeDef;
             auto setComponentFromCreatedShapes = [&]
             {
-                colliderComponent->Clear();
                 if (fixtureCount > 0)
                 {
                     colliderComponent->shapeDef = shapeDef;
                     colliderComponent->shapes = std::move(createdShapes);
                     colliderComponent->createdFixtureCount = fixtureCount;
+                }
+                else
+                {
+                    colliderComponent->shapeDef = priorShapeDef;
+                    colliderComponent->shapes = priorShapes;
+                    colliderComponent->createdFixtureCount = 0;
                 }
             };
 
@@ -1080,6 +1203,7 @@ if (isSweetTag)
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Box, localVertices });
                     setComponentFromCreatedShapes();
+                    markFixtureSuccess(*colliderComponent);
                     return bodyId;
                 }
                 setComponentFromCreatedShapes();
@@ -1091,6 +1215,7 @@ if (isSweetTag)
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
                     setComponentFromCreatedShapes();
+                    markFixtureSuccess(*colliderComponent);
                     return bodyId;
                 }
                 setComponentFromCreatedShapes();
@@ -1103,6 +1228,7 @@ if (isSweetTag)
                 {
                     createdShapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
                     setComponentFromCreatedShapes();
+                    markFixtureSuccess(*colliderComponent);
                     return bodyId;
                 }
                 setComponentFromCreatedShapes();
@@ -1114,12 +1240,22 @@ if (isSweetTag)
             }
         }
 
-        std::ostringstream oss;
-        oss << "[PhysicsMachine][Error] Failed to build fixtures for tag='" << body.GetTag()
-            << "'; destroying body.\n";
-        DebugTrace(oss.str());
+        const int failureCount = ++colliderComponent->fixtureBuildFailures;
+        colliderComponent->lastFailureConfigHash = colliderConfigHash;
 
-        colliderComponent->Clear();
+        if (failureCount == 1 || (failureCount % kFixtureFailureLogInterval) == 0)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine][Error] Failed to build fixtures for tag='" << body.GetTag() << "'";
+            if (failureCount > 1)
+            {
+                oss << " (repeated x" << failureCount << ")";
+            }
+            oss << "; destroying body.\n";
+            DebugTrace(oss.str());
+        }
+
+        colliderComponent->createdFixtureCount = 0;
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);
         return b2_nullBodyId;
