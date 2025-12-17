@@ -689,7 +689,9 @@ namespace
         return vertices;
     }
 
-    void ApplyColliderOffset(SweetsManager::ColliderBuildResult& result, const float2& colliderCenter)
+    using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
+
+    void ApplyColliderOffset(ColliderBuildResult& result, const float2& colliderCenter)
     {
         const float2 finalOffset
         {
