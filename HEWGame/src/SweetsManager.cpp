@@ -689,7 +689,9 @@ namespace
         return vertices;
     }
 
-    void ApplyColliderOffset(SweetsManager::ColliderBuildResult& result, const float2& colliderCenter)
+    using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
+
+    void ApplyColliderOffset(ColliderBuildResult& result, const float2& colliderCenter)
     {
         const float2 finalOffset
         {
@@ -1189,7 +1191,7 @@ namespace SweetsSpace
                 scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
             }
 
-            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
+            float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
 
             std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, float2{ 0.0f, 0.0f }, 1.0f, 0.0f);
             if (hullVertices.size() >= 3)
@@ -2935,6 +2937,25 @@ namespace SweetsSpace
                 {
                     sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
                     sweets->SetVisualTransform(visualTransform);
+
+#if defined(_DEBUG)
+                    const float2 finalColliderOffset = colliderBuild.centroidOffset;
+                    const float2 colliderWorldCenter
+                    {
+                        physicsTransform.position.x + finalColliderOffset.x,
+                        physicsTransform.position.y + finalColliderOffset.y,
+                    };
+
+                    std::ostringstream colliderLog;
+                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
+                        << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
+                        << ") colliderCenterLocal=(" << colliderCenter.x << ',' << colliderCenter.y
+                        << ") centroidOffset=(" << finalColliderOffset.x << ',' << finalColliderOffset.y
+                        << ") worldCenter=(" << colliderWorldCenter.x << ',' << colliderWorldCenter.y
+                        << ") pivotAppliedY=" << appliedPivotOffsetY
+                        << "\n";
+                    DebugTrace(colliderLog.str());
+#endif
 
                     const char* sourceLabel = "fallback";
                     switch (colliderBuild.source)
