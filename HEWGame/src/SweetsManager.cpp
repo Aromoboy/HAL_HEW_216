@@ -2368,10 +2368,10 @@ namespace SweetsSpace
                     DebugTrace(oss.str());
                 }
 
+                const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
                 auto model = type == SweetsType::Fairy ? CreateProceduralFairyModel() : nullptr;
                 if (!model)
                 {
-                    const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
                     model = cache.Get(primaryPath);
                     if (!model && primaryPath != kPlaceholderModelPath)
                     {
