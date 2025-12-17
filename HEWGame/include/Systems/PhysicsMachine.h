@@ -85,6 +85,5 @@ namespace Systems
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;
         bool m_loggedFirstTick = false;
-        int m_missingShapeLogCount = 0;
     };
 }

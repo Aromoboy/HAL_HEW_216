@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <vector>
 #include <string>
 
@@ -32,16 +31,12 @@ namespace Physics
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
         std::vector<ColliderShapeDescriptor> shapes;
         int createdFixtureCount{ 0 };
-        int fixtureBuildFailures{ 0 };
-        std::optional<std::size_t> lastFailureConfigHash{};
 
         void Clear()
         {
             shapes.clear();
             createdFixtureCount = 0;
             shapeDef = b2DefaultShapeDef();
-            fixtureBuildFailures = 0;
-            lastFailureConfigHash.reset();
             colliderId.clear();
             colliderOffset = b2Vec2{ 0.0f, 0.0f };
         }
