@@ -537,7 +537,7 @@ namespace
         case SweetsType::Strawberry:
             config.type = Box2DShapeConfig::Type::Circle;
             config.radius = 0.45f;
-            config.angularDamping = 0.85f;
+            config.angularDamping = 2.5f;
             config.density = 0.85f;
             config.friction = 0.5f;
             config.restitution = 0.12f;
@@ -545,7 +545,7 @@ namespace
         case SweetsType::Blueberry:
             config.type = Box2DShapeConfig::Type::Circle;
             config.radius = 0.35f;
-            config.angularDamping = 0.7f;
+            config.angularDamping = 2.25f;
             config.density = 0.7f;
             config.friction = 0.42f;
             config.restitution = 0.18f;
