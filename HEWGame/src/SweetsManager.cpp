@@ -837,6 +837,8 @@ namespace SweetsSpace
                 scaledRadius * 2.0f,
                 scaledRadius * 2.0f,
                 result.thickness);
+            const float offsetScale = uniformColliderScale * normalized.scale;
+            const float2 scaledOffset{ primitive.offset.x * offsetScale, primitive.offset.y * offsetScale };
 
             switch (primitive.shape)
             {
@@ -848,7 +850,7 @@ namespace SweetsSpace
                 result.meshPolygons.clear();
                 result.meshBoundary.clear();
                 result.thickness = std::max(result.thickness, normalized.thickness);
-                result.centroidOffset = float2{ 0.0f, 0.0f };
+                result.centroidOffset = scaledOffset;
                 result.source = ColliderSource::Config;
                 return true;
             }
@@ -860,6 +862,10 @@ namespace SweetsSpace
                     scaledRadius * 2.0f,
                     scaledHeight,
                     result.thickness);
+                const float2 scaledCapsuleOffset{
+                    primitive.offset.x * uniformColliderScale * normalizedCapsule.scale,
+                    primitive.offset.y * uniformColliderScale * normalizedCapsule.scale,
+                };
                 auto vertices = buildCapsuleVertices(normalizedCapsule.width, normalizedCapsule.height);
                 if (vertices.size() < 3)
                 {
@@ -873,7 +879,7 @@ namespace SweetsSpace
                 result.meshBoundary = vertices;
                 result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalizedCapsule.thickness * 0.5f);
                 result.thickness = std::max(result.thickness, normalizedCapsule.thickness);
-                result.centroidOffset = float2{ 0.0f, 0.0f };
+                result.centroidOffset = scaledCapsuleOffset;
                 result.source = ColliderSource::Config;
                 return true;
             }
@@ -2333,11 +2339,49 @@ namespace SweetsSpace
         parseError |= !TryParseFloat(tokens[2], &outPrimitive.radius);
         parseError |= !TryParseFloat(tokens[3], &outPrimitive.height);
 
+        if (tokens.size() >= 6)
+        {
+            parseError |= !TryParseFloat(tokens[4], &outPrimitive.offset.x);
+            parseError |= !TryParseFloat(tokens[5], &outPrimitive.offset.y);
+
+            if (tokens.size() >= 7)
+            {
+                parseError |= !TryParseFloat(tokens[6], &outPrimitive.offset.z);
+            }
+            else
+            {
+                outPrimitive.offset.z = 0.0f;
+            }
+        }
+        else if (tokens.size() == 5)
+        {
+            parseError = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "コライダープリセットの" << lineNumber
+                << "行目、オフセットにY(もしくはY,Z)成分が足りないよ (offsetX='" << tokens[4]
+                << "')\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            outPrimitive.offset = float3{ 0.0f, 0.0f, 0.0f };
+        }
+
         if (parseError)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "コライダープリセットの" << lineNumber << "行目、数値の解釈に失敗したよ (radius='"
-                << tokens[2] << "', height='" << tokens[3] << "')\n";
+                << tokens[2] << "', height='" << tokens[3] << "'";
+            if (tokens.size() >= 6)
+            {
+                oss << ", offset=('" << tokens[4] << "','" << tokens[5] << "'";
+                if (tokens.size() >= 7)
+                {
+                    oss << ",'" << tokens[6] << "'";
+                }
+                oss << ")";
+            }
+            oss << ")\n";
             DebugTrace(oss.str());
         }
 
