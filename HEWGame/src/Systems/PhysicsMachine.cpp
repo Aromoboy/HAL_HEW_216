@@ -1158,6 +1158,16 @@ if (isSweetTag)
                 }
                 b2DestroyBody(it->second);
             }
+            else
+            {
+                b2Body_SetUserData(it->second, nullptr);
+
+                auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
+                if (colliderComponent)
+                {
+                    colliderComponent->Clear();
+                }
+            }
         }
 
         const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);
