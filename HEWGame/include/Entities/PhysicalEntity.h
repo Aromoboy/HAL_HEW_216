@@ -131,6 +131,9 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
+        bool HasFixtureBuildFailure() const noexcept { return m_fixtureBuildFailed; }
+        void MarkFixtureBuildFailure(bool failed) noexcept { m_fixtureBuildFailed = failed; }
+
         void SetBoxColliderComponent(std::optional<Physics::BoxColliderComponent> component)
         {
             m_boxColliderComponent = std::move(component);
@@ -172,6 +175,7 @@ namespace Entities
         std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
         bool m_allowMeshPhysics{ true };
+        bool m_fixtureBuildFailed{ false };
 
     private:
         void RecreateBox2DBody();
