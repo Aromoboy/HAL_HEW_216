@@ -64,41 +64,6 @@ namespace
         }
     }
 
-    float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
-    {
-#if defined(_DEBUG)
-        assert(std::isfinite(renderLength));
-        assert(std::isfinite(axisScale));
-        const float scaleX = transform.scale.x;
-        const float scaleY = transform.scale.y;
-        const float uniformScale = std::max(scaleX, scaleY);
-        const bool matchesAxis = std::fabs(axisScale - scaleX) <= kScaleAssertionEpsilon
-            || std::fabs(axisScale - scaleY) <= kScaleAssertionEpsilon
-            || std::fabs(axisScale - uniformScale) <= kScaleAssertionEpsilon;
-        assert(matchesAxis && "Render-space collider length must be scaled by transform.scale before Box2D conversion.");
-#endif
-        return Entities::PhysicalEntity::ToBox2DLength(renderLength * axisScale);
-    }
-
-    b2Vec2 ToBox2DPosition(const b2Vec2& renderPosition, const Transform& transform)
-    {
-        return b2Vec2{
-            ToBox2DLength(renderPosition.x, transform.scale.x, transform),
-            ToBox2DLength(renderPosition.y, transform.scale.y, transform),
-        };
-    }
-
-    std::vector<b2Vec2> ToBox2DVertices(const std::vector<b2Vec2>& renderVertices, const Transform& transform, const b2Vec2& offset = b2Vec2{ 0.0f, 0.0f })
-    {
-        std::vector<b2Vec2> scaledVertices = renderVertices;
-        for (auto& vertex : scaledVertices)
-        {
-            vertex = ToBox2DPosition(b2Vec2{ vertex.x + offset.x, vertex.y + offset.y }, transform);
-        }
-
-        return scaledVertices;
-    }
-
     void DebugTrace(const std::string& message)
     {
 #if defined(_WIN32)
@@ -173,9 +138,6 @@ namespace
         std::size_t seed = 0;
         const Transform& transform = body.GetTransform();
 
-        HashCombine(seed, transform.scale.x);
-        HashCombine(seed, transform.scale.y);
-        HashCombine(seed, transform.scale.z);
         HashCombine(seed, static_cast<int>(body.GetCollisionLayer()));
 
         if (colliderComponent)
@@ -802,57 +764,27 @@ namespace Systems
         {
             Physics::ColliderShapeType type{ Physics::ColliderShapeType::Polygon };
             std::vector<b2Vec2> vertices{};
+            b2Vec2 center{ 0.0f, 0.0f };
             float radius{ 0.0f };
         };
 
-        const auto scaleVertices = [&](const std::vector<b2Vec2>& vertices)
+        const auto toBox2DVector = [](const b2Vec2& vertex)
         {
-            return ToBox2DVertices(vertices, transform);
+            return Entities::PhysicalEntity::ToBox2DVector(float3{ vertex.x, vertex.y, 0.0f });
         };
 
-        const auto scaleCircleRadius = [&](float radius)
+        const auto toBox2DVertices = [&](const std::vector<b2Vec2>& vertices)
         {
-            return ToBox2DLength(radius, std::max(transform.scale.x, transform.scale.y), transform);
+            std::vector<b2Vec2> converted;
+            converted.reserve(vertices.size());
+            for (const auto& vertex : vertices)
+            {
+                converted.push_back(toBox2DVector(vertex));
+            }
+            return converted;
         };
 
         std::vector<Physics::ColliderShapeDescriptor> sourceShapes = colliderComponent->shapes;
-        const b2Vec2 colliderOffset = colliderComponent->colliderOffset;
-        if (colliderOffset.x != 0.0f || colliderOffset.y != 0.0f)
-        {
-            for (auto& shape : sourceShapes)
-            {
-                switch (shape.type)
-                {
-                case Physics::ColliderShapeType::Circle:
-                {
-                    if (shape.vertices.empty())
-                    {
-                        shape.vertices.push_back(colliderOffset);
-                    }
-                    else
-                    {
-                        for (auto& vertex : shape.vertices)
-                        {
-                            vertex.x += colliderOffset.x;
-                            vertex.y += colliderOffset.y;
-                        }
-                    }
-                    break;
-                }
-                case Physics::ColliderShapeType::Box:
-                case Physics::ColliderShapeType::Polygon:
-                default:
-                {
-                    for (auto& vertex : shape.vertices)
-                    {
-                        vertex.x += colliderOffset.x;
-                        vertex.y += colliderOffset.y;
-                    }
-                    break;
-                }
-                }
-            }
-        }
 
         std::vector<ScaledShape> scaledShapes;
         scaledShapes.reserve(sourceShapes.size());
@@ -865,14 +797,17 @@ namespace Systems
             {
             case Physics::ColliderShapeType::Circle:
             {
-                scaled.radius = scaleCircleRadius(shape.radius);
+                scaled.center = shape.vertices.empty()
+                    ? b2Vec2{ 0.0f, 0.0f }
+                    : toBox2DVector(shape.vertices.front());
+                scaled.radius = Entities::PhysicalEntity::ToBox2DLength(shape.radius);
                 break;
             }
             case Physics::ColliderShapeType::Box:
             case Physics::ColliderShapeType::Polygon:
             default:
             {
-                scaled.vertices = scaleVertices(shape.vertices);
+                scaled.vertices = toBox2DVertices(shape.vertices);
                 break;
             }
             }
@@ -1082,7 +1017,7 @@ namespace Systems
             {
                 created = recordFixture(createCircleFixture(
                     enforceMinimumDimension(scaled.radius, "Collider circle radius"),
-                    b2Vec2{ 0.0f, 0.0f }));
+                    scaled.center));
                 break;
             }
             case Physics::ColliderShapeType::Box:
