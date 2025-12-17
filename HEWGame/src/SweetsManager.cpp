@@ -826,62 +826,98 @@ namespace SweetsSpace
             return vertices;
         };
 
-        if (primitiveIt != m_colliderPrimitives.end())
+        const auto applyPrimitiveCollider = [&](const ColliderPrimitive& primitive) -> bool
         {
-            const auto applyPrimitiveCollider = [&](const ColliderPrimitive& primitive) -> bool
+            const float scaledRadius = primitive.radius * uniformColliderScale;
+            const auto normalized = NormalizeColliderDimensions(
+                scaledRadius,
+                scaledRadius * 2.0f,
+                scaledRadius * 2.0f,
+                result.thickness);
+
+            switch (primitive.shape)
             {
-                const float scaledRadius = primitive.radius * uniformColliderScale;
-                const auto normalized = NormalizeColliderDimensions(
+            case ColliderShape::Circle:
+            {
+                result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
+                result.shapeConfig.radius = normalized.radius;
+                result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalized.thickness * 0.5f);
+                result.meshPolygons.clear();
+                result.meshBoundary.clear();
+                result.thickness = std::max(result.thickness, normalized.thickness);
+                result.centroidOffset = float2{ 0.0f, 0.0f };
+                result.source = ColliderSource::Config;
+                return true;
+            }
+            case ColliderShape::Capsule:
+            {
+                float scaledHeight = std::max(primitive.height * uniformColliderScale, scaledRadius * 2.0f);
+                const auto normalizedCapsule = NormalizeColliderDimensions(
                     scaledRadius,
                     scaledRadius * 2.0f,
-                    scaledRadius * 2.0f,
+                    scaledHeight,
                     result.thickness);
-
-                switch (primitive.shape)
+                auto vertices = buildCapsuleVertices(normalizedCapsule.width, normalizedCapsule.height);
+                if (vertices.size() < 3)
                 {
-                case ColliderShape::Circle:
-                {
-                    result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
-                    result.shapeConfig.radius = normalized.radius;
-                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalized.thickness * 0.5f);
-                    result.meshPolygons.clear();
-                    result.meshBoundary.clear();
-                    result.thickness = std::max(result.thickness, normalized.thickness);
-                    result.centroidOffset = float2{ 0.0f, 0.0f };
-                    result.source = ColliderSource::Config;
-                    return true;
-                }
-                case ColliderShape::Capsule:
-                {
-                    float scaledHeight = std::max(primitive.height * uniformColliderScale, scaledRadius * 2.0f);
-                    const auto normalizedCapsule = NormalizeColliderDimensions(
-                        scaledRadius,
-                        scaledRadius * 2.0f,
-                        scaledHeight,
-                        result.thickness);
-                    auto vertices = buildCapsuleVertices(normalizedCapsule.width, normalizedCapsule.height);
-                    if (vertices.size() < 3)
-                    {
-                        return false;
-                    }
-
-                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                    result.shapeConfig.vertices = vertices;
-                    result.meshPolygons.clear();
-                    result.meshPolygons.push_back(vertices);
-                    result.meshBoundary = vertices;
-                    result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalizedCapsule.thickness * 0.5f);
-                    result.thickness = std::max(result.thickness, normalizedCapsule.thickness);
-                    result.centroidOffset = float2{ 0.0f, 0.0f };
-                    result.source = ColliderSource::Config;
-                    return true;
-                }
-                default:
                     return false;
                 }
-            };
 
+                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
+                result.shapeConfig.vertices = vertices;
+                result.meshPolygons.clear();
+                result.meshPolygons.push_back(vertices);
+                result.meshBoundary = vertices;
+                result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, normalizedCapsule.thickness * 0.5f);
+                result.thickness = std::max(result.thickness, normalizedCapsule.thickness);
+                result.centroidOffset = float2{ 0.0f, 0.0f };
+                result.source = ColliderSource::Config;
+                return true;
+            }
+            default:
+                return false;
+            }
+        };
+
+        if (primitiveIt != m_colliderPrimitives.end())
+        {
             appliedPrimitive = applyPrimitiveCollider(primitiveIt->second);
+        }
+
+        const bool requiresPrimitive = type == SweetsType::Pudding;
+        const bool hasPrimitiveOverride = primitiveIt != m_colliderPrimitives.end();
+        if (requiresPrimitive && !appliedPrimitive)
+        {
+            if (!hasPrimitiveOverride)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
+                    << "' にプリン用のコライダープリミティブ設定が見当たらないよ\n";
+                Diagnostics::LogInfo(oss.str());
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
+                    << "' に設定されたプリン用プリミティブが無効だったよ\n";
+                Diagnostics::LogInfo(oss.str());
+            }
+
+            if (auto primitive = BuildDefaultColliderPrimitive(type))
+            {
+                appliedPrimitive = applyPrimitiveCollider(*primitive);
+            }
+
+            if (!appliedPrimitive)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ConfigError] kind='" << resolvedKind
+                    << "' のプリンはカプセルコライダーを構築できなかったから生成を中断するね\n";
+                Diagnostics::LogInfo(oss.str());
+
+                result.shapeConfig.type = Box2DShapeConfig::Type::None;
+                return result;
+            }
         }
 
         appliedConfigDefinition = appliedPrimitive;
