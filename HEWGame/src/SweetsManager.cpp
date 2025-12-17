@@ -717,6 +717,7 @@ namespace SweetsSpace
         const auto definitionIt = FindColliderDefinition(resolvedKind);
         const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
             && !IsColliderDefinitionEmpty(definitionIt->second);
+        const bool preferGeneratedCollider = (type == SweetsType::Blueberry) && m_colliderConfigOverridesEnabled;
 
         const float2 colliderScale{ transform.scale.x, transform.scale.y };
         const float uniformColliderScale = std::max(std::abs(colliderScale.x), std::abs(colliderScale.y));
@@ -753,6 +754,7 @@ namespace SweetsSpace
             return generated && !generated->hull.empty();
         };
         if (m_forceGeneratedColliders
+            || preferGeneratedCollider
             || !m_colliderConfigOverridesEnabled
             || !hasConfigDefinition)
         {
@@ -978,7 +980,7 @@ namespace SweetsSpace
                 appliedGeneratedHull = tryApplyGeneratedHull(*generated, "force-generated");
             }
         }
-        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
+        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition && !preferGeneratedCollider)
         {
             const auto& definition = definitionIt->second;
             const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
@@ -1013,7 +1015,8 @@ namespace SweetsSpace
             }
         }
 
-        if (!appliedGeneratedHull && hasConfigDefinition && result.source != ColliderSource::Config)
+        if (!appliedGeneratedHull && hasConfigDefinition && result.source != ColliderSource::Config
+            && (!preferGeneratedCollider || !hasGenerated()))
         {
             const auto& definition = definitionIt->second;
             applyConfigDefinition(definition, "generated-fallback-config");
