@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -106,6 +107,12 @@ namespace Entities
         float GetGravityScale() const;
         void SetGravityScale(float scale);
 
+        bool HasBodyCreationFailed() const;
+        bool CanAttemptBodyCreation() const;
+        void ResetBodyCreationFailure();
+        void MarkBodyCreationFailed();
+        void MarkPhysicsDefinitionChanged();
+
         void SyncTransformFromBox2DBody();
         void SyncBox2DBodyFromTransform();
 
@@ -131,9 +138,13 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
+        bool HasFixtureBuildFailure() const noexcept { return m_fixtureBuildFailed; }
+        void MarkFixtureBuildFailure(bool failed) noexcept { m_fixtureBuildFailed = failed; }
+
         void SetBoxColliderComponent(std::optional<Physics::BoxColliderComponent> component)
         {
             m_boxColliderComponent = std::move(component);
+            MarkPhysicsDefinitionChanged();
         }
 
         std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent()
@@ -172,6 +183,11 @@ namespace Entities
         std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
         bool m_allowMeshPhysics{ true };
+        bool m_fixtureBuildFailed{ false };
+
+        bool m_bodyCreationFailed{ false };
+        std::uint64_t m_physicsDefinitionRevision{ 0 };
+        std::uint64_t m_bodyCreationFailedRevision{ 0 };
 
     private:
         void RecreateBox2DBody();

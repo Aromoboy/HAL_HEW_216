@@ -17,6 +17,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <span>
 
 #include <box2d/box2d.h>
 #include <box2d/collision.h>
@@ -399,6 +400,22 @@ namespace Systems
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
+        if (body.HasBodyCreationFailed() && !body.CanAttemptBodyCreation())
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Skipping registration for tag='" << body.GetTag()
+                << "' due to previous creation failure.\n";
+            DebugTrace(oss.str());
+#endif
+            return;
+        }
+
+        if (body.HasBodyCreationFailed())
+        {
+            body.ResetBodyCreationFailure();
+        }
+
         if (std::find(m_bodies.begin(), m_bodies.end(), bodyPtr) != m_bodies.end())
         {
 #if defined(_DEBUG)
@@ -408,6 +425,8 @@ namespace Systems
 #endif
             return;
         }
+
+        body.MarkFixtureBuildFailure(false);
 
         const b2BodyId existing = body.GetBox2DBodyId();
         if (b2Body_IsValid(existing))
@@ -445,6 +464,7 @@ namespace Systems
         }
 
         m_bodies.pop_back();
+        body.MarkBodyCreationFailed();
     }
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
@@ -455,9 +475,12 @@ namespace Systems
         if (it == m_bodies.end())
         {
 #if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
-            DebugTrace(oss.str());
+            if (!body.HasFixtureBuildFailure())
+            {
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
+                DebugTrace(oss.str());
+            }
 #endif
             DestroyBody(body);
             return;
@@ -564,13 +587,15 @@ namespace Systems
             return;
         }
 
-        for (Entities::PhysicalEntity* body : m_bodies)
+        for (auto it = m_bodies.begin(); it != m_bodies.end();)
         {
+            Entities::PhysicalEntity* body = *it;
             if (!body)
             {
 #if defined(_DEBUG)
                 DebugTrace("[PhysicsMachine] Encountered null body pointer before step.\n");
 #endif
+                ++it;
                 continue;
             }
 
@@ -578,6 +603,17 @@ namespace Systems
             const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
             if (!hasBody)
             {
+                if (body->HasBodyCreationFailed() && !body->CanAttemptBodyCreation())
+                {
+                    ++it;
+                    continue;
+                }
+
+                if (body->HasBodyCreationFailed())
+                {
+                    body->ResetBodyCreationFailure();
+                }
+
                 const b2BodyId bodyId = CreateBody(*body);
                 if (!b2Body_IsValid(bodyId))
                 {
@@ -586,13 +622,20 @@ namespace Systems
                     oss << "[PhysicsMachine] Unable to create Box2D body before step for tag='" << body->GetTag() << "'\n";
                     DebugTrace(oss.str());
 #endif
-                    assert(false && "Failed to create Box2D body before physics step.");
+                    body->MarkBodyCreationFailed();
+                    if (mapIt != m_bodyMap.end())
+                    {
+                        m_bodyMap.erase(mapIt);
+                    }
+                    it = m_bodies.erase(it);
                     continue;
                 }
 
                 body->SetBox2DBodyId(bodyId);
                 m_bodyMap[body] = bodyId;
             }
+
+            ++it;
         }
 
         m_system->Apply(ctx.dt);
@@ -1022,7 +1065,46 @@ if (isSweetTag)
             }
 
             const float clampedRadius = enforceMinimumDimension(radius, "Polygon radius");
-            const b2Polygon polygon = b2MakePolygon(&hull, clampedRadius);
+
+            float maxHullRadius = std::numeric_limits<float>::max();
+            if (hull.count >= 3)
+            {
+                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                float minEdgeLength = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < hull.count; ++i)
+                {
+                    const b2Vec2& current = hull.points[i];
+                    const b2Vec2& next = hull.points[(i + 1) % hull.count];
+                    min.x = std::min(min.x, current.x);
+                    min.y = std::min(min.y, current.y);
+                    max.x = std::max(max.x, current.x);
+                    max.y = std::max(max.y, current.y);
+
+                    const float edgeLength = std::hypot(next.x - current.x, next.y - current.y);
+                    minEdgeLength = std::min(minEdgeLength, edgeLength);
+                }
+
+                const float minExtent = std::min(max.x - min.x, max.y - min.y);
+                const float minFeature = std::min(minEdgeLength, minExtent);
+                maxHullRadius = 0.5f * minFeature;
+            }
+
+            float hullSafeRadius = clampedRadius;
+            if (maxHullRadius > 0.0f && clampedRadius > maxHullRadius)
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Polygon radius clamped for tag='" << tag
+                    << "' due to thin hull: requested=" << clampedRadius
+                    << " hullMax=" << maxHullRadius << "\n";
+                DebugTrace(oss.str());
+#endif
+                hullSafeRadius = maxHullRadius;
+            }
+
+            const b2Polygon polygon = b2MakePolygon(&hull, hullSafeRadius);
             return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         };
 
@@ -1256,6 +1338,8 @@ if (isSweetTag)
         }
 
         colliderComponent->createdFixtureCount = 0;
+        body.MarkFixtureBuildFailure(true);
+        colliderComponent->Clear();
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);
         return b2_nullBodyId;
@@ -1271,18 +1355,26 @@ if (isSweetTag)
 
         if (b2Body_IsValid(it->second))
         {
+            std::vector<b2ShapeId> shapes;
+
             const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
             if (b2World_IsValid(bodyWorld))
             {
                 const int shapeCount = b2Body_GetShapeCount(it->second);
                 if (shapeCount > 0)
                 {
-                    std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
+                    shapes.resize(static_cast<size_t>(shapeCount));
                     const int writtenShapes = b2Body_GetShapes(it->second, shapes.data(), shapeCount);
+                    shapes.resize(static_cast<size_t>(writtenShapes));
                     for (int i = 0; i < writtenShapes; ++i)
                     {
                         b2Shape_SetUserData(shapes[static_cast<size_t>(i)], nullptr);
                     }
+                }
+
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
                 }
 
                 b2Body_SetUserData(it->second, nullptr);
@@ -1296,6 +1388,11 @@ if (isSweetTag)
             }
             else
             {
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
+                }
+
                 b2Body_SetUserData(it->second, nullptr);
 
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
