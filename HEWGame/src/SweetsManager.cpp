@@ -886,6 +886,26 @@ namespace SweetsSpace
 
         appliedConfigDefinition = appliedPrimitive;
 
+        const auto computePolygonDimensions = [](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
+        {
+            if (vertices.size() < 3)
+            {
+                return std::nullopt;
+            }
+
+            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+            for (const auto& vertex : vertices)
+            {
+                min.x = std::min(min.x, vertex.x);
+                min.y = std::min(min.y, vertex.y);
+                max.x = std::max(max.x, vertex.x);
+                max.y = std::max(max.y, vertex.y);
+            }
+
+            return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
+        };
+
         if (!appliedPrimitive)
         {
             auto acquireGenerated = [&]() -> std::optional<GeneratedCollider>
@@ -1082,26 +1102,6 @@ namespace SweetsSpace
                 appliedConfigDefinition = appliedConfigDefinition || applied;
 
                 return applied;
-            };
-
-            const auto computePolygonDimensions = [](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
-            {
-                if (vertices.size() < 3)
-                {
-                    return std::nullopt;
-                }
-
-                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-                for (const auto& vertex : vertices)
-                {
-                    min.x = std::min(min.x, vertex.x);
-                    min.y = std::min(min.y, vertex.y);
-                    max.x = std::max(max.x, vertex.x);
-                    max.y = std::max(max.y, vertex.y);
-                }
-
-                return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
             };
 
         auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness, const char* context)
