@@ -102,6 +102,7 @@ namespace
     constexpr float kMaxFinalScale = 3.0f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr float kMinimumBerryColliderRadius = 0.15f;
+    constexpr float kMinimumBlueberryColliderRadius = 0.2f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -1058,8 +1059,10 @@ namespace SweetsSpace
         switch (type)
         {
         case SweetsType::Strawberry:
-        case SweetsType::Blueberry:
             enforceMinimumCircleRadius(kMinimumBerryColliderRadius);
+            break;
+        case SweetsType::Blueberry:
+            enforceMinimumCircleRadius(kMinimumBlueberryColliderRadius);
             break;
         default:
             break;
@@ -2263,8 +2266,14 @@ namespace SweetsSpace
                 physicsTransform.scale = visualTransform.scale;
 
                 const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(model, visualTransform.scale);
-                physicsTransform.position.y += pivotInfo.offsetY;
-                visualTransform.position.y += pivotInfo.offsetY;
+                float appliedPivotOffsetY = pivotInfo.offsetY;
+                if ((type == SweetsType::Strawberry || type == SweetsType::Blueberry) && pivotInfo.rawOffsetY < 0.0f)
+                {
+                    appliedPivotOffsetY = std::max(pivotInfo.offsetY, 0.0f);
+                }
+
+                physicsTransform.position.y += appliedPivotOffsetY;
+                visualTransform.position.y += appliedPivotOffsetY;
 
                 const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model);
 
@@ -2300,7 +2309,7 @@ namespace SweetsSpace
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
-                        << ") pivotOffsetY(raw/clamped)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY
+                        << ") pivotOffsetY(raw/clamped/applied)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY << '/' << appliedPivotOffsetY
                         << " halfHeight=" << pivotInfo.halfHeight
                         << " colliderSource=" << sourceLabel
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
