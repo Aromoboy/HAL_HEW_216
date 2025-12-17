@@ -107,7 +107,6 @@ public:
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
-    void RefreshPlatformAnchor(bool forceRecompute);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay();
@@ -158,7 +157,6 @@ private:
     bool m_sweetsLateRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
-    void InitializeStageAnchors();
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
     Core::StepTimer m_countdownTimer;
@@ -193,7 +191,6 @@ private:
         float triggerHeight = 0.0f;
     };
     std::deque<PendingTimeBonus> m_pendingTimeBonuses;
-    bool m_platformAnchorInitialized = false;
     mutable bool m_guidelineInvalidLogged = false;
     mutable bool m_guidelineClampLogged = false;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();

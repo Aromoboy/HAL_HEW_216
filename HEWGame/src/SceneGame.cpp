@@ -1567,8 +1567,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
-    InitializeStageAnchors();
-
     m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
     if (!m_pObjects.empty())
     {
@@ -1978,7 +1976,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     HandleColliderDebugCommands(ctx);
 #endif
     ValidatePlayerPhysicsRegistration();
-    RefreshPlatformAnchor(false);
     UpdateCountdown(ctx);
     UpdateTowerHeightTelemetry();
 
@@ -2748,30 +2745,6 @@ void SceneGame::UnregisterAllPhysicsBodies()
     }
 }
 
-void SceneGame::InitializeStageAnchors()
-{
-    m_pObjects.clear();
-    const auto& spawnPoints = m_stageData.GetSpawnPoints();
-    if (spawnPoints.empty())
-    {
-        const float3 fallback{ 0.0f, 0.0f, m_stageData.GetPlaneZ() };
-        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", fallback, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
-        std::ostringstream oss;
-        oss << kLogPrefix << "InitializeStageAnchors fallback anchor at z=" << fallback.z << "\n";
-        ::DebugTrace(oss.str());
-        return;
-    }
-
-    for (const auto& spawn : spawnPoints)
-    {
-        m_pObjects.push_back(std::make_shared<TestObject>("OiiaioooooiaiFin", spawn, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f }));
-    }
-
-    std::ostringstream oss;
-    oss << kLogPrefix << "InitializeStageAnchors loaded " << m_pObjects.size() << " stage anchors.\n";
-    ::DebugTrace(oss.str());
-}
-
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
     std::ostringstream oss;
@@ -2829,7 +2802,6 @@ void SceneGame::ResetPlaySession()
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
-    InitializeStageAnchors();
     if (m_cameraAnchor && !m_pObjects.empty())
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
