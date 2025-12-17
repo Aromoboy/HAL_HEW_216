@@ -1191,7 +1191,7 @@ namespace SweetsSpace
                 scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
             }
 
-            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
+            float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
 
             std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, float2{ 0.0f, 0.0f }, 1.0f, 0.0f);
             if (hullVertices.size() >= 3)
