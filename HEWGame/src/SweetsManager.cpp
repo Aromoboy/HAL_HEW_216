@@ -2936,6 +2936,25 @@ namespace SweetsSpace
                     sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
                     sweets->SetVisualTransform(visualTransform);
 
+#if defined(_DEBUG)
+                    const float2 finalColliderOffset = colliderBuild.centroidOffset;
+                    const float2 colliderWorldCenter
+                    {
+                        physicsTransform.position.x + finalColliderOffset.x,
+                        physicsTransform.position.y + finalColliderOffset.y,
+                    };
+
+                    std::ostringstream colliderLog;
+                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
+                        << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
+                        << ") colliderCenterLocal=(" << colliderCenter.x << ',' << colliderCenter.y
+                        << ") centroidOffset=(" << finalColliderOffset.x << ',' << finalColliderOffset.y
+                        << ") worldCenter=(" << colliderWorldCenter.x << ',' << colliderWorldCenter.y
+                        << ") pivotAppliedY=" << appliedPivotOffsetY
+                        << "\n";
+                    DebugTrace(colliderLog.str());
+#endif
+
                     const char* sourceLabel = "fallback";
                     switch (colliderBuild.source)
                     {
