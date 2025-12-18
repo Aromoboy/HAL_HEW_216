@@ -916,12 +916,6 @@ namespace
                     (geometry.centroidOffset.x + tuning.offset.x) * transform.scale.x,
                     (geometry.centroidOffset.y + tuning.offset.y) * transform.scale.y
                 };
-                const std::vector<b2Vec2> hullVertices = BuildHullVertices(paddedHull, hullOffset, 1.0f, 0.0f);
-                if (!hullVertices.empty())
-                {
-                    collider.AddPolygon(hullVertices);
-                    footprint.IncludeVertices(hullVertices);
-                }
 
                 float thickness = geometry.paddedThickness * transform.scale.z;
                 thickness = std::max(thickness, kMinGeneratedThickness);
