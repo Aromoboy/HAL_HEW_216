@@ -19,7 +19,6 @@ namespace
             HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             if (result == RPC_E_CHANGED_MODE)
             {
-                // COM is already initialized with a different apartment model; treat as ready without reinitializing.
                 hr = S_FALSE;
                 return;
             }
