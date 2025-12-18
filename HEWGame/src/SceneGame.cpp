@@ -3451,9 +3451,27 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
 
     entity.AttachPhysicsMachine(m_physicsMachine.get());
 
+    auto failRegistrationDueToFixtures = [&](const char* context, bool hasBodyFlag, int fixtures)
+    {
+#if defined(_DEBUG)
+        assert(false && "Physics registration missing fixtures.");
+#endif
+        std::ostringstream oss;
+        oss << kLogPrefix << context << " for tag='" << entity.GetTag()
+            << "' (hasBody=" << std::boolalpha << hasBodyFlag
+            << ", fixtures=" << fixtures << ").\n";
+        ::DebugTrace(oss.str());
+        entity.MarkFixtureBuildFailure(true);
+        entity.MarkBodyCreationFailed();
+        entity.DetachPhysicsMachine();
+        m_registeredPhysicsBodies.erase(&entity);
+    };
+
+    const auto& refreshedColliderComponent = entity.GetBoxColliderComponent();
+
     {
         bool hasBody = entity.HasBox2DBody();
-        int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+        int fixtureCount = refreshedColliderComponent ? refreshedColliderComponent->createdFixtureCount : 0;
         if (!hasBody || fixtureCount <= 0)
         {
             std::ostringstream oss;
@@ -3472,17 +3490,10 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
             entity.AttachPhysicsMachine(m_physicsMachine.get());
 
             const bool rebuiltHasBody = entity.HasBox2DBody();
-            const int rebuiltFixtures = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
+            const int rebuiltFixtures = refreshedColliderComponent ? refreshedColliderComponent->createdFixtureCount : 0;
             if (!rebuiltHasBody || rebuiltFixtures <= 0)
             {
-                std::ostringstream errorOss;
-                errorOss << kLogPrefix << "Failed to create physics body for tag='" << entity.GetTag()
-                    << "' even after rebuild attempt (hasBody=" << std::boolalpha << rebuiltHasBody
-                    << ", fixtures=" << rebuiltFixtures << ").\n";
-                ::DebugTrace(errorOss.str());
-
-                entity.DetachPhysicsMachine();
-                m_registeredPhysicsBodies.erase(&entity);
+                failRegistrationDueToFixtures("Failed to create physics body", rebuiltHasBody, rebuiltFixtures);
                 return;
             }
 
@@ -3501,6 +3512,12 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
             entity.SetGravityScale(0.0f);
             gravityScale = entity.GetGravityScale();
             DebugTrace(std::string(kLogPrefix) + "Player gravity disabled to prevent unintended falling.\n");
+        }
+
+        if (refreshedColliderComponent && refreshedColliderComponent->createdFixtureCount <= 0)
+        {
+            failRegistrationDueToFixtures("Registered physics body missing fixtures", hasBody, refreshedColliderComponent->createdFixtureCount);
+            return;
         }
 
         std::ostringstream oss;

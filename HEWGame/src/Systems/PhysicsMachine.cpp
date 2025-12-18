@@ -972,6 +972,18 @@ namespace Systems
             return bodyId;
         }
 
+#if defined(_DEBUG)
+        {
+            const b2BodyType createdType = b2Body_IsValid(bodyId) ? b2Body_GetType(bodyId) : bodyDef.type;
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Fixture build failed for tag='" << tag
+                << "' requestedType=" << ToString(bodyDef.type)
+                << " createdType=" << ToString(createdType)
+                << " fixtures=" << fixtureCount << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
+
         colliderComponent->createdFixtureCount = 0;
         body.MarkFixtureBuildFailure(true);
         b2DestroyBody(bodyId);
