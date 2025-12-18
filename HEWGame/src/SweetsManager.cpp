@@ -1284,11 +1284,6 @@ namespace SweetsSpace
 
         switch (type)
         {
-        case SweetsType::Pudding:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.28f, 0.28f, 0.28f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.006f, 0.012f, 0.006f } };
-            return preset;
         case SweetsType::Cream:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.26f, 0.26f, 0.26f };

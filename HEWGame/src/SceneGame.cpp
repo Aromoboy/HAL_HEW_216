@@ -985,7 +985,7 @@ namespace
             return result;
         }
 
-        [[maybe_unused]] PlayerColliderBuildResult BuildPlayerCollider(
+        PlayerColliderBuildResult BuildPlayerCollider(
             const std::string& resolvedKey,
             const Transform& transform,
             const std::string& modelPath,
@@ -2309,19 +2309,45 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const bool playerIsKinematic = false;
     const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
 
-    const std::string resolvedColliderKey = ResolvePlayerColliderKey(playerColliderKey);
+    const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
     const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
+    const bool playerConfigAvailable = m_playerColliderConfigLoaded && hasConfigDefinition;
 
-    const auto colliderBuild = BuildPlayerColliderFromRegistry(
+    PlayerColliderBuildResult colliderBuild = BuildPlayerCollider(
         resolvedColliderKey,
         trans,
+        resolvedModelPath,
         m_playerColliderTuning,
-        m_playerPickupBoxWidth,
-        m_playerPickupBoxHeight,
+        m_playerColliderDefinitions,
+        m_forceConfigPlayerCollider,
         playerBodyType);
 
-    boxColliderComponent = colliderBuild.collider;
-    playerShapeConfig = colliderBuild.shapeConfig;
+    bool registryFallbackUsed = false;
+    if (!playerConfigAvailable)
+    {
+        PlayerColliderBuildResult registryBuild = BuildPlayerColliderFromRegistry(
+            resolvedColliderKey,
+            trans,
+            m_playerColliderTuning,
+            m_playerPickupBoxWidth,
+            m_playerPickupBoxHeight,
+            playerBodyType);
+
+        if (registryBuild.collider && !registryBuild.collider->Empty())
+        {
+            colliderBuild = registryBuild;
+            registryFallbackUsed = true;
+        }
+    }
+
+    if (colliderBuild.collider && !colliderBuild.collider->Empty())
+    {
+        boxColliderComponent = colliderBuild.collider;
+    }
+    if (colliderBuild.shapeConfig && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None)
+    {
+        playerShapeConfig = colliderBuild.shapeConfig;
+    }
     playerColliderHalfExtents = colliderBuild.halfExtents;
     playerColliderOffset = colliderBuild.centerOffset;
     if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f)
@@ -2329,6 +2355,13 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
         m_playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
     }
+
+    const bool colliderHasShapes = boxColliderComponent && !boxColliderComponent->Empty();
+    const bool shapeConfigValid = playerShapeConfig && playerShapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+    const bool colliderReady = colliderHasShapes && shapeConfigValid;
+    const std::string appliedSource = registryFallbackUsed
+        ? "RegistryFallback"
+        : (playerConfigAvailable ? "PlayerConfig" : "GeneratedFallback");
 
     {
         std::ostringstream oss;
@@ -2344,11 +2377,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         };
 
         oss << kLogPrefix << "[PlayerCollider] source=" << colliderBuild.source
+            << " appliedSource=" << appliedSource
             << " key='" << resolvedColliderKey << "' forceConfig=" << std::boolalpha << m_forceConfigPlayerCollider
+            << " configLoaded=" << m_playerColliderConfigLoaded
             << " configAvailable=" << hasConfigDefinition
             << " registryHit=" << colliderBuild.registryHit
             << " registryShapes=" << colliderBuild.registryHasShapes
-            << " applied=" << (boxColliderComponent && playerShapeConfig)
+            << " applied=" << colliderReady
+            << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
             << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
             << " offset=(" << playerColliderOffset.x << ',' << playerColliderOffset.y << ',' << playerColliderOffset.z << ')'
             << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ')'
@@ -2393,27 +2429,50 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
-        RegisterPhysicsBody(*player);
+        if (colliderReady)
         {
-            std::ostringstream oss;
-            const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
-            const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
-            const auto bodyTypeToString = [](b2BodyType type)
+            RegisterPhysicsBody(*player);
+            {
+                std::ostringstream oss;
+                const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
+                const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
+                const auto bodyTypeToString = [](b2BodyType type)
+                {
+                    switch (type)
+                    {
+                    case b2_staticBody: return "static";
+                    case b2_kinematicBody: return "kinematic";
+                    case b2_dynamicBody: return "dynamic";
+                    default: return "unknown";
+                    }
+                };
+
+                const bool typeMatches = configuredBodyType == createdBodyType;
+                oss << kLogPrefix << "Player physics body registered (expected="
+                    << bodyTypeToString(configuredBodyType)
+                    << ", created=" << bodyTypeToString(createdBodyType)
+                    << ", match=" << std::boolalpha << typeMatches << ").\n";
+                ::DebugTrace(oss.str());
+            }
+        }
+        else
+        {
+            const auto shapeToString = [](Physics::Box2DShapeConfig::Type type)
             {
                 switch (type)
                 {
-                case b2_staticBody: return "static";
-                case b2_kinematicBody: return "kinematic";
-                case b2_dynamicBody: return "dynamic";
-                default: return "unknown";
+                case Physics::Box2DShapeConfig::Type::Box: return "Box";
+                case Physics::Box2DShapeConfig::Type::Polygon: return "Polygon";
+                case Physics::Box2DShapeConfig::Type::Circle: return "Circle";
+                default: return "None";
                 }
             };
-
-            const bool typeMatches = configuredBodyType == createdBodyType;
-            oss << kLogPrefix << "Player physics body registered (expected="
-                << bodyTypeToString(configuredBodyType)
-                << ", created=" << bodyTypeToString(createdBodyType)
-                << ", match=" << std::boolalpha << typeMatches << ").\n";
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] Skipping physics registration; colliderReady="
+                << std::boolalpha << colliderReady
+                << " appliedSource=" << appliedSource
+                << " shapes=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
+                << " shapeType=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None") << "\n";
             ::DebugTrace(oss.str());
         }
         if (m_drawSystem)

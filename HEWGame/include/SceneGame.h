@@ -133,8 +133,6 @@ private:
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;
-    float ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const;
-    void RefreshSweetsSpawnOrigins(bool requireOsaraReady = false);
     std::vector<StageObject> m_stageObjects;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;

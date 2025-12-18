@@ -109,16 +109,14 @@ namespace SweetsSpace
 
     void SweetsPrototypeManifest::ApplyDefaults()
     {
-        Register(SweetsType::Pudding, "Pudding", "Assets/Model/LowPolyNature/Models/pudding.fbx", "Low-poly pudding cup with baked textures");
         Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx", "Soft-serve inspired cream scoop used for sherbet prototype");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx", "High-detail pineapple with leafy crown");
         Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx", "Low-poly curved banana fruit");
-        RegisterAlias(SweetsType::Cream, "Sherbet");
 
         RegisterExtra("Cake", "Assets/Model/cake.fbx", "Stage foundation cake block");
-        RegisterExtra("Osara", "Assets/Model/cake.fbx", "Stage plate block shared with cake base");
+        RegisterExtra("Osara", "Assets/Model/osara.fbx", "Stage plate");
         RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
         RegisterExtraAlias("Fairy", "Player");
     }
@@ -176,7 +174,6 @@ namespace SweetsSpace
         const bool loaded = LoadOverridesFromCsv(csvPath);
 
         const std::array<SweetsType, 6> kTypes{
-            SweetsType::Pudding,
             SweetsType::Cream,
             SweetsType::Strawberry,
             SweetsType::Blueberry,
@@ -286,7 +283,6 @@ namespace SweetsSpace
             }
             auto mapToSweetsType = [](const std::string& normalized) -> std::optional<SweetsType>
             {
-                if (normalized == NormalizeKey(ToString(SweetsType::Pudding))) return SweetsType::Pudding;
                 if (normalized == NormalizeKey(ToString(SweetsType::Cream)) || normalized == "sherbet") return SweetsType::Cream;
                 if (normalized == NormalizeKey(ToString(SweetsType::Strawberry))) return SweetsType::Strawberry;
                 if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
@@ -441,8 +437,6 @@ namespace SweetsSpace
     {
         switch (type)
         {
-        case SweetsType::Pudding:
-            return "Pudding";
         case SweetsType::Cream:
             return "Cream";
         case SweetsType::Strawberry:

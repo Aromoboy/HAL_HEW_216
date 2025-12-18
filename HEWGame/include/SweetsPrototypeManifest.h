@@ -10,7 +10,6 @@ namespace SweetsSpace
 {
     enum class SweetsType : std::uint8_t
     {
-        Pudding,
         Cream,
         Strawberry,
         Blueberry,
