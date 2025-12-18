@@ -648,7 +648,7 @@ AssimpModelLorder::MakeMaterial(
                     const std::string sanitizedPath = "Assets/Texture/" + fileName;
 
                     DebugLog::DebugMessage(
-                        "[Material] テクスチャパスを正規化 '" + originalTexPath +
+                        std::string("[Material] テクスチャパスを正規化 '") + originalTexPath +
                         "' -> '" + sanitizedPath + "'");
 
                     if (std::filesystem::exists(sanitizedPath))
@@ -666,12 +666,12 @@ AssimpModelLorder::MakeMaterial(
                             textureDirectory = "Assets/Texture/";
                             sanitizedFile = *alias;
                             DebugLog::DebugMessage(
-                                "[Material] テクスチャ '" + fileName + "' を '" + *alias + "' にマッピング");
+                                std::string("[Material] テクスチャ '") + fileName + "' を '" + *alias + "' にマッピング");
                         }
                         else
                         {
                             DebugLog::DebugMessage(
-                                "[AssimpModelLoader][WARNING] テクスチャエイリアス '" +
+                                std::string("[AssimpModelLoader][WARNING] テクスチャエイリアス '") +
                                 remappedPath + "' が見つからないためスキップ");
                             skipTextureLoading = true;
                         }
@@ -679,7 +679,7 @@ AssimpModelLorder::MakeMaterial(
                     else
                     {
                         DebugLog::DebugMessage(
-                            "[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '" +
+                            std::string("[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '") +
                             sanitizedPath + "' テクスチャをスキップ");
                         skipTextureLoading = true;
                     }
@@ -727,7 +727,7 @@ AssimpModelLorder::MakeMaterial(
                     }
 
                     DebugLog::DebugMessage(
-                        "[AssimpModelLoader][CHECKPOINT C] マテリアル=" + std::to_string(i)
+                        std::string("[AssimpModelLoader][CHECKPOINT C] マテリアル=") + std::to_string(i)
                         + " diffuse='" + texFile
                         + "' baseColor='" + baseColorStr
                         + "' modelDir=" + directory
@@ -746,14 +746,14 @@ AssimpModelLorder::MakeMaterial(
                         if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
                         {
                             DebugLog::DebugMessage(
-                                "[Material] 無効なパス '" + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
+                                std::string("[Material] 無効なパス '") + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
                             full = *fallback;
                             skipTextureLoad = false;
                         }
                         else
                         {
                             DebugLog::DebugMessage(
-                                "[Material][WARNING] フォールバックテクスチャが見つからない '" + texFile + "' テクスチャをスキップ");
+                                std::string("[Material][WARNING] フォールバックテクスチャが見つからない '") + texFile + "' テクスチャをスキップ");
                             skipTextureLoad = true;
                         }
                     }
@@ -776,7 +776,7 @@ AssimpModelLorder::MakeMaterial(
                 if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
                 {
                     DebugLog::DebugMessage(
-                        "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
+                        std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
                     std::wstring wfull(fallback->begin(), fallback->end());
                     texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
                 }
