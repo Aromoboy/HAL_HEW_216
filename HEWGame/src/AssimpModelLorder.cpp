@@ -111,7 +111,9 @@ namespace
             {
                 return true;
             }
-            return rel.native().rfind("..", 0) != 0 && !rel.is_absolute();
+            const auto native = rel.native();
+            const auto parentPrefix = std::filesystem::path("..").native();
+            return native.rfind(parentPrefix, 0) != 0 && !rel.is_absolute();
         }
 
         const auto lexicalRoot = root.lexically_normal();
@@ -122,7 +124,9 @@ namespace
         {
             return true;
         }
-        return rel.native().rfind("..", 0) != 0 && !rel.is_absolute();
+        const auto native = rel.native();
+        const auto parentPrefix = std::filesystem::path("..").native();
+        return native.rfind(parentPrefix, 0) != 0 && !rel.is_absolute();
     }
 
     bool EndsWithPath(const std::string& fullPath, const std::string& suffix)
