@@ -384,54 +384,25 @@ namespace Entities
         SetBox2DShapeConfig(shapeConfig);
     }
 
-    void Player::OnUpdate(Core::UpdateContext& ctx)
-    {
-        SyncVisualTransformFromPhysics();
-
-        Core::Input& input = ctx.input;
-
-        const bool hasBody = HasBox2DBody();
-        if (!hasBody && !m_missingBodyLogged)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "[Fatal] Missing Box2D body; falling back to transform-based update for pickups to continue.\n");
-            m_missingBodyLogged = true;
-        }
-
-        const float horizontal = input.GetAxis(Core::ActionId::MoveX);
-        const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
-
-        if (horizontal > 0.0f)
-        {
-            m_facingSign = 1.0f;
-        }
-        else if (horizontal < 0.0f)
-        {
-            m_facingSign = -1.0f;
-        }
-
-        const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
-        const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
-
-        if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
-        {
-            if (horizontal != 0.0f || vertical != 0.0f)
-            {
-                if (hasBody)
-                {
-                    const float3 desired{
-                        horizontal * effectiveHorizontalSpeed,
-                        vertical * effectiveVerticalSpeed,
-                        0.0f
-                    };
         void Player::OnUpdate(Core::UpdateContext& ctx)
         {
             SyncVisualTransformFromPhysics();
-            if (!HasBox2DBody())
-                return;
 
             Core::Input& input = ctx.input;
+
+            const bool hasBody = HasBox2DBody();
+            if (!hasBody && !m_missingBodyLogged)
+            {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) +
+                    "[Fatal] Missing Box2D body; falling back to transform-based update.\n");
+                m_missingBodyLogged = true;
+            }
+
             const float horizontal = input.GetAxis(Core::ActionId::MoveX);
             const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+
+            if (horizontal > 0.0f)      m_facingSign = 1.0f;
+            else if (horizontal < 0.0f) m_facingSign = -1.0f;
 
             const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
             const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
@@ -444,56 +415,47 @@ namespace Entities
                 {
                     isMovingNow = true;
 
-                    if (HasBox2DBody())
-                    {
-                        const float3 desired{
-                            horizontal * effectiveHorizontalSpeed,
-                            vertical * effectiveVerticalSpeed,
-                            0.0f
-                        };
-                        SetLinearVelocity(desired);
-                    }
-                }
-                else if (HasBox2DBody())
-                {
-                    SetLinearVelocity(float3{ 0,0,0 });
-                }
-                else
-                {
-                    const float3 delta{
-                        horizontal * effectiveHorizontalSpeed * ctx.dt,
-                        vertical * effectiveVerticalSpeed * ctx.dt,
+                    const float3 desired{
+                        horizontal * effectiveHorizontalSpeed,
+                        vertical * effectiveVerticalSpeed,
                         0.0f
                     };
-                    ApplyTranslation(delta);
+
+                    if (hasBody)
+                        SetLinearVelocity(desired);
+                    else
+                        ApplyTranslation(float3{
+                            desired.x * ctx.dt,
+                            desired.y * ctx.dt,
+                            desired.z * ctx.dt
+                            });
+                }
+                else if (hasBody)
+                {
+                    SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
                 }
             }
             else if (hasBody)
             {
-                SetLinearVelocity(float3{ 0,0,0 });
+                SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
             }
-        }
 
-            // ========== 移動音の制御（フェードアウト付き）==========
-            auto* sound = SoundManagerEX::GetInstance();
-            if (sound)
+            // ===== 移動音（フェードアウト付き）=====
+            if (auto* sound = SoundManagerEX::GetInstance())
             {
-                // 移動開始した瞬間
                 if (isMovingNow && !m_wasMovingLastFrame)
                 {
-                    // フェードアウト中だったらキャンセル
                     if (m_moveSoundFadingOut)
                     {
                         m_moveSoundFadingOut = false;
-                        sound->SetVolume(m_moveSoundHandle, 0.3f);  // フル音量に戻す
+                        sound->SetVolume(m_moveSoundHandle, 0.3f);
                     }
                     else
                     {
-                        // 新しく再生開始
-                        m_moveSoundHandle = sound->PlaySoundEX("Assets/Audio/SE_Move.wav", true, 0.3f);
+                        m_moveSoundHandle = sound->PlaySoundEX(
+                            "Assets/Audio/SE_Move.wav", true, 0.3f);
                     }
                 }
-                // 移動停止した瞬間 - フェードアウト開始
                 else if (!isMovingNow && m_wasMovingLastFrame && !m_moveSoundFadingOut)
                 {
                     if (m_moveSoundHandle != -1)
@@ -503,14 +465,11 @@ namespace Entities
                     }
                 }
 
-                // フェードアウト処理
                 if (m_moveSoundFadingOut && m_moveSoundHandle != -1)
                 {
                     m_moveSoundFadeTimer += ctx.dt;
-
                     if (m_moveSoundFadeTimer >= m_moveSoundFadeDuration)
                     {
-                        // フェードアウト完了 - 音を停止
                         sound->StopSound(m_moveSoundHandle);
                         m_moveSoundHandle = -1;
                         m_moveSoundFadingOut = false;
@@ -518,16 +477,12 @@ namespace Entities
                     }
                     else
                     {
-                        // 音量を徐々に下げる (1.0 → 0.0)
-                        float progress = m_moveSoundFadeTimer / m_moveSoundFadeDuration;
-                        float volume = 0.3f * (1.0f - progress);  // 0.3f から 0.0f へ
-                        sound->SetVolume(m_moveSoundHandle, volume);
+                        const float t = m_moveSoundFadeTimer / m_moveSoundFadeDuration;
+                        sound->SetVolume(m_moveSoundHandle, 0.3f * (1.0f - t));
                     }
                 }
             }
-
             m_wasMovingLastFrame = isMovingNow;
-            // ========== 移動音の制御ここまで ==========
 
             ClampVerticalPosition();
             ClampScreenBounds();

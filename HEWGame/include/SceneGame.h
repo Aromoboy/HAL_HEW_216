@@ -132,11 +132,7 @@ private:
     int ComputeScore() const;
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
-    std::string ResolvePlayerColliderKey(const std::string& key) const;
-    const Stage::PlatformDescriptor* FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const;
-    float ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const;
-    void RefreshSweetsSpawnOrigins(bool requireOsaraReady = false);
-  
+    std::string ResolvePlayerColliderKey(const std::string& key) const;  
     void Initialize(const Stage::StageData& stageData);
     
     std::vector<StageObject> m_stageObjects;
