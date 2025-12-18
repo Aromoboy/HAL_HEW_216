@@ -347,15 +347,12 @@ namespace Entities {
 }
 SceneSpace_PhysicalEntity <|-- Player
 namespace SweetsSpace {
-  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground }
+  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground Carried }
   class BaseSweets["SweetsSpace::BaseSweets"] {
     - model : shared_ptr<Render_Model>
     +OnUpdate(ctx:Core_UpdateContext)
     +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
   }
-  class Cake["SweetsSpace::Cake"]
-  class Pudding["SweetsSpace::Pudding"]
-  class Sherbet["SweetsSpace::Sherbet"]
   class SweetsManager["SweetsSpace::SweetsManager"] {
     - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
     +OnUpdate(ctx:Core_UpdateContext)
@@ -365,9 +362,6 @@ namespace SweetsSpace {
   }
 }
 SceneSpace_PhysicalEntity <|-- BaseSweets
-BaseSweets <|-- Cake
-BaseSweets <|-- Pudding
-BaseSweets <|-- Sherbet
 SweetsManager *-- BaseSweets
 SweetsManager *-- SweetsState
 Player o-- Render_Model
@@ -542,16 +536,15 @@ UpdateNode:
 
 ## SweetsPrototype プレースホルダーモデル
 
-`HEWGame/Assets/Model/SweetsPrototype/` には、プロトタイピング用に極めて単純なOBJメッシュを配置している。これらはGitで共有されているため、リポジトリをクローンすればそのまま`ModelCache`から参照できる。プレースホルダーモデルと`SweetsType`の対応は`SweetsPrototypeManifest`に集約されている。
+`SweetsPrototypeManifest` はビルトイン定義と `Assets/Config/sweets_models.csv` のオーバーライドをまとめ、`SweetsType` ごとのモデルパスを提供する。
 
 | SweetsType | ファイル名 | 形状 | 用途 |
 | --- | --- | --- | --- |
-| `Pudding` | `Pudding.obj` | 三角柱（UV展開済み） | 断面が三角形のプリン |
-| `Cream` (`Sherbet` alias) | `Sherbet.obj` | ローポリ球（シェーディング対応） | ソフトクリーム状のシャーベット |
-| `Strawberry` | `Strawberry.obj` | --- | いちご |
-| `Blueberry` | `Blueberry.obj` | --- | ブルーベリー |
-| `Pineapple` | `Pineapple.obj` | --- | パイナップル |
-| `Banana` | `Banana.obj` | --- | バナナ |
+| `Cream` (`Sherbet` alias) | `cream.fbx` | ローポリ球（シェーディング対応） | ソフトクリーム状のシャーベット |
+| `Strawberry` | `strawberry.fbx` | --- | いちご |
+| `Blueberry` | `blueberry.fbx` | --- | ブルーベリー |
+| `Pineapple` | `pineapple.fbx` | --- | パイナップル |
+| `Banana` | `banana.fbx` | --- | バナナ |
 
 ステージ用の `Cake`/`Osara` ブロックとプレイヤー用の `Fairy` は `SweetsType` には含まれない補助プロトタイプとして `SweetsPrototypeManifest` に登録されます（`Player` エイリアスも `Fairy` にマップされます）。
 

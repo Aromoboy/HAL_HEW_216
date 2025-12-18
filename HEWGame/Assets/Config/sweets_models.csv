@@ -1,7 +1,6 @@
 key,modelPath,description
 Cake,Assets/Model/cake.fbx,High-detail sponge cake base used by sweets and foundation platform
 Osara,Assets/Model/cake.fbx,Alternate plate variant for stage foundation that reuses the cake mesh
-Pudding,Assets/Model/LowPolyNature/Models/pudding.fbx,Low-poly pudding cup with baked textures
 Cream,Assets/Model/cream.fbx,Soft-serve cream scoop prototype used for sherbet-style sweets
 Strawberry,Assets/Model/strawberry.fbx,Textured strawberry fruit with visible seeds
 Blueberry,Assets/Model/blueberry.fbx,Juicy blueberry fruit mesh with baked vertex colors

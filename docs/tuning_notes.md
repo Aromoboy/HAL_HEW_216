@@ -14,13 +14,11 @@ These values are defined in `Assets/Config/stage_default.cfg`, `StageData` defau
 ## Sweets stacking
 - Scales tightened to keep cross-sections compact for predictable contacts:
   - Cake: 0.26–0.32
-  - Pudding: 0.24–0.32
-  - Sherbet: 0.22–0.30
+  - Cream (Sherbet alias): 0.22–0.30
   - Strawberry: 0.20–0.28
 - Densities reduced to lower mass and jitter risk while retaining frictional grip:
   - Cake: 1.2 (Box)
-  - Pudding: 0.95 (Polygon wedge)
-  - Sherbet: 0.75 (Circle)
+  - Cream/Sherbet: 0.75 (Circle)
   - Defaults/others: 0.9
 
 Configuration lives in `Assets/Config/sweets_factory.csv` (scales) and `SweetsManager::BuildBaseShapeConfig` (densities/materials).
