@@ -2458,7 +2458,7 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets);
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
