@@ -168,6 +168,23 @@ namespace
         return aliases;
     }
 
+    std::unordered_map<std::string, std::string> BuildModelTextureOverrideMap()
+    {
+        std::unordered_map<std::string, std::string> overrides;
+
+        const auto addOverride = [&overrides](const std::string& model, const std::string& texture)
+        {
+            overrides.emplace(NormalizeForKey(model), texture);
+        };
+
+        addOverride("cake.fbx", "Assets/Texture/cake.png");
+        addOverride("assets/model/cake.fbx", "Assets/Texture/cake.png");
+        addOverride("osara.fbx", "Assets/Texture/osara.png");
+        addOverride("assets/model/osara.fbx", "Assets/Texture/osara.png");
+
+        return overrides;
+    }
+
     std::optional<std::string> ResolveTextureAlias(const std::string& fileName)
     {
         static const std::unordered_map<std::string, std::string> kAliases = BuildTextureAliasMap();
@@ -182,9 +199,37 @@ namespace
         return std::nullopt;
     }
 
+    std::optional<std::string> ResolveTextureOverrideForModel(const std::string& normalizedModelPath)
+    {
+        static const std::unordered_map<std::string, std::string> kOverrides = BuildModelTextureOverrideMap();
+
+        const auto directIt = kOverrides.find(NormalizeForKey(normalizedModelPath));
+        if (directIt != kOverrides.end())
+        {
+            return directIt->second;
+        }
+
+        const std::filesystem::path asPath{ normalizedModelPath };
+        const auto fileIt = kOverrides.find(NormalizeForKey(asPath.filename().string()));
+        if (fileIt != kOverrides.end())
+        {
+            return fileIt->second;
+        }
+
+        return std::nullopt;
+    }
+
     std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
     {
         const std::string normalizedModelPath = NormalizePath(modelPath);
+
+        if (auto override = ResolveTextureOverrideForModel(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*override))
+            {
+                return override;
+            }
+        }
 
         if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
         {
