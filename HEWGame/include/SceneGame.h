@@ -47,11 +47,13 @@ struct StageObject
 {
     std::string modelPath;
     Transform transform;
-    bool spinEnabled;
-    float3 spinAxis;
-    float spinSpeed;
+    bool spinEnabled = false;
+    float3 spinAxis{ 0.0f, 0.0f, 0.0f };
+    float spinSpeed = 0.0f;
     std::shared_ptr<ModelDX> model;
-    float currentRotation;
+    float currentRotation = 0.0f;
+    std::string colliderPresetId;
+    std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 
 namespace Systems
