@@ -29,6 +29,7 @@
 #include <vector>
 #include "DirectX.h"
 #include "AABB.h"
+#include "Collision/ConvexHullBuilder.h"
 #include "ColliderRegistry.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
