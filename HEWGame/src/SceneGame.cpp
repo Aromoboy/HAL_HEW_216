@@ -3732,7 +3732,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
     float bonusSecond = m_heightBonusSeconds;
 
     //積んでる状態の高さ
-    float instantHeight = 2.0f;
+    float instantHeight = 0.0f;
 
     std::ostringstream oss;
     oss << "[DEBUG] instantHeight=" << instantHeight
