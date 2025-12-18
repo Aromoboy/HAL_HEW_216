@@ -293,6 +293,31 @@ namespace
         bool valid{ false };
     };
 
+    ModelBounds ToModelBounds(const AABB& bounds)
+    {
+        ModelBounds converted{};
+        converted.min = bounds.min;
+        converted.max = bounds.max;
+        converted.valid = true;
+        return converted;
+    }
+
+    ModelBounds ScaleBounds(const ModelBounds& bounds, const float3& scale)
+    {
+        ModelBounds scaled{};
+        if (!bounds.valid)
+        {
+            return scaled;
+        }
+
+        const float3 scaledMin = ScaleVector(bounds.min, scale);
+        const float3 scaledMax = ScaleVector(bounds.max, scale);
+        scaled.min = float3{ std::min(scaledMin.x, scaledMax.x), std::min(scaledMin.y, scaledMax.y), std::min(scaledMin.z, scaledMax.z) };
+        scaled.max = float3{ std::max(scaledMin.x, scaledMax.x), std::max(scaledMin.y, scaledMax.y), std::max(scaledMin.z, scaledMax.z) };
+        scaled.valid = true;
+        return scaled;
+    }
+
     struct MeshHullSummary
     {
         ModelBounds bounds{};
@@ -540,16 +565,263 @@ namespace SweetsSpace
         const float2& colliderCenter,
         bool allowMeshPhysics)
     {
-        (void)kind;
-        (void)transform;
-        (void)modelPath;
-        (void)model;
-        (void)colliderCenter;
-        (void)allowMeshPhysics;
-
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
-        result.source = ColliderSource::Config;
+        result.source = ColliderSource::Fallback;
+
+        const std::string resolvedKind = ResolveKindKey(kind);
+        const std::string normalizedKind = NormalizeKey(resolvedKind);
+
+        ColliderPreset colliderPreset{};
+        if (auto presetIt = m_factoryPresets.find(normalizedKind); presetIt != m_factoryPresets.end())
+        {
+            colliderPreset = presetIt->second.colliderPreset;
+        }
+
+        ModelBounds modelBounds{};
+        if (model && model->HasLocalBounds())
+        {
+            modelBounds = ToModelBounds(model->GetLocalBounds());
+        }
+
+        MeshHullSummary geometrySummary{};
+        if (!modelBounds.valid || allowMeshPhysics)
+        {
+            geometrySummary = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
+            if (geometrySummary.bounds.valid && !modelBounds.valid)
+            {
+                modelBounds = geometrySummary.bounds;
+            }
+
+            if (allowMeshPhysics && !geometrySummary.hull.empty())
+            {
+                std::vector<b2Vec2> hull;
+                hull.reserve(geometrySummary.hull.size());
+                for (const auto& pt : geometrySummary.hull)
+                {
+                    hull.push_back(b2Vec2{
+                        (pt.x + geometrySummary.centroidOffset.x) * transform.scale.x + colliderCenter.x,
+                        (pt.y + geometrySummary.centroidOffset.y) * transform.scale.y + colliderCenter.y });
+                }
+
+                result.meshBoundary = hull;
+                result.meshPolygons.push_back(hull);
+                result.thickness = geometrySummary.thickness * transform.scale.z;
+                result.centroidOffset = float2{
+                    geometrySummary.centroidOffset.x * transform.scale.x,
+                    geometrySummary.centroidOffset.y * transform.scale.y };
+                result.source = ColliderSource::Generated;
+            }
+        }
+
+        const ModelBounds scaledBounds = ScaleBounds(modelBounds, transform.scale);
+
+        float3 targetHalfExtents{};
+        const bool hasBounds = modelBounds.valid;
+        if (hasBounds)
+        {
+            targetHalfExtents = ComputeHalfExtents(modelBounds, transform.scale, colliderPreset);
+        }
+
+        auto registryDefinition = Physics::ColliderRegistry::Instance().Find(resolvedKind);
+        if (!registryDefinition && resolvedKind != ToString(type))
+        {
+            registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        }
+
+        const float minDimension = Physics::kMinimumShapeDimensionMeters;
+        const float minRadiusFromType = std::max(
+            minDimension * 0.5f,
+            (type == SweetsType::Blueberry)
+            ? kMinimumBlueberryColliderRadius
+            : ((type == SweetsType::Strawberry) ? kMinimumBerryColliderRadius : 0.0f));
+
+        const float allowedWidth = scaledBounds.valid
+            ? (scaledBounds.max.x - scaledBounds.min.x)
+            : std::numeric_limits<float>::infinity();
+        const float allowedHeight = scaledBounds.valid
+            ? (scaledBounds.max.y - scaledBounds.min.y)
+            : std::numeric_limits<float>::infinity();
+
+        auto fitVertices = [&](std::vector<b2Vec2>& vertices, float targetWidth, float targetHeight)
+        {
+            if (vertices.size() < 2)
+            {
+                return;
+            }
+
+            b2Vec2 minPt{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+            b2Vec2 maxPt{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+
+            for (const auto& vertex : vertices)
+            {
+                minPt.x = std::min(minPt.x, vertex.x);
+                minPt.y = std::min(minPt.y, vertex.y);
+                maxPt.x = std::max(maxPt.x, vertex.x);
+                maxPt.y = std::max(maxPt.y, vertex.y);
+            }
+
+            const float currentWidth = maxPt.x - minPt.x;
+            const float currentHeight = maxPt.y - minPt.y;
+            float desiredWidth = (targetWidth > 0.0f) ? targetWidth : currentWidth;
+            float desiredHeight = (targetHeight > 0.0f) ? targetHeight : currentHeight;
+
+            desiredWidth = std::max(desiredWidth, minDimension);
+            desiredHeight = std::max(desiredHeight, minDimension);
+
+            if (std::isfinite(allowedWidth))
+            {
+                desiredWidth = std::min(desiredWidth, allowedWidth);
+            }
+            if (std::isfinite(allowedHeight))
+            {
+                desiredHeight = std::min(desiredHeight, allowedHeight);
+            }
+
+            const float scaleX = (currentWidth > 0.0f) ? (desiredWidth / currentWidth) : 1.0f;
+            const float scaleY = (currentHeight > 0.0f) ? (desiredHeight / currentHeight) : 1.0f;
+            float uniformScale = std::min(scaleX, scaleY);
+            if (!std::isfinite(uniformScale) || uniformScale <= 0.0f)
+            {
+                uniformScale = 1.0f;
+            }
+
+            if (std::fabs(uniformScale - 1.0f) <= 1e-4f)
+            {
+                return;
+            }
+
+            const float centerX = (minPt.x + maxPt.x) * 0.5f;
+            const float centerY = (minPt.y + maxPt.y) * 0.5f;
+            for (auto& vertex : vertices)
+            {
+                vertex.x = centerX + (vertex.x - centerX) * uniformScale;
+                vertex.y = centerY + (vertex.y - centerY) * uniformScale;
+            }
+        };
+
+        const auto resolveRegistryMaterial = [&](const Physics::ColliderRegistryDefinition& def)
+        {
+            result.shapeConfig.type = InferShapeType(def.shapes);
+            result.shapeConfig.density = std::max(0.0f, def.shapeDef.density);
+            result.shapeConfig.friction = std::max(0.0f, def.shapeDef.material.friction);
+            result.shapeConfig.restitution = std::clamp(def.shapeDef.material.restitution, 0.0f, 1.0f);
+        };
+
+        if (registryDefinition)
+        {
+            resolveRegistryMaterial(*registryDefinition);
+
+            const float planarScale = std::max(transform.scale.x, transform.scale.y);
+            for (const auto& shape : registryDefinition->shapes)
+            {
+                Physics::ColliderShapeDescriptor scaledShape{};
+                scaledShape.type = shape.type;
+
+                switch (shape.type)
+                {
+                case Physics::ColliderShapeType::Circle:
+                {
+                    const b2Vec2 center = shape.vertices.empty()
+                        ? b2Vec2{ 0.0f, 0.0f }
+                        : b2Vec2{ shape.vertices.front().x * transform.scale.x + colliderCenter.x,
+                            shape.vertices.front().y * transform.scale.y + colliderCenter.y };
+
+                    float scaledRadius = shape.radius * planarScale;
+                    if (hasBounds)
+                    {
+                        scaledRadius = std::max(scaledRadius, std::max(targetHalfExtents.x, targetHalfExtents.y));
+                    }
+
+                    if (std::isfinite(allowedWidth) && std::isfinite(allowedHeight))
+                    {
+                        const float allowedRadius = 0.5f * std::min(allowedWidth, allowedHeight);
+                        if (allowedRadius > 0.0f)
+                        {
+                            scaledRadius = std::min(scaledRadius, allowedRadius);
+                        }
+                    }
+
+                    scaledRadius = std::max(scaledRadius, minRadiusFromType);
+                    scaledShape.radius = scaledRadius;
+                    scaledShape.vertices.push_back(center);
+                    result.shapes.push_back(std::move(scaledShape));
+                    break;
+                }
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    scaledShape.vertices.reserve(shape.vertices.size());
+                    for (const auto& vertex : shape.vertices)
+                    {
+                        scaledShape.vertices.push_back(b2Vec2{ vertex.x * transform.scale.x + colliderCenter.x,
+                            vertex.y * transform.scale.y + colliderCenter.y });
+                    }
+
+                    const float desiredWidth = hasBounds ? targetHalfExtents.x * 2.0f : 0.0f;
+                    const float desiredHeight = hasBounds ? targetHalfExtents.y * 2.0f : 0.0f;
+                    fitVertices(scaledShape.vertices, desiredWidth, desiredHeight);
+                    result.shapes.push_back(std::move(scaledShape));
+                    break;
+                }
+                }
+            }
+
+            result.source = ColliderSource::Config;
+        }
+
+        if (result.shapes.empty() && !geometrySummary.hull.empty())
+        {
+            Physics::ColliderShapeDescriptor hullShape{};
+            hullShape.type = Physics::ColliderShapeType::Polygon;
+            hullShape.vertices.reserve(geometrySummary.hull.size());
+            for (const auto& pt : geometrySummary.hull)
+            {
+                hullShape.vertices.push_back(b2Vec2{
+                    (pt.x + geometrySummary.centroidOffset.x) * transform.scale.x + colliderCenter.x,
+                    (pt.y + geometrySummary.centroidOffset.y) * transform.scale.y + colliderCenter.y });
+            }
+
+            const float desiredWidth = hasBounds ? targetHalfExtents.x * 2.0f : 0.0f;
+            const float desiredHeight = hasBounds ? targetHalfExtents.y * 2.0f : 0.0f;
+            fitVertices(hullShape.vertices, desiredWidth, desiredHeight);
+            result.shapes.push_back(std::move(hullShape));
+            result.shapeConfig.type = Physics::Box2DShapeConfig::Type::Polygon;
+            result.source = ColliderSource::Generated;
+        }
+
+        if (result.shapeConfig.type == Physics::Box2DShapeConfig::Type::None)
+        {
+            result.shapeConfig.type = InferShapeType(result.shapes);
+        }
+
+        const ModelBounds colliderBounds = ComputeBoundsFromShapes(result.shapes);
+
+#if defined(_DEBUG)
+        const bool isBerry = (type == SweetsType::Strawberry || type == SweetsType::Blueberry);
+        if (isBerry && scaledBounds.valid && colliderBounds.valid)
+        {
+            constexpr float kBoundsEpsilon = 1e-3f;
+            const bool within = (colliderBounds.min.x >= scaledBounds.min.x - kBoundsEpsilon)
+                && (colliderBounds.max.x <= scaledBounds.max.x + kBoundsEpsilon)
+                && (colliderBounds.min.y >= scaledBounds.min.y - kBoundsEpsilon)
+                && (colliderBounds.max.y <= scaledBounds.max.y + kBoundsEpsilon);
+
+            if (!within)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "[ColliderCheck] berry collider escaped bounds kind='" << resolvedKind << "'"
+                    << " colliderMin=(" << colliderBounds.min.x << ',' << colliderBounds.min.y << ")"
+                    << " colliderMax=(" << colliderBounds.max.x << ',' << colliderBounds.max.y << ")"
+                    << " meshMin=(" << scaledBounds.min.x << ',' << scaledBounds.min.y << ")"
+                    << " meshMax=(" << scaledBounds.max.x << ',' << scaledBounds.max.y << ")" << "\n";
+                DebugTrace(warn.str());
+                assert(within && "Berry collider should stay within mesh bounds");
+            }
+        }
+#endif
+
         return result;
     }
 
@@ -825,6 +1097,67 @@ namespace SweetsSpace
         bounds.min = float3{ extents.min.x, extents.min.y, -thickness * 0.5f };
         bounds.max = float3{ extents.max.x, extents.max.y, thickness * 0.5f };
         bounds.valid = true;
+        return bounds;
+    }
+
+    ModelBounds ComputeBoundsFromShapes(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
+    {
+        ModelBounds bounds{};
+        for (const auto& shape : shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+            {
+                const float radius = shape.radius;
+                if (!(radius > 0.0f))
+                {
+                    break;
+                }
+
+                const b2Vec2 center = shape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : shape.vertices.front();
+                const float minX = center.x - radius;
+                const float maxX = center.x + radius;
+                const float minY = center.y - radius;
+                const float maxY = center.y + radius;
+
+                bounds.min.x = std::min(bounds.min.x, minX);
+                bounds.min.y = std::min(bounds.min.y, minY);
+                bounds.max.x = std::max(bounds.max.x, maxX);
+                bounds.max.y = std::max(bounds.max.y, maxY);
+                bounds.valid = true;
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                if (shape.vertices.empty())
+                {
+                    break;
+                }
+
+                for (const auto& vertex : shape.vertices)
+                {
+                    bounds.min.x = std::min(bounds.min.x, vertex.x);
+                    bounds.min.y = std::min(bounds.min.y, vertex.y);
+                    bounds.max.x = std::max(bounds.max.x, vertex.x);
+                    bounds.max.y = std::max(bounds.max.y, vertex.y);
+                }
+
+                bounds.valid = true;
+                break;
+            }
+            }
+        }
+
+        if (bounds.valid)
+        {
+            // Treat collider depth as negligible for now; Z is controlled by mesh thickness elsewhere.
+            bounds.min.z = std::min(bounds.min.z, 0.0f);
+            bounds.max.z = std::max(bounds.max.z, 0.0f);
+        }
+
         return bounds;
     }
 
@@ -1726,7 +2059,17 @@ namespace SweetsSpace
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
-                auto shapeConfig = BuildBaseShapeConfig(type);
+                const float2 colliderCenter{ 0.0f, 0.0f };
+                const ColliderBuildResult colliderBuild = BuildColliderForSweets(
+                    resolvedKind,
+                    type,
+                    physicsTransform,
+                    primaryPath,
+                    model,
+                    colliderCenter,
+                    allowMeshPhysics);
+
+                auto shapeConfig = colliderBuild.shapeConfig;
 
                 Physics::BoxColliderComponent colliderComponent{};
                 std::string colliderLookupId = resolvedKind;
@@ -1737,28 +2080,36 @@ namespace SweetsSpace
                     registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 }
 
-                if (registryDefinition)
-                {
-                    colliderComponent.colliderId = colliderLookupId;
-                    colliderComponent.shapes = registryDefinition->shapes;
-                    colliderComponent.shapeDef = registryDefinition->shapeDef;
+                colliderComponent.colliderId = colliderLookupId;
+                colliderComponent.shapeDef = registryDefinition ? registryDefinition->shapeDef : b2DefaultShapeDef();
 
+                if (colliderBuild.shapeConfig.type == Physics::Box2DShapeConfig::Type::None && registryDefinition)
+                {
                     shapeConfig.type = InferShapeType(registryDefinition->shapes);
                     shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
                     shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
                     shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
                 }
-                else
+
+                if (!colliderBuild.shapes.empty())
                 {
-                    colliderComponent.colliderId = resolvedKind;
-                    if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "colliderId='" << resolvedKind
-                            << "' のレジストリエントリが見つからないから、フィクスチャの構築はスキップされるかも\n";
-                        DebugTrace(warn.str());
-                    }
+                    colliderComponent.shapes = colliderBuild.shapes;
                 }
+                else if (registryDefinition)
+                {
+                    colliderComponent.shapes = registryDefinition->shapes;
+                }
+                else if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
+                {
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "colliderId='" << resolvedKind
+                        << "' のレジストリエントリが見つからないから、フィクスチャの構築はスキップされるかも\n";
+                    DebugTrace(warn.str());
+                }
+
+                colliderComponent.shapeDef.density = shapeConfig.density;
+                colliderComponent.shapeDef.material.friction = shapeConfig.friction;
+                colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
@@ -1768,6 +2119,11 @@ namespace SweetsSpace
                     const std::string colliderIdForLog = colliderComponent.colliderId;
                     sweets->SetBoxColliderComponent(std::move(colliderComponent));
                     sweets->SetVisualTransform(visualTransform);
+
+                    if (allowMeshPhysics && !colliderBuild.meshPolygons.empty())
+                    {
+                        sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
+                    }
 
 #if defined(_DEBUG)
                     std::ostringstream colliderLog;
