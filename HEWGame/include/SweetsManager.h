@@ -51,7 +51,7 @@ namespace SweetsSpace
 
     struct WeightedSweetsType
     {
-        SweetsType kind{ SweetsType::Cake };
+        SweetsType kind{ SweetsType::Pudding };
         float weight = 1.0f;
     };
 

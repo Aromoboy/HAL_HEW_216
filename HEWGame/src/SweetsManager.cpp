@@ -1284,17 +1284,7 @@ namespace SweetsSpace
 
         switch (type)
         {
-        case SweetsType::Cake:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.30f, 0.30f, 0.30f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.006f, 0.006f, 0.006f } };
-            return preset;
         case SweetsType::Cream:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.28f, 0.28f, 0.28f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.006f, 0.012f, 0.006f } };
-            return preset;
-        case SweetsType::Sherbet:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.26f, 0.26f, 0.26f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
@@ -1590,15 +1580,6 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (prototype.type == SweetsType::Cake)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "種類 '" << descriptor->key
-                    << "' はステージ専用だからスポナー登録はスキップするね \n";
-                DebugTrace(oss.str());
-                continue;
-            }
-
             const std::string kind = descriptor->key;
             const std::string resolvedKind = ResolveKindKey(kind);
             const std::string normalizedKind = NormalizeKey(resolvedKind);
@@ -1683,19 +1664,15 @@ namespace SweetsSpace
                 }
 
                 const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
-                auto model = type == SweetsType::Fairy ? CreateProceduralFairyModel() : nullptr;
-                if (!model)
+                auto model = cache.Get(primaryPath);
+                if (!model && primaryPath != kPlaceholderModelPath)
                 {
-                    model = cache.Get(primaryPath);
-                    if (!model && primaryPath != kPlaceholderModelPath)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "スイーツ '" << descriptorKey
-                            << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
-                            << "' を試してみるね \n";
-                        DebugTrace(warn.str());
-                        model = cache.Get(kPlaceholderModelPath);
-                    }
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "スイーツ '" << descriptorKey
+                        << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
+                        << "' を試してみるね \n";
+                    DebugTrace(warn.str());
+                    model = cache.Get(kPlaceholderModelPath);
                 }
 
                 if (!model)

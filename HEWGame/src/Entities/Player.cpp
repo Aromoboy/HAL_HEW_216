@@ -309,7 +309,7 @@ namespace Entities
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
 
-        const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+        const auto* descriptor = manifest.Find("Fairy");
         std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
         if (!descriptor)
         {

@@ -88,14 +88,10 @@ namespace
             return "Assets/Texture/blueberry.png";
         case SweetsType::Pineapple:
             return "Assets/Texture/pineapple.png";
-        case SweetsType::Cake:
+        case SweetsType::Banana:
             return "Assets/Texture/banana.png";
         case SweetsType::Cream:
             return "Assets/Texture/cream.png";
-        case SweetsType::Sherbet:
-        case SweetsType::Banana:
-            return "Assets/Texture/banana.png";
-        case SweetsType::Fairy:
         default:
             return std::nullopt;
         }
@@ -139,42 +135,18 @@ namespace
         {
             return "Assets/Texture/pineapple.png";
         }
-        if (contains("cake") || contains("cream") || contains("Cream") || contains("banana"))
+        if (contains("cream"))
         {
             return "Assets/Texture/cream.png";
+        }
+        if (contains("banana"))
+        {
+            return "Assets/Texture/banana.png";
         }
 
         return std::nullopt;
     }
 
-    std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
-    {
-        const std::string normalizedPath = NormalizePath(modelPath);
-
-        if (auto mapped = ResolveTextureFromManifest(normalizedPath))
-        {
-            return mapped;
-        }
-
-        return GuessTextureFromFilename(normalizedPath);
-    }
-
-    std::optional<std::string> ResolveFallbackTextureByName(const std::string& textureName,
-        const std::string& modelPath)
-    {
-        if (auto mapped = ResolveTextureFromManifest(modelPath))
-        {
-            return mapped;
-        }
-
-        if (auto guessed = GuessTextureFromFilename(textureName))
-        {
-            return guessed;
-        }
-
-        const std::filesystem::path nameOnly(textureName);
-        return GuessTextureFromFilename(NormalizePath(nameOnly.string()));
-    }
 
     bool ContainsNonAscii(const std::string& value)
     {
@@ -194,15 +166,6 @@ namespace
                 });
     }
 
-    std::optional<std::string> ResolveTextureAlias(const std::string& fileName)
-    {
-        if (EqualsIgnoreCase(fileName, "strawberry_uv03.png"))
-        {
-            return "strawberry.png";
-        }
-
-        return std::nullopt;
-    }
 
     struct ImportResult
     {

@@ -2263,7 +2263,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         cache.SetLoader(m_loader, device, TextureCache::Instance());
     }
 
-    const auto* fairyDescriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+    const auto* fairyDescriptor = manifest.Find("Fairy");
     if (!fairyDescriptor && !m_playerModel)
     {
         DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using placeholder.\n");

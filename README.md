@@ -546,10 +546,14 @@ UpdateNode:
 
 | SweetsType | ファイル名 | 形状 | 用途 |
 | --- | --- | --- | --- |
-| `Cake` | `Cake.obj` | 1m 立方体（テクスチャ・法線つき） | キューブ状のスポンジケーキ（ステージ土台専用でスポナーには出現しない） |
 | `Pudding` | `Pudding.obj` | 三角柱（UV展開済み） | 断面が三角形のプリン |
-| `Sherbet` | `Sherbet.obj` | ローポリ球（シェーディング対応） | 丸いシャーベット |
-| `Fairy` | Procedural cross-plane (fallback: `Fairy.obj`) | 青系頂点カラーの板ポリ×2 | プレイヤーフェアリー |
+| `Cream` (`Sherbet` alias) | `Sherbet.obj` | ローポリ球（シェーディング対応） | ソフトクリーム状のシャーベット |
+| `Strawberry` | `Strawberry.obj` | --- | いちご |
+| `Blueberry` | `Blueberry.obj` | --- | ブルーベリー |
+| `Pineapple` | `Pineapple.obj` | --- | パイナップル |
+| `Banana` | `Banana.obj` | --- | バナナ |
+
+ステージ用の `Cake`/`Osara` ブロックとプレイヤー用の `Fairy` は `SweetsType` には含まれない補助プロトタイプとして `SweetsPrototypeManifest` に登録されます（`Player` エイリアスも `Fairy` にマップされます）。
 
 ### プレースホルダーの使い方
 
@@ -558,3 +562,4 @@ UpdateNode:
 3. `descriptor->modelPath` を `ModelCache::Get` に渡すと OBJ がロードされる。
 
 `SweetsManager` や `Entities::Player` など、`BaseSweets` の派生クラスはすべてこのマニフェストを参照するよう統一されています。新しいスイーツを追加する場合はマニフェストに定義を 1 行追加し、上記の表と README を更新してください。
+ステージ／プレイヤー用の補助プロトタイプを参照するときは、`SweetsPrototypeManifest::Instance().Find("Fairy")` のように文字列版の `Find` を使ってください。
