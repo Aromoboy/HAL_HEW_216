@@ -91,6 +91,7 @@ namespace
         case SweetsType::Cake:
         case SweetsType::Pudding:
         case SweetsType::Sherbet:
+            return std::nullopt;
         case SweetsType::Banana:
             return "Assets/Texture/cream.png";
         case SweetsType::Fairy:
@@ -137,7 +138,11 @@ namespace
         {
             return "Assets/Texture/pineapple.png";
         }
-        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana"))
+        if (contains("cake") || contains("pudding") || contains("sherbet"))
+        {
+            return std::nullopt;
+        }
+        if (contains("cream") || contains("banana"))
         {
             return "Assets/Texture/cream.png";
         }
@@ -537,6 +542,7 @@ AssimpModelLorder::MakeMaterial(
 
         aiColor3D col;
         float shininess = 0.0f;
+        bool skipTexturesForShadingModel = false;
 
         if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, col) == AI_SUCCESS)
             diffuse = { col.r, col.g, col.b, 1.0f };
@@ -556,9 +562,27 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
             specular.w = shininess;
 
+        {
+            int shadingModeValue = 0;
+            if (pScene->mMaterials[i]->Get(AI_MATKEY_SHADING_MODEL, shadingModeValue) == AI_SUCCESS)
+            {
+                const aiShadingMode shadingModel = static_cast<aiShadingMode>(shadingModeValue);
+                skipTexturesForShadingModel = shadingModel == aiShadingMode_Gouraud
+                    || shadingModel == aiShadingMode_NoShading;
+                if (skipTexturesForShadingModel)
+                {
+                    std::ostringstream oss;
+                    oss << "[AssimpModelLoader][CHECKPOINT C] マテリアル=" << i
+                        << " シェーディング=" << shadingModeValue << " テクスチャ読み込みをスキップ";
+                    DebugLog::DebugMessage(oss.str());
+                }
+            }
+        }
+
         // テクスチャ
         std::shared_ptr<Texture2D> texture = nullptr;
-        if (textureLoadingEnabled)
+        const bool enableTextureLoadingForMaterial = textureLoadingEnabled && !skipTexturesForShadingModel;
+        if (enableTextureLoadingForMaterial)
         {
             aiString texPath;
             if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
@@ -696,7 +720,7 @@ AssimpModelLorder::MakeMaterial(
                     }
                 }
             }
-            if (!texture)
+            if (!texture && enableTextureLoadingForMaterial)
             {
                 if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
                 {
