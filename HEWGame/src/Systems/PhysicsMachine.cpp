@@ -262,7 +262,14 @@ namespace Systems
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
-        if (body.HasBodyCreationFailed() && !body.CanAttemptBodyCreation())
+        const bool creationFailed = body.HasBodyCreationFailed();
+        const bool canAttemptCreation = body.CanAttemptBodyCreation();
+        const bool isExplicitReattach = creationFailed
+            && !canAttemptCreation
+            && body.GetPhysicsMachine() == this
+            && m_bodyMap.find(bodyPtr) == m_bodyMap.end();
+
+        if (creationFailed && !canAttemptCreation && !isExplicitReattach)
         {
 #if defined(_DEBUG)
             std::ostringstream oss;
@@ -273,7 +280,17 @@ namespace Systems
             return;
         }
 
-        if (body.HasBodyCreationFailed())
+        if (isExplicitReattach)
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Retrying registration for tag='" << body.GetTag()
+                << "' after explicit reattach request.\n";
+            DebugTrace(oss.str());
+#endif
+        }
+
+        if (creationFailed)
         {
             body.ResetBodyCreationFailure();
         }
