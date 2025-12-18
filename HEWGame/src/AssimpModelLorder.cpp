@@ -11,7 +11,6 @@
 #include <future>
 #include <cstdlib>
 #include <cctype>
-#include <array>
 #include <string>
 #include <string_view>
 #include <sstream>
@@ -94,7 +93,7 @@ namespace
         case SweetsType::Sherbet:
             return std::nullopt;
         case SweetsType::Banana:
-            return "Assets/Texture/Banana_Texture.png";
+            return "Assets/Texture/cream.png";
         case SweetsType::Fairy:
         default:
             return std::nullopt;
@@ -122,10 +121,9 @@ namespace
 
     std::optional<std::string> GuessTextureFromFilename(const std::string& normalizedModelPath)
     {
-        const std::string normalized = NormalizePath(normalizedModelPath);
         auto contains = [&](std::string_view token)
         {
-            return normalized.find(token) != std::string::npos;
+            return normalizedModelPath.find(token) != std::string::npos;
         };
 
         if (contains("strawberry"))
@@ -136,28 +134,15 @@ namespace
         {
             return "Assets/Texture/blueberry.png";
         }
-        const std::array<std::string_view, 4> pineappleTokens{
-            "pineapple",
-            "pinapple",
-            "pineaple",
-            "pinealle",
-        };
-        for (const auto& token : pineappleTokens)
+        if (contains("pineapple"))
         {
-            if (contains(token))
-            {
-                return "Assets/Texture/pineapple.png";
-            }
-        }
-        if (contains("banana"))
-        {
-            return "Assets/Texture/Banana_Texture.png";
+            return "Assets/Texture/pineapple.png";
         }
         if (contains("cake") || contains("pudding") || contains("sherbet"))
         {
             return std::nullopt;
         }
-        if (contains("cream"))
+        if (contains("cream") || contains("banana"))
         {
             return "Assets/Texture/cream.png";
         }
@@ -834,4 +819,6 @@ if (textureLoadingEnabled)
 
         specularTex = loadMaterialTexture(aiTextureType_SPECULAR, "specular", false);
     }
+
+    return materials;
 }
