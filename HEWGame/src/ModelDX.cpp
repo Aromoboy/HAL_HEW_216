@@ -3,14 +3,14 @@
 #include "ModelDX.h"
 
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, const std::vector<BoneDX>& a_bones, std::optional<AABB> localBounds = std::nullopt)
+ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, std::vector<BoneDX> a_bones, std::optional<AABB> localBounds)
 {
 
 
     m_meshes = std::move(a_meshes);
     m_materials = std::move(a_MaterialDXs);
     m_meshCount = static_cast<unsigned int>(m_meshes.size());
-    m_bones = a_bones;
+    m_bones = std::move(a_bones);
 
     if (localBounds)
     {

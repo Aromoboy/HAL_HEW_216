@@ -14,25 +14,25 @@
 
 
 
-// Œ^’è‹`
-using NodeIndexDX = int;	// ƒ{[ƒ“(ŠK‘w)”Ô†
+// å‹å®šç¾©
+using NodeIndexDX = int;	// ãƒœãƒ¼ãƒ³(éšå±¤)ç•ªå·
 using ChildrenDX = std::vector<NodeIndexDX>;
 
 struct BoneDX
 {
-    NodeIndexDX			nodeIndex;	// •ÏŒ`î•ñ‚ÍŠK‘wî•ñ‚ÉŠi”[
-    DirectX::XMFLOAT4X4	invOffset;	// ‹ts—ñ
+        ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, std::vector<BoneDX> a_bones = {}, std::optional<AABB> localBounds = std::nullopt);
+    DirectX::XMFLOAT4X4	invOffset;	// é€†è¡Œåˆ—
 };
 
 
 
-// ƒ{[ƒ“î•ñ
+// ãƒœãƒ¼ãƒ³æƒ…å ±
 struct NodeDX
 {
-    std::string			name;		// ƒ{[ƒ“–¼
-    NodeIndexDX			parent;		// eƒ{[ƒ“
-    ChildrenDX			children;	// qƒ{[ƒ“
-    DirectX::XMMATRIX	mat;		// •ÏŠ·s—ñ
+    std::string			name;		// ãƒœãƒ¼ãƒ³å
+    NodeIndexDX			parent;		// è¦ªãƒœãƒ¼ãƒ³
+    ChildrenDX			children;	// å­ãƒœãƒ¼ãƒ³
+    DirectX::XMMATRIX	mat;		// å¤‰æ›è¡Œåˆ—
 };
 
 
@@ -49,7 +49,7 @@ public:
         ~ModelDX();
 
 
-        using AnimeNo = int;	// ƒAƒjƒ[ƒVƒ‡ƒ“”Ô†
+        using AnimeNo = int;	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç•ªå·
 
         
 
@@ -70,7 +70,7 @@ private:
         std::vector<std::shared_ptr<MeshDX>> m_meshes;
         std::vector<std::shared_ptr<MaterialDX>> m_materials;
 
-        // ŠeƒƒbƒVƒ…‚ÌBoneî•ñ‚¾‚ª–{“–‚É‚±‚±‚Å‚Â‚×‚«‚©‚Í‰½‚Æ‚àŒ¾‚¦‚È‚¢AŠÔ‚ª‚È‚¢‚½‚ßˆê“x‚±‚±‚É‘‚­
+        // å„ãƒ¡ãƒƒã‚·ãƒ¥ã®Boneæƒ…å ±ã ãŒæœ¬å½“ã«ã“ã“ã§æŒã¤ã¹ãã‹ã¯ä½•ã¨ã‚‚è¨€ãˆãªã„ã€æ™‚é–“ãŒãªã„ãŸã‚ä¸€åº¦ã“ã“ã«æ›¸ã
         std::vector<BoneDX> m_bones;
 
         unsigned int m_meshCount;
