@@ -14,8 +14,6 @@
 #include "Entities/PhysicalEntity.h"
 #include "SoundManagerEX.h"
 
-//テスト用！終わり次第消すこと！
-#include "AnimationCache.h"
 
 #include <algorithm>
 #include <array>
@@ -237,13 +235,10 @@ namespace
             nullptr);
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
-        std::vector<BoneDX> dummy;
+
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat},
-            dummy,
-            std::nullopt
-        );
+            std::vector<std::shared_ptr<MaterialDX>>{mat});
 
         if (bounds)
         {
@@ -386,11 +381,6 @@ namespace Entities
         colliderComponent.colliderId = descriptor ? descriptor->key : std::string{ "Fairy" };
 
         SetBoxColliderComponent(std::move(colliderComponent));
-        // テスト用！
-        Render::AnimationCache& animCache = Render::AnimationCache::Instance();
-        m_animation = animCache.Get("Assets/Model/yousei_MoveAnimations.fbx");
-
-        SetBoxColliderComponent(colliderComponent);
         SetBox2DShapeConfig(shapeConfig);
     }
 
@@ -449,9 +439,6 @@ namespace Entities
             {
                 SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
             }
-        }
-        
-        m_animation->Step(1 / 60);
 
             // ===== 移動音（フェードアウト付き）=====
             if (auto* sound = SoundManagerEX::GetInstance())
@@ -516,7 +503,7 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*m_model, *m_animation,  m_renderTransform, &camera);
+        renderer.Draw(*m_model, m_renderTransform, &camera);
     }
 
     Transform Player::GetRenderTransform() const

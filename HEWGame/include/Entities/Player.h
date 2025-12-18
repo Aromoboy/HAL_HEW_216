@@ -116,7 +116,6 @@ namespace Entities
         bool m_moveSoundFadingOut;      
         float m_moveSoundFadeTimer;     
         float m_moveSoundFadeDuration;
-        std::shared_ptr<Animation> m_animation;
         std::optional<ColliderFootprint> m_colliderFootprint;
         SweetsSpace::PickupQueryResult m_lastPickupResult;
         size_t m_lastCarryInputLoggedCount;
@@ -129,6 +128,5 @@ namespace Entities
         void DropCarriedSweets();
         void ClampVerticalPosition();
         void ClampScreenBounds();
-        
     };
 }

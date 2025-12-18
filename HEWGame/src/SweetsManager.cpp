@@ -273,14 +273,9 @@ namespace
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
 
-
-        std::vector<BoneDX> dummy;
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat},
-            dummy,
-            std::nullopt
-        );
+            std::vector<std::shared_ptr<MaterialDX>>{mat});
 
         if (bounds)
         {
