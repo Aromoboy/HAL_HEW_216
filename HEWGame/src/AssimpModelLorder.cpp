@@ -89,6 +89,7 @@ namespace
         case SweetsType::Pineapple:
             return "Assets/Texture/pineapple.png";
         case SweetsType::Cake:
+
         case SweetsType::Pudding:
         case SweetsType::Sherbet:
         case SweetsType::Banana:

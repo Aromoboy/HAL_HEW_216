@@ -1590,6 +1590,15 @@ namespace SweetsSpace
                 continue;
             }
 
+            if (prototype.type == SweetsType::Cake)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "種類 '" << descriptor->key
+                    << "' はステージ専用だからスポナー登録はスキップするね \n";
+                DebugTrace(oss.str());
+                continue;
+            }
+
             const std::string kind = descriptor->key;
             const std::string resolvedKind = ResolveKindKey(kind);
             const std::string normalizedKind = NormalizeKey(resolvedKind);

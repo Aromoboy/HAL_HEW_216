@@ -546,7 +546,7 @@ UpdateNode:
 
 | SweetsType | ファイル名 | 形状 | 用途 |
 | --- | --- | --- | --- |
-| `Cake` | `Cake.obj` | 1m 立方体（テクスチャ・法線つき） | キューブ状のスポンジケーキ |
+| `Cake` | `Cake.obj` | 1m 立方体（テクスチャ・法線つき） | キューブ状のスポンジケーキ（ステージ土台専用でスポナーには出現しない） |
 | `Pudding` | `Pudding.obj` | 三角柱（UV展開済み） | 断面が三角形のプリン |
 | `Sherbet` | `Sherbet.obj` | ローポリ球（シェーディング対応） | 丸いシャーベット |
 | `Fairy` | Procedural cross-plane (fallback: `Fairy.obj`) | 青系頂点カラーの板ポリ×2 | プレイヤーフェアリー |
