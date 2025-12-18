@@ -11,6 +11,46 @@
 
 namespace
 {
+    class ComInitializer
+    {
+    public:
+        ComInitializer()
+        {
+            HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            if (result == RPC_E_CHANGED_MODE)
+            {
+                hr = S_FALSE;
+                return;
+            }
+
+            hr = result;
+            if (SUCCEEDED(hr))
+            {
+                needsUninit = true;
+            }
+        }
+
+        ~ComInitializer()
+        {
+            if (needsUninit)
+            {
+                CoUninitialize();
+            }
+        }
+
+        bool IsReady() const { return SUCCEEDED(hr); }
+
+    private:
+        HRESULT hr = E_FAIL;
+        bool needsUninit = false;
+    };
+
+    bool EnsureCOMInitialized()
+    {
+        thread_local ComInitializer initializer;
+        return initializer.IsReady();
+    }
+
     bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
         D3D11_TEXTURE2D_DESC desc = {};
@@ -77,6 +117,12 @@ namespace
 //============================================================
 bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 {
+    if (!EnsureCOMInitialized())
+    {
+        DebugLog::DebugMessage("[Texture2D] Failed to initialize COM");
+        return false;
+    }
+
     // WICt@Ng[쐬
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
@@ -106,6 +152,12 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
     if (height != 0 && width != 0)
     {
         return CreateTexture(device, width, height, data, textureView);
+    }
+
+    if (!EnsureCOMInitialized())
+    {
+        DebugLog::DebugMessage("[Texture2D] Failed to initialize COM");
+        return false;
     }
 
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
