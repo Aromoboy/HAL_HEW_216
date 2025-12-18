@@ -666,52 +666,7 @@ namespace Systems
             return converted;
         };
 
-        const std::vector<Physics::ColliderShapeDescriptor> baseShapes = colliderComponent->shapes;
-        std::vector<Physics::ColliderShapeDescriptor> sourceShapes = baseShapes;
-
-        const b2Vec2 colliderOffset = colliderComponent->colliderOffset;
-        const auto hasOffset = [](const b2Vec2& offset)
-        {
-            constexpr float kOffsetEpsilon = 1e-4f;
-            return std::fabs(offset.x) > kOffsetEpsilon || std::fabs(offset.y) > kOffsetEpsilon;
-        };
-
-        if (hasOffset(colliderOffset))
-        {
-            for (auto& shape : sourceShapes)
-            {
-                switch (shape.type)
-                {
-                case Physics::ColliderShapeType::Circle:
-                {
-                    if (shape.vertices.empty())
-                    {
-                        shape.vertices.push_back(colliderOffset);
-                    }
-                    else
-                    {
-                        for (auto& vertex : shape.vertices)
-                        {
-                            vertex.x += colliderOffset.x;
-                            vertex.y += colliderOffset.y;
-                        }
-                    }
-                    break;
-                }
-                case Physics::ColliderShapeType::Box:
-                case Physics::ColliderShapeType::Polygon:
-                default:
-                {
-                    for (auto& vertex : shape.vertices)
-                    {
-                        vertex.x += colliderOffset.x;
-                        vertex.y += colliderOffset.y;
-                    }
-                    break;
-                }
-                }
-            }
-        }
+        std::vector<Physics::ColliderShapeDescriptor> sourceShapes = colliderComponent->shapes;
 
         std::vector<ScaledShape> scaledShapes;
         scaledShapes.reserve(sourceShapes.size());
@@ -959,7 +914,7 @@ namespace Systems
         for (std::size_t i = 0; i < scaledShapes.size(); ++i)
         {
             const auto& scaled = scaledShapes[i];
-            const auto& original = baseShapes[i];
+            const auto& original = sourceShapes[i];
 
             bool created = false;
             switch (scaled.type)

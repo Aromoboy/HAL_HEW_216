@@ -540,76 +540,16 @@ namespace SweetsSpace
         const float2& colliderCenter,
         bool allowMeshPhysics)
     {
+        (void)kind;
+        (void)transform;
+        (void)modelPath;
+        (void)model;
+        (void)colliderCenter;
+        (void)allowMeshPhysics;
+
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
         result.source = ColliderSource::Config;
-
-        const MeshHullSummary geometry = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
-        ModelBounds bounds = geometry.bounds;
-
-        if (!bounds.valid && model && model->HasLocalBounds())
-        {
-            const AABB& local = model->GetLocalBounds();
-            bounds.min = local.min;
-            bounds.max = local.max;
-            bounds.valid = true;
-        }
-
-        const auto scaleBounds = [](const ModelBounds& source, const float3& scale)
-        {
-            ModelBounds scaled{};
-            if (!source.valid)
-            {
-                return scaled;
-            }
-
-            auto applyScale = [&](float minComponent, float maxComponent, float scaleComponent)
-            {
-                const float scaledMin = minComponent * scaleComponent;
-                const float scaledMax = maxComponent * scaleComponent;
-                return std::pair<float, float>{ std::min(scaledMin, scaledMax), std::max(scaledMin, scaledMax) };
-            };
-
-            const auto sx = applyScale(source.min.x, source.max.x, scale.x);
-            const auto sy = applyScale(source.min.y, source.max.y, scale.y);
-            const auto sz = applyScale(source.min.z, source.max.z, scale.z);
-
-            scaled.min = float3{ sx.first, sy.first, sz.first };
-            scaled.max = float3{ sx.second, sy.second, sz.second };
-            scaled.valid = true;
-            return scaled;
-        };
-
-        ModelBounds scaledBounds = scaleBounds(bounds, transform.scale);
-        if (!scaledBounds.valid)
-        {
-            scaledBounds.min = float3{ colliderCenter.x, colliderCenter.y, 0.0f };
-            scaledBounds.max = float3{ colliderCenter.x, colliderCenter.y, 0.0f };
-            scaledBounds.valid = true;
-        }
-
-        const float2 meshCenter{
-            (scaledBounds.min.x + scaledBounds.max.x) * 0.5f,
-            (scaledBounds.min.y + scaledBounds.max.y) * 0.5f,
-        };
-
-        const float meshWidth = scaledBounds.max.x - scaledBounds.min.x;
-        const float meshHeight = scaledBounds.max.y - scaledBounds.min.y;
-        const float meshRadius = std::max(meshWidth, meshHeight) * 0.5f;
-
-        result.centroidOffset = meshCenter;
-        result.thickness = geometry.thickness * std::max(1.0f, transform.scale.z);
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "[ColliderCenter] kind='" << kind
-            << "' path='" << modelPath << "'"
-            << " meshCenter=(" << meshCenter.x << ',' << meshCenter.y << ')'
-            << " offset=(" << result.centroidOffset.x << ',' << result.centroidOffset.y << ')'
-            << " radius=" << meshRadius
-            << " size=(" << meshWidth << 'x' << meshHeight << ')'
-            << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ")"
-            << " allowMeshPhysics=" << std::boolalpha << allowMeshPhysics << "\n";
-        DebugTrace(oss.str());
         return result;
     }
 
@@ -1787,17 +1727,6 @@ namespace SweetsSpace
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
                 auto shapeConfig = BuildBaseShapeConfig(type);
-                const float2 colliderCenter{ 0.0f, 0.0f };
-
-                const auto colliderBuild = BuildColliderForSweets(
-                    resolvedKind,
-                    type,
-                    physicsTransform,
-                    primaryPath,
-                    model,
-                    colliderCenter,
-                    allowMeshPhysics);
-                shapeConfig = colliderBuild.shapeConfig;
 
                 Physics::BoxColliderComponent colliderComponent{};
                 std::string colliderLookupId = resolvedKind;
@@ -1830,8 +1759,6 @@ namespace SweetsSpace
                         DebugTrace(warn.str());
                     }
                 }
-
-                colliderComponent.colliderOffset = b2Vec2{ colliderBuild.centroidOffset.x, colliderBuild.centroidOffset.y };
 
                 auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
