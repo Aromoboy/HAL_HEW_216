@@ -53,7 +53,7 @@ AssimpModelLorder();
 
     virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
 
-	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path);
+	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) override;
 
 private:
 	

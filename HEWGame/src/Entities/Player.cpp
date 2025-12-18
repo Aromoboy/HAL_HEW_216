@@ -10,7 +10,8 @@
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Entities/PhysicalEntity.h"
-
+//テスト用！終わり次第消すこと！
+#include "AnimationCache.h"
 
 #include <algorithm>
 #include <array>
@@ -191,10 +192,13 @@ namespace
             nullptr);
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
-
+        std::vector<BoneDX> dummy;
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat});
+            std::vector<std::shared_ptr<MaterialDX>>{mat},
+            dummy,
+            std::nullopt
+        );
 
         if (bounds)
         {
@@ -336,6 +340,10 @@ namespace Entities
         colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
         colliderComponent.AddPolygon(shapeConfig.vertices);
 
+        // テスト用！
+        Render::AnimationCache& animCache = Render::AnimationCache::Instance();
+        m_animation = animCache.Get("Assets/Model/yousei_MoveAnimations.fbx");
+
         SetBoxColliderComponent(colliderComponent);
         SetBox2DShapeConfig(shapeConfig);
     }
@@ -375,6 +383,8 @@ namespace Entities
                 SetLinearVelocity(float3{ 0,0,0 });
             }
         }
+        
+        m_animation->Step(1 / 60);
 
         ClampVerticalPosition();
         ClampScreenBounds();
@@ -395,7 +405,7 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*m_model, m_renderTransform, &camera);
+        renderer.Draw(*m_model, *m_animation,  m_renderTransform, &camera);
     }
 
     Transform Player::GetRenderTransform() const

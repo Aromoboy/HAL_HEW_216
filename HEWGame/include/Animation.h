@@ -62,7 +62,7 @@ public:
 
 
 	// コンストラクタ、デストラクタ
-	Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel);
+	Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, Animation::AnimationArray a_array, std::vector<NodeDX> a_nodes);
 	~Animation() = default;
 
 	// OnUpdateで保持しているアニメーションを更新する

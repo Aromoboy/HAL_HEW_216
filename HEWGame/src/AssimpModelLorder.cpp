@@ -318,13 +318,15 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     // メッシュ作成
     AABB localBounds{};
     bool hasBounds = false;
-    auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes,bones);
+    std::vector<std::shared_ptr<MeshDX>> meshes = MakeMesh(pScene, localBounds, hasBounds, nodes,bones);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
+    std::vector<std::shared_ptr<MaterialDX>> materials = MakeMaterial(pScene, directory, filename, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
+
+    ModelDX model(meshes, materials, bones, bounds);
     return std::make_shared<ModelDX>(meshes, materials, bones, bounds);
 }
 
@@ -439,8 +441,12 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
 #if 1 // 要素ごとにタイムラインを作成
         do
         {
+            
+            
+
             // 現状の参照位置で一番小さい時間を取得
-            float time = info.totalTime;
+            float time = std::numeric_limits<float>::max();
+
             for (int i = 0; i < 3; ++i)
             {
                 if (it[i] != keys[i].end())
@@ -448,6 +454,8 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
                     time = std::min(it[i]->first, time);
                 }
             }
+
+            time = std::max(0.0f, time);
 
             // 時間に基づいて補間値を計算
             DirectX::XMVECTOR result[3];
@@ -561,7 +569,7 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
     }
 
 
-    return std::make_shared<Animation>(info, channels);
+    return std::make_shared<Animation>(info, channels, animationArray, node);
 }
 
 DirectX::XMMATRIX AssimpModelLorder::GetMatrixFromAssimpMatrix(aiMatrix4x4 M)

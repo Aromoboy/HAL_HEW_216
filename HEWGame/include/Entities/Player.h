@@ -88,6 +88,7 @@ namespace Entities
         float m_maxScreenX;
         bool m_hasMaximumY;
         float m_maximumY;
+        std::shared_ptr<Animation> m_animation;
         std::optional<ColliderFootprint> m_colliderFootprint;
 
         float3 ComputeCarryAnchor() const;
@@ -97,6 +98,7 @@ namespace Entities
         void DropCarriedSweets();
         void ClampVerticalPosition();
         void ClampScreenBounds();
+        
     };
 }
 

@@ -2,9 +2,12 @@
 
 
 
-Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel)
+Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, Animation::AnimationArray a_array, std::vector<NodeDX> a_nodes)
 	: m_info(a_info)
 	, m_channels(a_channel)
+	, m_animeTransform(a_array)
+	, m_nodes(a_nodes)
+	
 {
 }
 

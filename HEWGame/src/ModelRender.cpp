@@ -59,7 +59,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     }
 }
 
-void ModelRender::Draw(Render::Model& a_model, Animation a_animation, Transform transform, const CameraSpace::ICamera* camera)
+void ModelRender::Draw(Render::Model& a_model, Animation& a_animation, Transform transform, const CameraSpace::ICamera* camera)
 {
 
     if (!camera)
@@ -78,11 +78,13 @@ void ModelRender::Draw(Render::Model& a_model, Animation a_animation, Transform 
     VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_ANIME);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
-    /*DirectX::XMFLOAT4X4 bones[200];
-    for (int boneIdx = 0; boneIdx < )
-    {
+    DirectX::XMFLOAT4X4 bones[200];
+    for (int boneIdx = 0; boneIdx < a_model.GetBoneCount(); boneIdx++)
+    {       
+        DirectX::XMStoreFloat4x4(&bones[boneIdx], DirectX::XMMatrixTranspose(a_animation.GetNodeMatrix(boneIdx) * a_model.GetBoneMatrix(boneIdx)));
+    }
 
-    }*/
+    ShaderList::SetBones(bones);
 
     pVTX->Bind();
     pPXS->Bind();

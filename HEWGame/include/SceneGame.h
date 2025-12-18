@@ -35,6 +35,7 @@
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
+#include "AnimationCache.h"
 
 struct CameraPrototypeSettings
 {

@@ -38,6 +38,7 @@ namespace Render
         std::map<std::string, std::shared_ptr<Render::Model>> m_models;
         std::unordered_set<std::string> m_inFlightKeys;
         bool m_textureLoadingEnabled = true;
+        
     };
 }
 

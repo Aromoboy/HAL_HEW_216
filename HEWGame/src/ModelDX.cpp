@@ -3,7 +3,7 @@
 #include "ModelDX.h"
 
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, const std::vector<BoneDX>& a_bones, std::optional<AABB> localBounds = std::nullopt)
+ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, const std::vector<BoneDX>& a_bones, std::optional<AABB> localBounds)
 {
 
 
@@ -27,6 +27,18 @@ ModelDX::~ModelDX()
 unsigned int ModelDX::GetMeshCount() const
 {
 	return m_meshCount;
+}
+
+unsigned int ModelDX::GetBoneCount() const
+{
+    return m_bones.size();
+}
+
+DirectX::XMMATRIX ModelDX::GetBoneMatrix(unsigned int index)
+{
+    if (index < 0 || index >= m_bones.size()) return DirectX::XMMatrixIdentity();
+
+    return DirectX::XMLoadFloat4x4(&m_bones[index].invOffset);
 }
 
 std::weak_ptr<MeshDX> ModelDX::GetMesh(int a_meshIndex) const

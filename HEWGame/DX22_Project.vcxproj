@@ -181,6 +181,7 @@
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="EffectSystem.cpp" />
     <ClCompile Include="include\EffectTestScene.cpp" />
+    <ClCompile Include="src\AnimationCache.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
     <ClCompile Include="src\Collision2D.cpp" />
@@ -271,6 +272,7 @@
   <ItemGroup>
     <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\Animation.h" />
+    <ClInclude Include="include\AnimationCache.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />

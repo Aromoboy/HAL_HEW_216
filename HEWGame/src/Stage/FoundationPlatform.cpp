@@ -272,8 +272,10 @@ namespace
         std::vector<std::shared_ptr<MaterialDX>> materials = CopyMaterials(source, maxMaterialId + 1, stats.nullMaterials);
         stats.materialCount = static_cast<unsigned int>(materials.size());
 
+        std::vector<BoneDX> dummy;
+
         std::optional<AABB> clonedBounds = source.HasLocalBounds() ? std::optional<AABB>(source.GetLocalBounds()) : std::nullopt;
-        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials), clonedBounds);
+        return std::make_shared<ModelDX>(std::move(meshes), std::move(materials), dummy, clonedBounds);
     }
 }
 
