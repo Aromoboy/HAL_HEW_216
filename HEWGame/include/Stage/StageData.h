@@ -55,10 +55,6 @@ namespace Stage
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
-        float GetOsaraLeftOffsetX() const noexcept;
-        float GetOsaraRightOffsetX() const noexcept;
-        float GetOsaraOffsetY() const noexcept;
-        float GetOsaraSpawnOffsetY() const noexcept;
 
     private:
         void ApplyDefaults();
@@ -93,11 +89,5 @@ namespace Stage
         std::string m_backgroundTexturePath;
         float m_heightBonusThreshold;
         float m_heightBonusSeconds;
-        float m_osaraLeftOffsetX;
-        float m_osaraRightOffsetX;
-        float m_osaraOffsetY;
-        float m_osaraSpawnOffsetY;
-        bool m_osaraOffsetsConfigured;
-        bool m_spawnPointsSuppressed;
     };
 }
