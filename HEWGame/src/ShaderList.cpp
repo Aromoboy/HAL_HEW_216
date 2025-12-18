@@ -250,8 +250,12 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-    float4 texColor = tex.Sample(samp, pin.uv);
-    texColor.a = 1.0f;
+    float4 texColor = float4(objDiffuse.rgb, 1.0f);
+    if (objAmbient.a >= 1.0f)
+    {
+        texColor = tex.Sample(samp, pin.uv);
+        texColor.a = 1.0f;
+    }
 
     float3 N = normalize(pin.normal);
     float3 L = normalize(-lightDir.xyz);
