@@ -222,12 +222,6 @@
     <ClCompile Include="src\SpriteRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp">
-      <Filter>Stage</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Stage\OsaraPlate.cpp">
-      <Filter>Stage</Filter>
-    </ClCompile>
     <ClCompile Include="src\Stage\StageData.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
@@ -513,12 +507,6 @@
     </ClInclude>
     <ClInclude Include="include\SpriteRenderer.h">
       <Filter>Rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Stage\FoundationPlatform.h">
-      <Filter>Stage</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Stage\OsaraPlate.h">
-      <Filter>Stage</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\StageData.h">
       <Filter>Stage</Filter>
