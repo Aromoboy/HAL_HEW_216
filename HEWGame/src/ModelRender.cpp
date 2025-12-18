@@ -53,11 +53,10 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             // 1️⃣ Константы материала
             ShaderList::SetMaterial(*material);
 
-            // 2️⃣ БИНД ТЕКСТУРЫ В PS (ЭТОГО НЕ ХВАТАЛО)
+            // 2️⃣ テクスチャスロットをすべて更新
             if (context)
             {
-                ID3D11ShaderResourceView* srv = material->GetTexture();
-                context->PSSetShaderResources(0, 1, &srv);
+                material->BindTextures(context);
             }
         }
         else
@@ -65,8 +64,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             // 3️⃣ Если материала нет — чистим слот
             if (context)
             {
-                ID3D11ShaderResourceView* nullView = nullptr;
-                context->PSSetShaderResources(0, 1, &nullView);
+		ID3D11ShaderResourceView* nullViews[3] = { nullptr, nullptr, nullptr };
+		context->PSSetShaderResources(0, 3, nullViews);
             }
         }
 
@@ -76,8 +75,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     // 4️⃣ После отрисовки — подчистить слот (DX любит порядок)
     if (context)
     {
-        ID3D11ShaderResourceView* nullView = nullptr;
-        context->PSSetShaderResources(0, 1, &nullView);
+	ID3D11ShaderResourceView* nullViews[3] = { nullptr, nullptr, nullptr };
+	context->PSSetShaderResources(0, 3, nullViews);
     }
 }
 
