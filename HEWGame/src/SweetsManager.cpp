@@ -1280,44 +1280,44 @@ namespace SweetsSpace
         {
         case SweetsType::Cake:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
+            preset.minScale = float3{ 0.95f, 0.95f, 0.95f };
+            preset.maxScale = float3{ 1.05f, 1.05f, 1.05f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
             return preset;
         case SweetsType::Pudding:
             preset.spawnWeight = 1.0f;
             preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
+            preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.04f, 0.02f } };
             return preset;
         case SweetsType::Sherbet:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
-            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
+            preset.maxScale = float3{ 1.05f, 1.05f, 1.05f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.012f, 0.012f, 0.012f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
+            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
+            preset.maxScale = float3{ 0.95f, 0.95f, 0.95f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.65f, 0.65f, 0.65f };
-            preset.maxScale = float3{ 1.15f, 1.15f, 1.15f };
+            preset.minScale = float3{ 0.7f, 0.7f, 0.7f };
+            preset.maxScale = float3{ 0.85f, 0.85f, 0.85f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.05f, 0.02f } };
+            preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
+            preset.maxScale = float3{ 1.1f, 1.1f, 1.1f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.03f, 0.05f, 0.03f } };
             return preset;
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
+            preset.maxScale = float3{ 1.05f, 1.05f, 1.05f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
             return preset;
         default:
