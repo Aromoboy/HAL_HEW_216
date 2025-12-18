@@ -271,6 +271,7 @@ namespace Entities
         , m_fairyModel(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
+        , m_carriedRotations()
         , m_maxCarry(kDefaultMaxCarry)
         , m_pickupHalfWidth(0.0f)
         , m_pickupHalfHeight(0.0f)
@@ -497,6 +498,7 @@ namespace Entities
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中に SweetsManager が解放されました 強制的にリリースします \n");
             m_carrieds.clear();
+            m_carriedRotations.clear();
         }
 
         m_sweetsManager = manager;
@@ -519,6 +521,7 @@ namespace Entities
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中のスイーツの参照をクリアします \n");
         }
         m_carrieds.clear();
+        m_carriedRotations.clear();
     }
 
     bool Player::IsKinematic() const
@@ -859,7 +862,12 @@ namespace Entities
             const Transform current = it ? it->GetTransform() : Transform{};
             Transform updated = current;
             updated.position = ComputeCarryAnchor();
-            updated.rotation = m_transform.rotation;
+
+            const auto rotationIt = m_carriedRotations.find(it.get());
+            if (rotationIt != m_carriedRotations.end())
+            {
+                updated.rotation = rotationIt->second;
+            }
 
             it->SetTransform(updated);
             it->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
@@ -1030,9 +1038,12 @@ namespace Entities
                     }
                     else
                     {
+                        const float3 originalRotation = candidateTransform.rotation;
+                        m_carriedRotations[candidate.get()] = originalRotation;
+
                         Transform updated = candidateTransform;
                         updated.position = ComputeCarryAnchor();
-                        updated.rotation = m_transform.rotation;
+                        updated.rotation = originalRotation;
                         candidate->SetTransformViaPhysics(updated.position, updated.rotation);
                         candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
@@ -1094,9 +1105,12 @@ namespace Entities
                         }
                         else
                         {
+                            const float3 originalRotation = candidateTransform.rotation;
+                            m_carriedRotations[candidate.get()] = originalRotation;
+
                             Transform updated = candidateTransform;
                             updated.position = ComputeCarryAnchor();
-                            updated.rotation = m_transform.rotation;
+                            updated.rotation = originalRotation;
                             candidate->SetTransformViaPhysics(updated.position, updated.rotation);
                             candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
@@ -1159,6 +1173,8 @@ namespace Entities
 
         auto sweets = m_carrieds.back();
         sweets->SetPositionViaPhysics(ComputeCarryAnchor());
+
+        m_carriedRotations.erase(sweets.get());
 
         const float3 bodyVelocity = GetLinearVelocity();
         float3 releaseVelocity = bodyVelocity;
