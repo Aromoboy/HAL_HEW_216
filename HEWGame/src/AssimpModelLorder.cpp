@@ -69,6 +69,62 @@ namespace
         return value;
     }
 
+    const std::filesystem::path& AssetsRoot()
+    {
+        static const std::filesystem::path root = []
+        {
+            std::error_code ec;
+            auto canonical = std::filesystem::weakly_canonical("Assets", ec);
+            if (!ec)
+            {
+                return canonical;
+            }
+            return std::filesystem::path("Assets");
+        }();
+        return root;
+    }
+
+    std::optional<std::filesystem::path> TryWeaklyCanonicalPath(const std::filesystem::path& path)
+    {
+        std::error_code ec;
+        auto canonical = std::filesystem::weakly_canonical(path, ec);
+        if (ec)
+        {
+            return std::nullopt;
+        }
+        return canonical;
+    }
+
+    bool IsUnderAssets(const std::filesystem::path& candidate)
+    {
+        const auto& root = AssetsRoot();
+        const auto candidateWithBase = candidate.is_absolute()
+            ? candidate
+            : (root.has_parent_path() ? root.parent_path() / candidate : candidate);
+        const auto canonicalRoot = TryWeaklyCanonicalPath(root);
+        const auto canonicalCandidate = TryWeaklyCanonicalPath(candidateWithBase);
+
+        if (canonicalRoot && canonicalCandidate)
+        {
+            auto rel = canonicalCandidate->lexically_relative(*canonicalRoot);
+            if (rel.empty())
+            {
+                return true;
+            }
+            return rel.native().rfind("..", 0) != 0 && !rel.is_absolute();
+        }
+
+        const auto lexicalRoot = root.lexically_normal();
+        const std::filesystem::path lexicalBase = root.has_parent_path() ? root.parent_path() : std::filesystem::path();
+        const auto lexicalCandidate = (candidate.is_absolute() ? candidate : lexicalBase / candidate).lexically_normal();
+        auto rel = lexicalCandidate.lexically_relative(lexicalRoot);
+        if (rel.empty())
+        {
+            return true;
+        }
+        return rel.native().rfind("..", 0) != 0 && !rel.is_absolute();
+    }
+
     bool EndsWithPath(const std::string& fullPath, const std::string& suffix)
     {
         if (fullPath.size() < suffix.size())
@@ -763,6 +819,7 @@ AssimpModelLorder::MakeMaterial(
 
                     const std::filesystem::path combinedPath = std::filesystem::path(textureDirectory) / texFile;
                     std::string full = NormalizeSeparators(combinedPath.string());
+                    const bool isExternalTexture = !IsUnderAssets(combinedPath);
 
                     aiString baseColorPath;
                     std::string baseColorStr;
@@ -784,35 +841,78 @@ AssimpModelLorder::MakeMaterial(
 
                     std::error_code existEc;
                     const bool textureExists = std::filesystem::exists(full, existEc);
-                    bool skipTextureLoad = skipTextureLoading;
+                    bool skipTextureLoad = skipTextureLoading || isExternalTexture;
+                    std::string fallbackReason;
+
+                    if (skipTextureLoading)
+                    {
+                        fallbackReason = "正規化済みパスなし";
+                    }
+                    if (isExternalTexture)
+                    {
+                        fallbackReason = fallbackReason.empty() ? "Assets外参照" : fallbackReason;
+                        DebugLog::DebugMessage(
+                            std::string("[AssimpModelLoader][WARNING] テクスチャ '") + full +
+                            "' は Assets 配下ではないためロードをスキップ");
+                    }
 
                     if (skipTextureLoad || hasNonAscii || !textureExists)
                     {
+                        if (hasNonAscii)
+                        {
+                            fallbackReason = fallbackReason.empty() ? "非ASCIIパス" : fallbackReason;
+                        }
+                        if (!textureExists)
+                        {
+                            fallbackReason = fallbackReason.empty() ? "ファイルなし" : fallbackReason;
+                        }
+
                         if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
                         {
-                            DebugLog::DebugMessage(
-                                std::string("[Material] 無効なパス '") + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
-                            full = *fallback;
-                            skipTextureLoad = false;
+                            if (!IsUnderAssets(*fallback))
+                            {
+                                DebugLog::DebugMessage(
+                                    std::string("[AssimpModelLoader][WARNING] フォールバックテクスチャ '") +
+                                    *fallback + "' が Assets 配下ではないためスキップ");
+                                skipTextureLoad = true;
+                            }
+                            else
+                            {
+                                DebugLog::DebugMessage(
+                                    std::string("[Material] 無効なパス '") + texFile + "' (" +
+                                    (fallbackReason.empty() ? std::string("パス検証エラー") : fallbackReason) +
+                                    ") へフォールバックテクスチャ '" + *fallback + "' を使用");
+                                full = NormalizeSeparators(*fallback);
+                                skipTextureLoad = false;
+                            }
                         }
                         else
                         {
                             DebugLog::DebugMessage(
-                                std::string("[Material][WARNING] フォールバックテクスチャが見つからない '") + texFile + "' テクスチャをスキップ");
+                                std::string("[Material][WARNING] フォールバックテクスチャが見つからない '") + texFile +
+                                "' (" + (fallbackReason.empty() ? std::string("パス検証エラー") : fallbackReason) + ") テクスチャをスキップ");
                             skipTextureLoad = true;
                         }
                     }
 
                     // --- 実際のロード ---
-                    if (!skipTextureLoad)
+                    if (!skipTextureLoad && IsUnderAssets(full))
                     {
                         texture = loadTexture(full);
+                    }
+                    else if (!skipTextureLoad)
+                    {
+                        DebugLog::DebugMessage(
+                            std::string("[AssimpModelLoader][WARNING] ロード直前に外部パスを検出: '") + full + "'");
                     }
 
                     if (!texture && texFile == "パイナップル.png")
                     {
                         const std::string alt = "Assets\\Texture\\" + texFile;
-                        texture = loadTexture(alt);
+                        if (IsUnderAssets(alt))
+                        {
+                            texture = loadTexture(alt);
+                        }
                     }
                 }
             }
@@ -820,10 +920,19 @@ AssimpModelLorder::MakeMaterial(
             {
                 if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
                 {
-                    DebugLog::DebugMessage(
-                        std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
-                    std::wstring wfull(fallback->begin(), fallback->end());
-                    texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
+                    if (!IsUnderAssets(*fallback))
+                    {
+                        DebugLog::DebugMessage(
+                            std::string("[AssimpModelLoader][WARNING] マニフェストフォールバック '") + *fallback +
+                            "' が Assets 配下ではないため適用をスキップ");
+                    }
+                    else
+                    {
+                        DebugLog::DebugMessage(
+                            std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
+                        std::wstring wfull(fallback->begin(), fallback->end());
+                        texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
+                    }
                 }
             }
         }
