@@ -18,6 +18,7 @@
 #include "ICamera.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
+#include "BoxColliderComponent.h"
 #include "Transform.h"
 #include "Vector.h"
 #include "CollisionLayer.h"
@@ -151,6 +152,7 @@ namespace SweetsSpace
         struct ColliderBuildResult
         {
             Physics::Box2DShapeConfig shapeConfig{};
+            std::vector<Physics::ColliderShapeDescriptor> shapes;
             std::vector<std::vector<b2Vec2>> meshPolygons;
             std::vector<b2Vec2> meshBoundary;
             ColliderSource source{ ColliderSource::Fallback };
