@@ -329,7 +329,7 @@ namespace Systems
         body.MarkBodyCreationFailed();
     }
 
-    void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
+    void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData)
     {
         if (m_bodies.empty()) return;
         auto* bodyPtr = &body;
@@ -344,12 +344,12 @@ namespace Systems
                 DebugTrace(oss.str());
             }
 #endif
-            DestroyBody(body);
+            DestroyBody(body, preserveColliderData);
             return;
         }
 
         m_bodies.erase(it, m_bodies.end());
-        DestroyBody(body);
+        DestroyBody(body, preserveColliderData);
     }
 
     void PhysicsMachine::ClearBodies()
@@ -358,7 +358,7 @@ namespace Systems
         {
             if (body)
             {
-                DestroyBody(*body);
+                DestroyBody(*body, false);
             }
         }
         m_bodyMap.clear();
@@ -962,7 +962,7 @@ namespace Systems
         return failBodyCreation("Failed to build fixtures for");
     }
 
-    void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body)
+    void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData)
     {
         auto it = m_bodyMap.find(const_cast<Entities::PhysicalEntity*>(&body));
         if (it == m_bodyMap.end())
@@ -999,7 +999,14 @@ namespace Systems
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
                 if (colliderComponent)
                 {
-                    colliderComponent->Clear();
+                    if (preserveColliderData)
+                    {
+                        colliderComponent->createdFixtureCount = 0;
+                    }
+                    else
+                    {
+                        colliderComponent->Clear();
+                    }
                 }
                 b2DestroyBody(it->second);
             }
@@ -1015,7 +1022,14 @@ namespace Systems
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
                 if (colliderComponent)
                 {
-                    colliderComponent->Clear();
+                    if (preserveColliderData)
+                    {
+                        colliderComponent->createdFixtureCount = 0;
+                    }
+                    else
+                    {
+                        colliderComponent->Clear();
+                    }
                 }
             }
         }
