@@ -1828,6 +1828,12 @@ void SceneGame::OnEnter()
     std::ostringstream oss;
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
+
+    // BGMを再生（ループあり、音量40%）
+    if (m_pManager)
+    {
+        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // true = ループ
+    }
 }
 
 void SceneGame::OnExit()
@@ -2588,6 +2594,10 @@ SceneGame::~SceneGame()
         {
             delete m_numberTexture;
             m_numberTexture = nullptr;
+        }
+        if (m_pManager)
+        {
+            m_pManager->StopAllSounds();
         }
 }
 

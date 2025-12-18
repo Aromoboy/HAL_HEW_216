@@ -111,6 +111,11 @@ namespace Entities
         float m_maxScreenX;
         bool m_hasMaximumY;
         float m_maximumY;
+        float m_moveSoundHandle;
+        bool m_wasMovingLastFrame;
+        bool m_moveSoundFadingOut;      
+        float m_moveSoundFadeTimer;     
+        float m_moveSoundFadeDuration;
         std::optional<ColliderFootprint> m_colliderFootprint;
         SweetsSpace::PickupQueryResult m_lastPickupResult;
         size_t m_lastCarryInputLoggedCount;

@@ -12,6 +12,7 @@
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Entities/PhysicalEntity.h"
+#include "SoundManagerEX.h"
 
 
 #include <algorithm>
@@ -297,6 +298,11 @@ namespace Entities
         , m_maximumY(0.0f)
         , m_lastPickupResult{}
         , m_lastCarryInputLoggedCount(m_carrieds.size())
+        , m_moveSoundHandle(-1)
+        , m_wasMovingLastFrame(false)
+        , m_moveSoundFadingOut(false)     
+        , m_moveSoundFadeTimer(0.0f)      
+        , m_moveSoundFadeDuration(0.4f)
     {
         if (model)
         {
@@ -417,8 +423,40 @@ namespace Entities
                         vertical * effectiveVerticalSpeed,
                         0.0f
                     };
+        void Player::OnUpdate(Core::UpdateContext& ctx)
+        {
+            SyncVisualTransformFromPhysics();
+            if (!HasBox2DBody())
+                return;
 
-                    SetLinearVelocity(desired);
+            Core::Input& input = ctx.input;
+            const float horizontal = input.GetAxis(Core::ActionId::MoveX);
+            const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+
+            const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
+            const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
+
+            bool isMovingNow = false;
+
+            if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
+            {
+                if (horizontal != 0.0f || vertical != 0.0f)
+                {
+                    isMovingNow = true;
+
+                    if (HasBox2DBody())
+                    {
+                        const float3 desired{
+                            horizontal * effectiveHorizontalSpeed,
+                            vertical * effectiveVerticalSpeed,
+                            0.0f
+                        };
+                        SetLinearVelocity(desired);
+                    }
+                }
+                else if (HasBox2DBody())
+                {
+                    SetLinearVelocity(float3{ 0,0,0 });
                 }
                 else
                 {
@@ -436,12 +474,67 @@ namespace Entities
             }
         }
 
-        ClampVerticalPosition();
-        ClampScreenBounds();
-        SyncVisualTransformFromPhysics();
-        HandleCarryInput(ctx);
-        UpdateCarriedSweets();
-    }
+            // ========== 移動音の制御（フェードアウト付き）==========
+            auto* sound = SoundManagerEX::GetInstance();
+            if (sound)
+            {
+                // 移動開始した瞬間
+                if (isMovingNow && !m_wasMovingLastFrame)
+                {
+                    // フェードアウト中だったらキャンセル
+                    if (m_moveSoundFadingOut)
+                    {
+                        m_moveSoundFadingOut = false;
+                        sound->SetVolume(m_moveSoundHandle, 0.3f);  // フル音量に戻す
+                    }
+                    else
+                    {
+                        // 新しく再生開始
+                        m_moveSoundHandle = sound->PlaySoundEX("Assets/Audio/SE_Move.wav", true, 0.3f);
+                    }
+                }
+                // 移動停止した瞬間 - フェードアウト開始
+                else if (!isMovingNow && m_wasMovingLastFrame && !m_moveSoundFadingOut)
+                {
+                    if (m_moveSoundHandle != -1)
+                    {
+                        m_moveSoundFadingOut = true;
+                        m_moveSoundFadeTimer = 0.0f;
+                    }
+                }
+
+                // フェードアウト処理
+                if (m_moveSoundFadingOut && m_moveSoundHandle != -1)
+                {
+                    m_moveSoundFadeTimer += ctx.dt;
+
+                    if (m_moveSoundFadeTimer >= m_moveSoundFadeDuration)
+                    {
+                        // フェードアウト完了 - 音を停止
+                        sound->StopSound(m_moveSoundHandle);
+                        m_moveSoundHandle = -1;
+                        m_moveSoundFadingOut = false;
+                        m_moveSoundFadeTimer = 0.0f;
+                    }
+                    else
+                    {
+                        // 音量を徐々に下げる (1.0 → 0.0)
+                        float progress = m_moveSoundFadeTimer / m_moveSoundFadeDuration;
+                        float volume = 0.3f * (1.0f - progress);  // 0.3f から 0.0f へ
+                        sound->SetVolume(m_moveSoundHandle, volume);
+                    }
+                }
+            }
+
+            m_wasMovingLastFrame = isMovingNow;
+            // ========== 移動音の制御ここまで ==========
+
+            ClampVerticalPosition();
+            ClampScreenBounds();
+            SyncVisualTransformFromPhysics();
+            HandleCarryInput(ctx);
+            UpdateCarriedSweets();
+        }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
@@ -1123,6 +1216,12 @@ namespace Entities
 
         m_lastPickupResult = pickupResult;
 
+        // ピックアップ音を再生
+        if (auto* sound = SoundManagerEX::GetInstance())
+        {
+            sound->PlaySoundEX("Assets/Audio/SE_Catch.wav", false, 0.5f);
+        }
+
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップ結果 result=" << PickupResultName(pickupResult.result)
             << " reason=" << PickupFailReasonName(pickupResult.failReason)
@@ -1199,6 +1298,12 @@ namespace Entities
         PlayerDebugTrace(oss.str());
 
         m_carrieds.pop_back();
+
+        // ドロップ音を再生
+        if (auto* sound = SoundManagerEX::GetInstance())
+        {
+            sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.5f);
+        }
     }
 
     void Player::ClampVerticalPosition()
