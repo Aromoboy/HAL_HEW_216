@@ -112,7 +112,7 @@ namespace SweetsSpace
         Register(SweetsType::Cake, "Cake", "Cake.obj", "Textured sponge cake cube with frosting layers");
         Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
         Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
-        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry_low01.fbx", "Textured strawberry fruit with visible seeds");
+        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple_high_fin.fbx", "High-detail pineapple with leafy crown");
         Register(SweetsType::Banana, "Banana", "Assets/Model/Banana_low01.fbx", "Low-poly curved banana fruit");

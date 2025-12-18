@@ -193,6 +193,16 @@ namespace
                 });
     }
 
+    std::optional<std::string> ResolveTextureAlias(const std::string& fileName)
+    {
+        if (EqualsIgnoreCase(fileName, "strawberry_uv03.png"))
+        {
+            return "strawberry.png";
+        }
+
+        return std::nullopt;
+    }
+
     struct ImportResult
     {
         std::unique_ptr<Assimp::Importer> importer;
@@ -601,6 +611,25 @@ AssimpModelLorder::MakeMaterial(
                         texFile = fileName;
                         textureDirectory = "Assets/Texture/";
                         sanitizedFile = fileName;
+                    }
+                    else if (auto alias = ResolveTextureAlias(fileName))
+                    {
+                        const std::string remappedPath = "Assets/Texture/" + *alias;
+                        if (std::filesystem::exists(remappedPath))
+                        {
+                            texFile = *alias;
+                            textureDirectory = "Assets/Texture/";
+                            sanitizedFile = *alias;
+                            DebugLog::DebugMessage(
+                                "[Material] テクスチャ '" + fileName + "' を '" + *alias + "' にマッピング");
+                        }
+                        else
+                        {
+                            DebugLog::DebugMessage(
+                                "[AssimpModelLoader][WARNING] テクスチャエイリアス '" +
+                                remappedPath + "' が見つからないためスキップ");
+                            skipTextureLoading = true;
+                        }
                     }
                     else
                     {
