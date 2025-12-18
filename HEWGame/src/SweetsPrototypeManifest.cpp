@@ -173,7 +173,7 @@ namespace SweetsSpace
 
         const bool loaded = LoadOverridesFromCsv(csvPath);
 
-        const std::array<SweetsType, 6> kTypes{
+        const std::array<SweetsType, 5> kTypes{
             SweetsType::Cream,
             SweetsType::Strawberry,
             SweetsType::Blueberry,
