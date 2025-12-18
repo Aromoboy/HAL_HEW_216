@@ -161,8 +161,7 @@ namespace SweetsSpace
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
-            float3 minScale{ 1.0f, 1.0f, 1.0f };
-            float3 maxScale{ 1.0f, 1.0f, 1.0f };
+            float3 scale{ 1.0f, 1.0f, 1.0f };
             ColliderPreset colliderPreset;
         };
 
@@ -320,7 +319,7 @@ namespace SweetsSpace
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
-        Transform BuildSpawnTransform(const float3& origin) const;
+        Transform BuildSpawnTransform(const std::string& normalizedKind, const float3& origin);
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
         void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,

@@ -2052,10 +2052,13 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 }
             };
             std::ostringstream oss;
-            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, collider)\n";
+            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, scale, collider)\n";
             for (const auto& preset : presets)
             {
-                oss << kLogPrefix << "  kind='" << preset.first << "' collider="
+                oss << kLogPrefix << "  kind='" << preset.first << "' scale=("
+                    << preset.second.scale.x << ','
+                    << preset.second.scale.y << ','
+                    << preset.second.scale.z << ") collider="
                     << colliderShapeToString(preset.second.colliderPreset.shape)
                     << " pad=(" << preset.second.colliderPreset.padding.x << ','
                     << preset.second.colliderPreset.padding.y << ','
