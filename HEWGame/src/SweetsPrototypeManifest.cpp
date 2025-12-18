@@ -110,7 +110,7 @@ namespace SweetsSpace
     void SweetsPrototypeManifest::ApplyDefaults()
     {
         Register(SweetsType::Cake, "Cake", "Assets/Model/cake.fbx", "Textured sponge cake cube with frosting layers");
-        Register(SweetsType::Pudding, "Pudding", "Assets/Model/LowPolyNature/Models/pudding.fbx", "Low-poly pudding cup with baked textures");
+        Register(SweetsType::Cream, "Cream", "Assets/Model/LowPolyNature/Models/Cream.fbx", "Low-poly Cream cup with baked textures");
         Register(SweetsType::Sherbet, "Sherbet", "Assets/Model/cream.fbx", "Stylized sherbet scoop modeled as a soft-serve swirl");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
@@ -149,7 +149,7 @@ namespace SweetsSpace
 
         const std::array<SweetsType, 8> kTypes{
             SweetsType::Cake,
-            SweetsType::Pudding,
+            SweetsType::Cream,
             SweetsType::Sherbet,
             SweetsType::Strawberry,
             SweetsType::Blueberry,
@@ -261,7 +261,7 @@ namespace SweetsSpace
             std::optional<SweetsType> mappedType;
             const bool isPlayerAlias = normalizedKey == "player";
             if (normalizedKey == NormalizeKey(ToString(SweetsType::Cake))) mappedType = SweetsType::Cake;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pudding))) mappedType = SweetsType::Pudding;
+            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Cream))) mappedType = SweetsType::Cream;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Sherbet))) mappedType = SweetsType::Sherbet;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Strawberry))) mappedType = SweetsType::Strawberry;
             else if (normalizedKey == NormalizeKey(ToString(SweetsType::Blueberry))) mappedType = SweetsType::Blueberry;
@@ -368,8 +368,8 @@ namespace SweetsSpace
         {
         case SweetsType::Cake:
             return "Cake";
-        case SweetsType::Pudding:
-            return "Pudding";
+        case SweetsType::Cream:
+            return "Cream";
         case SweetsType::Sherbet:
             return "Sherbet";
         case SweetsType::Strawberry:
