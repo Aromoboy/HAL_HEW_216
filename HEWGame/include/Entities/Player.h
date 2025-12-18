@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Entities/PhysicalEntity.h"
@@ -86,6 +87,7 @@ namespace Entities
         std::shared_ptr<Render::Model> m_fairyModel;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+        std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;
         int m_maxCarry;
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
