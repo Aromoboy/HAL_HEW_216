@@ -77,27 +77,9 @@ namespace
         return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
-    bool IsLambertOnlySweets(SweetsSpace::SweetsType type)
-    {
-        using SweetsSpace::SweetsType;
-        switch (type)
-        {
-        case SweetsType::Cake:
-        case SweetsType::Pudding:
-            return true;
-        default:
-            return false;
-        }
-    }
-
     std::optional<std::string> MapSweetsTypeToTexture(SweetsSpace::SweetsType type)
     {
         using SweetsSpace::SweetsType;
-        if (IsLambertOnlySweets(type))
-        {
-            return std::nullopt;
-        }
-
         switch (type)
         {
         case SweetsType::Strawberry:
@@ -107,19 +89,18 @@ namespace
         case SweetsType::Pineapple:
             return "Assets/Texture/pineapple.png";
         case SweetsType::Cake:
+        case SweetsType::Pudding:
         case SweetsType::Sherbet:
         case SweetsType::Banana:
             return "Assets/Texture/cream.png";
-        case SweetsType::Pudding:
         case SweetsType::Fairy:
         default:
             return std::nullopt;
         }
     }
 
-    std::optional<SweetsSpace::SweetsType> ResolveSweetsTypeFromModelPath(const std::string& modelPath)
+    std::optional<std::string> ResolveTextureFromManifest(const std::string& normalizedModelPath)
     {
-        const std::string normalizedModelPath = NormalizePath(modelPath);
         for (const auto& entry : SweetsSpace::SweetsPrototypeManifest::Instance().Enumerate())
         {
             std::string candidate = NormalizePath(entry.descriptor.modelPath);
@@ -130,18 +111,8 @@ namespace
 
             if (EndsWithPath(normalizedModelPath, candidate))
             {
-                return entry.type;
+                return MapSweetsTypeToTexture(entry.type);
             }
-        }
-
-        return std::nullopt;
-    }
-
-    std::optional<std::string> ResolveTextureFromManifest(const std::string& normalizedModelPath)
-    {
-        if (auto type = ResolveSweetsTypeFromModelPath(normalizedModelPath))
-        {
-            return MapSweetsTypeToTexture(*type);
         }
 
         return std::nullopt;
@@ -166,11 +137,7 @@ namespace
         {
             return "Assets/Texture/pineapple.png";
         }
-        if (contains("cake") || contains("pudding"))
-        {
-            return std::nullopt;
-        }
-        if (contains("cream") || contains("banana"))
+        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana"))
         {
             return "Assets/Texture/cream.png";
         }
@@ -554,8 +521,6 @@ AssimpModelLorder::MakeMaterial(
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
-    const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
-    const auto resolvedSweetsType = ResolveSweetsTypeFromModelPath(modelPathForFallback);
 
     if (!textureLoadingEnabled)
     {
@@ -567,6 +532,8 @@ AssimpModelLorder::MakeMaterial(
         DirectX::XMFLOAT4 diffuse;
         DirectX::XMFLOAT4 ambient;
         DirectX::XMFLOAT4 specular;
+
+        const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
 
         aiColor3D col;
         float shininess = 0.0f;
@@ -589,31 +556,9 @@ AssimpModelLorder::MakeMaterial(
         if (pScene->mMaterials[i]->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
             specular.w = shininess;
 
-        aiShadingMode shadingMode = aiShadingMode_Gouraud;
-        const bool hasShadingMode = pScene->mMaterials[i]->Get(AI_MATKEY_SHADING_MODEL, shadingMode) == AI_SUCCESS;
-        const bool isLambertMaterial = shadingMode == aiShadingMode_Lambert;
-        const bool isLambertSweets = resolvedSweetsType && IsLambertOnlySweets(*resolvedSweetsType);
-        const bool suppressTextureForLambert = isLambertMaterial || isLambertSweets;
-
-        if (suppressTextureForLambert && textureLoadingEnabled)
-        {
-            std::ostringstream oss;
-            oss << "[Material] Lambert/no-texture sweets detected; suppressing texture load for material "
-                << i << " model='" << modelFilename << "'";
-            if (resolvedSweetsType)
-            {
-                oss << " sweetsType=" << SweetsSpace::ToString(*resolvedSweetsType);
-            }
-            if (hasShadingMode)
-            {
-                oss << " shadingMode=" << static_cast<int>(shadingMode);
-            }
-            DebugLog::DebugMessage(oss.str());
-        }
-
         // テクスチャ
         std::shared_ptr<Texture2D> texture = nullptr;
-        if (textureLoadingEnabled && !suppressTextureForLambert)
+        if (textureLoadingEnabled)
         {
             aiString texPath;
             if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
@@ -761,12 +706,6 @@ AssimpModelLorder::MakeMaterial(
                     texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
                 }
             }
-        }
-        else if (!texture && suppressTextureForLambert)
-        {
-            DebugLog::DebugMessage(
-                "[Material] テクスチャ適用をスキップしました (Lambert/カラーのみ素材を維持) material " + std::to_string(i)
-                + " model='" + modelFilename + "'");
         }
 
         materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
