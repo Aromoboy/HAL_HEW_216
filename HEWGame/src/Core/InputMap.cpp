@@ -53,6 +53,9 @@ namespace Core
         m_bindings[ActionId::ToggleFullscreen] = MakeBinding(VK_F11, 0, -1, 1.0f);
         m_bindings[ActionId::CameraToggle] = MakeBinding(VK_RETURN, 0, -1, 1.0f);
         m_bindings[ActionId::CameraHeightToggle] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
+        m_bindings[ActionId::CameraOrbitYaw] = MakeBinding(0, 0, 1, 1.0f);
+        m_bindings[ActionId::CameraOrbitPitch] = MakeBinding(0, 0, 3, -1.0f);
+        m_bindings[ActionId::CameraZoom] = MakeBinding(0, 0, -1, 1.0f);
         m_bindings[ActionId::SpeedBoost] = MakeBinding('1', 0, -1, 1.0f);
         m_bindings[ActionId::SpeedReset] = MakeBinding('2', 0, -1, 1.0f);
         m_bindings[ActionId::ColliderNudgeUp] = MakeBinding(VK_F2, 0, -1, 1.0f);
@@ -60,6 +63,9 @@ namespace Core
 
         m_axisKeys[ActionId::MoveX] = { VK_A, VK_D };
         m_axisKeys[ActionId::RotateYaw] = { VK_S, VK_W };
+        m_axisKeys[ActionId::CameraOrbitYaw] = { VK_LEFT, VK_RIGHT };
+        m_axisKeys[ActionId::CameraOrbitPitch] = { VK_UP, VK_DOWN };
+        m_axisKeys[ActionId::CameraZoom] = { VK_PRIOR, VK_NEXT };
 
         m_actionKeys[ActionId::Drop] = { 'Q' };
         m_actionKeys[ActionId::Confirm] = { static_cast<unsigned char>('E'), VK_RETURN };
@@ -70,6 +76,9 @@ namespace Core
         m_actionKeys[ActionId::ToggleFullscreen] = { VK_F11 };
         m_actionKeys[ActionId::CameraToggle] = { VK_RETURN };
         m_actionKeys[ActionId::CameraHeightToggle] = { VK_SPACE };
+        m_actionKeys[ActionId::CameraOrbitYaw] = { VK_LEFT, VK_RIGHT };
+        m_actionKeys[ActionId::CameraOrbitPitch] = { VK_UP, VK_DOWN };
+        m_actionKeys[ActionId::CameraZoom] = { VK_PRIOR, VK_NEXT };
         m_actionKeys[ActionId::SpeedBoost] = { static_cast<unsigned char>('1') };
         m_actionKeys[ActionId::SpeedReset] = { static_cast<unsigned char>('2') };
         m_actionKeys[ActionId::ColliderNudgeUp] = { VK_F2 };

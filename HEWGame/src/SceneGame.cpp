@@ -1767,7 +1767,15 @@ namespace
 
         constexpr float kStageCenterX = 0.0f;
         constexpr float kCameraStateEpsilon = 1e-4f;
-
+        constexpr float kOrbitFollowSpeed = 6.0f;
+        constexpr float kCameraYawSpeed = DirectX::XMConvertToRadians(120.0f);
+        constexpr float kCameraPitchSpeed = DirectX::XMConvertToRadians(90.0f);
+        constexpr float kCameraZoomSpeed = 20.0f;
+        constexpr float kCameraMinPitchRadians = DirectX::XMConvertToRadians(-80.0f);
+        constexpr float kCameraMaxPitchRadians = DirectX::XMConvertToRadians(80.0f);
+        constexpr float kCameraMinDistance = 5.0f;
+        constexpr float kCameraMaxDistance = 80.0f;
+        constexpr float kCameraInputEpsilon = 1e-3f;
         bool HasMeaningfulDifference(float previous, float current, float epsilon = kCameraStateEpsilon)
         {
             if (!std::isfinite(previous) || !std::isfinite(current))
@@ -1782,6 +1790,11 @@ namespace
             return HasMeaningfulDifference(a.x, b.x, epsilon)
                 || HasMeaningfulDifference(a.y, b.y, epsilon)
                 || HasMeaningfulDifference(a.z, b.z, epsilon);
+        }
+
+        float VectorLength(const float3& value)
+        {
+            return std::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
         }
 
         Transform BuildPlatformTransformFromDescriptor(
@@ -1837,6 +1850,180 @@ void SceneGame::OnExit()
     ::DebugTrace(oss.str());
 }
 
+void SceneGame::InitializeCameraStateFromPreset(const CameraPrototypeSettings& settings)
+{
+    const float baseDistance = VectorLength(settings.offset);
+    m_defaultCameraDistance = (std::isfinite(baseDistance) && baseDistance > kCameraStateEpsilon)
+        ? baseDistance
+        : 1.0f;
+
+    if (baseDistance > kCameraStateEpsilon)
+    {
+        m_cameraBaseOffsetDir = float3{
+            settings.offset.x / baseDistance,
+            settings.offset.y / baseDistance,
+            settings.offset.z / baseDistance };
+    }
+    else
+    {
+        m_cameraBaseOffsetDir = float3{ 0.0f, 0.0f, -1.0f };
+    }
+
+    m_defaultCameraYaw = settings.yawRadians;
+    m_defaultCameraPitch = settings.pitchRadians;
+
+    m_cameraState.mode = CameraMode::SideView;
+    m_cameraState.yawRadians = m_defaultCameraYaw;
+    m_cameraState.pitchRadians = m_defaultCameraPitch;
+    m_cameraState.distance = m_defaultCameraDistance;
+
+    m_orbitCameraState = m_cameraState;
+    m_orbitCameraState.mode = CameraMode::Orbit;
+}
+
+float3 SceneGame::ComputeCameraOffsetFromState() const
+{
+    return float3{
+        m_cameraBaseOffsetDir.x * m_cameraState.distance,
+        m_cameraBaseOffsetDir.y * m_cameraState.distance,
+        m_cameraBaseOffsetDir.z * m_cameraState.distance };
+}
+
+void SceneGame::ApplyCameraState(bool forceImmediateUpdate)
+{
+    if (!m_gameCamera)
+    {
+        return;
+    }
+
+    const bool orbitMode = (m_cameraState.mode == CameraMode::Orbit);
+    const float3 offset = ComputeCameraOffsetFromState();
+    m_gameCamera->SetFieldOfViewDegrees(kFixedSideViewCameraPreset.fovDegrees);
+
+    if (m_cameraRig)
+    {
+        m_cameraRig->SetOffset(offset);
+        m_cameraRig->SetYaw(m_cameraState.yawRadians);
+        m_cameraRig->SetPitch(m_cameraState.pitchRadians);
+        m_cameraRig->SetFollowSpeed(orbitMode ? kOrbitFollowSpeed : 0.0f);
+        m_cameraRig->SetTranslationLocked(!orbitMode);
+        m_cameraRig->SetYawPitchLocked(!orbitMode);
+    }
+
+    if (!orbitMode)
+    {
+        ConfigureCamera(kFixedSideViewCameraPreset);
+    }
+    else if (forceImmediateUpdate)
+    {
+        const auto anchor = m_cameraAnchor;
+        float3 rotation{ m_cameraState.pitchRadians, m_cameraState.yawRadians, 0.0f };
+        if (anchor)
+        {
+            const auto& anchorTransform = anchor->GetTransform();
+            rotation.x += anchorTransform.rotation.x;
+            rotation.y += anchorTransform.rotation.y;
+            rotation.z += anchorTransform.rotation.z;
+
+            DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
+            DirectX::XMVECTOR rotatedOffset = RotateOffset(offset, rotation.y, rotation.x);
+            DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+            m_gameCamera->SetPosition(StoreFloat3(desiredPos));
+        }
+
+        m_gameCamera->SetRotation(rotation);
+    }
+
+    m_gameCamera->GetView();
+    m_gameCamera->GetProjection();
+}
+
+void SceneGame::ToggleCameraMode()
+{
+    const CameraMode previousMode = m_cameraState.mode;
+    if (previousMode == CameraMode::SideView)
+    {
+        if (m_orbitCameraState.mode != CameraMode::Orbit)
+        {
+            m_orbitCameraState.mode = CameraMode::Orbit;
+        }
+        m_cameraState = m_orbitCameraState;
+    }
+    else
+    {
+        m_orbitCameraState = m_cameraState;
+        m_orbitCameraState.mode = CameraMode::Orbit;
+        m_cameraState.mode = CameraMode::SideView;
+        m_cameraState.yawRadians = m_defaultCameraYaw;
+        m_cameraState.pitchRadians = m_defaultCameraPitch;
+        m_cameraState.distance = m_defaultCameraDistance;
+    }
+
+    ApplyCameraState(true);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Camera] Mode=" << (m_cameraState.mode == CameraMode::SideView ? "SideView" : "Orbit")
+        << " yawDeg=" << DirectX::XMConvertToDegrees(m_cameraState.yawRadians)
+        << " pitchDeg=" << DirectX::XMConvertToDegrees(m_cameraState.pitchRadians)
+        << " dist=" << m_cameraState.distance << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::HandleCameraInput(Core::UpdateContext& ctx, float deltaTime)
+{
+    if (!m_cameraRig || !m_gameCamera)
+    {
+        return;
+    }
+
+    if (ctx.input.IsTrigger(Core::ActionId::CameraToggle))
+    {
+        ToggleCameraMode();
+    }
+
+    if (m_cameraState.mode != CameraMode::Orbit)
+    {
+        return;
+    }
+
+    const float yawInput = ctx.input.GetAxis(Core::ActionId::CameraOrbitYaw);
+    const float pitchInput = ctx.input.GetAxis(Core::ActionId::CameraOrbitPitch);
+    const float zoomInput = ctx.input.GetAxis(Core::ActionId::CameraZoom);
+
+    bool stateChanged = false;
+    if (std::fabs(yawInput) > kCameraInputEpsilon)
+    {
+        m_cameraState.yawRadians = DirectX::XMScalarModAngle(
+            m_cameraState.yawRadians + yawInput * kCameraYawSpeed * deltaTime);
+        stateChanged = true;
+    }
+
+    if (std::fabs(pitchInput) > kCameraInputEpsilon)
+    {
+        m_cameraState.pitchRadians = std::clamp(
+            m_cameraState.pitchRadians + pitchInput * kCameraPitchSpeed * deltaTime,
+            kCameraMinPitchRadians,
+            kCameraMaxPitchRadians);
+        stateChanged = true;
+    }
+
+    if (std::fabs(zoomInput) > kCameraInputEpsilon)
+    {
+        m_cameraState.distance = std::clamp(
+            m_cameraState.distance + zoomInput * kCameraZoomSpeed * deltaTime,
+            kCameraMinDistance,
+            kCameraMaxDistance);
+        stateChanged = true;
+    }
+
+    if (stateChanged)
+    {
+        m_orbitCameraState = m_cameraState;
+        m_orbitCameraState.mode = CameraMode::Orbit;
+        ApplyCameraState(true);
+    }
+}
+
 std::string SceneGame::ResolvePlayerColliderKey(const std::string& key) const
 {
     const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
@@ -1868,6 +2055,7 @@ void SceneGame::NormalizePlayerColliderDefinitions()
 
 SceneGame::SceneGame()
 {
+InitializeCameraStateFromPreset(kFixedSideViewCameraPreset);
 m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
 m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kPlayerColliderConfigPath, false);
 m_playerColliderTuning = LoadPlayerColliderTuning(kPlayerColliderTuningPath);
@@ -2212,6 +2400,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     }
 
     const auto& cameraSettings = kFixedSideViewCameraPreset;
+    InitializeCameraStateFromPreset(cameraSettings);
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -2232,6 +2421,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         {
             m_cameraRig->Attach(m_cameraAnchor);
         }
+        ApplyCameraState(true);
     }
 
     m_pManager = std::make_unique<SoundManagerEX>();
@@ -2867,7 +3057,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     case StageState::ShowingResult:
         break;
     }
-
+    HandleCameraInput(ctx, deltaTime);
     if (m_stageState == StageState::ShowingResult)
     {
         ProcessPostGameInput(ctx);

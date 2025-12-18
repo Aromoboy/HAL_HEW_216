@@ -80,6 +80,21 @@ public:
         ShowingResult,
     };
 
+    enum class CameraMode
+    {
+        SideView,
+        Orbit,
+    };
+
+    struct CameraControlState
+    {
+        CameraMode mode = CameraMode::SideView;
+        float yawRadians = 0.0f;
+        float pitchRadians = 0.0f;
+        float distance = 1.0f;
+    };
+
+
     struct PlayerColliderTuning
     {
         float thicknessPadding = 1.0f;
@@ -125,6 +140,11 @@ private:
     void UpdateTowerHeightTelemetry();
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
+    void HandleCameraInput(Core::UpdateContext& ctx, float deltaTime);
+    void ToggleCameraMode();
+    void InitializeCameraStateFromPreset(const CameraPrototypeSettings& settings);
+    float3 ComputeCameraOffsetFromState() const;
+    void ApplyCameraState(bool forceImmediateUpdate);
     void ToggleGameplaySystems(bool enabled);
     bool TryGetGuidelineClipY(const ::CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
@@ -176,6 +196,12 @@ private:
     float m_heightBonusSeconds = 0.0f;
     float m_groundY = 0.0f;
     bool m_heightBonusArmed = false;
+    float m_defaultCameraDistance = 1.0f;
+    float m_defaultCameraYaw = 0.0f;
+    float m_defaultCameraPitch = 0.0f;
+    CameraControlState m_cameraState;
+    CameraControlState m_orbitCameraState;
+    float3 m_cameraBaseOffsetDir{ 0.0f, 0.0f, -1.0f };
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;
