@@ -1,7 +1,55 @@
 #include "Texture.h"
 #include "TextureLoad.h"
+#include "Debug.h"
 #include <cstring>
 #include <string>
+#include <combaseapi.h>
+#include <sstream>
+
+namespace
+{
+	class ComInitializer
+	{
+	public:
+		ComInitializer()
+		{
+			HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+			if (result == RPC_E_CHANGED_MODE)
+			{
+				hr = S_FALSE;
+				return;
+			}
+
+			hr = result;
+			if (SUCCEEDED(hr))
+			{
+				needsUninit = true;
+			}
+		}
+
+		~ComInitializer()
+		{
+			if (needsUninit)
+			{
+				CoUninitialize();
+			}
+		}
+
+		bool IsReady() const { return SUCCEEDED(hr); }
+		HRESULT Result() const { return hr; }
+
+	private:
+		HRESULT hr = E_FAIL;
+		bool needsUninit = false;
+	};
+
+	bool EnsureCOMInitialized(HRESULT& outHr)
+	{
+		thread_local ComInitializer initializer;
+		outHr = initializer.Result();
+		return initializer.IsReady();
+	}
+}
 
 /// <summary>
 /// クスチャ
@@ -22,19 +70,41 @@ HRESULT Texture::Create(const char* fileName)
 	HRESULT hr = S_OK;
 
 	// 字変換
-	wchar_t wPath[MAX_PATH];
-	size_t wLen = 0;
-	MultiByteToWideChar(0, 0, fileName, -1, wPath, MAX_PATH);
+	wchar_t wPath[MAX_PATH] = {};
+	int wLen = MultiByteToWideChar(CP_ACP, 0, fileName, -1, wPath, MAX_PATH);
+	if (wLen == 0)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		std::ostringstream oss;
+		oss << "[Texture] Failed to convert path to wide string: " << fileName << " hr=0x" << std::hex << hr;
+		DebugLog::DebugMessage(oss.str());
+		return hr;
+	}
 
 	// ファイル別読み込み
 	DirectX::TexMetadata mdata;
 	DirectX::ScratchImage image;
-	if (strstr(fileName, ".tga"))
+	const bool isTga = strstr(fileName, ".tga") != nullptr;
+	if (!isTga)
+	{
+		HRESULT comHr = E_FAIL;
+		if (!EnsureCOMInitialized(comHr))
+		{
+			std::ostringstream oss;
+			oss << "[Texture] Failed to initialize COM before loading texture: " << fileName << " hr=0x" << std::hex << comHr;
+			DebugLog::DebugMessage(oss.str());
+			return comHr;
+		}
+	}
+	if (isTga)
 		hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
 	else
 		hr = DirectX::LoadFromWICFile(wPath, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
 	if (FAILED(hr)) {
-		return E_FAIL;
+		std::ostringstream oss;
+		oss << "[Texture] Failed to load texture from " << fileName << " hr=0x" << std::hex << hr;
+		DebugLog::DebugMessage(oss.str());
+		return hr;
 	}
 
 	// シェーダリソース生
