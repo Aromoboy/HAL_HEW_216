@@ -2285,6 +2285,89 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     }
     // ModelCacheの設定後、ステージレイアウトをロード
     LoadStageLayout("Assets/StageLayout.csv");
+    if (m_sweetsManager)
+    {
+        std::vector<float3> spawnOrigins;
+        int layoutAnchorCount = 0;
+        int platformAnchorCount = 0;
+        int configAnchorCount = 0;
+
+        const auto isPlateModel = [](const std::string& modelPath)
+        {
+            std::string lowered = modelPath;
+            std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
+                return static_cast<char>(std::tolower(ch));
+                });
+            return lowered.find("osara") != std::string::npos;
+        };
+        const auto isFiniteVector = [](const float3& value)
+        {
+            return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+        };
+        const auto appendUniqueOrigin = [&](const float3& origin, int& counter)
+        {
+            if (!isFiniteVector(origin))
+            {
+                return;
+            }
+            constexpr float kOriginEpsilon = 1e-3f;
+            const auto duplicate = std::find_if(
+                spawnOrigins.begin(), spawnOrigins.end(),
+                [&](const float3& existing)
+                {
+                    return std::fabs(existing.x - origin.x) < kOriginEpsilon
+                        && std::fabs(existing.y - origin.y) < kOriginEpsilon
+                        && std::fabs(existing.z - origin.z) < kOriginEpsilon;
+                });
+            if (duplicate == spawnOrigins.end())
+            {
+                spawnOrigins.push_back(origin);
+                ++counter;
+            }
+        };
+
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!isPlateModel(obj.modelPath))
+            {
+                continue;
+            }
+
+            const float3 center{
+                kStageCenterX + obj.transform.position.x,
+                obj.transform.position.y,
+                obj.transform.position.z
+            };
+            appendUniqueOrigin(center, layoutAnchorCount);
+        }
+
+        for (const auto& descriptor : m_stageData.GetPlatforms())
+        {
+            const float3 center{
+                kStageCenterX + descriptor.center.x,
+                descriptor.center.y + (descriptor.heightWorld * 0.5f),
+                descriptor.center.z
+            };
+            appendUniqueOrigin(center, platformAnchorCount);
+        }
+
+        for (const auto& spawnPoint : m_stageData.GetSpawnPoints())
+        {
+            float3 anchoredPoint = spawnPoint;
+            anchoredPoint.x += kStageCenterX;
+            appendUniqueOrigin(anchoredPoint, configAnchorCount);
+        }
+
+        m_sweetsManager->SetSpawnOrigins(spawnOrigins, 2.0f);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnAnchors] stageLayout=" << layoutAnchorCount
+            << " platforms=" << platformAnchorCount
+            << " config=" << configAnchorCount
+            << " uniqueOrigins=" << spawnOrigins.size()
+            << " heightOffset=2.0\n";
+        DebugTrace(oss.str());
+    }
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
@@ -4003,4 +4086,3 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
 }
-
