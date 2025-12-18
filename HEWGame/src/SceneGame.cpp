@@ -32,14 +32,17 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <unordered_map>
 #include <optional>
 #include <cstdlib>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <iterator>
+#include <filesystem>
 #include <DirectXMath.h>
 #include "Physical.h"
+#include "ColliderRegistry.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -67,11 +70,13 @@ namespace
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr const char* kStageChecklistConfigPath = "Assets/Config/stage_checklist.cfg";
         constexpr const char* kStageDefaultConfigPath = "Assets/Config/stage_default.cfg";
+        constexpr const char* kStageColliderConfigPath = "Assets/Config/stage_colliders.cfg";
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
         constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
         constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
         constexpr const char* kRenderSettingsConfigPath = "Assets/Config/render_settings.cfg";
+        constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -168,6 +173,214 @@ namespace
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
+        }
+
+        struct StageColliderPreset
+        {
+            std::string presetId;
+            std::string registryId;
+            Collision::CollisionLayer layer{ Collision::CollisionLayer::Floor };
+            b2BodyType bodyType{ b2_staticBody };
+            bool fixedRotation{ true };
+            bool allowRotation{ false };
+            b2Vec2 offset{ 0.0f, 0.0f };
+        };
+
+        struct StageColliderConfig
+        {
+            std::unordered_map<std::string, StageColliderPreset> presetsByModelKey;
+            std::unordered_map<std::string, StageColliderPreset> presetsById;
+        };
+
+        std::string ToLowerCopy(const std::string& value)
+        {
+            std::string lowered = value;
+            std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
+                {
+                    return static_cast<char>(std::tolower(c));
+                });
+            return lowered;
+        }
+
+        Collision::CollisionLayer ParseCollisionLayer(const std::string& token, Collision::CollisionLayer fallback)
+        {
+            const std::string lowered = ToLowerCopy(token);
+            if (lowered == "floor") return Collision::CollisionLayer::Floor;
+            if (lowered == "player") return Collision::CollisionLayer::Player;
+            if (lowered == "sweets") return Collision::CollisionLayer::Sweets;
+            if (lowered == "default") return Collision::CollisionLayer::Default;
+            return fallback;
+        }
+
+        b2BodyType ParseBodyType(const std::string& token, b2BodyType fallback)
+        {
+            const std::string lowered = ToLowerCopy(token);
+            if (lowered == "static" || lowered == "staticbody") return b2_staticBody;
+            if (lowered == "dynamic" || lowered == "dynamicbody") return b2_dynamicBody;
+            if (lowered == "kinematic" || lowered == "kinematicbody") return b2_kinematicBody;
+            return fallback;
+        }
+
+        bool ParseBoolToken(const std::string& token, bool fallback)
+        {
+            const std::string lowered = ToLowerCopy(token);
+            if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on")
+            {
+                return true;
+            }
+            if (lowered == "false" || lowered == "0" || lowered == "no" || lowered == "off")
+            {
+                return false;
+            }
+            return fallback;
+        }
+
+        std::string BuildModelKey(const std::string& modelPath)
+        {
+            std::string key = modelPath;
+            try
+            {
+                const std::filesystem::path path(modelPath);
+                key = path.filename().string();
+            }
+            catch (...)
+            {
+                // そのまま modelPath を使う
+            }
+
+            return NormalizeColliderKey(key);
+        }
+
+        StageColliderConfig LoadStageColliderConfig(const std::string& path)
+        {
+            StageColliderConfig config{};
+            std::ifstream file(path);
+            if (!file.is_open())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Stage collider config missing at '" << path << "'\n";
+                DebugTrace(oss.str());
+                return config;
+            }
+
+            std::string line;
+            size_t lineNumber = 0;
+            while (std::getline(file, line))
+            {
+                ++lineNumber;
+                line = TrimWhitespace(line);
+                if (line.empty() || line[0] == '#')
+                {
+                    continue;
+                }
+
+                std::vector<std::string> tokens;
+                std::stringstream ss(line);
+                std::string token;
+                while (std::getline(ss, token, ','))
+                {
+                    tokens.push_back(TrimWhitespace(token));
+                }
+
+                if (tokens.size() < 5)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[StageColliders] Line " << lineNumber << " malformed ('" << line
+                        << "'); expected at least 5 tokens.\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                StageColliderPreset preset{};
+                preset.presetId = NormalizeColliderKey(tokens[0]);
+                const std::string modelKey = NormalizeColliderKey(tokens[1]);
+                preset.registryId = NormalizeColliderKey(tokens[2]);
+                preset.layer = ParseCollisionLayer(tokens[3], Collision::CollisionLayer::Floor);
+                preset.bodyType = ParseBodyType(tokens[4], b2_staticBody);
+                if (tokens.size() > 5)
+                {
+                    preset.fixedRotation = ParseBoolToken(tokens[5], true);
+                }
+                if (tokens.size() > 6)
+                {
+                    preset.allowRotation = ParseBoolToken(tokens[6], false);
+                }
+                if (tokens.size() > 7)
+                {
+                    try { preset.offset.x = std::stof(tokens[7]); } catch (...) {}
+                }
+                if (tokens.size() > 8)
+                {
+                    try { preset.offset.y = std::stof(tokens[8]); } catch (...) {}
+                }
+
+                if (!preset.presetId.empty())
+                {
+                    config.presetsById[preset.presetId] = preset;
+                }
+                if (!modelKey.empty())
+                {
+                    config.presetsByModelKey[modelKey] = preset;
+                }
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "[StageColliders] Loaded " << config.presetsById.size()
+                << " presets from '" << path << "'.\n";
+            DebugTrace(oss.str());
+
+            return config;
+        }
+
+        std::optional<StageColliderPreset> ResolveStageColliderPreset(
+            const StageColliderConfig& config,
+            const std::string& explicitPreset,
+            const std::string& modelPath)
+        {
+            const std::string requested = NormalizeColliderKey(explicitPreset);
+            if (!requested.empty())
+            {
+                auto it = config.presetsById.find(requested);
+                if (it != config.presetsById.end())
+                {
+                    return it->second;
+                }
+            }
+
+            const std::string modelKey = BuildModelKey(modelPath);
+            auto byModel = config.presetsByModelKey.find(modelKey);
+            if (byModel != config.presetsByModelKey.end())
+            {
+                return byModel->second;
+            }
+
+            auto fallbackPreset = config.presetsById.find(modelKey);
+            if (fallbackPreset != config.presetsById.end())
+            {
+                return fallbackPreset->second;
+            }
+
+            return std::nullopt;
+        }
+
+        Physics::Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
+        {
+            if (shapes.empty())
+            {
+                return Physics::Box2DShapeConfig::Type::None;
+            }
+
+            switch (shapes.front().type)
+            {
+            case Physics::ColliderShapeType::Box:
+                return Physics::Box2DShapeConfig::Type::Box;
+            case Physics::ColliderShapeType::Polygon:
+                return Physics::Box2DShapeConfig::Type::Polygon;
+            case Physics::ColliderShapeType::Circle:
+                return Physics::Box2DShapeConfig::Type::Circle;
+            default:
+                return Physics::Box2DShapeConfig::Type::None;
+            }
         }
 
 #if defined(_DEBUG)
@@ -2305,6 +2518,14 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
 
     DebugTrace(std::string(kLogPrefix) + "CSVファイルを開きました: " + csvPath + "\n");
 
+    const bool registryLoaded = Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath);
+    if (!registryLoaded)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Stage collider registry missing; falling back to cached definitions if any.\n");
+    }
+
+    const StageColliderConfig stageColliderConfig = LoadStageColliderConfig(kStageColliderConfigPath);
+
     Render::ModelCache& cache = Render::ModelCache::Instance();
     std::string line;
 
@@ -2359,6 +2580,10 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
         obj.spinAxis.z = std::stof(values[13]);
         obj.spinSpeed = std::stof(values[14]);
         obj.currentRotation = 0.0f;
+        if (values.size() > 15)
+        {
+            obj.colliderPresetId = NormalizeColliderKey(values[15]);
+        }
 
         // モデルをロード
         DebugTrace(std::string(kLogPrefix) + "モデルをロード中\n");
@@ -2371,6 +2596,72 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
         else
         {
             DebugTrace(std::string(kLogPrefix) + "モデルをロード成功\n");
+        }
+
+        if (m_physicsMachine)
+        {
+            const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
+            if (preset)
+            {
+                obj.colliderPresetId = preset->presetId;
+
+                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(preset->registryId);
+                if (!registryDefinition)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[StageColliders] registryId='" << preset->registryId
+                        << "' missing for model '" << obj.modelPath << "' (preset='" << preset->presetId << "').\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    Physics::BoxColliderComponent colliderComponent{};
+                    colliderComponent.colliderId = preset->registryId;
+                    colliderComponent.shapeDef = registryDefinition->shapeDef;
+                    colliderComponent.shapes = registryDefinition->shapes;
+                    colliderComponent.colliderOffset = preset->offset;
+
+                    Physics::Box2DShapeConfig shapeConfig{};
+                    shapeConfig.type = InferShapeType(colliderComponent.shapes);
+                    shapeConfig.bodyType = preset->bodyType;
+                    shapeConfig.fixedRotation = preset->fixedRotation;
+                    shapeConfig.allowRotation = preset->allowRotation;
+                    shapeConfig.angularDamping = preset->allowRotation ? 0.2f : 0.0f;
+                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+
+                    auto entity = std::make_shared<Entities::PhysicalEntity>(
+                        obj.transform,
+                        shapeConfig,
+                        preset->layer,
+                        obj.model,
+                        nullptr,
+                        Core::UpdatePhase::PrePhysics,
+                        0,
+                        preset->presetId,
+                        false);
+
+                    entity->SetBoxColliderComponent(colliderComponent);
+                    entity->SetAllowMeshPhysics(false);
+                    obj.physicsEntity = entity;
+
+                    RegisterPhysicsBody(*entity);
+
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[StageColliders] Registered preset='" << preset->presetId
+                        << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(preset->layer)
+                        << ")\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[StageColliders] No preset mapped for model '" << obj.modelPath
+                    << "'; collider skipped.\n";
+                DebugTrace(oss.str());
+            }
         }
 
         // リストに追加
