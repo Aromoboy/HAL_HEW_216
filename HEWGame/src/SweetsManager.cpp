@@ -1297,14 +1297,14 @@ namespace SweetsSpace
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 0.95f, 0.95f, 0.95f };
+            preset.minScale = float3{ 0.25f, 0.25f, 0.25f };
+            preset.maxScale = float3{ 0.32f, 0.32f, 0.32f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.7f, 0.7f, 0.7f };
-            preset.maxScale = float3{ 0.85f, 0.85f, 0.85f };
+            preset.minScale = float3{ 0.18f, 0.18f, 0.18f };
+            preset.maxScale = float3{ 0.25f, 0.25f, 0.25f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Pineapple:
