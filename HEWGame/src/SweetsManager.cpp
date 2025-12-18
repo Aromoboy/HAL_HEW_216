@@ -268,8 +268,6 @@ namespace
             DirectX::XMFLOAT4(0.5f, 0.75f, 1, 1),
             DirectX::XMFLOAT4(0.2f, 0.35f, 0.55f, 1),
             DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
-            nullptr,
-            nullptr,
             nullptr);
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);

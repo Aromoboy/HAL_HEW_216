@@ -83,37 +83,30 @@ void ShaderList::SetBones(DirectX::XMFLOAT4X4* bones200)
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	DirectX::XMFLOAT4 param[3] = {
 		material.diffuse,
 		material.ambient,
-		material.specular,
-		{material.pTexture ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f}
+		material.specular
 	};
+	param[1].w = material.pTexture ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		m_pPS[i]->SetTexture(0, material.pTexture);
-		m_pPS[i]->SetTexture(1, static_cast<ID3D11ShaderResourceView*>(nullptr));
-		m_pPS[i]->SetTexture(2, static_cast<ID3D11ShaderResourceView*>(nullptr));
 		m_pPS[i]->WriteBuffer(0, param);
 	}
 }
 
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	DirectX::XMFLOAT4 param[3] = {
 		material.GetDiffuse(),
 		material.GetAmbient(),
-		material.GetSpecular(),
-		{ material.GetTexture(MaterialDX::TextureSlot::Diffuse) ? 1.0f : 0.0f,
-		  material.GetTexture(MaterialDX::TextureSlot::Normal) ? 1.0f : 0.0f,
-		  material.GetTexture(MaterialDX::TextureSlot::Specular) ? 1.0f : 0.0f,
-		  0.0f }
+		material.GetSpecular()
 	};
+	param[1].w = material.GetTexture() ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
-		m_pPS[i]->SetTexture(0, material.GetTexture(MaterialDX::TextureSlot::Diffuse));
-		m_pPS[i]->SetTexture(1, material.GetTexture(MaterialDX::TextureSlot::Normal));
-		m_pPS[i]->SetTexture(2, material.GetTexture(MaterialDX::TextureSlot::Specular));
+		m_pPS[i]->SetTexture(0, material.GetTexture());
 		m_pPS[i]->WriteBuffer(0, param);
 	}
 }
@@ -138,7 +131,6 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	};
 	m_pPS[PS_SPECULAR]->WriteBuffer(2, param);
 	m_pPS[PS_TOON]->WriteBuffer(2, param);
-	m_pPS[PS_FOG]->WriteBuffer(2, param);
 }
 void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
 {
@@ -242,73 +234,40 @@ struct PS_IN {
 	float3 normal : NORMAL0;
 	float2 uv : TEXCOORD0;
 	float4 color : COLOR0;
-	float4 wPos : POSITION0;
 };
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
 	float4 objAmbient;
 	float4 objSpecular;
-	float4 mapFlags;
 };
 cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
 };
-Texture2D texDiffuse : register(t0);
-Texture2D texNormal : register(t1);
-Texture2D texSpecular : register(t2);
+Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-
-    float4 baseColor = float4(objDiffuse.rgb, 1.0f);
-
+    float4 texColor = float4(objDiffuse.rgb, 1.0f);
     if (objAmbient.a >= 1.0f)
     {
-        baseColor = tex.Sample(samp, pin.uv);
-        baseColor.a = 1.0f;
+        texColor = tex.Sample(samp, pin.uv);
+        texColor.a = 1.0f;
     }
 
     float3 N = normalize(pin.normal);
     float3 L = normalize(-lightDir.xyz);
 
-    float NdotL = saturate(dot(N, L));
+    float lambert = saturate(dot(N, L));
 
-    float3 litColor = baseColor.rgb * NdotL;
+    float3 ambient = objAmbient.rgb * texColor.rgb;
+    float3 diffuse = lambert * texColor.rgb;
 
-    return float4(litColor, baseColor.a);
-}
-
-float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
-{
-	if (mapFlags.y < 0.5f) return normalize(normal);
-
-	float3 dp1 = ddx(wPos);
-	float3 dp2 = ddy(wPos);
-	float2 duv1 = ddx(uv);
-	float2 duv2 = ddy(uv);
-	float det = duv1.x * duv2.y - duv1.y * duv2.x;
-	float3 N = normalize(normal);
-	if (abs(det) < 1e-5f) return N;
-	float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * sign(det));
-	float3 B = normalize(cross(N, T));
-	float3 mapN = texNormal.Sample(samp, uv).xyz * 2.0f - 1.0f;
-	float3x3 tbn = float3x3(T, B, N);
-	return normalize(mul(mapN, tbn));
-}
-
-float4 main(PS_IN pin) : SV_TARGET
-{
-	float3 baseColor = mapFlags.x >= 0.5f ? texDiffuse.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
-	float3 N = ApplyNormalMap(pin.normal, pin.uv, pin.wPos.xyz);
-	float3 L = normalize(-lightDir.xyz);
-	float lambert = saturate(dot(N, L));
-	float3 ambient = objAmbient.rgb * baseColor;
-	float3 diffuse = lambert * baseColor;
-	float3 finalColor = ambient + diffuse;
-	return float4(finalColor, 1.0f);
+    float3 finalColor = ambient + diffuse;
+    float shade = 0.85f; //絶対に触らないほうがいい　ドロスより
+    return float4(texColor.rgb * shade, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
@@ -328,7 +287,6 @@ cbuffer Material : register(b0)
 	float4 objDiffuse;
 	float4 objAmbient;
 	float4 objSpecular;
-	float4 mapFlags;
 };
 cbuffer Light : register(b1)
 {
@@ -339,33 +297,14 @@ cbuffer Camera : register(b2)
 {
 	float4 cameraPos;
 };
-Texture2D texDiffuse : register(t0);
-Texture2D texNormal : register(t1);
-Texture2D texSpecular : register(t2);
+Texture2D tex : register(t0);
 SamplerState samp : register(s0);
-
-float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
-{
-	if (mapFlags.y < 0.5f) return normalize(normal);
-
-	float3 dp1 = ddx(wPos);
-	float3 dp2 = ddy(wPos);
-	float2 duv1 = ddx(uv);
-	float2 duv2 = ddy(uv);
-	float det = duv1.x * duv2.y - duv1.y * duv2.x;
-	float3 N = normalize(normal);
-	if (abs(det) < 1e-5f) return N;
-	float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * sign(det));
-	float3 B = normalize(cross(N, T));
-	float3 mapN = texNormal.Sample(samp, uv).xyz * 2.0f - 1.0f;
-	float3x3 tbn = float3x3(T, B, N);
-	return normalize(mul(mapN, tbn));
-}
-
 float4 main(PS_IN pin) : SV_TARGET
 {
-	float3 baseColor = mapFlags.x >= 0.5f ? texDiffuse.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
-	float3 N = ApplyNormalMap(pin.normal, pin.uv, pin.wPos.xyz);
+	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	if(objAmbient.a >= 1.0f)
+		color = tex.Sample(samp, pin.uv);
+	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir.xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 	float3 R = reflect(-V, N);
@@ -373,14 +312,13 @@ float4 main(PS_IN pin) : SV_TARGET
 	float dotRL = saturate(dot(R, L));
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float specStrength = mapFlags.z >= 0.5f ? texSpecular.Sample(samp, pin.uv).r : 1.0f;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb * specStrength;
-	float3 color = baseColor;
-	color *= saturate(lerp(
+	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
+	// Lambertの計算を参考
+	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, dotNL));
-	color += specular * saturate(pow(dotRL, max(0.01f, objSpecular.a)));
-	return float4(color, 1.0f);
+	color.rgb += specular * saturate(pow(dotRL, max(0.01f, objSpecular.a)));
+	return color;
 })EOT";
 	m_pPS[PS_SPECULAR] = new PixelShader();
 	m_pPS[PS_SPECULAR]->Compile(code);
@@ -393,61 +331,39 @@ struct PS_IN {
 	float3 normal : NORMAL0;
 	float2 uv : TEXCOORD0;
 	float4 color : COLOR0;
-	float4 wPos : POSITION0;
 };
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
 	float4 objAmbient;
 	float4 objSpecular;
-	float4 mapFlags;
 };
 cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
 };
-Texture2D texDiffuse : register(t0);
-Texture2D texNormal : register(t1);
-Texture2D texSpecular : register(t2);
+Texture2D tex : register(t0);
 SamplerState samp : register(s0);
-
-float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
-{
-	if (mapFlags.y < 0.5f) return normalize(normal);
-
-	float3 dp1 = ddx(wPos);
-	float3 dp2 = ddy(wPos);
-	float2 duv1 = ddx(uv);
-	float2 duv2 = ddy(uv);
-	float det = duv1.x * duv2.y - duv1.y * duv2.x;
-	float3 N = normalize(normal);
-	if (abs(det) < 1e-5f) return N;
-	float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * sign(det));
-	float3 B = normalize(cross(N, T));
-	float3 mapN = texNormal.Sample(samp, uv).xyz * 2.0f - 1.0f;
-	float3x3 tbn = float3x3(T, B, N);
-	return normalize(mul(mapN, tbn));
-}
-
 float4 main(PS_IN pin) : SV_TARGET
 {
-	float3 baseColor = mapFlags.x >= 0.5f ? texDiffuse.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
-	float3 N = ApplyNormalMap(pin.normal, pin.uv, pin.wPos.xyz);
+	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	if(objAmbient.a >= 1.0f)
+		color = tex.Sample(samp, pin.uv);
+	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
 	float dotNL = dot(N, L); // マイナス込で計算
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float specStrength = mapFlags.z >= 0.5f ? texSpecular.Sample(samp, pin.uv).r : 1.0f;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb * specStrength;
+	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
 	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // 陰の境目を柔らかく
-	float3 color = baseColor;
-	color *= saturate(lerp(
+	// Lambertの計算を参考
+	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, toonNL));
 	if(objSpecular.a >= 1.0f)
-		color += specular * saturate(pow(dotNL, max(0.01f, objSpecular.a)) * 100.0f);
-	return float4(color, 1.0f);
+		color.rgb += specular * saturate(pow(dotNL, max(0.01f, objSpecular.a)) * 100.0f);
+	return color;
 })EOT";
 	m_pPS[PS_TOON] = new PixelShader();
 	m_pPS[PS_TOON]->Compile(code);
@@ -467,7 +383,6 @@ cbuffer Material : register(b0)
 	float4 objDiffuse;
 	float4 objAmbient;
 	float4 objSpecular;
-	float4 mapFlags;
 };
 cbuffer Light : register(b1)
 {
@@ -485,41 +400,22 @@ cbuffer Param : register(b3)
 	float fogRange;
 	float2 dummy;
 };
-Texture2D texDiffuse : register(t0);
-Texture2D texNormal : register(t1);
-Texture2D texSpecular : register(t2);
+Texture2D tex : register(t0);
 SamplerState samp : register(s0);
-
-float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
-{
-	if (mapFlags.y < 0.5f) return normalize(normal);
-
-	float3 dp1 = ddx(wPos);
-	float3 dp2 = ddy(wPos);
-	float2 duv1 = ddx(uv);
-	float2 duv2 = ddy(uv);
-	float det = duv1.x * duv2.y - duv1.y * duv2.x;
-	float3 N = normalize(normal);
-	if (abs(det) < 1e-5f) return N;
-	float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * sign(det));
-	float3 B = normalize(cross(N, T));
-	float3 mapN = texNormal.Sample(samp, uv).xyz * 2.0f - 1.0f;
-	float3x3 tbn = float3x3(T, B, N);
-	return normalize(mul(mapN, tbn));
-}
-
 float4 main(PS_IN pin) : SV_TARGET
 {
-	float3 baseColor = mapFlags.x >= 0.5f ? texDiffuse.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
-	float3 N = ApplyNormalMap(pin.normal, pin.uv, pin.wPos.xyz);
+	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	if(objAmbient.a >= 1.0f)
+		color = tex.Sample(samp, pin.uv);
+	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 color = baseColor * saturate(diffuse * dotNL + ambient);
+	color.rgb *= saturate(diffuse * dotNL + ambient);
 	float vLen = length(pin.wPos.xyz - cameraPos.xyz);
-	color = lerp(color, fogColor.rgb, saturate((vLen - fogStart) / fogRange));
-	return float4(color, 1.0f);
+	color.rgb = lerp(color.rgb, fogColor.rgb, saturate((vLen - fogStart) / fogRange));
+	return color;
 })EOT";
 	m_pPS[PS_FOG] = new PixelShader();
 	m_pPS[PS_FOG]->Compile(code);

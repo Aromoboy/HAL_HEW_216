@@ -1,15 +1,11 @@
 #include "MaterialDX.h"
 
-MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular,
-    std::shared_ptr<Texture2D> diffuseTexture,
-    std::shared_ptr<Texture2D> normalTexture,
-    std::shared_ptr<Texture2D> specularTexture)
+MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
 	: m_diffuse(diffuse)
 	, m_ambient(ambient)
 	, m_specular(specular)
-	, m_textures{ diffuseTexture, normalTexture, specularTexture }
-{
-}
+	, m_texture(a_texture)
+{}
 
 MaterialDX::~MaterialDX()
 {
@@ -17,43 +13,20 @@ MaterialDX::~MaterialDX()
 
 
 //	eQb^
-ID3D11ShaderResourceView* MaterialDX::GetTexture(TextureSlot slot) const
+ID3D11ShaderResourceView* MaterialDX::GetTexture() const
 {
-	const size_t index = static_cast<size_t>(slot);
-	if (index >= m_textures.size())
-	{
-		return nullptr;
-	}
-
-	return m_textures[index] ? m_textures[index]->Get() : nullptr;
+	return m_texture ? m_texture->Get() : nullptr;
 }
 
-void MaterialDX::BindTexture(ID3D11DeviceContext* context, TextureSlot slot) const
+void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
 {
 	if (!context)
 	{
 		return;
 	}
 
-	const UINT slotIndex = static_cast<UINT>(slot);
-	ID3D11ShaderResourceView* textureView = GetTexture(slot);
-	context->PSSetShaderResources(slotIndex, 1, &textureView);
-}
-
-void MaterialDX::BindTextures(ID3D11DeviceContext* context) const
-{
-	if (!context)
-	{
-		return;
-	}
-
-	ID3D11ShaderResourceView* textureViews[static_cast<size_t>(TextureSlot::Count)] = {};
-	for (size_t i = 0; i < m_textures.size(); ++i)
-	{
-		textureViews[i] = m_textures[i] ? m_textures[i]->Get() : nullptr;
-	}
-
-	context->PSSetShaderResources(0, static_cast<UINT>(TextureSlot::Count), textureViews);
+	ID3D11ShaderResourceView* textureView = GetTexture();
+	context->PSSetShaderResources(slot, 1, &textureView);
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
@@ -63,51 +36,31 @@ DirectX::XMFLOAT4 MaterialDX::GetDiffuse() const
 
 DirectX::XMFLOAT4 MaterialDX::GetAmbient() const
 {
-	return m_ambient;
+        return m_ambient;
 
 }
 
 DirectX::XMFLOAT4 MaterialDX::GetSpecular() const
 {
-	return m_specular;
+        return m_specular;
 }
 
-std::shared_ptr<Texture2D> MaterialDX::GetTextureResource(TextureSlot slot) const
+std::shared_ptr<Texture2D> MaterialDX::GetTextureResource() const
 {
-	const size_t index = static_cast<size_t>(slot);
-	if (index >= m_textures.size())
-	{
-		return nullptr;
-	}
-	return m_textures[index];
-}
-
-std::shared_ptr<Texture2D> MaterialDX::GetDiffuseTextureResource() const
-{
-	return GetTextureResource(TextureSlot::Diffuse);
-}
-
-std::shared_ptr<Texture2D> MaterialDX::GetNormalTextureResource() const
-{
-	return GetTextureResource(TextureSlot::Normal);
-}
-
-std::shared_ptr<Texture2D> MaterialDX::GetSpecularTextureResource() const
-{
-	return GetTextureResource(TextureSlot::Specular);
+        return m_texture;
 }
 
 void MaterialDX::SetDiffuse(const DirectX::XMFLOAT4& diffuse)
 {
-	m_diffuse = diffuse;
+        m_diffuse = diffuse;
 }
 
 void MaterialDX::SetAmbient(const DirectX::XMFLOAT4& ambient)
 {
-	m_ambient = ambient;
+        m_ambient = ambient;
 }
 
 void MaterialDX::SetSpecular(const DirectX::XMFLOAT4& specular)
 {
-	m_specular = specular;
+        m_specular = specular;
 }
