@@ -2684,8 +2684,27 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #endif
     ValidatePlayerPhysicsRegistration();
     UpdateCountdown(ctx);
+
+    // スイーツの状態更新
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->OnUpdate(ctx);
+    }
+
+    const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
+    ::DebugTrace("[DEBUG] stacked.size=" + std::to_string(stacked.size()) + "\n");
+    for (const auto& sweets : stacked)
+    {
+        if (!sweets) continue;
+        const AABB bounds = sweets->GetAABB();
+        ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
+    }
+
+    //高さボーナス判定
     UpdateTowerHeightTelemetry();
 
+    
+    
     float viewportWidth = static_cast<float>(SCREEN_WIDTH);
     float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
     bool viewportFromDefault = true;
@@ -3698,14 +3717,51 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
 
 void SceneGame::UpdateTowerHeightTelemetry()
 {
-    float instantHeight = 0.0f;
-    if (m_sweetsManager)
+    static int callCount = 0;
+    ++callCount;
+    ::DebugTrace("[DEBUG] UpdateTowerHeightTelemetry callCount="
+        + std::to_string(callCount) + "\n");
+
+  //  Initialize(m_stageData);
+   //テスト用マジックナンバー
+    //const float testHeight = 1.0f;
+   // const float bonusSecond = 5.0f;
+
+        //高さボーナス判定
+    float heightThreshold = m_heightBonusThresholdMeters;
+    float bonusSecond = m_heightBonusSeconds;
+
+    //積んでる状態の高さ
+    float instantHeight = 2.0f;
+
+    std::ostringstream oss;
+    oss << "[DEBUG] instantHeight=" << instantHeight
+        << " threshold=" << m_heightBonusThresholdMeters  // ← 正しい変数に変更
+        << " bonusSeconds=" << m_heightBonusSeconds
+        << "\n";
+    ::DebugTrace(oss.str());
+
+    if (!m_sweetsManager)
     {
-        instantHeight = m_sweetsManager->GetHighestStackedHeight();
+        ::DebugTrace("[ERROR] m_sweetsManager is nullptr!\n");
+        return;
     }
+    
+    //instantHeight = m_sweetsManager->GetHighestStackedHeight();
+    //if (m_sweetsManager)
+    //{
+    //    instantHeight = m_sweetsManager->GetHighestStackedHeight();  
+    //}
 
     m_currentTowerHeight = instantHeight;
     m_maxTowerHeight = std::max(m_maxTowerHeight, instantHeight);
+
+
+
+    ::DebugTrace("[DEBUG] instantHeight=" + std::to_string(instantHeight) +
+        " threshold=" + std::to_string(heightThreshold) +
+        " bonusSeconds=" + std::to_string(bonusSecond) + "\n");
+
 
     if (instantHeight > m_peakTowerHeight)
     {
@@ -3717,19 +3773,26 @@ void SceneGame::UpdateTowerHeightTelemetry()
         ::DebugTrace(oss.str());
     }
 
-    if (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f)
+    if (heightThreshold > 0.0f && bonusSecond > 0.0f)
     {
-        if (instantHeight >= m_heightBonusThresholdMeters)
+       
+        //高さライン越え
+        if (instantHeight >= heightThreshold)
         {
+            
             if (m_heightBonusArmed)
             {
+
                 m_heightBonusArmed = false;
-                m_pendingTimeBonuses.push_back(PendingTimeBonus{ m_heightBonusSeconds, instantHeight });
+
+                m_remainingCountdownSeconds += bonusSecond;
+
+                m_pendingTimeBonuses.push_back(PendingTimeBonus{ bonusSecond, instantHeight }); 
                 std::ostringstream oss;
                 oss << kLogPrefix << "[TowerBonus] thresholdCrossed height=" << std::fixed << std::setprecision(2)
                     << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
-                    << m_heightBonusThresholdMeters << "m bonus=" << std::fixed << std::setprecision(2)
-                    << m_heightBonusSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
+                    << heightThreshold << "m bonus=" << std::fixed << std::setprecision(2)
+                    << bonusSecond << "s queue=" << m_pendingTimeBonuses.size() << "\n";
                 ::DebugTrace(oss.str());
             }
         }
@@ -3739,7 +3802,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
             std::ostringstream oss;
             oss << kLogPrefix << "[TowerBonus] rearmed height=" << std::fixed << std::setprecision(2)
                 << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
-                << m_heightBonusThresholdMeters << "m\n";
+                << heightThreshold << "m\n";
             ::DebugTrace(oss.str());
         }
     }
@@ -3915,3 +3978,19 @@ int SceneGame::ComputeScore() const
 
     return score;
 }
+
+void SceneGame::Initialize(const Stage::StageData& stageData)
+{
+    
+    //高さボーナス設定
+    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
+    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
+    m_heightBonusArmed = true;
+
+    //デバッグ確認用
+    std::ostringstream oss;
+    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
+        << " second=" << m_heightBonusSeconds << "\n";
+    ::DebugTrace(oss.str());
+}
+

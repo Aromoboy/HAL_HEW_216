@@ -170,7 +170,7 @@ namespace SweetsSpace
 
         void OnUpdate(Core::UpdateContext& ctx) override;
         void OnLateUpdate(Core::UpdateContext& ctx);
-
+        void Update(Core::UpdateContext& ctx);
         void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera);
 
         SweetsList& GetByState(SweetsState state);
@@ -219,6 +219,7 @@ namespace SweetsSpace
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         int GetSweetsCount() const;
+        void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
     private:
         struct SweetsStateHash
         {
@@ -345,6 +346,10 @@ namespace SweetsSpace
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
+        //ラインのフラグ
+        bool m_passedGuideline = false;
+        int m_heightBonusSeconds;
+        int m_timeManager;
 
         template<typename T>
         std::shared_ptr<ActiveSweets> MakeSweets(

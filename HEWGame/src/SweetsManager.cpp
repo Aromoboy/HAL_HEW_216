@@ -2010,8 +2010,23 @@ namespace SweetsSpace
 
     float SweetsManager::GetHighestStackedHeight() const
     {
-        float maxHeight = 0.0f;
+        //確認用のログ
+  /*      ::DebugTrace("[SweetsDEBUG] ENTER 1\n");
+
+        ::DebugTrace("[SweetsDEBUG] before GetByState\n");
         const auto& stacked = GetByState(SweetsState::Stacked);
+        ::DebugTrace("[SweetsDEBUG] after GetByState\n");
+
+        if (stacked.empty())
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked EMPTY\n");
+        }OnUpdate
+        else
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked NOT empty\n");
+        }*/
+        float maxHeight = 0.0f;
+       const auto& stacked = GetByState(SweetsState::Stacked);
         for (const auto& sweets : stacked)
         {
             if (!sweets || sweets->IsPendingDestroy())
@@ -3915,4 +3930,23 @@ namespace SweetsSpace
 
         return transform;
     }
+
+
+    //void SweetsManager::OnSweetsPassedGuideline(
+    //    const std::shared_ptr<ActiveSweets>& sweets)
+    //{
+    //    if (!sweets)
+    //    {
+    //        return;
+    //    }
+
+    //    // 追加①：状態遷移
+    //    SetState(sweets, SweetsState::Stacked);
+
+    //    // 追加②：時間加算
+    //    if (m_heightBonusSeconds > 0.0f && m_timeManager)
+    //    {
+    //        m_timeManager->AddTime(m_heightBonusSeconds);
+    //    }
+    //}
 }
