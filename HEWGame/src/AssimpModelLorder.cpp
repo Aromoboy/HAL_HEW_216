@@ -538,10 +538,6 @@ AssimpModelLorder::MakeMaterial(
     TextureCache& textureCache)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
-    if (!pScene)
-    {
-        return {};
-    }
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
@@ -802,6 +798,4 @@ AssimpModelLorder::MakeMaterial(
             normalTex,
             specularTex);
     }
-
-    return materials;
 }
