@@ -260,6 +260,26 @@ Texture2D texDiffuse : register(t0);
 Texture2D texNormal : register(t1);
 Texture2D texSpecular : register(t2);
 SamplerState samp : register(s0);
+float4 main(PS_IN pin) : SV_TARGET
+{
+
+    float4 baseColor = float4(objDiffuse.rgb, 1.0f);
+
+    if (objAmbient.a >= 1.0f)
+    {
+        baseColor = tex.Sample(samp, pin.uv);
+        baseColor.a = 1.0f;
+    }
+
+    float3 N = normalize(pin.normal);
+    float3 L = normalize(-lightDir.xyz);
+
+    float NdotL = saturate(dot(N, L));
+
+    float3 litColor = baseColor.rgb * NdotL;
+
+    return float4(litColor, baseColor.a);
+}
 
 float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
 {

@@ -22,7 +22,6 @@
 #include "Vector.h"
 #include "CollisionLayer.h"
 #include "Physical.h"
-#include "ColliderConfigLoader.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Box2DMeshBuilder.h"
 #include "Systems/PhysicsMachine.h"
@@ -141,23 +140,6 @@ namespace SweetsSpace
 
         using PhaseChangeCallback = std::function<void(int)>;
 
-        enum class ColliderSource
-        {
-            Config,
-            Generated,
-            Fallback,
-        };
-
-        struct ColliderBuildResult
-        {
-            Physics::Box2DShapeConfig shapeConfig{};
-            std::vector<std::vector<b2Vec2>> meshPolygons;
-            std::vector<b2Vec2> meshBoundary;
-            ColliderSource source{ ColliderSource::Fallback };
-            float thickness{ 0.0f };
-            float2 centroidOffset{ 0.0f, 0.0f };
-        };
-
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
@@ -191,8 +173,6 @@ namespace SweetsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetForceGeneratedColliders(bool force);
-        void SetForceConfigColliders(bool force, const std::vector<std::string>& kinds = {});
-        void SetColliderConfigOverridesEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
         Core::IUpdatable* GetLateUpdateNode();
@@ -236,14 +216,6 @@ namespace SweetsSpace
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
         std::map<std::string, FactoryPreset> m_factoryPresets;
 
-        std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
-        struct GeneratedCollider
-        {
-            std::vector<float2> hull;
-            float2 centroidOffset{ 0.0f, 0.0f };
-            float thickness = 1.0f;
-        };
-        std::map<std::string, GeneratedCollider> m_generatedColliders;
         std::map<std::string, Systems::Box2DMeshFixtures> m_box2dFixtures;
 
         Systems::DrawSystem* m_drawSystem;
@@ -290,9 +262,6 @@ namespace SweetsSpace
         float m_generatedColliderThicknessPadding;
         float m_generatedColliderMinThickness;
         bool m_forceGeneratedColliders;
-        bool m_forceConfigColliders;
-        std::unordered_set<std::string> m_forceConfigColliderKinds;
-        bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
         struct ContactState
@@ -334,14 +303,6 @@ namespace SweetsSpace
         static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);
         static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
         std::string ResolveKindKey(const std::string& key) const;
-        std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
-        ColliderBuildResult BuildColliderForSweets(const std::string& kind,
-            SweetsType type,
-            const Transform& transform,
-            const std::string& modelPath,
-            const std::shared_ptr<Render::Model>& model,
-            const float2& colliderCenter,
-            bool allowMeshPhysics);
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
