@@ -110,8 +110,8 @@ namespace SweetsSpace
     void SweetsPrototypeManifest::ApplyDefaults()
     {
         Register(SweetsType::Cake, "Cake", "Assets/Model/cake.fbx", "Textured sponge cake cube with frosting layers");
-        Register(SweetsType::Pudding, "Pudding", "Pudding.obj", "UV-mapped triangular pudding slice");
-        Register(SweetsType::Sherbet, "Sherbet", "Sherbet.obj", "Shaded sherbet scoop with smooth normals");
+        Register(SweetsType::Pudding, "Pudding", "Assets/Model/LowPolyNature/Models/pudding.fbx", "Low-poly pudding cup with baked textures");
+        Register(SweetsType::Sherbet, "Sherbet", "Assets/Model/cream.fbx", "Stylized sherbet scoop modeled as a soft-serve swirl");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx", "High-detail pineapple with leafy crown");
