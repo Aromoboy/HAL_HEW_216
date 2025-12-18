@@ -73,13 +73,71 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         MeshDraw(*mesh);
     }
 
-    // 4️⃣ После отрисовки — подчистить слот (DX любит порядок)
     if (context)
     {
         ID3D11ShaderResourceView* nullView = nullptr;
         context->PSSetShaderResources(0, 1, &nullView);
     }
 }
+void ModelRender::Draw(Render::Model& a_model, Animation& a_animation, Transform transform, const CameraSpace::ICamera* camera)
+{
+
+    if (!camera)
+    {
+        return;
+    }
+
+    DirectX::XMFLOAT4X4 wvp[3];
+    wvp[1] = camera->GetView();
+    wvp[2] = camera->GetProjection();
+
+    float3 radRotation = { transform.rotation.x * RAD, transform.rotation.y * RAD, transform.rotation.z * RAD };
+    DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, radRotation);
+
+    ShaderList::SetWVP(wvp);
+    VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_ANIME);
+    PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
+
+    DirectX::XMFLOAT4X4 bones[200];
+    for (int boneIdx = 0; boneIdx < a_model.GetBoneCount(); boneIdx++)
+    {       
+        DirectX::XMStoreFloat4x4(&bones[boneIdx], DirectX::XMMatrixTranspose(a_animation.GetNodeMatrix(boneIdx) * a_model.GetBoneMatrix(boneIdx)));
+    }
+
+    ShaderList::SetBones(bones);
+
+    pVTX->Bind();
+    pPXS->Bind();
+
+    ID3D11DeviceContext* context = GetContext();
+
+    for (int i = 0; i < a_model.GetMeshCount(); i++)
+    {
+        std::shared_ptr<MeshDX> mesh = a_model.GetMesh(i).lock();
+        if (!mesh)
+        {
+            continue;
+        }
+
+        std::shared_ptr<MaterialDX> material = a_model.GetMaterial(mesh->GetMaterialID()).lock();
+        if (material)
+        {
+            ShaderList::SetMaterial(*material);
+        }
+        else
+        {
+            if (context)
+            {
+                ID3D11ShaderResourceView* nullView = nullptr;
+                context->PSSetShaderResources(0, 1, &nullView);
+            }
+        }
+
+        MeshDraw(*mesh);
+    }
+
+}
+
 
 void ModelRender::MeshDraw(MeshDX& a_mesh)
 {

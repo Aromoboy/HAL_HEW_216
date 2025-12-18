@@ -2031,6 +2031,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
     }
 
+    Render::AnimationCache& animCache = Render::AnimationCache::Instance();
+    animCache.Clear();
+
     NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
@@ -2252,6 +2255,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     else
     {
         cache.SetLoader(m_loader, device, TextureCache::Instance());
+        animCache.SetLoader(m_loader, device);
     }
 
     const auto* fairyDescriptor = manifest.Find("Fairy");
