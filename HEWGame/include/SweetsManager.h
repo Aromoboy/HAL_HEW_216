@@ -43,11 +43,6 @@ namespace Entities
     class PhysicalEntity;
 }
 
-namespace Collision
-{
-    class ICollider;
-}
-
 namespace SweetsSpace
 {
     class BaseSweets;
@@ -56,7 +51,7 @@ namespace SweetsSpace
 
     struct WeightedSweetsType
     {
-        SweetsType kind{ SweetsType::Cake };
+        SweetsType kind{ SweetsType::Cream };
         float weight = 1.0f;
     };
 
@@ -73,6 +68,7 @@ namespace SweetsSpace
     {
         Box,
         Capsule,
+        Circle,
     };
 
     struct ColliderPreset
@@ -165,8 +161,7 @@ namespace SweetsSpace
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
-            float3 minScale{ 1.0f, 1.0f, 1.0f };
-            float3 maxScale{ 1.0f, 1.0f, 1.0f };
+            float3 scale{ 1.0f, 1.0f, 1.0f };
             ColliderPreset colliderPreset;
         };
 
@@ -175,7 +170,7 @@ namespace SweetsSpace
 
         void OnUpdate(Core::UpdateContext& ctx) override;
         void OnLateUpdate(Core::UpdateContext& ctx);
-
+        void Update(Core::UpdateContext& ctx);
         void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera);
 
         SweetsList& GetByState(SweetsState state);
@@ -196,6 +191,7 @@ namespace SweetsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetForceGeneratedColliders(bool force);
+        void SetForceConfigColliders(bool force, const std::vector<std::string>& kinds = {});
         void SetColliderConfigOverridesEnabled(bool enabled);
         void ForceSpawnRefresh();
         void NotifyPhaseChanged(int newPhase);
@@ -223,6 +219,7 @@ namespace SweetsSpace
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         int GetSweetsCount() const;
+        void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
     private:
         struct SweetsStateHash
         {
@@ -294,6 +291,8 @@ namespace SweetsSpace
         float m_generatedColliderThicknessPadding;
         float m_generatedColliderMinThickness;
         bool m_forceGeneratedColliders;
+        bool m_forceConfigColliders;
+        std::unordered_set<std::string> m_forceConfigColliderKinds;
         bool m_colliderConfigOverridesEnabled;
         bool m_warnedMissingHorizontalBounds;
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
@@ -306,7 +305,7 @@ namespace SweetsSpace
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
-        void RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
+        bool RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
         void RunSpawnScheduler(float deltaSeconds);
         int CountLiveSweets() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;
@@ -321,7 +320,7 @@ namespace SweetsSpace
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
-        Transform BuildSpawnTransform(const float3& origin) const;
+        Transform BuildSpawnTransform(const std::string& normalizedKind, const float3& origin);
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
         void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,
@@ -341,10 +340,16 @@ namespace SweetsSpace
             SweetsType type,
             const Transform& transform,
             const std::string& modelPath,
-            const std::shared_ptr<Render::Model>& model);
+            const std::shared_ptr<Render::Model>& model,
+            const float2& colliderCenter,
+            bool allowMeshPhysics);
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
+        //ラインのフラグ
+        bool m_passedGuideline = false;
+        int m_heightBonusSeconds;
+        int m_timeManager;
 
         template<typename T>
         std::shared_ptr<ActiveSweets> MakeSweets(
@@ -354,7 +359,8 @@ namespace SweetsSpace
             const std::optional<Physics::Box2DShapeConfig>& shapeConfig,
             Collision::CollisionLayer layer,
             Core::UpdatePhase phase,
-            int priority)
+            int priority,
+            bool allowMeshPhysics)
         {
             if (!model)
                 return nullptr;
@@ -367,7 +373,8 @@ namespace SweetsSpace
                 layer,
                 m_physicsMachine,
                 phase,
-                priority
+                priority,
+                allowMeshPhysics
             );
 
             if (!sweets)

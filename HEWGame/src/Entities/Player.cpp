@@ -12,6 +12,7 @@
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Entities/PhysicalEntity.h"
+#include "SoundManagerEX.h"
 
 
 #include <algorithm>
@@ -251,7 +252,7 @@ namespace
     Physics::Box2DShapeConfig BuildDefaultPlayerShapeConfig(const Transform& transform, bool isKinematic)
     {
         Physics::Box2DShapeConfig config{};
-        config.type = Physics::Box2DShapeConfig::Type::Polygon;
+        config.type = Physics::Box2DShapeConfig::Type::None;
         config.bodyType = isKinematic ? b2_kinematicBody : b2_dynamicBody;
         config.fixedRotation = true;
         config.allowRotation = false;
@@ -259,16 +260,6 @@ namespace
         config.density = 0.5f;
         config.friction = 0.35f;
         config.restitution = 0.05f;
-
-        const float halfWidth = 0.35f;
-        const float halfHeight = 0.5f;
-
-        config.vertices = {
-            b2Vec2{ -halfWidth, -halfHeight },
-            b2Vec2{ halfWidth, -halfHeight },
-            b2Vec2{ halfWidth, halfHeight },
-            b2Vec2{ -halfWidth, halfHeight },
-        };
 
         return config;
     }
@@ -281,6 +272,7 @@ namespace Entities
         , m_fairyModel(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
+        , m_carriedRotations()
         , m_maxCarry(kDefaultMaxCarry)
         , m_pickupHalfWidth(0.0f)
         , m_pickupHalfHeight(0.0f)
@@ -305,6 +297,12 @@ namespace Entities
         , m_hasMaximumY(false)
         , m_maximumY(0.0f)
         , m_lastPickupResult{}
+        , m_lastCarryInputLoggedCount(m_carrieds.size())
+        , m_moveSoundHandle(-1)
+        , m_wasMovingLastFrame(false)
+        , m_moveSoundFadingOut(false)     
+        , m_moveSoundFadeTimer(0.0f)      
+        , m_moveSoundFadeDuration(0.4f)
     {
         if (model)
         {
@@ -318,7 +316,7 @@ namespace Entities
         Render::ModelCache& cache = Render::ModelCache::Instance();
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
 
-        const auto* descriptor = manifest.Find(SweetsSpace::SweetsType::Fairy);
+        const auto* descriptor = manifest.Find("Fairy");
         std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
         if (!descriptor)
         {
@@ -380,79 +378,118 @@ namespace Entities
 
         const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
         Physics::BoxColliderComponent colliderComponent;
-        colliderComponent.shapeDef.density = shapeConfig.density;
-        colliderComponent.shapeDef.material.friction = shapeConfig.friction;
-        colliderComponent.shapeDef.material.restitution = shapeConfig.restitution;
-        colliderComponent.AddPolygon(shapeConfig.vertices);
+        colliderComponent.colliderId = descriptor ? descriptor->key : std::string{ "Fairy" };
 
-        SetBoxColliderComponent(colliderComponent);
+        SetBoxColliderComponent(std::move(colliderComponent));
         SetBox2DShapeConfig(shapeConfig);
     }
 
-    void Player::OnUpdate(Core::UpdateContext& ctx)
-    {
-        SyncVisualTransformFromPhysics();
-
-        Core::Input& input = ctx.input;
-
-        const bool hasBody = HasBox2DBody();
-        if (!hasBody && !m_missingBodyLogged)
+        void Player::OnUpdate(Core::UpdateContext& ctx)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "[Fatal] Missing Box2D body; falling back to transform-based update for pickups to continue.\n");
-            m_missingBodyLogged = true;
-        }
+            SyncVisualTransformFromPhysics();
 
-        const float horizontal = input.GetAxis(Core::ActionId::MoveX);
-        const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+            Core::Input& input = ctx.input;
 
-        if (horizontal > 0.0f)
-        {
-            m_facingSign = 1.0f;
-        }
-        else if (horizontal < 0.0f)
-        {
-            m_facingSign = -1.0f;
-        }
-
-        const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
-        const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
-
-        if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
-        {
-            if (horizontal != 0.0f || vertical != 0.0f)
+            const bool hasBody = HasBox2DBody();
+            if (!hasBody && !m_missingBodyLogged)
             {
-                if (hasBody)
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) +
+                    "[Fatal] Missing Box2D body; falling back to transform-based update.\n");
+                m_missingBodyLogged = true;
+            }
+
+            const float horizontal = input.GetAxis(Core::ActionId::MoveX);
+            const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+
+            if (horizontal > 0.0f)      m_facingSign = 1.0f;
+            else if (horizontal < 0.0f) m_facingSign = -1.0f;
+
+            const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
+            const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
+
+            bool isMovingNow = false;
+
+            if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
+            {
+                if (horizontal != 0.0f || vertical != 0.0f)
                 {
+                    isMovingNow = true;
+
                     const float3 desired{
                         horizontal * effectiveHorizontalSpeed,
                         vertical * effectiveVerticalSpeed,
                         0.0f
                     };
 
-                    SetLinearVelocity(desired);
+                    if (hasBody)
+                        SetLinearVelocity(desired);
+                    else
+                        ApplyTranslation(float3{
+                            desired.x * ctx.dt,
+                            desired.y * ctx.dt,
+                            desired.z * ctx.dt
+                            });
                 }
-                else
+                else if (hasBody)
                 {
-                    const float3 delta{
-                        horizontal * effectiveHorizontalSpeed * ctx.dt,
-                        vertical * effectiveVerticalSpeed * ctx.dt,
-                        0.0f
-                    };
-                    ApplyTranslation(delta);
+                    SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
                 }
             }
             else if (hasBody)
             {
-                SetLinearVelocity(float3{ 0,0,0 });
+                SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
             }
-        }
 
-        ClampVerticalPosition();
-        ClampScreenBounds();
-        SyncVisualTransformFromPhysics();
-        HandleCarryInput(ctx);
-        UpdateCarriedSweets();
-    }
+            // ===== 移動音（フェードアウト付き）=====
+            if (auto* sound = SoundManagerEX::GetInstance())
+            {
+                if (isMovingNow && !m_wasMovingLastFrame)
+                {
+                    if (m_moveSoundFadingOut)
+                    {
+                        m_moveSoundFadingOut = false;
+                        sound->SetVolume(m_moveSoundHandle, 0.3f);
+                    }
+                    else
+                    {
+                        m_moveSoundHandle = sound->PlaySoundEX(
+                            "Assets/Audio/SE_Move.wav", true, 0.3f);
+                    }
+                }
+                else if (!isMovingNow && m_wasMovingLastFrame && !m_moveSoundFadingOut)
+                {
+                    if (m_moveSoundHandle != -1)
+                    {
+                        m_moveSoundFadingOut = true;
+                        m_moveSoundFadeTimer = 0.0f;
+                    }
+                }
+
+                if (m_moveSoundFadingOut && m_moveSoundHandle != -1)
+                {
+                    m_moveSoundFadeTimer += ctx.dt;
+                    if (m_moveSoundFadeTimer >= m_moveSoundFadeDuration)
+                    {
+                        sound->StopSound(m_moveSoundHandle);
+                        m_moveSoundHandle = -1;
+                        m_moveSoundFadingOut = false;
+                        m_moveSoundFadeTimer = 0.0f;
+                    }
+                    else
+                    {
+                        const float t = m_moveSoundFadeTimer / m_moveSoundFadeDuration;
+                        sound->SetVolume(m_moveSoundHandle, 0.3f * (1.0f - t));
+                    }
+                }
+            }
+            m_wasMovingLastFrame = isMovingNow;
+
+            ClampVerticalPosition();
+            ClampScreenBounds();
+            SyncVisualTransformFromPhysics();
+            HandleCarryInput(ctx);
+            UpdateCarriedSweets();
+        }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
@@ -509,6 +546,7 @@ namespace Entities
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中に SweetsManager が解放されました 強制的にリリースします \n");
             m_carrieds.clear();
+            m_carriedRotations.clear();
         }
 
         m_sweetsManager = manager;
@@ -531,6 +569,7 @@ namespace Entities
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "保持中のスイーツの参照をクリアします \n");
         }
         m_carrieds.clear();
+        m_carriedRotations.clear();
     }
 
     bool Player::IsKinematic() const
@@ -871,7 +910,12 @@ namespace Entities
             const Transform current = it ? it->GetTransform() : Transform{};
             Transform updated = current;
             updated.position = ComputeCarryAnchor();
-            updated.rotation = m_transform.rotation;
+
+            const auto rotationIt = m_carriedRotations.find(it.get());
+            if (rotationIt != m_carriedRotations.end())
+            {
+                updated.rotation = rotationIt->second;
+            }
 
             it->SetTransform(updated);
             it->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
@@ -886,6 +930,10 @@ namespace Entities
         const bool dropTriggered = input.IsTrigger(Core::ActionId::Drop);
         const bool confirmTriggered = input.IsTrigger(Core::ActionId::Confirm);
 
+        const bool carriedChanged = m_carrieds.size() != m_lastCarryInputLoggedCount;
+        const bool shouldLogEntry = carriedChanged || dropTriggered || confirmTriggered;
+
+        if (shouldLogEntry)
         {
             std::ostringstream oss;
             oss << kPlayerLogPrefix << "HandleCarryInput enter carried=" << m_carrieds.size()
@@ -893,6 +941,8 @@ namespace Entities
                 << " dropTrigger=" << dropTriggered
                 << " confirmTrigger=" << confirmTriggered << "\n";
             PlayerDebugTrace(oss.str());
+
+            m_lastCarryInputLoggedCount = m_carrieds.size();
         }
 
         if (dropTriggered)
@@ -1036,9 +1086,12 @@ namespace Entities
                     }
                     else
                     {
+                        const float3 originalRotation = candidateTransform.rotation;
+                        m_carriedRotations[candidate.get()] = originalRotation;
+
                         Transform updated = candidateTransform;
                         updated.position = ComputeCarryAnchor();
-                        updated.rotation = m_transform.rotation;
+                        updated.rotation = originalRotation;
                         candidate->SetTransformViaPhysics(updated.position, updated.rotation);
                         candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
@@ -1100,9 +1153,12 @@ namespace Entities
                         }
                         else
                         {
+                            const float3 originalRotation = candidateTransform.rotation;
+                            m_carriedRotations[candidate.get()] = originalRotation;
+
                             Transform updated = candidateTransform;
                             updated.position = ComputeCarryAnchor();
-                            updated.rotation = m_transform.rotation;
+                            updated.rotation = originalRotation;
                             candidate->SetTransformViaPhysics(updated.position, updated.rotation);
                             candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
 
@@ -1114,6 +1170,12 @@ namespace Entities
         }
 
         m_lastPickupResult = pickupResult;
+
+        // ピックアップ音を再生
+        if (auto* sound = SoundManagerEX::GetInstance())
+        {
+            sound->PlaySoundEX("Assets/Audio/SE_Catch.wav", false, 0.5f);
+        }
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップ結果 result=" << PickupResultName(pickupResult.result)
@@ -1166,6 +1228,8 @@ namespace Entities
         auto sweets = m_carrieds.back();
         sweets->SetPositionViaPhysics(ComputeCarryAnchor());
 
+        m_carriedRotations.erase(sweets.get());
+
         const float3 bodyVelocity = GetLinearVelocity();
         float3 releaseVelocity = bodyVelocity;
         releaseVelocity.y = std::max(releaseVelocity.y, m_dropUpwardBoost);
@@ -1189,6 +1253,12 @@ namespace Entities
         PlayerDebugTrace(oss.str());
 
         m_carrieds.pop_back();
+
+        // ドロップ音を再生
+        if (auto* sound = SoundManagerEX::GetInstance())
+        {
+            sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.5f);
+        }
     }
 
     void Player::ClampVerticalPosition()

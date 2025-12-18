@@ -1,11 +1,10 @@
 #include "SoundSystem.h"
 #include "Debug.h"
 
-
 #ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
 #define fourccDATA 'data'
-#define fourccFMT 'fmt '
+#define fourccFMT  'fmt '
 #define fourccWAVE 'WAVE'
 #define fourccXWMA 'XWMA'
 #define fourccDPDS 'dpds'
@@ -14,31 +13,27 @@
 #ifndef _XBOX //Little-Endian
 #define fourccRIFF 'FFIR'
 #define fourccDATA 'atad'
-#define fourccFMT ' tmf'
+#define fourccFMT  ' tmf'
 #define fourccWAVE 'EVAW'
 #define fourccXWMA 'AMWX'
 #define fourccDPDS 'sdpd'
 #endif
 
-
-
 SoundSystem::SoundSystem()
+    : m_pAudio2(nullptr)
+    , m_pMasterVoice(nullptr)
+    , m_nextHandle(1)
 {
 #ifdef _DEBUG
     DebugLog::DebugMessage("SoundSystem initializing.");
 #endif
 
-    m_pAudio2 = nullptr;
-    m_pMasterVoice = nullptr;
-    m_pSourceVoice = nullptr;
-
     HRESULT result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
     if (FAILED(result))
     {
 #ifdef _DEBUG
         DebugLog::DebugMessage("Failed to initialize COM.");
-#endif // _DEBUG
+#endif
         return;
     }
 
@@ -63,192 +58,233 @@ SoundSystem::SoundSystem()
 
 SoundSystem::~SoundSystem()
 {
-	if(m_pSourceVoice) m_pSourceVoice->DestroyVoice();
-    if(m_pMasterVoice) m_pMasterVoice->DestroyVoice();
-    if(m_pAudio2) m_pAudio2->Release();
+    // 全てのSourceVoiceを停止して破棄
+    for (auto& pair : m_sourceVoices)
+    {
+        if (pair.second)
+        {
+            pair.second->Stop(0);  // すぐに停止
+            pair.second->FlushSourceBuffers();  // バッファをフラッシュ
+            pair.second->DestroyVoice();
+        }
+    }
+    m_sourceVoices.clear();
+
+    // MasterVoiceを破棄
+    if (m_pMasterVoice)
+    {
+        m_pMasterVoice->DestroyVoice();
+        m_pMasterVoice = nullptr;
+    }
+
+    // XAudio2を解放
+    if (m_pAudio2)
+    {
+        m_pAudio2->Release();
+        m_pAudio2 = nullptr;
+    }
 
     CoUninitialize();
 }
 
 
+void SoundSystem::CleanupFinishedVoices()
+{
+    // 再生が終わったボイスを削除
+    auto it = m_sourceVoices.begin();
+    while (it != m_sourceVoices.end())
+    {
+        if (it->second)
+        {
+            XAUDIO2_VOICE_STATE state;
+            it->second->GetState(&state);
 
+            // キューにバッファが無い = 再生終了
+            if (state.BuffersQueued == 0)
+            {
+                it->second->DestroyVoice();
+                it = m_sourceVoices.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
+}
 
 bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData)
 {
-        // 何か入っていると困るため初期化
-        if (!outData)
-        {
-                return false;
-        }
+    if (!outData)
+    {
+        return false;
+    }
 
+    // 既に読み込み済みなら再読み込みしない
+    if (outData->m_soundBuffer != nullptr && outData->m_size > 0)
+    {
+        return true;
+    }
+
+    delete[] outData->m_soundBuffer;
+    outData->m_soundBuffer = nullptr;
+
+    HMMIO mmioHandle = mmioOpenA(const_cast<LPSTR>(a_wFilePath.c_str()), nullptr, MMIO_READ | MMIO_ALLOCBUF);
+    if (!mmioHandle)
+    {
+#ifdef _DEBUG
+        DebugLog::DebugMessage("Failed to open wave file.");
+#endif
+        return false;
+    }
+
+    MMCKINFO chunkInfo{};
+    MMCKINFO riffChunkInfo{};
+    riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
+
+    if (mmioDescend(mmioHandle, &riffChunkInfo, nullptr, MMIO_FINDRIFF) != MMSYSERR_NOERROR)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.cpp:Riffチャンクに侵入失敗しました");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    chunkInfo.ckid = mmioFOURCC('f', 'm', 't', ' ');
+    if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.cpp:fmtチャンクが存在しません");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    DWORD readSize = mmioRead(mmioHandle, (HPSTR)&outData->m_wavFormat, chunkInfo.cksize);
+    if (readSize != chunkInfo.cksize)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.h:読み込みサイズが一致していません");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    if (outData->m_wavFormat.wFormatTag != WAVE_FORMAT_PCM)
+    {
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    if (mmioAscend(mmioHandle, &chunkInfo, 0) != MMSYSERR_NOERROR)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.h:fmtチャンクからの退出に失敗しました");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    chunkInfo.ckid = mmioFOURCC('d', 'a', 't', 'a');
+    if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.cpp:dataチャンクへの侵入に失敗しました");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    outData->m_size = chunkInfo.cksize;
+    outData->m_soundBuffer = new char[chunkInfo.cksize];
+    readSize = mmioRead(mmioHandle, (HPSTR)outData->m_soundBuffer, chunkInfo.cksize);
+
+    if (readSize != chunkInfo.cksize)
+    {
+#ifdef _DEBUG
+        DebugMessage("Sound.cpp:dataチャンクの読み込みに失敗しました");
+#endif
+        mmioClose(mmioHandle, MMIO_FHOPEN);
         delete[] outData->m_soundBuffer;
-        outData->m_soundBuffer = nullptr;
+        return false;
+    }
 
-        HMMIO mmioHandle = mmioOpenA(const_cast<LPSTR>(a_wFilePath.c_str()), nullptr, MMIO_READ | MMIO_ALLOCBUF);
-        if (!mmioHandle)
-        {
-#ifdef _DEBUG
-                DebugLog::DebugMessage("Failed to open wave file.");
-#endif
-                return false;
-        }
-
-        // チャンク情報
-        MMCKINFO chunkInfo{};
-        MMCKINFO riffChunkInfo{};
-
-        riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
-
-	// RIFFチャンクに侵入する
-	if (mmioDescend(
-		mmioHandle,		// MMIOハンドル
-		&riffChunkInfo,	// 取得したチャンクの情報
-		nullptr,		// 親チャンク
-		MMIO_FINDRIFF	// 取得情報の種類
-	) != MMSYSERR_NOERROR)
-	{
-		// Riffチャンクに侵入失敗
-#ifdef _DEBUG
-		DebugMessage("Sound.cpp:Riffチャンクに侵入失敗しました");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	// 侵入先のチャンクを"fmt "として設定する
-	chunkInfo.ckid = mmioFOURCC('f', 'm', 't', ' ');
-	if (mmioDescend(
-		mmioHandle,
-		&chunkInfo,
-		&riffChunkInfo,
-		MMIO_FINDCHUNK
-	) != MMSYSERR_NOERROR)
-	{
-		// fmtチャンクがない
-#ifdef _DEBUG
-		DebugMessage("Sound.cpp:fmtチャンクが存在しません");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	DWORD readSize = mmioRead(
-		mmioHandle,						// ハンドル
-		(HPSTR)&outData->m_wavFormat,	// 読み込み用バッファ
-		chunkInfo.cksize				// バッファサイズ
-	);
-
-	if (readSize != chunkInfo.cksize)
-	{
-		// 読み込みサイズが一致していません
-#ifdef _DEBUG
-		DebugMessage("Sound.h:読み込みサイズが一致していません");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	// フォーマットチェック
-	if (outData->m_wavFormat.wFormatTag != WAVE_FORMAT_PCM)
-	{
-		// waveフォーマットエラーです
-
-#ifdef _DEBUG
-		//DebugMessage("Soundフォーマットエラーです");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	// fmtチャンクを退出する
-	if (mmioAscend(mmioHandle, &chunkInfo, 0) != MMSYSERR_NOERROR)
-	{
-		// fmtチャンク退出失敗
-#ifdef _DEBUG
-		DebugMessage("Sound.h:fmtチャンクからの退出に失敗しました");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	// dataチャンクに侵入
-	chunkInfo.ckid = mmioFOURCC('d', 'a', 't', 'a');
-	if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
-	{
-		// dataチャンク侵入失敗
-#ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataチャンクへの侵入に失敗しました");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
-
-	// サイズ保存
-	outData->m_size = chunkInfo.cksize;
-
-	// dataチャンク読み込み
-	outData->m_soundBuffer = new char[chunkInfo.cksize];
-	readSize = mmioRead(mmioHandle, (HPSTR)outData->m_soundBuffer, chunkInfo.cksize);
-	if (readSize != chunkInfo.cksize)
-	{
-		// dataチャンク読み込み失敗
-#ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataチャンクの読み込みに失敗しました");
-#endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		delete[] outData->m_soundBuffer;
-		return false;
-	}
-
-	mmioClose(mmioHandle, MMIO_FHOPEN);
-
-	return true;
+    mmioClose(mmioHandle, MMIO_FHOPEN);
+    return true;
 }
 
-
-bool SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop)
+int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume)
 {
-	if (!LoadWaveFile(fileName, outData))
-	{
-		// Waveファイル読み込み失敗
-		
-		return false;
-	}
+    CleanupFinishedVoices();
 
-	//SourceVoiceの作成
-	WAVEFORMATEX waveFormat{};
+    if (!LoadWaveFile(fileName, outData))
+    {
+        return -1;  // 失敗
+    }
 
-	// 波形フォーマットの設定
-	memcpy(&waveFormat, &outData->m_wavFormat, sizeof(outData->m_wavFormat));
+    WAVEFORMATEX waveFormat{};
+    memcpy(&waveFormat, &outData->m_wavFormat, sizeof(outData->m_wavFormat));
+    waveFormat.wBitsPerSample = outData->m_wavFormat.nBlockAlign * 8 / outData->m_wavFormat.nChannels;
 
-	// 1サンプル当たりのバッファサイズを算出
-	waveFormat.wBitsPerSample = outData->m_wavFormat.nBlockAlign * 8 / outData->m_wavFormat.nChannels;
+    IXAudio2SourceVoice* pNewSourceVoice = nullptr;
+    HRESULT result = m_pAudio2->CreateSourceVoice(&pNewSourceVoice, (WAVEFORMATEX*)&waveFormat);
+    if (FAILED(result))
+    {
+        DebugMessage("SourceVoiceの作成に失敗しました");
+        return -1;
+    }
 
-	// ソースボイスの作成 ここではフォーマットのみ渡っている
-	HRESULT result = m_pAudio2->CreateSourceVoice(&m_pSourceVoice, (WAVEFORMATEX*)&waveFormat);
-	if (FAILED(result))
-	{
-		// SourceVoice作成失敗
-		DebugMessage("SourceVoiceの作成に失敗しました");
-		return false;
-	}
+    pNewSourceVoice->SetVolume(volume);
 
+    XAUDIO2_BUFFER xAudio2Buffer{};
+    xAudio2Buffer.pAudioData = (BYTE*)outData->m_soundBuffer;
+    xAudio2Buffer.Flags = XAUDIO2_END_OF_STREAM;
+    xAudio2Buffer.AudioBytes = outData->m_size;
+    xAudio2Buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
 
-	// 波形データ(音データ本体をソースボイスに渡す)
+    pNewSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
+    pNewSourceVoice->Start();
 
-	XAUDIO2_BUFFER xAudio2Buffer{};
-	xAudio2Buffer.pAudioData = (BYTE*)outData->m_soundBuffer;
-	xAudio2Buffer.Flags = XAUDIO2_END_OF_STREAM;
-	xAudio2Buffer.AudioBytes = outData->m_size;
+    // ハンドルを生成して管理
+    int handle = m_nextHandle++;
+    m_sourceVoices[handle] = pNewSourceVoice;
 
-	// 三項比較演算子を用いてループするか否かの設定をする
-	xAudio2Buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
+    return handle;  // ハンドルを返す
+}
 
-	m_pSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
+void SoundSystem::SetVolume(int handle, float volume)
+{
+    auto it = m_sourceVoices.find(handle);
+    if (it != m_sourceVoices.end() && it->second)
+    {
+        // 0.0f ~ 1.0f にクランプ
+        float clampedVolume = std::max(0.0f, std::min(1.0f, volume));
+        it->second->SetVolume(clampedVolume);
+    }
+}
 
-	// 実際に音を鳴らす
-	m_pSourceVoice->Start();
+void SoundSystem::StopSound(int handle)
+{
+    auto it = m_sourceVoices.find(handle);
+    if (it != m_sourceVoices.end() && it->second)
+    {
+        it->second->Stop(0);  // すぐに停止
+        it->second->FlushSourceBuffers();  // バッファをフラッシュ
+        it->second->DestroyVoice();
+        m_sourceVoices.erase(it);
+    }
+}
 
-	return true;
+void SoundSystem::StopAllSounds()
+{
+    for (auto& pair : m_sourceVoices)
+    {
+        if (pair.second)
+        {
+            pair.second->Stop(0);
+            pair.second->FlushSourceBuffers();
+            pair.second->DestroyVoice();
+        }
+    }
+    m_sourceVoices.clear();
 }
 

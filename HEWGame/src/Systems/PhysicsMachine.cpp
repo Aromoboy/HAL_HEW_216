@@ -3,17 +3,22 @@
 #include "Systems/Box2DContactListener.h"
 
 #include "Physics/ShapeConstants.h"
+#include "ColliderRegistry.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
+#include <span>
 
 #include <box2d/box2d.h>
 #include <box2d/collision.h>
@@ -35,41 +40,6 @@ namespace
     constexpr uint16_t kFloorCategory = 0x0004;
     constexpr uint16_t kSweetsCategory = 0x0008;
     constexpr float kScaleAssertionEpsilon = 0.0001f;
-
-    float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
-    {
-#if defined(_DEBUG)
-        assert(std::isfinite(renderLength));
-        assert(std::isfinite(axisScale));
-        const float scaleX = transform.scale.x;
-        const float scaleY = transform.scale.y;
-        const float uniformScale = std::max(scaleX, scaleY);
-        const bool matchesAxis = std::fabs(axisScale - scaleX) <= kScaleAssertionEpsilon
-            || std::fabs(axisScale - scaleY) <= kScaleAssertionEpsilon
-            || std::fabs(axisScale - uniformScale) <= kScaleAssertionEpsilon;
-        assert(matchesAxis && "Render-space collider length must be scaled by transform.scale before Box2D conversion.");
-#endif
-        return Entities::PhysicalEntity::ToBox2DLength(renderLength * axisScale);
-    }
-
-    b2Vec2 ToBox2DPosition(const b2Vec2& renderPosition, const Transform& transform)
-    {
-        return b2Vec2{
-            ToBox2DLength(renderPosition.x, transform.scale.x, transform),
-            ToBox2DLength(renderPosition.y, transform.scale.y, transform),
-        };
-    }
-
-    std::vector<b2Vec2> ToBox2DVertices(const std::vector<b2Vec2>& renderVertices, const Transform& transform)
-    {
-        std::vector<b2Vec2> scaledVertices = renderVertices;
-        for (auto& vertex : scaledVertices)
-        {
-            vertex = ToBox2DPosition(vertex, transform);
-        }
-
-        return scaledVertices;
-    }
 
     void DebugTrace(const std::string& message)
     {
@@ -132,38 +102,16 @@ namespace
         }
     }
 
-    const char* ToString(Physics::Box2DShapeConfig::Type shapeType)
-    {
-        switch (shapeType)
-        {
-        case Physics::Box2DShapeConfig::Type::None:
-            return "none";
-        case Physics::Box2DShapeConfig::Type::Box:
-            return "box";
-        case Physics::Box2DShapeConfig::Type::Polygon:
-            return "polygon";
-        case Physics::Box2DShapeConfig::Type::Circle:
-            return "circle";
-        default:
-            return "unknown";
-        }
-    }
-
     bool HasPhysicsDefinition(const Entities::PhysicalEntity& body)
     {
         const auto& colliderComponent = body.GetBoxColliderComponent();
-        const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
-
-        const auto shapeConfig = body.GetBox2DShapeConfig();
-        const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-
-        const bool hasMeshData = body.HasBox2DMesh() || !body.GetBox2DBoundary().empty();
-        return hasColliderComponent || hasShapeConfig || hasMeshData;
+        return static_cast<bool>(colliderComponent);
     }
 }
 
 namespace Systems
 {
+    
     PhysicsMachine::PhysicsMachine(const PhysicsTuningParameters& tuning)
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
         , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(tuning))
@@ -314,6 +262,22 @@ namespace Systems
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
+        if (body.HasBodyCreationFailed() && !body.CanAttemptBodyCreation())
+        {
+#if defined(_DEBUG)
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] Skipping registration for tag='" << body.GetTag()
+                << "' due to previous creation failure.\n";
+            DebugTrace(oss.str());
+#endif
+            return;
+        }
+
+        if (body.HasBodyCreationFailed())
+        {
+            body.ResetBodyCreationFailure();
+        }
+
         if (std::find(m_bodies.begin(), m_bodies.end(), bodyPtr) != m_bodies.end())
         {
 #if defined(_DEBUG)
@@ -323,6 +287,8 @@ namespace Systems
 #endif
             return;
         }
+
+        body.MarkFixtureBuildFailure(false);
 
         const b2BodyId existing = body.GetBox2DBodyId();
         if (b2Body_IsValid(existing))
@@ -360,9 +326,10 @@ namespace Systems
         }
 
         m_bodies.pop_back();
+        body.MarkBodyCreationFailed();
     }
 
-    void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body)
+    void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData)
     {
         if (m_bodies.empty()) return;
         auto* bodyPtr = &body;
@@ -370,16 +337,19 @@ namespace Systems
         if (it == m_bodies.end())
         {
 #if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
-            DebugTrace(oss.str());
+            if (!body.HasFixtureBuildFailure())
+            {
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
+                DebugTrace(oss.str());
+            }
 #endif
-            DestroyBody(body);
+            DestroyBody(body, preserveColliderData);
             return;
         }
 
         m_bodies.erase(it, m_bodies.end());
-        DestroyBody(body);
+        DestroyBody(body, preserveColliderData);
     }
 
     void PhysicsMachine::ClearBodies()
@@ -388,7 +358,7 @@ namespace Systems
         {
             if (body)
             {
-                DestroyBody(*body);
+                DestroyBody(*body, false);
             }
         }
         m_bodyMap.clear();
@@ -479,13 +449,15 @@ namespace Systems
             return;
         }
 
-        for (Entities::PhysicalEntity* body : m_bodies)
+        for (auto it = m_bodies.begin(); it != m_bodies.end();)
         {
+            Entities::PhysicalEntity* body = *it;
             if (!body)
             {
 #if defined(_DEBUG)
                 DebugTrace("[PhysicsMachine] Encountered null body pointer before step.\n");
 #endif
+                ++it;
                 continue;
             }
 
@@ -493,6 +465,17 @@ namespace Systems
             const bool hasBody = (mapIt != m_bodyMap.end()) && b2Body_IsValid(mapIt->second);
             if (!hasBody)
             {
+                if (body->HasBodyCreationFailed() && !body->CanAttemptBodyCreation())
+                {
+                    ++it;
+                    continue;
+                }
+
+                if (body->HasBodyCreationFailed())
+                {
+                    body->ResetBodyCreationFailure();
+                }
+
                 const b2BodyId bodyId = CreateBody(*body);
                 if (!b2Body_IsValid(bodyId))
                 {
@@ -501,13 +484,20 @@ namespace Systems
                     oss << "[PhysicsMachine] Unable to create Box2D body before step for tag='" << body->GetTag() << "'\n";
                     DebugTrace(oss.str());
 #endif
-                    assert(false && "Failed to create Box2D body before physics step.");
+                    body->MarkBodyCreationFailed();
+                    if (mapIt != m_bodyMap.end())
+                    {
+                        m_bodyMap.erase(mapIt);
+                    }
+                    it = m_bodies.erase(it);
                     continue;
                 }
 
                 body->SetBox2DBodyId(bodyId);
                 m_bodyMap[body] = bodyId;
             }
+
+            ++it;
         }
 
         m_system->Apply(ctx.dt);
@@ -537,106 +527,87 @@ namespace Systems
         }
 
         auto& colliderComponent = body.GetBoxColliderComponent();
-        const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
+        if (!colliderComponent)
+        {
+            return b2_nullBodyId;
+        }
+
         const auto shapeConfig = body.GetBox2DShapeConfig();
-        const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-
         const std::string& tag = body.GetTag();
-        const bool isSweetTag = tag.rfind("sweet_", 0) == 0;
 
-        const auto& meshPolygons = body.GetBox2DPolygons();
-        const auto& meshBoundary = body.GetBox2DBoundary();
-        const bool hasMeshFixtures = !meshPolygons.empty();
-        const bool hasMeshBoundary = !meshBoundary.empty();
-        const bool hasMeshData = hasMeshFixtures || hasMeshBoundary;
+        auto failBodyCreation = [&](const std::string& reason)
+        {
+            colliderComponent->createdFixtureCount = 0;
 
-        if (isSweetTag && !hasShapeConfig)
+            if (!body.HasBodyCreationFailed())
+            {
+                std::ostringstream oss;
+                oss << "[PhysicsMachine] " << reason << " tag='" << tag << "'\n";
+                DebugTrace(oss.str());
+            }
+
+            body.MarkBodyCreationFailed();
+            return b2_nullBodyId;
+        };
+
+        constexpr float kDimensionEpsilon = std::numeric_limits<float>::epsilon();
+        const auto isFinite = [](float value)
+        {
+            return std::isfinite(value);
+        };
+        const auto isFiniteVec2 = [&](const b2Vec2& value)
+        {
+            return isFinite(value.x) && isFinite(value.y);
+        };
+
+        const auto registryDefinition = (!colliderComponent->colliderId.empty() && colliderComponent->shapes.empty())
+            ? Physics::ColliderRegistry::Instance().Find(colliderComponent->colliderId)
+            : std::nullopt;
+
+        if (registryDefinition)
+        {
+            colliderComponent->shapes = registryDefinition->shapes;
+
+            const b2ShapeDef defaultShapeDef = b2DefaultShapeDef();
+            const auto applyIfDefault = [&](float& target, float defaultValue, float source)
+            {
+                constexpr float kMaterialEpsilon = 1e-4f;
+                if (std::fabs(target - defaultValue) <= kMaterialEpsilon)
+                {
+                    target = source;
+                }
+            };
+
+            applyIfDefault(
+                colliderComponent->shapeDef.material.friction,
+                defaultShapeDef.material.friction,
+                registryDefinition->shapeDef.material.friction);
+            applyIfDefault(
+                colliderComponent->shapeDef.material.restitution,
+                defaultShapeDef.material.restitution,
+                registryDefinition->shapeDef.material.restitution);
+            applyIfDefault(
+                colliderComponent->shapeDef.density,
+                defaultShapeDef.density,
+                registryDefinition->shapeDef.density);
+        }
+        else if (!colliderComponent->colliderId.empty() && colliderComponent->shapes.empty())
         {
             std::ostringstream oss;
-            oss << "[PhysicsMachine] Skipping physics registration for sweet tag='" << tag
-                << "': missing Box2DShapeConfig.\n";
+            oss << "[PhysicsMachine] Collider id='" << colliderComponent->colliderId
+                << "' could not be resolved; collider will not be created.\n";
             DebugTrace(oss.str());
-            return b2_nullBodyId;
         }
 
-        if (!hasColliderComponent && !hasShapeConfig && !hasMeshData)
+        if (!isFiniteVec2(colliderComponent->colliderOffset))
         {
-            std::ostringstream oss;
-            oss << "[PhysicsMachine] Cannot create physics body for tag='" << tag
-                << "': collider component, shape config, and mesh data are all missing.\n";
-            DebugTrace(oss.str());
-            return b2_nullBodyId;
+            return failBodyCreation("Collider offset is not finite for");
         }
 
-        const float minBox2DDimension = Entities::PhysicalEntity::ToBox2DLength(
-            Physics::kMinimumShapeDimensionMeters);
-
-        const auto enforceMinimumDimension = [&](float length, const char* context)
+        if (colliderComponent->Empty())
         {
-            if (!(length > 0.0f))
-            {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] " << context << " invalid or zero for tag='" << tag
-                    << "'; raising to minimum dimension=" << minBox2DDimension << "\n";
-                DebugTrace(oss.str());
-#endif
-                return minBox2DDimension;
-            }
-
-            if (length < minBox2DDimension)
-            {
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] " << context << " below minimum for tag='" << tag
-                    << "': " << length << " < " << minBox2DDimension << " (clamped)\n";
-                DebugTrace(oss.str());
-#endif
-                return minBox2DDimension;
-            }
-
-            return length;
-        };
-
-        const auto isPolygonTooSmall = [&](const std::vector<b2Vec2>& vertices)
-        {
-            if (vertices.size() < 3)
-            {
-                return true;
-            }
-
-            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-            for (const b2Vec2& vertex : vertices)
-            {
-                min.x = std::min(min.x, vertex.x);
-                min.y = std::min(min.y, vertex.y);
-                max.x = std::max(max.x, vertex.x);
-                max.y = std::max(max.y, vertex.y);
-            }
-
-            const float width = max.x - min.x;
-            const float height = max.y - min.y;
-            const bool tooSmall = width < minBox2DDimension || height < minBox2DDimension;
-#if defined(_DEBUG)
-            if (tooSmall)
-            {
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Polygon collider rejected for tag='" << tag
-                    << "' (width=" << width << ", height=" << height
-                    << ") below minimum dimension=" << minBox2DDimension << "\n";
-                DebugTrace(oss.str());
-            }
-#endif
-            return tooSmall;
-        };
-
-        const auto clampRange = [](float value, float minValue, float maxValue)
-        {
-            return std::clamp(value, minValue, maxValue);
-        };
-
-        const bool useColliderComponent = hasColliderComponent && !hasMeshFixtures && !isSweetTag;
+            return failBodyCreation("Collider shapes missing for");
+        }
 
         float maxColliderExtent = 0.0f;
         const auto accumulatePolygonExtent = [&](const std::vector<b2Vec2>& vertices)
@@ -671,88 +642,117 @@ namespace Systems
             maxColliderExtent = std::max(maxColliderExtent, radius * 2.0f);
         };
 
-        if (useColliderComponent)
+        struct ScaledShape
         {
-            for (const auto& shape : colliderComponent->shapes)
+            Physics::ColliderShapeType type{ Physics::ColliderShapeType::Polygon };
+            std::vector<b2Vec2> vertices{};
+            b2Vec2 center{ 0.0f, 0.0f };
+            float radius{ 0.0f };
+        };
+
+        const auto toBox2DVector = [](const b2Vec2& vertex)
+        {
+            return Entities::PhysicalEntity::ToBox2DVector(float3{ vertex.x, vertex.y, 0.0f });
+        };
+
+        const auto toBox2DVertices = [&](const std::vector<b2Vec2>& vertices)
+        {
+            std::vector<b2Vec2> converted;
+            converted.reserve(vertices.size());
+            for (const auto& vertex : vertices)
             {
-                switch (shape.type)
-                {
-                case Physics::ColliderShapeType::Circle:
-                {
-                    const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
-                    accumulateCircleExtent(scaledRadius);
-                    break;
-                }
-                case Physics::ColliderShapeType::Box:
-                case Physics::ColliderShapeType::Polygon:
-                default:
-                {
-                    accumulatePolygonExtent(ToBox2DVertices(shape.vertices, transform));
-                    break;
-                }
-                }
+                converted.push_back(toBox2DVector(vertex));
             }
-        }
+            return converted;
+        };
 
-        if (hasMeshFixtures)
-        {
-            for (const auto& polygon : meshPolygons)
-            {
-                accumulatePolygonExtent(ToBox2DVertices(polygon, transform));
-            }
-        }
+        std::vector<Physics::ColliderShapeDescriptor> sourceShapes = colliderComponent->shapes;
 
-        if (hasMeshBoundary)
+        std::vector<ScaledShape> scaledShapes;
+        scaledShapes.reserve(sourceShapes.size());
+        for (const auto& shape : sourceShapes)
         {
-            accumulatePolygonExtent(ToBox2DVertices(meshBoundary, transform));
-        }
+            ScaledShape scaled{};
+            scaled.type = shape.type;
 
-        if (hasShapeConfig)
-        {
-            switch (shapeConfig->type)
+            switch (shape.type)
             {
-            case Physics::Box2DShapeConfig::Type::Box:
+            case Physics::ColliderShapeType::Circle:
             {
-                if (!shapeConfig->vertices.empty())
-                {
-                    accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
-                }
-                else
-                {
-                    const float hx = ToBox2DLength(0.5f, transform.scale.x, transform);
-                    const float hy = ToBox2DLength(0.5f, transform.scale.y, transform);
-                    accumulatePolygonExtent({
-                        b2Vec2{ -hx, -hy },
-                        b2Vec2{ hx, -hy },
-                        b2Vec2{ hx, hy },
-                        b2Vec2{ -hx, hy },
-                    });
-                }
+                scaled.center = shape.vertices.empty()
+                    ? b2Vec2{ 0.0f, 0.0f }
+                    : toBox2DVector(shape.vertices.front());
+                scaled.radius = Entities::PhysicalEntity::ToBox2DLength(shape.radius);
                 break;
             }
-            case Physics::Box2DShapeConfig::Type::Polygon:
-            {
-                accumulatePolygonExtent(ToBox2DVertices(shapeConfig->vertices, transform));
-                break;
-            }
-            case Physics::Box2DShapeConfig::Type::Circle:
-            {
-                const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
-                accumulateCircleExtent(scaledRadius);
-                break;
-            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
             default:
+            {
+                scaled.vertices = toBox2DVertices(shape.vertices);
                 break;
+            }
+            }
+
+            scaledShapes.push_back(std::move(scaled));
+        }
+
+        for (const auto& shape : scaledShapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+                if (!(shape.radius > kDimensionEpsilon) || !isFinite(shape.radius) || !isFiniteVec2(shape.center))
+                {
+                    return failBodyCreation("Collider circle is invalid for");
+                }
+
+                accumulateCircleExtent(shape.radius);
+                break;
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                if (shape.vertices.size() < 3)
+                {
+                    return failBodyCreation("Polygon collider has insufficient vertices for");
+                }
+
+                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                for (const b2Vec2& vertex : shape.vertices)
+                {
+                    if (!isFiniteVec2(vertex))
+                    {
+                        return failBodyCreation("Polygon collider contains non-finite vertex for");
+                    }
+
+                    min.x = std::min(min.x, vertex.x);
+                    min.y = std::min(min.y, vertex.y);
+                    max.x = std::max(max.x, vertex.x);
+                    max.y = std::max(max.y, vertex.y);
+                }
+
+                const float width = max.x - min.x;
+                const float height = max.y - min.y;
+                if (!(width > kDimensionEpsilon) || !(height > kDimensionEpsilon))
+                {
+                    return failBodyCreation("Polygon collider dimension too small for");
+                }
+
+                accumulatePolygonExtent(shape.vertices);
+                break;
+            }
             }
         }
 
         // BodyDef 設定
         b2BodyDef bodyDef = m_defaultBodyDef;
         bodyDef.position = Entities::PhysicalEntity::ToBox2DPosition(transform.position);
-        bodyDef.type = hasShapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
+        bodyDef.type = shapeConfig ? shapeConfig->bodyType : b2_dynamicBody;
         bodyDef.rotation = b2MakeRot(Entities::PhysicalEntity::ToBox2DAngle(transform.rotation.z));
-        bodyDef.motionLocks.angularZ = hasShapeConfig ? shapeConfig->fixedRotation : false;
-        if (hasShapeConfig && shapeConfig->angularDamping > 0.0f)
+        bodyDef.motionLocks.angularZ = shapeConfig ? shapeConfig->fixedRotation : false;
+        if (shapeConfig && shapeConfig->angularDamping > 0.0f)
         {
             bodyDef.angularDamping = shapeConfig->angularDamping;
         }
@@ -768,7 +768,7 @@ namespace Systems
             && maxColliderExtent <= Entities::PhysicalEntity::ToBox2DLength(m_tuning.smallDynamicContinuousThreshold);
 
         bool enableContinuousCollision = false;
-        if (m_tuning.continuousCollisionForSweets && (layer == Collision::CollisionLayer::Sweets || isSweetTag))
+        if (m_tuning.continuousCollisionForSweets && layer == Collision::CollisionLayer::Sweets)
         {
             enableContinuousCollision = true;
         }
@@ -797,14 +797,6 @@ namespace Systems
             bodyDef.isBullet = true;
         }
 
-        if (isSweetTag)
-        {
-            bodyDef.type = b2_dynamicBody;
-            bodyDef.gravityScale = 1.0f;
-            bodyDef.linearDamping = clampRange(bodyDef.linearDamping, 0.5f, 1.0f);
-            bodyDef.angularDamping = clampRange(bodyDef.angularDamping, 1.0f, 3.0f);
-        }
-
         b2BodyId bodyId = b2CreateBody(worldId, &bodyDef);
         if (!b2Body_IsValid(bodyId))
         {
@@ -815,39 +807,28 @@ namespace Systems
 
         // ShapeDef 設定
         const b2ShapeDef box2dDefaultShapeDef = b2DefaultShapeDef();
-        b2ShapeDef shapeDef = m_defaultShapeDef;
+        b2ShapeDef shapeDef = colliderComponent->shapeDef;
         shapeDef.userData = &body;
-        if (hasColliderComponent)
+        if (std::fabs(shapeDef.material.friction - box2dDefaultShapeDef.material.friction) <= std::numeric_limits<float>::epsilon())
         {
-            shapeDef = colliderComponent->shapeDef;
-            shapeDef.userData = &body;
-            if (!hasShapeConfig)
-            {
-                if (std::fabs(shapeDef.material.friction - box2dDefaultShapeDef.material.friction) <= std::numeric_limits<float>::epsilon())
-                {
-                    shapeDef.material.friction = m_defaultShapeDef.material.friction;
-                }
-                if (std::fabs(shapeDef.material.restitution - box2dDefaultShapeDef.material.restitution) <= std::numeric_limits<float>::epsilon())
-                {
-                    shapeDef.material.restitution = m_defaultShapeDef.material.restitution;
-                }
-            }
+            shapeDef.material.friction = m_defaultShapeDef.material.friction;
+        }
+        if (std::fabs(shapeDef.material.restitution - box2dDefaultShapeDef.material.restitution) <= std::numeric_limits<float>::epsilon())
+        {
+            shapeDef.material.restitution = m_defaultShapeDef.material.restitution;
         }
 
-        const float configuredDensity = hasShapeConfig
+        const float configuredDensity = shapeConfig
             ? std::max(0.0f, shapeConfig->density)
             : 1.0f;
         shapeDef.density = bodyDef.type == b2_dynamicBody ? configuredDensity : 0.0f;
-        if (hasShapeConfig)
+        if (shapeConfig)
         {
             shapeDef.material.friction = std::max(0.0f, shapeConfig->friction);
             shapeDef.material.restitution = std::clamp(shapeConfig->restitution, 0.0f, 1.0f);
         }
-        else
-        {
-            shapeDef.material.friction = std::max(0.0f, shapeDef.material.friction);
-            shapeDef.material.restitution = std::clamp(shapeDef.material.restitution, 0.0f, 1.0f);
-        }
+        shapeDef.material.friction = std::max(0.0f, shapeDef.material.friction);
+        shapeDef.material.restitution = std::clamp(shapeDef.material.restitution, 0.0f, 1.0f);
         shapeDef.enableContactEvents = true;
         shapeDef.enableHitEvents = true;
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
@@ -861,7 +842,7 @@ namespace Systems
         << " bodyType=" << ToString(bodyDef.type)
         << " lockAngularZ=" << std::boolalpha << bodyDef.motionLocks.angularZ
         << " angularDamping=" << bodyDef.angularDamping
-        << " shapeType=" << ToString(hasShapeConfig ? shapeConfig->type : Physics::Box2DShapeConfig::Type::None)
+        << " shapes=" << colliderComponent->shapes.size()
         << " density=" << shapeDef.density
         << " friction=" << shapeDef.material.friction
         << " restitution=" << shapeDef.material.restitution << "\n";
@@ -869,40 +850,9 @@ namespace Systems
 }
 #endif
 
-if (isSweetTag)
-{
-    auto toBodyTypeString = [](b2BodyType type)
-    {
-        switch (type)
+        auto createPolygonFixture = [&](std::vector<b2Vec2> vertices)
         {
-        case b2_staticBody: return "static";
-        case b2_kinematicBody: return "kinematic";
-        default: return "dynamic";
-        }
-    };
-
-    std::ostringstream oss;
-    oss << "[PhysicsMachine] sweet body params tag='" << tag
-        << "' type=" << toBodyTypeString(bodyDef.type)
-        << " gravityScale=" << bodyDef.gravityScale
-        << " linearDamping=" << bodyDef.linearDamping
-        << " angularDamping=" << bodyDef.angularDamping
-        << " friction=" << shapeDef.material.friction
-        << " restitution=" << shapeDef.material.restitution << "\n";
-    DebugTrace(oss.str());
-}
-
-
-        const float configuredPolygonRadius = hasShapeConfig
-            ? std::max(0.0f, shapeConfig->polygonRadius)
-            : 0.0f;
-        const float box2dPolygonRadius = configuredPolygonRadius > 0.0f
-            ? ToBox2DLength(configuredPolygonRadius, std::max(transform.scale.x, transform.scale.y), transform)
-            : 0.0f;
-
-        auto createPolygonFixture = [&](std::vector<b2Vec2> vertices, float radius)
-        {
-            if (vertices.size() < 3 || isPolygonTooSmall(vertices))
+            if (vertices.size() < 3)
             {
                 return b2_nullShapeId;
             }
@@ -913,215 +863,106 @@ if (isSweetTag)
                 return b2_nullShapeId;
             }
 
-            const float clampedRadius = enforceMinimumDimension(radius, "Polygon radius");
-            const b2Polygon polygon = b2MakePolygon(&hull, clampedRadius);
+            float maxHullRadius = std::numeric_limits<float>::max();
+            if (hull.count >= 3)
+            {
+                b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+                b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+                float minEdgeLength = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < hull.count; ++i)
+                {
+                    const b2Vec2& current = hull.points[i];
+                    const b2Vec2& next = hull.points[(i + 1) % hull.count];
+                    min.x = std::min(min.x, current.x);
+                    min.y = std::min(min.y, current.y);
+                    max.x = std::max(max.x, current.x);
+                    max.y = std::max(max.y, current.y);
+
+                    const float edgeLength = std::hypot(next.x - current.x, next.y - current.y);
+                    minEdgeLength = std::min(minEdgeLength, edgeLength);
+                }
+
+                const float minExtent = std::min(max.x - min.x, max.y - min.y);
+                const float minFeature = std::min(minEdgeLength, minExtent);
+                maxHullRadius = 0.5f * minFeature;
+            }
+
+            const b2Polygon polygon = b2MakePolygon(&hull, 0.0f);
             return b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         };
 
-        auto createCircleFixture = [&](float radius)
+        auto createCircleFixture = [&](float radius, const b2Vec2& center)
         {
             if (radius <= 0.0f)
             {
                 return b2_nullShapeId;
             }
 
-            const float clamped = enforceMinimumDimension(radius, "Circle radius");
-            const b2Circle circle{ b2Vec2{0.0f, 0.0f}, clamped };
+            const b2Circle circle{ center, radius };
             return b2CreateCircleShape(bodyId, &shapeDef, &circle);
         };
 
         int fixtureCount = 0;
+        bool allFixturesCreated = true;
 
-        auto recordFixture = [&](b2ShapeId id)
+
+        colliderComponent->createdFixtureCount = 0;
+        std::vector<Physics::ColliderShapeDescriptor> createdShapes;
+        createdShapes.reserve(sourceShapes.size());
+
+        for (std::size_t i = 0; i < scaledShapes.size(); ++i)
         {
-            if (b2Shape_IsValid(id))
+            const auto& scaled = scaledShapes[i];
+            const auto& original = sourceShapes[i];
+
+            bool created = false;
+            switch (scaled.type)
             {
+            case Physics::ColliderShapeType::Circle:
+            {
+                const b2ShapeId shapeId = createCircleFixture(scaled.radius, scaled.center);
+                created = b2Shape_IsValid(shapeId);
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                const b2ShapeId shapeId = createPolygonFixture(scaled.vertices);
+                created = b2Shape_IsValid(shapeId);
+                break;
+            }
+            }
+
+            if (created)
+            {
+                createdShapes.push_back(original);
                 ++fixtureCount;
-                return true;
-            }
-            return false;
-        };
-
-        if (useColliderComponent)
-        {
-            const auto inputShapes = colliderComponent->shapes;
-            colliderComponent->Clear();
-
-            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
-            for (const auto& shape : inputShapes)
-            {
-                bool created = false;
-                switch (shape.type)
-                {
-                case Physics::ColliderShapeType::Circle:
-                {
-                    const float scaledRadius = ToBox2DLength(shape.radius, std::max(transform.scale.x, transform.scale.y), transform);
-                    created = recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "Collider circle radius")));
-                    break;
-                }
-                case Physics::ColliderShapeType::Box:
-                case Physics::ColliderShapeType::Polygon:
-                default:
-                {
-                    created = recordFixture(createPolygonFixture(ToBox2DVertices(shape.vertices, transform), 0.0f));
-                    break;
-                }
-                }
-
-                if (created)
-                {
-                    createdShapes.push_back(shape);
-                }
-            }
-
-            if (fixtureCount > 0)
-            {
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->shapes = std::move(createdShapes);
-                colliderComponent->createdFixtureCount = fixtureCount;
             }
             else
             {
-                colliderComponent->Clear();
+                allFixturesCreated = false;
+                break;
             }
         }
 
-        const bool createdFromComponent = useColliderComponent && fixtureCount > 0;
-        if (createdFromComponent)
+        if (allFixturesCreated && fixtureCount > 0)
         {
+            colliderComponent->shapeDef = shapeDef;
+            colliderComponent->shapes = std::move(createdShapes);
+            colliderComponent->createdFixtureCount = fixtureCount;
             return bodyId;
         }
 
-        // モデル由来のメッシュポリゴンがあれば優先的に使う
-        fixtureCount = 0;
-        if (hasMeshFixtures)
-        {
-            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
-
-            for (const auto& polygon : meshPolygons)
-            {
-                if (polygon.size() < 3)
-                {
-                    continue;
-                }
-
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(polygon, transform), box2dPolygonRadius)))
-                {
-                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, polygon });
-                }
-            }
-
-            if (fixtureCount == 0 && hasMeshBoundary && meshBoundary.size() >= 3)
-            {
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(meshBoundary, transform), box2dPolygonRadius)))
-                {
-                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, meshBoundary });
-                }
-            }
-
-            colliderComponent->Clear();
-            if (fixtureCount > 0)
-            {
-                colliderComponent->shapeDef = shapeDef;
-                colliderComponent->shapes = std::move(createdShapes);
-                colliderComponent->createdFixtureCount = fixtureCount;
-
-#if defined(_DEBUG)
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Created mesh fixtures for body tag='" << body.GetTag() << "'"
-                    << " polygons=" << meshPolygons.size()
-                    << " boundaryPoints=" << meshBoundary.size() << "\n";
-                DebugTrace(oss.str());
-#endif
-                return bodyId;
-            }
-        }
-
-        // ShapeConfig から形状を作る
-        fixtureCount = 0;
-        if (hasShapeConfig)
-        {
-            std::vector<Physics::ColliderShapeDescriptor> createdShapes;
-            auto setComponentFromCreatedShapes = [&]
-            {
-                colliderComponent->Clear();
-                if (fixtureCount > 0)
-                {
-                    colliderComponent->shapeDef = shapeDef;
-                    colliderComponent->shapes = std::move(createdShapes);
-                    colliderComponent->createdFixtureCount = fixtureCount;
-                }
-            };
-
-            switch (shapeConfig->type)
-            {
-            case Physics::Box2DShapeConfig::Type::Box:
-            {
-                std::vector<b2Vec2> localVertices;
-                if (!shapeConfig->vertices.empty())
-                {
-                    localVertices = shapeConfig->vertices;
-                }
-                else
-                {
-                    localVertices = {
-                        b2Vec2{ -0.5f, -0.5f },
-                        b2Vec2{ 0.5f, -0.5f },
-                        b2Vec2{ 0.5f, 0.5f },
-                        b2Vec2{ -0.5f, 0.5f },
-                    };
-                }
-
-                const std::vector<b2Vec2> box2dVertices = ToBox2DVertices(localVertices, transform);
-                if (recordFixture(createPolygonFixture(box2dVertices, box2dPolygonRadius)))
-                {
-                    createdShapes.push_back({ Physics::ColliderShapeType::Box, localVertices });
-                    setComponentFromCreatedShapes();
-                    return bodyId;
-                }
-                setComponentFromCreatedShapes();
-                break;
-            }
-            case Physics::Box2DShapeConfig::Type::Polygon:
-            {
-                if (recordFixture(createPolygonFixture(ToBox2DVertices(shapeConfig->vertices, transform), box2dPolygonRadius)))
-                {
-                    createdShapes.push_back({ Physics::ColliderShapeType::Polygon, shapeConfig->vertices });
-                    setComponentFromCreatedShapes();
-                    return bodyId;
-                }
-                setComponentFromCreatedShapes();
-                break;
-            }
-            case Physics::Box2DShapeConfig::Type::Circle:
-            {
-                const float scaledRadius = ToBox2DLength(shapeConfig->radius, std::max(transform.scale.x, transform.scale.y), transform);
-                if (recordFixture(createCircleFixture(enforceMinimumDimension(scaledRadius, "ShapeConfig circle radius"))))
-                {
-                    createdShapes.push_back({ Physics::ColliderShapeType::Circle, {}, shapeConfig->radius });
-                    setComponentFromCreatedShapes();
-                    return bodyId;
-                }
-                setComponentFromCreatedShapes();
-                break;
-            }
-            default:
-                setComponentFromCreatedShapes();
-                break;
-            }
-        }
-
-        std::ostringstream oss;
-        oss << "[PhysicsMachine] Failed to build fixtures for tag='" << body.GetTag() << "'.\n";
-        DebugTrace(oss.str());
-
-        colliderComponent->Clear();
+        colliderComponent->createdFixtureCount = 0;
+        body.MarkFixtureBuildFailure(true);
         b2DestroyBody(bodyId);
         body.SetBox2DBodyId(b2_nullBodyId);
-        return b2_nullBodyId;
+        return failBodyCreation("Failed to build fixtures for");
     }
 
-    void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body)
+    void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData)
     {
         auto it = m_bodyMap.find(const_cast<Entities::PhysicalEntity*>(&body));
         if (it == m_bodyMap.end())
@@ -1131,15 +972,65 @@ if (isSweetTag)
 
         if (b2Body_IsValid(it->second))
         {
+            std::vector<b2ShapeId> shapes;
+
             const b2WorldId bodyWorld = b2Body_GetWorld(it->second);
             if (b2World_IsValid(bodyWorld))
             {
+                const int shapeCount = b2Body_GetShapeCount(it->second);
+                if (shapeCount > 0)
+                {
+                    shapes.resize(static_cast<size_t>(shapeCount));
+                    const int writtenShapes = b2Body_GetShapes(it->second, shapes.data(), shapeCount);
+                    shapes.resize(static_cast<size_t>(writtenShapes));
+                    for (int i = 0; i < writtenShapes; ++i)
+                    {
+                        b2Shape_SetUserData(shapes[static_cast<size_t>(i)], nullptr);
+                    }
+                }
+
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
+                }
+
+                b2Body_SetUserData(it->second, nullptr);
+
                 auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
                 if (colliderComponent)
                 {
-                    colliderComponent->Clear();
+                    if (preserveColliderData)
+                    {
+                        colliderComponent->createdFixtureCount = 0;
+                    }
+                    else
+                    {
+                        colliderComponent->Clear();
+                    }
                 }
                 b2DestroyBody(it->second);
+            }
+            else
+            {
+                if (m_contactListener)
+                {
+                    m_contactListener->NotifyDestroyedBody(it->second, shapes);
+                }
+
+                b2Body_SetUserData(it->second, nullptr);
+
+                auto& colliderComponent = const_cast<Entities::PhysicalEntity&>(body).GetBoxColliderComponent();
+                if (colliderComponent)
+                {
+                    if (preserveColliderData)
+                    {
+                        colliderComponent->createdFixtureCount = 0;
+                    }
+                    else
+                    {
+                        colliderComponent->Clear();
+                    }
+                }
             }
         }
 

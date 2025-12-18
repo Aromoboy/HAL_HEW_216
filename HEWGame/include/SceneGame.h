@@ -17,8 +17,6 @@
 #include "Vector.h"
 #include "Transform.h"
 #include "Stage/StageData.h"
-#include "Stage/FoundationPlatform.h"
-#include "Stage/OsaraPlate.h"
 #include "GameFlow/PhaseManager.h"
 #include "HudRenderer.h"
 #include "TimerDisplay.h"
@@ -49,11 +47,13 @@ struct StageObject
 {
     std::string modelPath;
     Transform transform;
-    bool spinEnabled;
-    float3 spinAxis;
-    float spinSpeed;
+    bool spinEnabled = false;
+    float3 spinAxis{ 0.0f, 0.0f, 0.0f };
+    float spinSpeed = 0.0f;
     std::shared_ptr<ModelDX> model;
-    float currentRotation;
+    float currentRotation = 0.0f;
+    std::string colliderPresetId;
+    std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 
 namespace Systems
@@ -109,7 +109,6 @@ public:
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
-    void RefreshPlatformAnchor(bool forceRecompute);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay();
@@ -133,10 +132,9 @@ private:
     int ComputeScore() const;
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
-    std::string ResolvePlayerColliderKey(const std::string& key) const;
-    const Stage::PlatformDescriptor* FindDescriptorForPlatform(const Stage::FoundationPlatform* platform) const;
-    float ComputePlatformTopY(const Stage::PlatformDescriptor& descriptor) const;
-    void RefreshSweetsSpawnOrigins(bool requireOsaraReady = false);
+    std::string ResolvePlayerColliderKey(const std::string& key) const;  
+    void Initialize(const Stage::StageData& stageData);
+    
     std::vector<StageObject> m_stageObjects;
     std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
@@ -151,14 +149,6 @@ private:
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
-    std::vector<std::unique_ptr<Stage::FoundationPlatform>> m_foundationPlatforms;
-    std::vector<bool> m_platformUpdateRegistered;
-    std::vector<bool> m_platformDrawRegistered;
-    std::vector<std::unique_ptr<Stage::OsaraPlate>> m_osaraPlates;
-    std::vector<bool> m_osaraUpdateRegistered;
-    std::vector<bool> m_osaraDrawRegistered;
-    Stage::FoundationPlatform* m_platePlatform = nullptr;
-    Stage::FoundationPlatform* m_spawnHeightPlatform = nullptr;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
     bool m_inputRegistered = false;
@@ -169,7 +159,6 @@ private:
     bool m_sweetsLateRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
-    void InitializeStageAnchors();
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
     Core::StepTimer m_countdownTimer;
@@ -204,7 +193,6 @@ private:
         float triggerHeight = 0.0f;
     };
     std::deque<PendingTimeBonus> m_pendingTimeBonuses;
-    bool m_platformAnchorInitialized = false;
     mutable bool m_guidelineInvalidLogged = false;
     mutable bool m_guidelineClampLogged = false;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();

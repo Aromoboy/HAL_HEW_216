@@ -13,12 +13,12 @@
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
 #include "Entities/PhysicalEntity.h"
-#include "Collision2D.h"
 #include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
 #include "DebugColliderRenderer.h"
+#include "Systems/PhysicsMachine.h"
 
 namespace
 {
@@ -48,19 +48,6 @@ namespace
         constexpr float kMaxRenderableScale = 1.0e4f;
         constexpr float kMaxDepthMagnitude = 1.0e5f;
         constexpr float kPlaneZTolerance = 5.0f;
-
-        float2 ApplyTransform2D(const float2& local, const Transform& transform)
-        {
-                const float scaledX = local.x * transform.scale.x;
-                const float scaledY = local.y * transform.scale.y;
-                const float cosR = std::cos(transform.rotation.z);
-                const float sinR = std::sin(transform.rotation.z);
-
-                return float2{
-                        transform.position.x + (cosR * scaledX - sinR * scaledY),
-                        transform.position.y + (sinR * scaledX + cosR * scaledY),
-                };
-        }
 
         bool ReadDebugColliderCvar()
         {
@@ -372,46 +359,78 @@ namespace Systems
                         return;
                 }
 
+                b2Transform bodyTransform{};
+                std::vector<b2ShapeId> shapes;
+                if (!entity.CollectBox2DShapes(shapes, bodyTransform))
+                {
+                        return;
+                }
+
+                if (shapes.empty())
+                {
+                        return;
+                }
+
                 constexpr Color kColliderColor{ 0.9f, 0.3f, 0.3f, 1.0f };
                 constexpr Color kBoundsColor{ 1.0f, 1.0f, 0.0f, 1.0f };
 
                 const Transform& transform = entity.GetTransform();
                 const float z = transform.position.z;
 
-                for (const auto& shape : colliderComponent->shapes)
+                auto toWorldFloat2 = [](const b2Vec2& v)
                 {
-                        switch (shape.type)
+                        const float3 world = Entities::PhysicalEntity::ToWorldVector(v);
+                        return float2{ world.x, world.y };
+                };
+
+                for (const b2ShapeId shapeId : shapes)
+                {
+                        switch (b2Shape_GetType(shapeId))
                         {
-                        case Physics::ColliderShapeType::Circle:
+                        case b2_circleShape:
                         {
-                                const float2 center = ApplyTransform2D(float2{ 0.0f, 0.0f }, transform);
-                                const float scaledRadius = shape.radius * std::max(transform.scale.x, transform.scale.y);
-                                DebugColliderRenderer::DrawCircle(center, scaledRadius, z, kColliderColor);
+                                const b2Circle circle = b2Shape_GetCircle(shapeId);
+                                const b2Vec2 worldCenter = b2TransformPoint(bodyTransform, circle.center);
+                                const float2 center = toWorldFloat2(worldCenter);
+                                const float radius = Entities::PhysicalEntity::ToWorldLength(circle.radius);
+                                DebugColliderRenderer::DrawCircle(center, radius, z, kColliderColor);
                                 break;
                         }
-                        case Physics::ColliderShapeType::Box:
-                        case Physics::ColliderShapeType::Polygon:
-                        default:
+                        case b2_polygonShape:
                         {
-                                if (shape.vertices.empty())
+                                const b2Polygon polygon = b2Shape_GetPolygon(shapeId);
+                                if (polygon.count < 2)
                                 {
-                                        continue;
+                                        break;
                                 }
 
                                 std::vector<float2> hull;
-                                hull.reserve(shape.vertices.size());
-                                for (const auto& vertex : shape.vertices)
+                                hull.reserve(static_cast<size_t>(polygon.count));
+
+                                for (int i = 0; i < polygon.count; ++i)
                                 {
-                                        hull.push_back(ApplyTransform2D(float2{ vertex.x, vertex.y }, transform));
+                                        const b2Vec2 worldVertex = b2TransformPoint(bodyTransform, polygon.vertices[i]);
+                                        hull.push_back(toWorldFloat2(worldVertex));
                                 }
 
                                 DebugColliderRenderer::DrawHull(hull, z, kColliderColor);
                                 break;
                         }
+                        case b2_capsuleShape:
+                        {
+                                const b2Capsule capsule = b2Shape_GetCapsule(shapeId);
+                                const b2Vec2 worldP0 = b2TransformPoint(bodyTransform, capsule.center1);
+                                const b2Vec2 worldP1 = b2TransformPoint(bodyTransform, capsule.center2);
+                                const float radius = Entities::PhysicalEntity::ToWorldLength(capsule.radius);
+                                DebugColliderRenderer::DrawCapsule(toWorldFloat2(worldP0), toWorldFloat2(worldP1), radius, z, kColliderColor);
+                                break;
+                        }
+                        default:
+                                break;
                         }
                 }
 
-                if (g_DrawColliderBounds && !colliderComponent->shapes.empty())
+                if (g_DrawColliderBounds && !shapes.empty())
                 {
                         const AABB bounds = entity.GetAABB();
                         DebugColliderRenderer::DrawHull(

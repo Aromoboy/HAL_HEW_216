@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Entities/PhysicalEntity.h"
@@ -85,6 +87,7 @@ namespace Entities
         std::shared_ptr<Render::Model> m_fairyModel;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
+        std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;
         int m_maxCarry;
         float m_pickupHalfWidth;
         float m_pickupHalfHeight;
@@ -108,8 +111,14 @@ namespace Entities
         float m_maxScreenX;
         bool m_hasMaximumY;
         float m_maximumY;
+        float m_moveSoundHandle;
+        bool m_wasMovingLastFrame;
+        bool m_moveSoundFadingOut;      
+        float m_moveSoundFadeTimer;     
+        float m_moveSoundFadeDuration;
         std::optional<ColliderFootprint> m_colliderFootprint;
         SweetsSpace::PickupQueryResult m_lastPickupResult;
+        size_t m_lastCarryInputLoggedCount;
 
         float3 ComputeCarryAnchor() const;
         PickupOrigin ComputePickupOrigin() const;

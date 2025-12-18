@@ -29,13 +29,11 @@
 #include <vector>
 #include "DirectX.h"
 #include "AABB.h"
-#include "ColliderConfigLoader.h"
-#include "Collision2D.h"
+#include "ColliderRegistry.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
 #include "ModelCache.h"
-#include "ModelPivot.h"
 #include "BoxColliderComponent.h"
 #include "Sweets/BaseSweets.h"
 #include "SweetsPrototypeManifest.h"
@@ -45,6 +43,7 @@
 #include "Physics/ShapeConstants.h"
 #include "Diagnostics/Logger.h"
 #include <DirectXMath.h>
+#include <ModelPivot.h>
 
 namespace SweetsSpace
 {
@@ -56,6 +55,8 @@ namespace SweetsSpace
             return "Box";
         case ColliderShape::Capsule:
             return "Capsule";
+        case ColliderShape::Circle:
+            return "Circle";
         default:
             return "Unknown";
         }
@@ -88,18 +89,13 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
+    constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
-    constexpr float kScaleReferenceMeters = 1.0f;
-    constexpr float kMinNormalizationScale = 0.02f;
-    constexpr float kMaxNormalizationScale = 50.0f;
-    constexpr float kMinFinalScale = 0.05f;
-    constexpr float kMaxFinalScale = 3.0f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr float kMinimumBerryColliderRadius = 0.15f;
     constexpr float kMinimumBlueberryColliderRadius = 0.2f;
@@ -138,62 +134,6 @@ namespace
         Diagnostics::LogInfo(oss.str());
 
         assert(false && "Invalid Box2DShapeConfig for sweets type");
-    }
-
-    float ComputeNormalizationScale(const Render::Model& model, const char* context)
-    {
-        if (!model.HasLocalBounds())
-        {
-            return 1.0f;
-        }
-
-        const AABB bounds = model.GetLocalBounds();
-        const float3 extents = bounds.Extents();
-        const float largestExtent = std::max({ extents.x, extents.y, extents.z });
-        if (!std::isfinite(largestExtent) || largestExtent <= 0.0f)
-        {
-            return 1.0f;
-        }
-
-        const float rawScale = kScaleReferenceMeters / largestExtent;
-        if (!std::isfinite(rawScale) || rawScale <= 0.0f)
-        {
-            return 1.0f;
-        }
-
-        const float clamped = std::clamp(rawScale, kMinNormalizationScale, kMaxNormalizationScale);
-        if (std::fabs(clamped - 1.0f) > 0.01f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' の extents=("
-                << extents.x << ',' << extents.y << ',' << extents.z << ") raw=" << rawScale
-                << " clamped=" << clamped << " referenceMeters=" << kScaleReferenceMeters << "\n";
-            DebugTrace(oss.str());
-        }
-
-        return clamped;
-    }
-
-    float3 ClampScaleToGameplayRange(const float3& scale, const char* context)
-    {
-        float3 clamped
-        {
-            std::clamp(scale.x, kMinFinalScale, kMaxFinalScale),
-            std::clamp(scale.y, kMinFinalScale, kMaxFinalScale),
-            std::clamp(scale.z, kMinFinalScale, kMaxFinalScale),
-        };
-
-        if (HasMeaningfulDifference(scale, clamped, 1e-3f))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ScaleNorm] context='" << context << "' のスケールを ("
-                << scale.x << ',' << scale.y << ',' << scale.z << ") から ("
-                << clamped.x << ',' << clamped.y << ',' << clamped.z << ") に丸めたよ bounds="
-                << kMinFinalScale << "-" << kMaxFinalScale << "\n";
-            DebugTrace(oss.str());
-        }
-
-        return clamped;
     }
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
@@ -457,40 +397,24 @@ namespace
             || HasMeaningfulDifference(a.z, b.z, epsilon);
     }
 
-    float ComputeVolumeScale(const float3& scale)
+    Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
     {
-        if (!(std::isfinite(scale.x) && std::isfinite(scale.y) && std::isfinite(scale.z)))
+        if (shapes.empty())
         {
-            return 1.0f;
+            return Box2DShapeConfig::Type::None;
         }
 
-        return std::max(0.0f, scale.x * scale.y * scale.z);
-    }
-
-    float ComputeAreaScaleXY(const float3& scale, Physics::Box2DShapeConfig::Type shape)
-    {
-        if (!(std::isfinite(scale.x) && std::isfinite(scale.y)))
+        switch (shapes.front().type)
         {
-            return 1.0f;
-        }
-
-        switch (shape)
-        {
-        case Physics::Box2DShapeConfig::Type::Circle:
-        {
-            const float axisScale = std::max(scale.x, scale.y);
-            return axisScale * axisScale;
-        }
+        case Physics::ColliderShapeType::Box:
+            return Box2DShapeConfig::Type::Box;
+        case Physics::ColliderShapeType::Polygon:
+            return Box2DShapeConfig::Type::Polygon;
+        case Physics::ColliderShapeType::Circle:
+            return Box2DShapeConfig::Type::Circle;
         default:
-            return scale.x * scale.y;
+            return Box2DShapeConfig::Type::None;
         }
-    }
-
-    float ComputeDensityScale(const float3& scale, Physics::Box2DShapeConfig::Type shape)
-    {
-        const float areaScale = std::max(ComputeAreaScaleXY(scale, shape), std::numeric_limits<float>::min());
-        const float volumeScale = ComputeVolumeScale(scale);
-        return (areaScale > 0.0f) ? (volumeScale / areaScale) : 1.0f;
     }
 
     Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
@@ -499,95 +423,17 @@ namespace
         config.allowRotation = true;
         config.angularDamping = 0.2f;
 
-        switch (type)
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (registryDefinition)
         {
-        case SweetsType::Cake:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.allowRotation = false;
-            config.angularDamping = 6.0f;
-            config.density = 1.2f;
-            config.friction = 0.72f;
-            config.restitution = 0.03f;
-            config.vertices = {
-                b2Vec2{ -0.5f, -0.5f },
-                b2Vec2{ 0.5f, -0.5f },
-                b2Vec2{ 0.5f, 0.5f },
-                b2Vec2{ -0.5f, 0.5f },
-            };
-            break;
-        case SweetsType::Pudding:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.5f, -0.45f },
-                b2Vec2{ 0.5f, -0.45f },
-                b2Vec2{ 0.0f, 0.55f },
-            };
-            config.allowRotation = false;
-            config.angularDamping = 0.65f;
-            config.density = 0.95f;
-            config.friction = 0.6f;
-            config.restitution = 0.06f;
-            break;
-        case SweetsType::Sherbet:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.5f;
-            config.angularDamping = 0.75f;
-            config.density = 0.75f;
-            config.friction = 0.35f;
-            config.restitution = 0.28f;
-            break;
-        case SweetsType::Strawberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.45f;
-            config.angularDamping = 2.5f;
-            config.density = 0.85f;
-            config.friction = 0.5f;
-            config.restitution = 0.12f;
-            break;
-        case SweetsType::Blueberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.35f;
-            config.angularDamping = 2.25f;
-            config.density = 0.7f;
-            config.friction = 0.42f;
-            config.restitution = 0.18f;
-            break;
-        case SweetsType::Pineapple:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.5f;
-            config.density = 1.05f;
-            config.friction = 0.68f;
-            config.restitution = 0.04f;
-            config.vertices = {
-                b2Vec2{ -0.32f, -0.6f },
-                b2Vec2{ 0.32f, -0.6f },
-                b2Vec2{ 0.38f, 0.15f },
-                b2Vec2{ 0.0f, 0.65f },
-                b2Vec2{ -0.38f, 0.15f },
-            };
-            break;
-        case SweetsType::Banana:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.6f, -0.08f },
-                b2Vec2{ 0.6f, 0.08f },
-                b2Vec2{ 0.55f, 0.24f },
-                b2Vec2{ -0.45f, 0.24f },
-            };
-            config.angularDamping = 0.65f;
-            config.density = 0.9f;
-            config.friction = 0.55f;
-            config.restitution = 0.08f;
-            break;
-        case SweetsType::Fairy:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.35f;
-            config.allowRotation = false;
-            config.angularDamping = 2.5f;
-            config.density = 0.55f;
-            config.friction = 0.4f;
-            config.restitution = 0.06f;
-            break;
+            config.type = InferShapeType(registryDefinition->shapes);
+            config.density = std::max(0.0f, registryDefinition->shapeDef.density);
+            config.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+            config.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+        }
+        else
+        {
+            ReportInvalidBox2DConfig(type, "is missing a collider registry definition");
         }
 
         if (config.type == Box2DShapeConfig::Type::None)
@@ -606,35 +452,44 @@ namespace
 
     bool ValidateBaseShapeDefinition(SweetsType type)
     {
-        const auto config = BuildBaseShapeConfig(type);
-
-        if (config.type == Box2DShapeConfig::Type::None)
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (!registryDefinition)
         {
+            ReportInvalidBox2DConfig(type, "cannot resolve collider registry entry");
             return false;
         }
 
-        switch (config.type)
+        if (registryDefinition->shapes.empty())
         {
-        case Box2DShapeConfig::Type::Box:
-        case Box2DShapeConfig::Type::Polygon:
-            if (config.vertices.size() < 3)
-            {
-                ReportInvalidBox2DConfig(type, "requires explicit vertices for its collider definition");
-                return false;
-            }
-            break;
-        case Box2DShapeConfig::Type::Circle:
-            if (!(config.radius > 0.0f))
-            {
-                ReportInvalidBox2DConfig(type, "requires a positive radius for its collider definition");
-                return false;
-            }
-            break;
-        default:
-            break;
+            ReportInvalidBox2DConfig(type, "collider registry entry is missing shapes");
+            return false;
         }
 
-        return true;
+        for (const auto& shape : registryDefinition->shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+                if (!(shape.radius > 0.0f))
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry circle has non-positive radius");
+                    return false;
+                }
+                break;
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+                if (shape.vertices.size() < 3)
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry polygon/box is missing vertices");
+                    return false;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+
+        return InferShapeType(registryDefinition->shapes) != Box2DShapeConfig::Type::None;
     }
 
     std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
@@ -667,26 +522,7 @@ namespace
         return vertices;
     }
 
-    std::vector<b2Vec2> BuildCircleApproximation(float radius, int segments = 14)
-    {
-        std::vector<b2Vec2> vertices;
-        if (!(radius > 0.0f) || segments < 3)
-        {
-            return vertices;
-        }
-
-        vertices.reserve(static_cast<std::size_t>(segments));
-        constexpr float kTwoPi = 6.28318530718f;
-        const float step = kTwoPi / static_cast<float>(segments);
-        for (int i = 0; i < segments; ++i)
-        {
-            const float angle = step * static_cast<float>(i);
-            vertices.push_back(b2Vec2{ radius * std::cos(angle), radius * std::sin(angle) });
-        }
-
-        return vertices;
-    }
-
+    using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
 }
 
 namespace SweetsSpace
@@ -700,533 +536,20 @@ namespace SweetsSpace
         SweetsType type,
         const Transform& transform,
         const std::string& modelPath,
-        const std::shared_ptr<Render::Model>& model)
+        const std::shared_ptr<Render::Model>& model,
+        const float2& colliderCenter,
+        bool allowMeshPhysics)
     {
+        (void)kind;
+        (void)transform;
+        (void)modelPath;
+        (void)model;
+        (void)colliderCenter;
+        (void)allowMeshPhysics;
+
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
-        static bool s_loggedPolygonFallback = false;
-
-        (void)model;
-
-        const std::string resolvedKind = ResolveKindKey(kind);
-        const std::string normalizedKind = NormalizeKey(resolvedKind);
-        const auto presetIt = m_factoryPresets.find(normalizedKind);
-        const ColliderPreset* colliderPreset = presetIt != m_factoryPresets.end()
-            ? &presetIt->second.colliderPreset
-            : nullptr;
-        const auto definitionIt = FindColliderDefinition(resolvedKind);
-        const bool hasConfigDefinition = definitionIt != m_colliderDefinitions.end()
-            && !IsColliderDefinitionEmpty(definitionIt->second);
-
-        const float2 colliderScale{ transform.scale.x, transform.scale.y };
-        const float uniformColliderScale = std::max(std::abs(colliderScale.x), std::abs(colliderScale.y));
-
-        auto acquireGenerated = [&]() -> std::optional<GeneratedCollider>
-        {
-            if (auto cached = m_generatedColliders.find(normalizedKind); cached != m_generatedColliders.end())
-            {
-                return cached->second;
-            }
-
-            if (modelPath.empty())
-            {
-                return std::nullopt;
-            }
-
-            const MeshHullSummary summary = AnalyzeModelGeometry(modelPath, m_generatedColliderThicknessPadding, m_generatedColliderMinThickness);
-            if (summary.hull.empty())
-            {
-                return std::nullopt;
-            }
-
-            GeneratedCollider generated{};
-            generated.hull = summary.hull;
-            generated.centroidOffset = summary.centroidOffset;
-            generated.thickness = std::clamp(summary.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
-            m_generatedColliders[normalizedKind] = generated;
-            return generated;
-        };
-
-        std::optional<GeneratedCollider> generated;
-        if (m_forceGeneratedColliders || !m_colliderConfigOverridesEnabled || !hasConfigDefinition)
-        {
-            generated = acquireGenerated();
-        }
-
-        const bool hasGenerated = generated && !generated->hull.empty();
-        bool appliedConfigDefinition = false;
-
-        auto applyConfigDefinition = [&](const Collision::ColliderDefinition& definition, const char* reason) -> bool
-        {
-            bool applied = false;
-            const float clampedThickness = std::clamp(definition.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
-            switch (definition.type)
-            {
-            case Collision::ColliderKind::Circle:
-            {
-                const float effectiveRadius = std::max(0.0f, ((definition.radius * definition.scale) + definition.margin) * uniformColliderScale);
-                result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
-                result.shapeConfig.radius = effectiveRadius;
-                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                result.thickness = clampedThickness * uniformColliderScale;
-                result.source = ColliderSource::Config;
-                applied = true;
-                break;
-            }
-            case Collision::ColliderKind::Hull:
-            {
-                result.meshPolygons.clear();
-                result.meshBoundary.clear();
-
-                std::vector<float2> scaledPoints;
-                scaledPoints.reserve(definition.points.size());
-                for (const auto& pt : definition.points)
-                {
-                    scaledPoints.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
-                }
-
-                const float2 scaledOffset{ definition.offset.x * colliderScale.x, definition.offset.y * colliderScale.y };
-                const float scaledMargin = definition.margin * uniformColliderScale;
-
-                result.shapeConfig.vertices = BuildHullVertices(scaledPoints, scaledOffset, definition.scale, scaledMargin);
-                if (result.shapeConfig.vertices.size() >= 3)
-                {
-                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                    result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                    result.thickness = clampedThickness * uniformColliderScale;
-                    result.source = ColliderSource::Config;
-                    applied = true;
-                }
-                break;
-            }
-            case Collision::ColliderKind::Compound:
-            {
-                result.meshPolygons.clear();
-                float maxThickness = 0.0f;
-                for (const auto& child : definition.children)
-                {
-                    const float clampedChildThickness = std::clamp(child.thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
-                    switch (child.type)
-                    {
-                    case Collision::ColliderKind::Circle:
-                    {
-                        const float radius = std::max(0.0f, ((child.radius * child.scale) + child.margin) * uniformColliderScale);
-                        auto circlePoly = BuildCircleApproximation(radius);
-                        if (circlePoly.size() >= 3)
-                        {
-                            result.meshPolygons.push_back(std::move(circlePoly));
-                            applied = true;
-                        }
-                        break;
-                    }
-                    case Collision::ColliderKind::Hull:
-                    {
-                        std::vector<float2> scaledPoints;
-                        scaledPoints.reserve(child.points.size());
-                        for (const auto& pt : child.points)
-                        {
-                            scaledPoints.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
-                        }
-
-                        const float2 scaledOffset{ child.offset.x * colliderScale.x, child.offset.y * colliderScale.y };
-                        const float scaledMargin = child.margin * uniformColliderScale;
-
-                        auto hullVertices = BuildHullVertices(scaledPoints, scaledOffset, child.scale, scaledMargin);
-                        if (hullVertices.size() >= 3)
-                        {
-                            result.meshPolygons.push_back(std::move(hullVertices));
-                            applied = true;
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                    }
-
-                    maxThickness = std::max(maxThickness, clampedChildThickness * uniformColliderScale);
-                }
-
-                if (!result.meshPolygons.empty())
-                {
-                    result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                    result.shapeConfig.polygonRadius = std::max(0.0f, maxThickness * 0.5f);
-                    result.thickness = maxThickness;
-                    result.source = ColliderSource::Config;
-                }
-                break;
-            }
-            default:
-                break;
-            }
-
-            if (applied)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "コライダー設定を使ったよ reason='" << (reason ? reason : "")
-                    << "' kind='" << resolvedKind << "' scale= ("
-                    << colliderScale.x << ',' << colliderScale.y << ") uniform=" << uniformColliderScale << "\n";
-                DebugTrace(oss.str());
-            }
-
-            appliedConfigDefinition = appliedConfigDefinition || applied;
-
-            return applied;
-        };
-
-        auto applyHull = [&](const std::vector<float2>& hull, const float2& centroidOffset, float thickness)
-        {
-            const float clampedThickness = std::clamp(thickness, 0.0f, Physics::kMinimumShapeDimensionMeters);
-            std::vector<float2> scaledHull;
-            scaledHull.reserve(hull.size());
-            for (const auto& pt : hull)
-            {
-                scaledHull.push_back(float2{ pt.x * colliderScale.x, pt.y * colliderScale.y });
-            }
-
-            const float2 scaledOffset{ centroidOffset.x * colliderScale.x, centroidOffset.y * colliderScale.y };
-
-            std::vector<b2Vec2> hullVertices = BuildHullVertices(scaledHull, scaledOffset, 1.0f, 0.0f);
-            if (hullVertices.size() >= 3)
-            {
-                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                result.shapeConfig.vertices = hullVertices;
-                result.meshPolygons.clear();
-                result.meshPolygons.push_back(hullVertices);
-                result.shapeConfig.polygonRadius = std::max(0.0f, clampedThickness * 0.5f * uniformColliderScale);
-                result.thickness = clampedThickness * uniformColliderScale;
-                result.centroidOffset = scaledOffset;
-            }
-        };
-
-        if (m_forceGeneratedColliders)
-        {
-            if (hasGenerated)
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                result.source = ColliderSource::Generated;
-            }
-        }
-        else if (m_colliderConfigOverridesEnabled && hasConfigDefinition)
-        {
-            const bool preferGeneratedOverride = (type == SweetsType::Blueberry) && hasGenerated;
-            bool appliedGeneratedOverride = false;
-            if (preferGeneratedOverride)
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                if (result.shapeConfig.type != Box2DShapeConfig::Type::None)
-                {
-                    result.source = ColliderSource::Generated;
-                    appliedGeneratedOverride = true;
-
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "オーバーライド中だけどブルーベリーはメッシュ凸包を使うよ kind='"
-                        << resolvedKind << "' verts=" << result.shapeConfig.vertices.size() << "\n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-            if (!appliedGeneratedOverride)
-            {
-                const auto& definition = definitionIt->second;
-                const bool appliedConfig = applyConfigDefinition(definition, "override-enabled");
-                if (!appliedConfig && hasGenerated)
-                {
-                    applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                    result.source = ColliderSource::Generated;
-                }
-            }
-        }
-        else if (hasGenerated)
-        {
-            applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-            result.source = ColliderSource::Generated;
-        }
-        else if (hasConfigDefinition)
-        {
-            const auto& definition = definitionIt->second;
-            applyConfigDefinition(definition, "fallback-config");
-        }
-        else if (!hasGenerated)
-        {
-            generated = acquireGenerated();
-            if (generated && !generated->hull.empty())
-            {
-                applyHull(generated->hull, generated->centroidOffset, generated->thickness);
-                result.source = ColliderSource::Generated;
-            }
-        }
-
-        const auto computePolygonDimensions = [](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
-        {
-            if (vertices.size() < 3)
-            {
-                return std::nullopt;
-            }
-
-            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-            for (const auto& vertex : vertices)
-            {
-                min.x = std::min(min.x, vertex.x);
-                min.y = std::min(min.y, vertex.y);
-                max.x = std::max(max.x, vertex.x);
-                max.y = std::max(max.y, vertex.y);
-            }
-
-            return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
-        };
-
-        const auto buildCapsuleVertices = [](float width, float height) -> std::vector<b2Vec2>
-        {
-            std::vector<b2Vec2> vertices;
-            if (!(width > 0.0f) || !(height > 0.0f))
-            {
-                return vertices;
-            }
-
-            const float halfWidth = width * 0.5f;
-            const float halfHeight = height * 0.5f;
-            const bool horizontal = halfWidth >= halfHeight;
-            const float radius = horizontal ? halfHeight : halfWidth;
-            const float spine = (horizontal ? halfWidth : halfHeight) - radius;
-            if (!(radius > 0.0f))
-            {
-                return vertices;
-            }
-
-            constexpr int kArcSegments = 6;
-            const float startRight = -B2_PI * 0.5f;
-            const float endRight = B2_PI * 0.5f;
-            const float startLeft = B2_PI * 0.5f;
-            const float endLeft = B2_PI * 1.5f;
-
-            const float offsetX = horizontal ? spine : 0.0f;
-            const float offsetY = horizontal ? 0.0f : spine;
-
-            auto appendArc = [&](float cx, float cy, float start, float end, bool skipFirst)
-            {
-                const float step = (end - start) / static_cast<float>(kArcSegments);
-                for (int i = 0; i <= kArcSegments; ++i)
-                {
-                    if (skipFirst && i == 0)
-                    {
-                        continue;
-                    }
-
-                    const float angle = start + (step * static_cast<float>(i));
-                    vertices.push_back(b2Vec2{ cx + (radius * std::cos(angle)), cy + (radius * std::sin(angle)) });
-                }
-            };
-
-            appendArc(offsetX, offsetY, startRight, endRight, false);
-            appendArc(-offsetX, -offsetY, startLeft, endLeft, true);
-
-            return vertices;
-        };
-
-        if (colliderPreset && !appliedConfigDefinition)
-        {
-            std::optional<std::pair<float, float>> dimensions;
-            if (!result.shapeConfig.vertices.empty())
-            {
-                dimensions = computePolygonDimensions(result.shapeConfig.vertices);
-            }
-            else if (!result.meshPolygons.empty())
-            {
-                dimensions = computePolygonDimensions(result.meshPolygons.front());
-            }
-            else if (result.shapeConfig.type == Box2DShapeConfig::Type::Circle && (result.shapeConfig.radius > 0.0f))
-            {
-                const float diameter = result.shapeConfig.radius * 2.0f;
-                dimensions = std::make_optional(std::make_pair(diameter, diameter));
-            }
-
-            const float width = std::max(dimensions ? dimensions->first : Physics::kMinimumShapeDimensionMeters, Physics::kMinimumShapeDimensionMeters);
-            const float height = std::max(dimensions ? dimensions->second : Physics::kMinimumShapeDimensionMeters, Physics::kMinimumShapeDimensionMeters);
-
-            const float paddedWidth = width + (colliderPreset->padding.x * 2.0f * uniformColliderScale);
-            const float paddedHeight = height + (colliderPreset->padding.y * 2.0f * uniformColliderScale);
-            const float thickness = std::max({ result.thickness, colliderPreset->padding.z * uniformColliderScale, Physics::kMinimumShapeDimensionMeters });
-
-            std::vector<b2Vec2> presetVertices;
-            switch (colliderPreset->shape)
-            {
-            case ColliderShape::Capsule:
-                presetVertices = buildCapsuleVertices(paddedWidth, paddedHeight);
-                break;
-            case ColliderShape::Box:
-            default:
-                presetVertices = {
-                    b2Vec2{ -paddedWidth * 0.5f, -paddedHeight * 0.5f },
-                    b2Vec2{ paddedWidth * 0.5f, -paddedHeight * 0.5f },
-                    b2Vec2{ paddedWidth * 0.5f, paddedHeight * 0.5f },
-                    b2Vec2{ -paddedWidth * 0.5f, paddedHeight * 0.5f },
-                };
-                break;
-            }
-
-            if (presetVertices.size() >= 3)
-            {
-                result.shapeConfig.type = Box2DShapeConfig::Type::Polygon;
-                result.shapeConfig.vertices = presetVertices;
-                result.meshPolygons.clear();
-                result.meshPolygons.push_back(presetVertices);
-                result.meshBoundary = presetVertices;
-                result.shapeConfig.polygonRadius = std::max(result.shapeConfig.polygonRadius, thickness * 0.5f);
-                result.thickness = thickness;
-                result.centroidOffset = float2{ 0.0f, 0.0f };
-                result.source = ColliderSource::Config;
-            }
-        }
-
-        if (result.shapeConfig.type == Box2DShapeConfig::Type::None)
-        {
-            ReportInvalidBox2DConfig(type, "cannot build a collider without a Box2DShapeConfig; registration should abort earlier");
-            return result;
-        }
-
-        const auto isInvalidPolygon = [](const std::vector<b2Vec2>& vertices)
-        {
-            return vertices.size() < 3;
-        };
-
-        result.meshPolygons.erase(
-            std::remove_if(result.meshPolygons.begin(), result.meshPolygons.end(), isInvalidPolygon),
-            result.meshPolygons.end());
-
-        if ((result.shapeConfig.type == Box2DShapeConfig::Type::Box || result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
-            && result.shapeConfig.vertices.size() < 3 && result.meshPolygons.empty())
-        {
-            ReportInvalidBox2DConfig(type, "requires explicit vertices instead of mesh-derived bounds");
-            return result;
-        }
-
-        if (result.shapeConfig.type == Box2DShapeConfig::Type::Circle && !(result.shapeConfig.radius > 0.0f))
-        {
-            ReportInvalidBox2DConfig(type, "requires a positive radius instead of mesh-derived bounds");
-            return result;
-        }
-
-        const float densityScale = ComputeDensityScale(transform.scale, result.shapeConfig.type);
-        result.shapeConfig.density *= densityScale;
-
-        auto computeScaledDimensions = [&](const std::vector<b2Vec2>& vertices) -> std::optional<std::pair<float, float>>
-        {
-            if (vertices.size() < 3)
-            {
-                return std::nullopt;
-            }
-
-            b2Vec2 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-            b2Vec2 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-            for (const auto& vertex : vertices)
-            {
-                const float scaledX = vertex.x * colliderScale.x;
-                const float scaledY = vertex.y * colliderScale.y;
-                min.x = std::min(min.x, scaledX);
-                min.y = std::min(min.y, scaledY);
-                max.x = std::max(max.x, scaledX);
-                max.y = std::max(max.y, scaledY);
-            }
-
-            return std::make_optional(std::make_pair(max.x - min.x, max.y - min.y));
-        };
-
-        auto scaleVertices = [](std::vector<b2Vec2>& vertices, float factor)
-        {
-            for (auto& vertex : vertices)
-            {
-                vertex.x *= factor;
-                vertex.y *= factor;
-            }
-        };
-
-        const float minDimension = Physics::kMinimumShapeDimensionMeters;
-        if (result.shapeConfig.type == Box2DShapeConfig::Type::Polygon)
-        {
-            if (const auto dimensions = computeScaledDimensions(result.shapeConfig.vertices))
-            {
-                const float width = dimensions->first;
-                const float height = dimensions->second;
-                const float smallest = std::min(width, height);
-                if (!(smallest >= minDimension))
-                {
-                    if (smallest <= 0.0f)
-                    {
-                        result.shapeConfig.type = Box2DShapeConfig::Type::Circle;
-                        result.shapeConfig.radius = std::max(minDimension * 0.5f, result.shapeConfig.radius);
-                        result.shapeConfig.polygonRadius = 0.0f;
-                        result.shapeConfig.vertices.clear();
-                        result.meshPolygons.clear();
-                    }
-                    else
-                    {
-                        const float scaleFactor = minDimension / smallest;
-                        scaleVertices(result.shapeConfig.vertices, scaleFactor);
-                        for (auto& polygon : result.meshPolygons)
-                        {
-                            scaleVertices(polygon, scaleFactor);
-                        }
-                        result.shapeConfig.polygonRadius *= scaleFactor;
-                        result.thickness *= scaleFactor;
-                        result.centroidOffset.x *= scaleFactor;
-                        result.centroidOffset.y *= scaleFactor;
-                    }
-
-                    if (!s_loggedPolygonFallback)
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Collider for kind='" << resolvedKind
-                            << "' resized to meet Box2D min dimension (width=" << width
-                            << ", height=" << height << ") target=" << minDimension << "\n";
-                        Diagnostics::LogInfo(oss.str());
-                        s_loggedPolygonFallback = true;
-                    }
-
-                    result.source = ColliderSource::Fallback;
-                }
-            }
-        }
-
-        auto enforceMinimumCircleRadius = [&](float minRadius)
-        {
-            if (result.shapeConfig.type != Box2DShapeConfig::Type::Circle)
-            {
-                return;
-            }
-
-            const float currentRadius = result.shapeConfig.radius;
-            if (!(currentRadius > 0.0f) || currentRadius >= minRadius)
-            {
-                return;
-            }
-
-            const float scaleFactor = minRadius / currentRadius;
-            result.shapeConfig.radius = minRadius;
-            result.shapeConfig.polygonRadius *= scaleFactor;
-            result.thickness *= scaleFactor;
-            result.centroidOffset.x *= scaleFactor;
-            result.centroidOffset.y *= scaleFactor;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Collider for kind='" << resolvedKind
-                << "' radius clamped to min playable size from " << currentRadius
-                << " to " << minRadius << "\n";
-            DebugTrace(oss.str());
-        };
-
-        switch (type)
-        {
-        case SweetsType::Strawberry:
-            enforceMinimumCircleRadius(kMinimumBerryColliderRadius);
-            break;
-        case SweetsType::Blueberry:
-            enforceMinimumCircleRadius(kMinimumBlueberryColliderRadius);
-            break;
-        default:
-            break;
-        }
-
+        result.source = ColliderSource::Config;
         return result;
     }
 
@@ -1769,6 +1092,14 @@ namespace SweetsSpace
             halfExtents = float3{ radius, height * 0.5f, radius };
             break;
         }
+        case ColliderShape::Circle:
+        {
+            const float radius = std::max(
+                (scaledMax.x - scaledMin.x) * 0.5f,
+                (scaledMax.y - scaledMin.y) * 0.5f);
+            halfExtents = float3{ radius, radius, radius };
+            break;
+        }
         case ColliderShape::Box:
         default:
             halfExtents = float3{
@@ -1783,17 +1114,6 @@ namespace SweetsSpace
         halfExtents.y += preset.padding.y;
         halfExtents.z += preset.padding.z;
         return halfExtents;
-    }
-
-    float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
-    {
-        const float3 scaledMin = ScaleVector(bounds.min, scale);
-        const float3 scaledMax = ScaleVector(bounds.max, scale);
-        return float3{
-            (scaledMax.x + scaledMin.x) * 0.5f,
-            (scaledMax.y + scaledMin.y) * 0.5f,
-            (scaledMax.z + scaledMin.z) * 0.5f,
-        };
     }
 
     float3 ComputeExpandFromHalfExtents(const float3& halfExtents, const float3& transformScale)
@@ -1959,53 +1279,35 @@ namespace SweetsSpace
     {
         FactoryPreset preset{};
         preset.spawnWeight = 0.0f;
-        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
-        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.scale = float3{ 1.0f, 1.0f, 1.0f };
         preset.colliderPreset = ColliderPreset{};
 
         switch (type)
         {
-        case SweetsType::Cake:
+        case SweetsType::Cream:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
-            return preset;
-        case SweetsType::Pudding:
-            preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
-            return preset;
-        case SweetsType::Sherbet:
-            preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
-            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
+            preset.scale = float3{ 0.24f, 0.24f, 0.24f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.65f, 0.65f, 0.65f };
-            preset.maxScale = float3{ 1.15f, 1.15f, 1.15f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.18f, 0.18f, 0.18f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.05f, 0.02f } };
+            preset.scale = float3{ 0.34f, 0.34f, 0.34f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.016f, 0.01f } };
             return preset;
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
+            preset.scale = float3{ 0.32f, 0.32f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.005f, 0.005f, 0.005f } };
             return preset;
         default:
             return std::nullopt;
@@ -2014,39 +1316,48 @@ namespace SweetsSpace
 
     bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
     {
-        if (tokens.size() < 11)
+        if (tokens.size() < 8)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "工場プリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
-                << "個で足りてないよ（最低11個欲しい） \n";
+                << "個で足りてないよ（最低8個欲しい） \n";
             DebugTrace(oss.str());
             return false;
         }
 
         bool parseError = false;
         parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.minScale.x);
-        parseError |= !TryParseFloat(tokens[3], &outPreset.minScale.y);
-        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.z);
-        parseError |= !TryParseFloat(tokens[5], &outPreset.maxScale.x);
-        parseError |= !TryParseFloat(tokens[6], &outPreset.maxScale.y);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.z);
-        parseError |= !TryParseFloat(tokens[9], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[10], &outPreset.colliderPreset.padding.y);
-
-        if (tokens.size() > 11)
+        parseError |= !TryParseFloat(tokens[2], &outPreset.scale.x);
+        outPreset.scale.y = outPreset.scale.x;
+        outPreset.scale.z = outPreset.scale.x;
+        if (tokens.size() > 3 && !tokens[3].empty())
         {
-            parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.z);
+            parseError |= !TryParseFloat(tokens[3], &outPreset.scale.y);
+        }
+        if (tokens.size() > 4 && !tokens[4].empty())
+        {
+            parseError |= !TryParseFloat(tokens[4], &outPreset.scale.z);
+        }
+        parseError |= !TryParseFloat(tokens[6], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.colliderPreset.padding.y);
+
+        if (tokens.size() > 8)
+        {
+            parseError |= !TryParseFloat(tokens[8], &outPreset.colliderPreset.padding.z);
         }
         else
         {
             outPreset.colliderPreset.padding.z = 0.0f;
         }
 
-        const std::string colliderShape = NormalizeKey(tokens[8]);
+        const std::string colliderShape = NormalizeKey(tokens[5]);
         if (colliderShape == "capsule")
         {
             outPreset.colliderPreset.shape = ColliderShape::Capsule;
+        }
+        else if (colliderShape == "circle")
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Circle;
         }
         else if (colliderShape == "box" || colliderShape.empty())
         {
@@ -2055,7 +1366,7 @@ namespace SweetsSpace
         else
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[10]
+            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[5]
                 << "' が知らない形だったから、とりあえず Box にしとくね\n";
             DebugTrace(oss.str());
             outPreset.colliderPreset.shape = ColliderShape::Box;
@@ -2127,8 +1438,7 @@ namespace SweetsSpace
                 << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
                 << " resolvedKey='" << resolvedKey << "'"
                 << " spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
@@ -2226,6 +1536,8 @@ namespace SweetsSpace
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
         , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
         , m_forceGeneratedColliders(false)
+        , m_forceConfigColliders(false)
+        , m_forceConfigColliderKinds()
         , m_colliderConfigOverridesEnabled(true)
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
@@ -2236,28 +1548,12 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Ground, SweetsList{});
         m_byState.emplace(SweetsState::Carried, SweetsList{});
 
-        if (!Collision::LoadColliderDefinitions(kColliderConfigPath, m_colliderDefinitions))
+        if (!Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath))
         {
-            DebugTrace(std::string(kLogPrefix) + "コライダー定義のロードに失敗したから、AABB の代替を使うね\n");
-        }
-        else
-        {
-            std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
-            for (const auto& entry : m_colliderDefinitions)
-            {
-                const std::string normalizedKey = NormalizeKey(entry.first);
-                normalizedDefinitions[normalizedKey] = entry.second;
-
-                if (normalizedKey != entry.first)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "コライダー定義のキーを '" << entry.first
-                        << "' から '" << normalizedKey << "' に揃えておいたよ \n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-            m_colliderDefinitions.swap(normalizedDefinitions);
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ConfigError] collider registry '" << kColliderRegistryPath
+                << "' を読み込めなかったからデフォルト形状に頼るかもしれないよ\n";
+            Diagnostics::LogInfo(oss.str());
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
@@ -2314,8 +1610,7 @@ namespace SweetsSpace
             }
             presetLog << " source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")"
@@ -2369,19 +1664,15 @@ namespace SweetsSpace
                 }
 
                 const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
-                auto model = type == SweetsType::Fairy ? CreateProceduralFairyModel() : nullptr;
-                if (!model)
+                auto model = cache.Get(primaryPath);
+                if (!model && primaryPath != kPlaceholderModelPath)
                 {
-                    model = cache.Get(primaryPath);
-                    if (!model && primaryPath != kPlaceholderModelPath)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "スイーツ '" << descriptorKey
-                            << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
-                            << "' を試してみるね \n";
-                        DebugTrace(warn.str());
-                        model = cache.Get(kPlaceholderModelPath);
-                    }
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "スイーツ '" << descriptorKey
+                        << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
+                        << "' を試してみるね \n";
+                    DebugTrace(warn.str());
+                    model = cache.Get(kPlaceholderModelPath);
                 }
 
                 if (!model)
@@ -2404,82 +1695,72 @@ namespace SweetsSpace
                 }
 
                 Transform physicsTransform = transform;
+                physicsTransform.scale = preset.scale;
                 VisualTransform visualTransform{};
                 visualTransform.position = physicsTransform.position;
                 visualTransform.rotation = physicsTransform.rotation;
+                visualTransform.scale = physicsTransform.scale;
 
-                const auto computeDeterministicScale = [](float minValue, float maxValue)
+                const bool allowMeshPhysics = descriptor->allowMeshPhysics;
+
+                auto shapeConfig = BuildBaseShapeConfig(type);
+
+                Physics::BoxColliderComponent colliderComponent{};
+                std::string colliderLookupId = resolvedKind;
+                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+                if (!registryDefinition && resolvedKind != ToString(type))
                 {
-                    const float lo = std::min(minValue, maxValue);
-                    const float hi = std::max(minValue, maxValue);
-                    return (lo + hi) * 0.5f;
-                };
-
-                const float3 sampledScale{
-                    computeDeterministicScale(preset.minScale.x, preset.maxScale.x),
-                    computeDeterministicScale(preset.minScale.y, preset.maxScale.y),
-                    computeDeterministicScale(preset.minScale.z, preset.maxScale.z)
-                };
-
-                const float normalizationScale = ComputeNormalizationScale(*model, descriptorKey.c_str());
-                float3 finalScale = float3
-                {
-                    physicsTransform.scale.x * sampledScale.x * normalizationScale,
-                    physicsTransform.scale.y * sampledScale.y * normalizationScale,
-                    physicsTransform.scale.z * sampledScale.z * normalizationScale
-                };
-
-                finalScale = ClampScaleToGameplayRange(finalScale, descriptorKey.c_str());
-                visualTransform.scale = finalScale;
-                physicsTransform.scale = visualTransform.scale;
-
-                const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(model, visualTransform.scale);
-                float appliedPivotOffsetY = pivotInfo.offsetY;
-                if ((type == SweetsType::Strawberry || type == SweetsType::Blueberry) && pivotInfo.rawOffsetY < 0.0f)
-                {
-                    appliedPivotOffsetY = std::max(pivotInfo.offsetY, 0.0f);
+                    colliderLookupId = ToString(type);
+                    registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 }
 
-                physicsTransform.position.y += appliedPivotOffsetY;
-                visualTransform.position.y += appliedPivotOffsetY;
-
-                const auto colliderBuild = BuildColliderForSweets(kind, type, physicsTransform, descriptor->modelPath, model);
-
-                if (colliderBuild.shapeConfig.type == Box2DShapeConfig::Type::None)
+                if (registryDefinition)
                 {
-                    DebugTrace(std::string(kLogPrefix) + "ボディ形状が無効だから、このスイーツの生成はスキップするね\n");
-                    return nullptr;
+                    colliderComponent.colliderId = colliderLookupId;
+                    colliderComponent.shapes = registryDefinition->shapes;
+                    colliderComponent.shapeDef = registryDefinition->shapeDef;
+
+                    shapeConfig.type = InferShapeType(registryDefinition->shapes);
+                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+                }
+                else
+                {
+                    colliderComponent.colliderId = resolvedKind;
+                    if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "colliderId='" << resolvedKind
+                            << "' のレジストリエントリが見つからないから、フィクスチャの構築はスキップされるかも\n";
+                        DebugTrace(warn.str());
+                    }
                 }
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
-                    Core::UpdatePhase::Physics, 0);
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
+                    Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
                 if (sweets)
                 {
-                    sweets->SetBox2DMesh(colliderBuild.meshPolygons, colliderBuild.meshBoundary);
+                    const std::string colliderIdForLog = colliderComponent.colliderId;
+                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
                     sweets->SetVisualTransform(visualTransform);
 
-                    const char* sourceLabel = "fallback";
-                    switch (colliderBuild.source)
-                    {
-                    case ColliderSource::Config:
-                        sourceLabel = "config";
-                        break;
-                    case ColliderSource::Generated:
-                        sourceLabel = "mesh";
-                        break;
-                    default:
-                        break;
-                    }
+#if defined(_DEBUG)
+                    std::ostringstream colliderLog;
+                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
+                        << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
+                        << ") colliderId='" << colliderIdForLog << "'"
+                        << "\n";
+                    DebugTrace(colliderLog.str());
+#endif
 
                     std::ostringstream created;
                     created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
-                        << ") pivotOffsetY(raw/clamped/applied)=" << pivotInfo.rawOffsetY << '/' << pivotInfo.offsetY << '/' << appliedPivotOffsetY
-                        << " halfHeight=" << pivotInfo.halfHeight
-                        << " colliderSource=" << sourceLabel
+                        << " colliderId='" << resolvedKind << "'"
                         << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
                     Diagnostics::LogInfo(created.str());
                 }
@@ -2497,7 +1778,6 @@ namespace SweetsSpace
             }
         }
 
-        ApplyDefaultPhaseConfigs();
         ApplyDefaultPhaseConfigs();
 
     }
@@ -2730,8 +2010,23 @@ namespace SweetsSpace
 
     float SweetsManager::GetHighestStackedHeight() const
     {
-        float maxHeight = 0.0f;
+        //確認用のログ
+  /*      ::DebugTrace("[SweetsDEBUG] ENTER 1\n");
+
+        ::DebugTrace("[SweetsDEBUG] before GetByState\n");
         const auto& stacked = GetByState(SweetsState::Stacked);
+        ::DebugTrace("[SweetsDEBUG] after GetByState\n");
+
+        if (stacked.empty())
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked EMPTY\n");
+        }OnUpdate
+        else
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked NOT empty\n");
+        }*/
+        float maxHeight = 0.0f;
+       const auto& stacked = GetByState(SweetsState::Stacked);
         for (const auto& sweets : stacked)
         {
             if (!sweets || sweets->IsPendingDestroy())
@@ -2992,8 +2287,12 @@ namespace SweetsSpace
             return nullptr;
         }
     
+        if (!RegisterWithSystems(sweets))
+        {
+            return nullptr;
+        }
+
         SetState(sweets, SweetsState::Active);
-        RegisterWithSystems(sweets);
 
         if (m_physicsMachine && sweets)
         {
@@ -3172,7 +2471,7 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets);
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
@@ -3238,12 +2537,31 @@ namespace SweetsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
-    void SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
+    bool SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
-            return;
+            return false;
         }
+
+        const auto cleanupFailedRegistration = [&](const std::string& reason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Error] " << reason << '\n';
+            DebugTrace(oss.str());
+
+            ClearContactState(sweets.get());
+            sweets->MarkPendingDestroy();
+            sweets->Enable(false);
+            UnregisterSweetsFromSystems(sweets, "RegisterWithSystems", false);
+
+            for (auto& entry : m_byState)
+            {
+                entry.second.remove(sweets);
+            }
+            m_lookup.erase(sweets);
+            return false;
+        };
 
         if (m_scheduler)
         {
@@ -3261,18 +2579,13 @@ namespace SweetsSpace
         if (m_physicsMachine)
         {
             const auto& colliderComponent = sweets->GetBoxColliderComponent();
-            const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
-            const auto shapeConfig = sweets->GetBox2DShapeConfig();
-            const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-            const bool hasMeshFixtures = sweets->HasBox2DMesh() || !sweets->GetBox2DBoundary().empty();
+            const bool hasColliderComponent = static_cast<bool>(colliderComponent);
 
-            if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
+            if (!hasColliderComponent)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
-                    << "' の物理登録を飛ばすね コライダー設定が見当たらない \n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
+                return cleanupFailedRegistration(oss.str());
             }
 
             const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
@@ -3288,11 +2601,9 @@ namespace SweetsSpace
             if (!hasBody || fixtureCount <= 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
-                    << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
-                    << " fixtures=" << fixtureCount << "\n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
+                    << " fixtures=" << fixtureCount;
+                return cleanupFailedRegistration(oss.str());
             }
 
             m_registeredPhysicsBodies.insert(sweets.get());
@@ -3318,6 +2629,8 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
+
+        return true;
     }
 
     void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings)
@@ -3440,7 +2753,6 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "フェーズのスポーン設定が '" << path << "' に見つからないから、デフォルトを使うね \n";
             DebugTrace(oss.str());
-            ApplyDefaultPhaseConfigs();
             return false;
         }
 
@@ -3958,6 +3270,49 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    {
+        std::unordered_set<std::string> normalizedKinds;
+        normalizedKinds.reserve(kinds.size());
+        for (const auto& kind : kinds)
+        {
+            const auto resolved = ResolveKindKey(kind);
+            normalizedKinds.insert(NormalizeKey(resolved));
+        }
+
+        const bool changed = (m_forceConfigColliders != force) || (normalizedKinds != m_forceConfigColliderKinds);
+        m_forceConfigColliders = force;
+        m_forceConfigColliderKinds = std::move(normalizedKinds);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "設定コライダー強制 " << (force ? "ON" : "OFF")
+            << " kindOverrides=";
+        if (m_forceConfigColliderKinds.empty())
+        {
+            oss << "<none>";
+        }
+        else
+        {
+            bool first = true;
+            for (const auto& kind : m_forceConfigColliderKinds)
+            {
+                if (!first)
+                {
+                    oss << ',';
+                }
+                oss << kind;
+                first = false;
+            }
+        }
+        oss << " 設定ファイルの形状があるなら必ず使うね\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "設定コライダー強制フラグは前と同じだよ \n");
+        }
+    }
+
     void SweetsManager::SetColliderConfigOverridesEnabled(bool enabled)
     {
         const bool changed = m_colliderConfigOverridesEnabled != enabled;
@@ -4287,7 +3642,7 @@ namespace SweetsSpace
             for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
             {
                 const float3& origin = emitOrigins[originIndex];
-                Transform transform = BuildSpawnTransform(origin);
+                Transform transform = BuildSpawnTransform(kind, origin);
                 Spawn(kind, transform);
             }
         }
@@ -4528,7 +3883,7 @@ namespace SweetsSpace
         return origin;
     }
    
-    Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
+    Transform SweetsManager::BuildSpawnTransform(const std::string& normalizedKind, const float3& origin)
     {
         Transform transform{};
         transform.position = origin;
@@ -4540,6 +3895,19 @@ namespace SweetsSpace
         transform.position.y += m_spawnHeightOffset;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        auto presetIt = m_factoryPresets.find(normalizedKind);
+        if (presetIt != m_factoryPresets.end())
+        {
+            transform.scale = presetIt->second.scale;
+        }
+        else if (m_warnedMissingFactoryPresetKinds.insert(normalizedKind).second)
+        {
+            std::ostringstream warn;
+            warn << kLogPrefix << "種類 '" << normalizedKind
+                << "' の工場プリセットが見つからないから、スケールはデフォルト(1,1,1)にしとくね\n";
+            DebugTrace(warn.str());
+        }
 
         const auto computeDeterministicRotation = [](float minDeg, float maxDeg)
         {
@@ -4556,9 +3924,29 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
             << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+            << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
             << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
         DebugTrace(oss.str());
 
         return transform;
     }
+
+
+    //void SweetsManager::OnSweetsPassedGuideline(
+    //    const std::shared_ptr<ActiveSweets>& sweets)
+    //{
+    //    if (!sweets)
+    //    {
+    //        return;
+    //    }
+
+    //    // 追加①：状態遷移
+    //    SetState(sweets, SweetsState::Stacked);
+
+    //    // 追加②：時間加算
+    //    if (m_heightBonusSeconds > 0.0f && m_timeManager)
+    //    {
+    //        m_timeManager->AddTime(m_heightBonusSeconds);
+    //    }
+    //}
 }

@@ -16,6 +16,7 @@
 #include <sstream>
 #include <vector>
 #include <thread>
+#include <unordered_map>
 #include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
@@ -88,12 +89,10 @@ namespace
             return "Assets/Texture/blueberry.png";
         case SweetsType::Pineapple:
             return "Assets/Texture/pineapple.png";
-        case SweetsType::Cake:
-        case SweetsType::Pudding:
-        case SweetsType::Sherbet:
         case SweetsType::Banana:
+            return "Assets/Texture/banana.png";
+        case SweetsType::Cream:
             return "Assets/Texture/cream.png";
-        case SweetsType::Fairy:
         default:
             return std::nullopt;
         }
@@ -137,9 +136,84 @@ namespace
         {
             return "Assets/Texture/pineapple.png";
         }
-        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana"))
+        if (contains("cream"))
         {
             return "Assets/Texture/cream.png";
+        }
+        if (contains("banana"))
+        {
+            return "Assets/Texture/banana.png";
+        }
+
+        return std::nullopt;
+    }
+
+    std::unordered_map<std::string, std::string> BuildTextureAliasMap()
+    {
+        std::unordered_map<std::string, std::string> aliases;
+
+        const auto addAlias = [&aliases](const std::string& alias, const std::string& target)
+        {
+            aliases.emplace(NormalizeForKey(alias), target);
+        };
+
+        addAlias("パイナップル.png", "pineapple.png");
+        addAlias("パイナップル.png", "pineapple.png");
+        addAlias("バナナ.png", "banana.png");
+        addAlias("ブルーベリー.png", "blueberry.png");
+        addAlias("ストロベリー.png", "strawberry.png");
+        addAlias("いちご.png", "strawberry.png");
+        addAlias("クリーム.png", "cream.png");
+
+        return aliases;
+    }
+
+    std::unordered_map<std::string, std::string> BuildModelTextureOverrideMap()
+    {
+        std::unordered_map<std::string, std::string> overrides;
+
+        const auto addOverride = [&overrides](const std::string& model, const std::string& texture)
+        {
+            overrides.emplace(NormalizeForKey(model), texture);
+        };
+
+        addOverride("cake.fbx", "Assets/Texture/cake.png");
+        addOverride("assets/model/cake.fbx", "Assets/Texture/cake.png");
+        addOverride("osara.fbx", "Assets/Texture/osara.png");
+        addOverride("assets/model/osara.fbx", "Assets/Texture/osara.png");
+
+        return overrides;
+    }
+
+    std::optional<std::string> ResolveTextureAlias(const std::string& fileName)
+    {
+        static const std::unordered_map<std::string, std::string> kAliases = BuildTextureAliasMap();
+        const std::string normalized = NormalizeForKey(fileName);
+
+        const auto it = kAliases.find(normalized);
+        if (it != kAliases.end())
+        {
+            return it->second;
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> ResolveTextureOverrideForModel(const std::string& normalizedModelPath)
+    {
+        static const std::unordered_map<std::string, std::string> kOverrides = BuildModelTextureOverrideMap();
+
+        const auto directIt = kOverrides.find(NormalizeForKey(normalizedModelPath));
+        if (directIt != kOverrides.end())
+        {
+            return directIt->second;
+        }
+
+        const std::filesystem::path asPath{ normalizedModelPath };
+        const auto fileIt = kOverrides.find(NormalizeForKey(asPath.filename().string()));
+        if (fileIt != kOverrides.end())
+        {
+            return fileIt->second;
         }
 
         return std::nullopt;
@@ -147,32 +221,58 @@ namespace
 
     std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
     {
-        const std::string normalizedPath = NormalizePath(modelPath);
+        const std::string normalizedModelPath = NormalizePath(modelPath);
 
-        if (auto mapped = ResolveTextureFromManifest(normalizedPath))
+        if (auto override = ResolveTextureOverrideForModel(normalizedModelPath))
         {
-            return mapped;
+            if (std::filesystem::exists(*override))
+            {
+                return override;
+            }
         }
 
-        return GuessTextureFromFilename(normalizedPath);
+        if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*fromManifest))
+            {
+                return fromManifest;
+            }
+        }
+
+        if (auto guessed = GuessTextureFromFilename(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*guessed))
+            {
+                return guessed;
+            }
+        }
+
+        return std::nullopt;
     }
 
-    std::optional<std::string> ResolveFallbackTextureByName(const std::string& textureName,
-        const std::string& modelPath)
+    std::optional<std::string> ResolveFallbackTextureByName(const std::string& sanitizedFile, const std::string& modelPath)
     {
-        if (auto mapped = ResolveTextureFromManifest(modelPath))
+        if (auto alias = ResolveTextureAlias(sanitizedFile))
         {
-            return mapped;
+            const std::string remapped = "Assets/Texture/" + *alias;
+            if (std::filesystem::exists(remapped))
+            {
+                return remapped;
+            }
         }
 
-        if (auto guessed = GuessTextureFromFilename(textureName))
+        const std::string normalizedFile = NormalizePath(sanitizedFile);
+        if (auto guess = GuessTextureFromFilename(normalizedFile))
         {
-            return guessed;
+            if (std::filesystem::exists(*guess))
+            {
+                return guess;
+            }
         }
 
-        const std::filesystem::path nameOnly(textureName);
-        return GuessTextureFromFilename(NormalizePath(nameOnly.string()));
+        return ResolveFallbackTexture(modelPath);
     }
+
 
     bool ContainsNonAscii(const std::string& value)
     {
@@ -191,6 +291,7 @@ namespace
                         == std::tolower(static_cast<unsigned char>(r));
                 });
     }
+
 
     struct ImportResult
     {
@@ -592,7 +693,7 @@ AssimpModelLorder::MakeMaterial(
                     const std::string sanitizedPath = "Assets/Texture/" + fileName;
 
                     DebugLog::DebugMessage(
-                        "[Material] テクスチャパスを正規化 '" + originalTexPath +
+                        std::string("[Material] テクスチャパスを正規化 '") + originalTexPath +
                         "' -> '" + sanitizedPath + "'");
 
                     if (std::filesystem::exists(sanitizedPath))
@@ -601,10 +702,29 @@ AssimpModelLorder::MakeMaterial(
                         textureDirectory = "Assets/Texture/";
                         sanitizedFile = fileName;
                     }
+                    else if (auto alias = ResolveTextureAlias(fileName))
+                    {
+                        const std::string remappedPath = "Assets/Texture/" + *alias;
+                        if (std::filesystem::exists(remappedPath))
+                        {
+                            texFile = *alias;
+                            textureDirectory = "Assets/Texture/";
+                            sanitizedFile = *alias;
+                            DebugLog::DebugMessage(
+                                std::string("[Material] テクスチャ '") + fileName + "' を '" + *alias + "' にマッピング");
+                        }
+                        else
+                        {
+                            DebugLog::DebugMessage(
+                                std::string("[AssimpModelLoader][WARNING] テクスチャエイリアス '") +
+                                remappedPath + "' が見つからないためスキップ");
+                            skipTextureLoading = true;
+                        }
+                    }
                     else
                     {
                         DebugLog::DebugMessage(
-                            "[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '" +
+                            std::string("[AssimpModelLoader][WARNING] 正規化後のテクスチャパスが存在しない: '") +
                             sanitizedPath + "' テクスチャをスキップ");
                         skipTextureLoading = true;
                     }
@@ -652,7 +772,7 @@ AssimpModelLorder::MakeMaterial(
                     }
 
                     DebugLog::DebugMessage(
-                        "[AssimpModelLoader][CHECKPOINT C] マテリアル=" + std::to_string(i)
+                        std::string("[AssimpModelLoader][CHECKPOINT C] マテリアル=") + std::to_string(i)
                         + " diffuse='" + texFile
                         + "' baseColor='" + baseColorStr
                         + "' modelDir=" + directory
@@ -671,14 +791,14 @@ AssimpModelLorder::MakeMaterial(
                         if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
                         {
                             DebugLog::DebugMessage(
-                                "[Material] 無効なパス '" + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
+                                std::string("[Material] 無効なパス '") + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
                             full = *fallback;
                             skipTextureLoad = false;
                         }
                         else
                         {
                             DebugLog::DebugMessage(
-                                "[Material][WARNING] フォールバックテクスチャが見つからない '" + texFile + "' テクスチャをスキップ");
+                                std::string("[Material][WARNING] フォールバックテクスチャが見つからない '") + texFile + "' テクスチャをスキップ");
                             skipTextureLoad = true;
                         }
                     }
@@ -701,7 +821,7 @@ AssimpModelLorder::MakeMaterial(
                 if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
                 {
                     DebugLog::DebugMessage(
-                        "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
+                        std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
                     std::wstring wfull(fallback->begin(), fallback->end());
                     texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
                 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #include <box2d/box2d.h>
 
@@ -23,6 +24,10 @@ namespace Physics
     // Simple collider component that describes shapes and materials for an entity.
     struct BoxColliderComponent
     {
+        // Identifier used to resolve shared collider definitions from the registry.
+        std::string colliderId{};
+        // Optional local offset applied to all shapes after lookup.
+        b2Vec2 colliderOffset{ 0.0f, 0.0f };
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
         std::vector<ColliderShapeDescriptor> shapes;
         int createdFixtureCount{ 0 };
@@ -32,6 +37,8 @@ namespace Physics
             shapes.clear();
             createdFixtureCount = 0;
             shapeDef = b2DefaultShapeDef();
+            colliderId.clear();
+            colliderOffset = b2Vec2{ 0.0f, 0.0f };
         }
 
         bool Empty() const

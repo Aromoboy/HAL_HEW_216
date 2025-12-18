@@ -181,8 +181,8 @@
     <ClCompile Include="EffectSystem.cpp" />
     <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
+    <ClCompile Include="src\ColliderRegistry.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
-    <ClCompile Include="src\Collision2D.cpp" />
     <ClCompile Include="include\PowerUpRenderer.cpp" />
     <ClCompile Include="include\PowerUpTarget.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
@@ -222,7 +222,6 @@
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
-    <ClCompile Include="src\Entities\CollisionEntity.cpp" />
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="src\Entities\Player.cpp" />
@@ -239,8 +238,6 @@
     <ClCompile Include="src\ScenePowerUp.cpp" />
     <ClCompile Include="src\SpriteRenderer.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
-    <ClCompile Include="src\Stage\OsaraPlate.cpp" />
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
     <ClCompile Include="src\Systems\Box2DContactListener.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
@@ -271,9 +268,8 @@
     <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
+    <ClInclude Include="include\ColliderRegistry.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
-    <ClInclude Include="include\Collision2D.h" />
-    <ClInclude Include="include\CollisionEntity.h" />
     <ClInclude Include="include\CollisionLayer.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
@@ -311,7 +307,6 @@
     <ClInclude Include="include\DirectX.h" />
     <ClInclude Include="include\DrawMatrix.h" />
     <ClInclude Include="include\Entity.h" />
-    <ClInclude Include="include\Entities\CollisionEntity.h" />
     <ClInclude Include="include\Entities\Entity.h" />
     <ClInclude Include="include\Entities\PhysicalEntity.h" />
     <ClInclude Include="include\Physical.h" />
@@ -324,7 +319,6 @@
     <ClInclude Include="include\BackgroundRenderer.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
     <ClInclude Include="include\ICamera.h" />
-    <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
     <ClInclude Include="include\Components\BoxColliderComponent.h" />
@@ -346,8 +340,6 @@
     <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
-    <ClInclude Include="include\Stage\OsaraPlate.h" />
-    <ClInclude Include="include\Stage\FoundationPlatform.h" />
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
     <ClInclude Include="include\Systems\IntegrateSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />

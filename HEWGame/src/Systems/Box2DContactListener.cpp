@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <sstream>
+#include <span>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <box2d/collision.h>
 #include <box2d/id.h>
@@ -49,69 +52,190 @@ namespace Systems
                 // valid until the next world step. They must not be freed by the listener.
 
                 constexpr int kMaxLogsPerFrame = 4;
-                constexpr int kMaxUnknownShapeLogsPerFrame = 8;
+                constexpr int kMaxDroppedEventLogsPerFrame = 8;
                 int loggedMeshContacts = 0;
-                int loggedUnknownShapes = 0;
+                int loggedDroppedEvents = 0;
 
-                const auto logUnknownShape = [&](b2ShapeId shapeId)
+                struct ShapeValidationResult
+                {
+                        bool valid{ false };
+                        const char* reason{ nullptr };
+                        uint64_t bodyKey{ 0 };
+                };
+
+                struct DroppedEventKey
+                {
+                        uint64_t bodyA = 0;
+                        uint64_t bodyB = 0;
+                        std::string eventType{};
+                        std::string reason{};
+
+                        bool operator==(const DroppedEventKey& other) const noexcept
+                        {
+                                return bodyA == other.bodyA
+                                    && bodyB == other.bodyB
+                                    && eventType == other.eventType
+                                    && reason == other.reason;
+                        }
+                };
+
+                struct DroppedEventKeyHash
+                {
+                        size_t operator()(const DroppedEventKey& key) const noexcept
+                        {
+                                size_t hash = std::hash<uint64_t>{}(key.bodyA);
+                                hash ^= std::hash<uint64_t>{}(key.bodyB) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                hash ^= std::hash<std::string>{}(key.eventType) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                hash ^= std::hash<std::string>{}(key.reason) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                                return hash;
+                        }
+                };
+
+                struct DroppedEventLog
+                {
+                        std::string message;
+                        int count = 0;
+                };
+
+                std::unordered_map<DroppedEventKey, DroppedEventLog, DroppedEventKeyHash> droppedEventLogs;
+
+                const auto validateShapeAndBody = [&](b2ShapeId shapeId)
                     {
-                        if (loggedUnknownShapes >= kMaxUnknownShapeLogsPerFrame)
+                        ShapeValidationResult result{};
+                        if (!b2Shape_IsValid(shapeId))
                         {
-                            return;
+                                result.reason = "invalid shape";
+                                return result;
                         }
 
-                        const bool shapeIsValid = b2Shape_IsValid(shapeId);
-
-                        std::ostringstream oss;
-                        oss << "[Box2DContactListener] Contact event received for unknown shape id=";
-                        if (shapeIsValid)
+                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                        if (b2Body_IsValid(bodyId))
                         {
-                                oss << b2StoreShapeId(shapeId);
-                        }
-                        else
-                        {
-                                oss << "<invalid>";
+                                result.bodyKey = b2StoreBodyId(bodyId);
                         }
 
-                        if (shapeIsValid)
+                        const uint64_t shapeKey = b2StoreShapeId(shapeId);
+                        if (m_destroyedShapeIds.contains(shapeKey))
                         {
-                                const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                                oss << " bodyId=";
-                                if (b2Body_IsValid(bodyId))
+                                result.reason = "destroyed shape";
+                                return result;
+                        }
+
+                        if (!b2Body_IsValid(bodyId))
+                        {
+                                result.reason = "invalid body";
+                                return result;
+                        }
+
+                        if (m_destroyedBodyIds.contains(result.bodyKey))
+                        {
+                                result.reason = "destroyed body";
+                                return result;
+                        }
+
+                        result.valid = true;
+                        return result;
+                    };
+
+                const auto shapeMatchesEntity = [&](Entities::PhysicalEntity* entity, b2ShapeId shapeId)
+                    {
+                        if (!entity)
+                        {
+                            return false;
+                        }
+
+                        if (!b2Shape_IsValid(shapeId))
+                        {
+                            return false;
+                        }
+
+                        const b2BodyId shapeBodyId = b2Shape_GetBody(shapeId);
+                        const b2BodyId entityBodyId = entity->GetBox2DBodyId();
+                        if (!b2Body_IsValid(shapeBodyId) || !b2Body_IsValid(entityBodyId))
+                        {
+                            return false;
+                        }
+
+                        return entity->HasBox2DBody()
+                            && b2StoreBodyId(shapeBodyId) == b2StoreBodyId(entityBodyId);
+                    };
+
+                const auto hasValidFixtures = [](Entities::PhysicalEntity* entity)
+                    {
+                        if (!entity)
+                        {
+                            return false;
+                        }
+
+                        const auto& colliderComponent = entity->GetBoxColliderComponent();
+                        const int createdFixtures = colliderComponent ? colliderComponent->createdFixtureCount : 0;
+                        return createdFixtures > 0;
+                    };
+
+                const auto recordDroppedEvent = [&](const char* eventType, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
+                                                std::string reason, uint64_t bodyKeyA, uint64_t bodyKeyB)
+                    {
+                        if (!m_logDroppedEvents)
+                        {
+                                return;
+                        }
+
+                        const uint64_t orderedA = std::min(bodyKeyA, bodyKeyB);
+                        const uint64_t orderedB = std::max(bodyKeyA, bodyKeyB);
+                        DroppedEventKey key{ orderedA, orderedB, eventType ? eventType : "", std::move(reason) };
+                        auto [it, inserted] = droppedEventLogs.try_emplace(std::move(key));
+                        ++it->second.count;
+
+                        if (inserted)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DContactListener][Error] Dropped " << eventType
+                                    << " contact event for shapes=";
+                                if (b2Shape_IsValid(shapeIdA))
                                 {
-                                        oss << b2StoreBodyId(bodyId);
+                                        oss << b2StoreShapeId(shapeIdA);
                                 }
                                 else
                                 {
                                         oss << "<invalid>";
                                 }
-                        }
-                        else
-                        {
-                                oss << " (invalid shape)";
-                        }
+                                oss << ",";
+                                if (b2Shape_IsValid(shapeIdB))
+                                {
+                                        oss << b2StoreShapeId(shapeIdB);
+                                }
+                                else
+                                {
+                                        oss << "<invalid>";
+                                }
+                                if (!it->first.reason.empty())
+                                {
+                                        oss << " reason=" << it->first.reason;
+                                }
 
-                        oss << "\n";
-                        DebugTrace(oss.str());
-                        ++loggedUnknownShapes;
+                                it->second.message = oss.str();
+                        }
                     };
 
-                const auto validateShapeAndBody = [&](b2ShapeId shapeId)
+                const auto flushDroppedEventLogs = [&]()
                     {
-                        if (!b2Shape_IsValid(shapeId))
+                        for (const auto& [key, log] : droppedEventLogs)
                         {
-                            logUnknownShape(shapeId);
-                            return false;
-                        }
+                                if (loggedDroppedEvents >= kMaxDroppedEventLogsPerFrame)
+                                {
+                                        break;
+                                }
 
-                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
-                        if (!b2Body_IsValid(bodyId))
-                        {
-                            logUnknownShape(shapeId);
-                            return false;
+                                std::ostringstream oss;
+                                oss << log.message;
+                                if (log.count > 1)
+                                {
+                                        oss << " occurrences=" << log.count;
+                                }
+                                oss << "\n";
+                                DebugTrace(oss.str());
+                                ++loggedDroppedEvents;
                         }
-
-                        return true;
                     };
 
                 const std::span<const b2ContactBeginTouchEvent> beginEvents =
@@ -121,24 +245,37 @@ namespace Systems
                         : std::span<const b2ContactBeginTouchEvent>();
                 for (const b2ContactBeginTouchEvent& evt : beginEvents)
                 {
-                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
-                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
-                        if (!shapeAValid || !shapeBValid)
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 continue;
                         }
 
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
-                        if (!entityA)
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
                         {
-                                logUnknownShape(evt.shapeIdA);
+                                if (bodiesMatchShapes)
+                                {
+                                        recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                }
+                                continue;
                         }
-                        if (!entityB)
-                        {
-                                logUnknownShape(evt.shapeIdB);
-                        }
+
                         BeginContact(entityA, entityB);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
@@ -160,30 +297,47 @@ namespace Systems
                         : std::span<const b2ContactEndTouchEvent>();
                 for (const b2ContactEndTouchEvent& evt : endEvents)
                 {
-                        const bool shapeAValid = validateShapeAndBody(evt.shapeIdA);
-                        const bool shapeBValid = validateShapeAndBody(evt.shapeIdB);
-                        if (!shapeAValid || !shapeBValid)
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 continue;
                         }
 
                         Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
                         Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
 
-                        if (!entityA)
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
                         {
-                                logUnknownShape(evt.shapeIdA);
+                                if (bodiesMatchShapes)
+                                {
+                                        recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
+                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                }
+                                continue;
                         }
-                        if (!entityB)
-                        {
-                                logUnknownShape(evt.shapeIdB);
-                        }
+
                         EndContact(entityA, entityB);
                 }
 
                 // Contact hit events are intentionally ignored for now; Box2D owns the buffer.
                 (void)events.hitEvents;
                 (void)events.hitCount;
+
+                flushDroppedEventLogs();
+                m_destroyedBodyIds.clear();
+                m_destroyedShapeIds.clear();
 
         }
 
@@ -202,6 +356,11 @@ namespace Systems
                 m_logMeshContacts = enabled;
         }
 
+        void Box2DContactListener::EnableDroppedEventLogging(bool enabled)
+        {
+                m_logDroppedEvents = enabled;
+        }
+
         void Box2DContactListener::SetWorld(b2WorldId worldId)
         {
                 m_worldId = worldId;
@@ -210,6 +369,22 @@ namespace Systems
         void Box2DContactListener::SetPhysicsMachine(PhysicsMachine* physicsMachine)
         {
                 m_physicsMachine = physicsMachine;
+        }
+
+        void Box2DContactListener::NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes)
+        {
+                if (b2Body_IsValid(bodyId))
+                {
+                        m_destroyedBodyIds.insert(b2StoreBodyId(bodyId));
+                }
+
+                for (const b2ShapeId shapeId : shapes)
+                {
+                        if (b2Shape_IsValid(shapeId))
+                        {
+                                m_destroyedShapeIds.insert(b2StoreShapeId(shapeId));
+                        }
+                }
         }
 
         void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -39,6 +40,7 @@ namespace Physics
         float density{ 1.0f };
         float friction{ 0.6f };
         float restitution{ 0.0f };
+        b2Vec2 offset{ 0.0f, 0.0f };
     };
 }
 
@@ -54,7 +56,8 @@ namespace Entities
             Systems::PhysicsMachine* physicsMachine = nullptr,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
             int priority = 0,
-            std::string tag = {});
+            std::string tag = {},
+            bool allowMeshPhysics = true);
 
         PhysicalEntity(const std::string& tag,
             const float3& pos,
@@ -63,7 +66,8 @@ namespace Entities
             std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
             Collision::CollisionLayer layer = Collision::CollisionLayer::Default,
             Core::UpdatePhase phase = Core::UpdatePhase::PrePhysics,
-            int priority = 0);
+            int priority = 0,
+            bool allowMeshPhysics = true);
 
         ~PhysicalEntity() override;
 
@@ -80,6 +84,9 @@ namespace Entities
         void SetRotation(const float3& rotation);
         void SetScale(const float3& scale);
 
+        void SetAllowMeshPhysics(bool allow);
+        bool IsMeshPhysicsAllowed() const noexcept { return m_allowMeshPhysics; }
+
         void SyncColliderBounds();
         void MarkTransformDirty();
         bool IsTransformDirty() const;
@@ -95,11 +102,19 @@ namespace Entities
         virtual void SetBox2DBodyId(b2BodyId bodyId);
         virtual b2BodyId GetBox2DBodyId() const;
         bool HasBox2DBody() const;
+        bool CollectBox2DShapes(std::vector<b2ShapeId>& outShapes, b2Transform& outBodyTransform, b2BodyId* outBodyId = nullptr) const;
+        bool GetBox2DBodyAABB(b2AABB& outAabb) const;
 
         float3 GetLinearVelocity() const;
         void SetLinearVelocity(const float3& velocity);
         float GetGravityScale() const;
         void SetGravityScale(float scale);
+
+        bool HasBodyCreationFailed() const;
+        bool CanAttemptBodyCreation() const;
+        void ResetBodyCreationFailure();
+        void MarkBodyCreationFailed();
+        void MarkPhysicsDefinitionChanged();
 
         void SyncTransformFromBox2DBody();
         void SyncBox2DBodyFromTransform();
@@ -126,9 +141,13 @@ namespace Entities
         const std::vector<std::vector<b2Vec2>>& GetBox2DPolygons() const;
         const std::vector<b2Vec2>& GetBox2DBoundary() const;
 
+        bool HasFixtureBuildFailure() const noexcept { return m_fixtureBuildFailed; }
+        void MarkFixtureBuildFailure(bool failed) noexcept { m_fixtureBuildFailed = failed; }
+
         void SetBoxColliderComponent(std::optional<Physics::BoxColliderComponent> component)
         {
             m_boxColliderComponent = std::move(component);
+            MarkPhysicsDefinitionChanged();
         }
 
         std::optional<Physics::BoxColliderComponent>& GetBoxColliderComponent()
@@ -166,6 +185,12 @@ namespace Entities
 
         std::optional<Physics::BoxColliderComponent> m_boxColliderComponent;
         std::optional<Physics::Box2DShapeConfig> m_box2dShapeConfig;
+        bool m_allowMeshPhysics{ true };
+        bool m_fixtureBuildFailed{ false };
+
+        bool m_bodyCreationFailed{ false };
+        std::uint64_t m_physicsDefinitionRevision{ 0 };
+        std::uint64_t m_bodyCreationFailedRevision{ 0 };
 
     private:
         void RecreateBox2DBody();
