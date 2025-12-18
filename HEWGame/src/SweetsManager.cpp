@@ -30,6 +30,7 @@
 #include "DirectX.h"
 #include "AABB.h"
 #include "ColliderRegistry.h"
+#include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
 #include "ModelCache.h"
@@ -340,6 +341,21 @@ namespace
         return std::max(thickness, sanitizedMin);
     }
 
+    bool IsColliderDefinitionEmpty(const Collision::ColliderDefinition& definition)
+    {
+        switch (definition.type)
+        {
+        case Collision::ColliderKind::Compound:
+            return definition.children.empty();
+        case Collision::ColliderKind::Hull:
+            return definition.points.empty();
+        case Collision::ColliderKind::Circle:
+            return definition.radius <= std::numeric_limits<float>::epsilon();
+        default:
+            return false;
+        }
+    }
+
     void UpdateBatchUsage(::SweetsSpace::DeleteBatchContext* batch, ::SweetsSpace::UseOutcome outcome)
     {
         if (!batch)
@@ -505,6 +521,8 @@ namespace
 
         return vertices;
     }
+
+    using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
 }
 
 namespace SweetsSpace
@@ -513,6 +531,27 @@ namespace SweetsSpace
     std::string NormalizeKey(const std::string& key);
     MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding, float minThickness);
 
+
+    SweetsManager::ColliderBuildResult SweetsManager::BuildColliderForSweets(const std::string& kind,
+        SweetsType type,
+        const Transform& transform,
+        const std::string& modelPath,
+        const std::shared_ptr<Render::Model>& model,
+        const float2& colliderCenter,
+        bool allowMeshPhysics)
+    {
+        (void)kind;
+        (void)transform;
+        (void)modelPath;
+        (void)model;
+        (void)colliderCenter;
+        (void)allowMeshPhysics;
+
+        ColliderBuildResult result{};
+        result.shapeConfig = BuildBaseShapeConfig(type);
+        result.source = ColliderSource::Config;
+        return result;
+    }
 
     float ComputeFallbackHorizontalLimit(float margin)
     {
@@ -1412,6 +1451,28 @@ namespace SweetsSpace
         return ResolveManifestKeyAlias(key);
     }
 
+    std::map<std::string, Collision::ColliderDefinition>::const_iterator SweetsManager::FindColliderDefinition(const std::string& key) const
+    {
+        const std::string canonicalKey = ResolveKindKey(key);
+        const std::string normalizedKey = NormalizeKey(key);
+        const std::string normalizedCanonical = NormalizeKey(canonicalKey);
+
+        if (auto normalized = m_colliderDefinitions.find(normalizedKey); normalized != m_colliderDefinitions.end())
+        {
+            return normalized;
+        }
+
+        if (normalizedCanonical != normalizedKey)
+        {
+            if (auto canonical = m_colliderDefinitions.find(normalizedCanonical); canonical != m_colliderDefinitions.end())
+            {
+                return canonical;
+            }
+        }
+
+        return m_colliderDefinitions.end();
+    }
+
     class LateUpdateNode : public Core::UpdateNode
     {
     public:
@@ -1473,6 +1534,9 @@ namespace SweetsSpace
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
         , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
         , m_forceGeneratedColliders(false)
+        , m_forceConfigColliders(false)
+        , m_forceConfigColliderKinds()
+        , m_colliderConfigOverridesEnabled(true)
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
         , m_lastLiveSweetsCount(0)
@@ -1495,6 +1559,7 @@ namespace SweetsSpace
 
         bool factoryParseError = false;
         const auto factoryOverrides = LoadFactoryPresets(&factoryParseError);
+        const ModelBounds fallbackBounds{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f }, true };
         const auto prototypes = manifest.Enumerate();
         if (prototypes.empty())
         {
@@ -3189,6 +3254,68 @@ namespace SweetsSpace
         if (!changed)
         {
             DebugTrace(std::string(kLogPrefix) + "生成コライダー強制フラグは前回と同じだよ \n");
+        }
+    }
+
+    void SweetsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    {
+        std::unordered_set<std::string> normalizedKinds;
+        normalizedKinds.reserve(kinds.size());
+        for (const auto& kind : kinds)
+        {
+            const auto resolved = ResolveKindKey(kind);
+            normalizedKinds.insert(NormalizeKey(resolved));
+        }
+
+        const bool changed = (m_forceConfigColliders != force) || (normalizedKinds != m_forceConfigColliderKinds);
+        m_forceConfigColliders = force;
+        m_forceConfigColliderKinds = std::move(normalizedKinds);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "設定コライダー強制 " << (force ? "ON" : "OFF")
+            << " kindOverrides=";
+        if (m_forceConfigColliderKinds.empty())
+        {
+            oss << "<none>";
+        }
+        else
+        {
+            bool first = true;
+            for (const auto& kind : m_forceConfigColliderKinds)
+            {
+                if (!first)
+                {
+                    oss << ',';
+                }
+                oss << kind;
+                first = false;
+            }
+        }
+        oss << " 設定ファイルの形状があるなら必ず使うね\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "設定コライダー強制フラグは前と同じだよ \n");
+        }
+    }
+
+    void SweetsManager::SetColliderConfigOverridesEnabled(bool enabled)
+    {
+        const bool changed = m_colliderConfigOverridesEnabled != enabled;
+        m_colliderConfigOverridesEnabled = enabled;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "コライダー設定の上書きは " << (enabled ? "有効" : "無効")
+            << " "
+            << (enabled ? "生成済みがあっても（強制生成が有効でなければ）そっちに差し替えるよ "
+                : "生成コライダーがない／オフのときだけ設定を使うよ ")
+            << "\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "コライダー設定の上書きフラグは前と変わらないよ \n");
         }
     }
 
