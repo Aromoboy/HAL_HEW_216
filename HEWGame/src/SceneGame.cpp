@@ -1776,6 +1776,7 @@ namespace
         constexpr float kCameraMinDistance = 5.0f;
         constexpr float kCameraMaxDistance = 80.0f;
         constexpr float kCameraInputEpsilon = 1e-3f;
+        bool g_cameraControlsHintLogged = false;
         bool HasMeaningfulDifference(float previous, float current, float epsilon = kCameraStateEpsilon)
         {
             if (!std::isfinite(previous) || !std::isfinite(current))
@@ -1981,14 +1982,24 @@ void SceneGame::HandleCameraInput(Core::UpdateContext& ctx, float deltaTime)
         ToggleCameraMode();
     }
 
-    if (m_cameraState.mode != CameraMode::Orbit)
-    {
-        return;
-    }
-
     const float yawInput = ctx.input.GetAxis(Core::ActionId::CameraOrbitYaw);
     const float pitchInput = ctx.input.GetAxis(Core::ActionId::CameraOrbitPitch);
     const float zoomInput = ctx.input.GetAxis(Core::ActionId::CameraZoom);
+
+    const bool hasOrbitIntent =
+        (std::fabs(yawInput) > kCameraInputEpsilon)
+        || (std::fabs(pitchInput) > kCameraInputEpsilon)
+        || (std::fabs(zoomInput) > kCameraInputEpsilon);
+
+    if (m_cameraState.mode != CameraMode::Orbit)
+    {
+        if (!hasOrbitIntent)
+        {
+            return;
+        }
+
+        ToggleCameraMode();
+    }
 
     bool stateChanged = false;
     if (std::fabs(yawInput) > kCameraInputEpsilon)
@@ -3494,6 +3505,14 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
             << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
     }
     ::DebugTrace(oss.str());
+
+    if (!g_cameraControlsHintLogged)
+    {
+        std::ostringstream hint;
+        hint << kLogPrefix << "[Camera] Controls: Enter = toggle Orbit/Side, Arrow keys or RS = orbit, PageUp/PageDown = zoom.\n";
+        ::DebugTrace(hint.str());
+        g_cameraControlsHintLogged = true;
+    }
 
 }
 
