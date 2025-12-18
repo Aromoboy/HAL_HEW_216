@@ -1092,6 +1092,14 @@ namespace SweetsSpace
             halfExtents = float3{ radius, height * 0.5f, radius };
             break;
         }
+        case ColliderShape::Circle:
+        {
+            const float radius = std::max(
+                (scaledMax.x - scaledMin.x) * 0.5f,
+                (scaledMax.y - scaledMin.y) * 0.5f);
+            halfExtents = float3{ radius, radius, radius };
+            break;
+        }
         case ColliderShape::Box:
         default:
             halfExtents = float3{
@@ -1277,39 +1285,39 @@ namespace SweetsSpace
         switch (type)
         {
         case SweetsType::Cake:
-            preset.spawnWeight = 0.0f;
-            preset.scale = float3{ 1.0f, 1.0f, 1.0f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
+            preset.spawnWeight = 1.0f;
+            preset.scale = float3{ 0.30f, 0.30f, 0.30f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.006f, 0.006f, 0.006f } };
             return preset;
         case SweetsType::Pudding:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.95f, 0.95f, 0.95f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.04f, 0.02f } };
+            preset.scale = float3{ 0.28f, 0.28f, 0.28f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.006f, 0.012f, 0.006f } };
             return preset;
         case SweetsType::Sherbet:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.975f, 0.975f, 0.975f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.012f, 0.012f, 0.012f } };
+            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.285f, 0.285f, 0.285f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
+            preset.scale = float3{ 0.24f, 0.24f, 0.24f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.215f, 0.215f, 0.215f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.18f, 0.18f, 0.18f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.scale = float3{ 1.05f, 1.05f, 1.05f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.03f, 0.05f, 0.03f } };
+            preset.scale = float3{ 0.34f, 0.34f, 0.34f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.016f, 0.01f } };
             return preset;
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
-            preset.scale = float3{ 0.975f, 0.975f, 0.975f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
+            preset.scale = float3{ 0.32f, 0.32f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.005f, 0.005f, 0.005f } };
             return preset;
         default:
             return std::nullopt;
@@ -1356,6 +1364,10 @@ namespace SweetsSpace
         if (colliderShape == "capsule")
         {
             outPreset.colliderPreset.shape = ColliderShape::Capsule;
+        }
+        else if (colliderShape == "circle")
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Circle;
         }
         else if (colliderShape == "box" || colliderShape.empty())
         {
