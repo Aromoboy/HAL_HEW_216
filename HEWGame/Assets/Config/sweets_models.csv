@@ -1,10 +1,10 @@
 key,modelPath,description
-Cake,Assets/Model/cake_high.fbx,High-detail sponge cake base used by sweets and foundation platform
+Cake,Assets/Model/cake.fbx,High-detail sponge cake base used by sweets and foundation platform
 Pudding,Assets/Model/SweetsPrototype/Pudding.obj,UV-mapped triangular pudding slice
 Sherbet,Assets/Model/SweetsPrototype/Sherbet.obj,Shaded sherbet scoop with smooth normals
-Strawberry,Assets/Model/strawberry_low01.fbx,Textured strawberry fruit with visible seeds
+Strawberry,Assets/Model/strawberry.fbx,Textured strawberry fruit with visible seeds
 Blueberry,Assets/Model/blueberry.fbx,Juicy blueberry fruit mesh with baked vertex colors
-Pineapple,Assets/Model/pineapple_high_fin.fbx,Detailed pineapple fruit with crown and textured skin
-Banana,Assets/Model/Banana_low01.fbx,Curved banana fruit with stylized proportions
-Fairy,Assets/Model/SweetsPrototype/Fairy.obj,Procedural cross-plane fairy with cross-plane wings
-Player,Assets/Model/yousei_low_fin.fbx,Player-controlled fairy alias; falls back to Fairy.obj if missing
+Pineapple,Assets/Model/pineapple.fbx,Detailed pineapple fruit with crown and textured skin
+Banana,Assets/Model/banana.fbx,Curved banana fruit with stylized proportions
+Fairy,Assets/Model/yousei.fbx,Procedural cross-plane fairy with cross-plane wings
+Player,Assets/Model/yousei.fbx,Player-controlled fairy alias; falls back to Fairy.obj if missing
