@@ -16,6 +16,7 @@
 #include <sstream>
 #include <vector>
 #include <thread>
+#include <unordered_map>
 #include "Debug.h"
 #include "TextureCache.h"
 #include "TextureDX.h"
@@ -145,6 +146,86 @@ namespace
         }
 
         return std::nullopt;
+    }
+
+    std::unordered_map<std::string, std::string> BuildTextureAliasMap()
+    {
+        std::unordered_map<std::string, std::string> aliases;
+
+        const auto addAlias = [&aliases](const std::string& alias, const std::string& target)
+        {
+            aliases.emplace(NormalizeForKey(alias), target);
+        };
+
+        addAlias("パイナップル.png", "pineapple.png");
+        addAlias("パイナップル.png", "pineapple.png");
+        addAlias("バナナ.png", "banana.png");
+        addAlias("ブルーベリー.png", "blueberry.png");
+        addAlias("ストロベリー.png", "strawberry.png");
+        addAlias("いちご.png", "strawberry.png");
+        addAlias("クリーム.png", "cream.png");
+
+        return aliases;
+    }
+
+    std::optional<std::string> ResolveTextureAlias(const std::string& fileName)
+    {
+        static const std::unordered_map<std::string, std::string> kAliases = BuildTextureAliasMap();
+        const std::string normalized = NormalizeForKey(fileName);
+
+        const auto it = kAliases.find(normalized);
+        if (it != kAliases.end())
+        {
+            return it->second;
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
+    {
+        const std::string normalizedModelPath = NormalizePath(modelPath);
+
+        if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*fromManifest))
+            {
+                return fromManifest;
+            }
+        }
+
+        if (auto guessed = GuessTextureFromFilename(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*guessed))
+            {
+                return guessed;
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> ResolveFallbackTextureByName(const std::string& sanitizedFile, const std::string& modelPath)
+    {
+        if (auto alias = ResolveTextureAlias(sanitizedFile))
+        {
+            const std::string remapped = "Assets/Texture/" + *alias;
+            if (std::filesystem::exists(remapped))
+            {
+                return remapped;
+            }
+        }
+
+        const std::string normalizedFile = NormalizePath(sanitizedFile);
+        if (auto guess = GuessTextureFromFilename(normalizedFile))
+        {
+            if (std::filesystem::exists(*guess))
+            {
+                return guess;
+            }
+        }
+
+        return ResolveFallbackTexture(modelPath);
     }
 
 
