@@ -819,6 +819,4 @@ if (textureLoadingEnabled)
 
         specularTex = loadMaterialTexture(aiTextureType_SPECULAR, "specular", false);
     }
-
-    return materials;
 }
