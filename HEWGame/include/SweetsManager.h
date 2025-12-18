@@ -77,14 +77,6 @@ namespace SweetsSpace
         float3 padding{ 0.0f, 0.0f, 0.0f };
     };
 
-    struct ColliderPrimitive
-    {
-        ColliderShape shape{ ColliderShape::Circle };
-        float radius{ 0.0f };
-        float height{ 0.0f };
-        float3 offset{ 0.0f, 0.0f, 0.0f };
-    };
-
     enum class DeleteReason : std::uint8_t
     {
         Hit,
@@ -169,8 +161,7 @@ namespace SweetsSpace
         struct FactoryPreset
         {
             float spawnWeight = 1.0f;
-            float3 minScale{ 1.0f, 1.0f, 1.0f };
-            float3 maxScale{ 1.0f, 1.0f, 1.0f };
+            float3 scale{ 1.0f, 1.0f, 1.0f };
             ColliderPreset colliderPreset;
         };
 
@@ -244,7 +235,6 @@ namespace SweetsSpace
 
         std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>> m_spawner;
         std::map<std::string, FactoryPreset> m_factoryPresets;
-        std::map<std::string, ColliderPrimitive> m_colliderPrimitives;
 
         std::map<std::string, Collision::ColliderDefinition> m_colliderDefinitions;
         struct GeneratedCollider
@@ -329,7 +319,7 @@ namespace SweetsSpace
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         float3 NextSpawnOrigin();
-        Transform BuildSpawnTransform(const float3& origin) const;
+        Transform BuildSpawnTransform(const std::string& normalizedKind, const float3& origin);
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
         void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,
@@ -343,9 +333,6 @@ namespace SweetsSpace
         static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
         static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);
         static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
-        static std::optional<ColliderPrimitive> BuildDefaultColliderPrimitive(SweetsType type);
-        static bool ParseColliderPrimitiveRow(const std::vector<std::string>& tokens, ColliderPrimitive& outPrimitive, size_t lineNumber);
-        static std::map<std::string, ColliderPrimitive> LoadColliderPrimitives(bool* parseError);
         std::string ResolveKindKey(const std::string& key) const;
         std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
         ColliderBuildResult BuildColliderForSweets(const std::string& kind,

@@ -743,8 +743,8 @@ namespace
 
         std::vector<float2> BuildPaddedHull(const PlayerColliderGeometry& geometry, const SceneGame::PlayerColliderTuning& tuning, const float3& scale)
         {
-        std::vector<float2> hull;
-        hull.reserve(geometry.hull.empty() ? 4u : geometry.hull.size());
+            std::vector<float2> hull;
+            hull.reserve(geometry.hull.empty() ? 4u : geometry.hull.size());
 
             if (geometry.hull.empty())
             {
@@ -782,8 +782,421 @@ namespace
                 }
             }
 
-        return hull;
-    }
+            return hull;
+        }
+
+        struct PlayerColliderBuildResult
+        {
+            std::optional<Physics::BoxColliderComponent> collider;
+            std::optional<Physics::Box2DShapeConfig> shapeConfig;
+            float3 halfExtents{ 0.0f, 0.0f, 0.0f };
+            float3 centerOffset{ 0.0f, 0.0f, 0.0f };
+            std::string source{ "Unknown" };
+            bool registryHit{ false };
+            bool registryHasShapes{ false };
+        };
+
+        struct FootprintAccumulator
+        {
+            float minX{ std::numeric_limits<float>::max() };
+            float minY{ std::numeric_limits<float>::max() };
+            float maxX{ std::numeric_limits<float>::lowest() };
+            float maxY{ std::numeric_limits<float>::lowest() };
+            float halfZ{ 0.0f };
+            bool valid{ false };
+
+            void IncludeVertex(const b2Vec2& v)
+            {
+                minX = std::min(minX, v.x);
+                minY = std::min(minY, v.y);
+                maxX = std::max(maxX, v.x);
+                maxY = std::max(maxY, v.y);
+                valid = true;
+            }
+
+            void IncludeVertices(const std::vector<b2Vec2>& vertices)
+            {
+                for (const auto& v : vertices)
+                {
+                    IncludeVertex(v);
+                }
+            }
+
+            void IncludeCircle(const b2Vec2& center, float radius)
+            {
+                if (!(radius > 0.0f))
+                {
+                    return;
+                }
+
+                IncludeVertex(b2Vec2{ center.x - radius, center.y - radius });
+                IncludeVertex(b2Vec2{ center.x + radius, center.y + radius });
+            }
+
+            void ExpandHalfZ(float thickness)
+            {
+                if (std::isfinite(thickness) && thickness > 0.0f)
+                {
+                    halfZ = std::max(halfZ, thickness * 0.5f);
+                }
+            }
+
+            float3 Center(float zOffset) const
+            {
+                if (!valid)
+                {
+                    return float3{ 0.0f, 0.0f, zOffset };
+                }
+
+                return float3{ (minX + maxX) * 0.5f, (minY + maxY) * 0.5f, zOffset };
+            }
+
+            float3 HalfExtents(float minHalfZ) const
+            {
+                float3 hext{ 0.0f, 0.0f, std::max(halfZ, minHalfZ) };
+                if (valid)
+                {
+                    hext.x = (maxX - minX) * 0.5f;
+                    hext.y = (maxY - minY) * 0.5f;
+                }
+                return hext;
+            }
+        };
+
+        PlayerColliderBuildResult BuildPlayerColliderFromRegistry(
+            const std::string& colliderId,
+            const Transform& transform,
+            const SceneGame::PlayerColliderTuning& tuning,
+            float fallbackWidth,
+            float fallbackHeight,
+            b2BodyType bodyType)
+        {
+            PlayerColliderBuildResult result{};
+            result.source = "RegistryMissing";
+
+            Physics::Box2DShapeConfig shapeConfig{};
+            shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
+            shapeConfig.bodyType = bodyType;
+            shapeConfig.fixedRotation = true;
+            shapeConfig.allowRotation = false;
+            shapeConfig.angularDamping = 5.0f;
+            shapeConfig.density = 0.5f;
+            shapeConfig.friction = 0.35f;
+            shapeConfig.restitution = 0.05f;
+
+            Physics::BoxColliderComponent collider{};
+            collider.colliderId = colliderId;
+            collider.shapeDef = b2DefaultShapeDef();
+            collider.shapeDef.density = shapeConfig.density;
+            collider.shapeDef.material.friction = shapeConfig.friction;
+            collider.shapeDef.material.restitution = shapeConfig.restitution;
+
+            FootprintAccumulator footprint{};
+            const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderId);
+            result.registryHit = registryDefinition.has_value();
+            result.registryHasShapes = registryDefinition && !registryDefinition->shapes.empty();
+
+            const float paddedThickness = std::max(
+                kMinGeneratedThickness,
+                (tuning.fallbackSize.z + tuning.fallbackPadding.z * 2.0f) * transform.scale.z);
+            footprint.ExpandHalfZ(paddedThickness);
+
+            if (registryDefinition && result.registryHasShapes)
+            {
+                const float uniformScale = std::max(transform.scale.x, transform.scale.y);
+                for (const auto& shape : registryDefinition->shapes)
+                {
+                    switch (shape.type)
+                    {
+                    case Physics::ColliderShapeType::Circle:
+                    {
+                        const float radius = shape.radius * uniformScale;
+                        const b2Vec2 center = shape.vertices.empty()
+                            ? b2Vec2{ 0.0f, 0.0f }
+                            : b2Vec2{ shape.vertices.front().x * transform.scale.x, shape.vertices.front().y * transform.scale.y };
+                        footprint.IncludeCircle(center, radius);
+                        break;
+                    }
+                    case Physics::ColliderShapeType::Box:
+                    case Physics::ColliderShapeType::Polygon:
+                    default:
+                    {
+                        std::vector<b2Vec2> vertices;
+                        vertices.reserve(shape.vertices.size());
+                        for (const auto& vertex : shape.vertices)
+                        {
+                            vertices.push_back(b2Vec2{ vertex.x * transform.scale.x, vertex.y * transform.scale.y });
+                        }
+                        footprint.IncludeVertices(vertices);
+                        break;
+                    }
+                    }
+                }
+
+                collider.shapeDef = registryDefinition->shapeDef;
+                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+                result.source = "RegistryBox";
+            }
+            else if (registryDefinition && !result.registryHasShapes)
+            {
+                result.source = "RegistryEmpty";
+            }
+
+            const float sanitizedHalfWidth = std::max(0.01f, fallbackWidth * 0.5f * transform.scale.x);
+            const float sanitizedHalfHeight = std::max(0.01f, fallbackHeight * 0.5f * transform.scale.y);
+            const float defaultHalfZ = paddedThickness * 0.5f;
+            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
+
+            float3 centerOffset = footprint.valid
+                ? footprint.Center(scaledOffset.z)
+                : float3{ 0.0f, sanitizedHalfHeight, scaledOffset.z };
+            centerOffset.x += scaledOffset.x;
+            centerOffset.y += scaledOffset.y;
+
+            float3 halfExtents = footprint.valid
+                ? footprint.HalfExtents(defaultHalfZ)
+                : float3{ sanitizedHalfWidth, sanitizedHalfHeight, defaultHalfZ };
+
+            halfExtents.x = std::max(halfExtents.x, sanitizedHalfWidth);
+            halfExtents.y = std::max(halfExtents.y, sanitizedHalfHeight);
+            halfExtents.z = std::max(halfExtents.z, defaultHalfZ);
+
+            collider.AddBox(halfExtents.x, halfExtents.y, b2Vec2{ centerOffset.x, centerOffset.y });
+
+            shapeConfig.offset = b2Vec2{ centerOffset.x, centerOffset.y };
+            shapeConfig.vertices =
+            {
+                b2Vec2{ centerOffset.x - halfExtents.x, centerOffset.y - halfExtents.y },
+                b2Vec2{ centerOffset.x + halfExtents.x, centerOffset.y - halfExtents.y },
+                b2Vec2{ centerOffset.x + halfExtents.x, centerOffset.y + halfExtents.y },
+                b2Vec2{ centerOffset.x - halfExtents.x, centerOffset.y + halfExtents.y },
+            };
+
+            result.collider = collider;
+            result.shapeConfig = shapeConfig;
+            result.halfExtents = halfExtents;
+            result.centerOffset = centerOffset;
+            if (result.source == "RegistryMissing")
+            {
+                result.source = "BoxFallback";
+            }
+            return result;
+        }
+
+        [[maybe_unused]] PlayerColliderBuildResult BuildPlayerCollider(
+            const std::string& resolvedKey,
+            const Transform& transform,
+            const std::string& modelPath,
+            const SceneGame::PlayerColliderTuning& tuning,
+            const std::map<std::string, Collision::ColliderDefinition>& definitions,
+            bool forceConfig,
+            b2BodyType bodyType)
+        {
+            PlayerColliderBuildResult result{};
+
+            Physics::Box2DShapeConfig shapeConfig{};
+            shapeConfig.type = Physics::Box2DShapeConfig::Type::None;
+            shapeConfig.bodyType = bodyType;
+            shapeConfig.fixedRotation = true;
+            shapeConfig.allowRotation = false;
+            shapeConfig.angularDamping = 5.0f;
+            shapeConfig.density = 0.5f;
+            shapeConfig.friction = 0.35f;
+            shapeConfig.restitution = 0.05f;
+
+            Physics::BoxColliderComponent collider{};
+            collider.colliderId = resolvedKey;
+            collider.shapeDef = b2DefaultShapeDef();
+            collider.shapeDef.density = shapeConfig.density;
+            collider.shapeDef.material.friction = shapeConfig.friction;
+            collider.shapeDef.material.restitution = shapeConfig.restitution;
+
+            if (auto registryDefinition = Physics::ColliderRegistry::Instance().Find(resolvedKey))
+            {
+                collider.shapeDef = registryDefinition->shapeDef;
+                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            }
+
+            const auto configIt = definitions.find(resolvedKey);
+            const Collision::ColliderDefinition* configDef = (configIt != definitions.end()) ? &configIt->second : nullptr;
+
+            PlayerColliderGeometry geometry{};
+            if (!forceConfig)
+            {
+                geometry = AnalyzePlayerModelGeometry(modelPath, tuning.thicknessPadding);
+            }
+
+            FootprintAccumulator footprint{};
+            std::string source = "FallbackSize";
+
+            if (!forceConfig && geometry.bounds.valid)
+            {
+                const auto paddedHull = BuildPaddedHull(geometry, tuning, transform.scale);
+                const float2 hullOffset{
+                    (geometry.centroidOffset.x + tuning.offset.x) * transform.scale.x,
+                    (geometry.centroidOffset.y + tuning.offset.y) * transform.scale.y
+                };
+
+                float thickness = geometry.paddedThickness * transform.scale.z;
+                thickness = std::max(thickness, kMinGeneratedThickness);
+                thickness += tuning.padding.z * 2.0f;
+                footprint.ExpandHalfZ(thickness);
+                source = "GeneratedHull";
+            }
+
+            if (collider.shapes.empty() && configDef)
+            {
+                const auto appendDefinition = [&](const Collision::ColliderDefinition& def, const b2Vec2& parentOffset, float parentScale, const auto& self) -> void
+                {
+                    const float combinedScale = std::max(0.0f, def.scale) * parentScale;
+                    const b2Vec2 scaledOffset{
+                        parentOffset.x + def.offset.x * transform.scale.x,
+                        parentOffset.y + def.offset.y * transform.scale.y
+                    };
+
+                    const float marginX = def.margin2 ? def.margin2->x : (def.margin3 ? def.margin3->x : def.margin);
+                    const float marginY = def.margin2 ? def.margin2->y : (def.margin3 ? def.margin3->y : def.margin);
+
+                    switch (def.type)
+                    {
+                    case Collision::ColliderKind::Circle:
+                    {
+                        float radius = def.radius * combinedScale * std::max(transform.scale.x, transform.scale.y);
+                        float marginRadius = def.margin;
+                        if (def.margin2)
+                        {
+                            marginRadius = std::max(def.margin2->x, def.margin2->y);
+                        }
+                        if (def.margin3)
+                        {
+                            marginRadius = std::max(marginRadius, std::max(def.margin3->x, def.margin3->y));
+                        }
+                        radius = std::max(kMinGeneratedThickness * 0.5f, radius + marginRadius);
+
+                        b2Vec2 center = scaledOffset;
+                        Physics::ColliderShapeDescriptor shape{};
+                        shape.type = Physics::ColliderShapeType::Circle;
+                        shape.radius = radius;
+                        shape.vertices.push_back(center);
+                        collider.shapes.push_back(shape);
+                        footprint.IncludeCircle(center, radius);
+
+                        float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * transform.scale.z;
+                        thickness = std::max(thickness, kMinGeneratedThickness);
+                        footprint.ExpandHalfZ(thickness + tuning.padding.z * 2.0f);
+                        break;
+                    }
+                    case Collision::ColliderKind::Hull:
+                    {
+                        std::vector<b2Vec2> vertices;
+                        vertices.reserve(def.points.size());
+                        for (auto p : def.points)
+                        {
+                            float vx = p.x * combinedScale * transform.scale.x;
+                            float vy = p.y * combinedScale * transform.scale.y;
+                            if (marginX != 0.0f)
+                            {
+                                vx += (vx >= 0.0f) ? marginX : -marginX;
+                            }
+                            if (marginY != 0.0f)
+                            {
+                                vy += (vy >= 0.0f) ? marginY : -marginY;
+                            }
+
+                            vertices.push_back(b2Vec2{ scaledOffset.x + vx, scaledOffset.y + vy });
+                        }
+
+                        collider.AddPolygon(vertices);
+                        footprint.IncludeVertices(vertices);
+
+                        float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * transform.scale.z;
+                        thickness = std::max(thickness, kMinGeneratedThickness);
+                        footprint.ExpandHalfZ(thickness + tuning.padding.z * 2.0f);
+                        break;
+                    }
+                    case Collision::ColliderKind::Compound:
+                    default:
+                    {
+                        for (const auto& child : def.children)
+                        {
+                            self(child, scaledOffset, combinedScale, self);
+                        }
+                        break;
+                    }
+                    }
+                };
+
+                appendDefinition(*configDef, b2Vec2{ 0.0f, 0.0f }, 1.0f, appendDefinition);
+                if (!collider.shapes.empty())
+                {
+                    source = "Config";
+                }
+            }
+
+            if (collider.shapes.empty())
+            {
+                const float3 scaledSize
+                {
+                    (tuning.fallbackSize.x + tuning.fallbackPadding.x * 2.0f) * transform.scale.x,
+                    (tuning.fallbackSize.y + tuning.fallbackPadding.y * 2.0f) * transform.scale.y,
+                    std::max(kMinGeneratedThickness, (tuning.fallbackSize.z + tuning.fallbackPadding.z * 2.0f) * transform.scale.z)
+                };
+
+                const float3 half{ scaledSize.x * 0.5f, scaledSize.y * 0.5f, scaledSize.z * 0.5f };
+                const float3 center
+                {
+                    tuning.fallbackOffset.x * transform.scale.x,
+                    (tuning.fallbackOffset.y * transform.scale.y) + half.y,
+                    tuning.fallbackOffset.z
+                };
+
+                std::vector<b2Vec2> vertices
+                {
+                    b2Vec2{ center.x - half.x, center.y - half.y },
+                    b2Vec2{ center.x + half.x, center.y - half.y },
+                    b2Vec2{ center.x + half.x, center.y + half.y },
+                    b2Vec2{ center.x - half.x, center.y + half.y },
+                };
+
+                collider.AddPolygon(vertices);
+                footprint.IncludeVertices(vertices);
+                footprint.ExpandHalfZ(scaledSize.z);
+                source = "FallbackSize";
+            }
+
+            const float centerZ = (source == "FallbackSize") ? tuning.fallbackOffset.z : tuning.offset.z;
+            result.centerOffset = footprint.Center(centerZ);
+            result.halfExtents = footprint.HalfExtents(kMinGeneratedThickness * 0.5f);
+
+            shapeConfig.type = InferShapeType(collider.shapes);
+            if (!collider.shapes.empty())
+            {
+                const auto& primaryShape = collider.shapes.front();
+                switch (shapeConfig.type)
+                {
+                case Physics::Box2DShapeConfig::Type::Polygon:
+                case Physics::Box2DShapeConfig::Type::Box:
+                    shapeConfig.vertices = primaryShape.vertices;
+                    shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
+                    break;
+                case Physics::Box2DShapeConfig::Type::Circle:
+                    shapeConfig.radius = primaryShape.radius;
+                    shapeConfig.offset = primaryShape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : primaryShape.vertices.front();
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            result.collider = collider;
+            result.shapeConfig = shapeConfig;
+            result.source = source;
+            return result;
+        }
 
     std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
     {
@@ -1763,10 +2176,13 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 }
             };
             std::ostringstream oss;
-            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, collider)\n";
+            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, scale, collider)\n";
             for (const auto& preset : presets)
             {
-                oss << kLogPrefix << "  kind='" << preset.first << "' collider="
+                oss << kLogPrefix << "  kind='" << preset.first << "' scale=("
+                    << preset.second.scale.x << ','
+                    << preset.second.scale.y << ','
+                    << preset.second.scale.z << ") collider="
                     << colliderShapeToString(preset.second.colliderPreset.shape)
                     << " pad=(" << preset.second.colliderPreset.padding.x << ','
                     << preset.second.colliderPreset.padding.y << ','
@@ -1896,36 +2312,23 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const std::string resolvedColliderKey = ResolvePlayerColliderKey(playerColliderKey);
     const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
 
-    Physics::BoxColliderComponent collider{};
-    collider.colliderId = resolvedColliderKey;
-    boxColliderComponent = collider;
+    const auto colliderBuild = BuildPlayerColliderFromRegistry(
+        resolvedColliderKey,
+        trans,
+        m_playerColliderTuning,
+        m_playerPickupBoxWidth,
+        m_playerPickupBoxHeight,
+        playerBodyType);
 
-    Physics::Box2DShapeConfig shapeConfig{};
-    shapeConfig.type = Physics::Box2DShapeConfig::Type::None;
-    shapeConfig.bodyType = playerBodyType;
-    shapeConfig.fixedRotation = true;
-    shapeConfig.allowRotation = false;
-    shapeConfig.angularDamping = 5.0f;
-    shapeConfig.density = 0.5f;
-    shapeConfig.friction = 0.35f;
-    shapeConfig.restitution = 0.05f;
-    playerShapeConfig = shapeConfig;
-
-    float3 colliderSize = m_playerColliderTuning.fallbackSize;
-    float3 colliderOffset{ 0.0f, m_playerColliderTuning.fallbackSize.y * 0.5f, 0.0f };
-
-    colliderSize.x += m_playerColliderTuning.fallbackPadding.x * 2.0f;
-    colliderSize.y += m_playerColliderTuning.fallbackPadding.y * 2.0f;
-    colliderSize.z = std::max(colliderSize.z + m_playerColliderTuning.fallbackPadding.z * 2.0f, kMinGeneratedThickness);
-
-    colliderOffset.x += m_playerColliderTuning.fallbackOffset.x;
-    colliderOffset.y += m_playerColliderTuning.fallbackOffset.y;
-    colliderOffset.z += m_playerColliderTuning.fallbackOffset.z;
-
-    playerColliderHalfExtents = float3{ colliderSize.x * 0.5f, colliderSize.y * 0.5f, colliderSize.z * 0.5f };
-    playerColliderOffset = colliderOffset;
-
-    std::string colliderSource = "registry";
+    boxColliderComponent = colliderBuild.collider;
+    playerShapeConfig = colliderBuild.shapeConfig;
+    playerColliderHalfExtents = colliderBuild.halfExtents;
+    playerColliderOffset = colliderBuild.centerOffset;
+    if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f)
+    {
+        m_playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
+        m_playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
+    }
 
     {
         std::ostringstream oss;
@@ -1940,11 +2343,16 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             }
         };
 
-        oss << kLogPrefix << "[PlayerCollider] source=" << colliderSource
+        oss << kLogPrefix << "[PlayerCollider] source=" << colliderBuild.source
             << " key='" << resolvedColliderKey << "' forceConfig=" << std::boolalpha << m_forceConfigPlayerCollider
             << " configAvailable=" << hasConfigDefinition
-            << " applied=true"
-            << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None") << "\n";
+            << " registryHit=" << colliderBuild.registryHit
+            << " registryShapes=" << colliderBuild.registryHasShapes
+            << " applied=" << (boxColliderComponent && playerShapeConfig)
+            << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
+            << " offset=(" << playerColliderOffset.x << ',' << playerColliderOffset.y << ',' << playerColliderOffset.z << ')'
+            << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ')'
+            << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ")\n";
         DebugTrace(oss.str());
     }
 
@@ -1952,18 +2360,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     if (!std::isfinite(m_playerPickupOriginOffset.x) || !std::isfinite(m_playerPickupOriginOffset.y) || !std::isfinite(m_playerPickupOriginOffset.z))
     {
         m_playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
-    }
-    else if (std::fabs(m_playerPickupOriginOffset.x) < std::numeric_limits<float>::epsilon()
-        && std::fabs(m_playerPickupOriginOffset.y) < std::numeric_limits<float>::epsilon()
-        && std::fabs(m_playerPickupOriginOffset.z) < std::numeric_limits<float>::epsilon())
-    {
-        const float2 colliderScale{ trans.scale.x, trans.scale.y };
-        m_playerPickupOriginOffset = float3
-        {
-            m_playerColliderTuning.fallbackOffset.x * colliderScale.x,
-            m_playerColliderTuning.fallbackOffset.y * colliderScale.y,
-            m_playerColliderTuning.fallbackOffset.z,
-        };
     }
 
     player = std::make_unique<Entities::Player>(

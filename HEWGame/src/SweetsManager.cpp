@@ -89,7 +89,6 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr const char* kColliderConfigPath = ""; // Legacy collider config no longer used
     constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
@@ -1272,52 +1271,44 @@ namespace SweetsSpace
     {
         FactoryPreset preset{};
         preset.spawnWeight = 0.0f;
-        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
-        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.scale = float3{ 1.0f, 1.0f, 1.0f };
         preset.colliderPreset = ColliderPreset{};
 
         switch (type)
         {
         case SweetsType::Cake:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
+            preset.scale = float3{ 1.0f, 1.0f, 1.0f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
             return preset;
         case SweetsType::Pudding:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
+            preset.scale = float3{ 0.95f, 0.95f, 0.95f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.04f, 0.02f } };
             return preset;
         case SweetsType::Sherbet:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
-            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.975f, 0.975f, 0.975f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.012f, 0.012f, 0.012f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
+            preset.scale = float3{ 0.285f, 0.285f, 0.285f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.65f, 0.65f, 0.65f };
-            preset.maxScale = float3{ 1.15f, 1.15f, 1.15f };
+            preset.scale = float3{ 0.215f, 0.215f, 0.215f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.05f, 0.02f } };
+            preset.scale = float3{ 1.05f, 1.05f, 1.05f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.03f, 0.05f, 0.03f } };
             return preset;
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
+            preset.scale = float3{ 0.975f, 0.975f, 0.975f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
             return preset;
         default:
@@ -1325,243 +1316,43 @@ namespace SweetsSpace
         }
     }
 
-    std::optional<ColliderPrimitive> SweetsManager::BuildDefaultColliderPrimitive(SweetsType type)
-    {
-        ColliderPrimitive primitive{};
-
-        switch (type)
-        {
-        case SweetsType::Cake:
-            primitive.shape = ColliderShape::Capsule;
-            primitive.radius = 0.5f;
-            primitive.height = 0.6f;
-            return primitive;
-        case SweetsType::Pudding:
-            primitive.shape = ColliderShape::Capsule;
-            primitive.radius = 0.35f;
-            primitive.height = 0.7f;
-            return primitive;
-        case SweetsType::Sherbet:
-            primitive.shape = ColliderShape::Circle;
-            primitive.radius = 0.5f;
-            primitive.height = 0.0f;
-            return primitive;
-        case SweetsType::Strawberry:
-            primitive.shape = ColliderShape::Circle;
-            primitive.radius = 0.45f;
-            primitive.height = 0.0f;
-            return primitive;
-        case SweetsType::Blueberry:
-            primitive.shape = ColliderShape::Circle;
-            primitive.radius = 0.5f;
-            primitive.height = 0.0f;
-            return primitive;
-        case SweetsType::Pineapple:
-            primitive.shape = ColliderShape::Capsule;
-            primitive.radius = 0.38f;
-            primitive.height = 1.25f;
-            return primitive;
-        case SweetsType::Banana:
-            primitive.shape = ColliderShape::Capsule;
-            primitive.radius = 0.2f;
-            primitive.height = 1.2f;
-            return primitive;
-        case SweetsType::Fairy:
-            primitive.shape = ColliderShape::Circle;
-            primitive.radius = 0.35f;
-            primitive.height = 0.0f;
-            return primitive;
-        default:
-            return std::nullopt;
-        }
-    }
-
-    bool SweetsManager::ParseColliderPrimitiveRow(const std::vector<std::string>& tokens, ColliderPrimitive& outPrimitive, size_t lineNumber)
-    {
-        if (tokens.size() < 4)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "コライダープリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
-                << "個で足りてないよ（最低4個欲しい） \n";
-            DebugTrace(oss.str());
-            return false;
-        }
-
-        bool parseError = false;
-        const std::string colliderShape = NormalizeKey(tokens[1]);
-        if (colliderShape == "capsule")
-        {
-            outPrimitive.shape = ColliderShape::Capsule;
-        }
-        else if (colliderShape == "circle")
-        {
-            outPrimitive.shape = ColliderShape::Circle;
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[1]
-                << "' が知らない形だったから、とりあえず Circle にしとくね\n";
-            DebugTrace(oss.str());
-            outPrimitive.shape = ColliderShape::Circle;
-            parseError = true;
-        }
-
-        parseError |= !TryParseFloat(tokens[2], &outPrimitive.radius);
-        parseError |= !TryParseFloat(tokens[3], &outPrimitive.height);
-
-        if (tokens.size() >= 6)
-        {
-            parseError |= !TryParseFloat(tokens[4], &outPrimitive.offset.x);
-            parseError |= !TryParseFloat(tokens[5], &outPrimitive.offset.y);
-
-            if (tokens.size() >= 7)
-            {
-                parseError |= !TryParseFloat(tokens[6], &outPrimitive.offset.z);
-            }
-            else
-            {
-                outPrimitive.offset.z = 0.0f;
-            }
-        }
-        else if (tokens.size() == 5)
-        {
-            parseError = true;
-            std::ostringstream oss;
-            oss << kLogPrefix << "コライダープリセットの" << lineNumber
-                << "行目、オフセットにY(もしくはY,Z)成分が足りないよ (offsetX='" << tokens[4]
-                << "')\n";
-            DebugTrace(oss.str());
-        }
-        else
-        {
-            outPrimitive.offset = float3{ 0.0f, 0.0f, 0.0f };
-        }
-
-        if (parseError)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "コライダープリセットの" << lineNumber << "行目、数値の解釈に失敗したよ (radius='"
-                << tokens[2] << "', height='" << tokens[3] << "'";
-            if (tokens.size() >= 6)
-            {
-                oss << ", offset=('" << tokens[4] << "','" << tokens[5] << "'";
-                if (tokens.size() >= 7)
-                {
-                    oss << ",'" << tokens[6] << "'";
-                }
-                oss << ")";
-            }
-            oss << ")\n";
-            DebugTrace(oss.str());
-        }
-
-        return !parseError;
-    }
-
-    std::map<std::string, ColliderPrimitive> SweetsManager::LoadColliderPrimitives(bool* parseError)
-    {
-        std::map<std::string, ColliderPrimitive> overrides;
-        std::ifstream file(kColliderConfigPath);
-        bool localParseError = false;
-
-        if (file.is_open())
-        {
-            std::string line;
-            std::size_t lineNumber = 0;
-            while (std::getline(file, line))
-            {
-                ++lineNumber;
-                if (line.empty() || line[0] == '#')
-                {
-                    continue;
-                }
-
-                std::vector<std::string> tokens;
-                std::stringstream stream(line);
-                std::string token;
-                while (std::getline(stream, token, ','))
-                {
-                    tokens.push_back(TrimToken(token));
-                }
-
-                if (tokens.empty())
-                {
-                    continue;
-                }
-
-                if (NormalizeKey(tokens.front()) == "key")
-                {
-                    continue;
-                }
-
-                ColliderPrimitive primitive{};
-                if (ParseColliderPrimitiveRow(tokens, primitive, lineNumber))
-                {
-                    overrides[NormalizeKey(tokens.front())] = primitive;
-                }
-                else
-                {
-                    localParseError = true;
-                }
-            }
-        }
-        else
-        {
-            localParseError = true;
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ConfigError] コライダープリセットの CSV '" << kColliderConfigPath
-                << "' が開けなかったから読み込みを中断するね\n";
-            Diagnostics::LogInfo(oss.str());
-        }
-
-        if (parseError)
-        {
-            *parseError = localParseError;
-        }
-
-        if (localParseError)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[ConfigError] collider preset CSV の読み込みに失敗したので初期化を続行できないよ\n";
-            Diagnostics::LogInfo(oss.str());
-        }
-
-        return overrides;
-    }
-
     bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
     {
-        if (tokens.size() < 11)
+        if (tokens.size() < 8)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "工場プリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
-                << "個で足りてないよ（最低11個欲しい） \n";
+                << "個で足りてないよ（最低8個欲しい） \n";
             DebugTrace(oss.str());
             return false;
         }
 
         bool parseError = false;
         parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.minScale.x);
-        parseError |= !TryParseFloat(tokens[3], &outPreset.minScale.y);
-        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.z);
-        parseError |= !TryParseFloat(tokens[5], &outPreset.maxScale.x);
-        parseError |= !TryParseFloat(tokens[6], &outPreset.maxScale.y);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.z);
-        parseError |= !TryParseFloat(tokens[9], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[10], &outPreset.colliderPreset.padding.y);
-
-        if (tokens.size() > 11)
+        parseError |= !TryParseFloat(tokens[2], &outPreset.scale.x);
+        outPreset.scale.y = outPreset.scale.x;
+        outPreset.scale.z = outPreset.scale.x;
+        if (tokens.size() > 3 && !tokens[3].empty())
         {
-            parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.z);
+            parseError |= !TryParseFloat(tokens[3], &outPreset.scale.y);
+        }
+        if (tokens.size() > 4 && !tokens[4].empty())
+        {
+            parseError |= !TryParseFloat(tokens[4], &outPreset.scale.z);
+        }
+        parseError |= !TryParseFloat(tokens[6], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.colliderPreset.padding.y);
+
+        if (tokens.size() > 8)
+        {
+            parseError |= !TryParseFloat(tokens[8], &outPreset.colliderPreset.padding.z);
         }
         else
         {
             outPreset.colliderPreset.padding.z = 0.0f;
         }
 
-        const std::string colliderShape = NormalizeKey(tokens[8]);
+        const std::string colliderShape = NormalizeKey(tokens[5]);
         if (colliderShape == "capsule")
         {
             outPreset.colliderPreset.shape = ColliderShape::Capsule;
@@ -1573,7 +1364,7 @@ namespace SweetsSpace
         else
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[10]
+            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[5]
                 << "' が知らない形だったから、とりあえず Box にしとくね\n";
             DebugTrace(oss.str());
             outPreset.colliderPreset.shape = ColliderShape::Box;
@@ -1645,8 +1436,7 @@ namespace SweetsSpace
                 << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
                 << " resolvedKey='" << resolvedKey << "'"
                 << " spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
@@ -1818,8 +1608,7 @@ namespace SweetsSpace
             }
             presetLog << " source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")"
@@ -1908,11 +1697,11 @@ namespace SweetsSpace
                 }
 
                 Transform physicsTransform = transform;
+                physicsTransform.scale = preset.scale;
                 VisualTransform visualTransform{};
                 visualTransform.position = physicsTransform.position;
                 visualTransform.rotation = physicsTransform.rotation;
                 visualTransform.scale = physicsTransform.scale;
-                physicsTransform.scale = visualTransform.scale;
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
@@ -3840,7 +3629,7 @@ namespace SweetsSpace
             for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
             {
                 const float3& origin = emitOrigins[originIndex];
-                Transform transform = BuildSpawnTransform(origin);
+                Transform transform = BuildSpawnTransform(kind, origin);
                 Spawn(kind, transform);
             }
         }
@@ -4081,7 +3870,7 @@ namespace SweetsSpace
         return origin;
     }
    
-    Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
+    Transform SweetsManager::BuildSpawnTransform(const std::string& normalizedKind, const float3& origin)
     {
         Transform transform{};
         transform.position = origin;
@@ -4093,6 +3882,19 @@ namespace SweetsSpace
         transform.position.y += m_spawnHeightOffset;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        auto presetIt = m_factoryPresets.find(normalizedKind);
+        if (presetIt != m_factoryPresets.end())
+        {
+            transform.scale = presetIt->second.scale;
+        }
+        else if (m_warnedMissingFactoryPresetKinds.insert(normalizedKind).second)
+        {
+            std::ostringstream warn;
+            warn << kLogPrefix << "種類 '" << normalizedKind
+                << "' の工場プリセットが見つからないから、スケールはデフォルト(1,1,1)にしとくね\n";
+            DebugTrace(warn.str());
+        }
 
         const auto computeDeterministicRotation = [](float minDeg, float maxDeg)
         {
@@ -4109,6 +3911,7 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
             << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+            << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
             << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
         DebugTrace(oss.str());
 
