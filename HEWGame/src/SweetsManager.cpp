@@ -1277,7 +1277,7 @@ namespace SweetsSpace
         switch (type)
         {
         case SweetsType::Cake:
-            preset.spawnWeight = 1.0f;
+            preset.spawnWeight = 0.0f;
             preset.scale = float3{ 1.0f, 1.0f, 1.0f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
             return preset;
@@ -1574,6 +1574,15 @@ namespace SweetsSpace
                 std::ostringstream oss;
                 oss << kLogPrefix << "タイプ '" << ToString(prototype.type)
                     << "' のプロトタイプを探せなかったのでスキップするね \n";
+                DebugTrace(oss.str());
+                continue;
+            }
+
+            if (prototype.type == SweetsType::Cake)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "種類 '" << descriptor->key
+                    << "' はステージ専用だからスポナー登録はスキップするね \n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -2458,7 +2467,7 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets);
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (!m_warnedMissingPhysicsMachine)
         {

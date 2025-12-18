@@ -60,7 +60,7 @@ namespace Systems
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);
-        void UnregisterBody(Entities::PhysicalEntity& body);
+        void UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData = false);
         void ClearBodies();
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
@@ -71,7 +71,7 @@ namespace Systems
 
     private:
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
-        void DestroyBody(const Entities::PhysicalEntity& body);
+        void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
