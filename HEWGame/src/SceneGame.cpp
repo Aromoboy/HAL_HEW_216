@@ -3462,6 +3462,12 @@ void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
                 << ", fixtures=" << fixtureCount << "); attempting immediate rebuild.\n";
             ::DebugTrace(oss.str());
 
+            if (entity.HasBodyCreationFailed())
+            {
+                entity.ResetBodyCreationFailure();
+                entity.MarkPhysicsDefinitionChanged();
+            }
+
             entity.DetachPhysicsMachine();
             entity.AttachPhysicsMachine(m_physicsMachine.get());
 
