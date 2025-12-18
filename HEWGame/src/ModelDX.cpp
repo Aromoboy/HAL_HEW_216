@@ -3,17 +3,20 @@
 #include "ModelDX.h"
 
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, std::optional<AABB> localBounds)
+ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, const std::vector<BoneDX>& a_bones, std::optional<AABB> localBounds = std::nullopt)
 {
-        m_meshes = std::move(a_meshes);
-        m_materials = std::move(a_materials);
-        m_meshCount = static_cast<unsigned int>(m_meshes.size());
 
-        if (localBounds)
-        {
-                m_localBounds = *localBounds;
-                m_hasLocalBounds = true;
-        }
+
+    m_meshes = std::move(a_meshes);
+    m_materials = std::move(a_MaterialDXs);
+    m_meshCount = static_cast<unsigned int>(m_meshes.size());
+    m_bones = a_bones;
+
+    if (localBounds)
+    {
+        m_localBounds = *localBounds;
+        m_hasLocalBounds = true;
+    }
 }
 
 ModelDX::~ModelDX()
@@ -51,3 +54,4 @@ void ModelDX::SetLocalBounds(const AABB& bounds)
         m_localBounds = bounds;
         m_hasLocalBounds = true;
 }
+

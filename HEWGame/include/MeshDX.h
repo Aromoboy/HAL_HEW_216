@@ -56,6 +56,8 @@ private:
 	// 対応するマテリアルID
 	unsigned int m_materialID;
 
+
+
 	// Index数
 	unsigned int m_indexCount;
 

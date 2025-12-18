@@ -4,7 +4,7 @@ Pudding,Assets/Model/SweetsPrototype/Pudding.obj,UV-mapped triangular pudding sl
 Sherbet,Assets/Model/SweetsPrototype/Sherbet.obj,Shaded sherbet scoop with smooth normals
 Strawberry,Assets/Model/strawberry_low01.fbx,Textured strawberry fruit with visible seeds
 Blueberry,Assets/Model/blueberry.fbx,Juicy blueberry fruit mesh with baked vertex colors
-Pineapple,Assets/Model/pineapple_high_fin.fbx,Detailed pineapple fruit with crown and textured skin
+Pineapple,Assets/Model/pineapple_kaizen.fbx,Detailed pineapple fruit with crown and textured skin
 Banana,Assets/Model/Banana_low01.fbx,Curved banana fruit with stylized proportions
 Fairy,Assets/Model/SweetsPrototype/Fairy.obj,Procedural cross-plane fairy with cross-plane wings
 Player,Assets/Model/yousei_low_fin.fbx,Player-controlled fairy alias; falls back to Fairy.obj if missing
