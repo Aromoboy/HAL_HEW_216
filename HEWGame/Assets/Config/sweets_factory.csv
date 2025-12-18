@@ -1,7 +1,7 @@
 # Factory presets for sweets spawn and collider defaults.
 # key,spawnWeight,scaleX,scaleY,scaleZ,colliderPreset,padX,padY,padZ
 key,spawnWeight,scaleX,scaleY,scaleZ,colliderPreset,padX,padY,padZ
-Cake,1.0,1.0,1.0,1.0,box,0.02,0.02,0.02
+Cake,0.0,1.0,1.0,1.0,box,0.02,0.02,0.02
 Pudding,1.0,0.95,0.95,0.95,box,0.02,0.04,0.02
 Sherbet,1.0,0.975,0.975,0.975,capsule,0.012,0.012,0.012
 Strawberry,1.0,0.285,0.285,0.285,capsule,0.0125,0.0125,0.0125
