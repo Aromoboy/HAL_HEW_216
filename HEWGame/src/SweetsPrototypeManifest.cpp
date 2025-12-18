@@ -109,15 +109,18 @@ namespace SweetsSpace
 
     void SweetsPrototypeManifest::ApplyDefaults()
     {
-        Register(SweetsType::Cake, "Cake", "Assets/Model/cake.fbx", "Textured sponge cake cube with frosting layers");
         Register(SweetsType::Pudding, "Pudding", "Assets/Model/LowPolyNature/Models/pudding.fbx", "Low-poly pudding cup with baked textures");
-        Register(SweetsType::Sherbet, "Sherbet", "Assets/Model/cream.fbx", "Stylized sherbet scoop modeled as a soft-serve swirl");
+        Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx", "Soft-serve inspired cream scoop used for sherbet prototype");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx", "High-detail pineapple with leafy crown");
         Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx", "Low-poly curved banana fruit");
-        Register(SweetsType::Fairy, "Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
-        RegisterAlias(SweetsType::Fairy, "Player");
+        RegisterAlias(SweetsType::Cream, "Sherbet");
+
+        RegisterExtra("Cake", "Assets/Model/cake.fbx", "Stage foundation cake block");
+        RegisterExtra("Osara", "Assets/Model/cake.fbx", "Stage plate block shared with cake base");
+        RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
+        RegisterExtraAlias("Fairy", "Player");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics)
@@ -138,24 +141,47 @@ namespace SweetsSpace
         m_lookup[NormalizeKey(aliasKey)] = type;
     }
 
+    void SweetsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description, bool allowMeshPhysics)
+    {
+        SweetsPrototypeDescriptor descriptor{};
+        descriptor.key = std::move(key);
+        descriptor.modelPath = ResolveModelPath(relativePath);
+        descriptor.description = std::move(description);
+        descriptor.allowMeshPhysics = allowMeshPhysics;
+
+        const std::string normalized = NormalizeKey(descriptor.key);
+        m_extraLookup[normalized] = normalized;
+        m_extras[normalized] = std::move(descriptor);
+    }
+
+    void SweetsPrototypeManifest::RegisterExtraAlias(const std::string& key, const std::string& aliasKey)
+    {
+        const std::string normalizedKey = NormalizeKey(key);
+        const std::string normalizedAlias = NormalizeKey(aliasKey);
+        if (m_extras.find(normalizedKey) != m_extras.end())
+        {
+            m_extraLookup[normalizedAlias] = normalizedKey;
+        }
+    }
+
     bool SweetsPrototypeManifest::ReloadFromCsv(const std::string& csvPath)
     {
         m_byType.clear();
         m_lookup.clear();
+        m_extras.clear();
+        m_extraLookup.clear();
 
         ApplyDefaults();
 
         const bool loaded = LoadOverridesFromCsv(csvPath);
 
-        const std::array<SweetsType, 8> kTypes{
-            SweetsType::Cake,
+        const std::array<SweetsType, 6> kTypes{
             SweetsType::Pudding,
-            SweetsType::Sherbet,
+            SweetsType::Cream,
             SweetsType::Strawberry,
             SweetsType::Blueberry,
             SweetsType::Pineapple,
             SweetsType::Banana,
-            SweetsType::Fairy,
         };
         for (const auto type : kTypes)
         {
@@ -258,18 +284,27 @@ namespace SweetsSpace
             {
                 continue;
             }
-            std::optional<SweetsType> mappedType;
-            const bool isPlayerAlias = normalizedKey == "player";
-            if (normalizedKey == NormalizeKey(ToString(SweetsType::Cake))) mappedType = SweetsType::Cake;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pudding))) mappedType = SweetsType::Pudding;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Sherbet))) mappedType = SweetsType::Sherbet;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Strawberry))) mappedType = SweetsType::Strawberry;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Blueberry))) mappedType = SweetsType::Blueberry;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Pineapple))) mappedType = SweetsType::Pineapple;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Banana))) mappedType = SweetsType::Banana;
-            else if (normalizedKey == NormalizeKey(ToString(SweetsType::Fairy)) || isPlayerAlias) mappedType = SweetsType::Fairy;
+            auto mapToSweetsType = [](const std::string& normalized) -> std::optional<SweetsType>
+            {
+                if (normalized == NormalizeKey(ToString(SweetsType::Pudding))) return SweetsType::Pudding;
+                if (normalized == NormalizeKey(ToString(SweetsType::Cream)) || normalized == "sherbet") return SweetsType::Cream;
+                if (normalized == NormalizeKey(ToString(SweetsType::Strawberry))) return SweetsType::Strawberry;
+                if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
+                if (normalized == NormalizeKey(ToString(SweetsType::Pineapple))) return SweetsType::Pineapple;
+                if (normalized == NormalizeKey(ToString(SweetsType::Banana))) return SweetsType::Banana;
+                return std::nullopt;
+            };
 
-            if (!mappedType)
+            std::optional<SweetsType> mappedType = mapToSweetsType(normalizedKey);
+            std::optional<std::string> mappedExtraKey;
+            const auto extraIt = m_extraLookup.find(normalizedKey);
+            if (!mappedType && extraIt != m_extraLookup.end())
+            {
+                mappedExtraKey = extraIt->second;
+            }
+            const bool isExtraAlias = mappedExtraKey && normalizedKey != *mappedExtraKey;
+
+            if (!mappedType && !mappedExtraKey)
             {
                 std::ostringstream warn;
                 warn << kLogPrefix << "Unknown sweets key '" << key << "' on line " << lineNumber
@@ -288,21 +323,48 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (description.empty())
+            if (mappedType)
             {
-                const auto* existing = Find(*mappedType);
-                description = existing ? existing->description : std::string{};
+                if (description.empty())
+                {
+                    const auto* existing = Find(*mappedType);
+                    description = existing ? existing->description : std::string{};
+                }
+
+                const std::string canonicalKey = ToString(*mappedType);
+                const bool isAliasForCream = (*mappedType == SweetsType::Cream) && normalizedKey == "sherbet";
+                const std::string registerKey = isAliasForCream ? canonicalKey : key;
+
+                Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
+                if (isAliasForCream || NormalizeKey(registerKey) != normalizedKey)
+                {
+                    RegisterAlias(*mappedType, key);
+                }
+                touched.insert(*mappedType);
             }
-
-            const std::string canonicalKey = ToString(*mappedType);
-            const std::string registerKey = isPlayerAlias ? canonicalKey : key;
-
-            Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
-            if (isPlayerAlias)
+            else if (mappedExtraKey)
             {
-                RegisterAlias(*mappedType, key);
+                if (description.empty())
+                {
+                    const auto descriptorIt = m_extras.find(*mappedExtraKey);
+                    if (descriptorIt != m_extras.end())
+                    {
+                        description = descriptorIt->second.description;
+                    }
+                }
+
+                std::string canonicalExtraKey = key;
+                const auto descriptorIt = m_extras.find(*mappedExtraKey);
+                if (descriptorIt != m_extras.end())
+                {
+                    canonicalExtraKey = descriptorIt->second.key;
+                }
+                RegisterExtra(canonicalExtraKey, resolvedPath, description, allowMeshPhysics);
+                if (isExtraAlias)
+                {
+                    RegisterExtraAlias(canonicalExtraKey, key);
+                }
             }
-            touched.insert(*mappedType);
 
         }
 
@@ -355,23 +417,34 @@ namespace SweetsSpace
     const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(const std::string& key) const
     {
         auto resolved = Resolve(key);
-        if (!resolved)
+        if (resolved)
+        {
+            return Find(*resolved);
+        }
+
+        const std::string normalized = NormalizeKey(key);
+        const auto aliasIt = m_extraLookup.find(normalized);
+        if (aliasIt == m_extraLookup.end())
         {
             return nullptr;
         }
-        return Find(*resolved);
+
+        const auto descriptorIt = m_extras.find(aliasIt->second);
+        if (descriptorIt == m_extras.end())
+        {
+            return nullptr;
+        }
+        return &descriptorIt->second;
     }
 
     std::string ToString(SweetsType type)
     {
         switch (type)
         {
-        case SweetsType::Cake:
-            return "Cake";
         case SweetsType::Pudding:
             return "Pudding";
-        case SweetsType::Sherbet:
-            return "Sherbet";
+        case SweetsType::Cream:
+            return "Cream";
         case SweetsType::Strawberry:
             return "Strawberry";
         case SweetsType::Blueberry:
@@ -380,8 +453,6 @@ namespace SweetsSpace
             return "Pineapple";
         case SweetsType::Banana:
             return "Banana";
-        case SweetsType::Fairy:
-            return "Fairy";
         default:
             return "Unknown";
         }

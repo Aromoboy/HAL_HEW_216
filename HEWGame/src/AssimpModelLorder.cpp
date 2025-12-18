@@ -88,13 +88,10 @@ namespace
             return "Assets/Texture/blueberry.png";
         case SweetsType::Pineapple:
             return "Assets/Texture/pineapple.png";
-        case SweetsType::Cake:
-
         case SweetsType::Pudding:
-        case SweetsType::Sherbet:
         case SweetsType::Banana:
+        case SweetsType::Cream:
             return "Assets/Texture/cream.png";
-        case SweetsType::Fairy:
         default:
             return std::nullopt;
         }
@@ -138,7 +135,7 @@ namespace
         {
             return "Assets/Texture/pineapple.png";
         }
-        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana"))
+        if (contains("cake") || contains("cream") || contains("pudding") || contains("banana") || contains("sherbet"))
         {
             return "Assets/Texture/cream.png";
         }
