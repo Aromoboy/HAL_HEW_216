@@ -248,26 +248,35 @@ cbuffer Light : register(b1)
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
+
+float3 ApplyNormalMap(float3 normal, float2 uv, float3 wPos)
+{
+	if (mapFlags.y < 0.5f) return normalize(normal);
+
+	float3 dp1 = ddx(wPos);
+	float3 dp2 = ddy(wPos);
+	float2 duv1 = ddx(uv);
+	float2 duv2 = ddy(uv);
+	float det = duv1.x * duv2.y - duv1.y * duv2.x;
+	float3 N = normalize(normal);
+	if (abs(det) < 1e-5f) return N;
+	float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * sign(det));
+	float3 B = normalize(cross(N, T));
+	float3 mapN = texNormal.Sample(samp, uv).xyz * 2.0f - 1.0f;
+	float3x3 tbn = float3x3(T, B, N);
+	return normalize(mul(mapN, tbn));
+}
+
 float4 main(PS_IN pin) : SV_TARGET
 {
-    float4 texColor = float4(objDiffuse.rgb, 1.0f);
-    if (objAmbient.a >= 1.0f)
-    {
-        texColor = tex.Sample(samp, pin.uv);
-        texColor.a = 1.0f;
-    }
-
-    float3 N = normalize(pin.normal);
-    float3 L = normalize(-lightDir.xyz);
-
-    float lambert = saturate(dot(N, L));
-
-    float3 ambient = objAmbient.rgb * texColor.rgb;
-    float3 diffuse = lambert * texColor.rgb;
-
-    float3 finalColor = ambient + diffuse;
-    float shade = 0.85f; //絶対に触らないほうがいい　ドロスより
-    return float4(texColor.rgb * shade, 1.0f);
+	float3 baseColor = mapFlags.x >= 0.5f ? texDiffuse.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
+	float3 N = ApplyNormalMap(pin.normal, pin.uv, pin.wPos.xyz);
+	float3 L = normalize(-lightDir.xyz);
+	float lambert = saturate(dot(N, L));
+	float3 ambient = objAmbient.rgb * baseColor;
+	float3 diffuse = lambert * baseColor;
+	float3 finalColor = ambient + diffuse;
+	return float4(finalColor, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);

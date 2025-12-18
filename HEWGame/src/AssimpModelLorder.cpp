@@ -537,7 +537,6 @@ AssimpModelLorder::MakeMaterial(
 
         aiColor3D col;
         float shininess = 0.0f;
-        bool skipTexturesForShadingModel = false;
 
         if (pScene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, col) == AI_SUCCESS)
             diffuse = { col.r, col.g, col.b, 1.0f };
@@ -705,9 +704,37 @@ AssimpModelLorder::MakeMaterial(
                     texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
                 }
             }
+
+            if (!texture && allowFallbackByName)
+            {
+                if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
+                {
+                    DebugLog::DebugMessage(
+                        "[Material] マニフェスト/名前フォールバックテクスチャ '" + *fallback + "' を適用 material " + std::to_string(i));
+                    std::wstring wfull(fallback->begin(), fallback->end());
+                    texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
+                }
+            }
+
+            return texture;
+        };
+
+        std::shared_ptr<Texture2D> diffuseTex = nullptr;
+        std::shared_ptr<Texture2D> normalTex = nullptr;
+        std::shared_ptr<Texture2D> specularTex = nullptr;
+
+        if (textureLoadingEnabled)
+        {
+            diffuseTex = loadMaterialTexture(aiTextureType_DIFFUSE, "diffuse", true);
+            normalTex = loadMaterialTexture(aiTextureType_NORMALS, "normal", false);
+            if (!normalTex)
+            {
+                normalTex = loadMaterialTexture(aiTextureType_HEIGHT, "height-normal", false);
+            }
+            specularTex = loadMaterialTexture(aiTextureType_SPECULAR, "specular", false);
         }
 
-        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, diffuseTex, normalTex, specularTex);
     }
 
     return materials;
