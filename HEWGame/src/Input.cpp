@@ -1,7 +1,7 @@
 #include "Core/Input.h"
 
 #include <sstream>
-
+#include <core/StepTimer.h>
 #include "Diagnostics/Logger.h"
 
 namespace
