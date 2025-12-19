@@ -86,6 +86,7 @@ namespace
         constexpr float kFallbackPlayerMoveSpeed = 10.0f;
         constexpr float kDefaultPickupMaxDistance = 0.5f;
         constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
+        constexpr float kGuidelineAdvanceCooldownSeconds = 0.25f;
         constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
@@ -2042,6 +2043,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
     m_guidelineStepMeters = m_stageData.GetGuidelineStep();
+    m_guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
+    m_guidelineCooldownRemainingSeconds = 0.0f;
     if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
     {
         std::ostringstream oss;
@@ -2710,6 +2713,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #endif
     ValidatePlayerPhysicsRegistration();
     UpdateCountdown(ctx);
+    if (m_guidelineCooldownRemainingSeconds > 0.0f)
+    {
+        m_guidelineCooldownRemainingSeconds = std::max(0.0f, m_guidelineCooldownRemainingSeconds - ctx.dt);
+    }
 
     if (m_guidelineTriggerCooldownSeconds > 0.0f)
     {
@@ -2936,12 +2943,19 @@ bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
         return false;
     }
 
+    if (m_guidelineCooldownRemainingSeconds > 0.0f)
+    {
+        return false;
+    }
+
     const SweetsSpace::SweetsState states[] = {
         SweetsSpace::SweetsState::Active,
         SweetsSpace::SweetsState::Stacked,
         SweetsSpace::SweetsState::Ground,
         SweetsSpace::SweetsState::Carried,
     };
+
+    std::shared_ptr<SweetsSpace::ActiveSweets> crossedSweets;
 
     for (SweetsSpace::SweetsState state : states)
     {
@@ -2962,10 +2976,27 @@ bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
             const AABB bounds = sweets->GetAABB();
             if (bounds.max.y >= m_guidelineHeightMeters)
             {
+                if (m_guidelineTriggeredThisHeight.insert(sweets.get()).second)
+                {
+                    crossedSweets = sweets;
+                    break;
+                }
                 outTriggerHeight = bounds.max.y;
                 return true;
             }
         }
+
+        if (crossedSweets)
+        {
+            break;
+        }
+    }
+
+    if (crossedSweets)
+    {
+        m_guidelineCooldownRemainingSeconds = m_guidelineCooldownDurationSeconds;
+        m_sweetsManager->OnSweetsPassedGuideline(crossedSweets);
+        return true;
     }
 
     return false;
@@ -2983,6 +3014,8 @@ void SceneGame::OnGuidelineCrossed()
     m_guidelineHeightMeters += m_guidelineStepMeters;
     m_guidelineInvalidLogged = false;
     m_guidelineClampLogged = false;
+    m_guidelineTriggeredThisHeight.clear();
+    m_guidelineCooldownRemainingSeconds = 0.0f;
 
     std::ostringstream oss;
     oss << kLogPrefix << "[Guideline] Advanced threshold from " << previousHeight
@@ -3759,6 +3792,9 @@ void SceneGame::ResetPlaySession()
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
     m_pendingTimeBonuses.clear();
+    m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
+    m_guidelineTriggeredThisHeight.clear();
+    m_guidelineCooldownRemainingSeconds = 0.0f;
     m_guidelineTriggerCooldownSeconds = 0.0f;
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
