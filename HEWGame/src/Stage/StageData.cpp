@@ -1291,13 +1291,15 @@ namespace Stage
         const auto defaultSpawnPointsPrimary = BuildDefaultSpawnPointsPrimary(planeZ);
         const auto defaultSpawnPointsSecondary = BuildDefaultSpawnPointsSecondary(planeZ);
 
-        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label)
+        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label, bool* usedDefaults)
         {
             const std::size_t parsedAnchorCount = spawnPoints.size();
+            bool defaulted = false;
             if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
             {
                 parseError = true;
                 spawnPoints = defaults;
+                defaulted = true;
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " provided " << parsedAnchorCount
                     << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
@@ -1309,6 +1311,7 @@ namespace Stage
             if (spawnPoints.empty())
             {
                 spawnPoints = defaults;
+                defaulted = true;
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " missing; using defaults.\n";
                 DebugTrace(oss.str());
@@ -1344,10 +1347,17 @@ namespace Stage
                     DebugTrace(oss.str());
                 }
             }
+
+            if (usedDefaults)
+            {
+                *usedDefaults = defaulted;
+            }
         };
 
-        sanitizeSpawnGroup(spawnPointsPrimary, defaultSpawnPointsPrimary, "spawnPointsPrimary");
-        sanitizeSpawnGroup(spawnPointsSecondary, defaultSpawnPointsSecondary, "spawnPointsSecondary");
+        bool primaryUsedDefaults = false;
+        bool secondaryUsedDefaults = false;
+        sanitizeSpawnGroup(spawnPointsPrimary, defaultSpawnPointsPrimary, "spawnPointsPrimary", &primaryUsedDefaults);
+        sanitizeSpawnGroup(spawnPointsSecondary, defaultSpawnPointsSecondary, "spawnPointsSecondary", &secondaryUsedDefaults);
 
         if (!spawnPointsPrimary.empty() && !spawnPointsSecondary.empty())
         {
@@ -1594,36 +1604,14 @@ namespace Stage
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
-            << ", thresholds=" << m_phaseThresholds.size()
-            << ", multipliers=" << m_phaseRewardMultipliers.size()
-            << ", minithresholds=" << m_phaseMiniThresholds.size()            // ミニフェーズ
-            << ", minimultipliers=" << m_phaseRewardMiniMultipliers.size()    // ミニフェーズ
-            << ", spawnPointsPrimary=" << m_spawnPointsPrimary.size()
-            << ", spawnPointsSecondary=" << m_spawnPointsSecondary.size()
-            << ", platforms=" << m_platforms.size()
-            << ", cellSizeWorld=" << m_cellSizeWorld
-            << ", playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
-            << ", playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
-            << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
-            << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
-            << ", pickupMaxDistance=" << m_pickupMaxDistance
-            << ", pickupDepthThreshold=" << m_pickupDepthThreshold
-            << ", pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
-            << ", pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
-            << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
-            << ", guidelineHeight=" << m_guidelineHeight
-            << ", heightBonusThreshold=" << m_heightBonusThreshold
-            << ", heightBonusSeconds=" << m_heightBonusSeconds
-            << ", backgroundTexture='" << m_backgroundTexturePath << "'"
-            << ", parseError=" << std::boolalpha << parseError << ").\n";
-        DebugTrace(oss.str());
-
-        for (std::size_t i = 0; i < m_platforms.size(); ++i)
-        {
-            LogPlatformSummary(i, m_platforms[i]);
-        }
+        std::ostringstream detail;
+        detail << "source='" << path << "' parseError=" << std::boolalpha << parseError
+            << " primaryDefaulted=" << primaryUsedDefaults
+            << " secondaryDefaulted=" << secondaryUsedDefaults
+            << " minithresholds=" << m_phaseMiniThresholds.size()
+            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size()
+            << " platformCount=" << m_platforms.size();
+        LogSummary("Loaded", detail.str());
 
         return m_loadedFromFile;
     }
