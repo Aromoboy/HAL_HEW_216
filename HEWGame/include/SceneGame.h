@@ -123,6 +123,7 @@ private:
     void ResetPlaySession();
     void UpdateCountdown(Core::UpdateContext& ctx);
     void UpdateTowerHeightTelemetry();
+    bool CheckGuidelineCrossing();
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);

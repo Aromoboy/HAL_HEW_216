@@ -142,6 +142,26 @@ namespace GameFlow
         DebugTrace(oss.str());
     }
 
+    bool PhaseManager::AdvancePhase()
+    {
+        if (!m_initialized)
+        {
+            return false;
+        }
+
+        const std::size_t requiredMultiplierCount = m_thresholds.size() + 1;
+        if (m_rewardMultipliers.size() < requiredMultiplierCount)
+        {
+            const float fillValue = m_rewardMultipliers.empty() ? 1.0f : m_rewardMultipliers.back();
+            m_rewardMultipliers.resize(requiredMultiplierCount, fillValue);
+        }
+
+        ++m_currentPhase;
+        m_nextThresholdIndex = std::min(m_nextThresholdIndex + 1, m_thresholds.size());
+
+        return true;
+    }
+
 
     PhaseManager::PhaseUpdateResult PhaseManager::UpdateHeight(float currentMaxHeight)
     {

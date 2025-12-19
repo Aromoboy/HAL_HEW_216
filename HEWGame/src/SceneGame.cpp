@@ -2885,13 +2885,13 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        const float timeStep = std::max(deltaTime, 0.0f);
-        GameFlow::PhaseManager::PhaseUpdateResult advenced =
-            m_phaseManager.UpdateTime(timeStep);
-
-        if (advenced.phaseAdvanced)
+        if (CheckGuidelineCrossing())
         {
-            BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
+            const bool advanced = m_phaseManager.AdvancePhase();
+            if (advanced)
+            {
+                BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
+            }
         }
         break;
     }
@@ -2907,6 +2907,46 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         ProcessPostGameInput(ctx);
     }
+}
+
+bool SceneGame::CheckGuidelineCrossing()
+{
+    if (!m_sweetsManager)
+    {
+        return false;
+    }
+
+    if (!(m_guidelineHeightMeters > 0.0f))
+    {
+        return false;
+    }
+
+    const SweetsSpace::SweetsState states[] = {
+        SweetsSpace::SweetsState::Active,
+        SweetsSpace::SweetsState::Stacked,
+        SweetsSpace::SweetsState::Ground,
+    };
+
+    for (SweetsSpace::SweetsState state : states)
+    {
+        auto& list = m_sweetsManager->GetByState(state);
+        for (const auto& sweets : list)
+        {
+            if (!sweets || sweets->IsPendingDestroy())
+            {
+                continue;
+            }
+
+            sweets->SyncColliderBounds();
+            const AABB bounds = sweets->GetAABB();
+            if (bounds.max.y >= m_guidelineHeightMeters)
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 #if defined(_DEBUG)

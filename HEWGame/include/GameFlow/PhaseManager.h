@@ -30,6 +30,7 @@ namespace GameFlow
         void Reset();
         PhaseUpdateResult UpdateHeight(float currentMaxHeight);
         PhaseUpdateResult UpdateTime(float deltaSeconds);
+        bool AdvancePhase();
 
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
