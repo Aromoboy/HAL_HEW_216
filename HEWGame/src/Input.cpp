@@ -1,5 +1,9 @@
 #include "Core/Input.h"
 
+#include <sstream>
+
+#include "Diagnostics/Logger.h"
+
 namespace
 {
         constexpr BYTE kKeyPressedMask = 0x80;
@@ -39,12 +43,31 @@ namespace Core
 
                 m_pad = Gamepad();
                 m_map = InputMap();
+                m_lastPolledFrame = 0;
         }
 
         void Input::OnUpdate(UpdateContext& ctx)
         {
+                const std::uint64_t frameIndex = ctx.timer.FrameIndex();
+
+                if (frameIndex == m_lastPolledFrame)
+                {
+                        return;
+                }
+
+                if (m_initialized && m_lastPolledFrame != 0 && frameIndex > m_lastPolledFrame + 1)
+                {
+                        std::ostringstream oss;
+                        oss << "[Input] polling resumed after skipping "
+                            << (frameIndex - m_lastPolledFrame - 1) << " frame(s) (last=" << m_lastPolledFrame
+                            << ", current=" << frameIndex << ')';
+                        Diagnostics::LogInfo(oss.str());
+                }
                 if (!m_initialized)
                 {
+                        std::ostringstream oss;
+                        oss << "[Input] initializing poll pipeline at frame " << frameIndex;
+                        Diagnostics::LogInfo(oss.str());
                         // OnUpdate 経由での遅延初期化 ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする 
                         PollKeyboardState();
                         m_previousKeys = m_currentKeys;
@@ -58,6 +81,8 @@ namespace Core
                         PollKeyboardState();
                         PollPadState();
                 }
+
+                m_lastPolledFrame = frameIndex;
         }
 
         float Input::GetAxis(ActionId action) const
@@ -169,4 +194,3 @@ namespace Core
                 return (m_previousKeys[key] & kKeyPressedMask) != 0;
         }
 }
-

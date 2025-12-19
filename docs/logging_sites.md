@@ -10,6 +10,13 @@ The following call sites already emit debug traces or guardrails around asset/sy
   - **Warning** when an individual model fails to load; the loader continues after logging the failure.
   - **Info** for the start/end progress messages (file opened, per-model load attempt/success, total loaded count).
 
+## Stage spawn anchors (`StageData::LoadFromFile`)
+- Location: `HEWGame/src/Stage/StageData.cpp` (see the spawn lane sanitization block).
+- Behavior: logs per-lane anchor counts, when defaults are injected for a missing primary lane, when the optional secondary lane is absent, and when both lanes are empty (fallback `(0,0,0)` anchor). Cross-plane mismatches are also reported.
+- Suggested severity:
+  - **Warning** when anchor parsing fails or when both lanes are empty and the fallback anchor is injected.
+  - **Info** when defaults are applied intentionally (missing primary lane) or when lanes are intentionally empty (secondary omitted).
+
 ## Model loader (`AssimpModelLorder`)
 - Location: `HEWGame/src/AssimpModelLorder.cpp`.
 - Behavior: returns `nullptr` if `Assimp::Importer::ReadFile` fails (error string available under `_DEBUG`) and logs texture load failures with `OutputDebugStringA` while continuing without a texture.

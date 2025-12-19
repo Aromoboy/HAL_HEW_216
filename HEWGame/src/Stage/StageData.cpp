@@ -363,13 +363,34 @@ namespace Stage
         bool backgroundTextureSet = false;
         bool parseError = false;
         size_t lineNumber = 0;
+        bool primaryProvided = false;
+        bool secondaryProvided = false;
+        bool primaryParseError = false;
+        bool secondaryParseError = false;
 
         auto appendSpawnPoints = [&](const std::string& label, const std::string& rawValue, std::vector<float3>& targets)
         {
+            if (label == "spawnPointsPrimary")
+            {
+                primaryProvided = true;
+            }
+            else if (label == "spawnPointsSecondary")
+            {
+                secondaryProvided = true;
+            }
+
             const size_t beforeCount = targets.size();
             if (!TryParseSpawnPoint(rawValue, lineNumber, targets))
             {
                 parseError = true;
+                if (label == "spawnPointsPrimary")
+                {
+                    primaryParseError = true;
+                }
+                else if (label == "spawnPointsSecondary")
+                {
+                    secondaryParseError = true;
+                }
                 return;
             }
 
@@ -619,19 +640,11 @@ namespace Stage
                     minithresholds.insert(minithresholds.end(), parsed.begin(), parsed.end());
                 }
             }
-            else if (key == "spawnPoint" || key == "spawnPointA" || key == "spawnPointPrimary")
-            {
-                appendSpawnPoints("spawnPoint(primary)", rawValue, spawnPointsPrimary);
-            }
-            else if (key == "spawnPoints" || key == "spawnPointsA" || key == "spawnPointsPrimary")
+            else if (key == "spawnPoints" || key == "spawnPointsPrimary" || key == "spawnPointsA")
             {
                 appendSpawnPoints("spawnPointsPrimary", rawValue, spawnPointsPrimary);
             }
-            else if (key == "spawnPointB" || key == "spawnPointSecondary")
-            {
-                appendSpawnPoints("spawnPoint(secondary)", rawValue, spawnPointsSecondary);
-            }
-            else if (key == "spawnPointsB" || key == "spawnPointsSecondary")
+            else if (key == "spawnPointsSecondary" || key == "spawnPointsB")
             {
                 appendSpawnPoints("spawnPointsSecondary", rawValue, spawnPointsSecondary);
             }
@@ -1291,29 +1304,29 @@ namespace Stage
         const auto defaultSpawnPointsPrimary = BuildDefaultSpawnPointsPrimary(planeZ);
         const auto defaultSpawnPointsSecondary = BuildDefaultSpawnPointsSecondary(planeZ);
 
-        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label, bool* usedDefaults)
+        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label, bool parseFailed, bool allowDefaults, bool& usedDefaults)
         {
             const std::size_t parsedAnchorCount = spawnPoints.size();
-            bool defaulted = false;
+            usedDefaults = false;
             if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
             {
                 parseError = true;
-                spawnPoints = defaults;
-                defaulted = true;
+                parseFailed = true;
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " provided " << parsedAnchorCount
                     << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
                     << "; expected at least " << kRequiredSpawnAnchors
-                    << ". Falling back to defaults and marking parse error.\n";
+                    << ". Keeping lane empty to avoid silent defaults.\n";
                 DebugTrace(oss.str());
+                spawnPoints.clear();
             }
 
-            if (spawnPoints.empty())
+            if (spawnPoints.empty() && !parseFailed && allowDefaults)
             {
                 spawnPoints = defaults;
-                defaulted = true;
+                usedDefaults = true;
                 std::ostringstream oss;
-                oss << kLogPrefix << label << " missing; using defaults.\n";
+                oss << kLogPrefix << label << " missing; using defaults for this lane.\n";
                 DebugTrace(oss.str());
             }
 
@@ -1347,17 +1360,35 @@ namespace Stage
                     DebugTrace(oss.str());
                 }
             }
-
-            if (usedDefaults)
-            {
-                *usedDefaults = defaulted;
-            }
         };
 
         bool primaryUsedDefaults = false;
         bool secondaryUsedDefaults = false;
-        sanitizeSpawnGroup(spawnPointsPrimary, defaultSpawnPointsPrimary, "spawnPointsPrimary", &primaryUsedDefaults);
-        sanitizeSpawnGroup(spawnPointsSecondary, defaultSpawnPointsSecondary, "spawnPointsSecondary", &secondaryUsedDefaults);
+        bool insertedFallbackAnchor = false;
+        sanitizeSpawnGroup(
+            spawnPointsPrimary,
+            defaultSpawnPointsPrimary,
+            "spawnPointsPrimary",
+            primaryParseError,
+            !primaryProvided,
+            primaryUsedDefaults);
+        sanitizeSpawnGroup(
+            spawnPointsSecondary,
+            defaultSpawnPointsSecondary,
+            "spawnPointsSecondary",
+            secondaryParseError,
+            false,
+            secondaryUsedDefaults);
+
+        if (spawnPointsPrimary.empty() && spawnPointsSecondary.empty())
+        {
+            spawnPointsPrimary.push_back(float3{ 0.0f, 0.0f, 0.0f });
+            insertedFallbackAnchor = true;
+            parseError = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Both spawn lanes are empty; inserting single fallback anchor at (0,0,0).\n";
+            DebugTrace(oss.str());
+        }
 
         if (!spawnPointsPrimary.empty() && !spawnPointsSecondary.empty())
         {
@@ -1608,6 +1639,11 @@ namespace Stage
         detail << "source='" << path << "' parseError=" << std::boolalpha << parseError
             << " primaryDefaulted=" << primaryUsedDefaults
             << " secondaryDefaulted=" << secondaryUsedDefaults
+            << " primaryProvided=" << primaryProvided
+            << " secondaryProvided=" << secondaryProvided
+            << " primaryParseError=" << primaryParseError
+            << " secondaryParseError=" << secondaryParseError
+            << " fallbackAnchors=" << insertedFallbackAnchor
             << " minithresholds=" << m_phaseMiniThresholds.size()
             << " minimultipliers=" << m_phaseRewardMiniMultipliers.size()
             << " platformCount=" << m_platforms.size();
@@ -1765,7 +1801,7 @@ namespace Stage
         EnsureRewardMultiplierCoverage(m_phaseRewardMiniMultipliers, m_phaseMiniThresholds.size() + 1, kDefaultMiniRewardMultipliers);
 
         m_spawnPointsPrimary = BuildDefaultSpawnPointsPrimary(kDefaultPlaneZ);
-        m_spawnPointsSecondary = BuildDefaultSpawnPointsSecondary(kDefaultPlaneZ);
+        m_spawnPointsSecondary.clear();
         m_platforms.clear();
         PlatformDescriptor descriptor{};
         descriptor.center = float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ };

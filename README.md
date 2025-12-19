@@ -535,13 +535,12 @@ UpdateNode:
 
 
 ## Stage spawn anchors
-- `spawnPointsPrimary` / `spawnPointsSecondary` define spawn lanes as comma/semicolon separated triples (`x,y,z`). Each lane expects at least two anchors; malformed lanes fall back to defaults on the configured `planeZ`.
-- Primary lane aliases: `spawnPoints`, `spawnPointsPrimary`, or `spawnPointsA`.
-- Secondary lane aliases: `spawnPointsSecondary` or `spawnPointsB`.
-- At least two anchors per lane are required; malformed or missing lanes are repopulated with defaults on the configured `planeZ`. When the secondary lane is omitted, the default lane is still applied and logged so you can see which anchors were used.
-- SweetsManager alternates between primary and secondary anchors per spawn request. Lane strategy and anchor indices are logged whenever anchors are configured, making spawn order deterministic in traces.
+- `spawnPoints` defines the primary lane as comma/semicolon separated triples (`x,y,z`). Each lane expects at least two anchors. When the primary lane is omitted entirely, a default pair on the configured `planeZ` is injected and logged; parse errors keep the lane empty.
+- `spawnPointsSecondary` (alias `spawnPointsB`) is optional and is never auto-generated; if parsing fails or the key is absent, the secondary lane stays empty.
+- Only when **both** lanes end up empty is a single fallback anchor `(0,0,0)` inserted. Cross-lane `planeZ` mismatches are still logged.
+- SweetsManager alternates lanes only when both are present; otherwise it uses the sole configured lane. Spawn order, lane strategy, and anchor counts are logged when origins are configured.
 
-Example (all aliases acceptable):
+Example:
 
 ```
 # Primary (lane A) – same planeZ as the stage
