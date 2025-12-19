@@ -41,7 +41,6 @@ namespace
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 2.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
-    // Bonus time per guideline crossing is fixed by requirement at +5 seconds.
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
     constexpr std::size_t kRequiredSpawnAnchors = 2;
