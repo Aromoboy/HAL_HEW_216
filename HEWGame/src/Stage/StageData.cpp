@@ -41,6 +41,7 @@ namespace
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 2.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
+    // Bonus time per guideline crossing is fixed by requirement at +5 seconds.
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
     constexpr std::size_t kRequiredSpawnAnchors = 2;
@@ -1598,6 +1599,16 @@ namespace Stage
             oss << kLogPrefix << "heightBonusSeconds <= 0. Bonus events disabled.\n";
             DebugTrace(oss.str());
             heightBonusSeconds = 0.0f;
+        }
+        else if (std::fabs(heightBonusSeconds - kDefaultHeightBonusSeconds)
+            > std::numeric_limits<float>::epsilon())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
+                << " overridden to requirement default " << kDefaultHeightBonusSeconds
+                << " (+5s per crossing).\n";
+            DebugTrace(oss.str());
+            heightBonusSeconds = kDefaultHeightBonusSeconds;
         }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;

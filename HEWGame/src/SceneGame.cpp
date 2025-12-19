@@ -3773,55 +3773,54 @@ void SceneGame::UpdateCountdown(Core::UpdateContext& ctx)
 
 void SceneGame::UpdateTowerHeightTelemetry()
 {
-    static int callCount = 0;
-    ++callCount;
-    ::DebugTrace("[DEBUG] UpdateTowerHeightTelemetry callCount="
-        + std::to_string(callCount) + "\n");
-
-  //  Initialize(m_stageData);
-   //テスト用マジックナンバー
-    //const float testHeight = 1.0f;
-   // const float bonusSecond = 5.0f;
-
-        //高さボーナス判定
-    float heightThreshold = m_heightBonusThresholdMeters;
-    float bonusSecond = m_heightBonusSeconds;
-
-    //積んでる状態の高さ
-    float instantHeight = 0.0f;
-
-    std::ostringstream oss;
-    oss << "[DEBUG] instantHeight=" << instantHeight
-        << " threshold=" << m_heightBonusThresholdMeters  // ← 正しい変数に変更
-        << " bonusSeconds=" << m_heightBonusSeconds
-        << "\n";
-    ::DebugTrace(oss.str());
-
     if (!m_sweetsManager)
     {
         ::DebugTrace("[ERROR] m_sweetsManager is nullptr!\n");
         return;
     }
-    
-    //instantHeight = m_sweetsManager->GetHighestStackedHeight();
-    //if (m_sweetsManager)
-    //{
-    //    instantHeight = m_sweetsManager->GetHighestStackedHeight();  
-    //}
 
-    m_currentTowerHeight = instantHeight;
-    m_maxTowerHeight = std::max(m_maxTowerHeight, instantHeight);
+    const float heightThreshold =
+        (m_heightBonusThresholdMeters > 0.0f) ? m_heightBonusThresholdMeters : m_guidelineHeightMeters;
+    const float bonusSeconds = m_heightBonusSeconds;
 
+    const SweetsSpace::SweetsState states[] = {
+        SweetsSpace::SweetsState::Active,
+        SweetsSpace::SweetsState::Stacked,
+        SweetsSpace::SweetsState::Ground,
+    };
 
+    float highestTop = 0.0f;
+    float triggerHeight = 0.0f;
+    bool crossedThreshold = false;
 
-    ::DebugTrace("[DEBUG] instantHeight=" + std::to_string(instantHeight) +
-        " threshold=" + std::to_string(heightThreshold) +
-        " bonusSeconds=" + std::to_string(bonusSecond) + "\n");
-
-
-    if (instantHeight > m_peakTowerHeight)
+    for (SweetsSpace::SweetsState state : states)
     {
-        m_peakTowerHeight = instantHeight;
+        auto& list = m_sweetsManager->GetByState(state);
+        for (const auto& sweets : list)
+        {
+            if (!sweets || sweets->IsPendingDestroy())
+            {
+                continue;
+            }
+
+            sweets->SyncColliderBounds();
+            const AABB bounds = sweets->GetAABB();
+            highestTop = std::max(highestTop, bounds.max.y);
+
+            if (heightThreshold > 0.0f && bounds.max.y >= heightThreshold)
+            {
+                crossedThreshold = true;
+                triggerHeight = std::max(triggerHeight, bounds.max.y);
+            }
+        }
+    }
+
+    m_currentTowerHeight = highestTop;
+    m_maxTowerHeight = std::max(m_maxTowerHeight, highestTop);
+
+    if (highestTop > m_peakTowerHeight)
+    {
+        m_peakTowerHeight = highestTop;
         std::ostringstream oss;
         oss << kLogPrefix << "[Tower] newPeakTop=" << std::fixed << std::setprecision(2)
             << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
@@ -3829,26 +3828,19 @@ void SceneGame::UpdateTowerHeightTelemetry()
         ::DebugTrace(oss.str());
     }
 
-    if (heightThreshold > 0.0f && bonusSecond > 0.0f)
+    if (heightThreshold > 0.0f && bonusSeconds > 0.0f)
     {
-       
-        //高さライン越え
-        if (instantHeight >= heightThreshold)
+        if (crossedThreshold)
         {
-            
             if (m_heightBonusArmed)
             {
-
                 m_heightBonusArmed = false;
-
-                m_remainingCountdownSeconds += bonusSecond;
-
-                m_pendingTimeBonuses.push_back(PendingTimeBonus{ bonusSecond, instantHeight }); 
+                m_pendingTimeBonuses.push_back(PendingTimeBonus{ bonusSeconds, triggerHeight });
                 std::ostringstream oss;
                 oss << kLogPrefix << "[TowerBonus] thresholdCrossed height=" << std::fixed << std::setprecision(2)
-                    << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
+                    << triggerHeight << "m threshold=" << std::fixed << std::setprecision(2)
                     << heightThreshold << "m bonus=" << std::fixed << std::setprecision(2)
-                    << bonusSecond << "s queue=" << m_pendingTimeBonuses.size() << "\n";
+                    << bonusSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
                 ::DebugTrace(oss.str());
             }
         }
@@ -3857,7 +3849,7 @@ void SceneGame::UpdateTowerHeightTelemetry()
             m_heightBonusArmed = true;
             std::ostringstream oss;
             oss << kLogPrefix << "[TowerBonus] rearmed height=" << std::fixed << std::setprecision(2)
-                << instantHeight << "m threshold=" << std::fixed << std::setprecision(2)
+                << highestTop << "m threshold=" << std::fixed << std::setprecision(2)
                 << heightThreshold << "m\n";
             ::DebugTrace(oss.str());
         }
