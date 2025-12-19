@@ -29,6 +29,7 @@ namespace GameFlow
 
         void Reset();
         PhaseUpdateResult UpdateHeight(float currentMaxHeight);
+        // Time-based progression is intentionally disabled to avoid double-triggering phases.
         PhaseUpdateResult UpdateTime(float deltaSeconds);
         bool AdvancePhase();
 

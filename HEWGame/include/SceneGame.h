@@ -123,8 +123,10 @@ private:
     void ResetPlaySession();
     void UpdateCountdown(Core::UpdateContext& ctx);
     void UpdateTowerHeightTelemetry();
-    bool CheckGuidelineCrossing();
+    bool CheckGuidelineCrossing(float& outTriggerHeight);
     void OnGuidelineCrossed();
+    void ApplyGuidelineBonus(float triggerHeight);
+    void HandleGuidelineAdvance(float triggerHeight);
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
@@ -180,7 +182,7 @@ private:
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     float m_groundY = 0.0f;
-    bool m_heightBonusArmed = false;
+    float m_guidelineTriggerCooldownSeconds = 0.0f;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;
