@@ -1599,6 +1599,16 @@ namespace Stage
             DebugTrace(oss.str());
             heightBonusSeconds = 0.0f;
         }
+        else if (std::fabs(heightBonusSeconds - kDefaultHeightBonusSeconds)
+            > std::numeric_limits<float>::epsilon())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
+                << " overridden to requirement default " << kDefaultHeightBonusSeconds
+                << " (+5s per crossing).\n";
+            DebugTrace(oss.str());
+            heightBonusSeconds = kDefaultHeightBonusSeconds;
+        }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
