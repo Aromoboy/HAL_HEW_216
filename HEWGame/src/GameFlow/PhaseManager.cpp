@@ -212,51 +212,11 @@ namespace GameFlow
 
     PhaseManager::PhaseUpdateResult PhaseManager::UpdateTime(float deltaSeconds)
     {
+        (void)deltaSeconds;
         PhaseUpdateResult phaseupdate = {};
-
         phaseupdate.phaseAdvanced = false;
         phaseupdate.miniPhaseAdvanced = false;
         phaseupdate.timeElapsed = 0.0f;
-
-        if (!m_initialized)
-        {
-            return phaseupdate;
-        }
-
-        if (!std::isfinite(deltaSeconds))
-        {
-            return phaseupdate;
-        }
-
-        if (deltaSeconds <= 0.0f)
-        {
-            return phaseupdate;
-        }
-
-        m_elapsedSeconds += deltaSeconds;
-
-        while (m_nextThresholdIndex < m_thresholds.size()
-            && m_elapsedSeconds >= m_thresholds[m_nextThresholdIndex])
-        {
-            const float threshold = m_thresholds[m_nextThresholdIndex];
-            ++m_nextThresholdIndex;
-            ++m_currentPhase;
-            phaseupdate.phaseAdvanced = true;
-            phaseupdate.timeElapsed += GetRewardMultiplierForPhase(m_currentPhase);
-            LogPhaseAdvance(threshold, m_elapsedSeconds, "time");
-        }
-
-        while (m_nextMiniThresholdIndex < m_minithresholds.size()
-            && m_elapsedSeconds >= m_minithresholds[m_nextMiniThresholdIndex])
-        {
-            const float minithreshold = m_minithresholds[m_nextMiniThresholdIndex];
-            ++m_nextMiniThresholdIndex;
-            ++m_currentMiniPhase;
-            phaseupdate.miniPhaseAdvanced = true;
-            phaseupdate.timeElapsed += GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
-            LogPhaseAdvance(minithreshold, m_elapsedSeconds, "time");
-        }
-
         return phaseupdate;
     }
     

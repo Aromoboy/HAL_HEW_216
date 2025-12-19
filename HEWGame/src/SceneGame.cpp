@@ -91,6 +91,8 @@ namespace
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float kPlayerMinimumYMargin = 1.0f;
+        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
+        constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
         constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
         constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
@@ -2087,8 +2089,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_heightBonusSeconds = 0.0f;
     }
 
-    m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
-
     const std::string backgroundTexture = m_stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
@@ -2718,6 +2718,11 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_guidelineCooldownRemainingSeconds = std::max(0.0f, m_guidelineCooldownRemainingSeconds - ctx.dt);
     }
 
+    if (m_guidelineTriggerCooldownSeconds > 0.0f)
+    {
+        m_guidelineTriggerCooldownSeconds = std::max(0.0f, m_guidelineTriggerCooldownSeconds - ctx.dt);
+    }
+
     // スイーツの状態更新
     if (m_sweetsManager)
     {
@@ -2902,14 +2907,11 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             anchorTransform.scale = m_pObjects.front()->GetScale();
         }
 
-        if (CheckGuidelineCrossing())
+        float triggerHeight = 0.0f;
+        if (m_guidelineTriggerCooldownSeconds <= 0.0f
+            && CheckGuidelineCrossing(triggerHeight))
         {
-            const bool advanced = m_phaseManager.AdvancePhase();
-            if (advanced)
-            {
-                BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
-            }
-            OnGuidelineCrossed();
+            HandleGuidelineAdvance(triggerHeight);
         }
         break;
     }
@@ -2927,8 +2929,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     }
 }
 
-bool SceneGame::CheckGuidelineCrossing()
+bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
 {
+    outTriggerHeight = 0.0f;
+
     if (!m_sweetsManager)
     {
         return false;
@@ -2948,12 +2952,18 @@ bool SceneGame::CheckGuidelineCrossing()
         SweetsSpace::SweetsState::Active,
         SweetsSpace::SweetsState::Stacked,
         SweetsSpace::SweetsState::Ground,
+        SweetsSpace::SweetsState::Carried,
     };
 
     std::shared_ptr<SweetsSpace::ActiveSweets> crossedSweets;
 
     for (SweetsSpace::SweetsState state : states)
     {
+        if (state == SweetsSpace::SweetsState::Carried)
+        {
+            continue;
+        }
+
         auto& list = m_sweetsManager->GetByState(state);
         for (const auto& sweets : list)
         {
@@ -2971,6 +2981,8 @@ bool SceneGame::CheckGuidelineCrossing()
                     crossedSweets = sweets;
                     break;
                 }
+                outTriggerHeight = bounds.max.y;
+                return true;
             }
         }
 
@@ -2994,6 +3006,7 @@ void SceneGame::OnGuidelineCrossed()
 {
     if (!(m_guidelineHeightMeters > 0.0f) || !(m_guidelineStepMeters > 0.0f))
     {
+        m_guidelineTriggerCooldownSeconds = kGuidelineGlobalCooldownSeconds;
         return;
     }
 
@@ -3008,6 +3021,38 @@ void SceneGame::OnGuidelineCrossed()
     oss << kLogPrefix << "[Guideline] Advanced threshold from " << previousHeight
         << " to " << m_guidelineHeightMeters << " step=" << m_guidelineStepMeters << "\n";
     ::DebugTrace(oss.str());
+    m_guidelineTriggerCooldownSeconds = kGuidelineGlobalCooldownSeconds;
+}
+
+void SceneGame::ApplyGuidelineBonus(float triggerHeight)
+{
+    if (!(kGuidelineTimeBonusSeconds > 0.0f))
+    {
+        return;
+    }
+
+    PendingTimeBonus bonus{};
+    bonus.seconds = kGuidelineTimeBonusSeconds;
+    bonus.triggerHeight = triggerHeight;
+    m_pendingTimeBonuses.push_back(bonus);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] guidelineBonus +=" << std::fixed << std::setprecision(2)
+        << bonus.seconds << "s triggerHeight=" << triggerHeight
+        << "m queue=" << m_pendingTimeBonuses.size() << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::HandleGuidelineAdvance(float triggerHeight)
+{
+    const bool advanced = m_phaseManager.AdvancePhase();
+    if (advanced)
+    {
+        BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
+    }
+
+    ApplyGuidelineBonus(triggerHeight);
+    OnGuidelineCrossed();
 }
 
 #if defined(_DEBUG)
@@ -3750,6 +3795,7 @@ void SceneGame::ResetPlaySession()
     m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
     m_guidelineTriggeredThisHeight.clear();
     m_guidelineCooldownRemainingSeconds = 0.0f;
+    m_guidelineTriggerCooldownSeconds = 0.0f;
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
@@ -3842,10 +3888,6 @@ void SceneGame::UpdateTowerHeightTelemetry()
         return;
     }
 
-    const float heightThreshold =
-        (m_heightBonusThresholdMeters > 0.0f) ? m_heightBonusThresholdMeters : m_guidelineHeightMeters;
-    const float bonusSeconds = m_heightBonusSeconds;
-
     const SweetsSpace::SweetsState states[] = {
         SweetsSpace::SweetsState::Active,
         SweetsSpace::SweetsState::Stacked,
@@ -3853,8 +3895,6 @@ void SceneGame::UpdateTowerHeightTelemetry()
     };
 
     float highestTop = 0.0f;
-    float triggerHeight = 0.0f;
-    bool crossedThreshold = false;
 
     for (SweetsSpace::SweetsState state : states)
     {
@@ -3869,12 +3909,6 @@ void SceneGame::UpdateTowerHeightTelemetry()
             sweets->SyncColliderBounds();
             const AABB bounds = sweets->GetAABB();
             highestTop = std::max(highestTop, bounds.max.y);
-
-            if (heightThreshold > 0.0f && bounds.max.y >= heightThreshold)
-            {
-                crossedThreshold = true;
-                triggerHeight = std::max(triggerHeight, bounds.max.y);
-            }
         }
     }
 
@@ -3889,33 +3923,6 @@ void SceneGame::UpdateTowerHeightTelemetry()
             << m_peakTowerHeight << "m remaining=" << std::fixed << std::setprecision(2)
             << m_remainingCountdownSeconds << "s\n";
         ::DebugTrace(oss.str());
-    }
-
-    if (heightThreshold > 0.0f && bonusSeconds > 0.0f)
-    {
-        if (crossedThreshold)
-        {
-            if (m_heightBonusArmed)
-            {
-                m_heightBonusArmed = false;
-                m_pendingTimeBonuses.push_back(PendingTimeBonus{ bonusSeconds, triggerHeight });
-                std::ostringstream oss;
-                oss << kLogPrefix << "[TowerBonus] thresholdCrossed height=" << std::fixed << std::setprecision(2)
-                    << triggerHeight << "m threshold=" << std::fixed << std::setprecision(2)
-                    << heightThreshold << "m bonus=" << std::fixed << std::setprecision(2)
-                    << bonusSeconds << "s queue=" << m_pendingTimeBonuses.size() << "\n";
-                ::DebugTrace(oss.str());
-            }
-        }
-        else if (!m_heightBonusArmed)
-        {
-            m_heightBonusArmed = true;
-            std::ostringstream oss;
-            oss << kLogPrefix << "[TowerBonus] rearmed height=" << std::fixed << std::setprecision(2)
-                << highestTop << "m threshold=" << std::fixed << std::setprecision(2)
-                << heightThreshold << "m\n";
-            ::DebugTrace(oss.str());
-        }
     }
 }
 
@@ -4127,7 +4134,6 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
     //高さボーナス設定
     m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
     m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
-    m_heightBonusArmed = true;
 
     //デバッグ確認用
     std::ostringstream oss;
