@@ -5,7 +5,7 @@ This checklist uses `Assets/Config/stage_checklist.cfg`, which positions the pla
 ## Quick facts
 - Stage config order: try `stage_checklist.cfg`, fall back to `stage_default.cfg` if missing.
 - Ground baseline: `SceneGame` logs `[Ground]` entries with the platform tag and top Y so testers can confirm the rendered plate matches the physics floor.
-- Spawn anchors: default spawns are lifted to the platform top and share its Z plane for walk-through tests.
+- Spawn anchors: primary/secondary lanes come from `spawnPointsPrimary`/`spawnPointsSecondary`, share the configured `planeZ`, and SweetsManager alternates lanes for deterministic walks.
 
 ## Regression checklist
 | Status | Area | What to check | Evidence/notes |

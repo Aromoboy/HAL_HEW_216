@@ -1975,7 +1975,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " planeZ=" << m_stageData.GetPlaneZ()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
-            << " spawnPoints=" << m_stageData.GetSpawnPoints().size()
+            << " spawnPointsPrimary=" << m_stageData.GetSpawnPointsPrimary().size()
+            << " spawnPointsSecondary=" << m_stageData.GetSpawnPointsSecondary().size()
             << " platforms=" << m_stageData.GetPlatformCount()
             << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
             << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
@@ -2145,6 +2146,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_sweetsManager->SetDrawSystem(m_drawSystem.get());
         m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
         m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
+        m_sweetsManager->SetSpawnOrigins(
+            m_stageData.GetSpawnPointsPrimary(),
+            m_stageData.GetSpawnPointsSecondary());
         const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
         {
             std::ostringstream oss;
@@ -4003,4 +4007,3 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
 }
-
