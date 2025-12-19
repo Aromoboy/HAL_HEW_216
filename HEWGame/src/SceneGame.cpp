@@ -15,6 +15,7 @@
 #include "ModelCache.h"
 #include "TextureCache.h"
 #include "DirectX.h"
+#include "BaseCamera.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "BackgroundRenderer.h"
@@ -122,6 +123,8 @@ namespace
             32.0f,
             DirectX::XMFLOAT4(0.95f, 0.95f, 1.0f, 0.8f)
         };
+
+        constexpr float kGuidelineViewHeightScale = 12.0f;
 
         struct ModelBounds
         {
@@ -3882,51 +3885,82 @@ bool SceneGame::TryGetGuidelineClipY(const ::CameraSpace::ICamera& camera, float
         return false;
     }
 
-    DirectX::XMFLOAT4X4 viewMatrix = camera.GetView();
-    DirectX::XMFLOAT4X4 projMatrix = camera.GetProjection();
-    const DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
-    const DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMatrix);
-    const DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj);
-    const DirectX::XMVECTOR worldPos = DirectX::XMVectorSet(0.0f, m_guidelineHeightMeters, m_stageData.GetPlaneZ(), 1.0f);
-    const DirectX::XMVECTOR clipPos = DirectX::XMVector4Transform(worldPos, viewProj);
-    const float clipW = DirectX::XMVectorGetW(clipPos);
-    if (!std::isfinite(clipW) || std::fabs(clipW) <= std::numeric_limits<float>::epsilon())
+    const auto* baseCamera = dynamic_cast<const ::CameraSpace::BaseCamera*>(&camera);
+    if (!baseCamera)
     {
         if (!m_guidelineInvalidLogged)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[Guideline] Invalid clip W=" << clipW
-                << " threshold=" << m_guidelineHeightMeters
-                << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
+            oss << kLogPrefix << "[Guideline] Unsupported camera type for guideline computation.\n";
             ::DebugTrace(oss.str());
             m_guidelineInvalidLogged = true;
         }
         return false;
     }
 
-    const float clipY = DirectX::XMVectorGetY(clipPos) / clipW;
-    if (!std::isfinite(clipY))
+    const float cameraWorldY = baseCamera->GetPosition().y;
+    if (!std::isfinite(cameraWorldY))
     {
         if (!m_guidelineInvalidLogged)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[Guideline] Non-finite clipY derived from threshold="
-                << m_guidelineHeightMeters << " clipW=" << clipW << "\n";
+            oss << kLogPrefix << "[Guideline] Non-finite camera Y; guideline disabled.\n";
             ::DebugTrace(oss.str());
             m_guidelineInvalidLogged = true;
         }
         return false;
     }
 
-    outClipY = std::clamp(clipY, -1.0f, 1.0f);
-    if ((clipY < -1.0f || clipY > 1.0f))
+    const float deltaY = m_guidelineHeightMeters - cameraWorldY;
+    const float viewHeightScale = kGuidelineViewHeightScale;
+    if (!std::isfinite(viewHeightScale) || viewHeightScale <= std::numeric_limits<float>::epsilon())
     {
-        if (!m_guidelineClampLogged)
+        if (!m_guidelineInvalidLogged)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[Guideline] Clamped clipY from " << clipY
-                << " to " << outClipY << " threshold=" << m_guidelineHeightMeters
-                << " planeZ=" << m_stageData.GetPlaneZ() << "\n";
+            oss << kLogPrefix << "[Guideline] Invalid viewHeightScale=" << viewHeightScale << "\n";
+            ::DebugTrace(oss.str());
+            m_guidelineInvalidLogged = true;
+        }
+        return false;
+    }
+
+    float halfThickness = 0.0f;
+    if (RenderTarget* rtv = GetDefaultRTV())
+    {
+        const float viewportHeight = static_cast<float>(rtv->GetHeight());
+        if (std::isfinite(viewportHeight) && viewportHeight > 0.0f)
+        {
+            const float thicknessClip = (kHudLayoutConfig.guidelineThicknessPixels / viewportHeight) * 2.0f;
+            halfThickness = std::max(0.0f, thicknessClip * 0.5f);
+        }
+    }
+
+    const float rawClipY = deltaY / viewHeightScale;
+    if (!std::isfinite(rawClipY))
+    {
+        if (!m_guidelineInvalidLogged)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Non-finite rawClipY from deltaY=" << deltaY
+                << " viewHeightScale=" << viewHeightScale << "\n";
+            ::DebugTrace(oss.str());
+            m_guidelineInvalidLogged = true;
+        }
+        return false;
+    }
+
+    const float minClip = -1.0f + halfThickness;
+    const float maxClip = 1.0f - halfThickness;
+    outClipY = std::clamp(rawClipY, minClip, maxClip);
+    if ((rawClipY < minClip) || (rawClipY > maxClip))
+    {
+        if (!m_guidelineClampLogged && std::isfinite(halfThickness))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Guideline] Clamped clipY from " << rawClipY
+                << " to " << outClipY << " halfThickness=" << halfThickness
+                << " threshold=" << m_guidelineHeightMeters << "\n";
             ::DebugTrace(oss.str());
             m_guidelineClampLogged = true;
         }
