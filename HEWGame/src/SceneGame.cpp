@@ -1989,6 +1989,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " pickupOffsetLocalWorld=(" << m_playerPickupOffset.localOffset.x << ','
             << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
+            << " guidelineStep=" << m_stageData.GetGuidelineStep()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
             << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
@@ -2038,6 +2039,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
+    m_guidelineStepMeters = m_stageData.GetGuidelineStep();
     if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
     {
         std::ostringstream oss;
@@ -2045,6 +2047,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " invalid; overlay guideline disabled.\n";
         ::DebugTrace(oss.str());
         m_guidelineHeightMeters = 0.0f;
+    }
+    if (!std::isfinite(m_guidelineStepMeters) || m_guidelineStepMeters <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Guideline step " << m_guidelineStepMeters
+            << " invalid; guideline will not advance.\n";
+        ::DebugTrace(oss.str());
+        m_guidelineStepMeters = 0.0f;
     }
 
     m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
@@ -2892,6 +2902,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             {
                 BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
             }
+            OnGuidelineCrossed();
         }
         break;
     }
@@ -2947,6 +2958,24 @@ bool SceneGame::CheckGuidelineCrossing()
     }
 
     return false;
+}
+
+void SceneGame::OnGuidelineCrossed()
+{
+    if (!(m_guidelineHeightMeters > 0.0f) || !(m_guidelineStepMeters > 0.0f))
+    {
+        return;
+    }
+
+    const float previousHeight = m_guidelineHeightMeters;
+    m_guidelineHeightMeters += m_guidelineStepMeters;
+    m_guidelineInvalidLogged = false;
+    m_guidelineClampLogged = false;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Guideline] Advanced threshold from " << previousHeight
+        << " to " << m_guidelineHeightMeters << " step=" << m_guidelineStepMeters << "\n";
+    ::DebugTrace(oss.str());
 }
 
 #if defined(_DEBUG)
