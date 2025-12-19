@@ -3792,7 +3792,7 @@ void SceneGame::ResetPlaySession()
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
     m_pendingTimeBonuses.clear();
-    m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
+    //m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
     m_guidelineTriggeredThisHeight.clear();
     m_guidelineCooldownRemainingSeconds = 0.0f;
     m_guidelineTriggerCooldownSeconds = 0.0f;
