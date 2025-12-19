@@ -4,7 +4,6 @@
 #include "Core/Input.h"
 #include "Entities/Player.h"
 
-#include "BoxColliderComponent.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
 #include "Systems/PhysicsMachine.h"
@@ -249,20 +248,6 @@ namespace
         return model;
     }
 
-    Physics::Box2DShapeConfig BuildDefaultPlayerShapeConfig(const Transform& transform, bool isKinematic)
-    {
-        Physics::Box2DShapeConfig config{};
-        config.type = Physics::Box2DShapeConfig::Type::None;
-        config.bodyType = isKinematic ? b2_kinematicBody : b2_dynamicBody;
-        config.fixedRotation = true;
-        config.allowRotation = false;
-        config.angularDamping = 5.0f;
-        config.density = 0.5f;
-        config.friction = 0.35f;
-        config.restitution = 0.05f;
-
-        return config;
-    }
 }
 
 namespace Entities
@@ -375,13 +360,6 @@ namespace Entities
         m_visual.rotation = m_transform.rotation;
         m_visual.scale = m_transform.scale;
         RefreshRenderTransform();
-
-        const auto shapeConfig = BuildDefaultPlayerShapeConfig(m_transform, m_isKinematic);
-        Physics::BoxColliderComponent colliderComponent;
-        colliderComponent.colliderId = descriptor ? descriptor->key : std::string{ "Fairy" };
-
-        SetBoxColliderComponent(std::move(colliderComponent));
-        SetBox2DShapeConfig(shapeConfig);
     }
 
         void Player::OnUpdate(Core::UpdateContext& ctx)
