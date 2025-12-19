@@ -2379,8 +2379,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
     }
 
-    const bool shapeConfigValid = playerShapeConfig && playerShapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-    const bool colliderReady = colliderHasShapes && shapeConfigValid;
+    const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
     const std::string appliedSource = registryFallbackUsed
         ? "RegistryFallback"
         : colliderBuild.source;
@@ -4003,4 +4002,3 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
 }
-
