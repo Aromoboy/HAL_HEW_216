@@ -1382,8 +1382,8 @@ namespace Stage
 
         if (spawnPointsPrimary.empty() && spawnPointsSecondary.empty())
         {
-            spawnPointsPrimary.push_back(float3{ 8.0f, 0.0f, 0.0f });
-            spawnPointsSecondary.push_back(float3{ -8.0f, 0.0f, 0.0f });
+            spawnPointsPrimary.push_back(float3{ 8.0f, -4.0f, 0.0f });
+            spawnPointsSecondary.push_back(float3{ -8.0f, -4.0f, 0.0f });
             insertedFallbackAnchor = true;
             parseError = true;
             std::ostringstream oss;
