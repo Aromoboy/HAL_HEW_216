@@ -39,7 +39,7 @@ namespace
     constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
-    constexpr float kDefaultGuidelineHeight = 20.0f;
+    constexpr float kDefaultGuidelineHeight = 2.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
