@@ -3971,21 +3971,18 @@ namespace SweetsSpace
     }
 
 
-    //void SweetsManager::OnSweetsPassedGuideline(
-    //    const std::shared_ptr<ActiveSweets>& sweets)
-    //{
-    //    if (!sweets)
-    //    {
-    //        return;
-    //    }
+    void SweetsManager::OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
 
-    //    // 追加①：状態遷移
-    //    SetState(sweets, SweetsState::Stacked);
-
-    //    // 追加②：時間加算
-    //    if (m_heightBonusSeconds > 0.0f && m_timeManager)
-    //    {
-    //        m_timeManager->AddTime(m_heightBonusSeconds);
-    //    }
-    //}
+        const auto lookup = m_lookup.find(sweets);
+        const SweetsState currentState = (lookup != m_lookup.end()) ? lookup->second : SweetsState::Active;
+        if (currentState != SweetsState::Stacked)
+        {
+            SetState(sweets, SweetsState::Stacked);
+        }
+    }
 }

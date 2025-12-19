@@ -177,6 +177,8 @@ private:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
+    float m_guidelineCooldownDurationSeconds = 0.0f;
+    float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     float m_groundY = 0.0f;
@@ -212,6 +214,7 @@ private:
     PlayerSpawnTransform m_playerSpawnTransform;
     TimerDisplay m_timerDisplay;
     Texture* m_numberTexture;
+    std::unordered_set<SweetsSpace::ActiveSweets*> m_guidelineTriggeredThisHeight;
 };
 
 #endif // __SCENE_GAME_H__
