@@ -50,16 +50,16 @@ namespace
     std::vector<float3> BuildDefaultSpawnPointsPrimary(float planeZ)
     {
         return {
-            { -2.5f, 0.0f, planeZ },
-            { 2.5f, 0.0f, planeZ },
+            { -8.0f, 0.0f, planeZ },
+            { -8.0f, 0.0f, planeZ },
         };
     }
 
     std::vector<float3> BuildDefaultSpawnPointsSecondary(float planeZ)
     {
         return {
-            { -1.25f, 0.0f, planeZ },
-            { 1.25f, 0.0f, planeZ },
+            { 8.0f, 0.0f, planeZ },
+            { 8.0f, 0.0f, planeZ },
         };
     }
 
@@ -1382,11 +1382,12 @@ namespace Stage
 
         if (spawnPointsPrimary.empty() && spawnPointsSecondary.empty())
         {
-            spawnPointsPrimary.push_back(float3{ 0.0f, 0.0f, 0.0f });
+            spawnPointsPrimary.push_back(float3{ 8.0f, 0.0f, 0.0f });
+            spawnPointsSecondary.push_back(float3{ -8.0f, 0.0f, 0.0f });
             insertedFallbackAnchor = true;
             parseError = true;
             std::ostringstream oss;
-            oss << kLogPrefix << "Both spawn lanes are empty; inserting single fallback anchor at (0,0,0).\n";
+            oss << kLogPrefix << "Both spawn lanes are empty; inserting single fallback anchor at (+-8,0,0).\n";
             DebugTrace(oss.str());
         }
 
