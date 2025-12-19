@@ -1,6 +1,7 @@
 #include "Main.h"
 
 #include <memory>
+#include <sstream>
 
 #include "DirectX.h"
 #include "Geometory.h"
@@ -88,6 +89,13 @@ void Update()
         {
                 FullscreenManager::Toggle();
         }
+
+        if (g_input.IsTrigger(VK_ESCAPE) || g_input.IsTrigger(Core::ActionId::Cancel))
+        {
+                std::ostringstream oss;
+                oss << "[Input] Exit hotkey triggered at frame " << g_stepTimer.FrameIndex();
+                Diagnostics::LogInfo(oss.str());
+        }
 }
 
 void Draw()
@@ -100,4 +108,3 @@ void Draw()
         }
         EndDrawDirectX();
 }
-

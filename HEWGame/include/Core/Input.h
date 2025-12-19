@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <array>
+#include <cstdint>
 #include <Xinput.h>
 
 #include "Core/ActionId.h"
@@ -71,8 +72,8 @@ namespace Core
 
         Gamepad m_pad;
         InputMap m_map;
+        std::uint64_t m_lastPolledFrame = 0;
 
         friend class InputMap;
     };
 }
-
