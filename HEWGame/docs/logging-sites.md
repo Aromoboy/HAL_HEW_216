@@ -2,6 +2,7 @@
 
 ## src/Stage/StageData.cpp
 - **Parsing helpers**: `ParseFloatList` logs when a comma-separated float token cannot be parsed and aborts list creation; `TryParseSpawnPoint` logs malformed spawn points (too few values or not grouped in triples). These messages appear during stage config load.
+- **Spawn lane parsing**: `spawnPointsPrimary`/`spawnPointsSecondary` emit per-lane counts when anchors are parsed, warn on underfilled lanes, and log cross-lane plane mismatches before falling back to defaults.
 - **Color sanitization**: `SanitizeColor` logs if incoming color components are non-finite (fallback used) or if values are clamped into the 0–1 range.
 - **File loading**: `LoadFromFile` logs when the stage config file is missing, when a line lacks an '=' delimiter, or when an unknown key is encountered while parsing.
 - **Missing values**: After parsing, defaults are logged for unset fields such as plane Z, platform geometry/fractions, movement speeds, guideline and bonus heights, and background texture.

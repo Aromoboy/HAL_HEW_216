@@ -187,7 +187,10 @@ namespace SweetsSpace
         void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
-        void SetSpawnOrigins(const std::vector<float3>& origins, std::optional<float> spawnHeightOffset = std::nullopt);
+        void SetSpawnOrigins(
+            const std::vector<float3>& primary,
+            const std::vector<float3>& secondary,
+            std::optional<float> spawnHeightOffset = std::nullopt);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetForceGeneratedColliders(bool force);
@@ -258,8 +261,12 @@ namespace SweetsSpace
         float m_spawnTimer;
         float m_burstTimer;
         std::deque<std::string> m_spawnQueue;
-        std::vector<float3> m_spawnOrigins;
+        std::vector<float3> m_spawnOriginsPrimary;
+        std::vector<float3> m_spawnOriginsSecondary;
         float m_spawnHeightOffset;
+        bool m_nextSpawnUsesPrimary;
+        std::size_t m_spawnOriginCursorPrimary;
+        std::size_t m_spawnOriginCursorSecondary;
         float m_activeBurstInterval;
         int m_activeBurstPlanned;
         int m_currentBurstRemaining;
@@ -319,8 +326,13 @@ namespace SweetsSpace
             const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
-        float3 NextSpawnOrigin();
-        Transform BuildSpawnTransform(const std::string& normalizedKind, const float3& origin);
+        struct SpawnOriginSelection
+        {
+            float3 origin{};
+            const char* laneLabel = "primary";
+        };
+        SpawnOriginSelection NextSpawnOrigin();
+        Transform BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& origin);
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings = true);
         void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,

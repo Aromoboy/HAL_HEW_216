@@ -47,11 +47,21 @@ namespace
     constexpr std::size_t kSpawnCoordinatesPerAnchor = 3;
     constexpr float kSpawnPlaneTolerance = 0.01f;
 
-    const float3 kDefaultSpawnPoints[] =
+    std::vector<float3> BuildDefaultSpawnPointsPrimary(float planeZ)
     {
-        { -2.5f, 0.0f, kDefaultPlaneZ },
-        { 2.5f, 0.0f, kDefaultPlaneZ },
-    };
+        return {
+            { -2.5f, 0.0f, planeZ },
+            { 2.5f, 0.0f, planeZ },
+        };
+    }
+
+    std::vector<float3> BuildDefaultSpawnPointsSecondary(float planeZ)
+    {
+        return {
+            { -1.25f, 0.0f, planeZ },
+            { 1.25f, 0.0f, planeZ },
+        };
+    }
 
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
@@ -310,7 +320,8 @@ namespace Stage
 
         std::vector<float> thresholds;
         std::vector<float> minithresholds; //ミニフェーズ
-        std::vector<float3> spawnPoints;
+        std::vector<float3> spawnPointsPrimary;
+        std::vector<float3> spawnPointsSecondary;
         std::vector<float> rewardMultipliers; //ミニフェーズ
         std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
@@ -351,9 +362,27 @@ namespace Stage
         std::string backgroundTexturePath = kDefaultBackgroundTexturePath;
         bool backgroundTextureSet = false;
         bool parseError = false;
+        size_t lineNumber = 0;
+
+        auto appendSpawnPoints = [&](const std::string& label, const std::string& rawValue, std::vector<float3>& targets)
+        {
+            const size_t beforeCount = targets.size();
+            if (!TryParseSpawnPoint(rawValue, lineNumber, targets))
+            {
+                parseError = true;
+                return;
+            }
+
+            const size_t added = targets.size() - beforeCount;
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " on line " << lineNumber
+                << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
+                << " (" << targets.size() << " total). Each anchor requires"
+                << " three coordinates. Raw='" << rawValue << "'\n";
+            DebugTrace(oss.str());
+        };
 
         std::string line;
-        size_t lineNumber = 0;
         while (std::getline(file, line))
         {
             ++lineNumber;
@@ -590,31 +619,21 @@ namespace Stage
                     minithresholds.insert(minithresholds.end(), parsed.begin(), parsed.end());
                 }
             }
-            
-            else if (key == "spawnPoint")
+            else if (key == "spawnPoint" || key == "spawnPointA" || key == "spawnPointPrimary")
             {
-                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
-                {
-                    parseError = true;
-                }
+                appendSpawnPoints("spawnPoint(primary)", rawValue, spawnPointsPrimary);
             }
-            else if (key == "spawnPoints")
+            else if (key == "spawnPoints" || key == "spawnPointsA" || key == "spawnPointsPrimary")
             {
-                size_t beforeCount = spawnPoints.size();
-                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
-                {
-                    parseError = true;
-                }
-                else
-                {
-                    const size_t added = spawnPoints.size() - beforeCount;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "spawnPoints on line " << lineNumber
-                        << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
-                        << " (" << spawnPoints.size() << " total). Each anchor requires"
-                        << " three coordinates. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
-                }
+                appendSpawnPoints("spawnPointsPrimary", rawValue, spawnPointsPrimary);
+            }
+            else if (key == "spawnPointB" || key == "spawnPointSecondary")
+            {
+                appendSpawnPoints("spawnPoint(secondary)", rawValue, spawnPointsSecondary);
+            }
+            else if (key == "spawnPointsB" || key == "spawnPointsSecondary")
+            {
+                appendSpawnPoints("spawnPointsSecondary", rawValue, spawnPointsSecondary);
             }
             else if (key == "phaseRewardMultipliers")
             {
@@ -1269,54 +1288,76 @@ namespace Stage
             DebugTrace(oss.str());
         }
 
-        const std::size_t parsedAnchorCount = spawnPoints.size();
-        if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
-        {
-            parseError = true;
-            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
-            std::ostringstream oss;
-            oss << kLogPrefix << "spawnPoints provided " << parsedAnchorCount
-                << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
-                << "; expected at least " << kRequiredSpawnAnchors
-                << ". Falling back to defaults and marking parse error.\n";
-            DebugTrace(oss.str());
-        }
+        const auto defaultSpawnPointsPrimary = BuildDefaultSpawnPointsPrimary(planeZ);
+        const auto defaultSpawnPointsSecondary = BuildDefaultSpawnPointsSecondary(planeZ);
 
-        if (spawnPoints.empty())
+        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label)
         {
-            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
-            std::ostringstream oss;
-            oss << kLogPrefix << "No spawnPoint entries found; using defaults.\n";
-            DebugTrace(oss.str());
-        }
-
-        if (!spawnPoints.empty())
-        {
-            const float spawnPlaneZ = spawnPoints.front().z;
-            bool spawnPlaneConsistent = true;
-            for (const auto& spawn : spawnPoints)
+            const std::size_t parsedAnchorCount = spawnPoints.size();
+            if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
             {
-                if (std::fabs(spawn.z - spawnPlaneZ) > kSpawnPlaneTolerance)
-                {
-                    spawnPlaneConsistent = false;
-                    break;
-                }
-            }
-
-            if (!spawnPlaneConsistent)
-            {
+                parseError = true;
+                spawnPoints = defaults;
                 std::ostringstream oss;
-                oss << kLogPrefix << "spawnPoints contain multiple planeZ values; anchors may be misaligned.\n";
+                oss << kLogPrefix << label << " provided " << parsedAnchorCount
+                    << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
+                    << "; expected at least " << kRequiredSpawnAnchors
+                    << ". Falling back to defaults and marking parse error.\n";
                 DebugTrace(oss.str());
             }
 
-            const float spawnPlaneDelta = std::fabs(spawnPlaneZ - planeZ);
-            if (spawnPlaneDelta > kSpawnPlaneTolerance)
+            if (spawnPoints.empty())
+            {
+                spawnPoints = defaults;
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " missing; using defaults.\n";
+                DebugTrace(oss.str());
+            }
+
+            if (!spawnPoints.empty())
+            {
+                const float spawnPlaneZ = spawnPoints.front().z;
+                bool spawnPlaneConsistent = true;
+                for (const auto& spawn : spawnPoints)
+                {
+                    if (std::fabs(spawn.z - spawnPlaneZ) > kSpawnPlaneTolerance)
+                    {
+                        spawnPlaneConsistent = false;
+                        break;
+                    }
+                }
+
+                if (!spawnPlaneConsistent)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << label << " contain multiple planeZ values; anchors may be misaligned.\n";
+                    DebugTrace(oss.str());
+                }
+
+                const float spawnPlaneDelta = std::fabs(spawnPlaneZ - planeZ);
+                if (spawnPlaneDelta > kSpawnPlaneTolerance)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << label << " planeZ=" << spawnPlaneZ
+                        << " differs from configured planeZ=" << planeZ
+                        << " by " << spawnPlaneDelta << "; verify alignment.\n";
+                    DebugTrace(oss.str());
+                }
+            }
+        };
+
+        sanitizeSpawnGroup(spawnPointsPrimary, defaultSpawnPointsPrimary, "spawnPointsPrimary");
+        sanitizeSpawnGroup(spawnPointsSecondary, defaultSpawnPointsSecondary, "spawnPointsSecondary");
+
+        if (!spawnPointsPrimary.empty() && !spawnPointsSecondary.empty())
+        {
+            const float laneDelta = std::fabs(spawnPointsPrimary.front().z - spawnPointsSecondary.front().z);
+            if (laneDelta > kSpawnPlaneTolerance)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "spawnPoints planeZ=" << spawnPlaneZ
-                    << " differs from configured planeZ=" << planeZ
-                    << " by " << spawnPlaneDelta << "; verify alignment.\n";
+                oss << kLogPrefix << "spawn point lanes use different planeZ values (primary="
+                    << spawnPointsPrimary.front().z << ", secondary=" << spawnPointsSecondary.front().z
+                    << "); verify cross-lane alignment.\n";
                 DebugTrace(oss.str());
             }
         }
@@ -1530,7 +1571,8 @@ namespace Stage
         m_phaseRewardMultipliers = rewardMultipliers;
         m_phaseMiniThresholds = minithresholds;                  //ミニフェーズ
         m_phaseRewardMiniMultipliers = minirewardMultipliers;    //ミニフェーズ
-        m_spawnPoints = spawnPoints;
+        m_spawnPointsPrimary = spawnPointsPrimary;
+        m_spawnPointsSecondary = spawnPointsSecondary;
         m_platforms = std::move(platformDescriptors);
         m_cellSizeWorld = cellSizeWorld;
         m_playerHorizontalSpeedCellsPerSec = horizontalSpeedCellsPerSec;
@@ -1558,7 +1600,8 @@ namespace Stage
             << ", multipliers=" << m_phaseRewardMultipliers.size()
             << ", minithresholds=" << m_phaseMiniThresholds.size()            // ミニフェーズ
             << ", minimultipliers=" << m_phaseRewardMiniMultipliers.size()    // ミニフェーズ
-            << ", spawnPoints=" << m_spawnPoints.size()
+            << ", spawnPointsPrimary=" << m_spawnPointsPrimary.size()
+            << ", spawnPointsSecondary=" << m_spawnPointsSecondary.size()
             << ", platforms=" << m_platforms.size()
             << ", cellSizeWorld=" << m_cellSizeWorld
             << ", playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
@@ -1605,9 +1648,19 @@ namespace Stage
         return m_phaseRewardMiniMultipliers;
     }
 
+    const std::vector<float3>& StageData::GetSpawnPointsPrimary() const noexcept
+    {
+        return m_spawnPointsPrimary;
+    }
+
+    const std::vector<float3>& StageData::GetSpawnPointsSecondary() const noexcept
+    {
+        return m_spawnPointsSecondary;
+    }
+
     const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
     {
-        return m_spawnPoints;
+        return m_spawnPointsPrimary;
     }
 
     float StageData::GetPlaneZ() const noexcept
@@ -1723,7 +1776,8 @@ namespace Stage
         m_phaseRewardMiniMultipliers.assign(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
         EnsureRewardMultiplierCoverage(m_phaseRewardMiniMultipliers, m_phaseMiniThresholds.size() + 1, kDefaultMiniRewardMultipliers);
 
-        m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+        m_spawnPointsPrimary = BuildDefaultSpawnPointsPrimary(kDefaultPlaneZ);
+        m_spawnPointsSecondary = BuildDefaultSpawnPointsSecondary(kDefaultPlaneZ);
         m_platforms.clear();
         PlatformDescriptor descriptor{};
         descriptor.center = float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ };
@@ -1772,7 +1826,8 @@ namespace Stage
             << " multipliers=" << m_phaseRewardMultipliers.size()
             << " minithreshold=" << m_phaseMiniThresholds.size()          //ミニフェーズ
             << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //ミニフェーズ
-            << " spawnPoints=" << m_spawnPoints.size()
+            << " spawnPointsPrimary=" << m_spawnPointsPrimary.size()
+            << " spawnPointsSecondary=" << m_spawnPointsSecondary.size()
             << " platforms=" << m_platforms.size()
             << " cellSizeWorld=" << m_cellSizeWorld
             << " playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld

@@ -1505,8 +1505,12 @@ namespace SweetsSpace
         , m_spawnTimer(kDefaultSpawnIntervalSeconds)
         , m_burstTimer(0.0f)
         , m_spawnQueue()
-        , m_spawnOrigins()
+        , m_spawnOriginsPrimary()
+        , m_spawnOriginsSecondary()
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
+        , m_nextSpawnUsesPrimary(true)
+        , m_spawnOriginCursorPrimary(0)
+        , m_spawnOriginCursorSecondary(0)
         , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
         , m_activeBurstPlanned(0)
         , m_currentBurstRemaining(0)
@@ -3332,10 +3336,17 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins, std::optional<float> spawnHeightOffset)
+    void SweetsManager::SetSpawnOrigins(
+        const std::vector<float3>& primary,
+        const std::vector<float3>& secondary,
+        std::optional<float> spawnHeightOffset)
     {
-        m_spawnOrigins = origins;
-        m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+        m_spawnOriginsPrimary = primary;
+        m_spawnOriginsSecondary = secondary;
+        m_nextSpawnUsesPrimary = true;
+        m_spawnOriginCursorPrimary = 0;
+        m_spawnOriginCursorSecondary = 0;
+        m_warnedMissingSpawnOrigins = m_spawnOriginsPrimary.empty() && m_spawnOriginsSecondary.empty();
         if (spawnHeightOffset.has_value())
         {
             m_spawnHeightOffset = *spawnHeightOffset;
@@ -3343,10 +3354,16 @@ namespace SweetsSpace
         const auto seed = std::random_device{}();
         m_random.seed(seed);
 
-
+        const bool hasPrimary = !m_spawnOriginsPrimary.empty();
+        const bool hasSecondary = !m_spawnOriginsSecondary.empty();
+        const bool alternatingLanes = hasPrimary && hasSecondary;
+        const char* laneStrategy = alternatingLanes ? "alternate" : (hasPrimary ? "primary-only" : "secondary-only");
         std::ostringstream oss;
-        oss << kLogPrefix << "スポーン元を " << m_spawnOrigins.size()
-            << " 箇所設定したよ (heightOffset=" << m_spawnHeightOffset
+        oss << kLogPrefix << "スポーン元を設定したよ primary=" << m_spawnOriginsPrimary.size()
+            << " secondary=" << m_spawnOriginsSecondary.size()
+            << " (heightOffset=" << m_spawnHeightOffset
+            << " alternateLanes=" << std::boolalpha << alternatingLanes
+            << " laneStrategy=" << laneStrategy
             << " seed=" << seed << ") \n";
         DebugTrace(oss.str());
     }
@@ -3636,15 +3653,9 @@ namespace SweetsSpace
                 --m_currentBurstRemaining;
             }
 
-            const std::vector<float3> emitOrigins = m_spawnOrigins.empty()
-                ? std::vector<float3>{ NextSpawnOrigin() }
-                : m_spawnOrigins;
-            for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
-            {
-                const float3& origin = emitOrigins[originIndex];
-                Transform transform = BuildSpawnTransform(kind, origin);
-                Spawn(kind, transform);
-            }
+            const SpawnOriginSelection originSelection = NextSpawnOrigin();
+            Transform transform = BuildSpawnTransform(kind, originSelection);
+            Spawn(kind, transform);
         }
 
         if (m_currentBurstRemaining < 0)
@@ -3858,35 +3869,62 @@ namespace SweetsSpace
         return weights;
     }
 
-    float3 SweetsManager::NextSpawnOrigin()
+    SweetsManager::SpawnOriginSelection SweetsManager::NextSpawnOrigin()
     {
-        if (m_spawnOrigins.empty())
+        const bool hasPrimary = !m_spawnOriginsPrimary.empty();
+        const bool hasSecondary = !m_spawnOriginsSecondary.empty();
+        if (!hasPrimary && !hasSecondary)
         {
             if (!m_warnedMissingSpawnOrigins)
             {
                 DebugTrace(std::string(kLogPrefix) + "スポーン元リストが空だから、ワールド原点を使うね \n");
                 m_warnedMissingSpawnOrigins = true;
             }
-            return float3{ 0.0f, 0.0f, 0.0f };
+            return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, "fallback" };
         }
 
-        std::uniform_int_distribution<std::size_t> dist(0, m_spawnOrigins.size() - 1);
-        const std::size_t chosenIndex = dist(m_random);
-        const float3 origin = m_spawnOrigins[chosenIndex];
+        auto selectFromLane = [](std::vector<float3>& origins, std::size_t& cursor, const char* label)
+        {
+            if (origins.empty())
+            {
+                return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, label };
+            }
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "スポーン元インデックス=" << chosenIndex
-            << " position=(" << origin.x << ',' << origin.y << ',' << origin.z
-            << ") / 設定済み " << m_spawnOrigins.size() << " 箇所から選んだよ \n";
-        DebugTrace(oss.str());
+            cursor = cursor % origins.size();
+            const std::size_t chosenIndex = cursor;
+            cursor = (cursor + 1) % origins.size();
+            const float3 origin = origins[chosenIndex];
 
-        return origin;
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnOrigin] lane=" << label
+                << " index=" << chosenIndex << "/" << origins.size()
+                << " position=(" << origin.x << ',' << origin.y << ',' << origin.z << ")\n";
+            DebugTrace(oss.str());
+
+            return SpawnOriginSelection{ origin, label };
+        };
+
+        if (hasPrimary && hasSecondary)
+        {
+            SpawnOriginSelection selection = m_nextSpawnUsesPrimary
+                ? selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary")
+                : selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
+            m_nextSpawnUsesPrimary = !m_nextSpawnUsesPrimary;
+            return selection;
+        }
+
+        if (hasPrimary)
+        {
+            return selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary");
+        }
+
+        return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
     }
    
-    Transform SweetsManager::BuildSpawnTransform(const std::string& normalizedKind, const float3& origin)
+    Transform SweetsManager::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)
     {
         Transform transform{};
-        transform.position = origin;
+        transform.position = originSelection.origin;
         static bool s_flipSpawnSign = false;
         s_flipSpawnSign = !s_flipSpawnSign;
         std::uniform_real_distribution<float> xJitterDist(1.0f, 1.5f);
@@ -3925,7 +3963,8 @@ namespace SweetsSpace
         oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
             << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
             << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
-            << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
+            << " origin=" << originSelection.origin.x << ',' << originSelection.origin.y << ',' << originSelection.origin.z
+            << " lane=" << originSelection.laneLabel << "\n";
         DebugTrace(oss.str());
 
         return transform;

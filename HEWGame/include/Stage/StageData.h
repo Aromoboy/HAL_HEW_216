@@ -36,6 +36,9 @@ namespace Stage
         //ミニフェーズ
         const std::vector<float>& GetPhaseMiniThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
+        const std::vector<float3>& GetSpawnPointsPrimary() const noexcept;
+        const std::vector<float3>& GetSpawnPointsSecondary() const noexcept;
+        // Legacy alias for primary spawn points
         const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
         const std::vector<PlatformDescriptor>& GetPlatforms() const noexcept;
@@ -69,7 +72,8 @@ namespace Stage
         std::vector<float> m_phaseRewardMultipliers;
         std::vector<float> m_phaseMiniThresholds;        //ミニフェーズ
         std::vector<float> m_phaseRewardMiniMultipliers; //ミニフェーズ
-        std::vector<float3> m_spawnPoints;
+        std::vector<float3> m_spawnPointsPrimary;
+        std::vector<float3> m_spawnPointsSecondary;
         std::string m_sourcePath;
         bool m_loadedFromFile;
         float m_cellSizeWorld;
