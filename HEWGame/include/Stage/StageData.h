@@ -55,6 +55,7 @@ namespace Stage
         float GetPickupDepthThreshold() const noexcept;
         const PickupOffset& GetPickupOffset() const noexcept;
         float GetGuidelineHeight() const noexcept;
+        float GetGuidelineStep() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
@@ -90,6 +91,7 @@ namespace Stage
         PickupOffset m_pickupOffset;
         float m_playerMoveSpeed;
         float m_guidelineHeight;
+        float m_guidelineStep;
         std::string m_backgroundTexturePath;
         float m_heightBonusThreshold;
         float m_heightBonusSeconds;

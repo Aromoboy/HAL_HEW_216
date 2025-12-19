@@ -124,6 +124,7 @@ private:
     void UpdateCountdown(Core::UpdateContext& ctx);
     void UpdateTowerHeightTelemetry();
     bool CheckGuidelineCrossing();
+    void OnGuidelineCrossed();
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
@@ -175,6 +176,7 @@ private:
     std::unique_ptr<HudRenderer> m_hudRenderer;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
+    float m_guidelineStepMeters = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     float m_groundY = 0.0f;

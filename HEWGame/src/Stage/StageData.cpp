@@ -40,6 +40,7 @@ namespace
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 2.0f;
+    constexpr float kDefaultGuidelineStep = 1.0f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
@@ -297,6 +298,7 @@ namespace Stage
             kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld } }
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
+        , m_guidelineStep(kDefaultGuidelineStep)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
         , m_heightBonusThreshold(kDefaultHeightBonusThreshold)
         , m_heightBonusSeconds(kDefaultHeightBonusSeconds)
@@ -355,6 +357,8 @@ namespace Stage
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
         bool guidelineHeightSet = false;
+        float guidelineStep = kDefaultGuidelineStep;
+        bool guidelineStepSet = false;
         float heightBonusThreshold = kDefaultHeightBonusThreshold;
         bool heightBonusThresholdSet = false;
         float heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -931,6 +935,22 @@ namespace Stage
                     parseError = true;
                 }
             }
+            else if (key == "guidelineStep")
+            {
+                try
+                {
+                    guidelineStep = std::stof(rawValue);
+                    guidelineStepSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineStep on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "heightBonusThreshold")
             {
                 try
@@ -1027,6 +1047,14 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!guidelineStepSet)
+        {
+            guidelineStep = kDefaultGuidelineStep;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
             DebugTrace(oss.str());
         }
 
@@ -1575,6 +1603,15 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
         }
 
+        if (!std::isfinite(guidelineStep) || guidelineStep <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineStep value " << guidelineStep
+                << " invalid; using default " << kDefaultGuidelineStep << "\n";
+            DebugTrace(oss.str());
+            guidelineStep = kDefaultGuidelineStep;
+        }
+
         if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
         {
             std::ostringstream oss;
@@ -1640,6 +1677,7 @@ namespace Stage
         m_pickupOffset = pickupOffset;
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
+        m_guidelineStep = guidelineStep;
         m_heightBonusThreshold = heightBonusThreshold;
         m_heightBonusSeconds = heightBonusSeconds;
         m_backgroundTexturePath = backgroundTexturePath;
@@ -1784,6 +1822,11 @@ namespace Stage
         return m_guidelineHeight;
     }
 
+    float StageData::GetGuidelineStep() const noexcept
+    {
+        return m_guidelineStep;
+    }
+
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -1845,6 +1888,7 @@ namespace Stage
         };
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
+        m_guidelineStep = kDefaultGuidelineStep;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
         m_heightBonusThreshold = kDefaultHeightBonusThreshold;
         m_heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -1875,6 +1919,7 @@ namespace Stage
             << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_guidelineHeight
+            << " guidelineStep=" << m_guidelineStep
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
