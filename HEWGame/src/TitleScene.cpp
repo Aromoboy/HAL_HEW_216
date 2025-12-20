@@ -84,7 +84,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
     {
         if (m_manager)
         {
-            m_manager->RequestSceneChange(std::make_unique<SceneGame>());
+            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
         }
         return;
     }

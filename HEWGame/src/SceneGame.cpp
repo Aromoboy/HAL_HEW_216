@@ -44,6 +44,7 @@
 #include <DirectXMath.h>
 #include "Physical.h"
 #include "ColliderRegistry.h"
+#include "TitleScene.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -1895,7 +1896,8 @@ void SceneGame::NormalizePlayerColliderDefinitions()
     m_playerColliderDefinitions.swap(normalizedDefinitions);
 }
 
-SceneGame::SceneGame()
+SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
+    : m_manager(&a_manager)
 {
 m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
 m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kPlayerColliderConfigPath, false);
@@ -2750,6 +2752,9 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
     HandleColliderDebugCommands(ctx);
 #endif
+
+
+    
     ValidatePlayerPhysicsRegistration();
     UpdateCountdown(ctx);
     if (m_guidelineCooldownRemainingSeconds > 0.0f)
@@ -2861,6 +2866,9 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_cachedPlayerMinX = minX;
         m_cachedPlayerMaxX = maxX;
         m_cachedPlayerBoundsValid = true;
+
+
+
     }
 
     switch (m_stageState)
@@ -2966,6 +2974,17 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         ProcessPostGameInput(ctx);
     }
+
+    if (ctx.input.IsKeyPress(VK_RETURN))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+        }
+
+        return;
+    }
+
 }
 
 bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)

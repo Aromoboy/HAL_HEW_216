@@ -34,6 +34,7 @@
 #include "ThirdParty/Effekseer/Effekseer.h"
 #include "ResultRenderer.h"
 
+
 struct CameraPrototypeSettings
 {
     bool fixedPosition = false;
@@ -98,7 +99,7 @@ public:
         bool rotationFromDegrees = false;
     };
 
-    SceneGame();
+    SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
     void Load(Core::Input& input) override;
     void Update(Core::StepTimer& timer, Core::Input& input) override;
@@ -224,6 +225,9 @@ private:
     TimerDisplay m_timerDisplay;
     Texture* m_numberTexture;
     std::unordered_set<SweetsSpace::ActiveSweets*> m_guidelineTriggeredThisHeight;
+
+
+    SceneSpace::SceneManager* m_manager = nullptr;
 };
 
 #endif // __SCENE_GAME_H__
