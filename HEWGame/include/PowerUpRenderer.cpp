@@ -718,7 +718,7 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 	
 	SetBlendMode(BLEND_ALPHA);
 
-	DrawSprite(data.stringTexture, worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{0.0f, 0.0f}, float2{width,1.0f}));
+	DrawSprite(data.stringTexture, worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{ 0.0f, 0.0f }, float2{ width,1.0f }, float3{0.0f, 0.0f, 0.0f}));
 
 }
 

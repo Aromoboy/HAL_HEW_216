@@ -75,6 +75,7 @@ namespace SceneSpace
 
         void ScenePowerUp::Draw()
         {
+            SetDepthTest(false);
                 RootDraw();
         }
 
