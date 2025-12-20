@@ -32,6 +32,7 @@
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
+#include "ResultRenderer.h"
 
 struct CameraPrototypeSettings
 {
@@ -153,6 +154,7 @@ private:
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
+    std::unique_ptr<ResultRenderer> m_resultRenderer;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
     bool m_loggedPlayerBodyRecovery = false;
     bool m_inputRegistered = false;
@@ -212,6 +214,11 @@ private:
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
     bool m_forceConfigPlayerCollider = false;
+    // クリアできたかどうかの判定
+    bool m_isGameClear = false;
+    int m_phaseUpCount = 0;
+    // 仮で作った何回フェーズを超えたらクリアになるかの判定
+    int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
     TimerDisplay m_timerDisplay;

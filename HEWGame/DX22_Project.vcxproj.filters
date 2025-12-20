@@ -293,6 +293,7 @@
     </ClCompile>
     <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="EffectSystem.cpp" />
+    <ClCompile Include="src\ResultRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h">
@@ -587,6 +588,7 @@
     <ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" />
     <ClInclude Include="include\EffectTestScene.h" />
     <ClInclude Include="EffectSystem.h" />
+    <ClInclude Include="include\ResultRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

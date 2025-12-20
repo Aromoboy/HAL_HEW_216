@@ -205,6 +205,7 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\BaseCamera.cpp" />
+    <ClCompile Include="src\ResultRenderer.cpp" />
     <ClCompile Include="src\SettingScene.cpp" />
     <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
@@ -293,6 +294,7 @@
     <ClInclude Include="include\Core\VertexBuffer.h" />
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugColliderRenderer.h" />
+    <ClInclude Include="include\ResultRenderer.h" />
     <ClInclude Include="include\SettingScene.h" />
     <ClInclude Include="include\Systems\Box2DContactListener.h" />
     <ClInclude Include="include\PowerUpCursor.h" />

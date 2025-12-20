@@ -127,6 +127,23 @@ namespace
             DirectX::XMFLOAT4(0.95f, 0.95f, 1.0f, 0.8f)
         };
 
+        const ResultLayoutConfig kResultLayoutConfig
+        {
+            512u,
+            192u,
+            32.0f,
+            12.0f,
+            28.0f,
+            5.0f,
+            1.5f,
+            2.0f,
+            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f),
+            3.0f,
+            32.0f,
+            DirectX::XMFLOAT4(1.0, 1.0f, 1.0f, 1.0f)
+        };
+
         constexpr float kGuidelineViewHeightScale = 12.0f;
 
         struct ModelBounds
@@ -2224,6 +2241,22 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
     }
 
+    m_resultRenderer = std::make_unique<ResultRenderer>();
+    if (m_resultRenderer && !m_resultRenderer->Initialize(kResultLayoutConfig))
+    {
+        DebugTrace(std::string(kLogPrefix) + "HUD renderer failed to initialize; overlay disabled.\n");
+        m_resultRenderer.reset();
+    }
+    else if (m_resultRenderer)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Result renderer initialized (texture="
+            << kResultLayoutConfig.textureWidth << 'x' << kResultLayoutConfig.textureHeight
+            << ", margin=" << kResultLayoutConfig.marginPixels
+            << ", warningThreshold=" << kResultLayoutConfig.warningThresholdSeconds << "s).\n";
+        ::DebugTrace(oss.str());
+    }
+
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
@@ -2541,6 +2574,12 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
 SceneGame::~SceneGame()
 {
+    if (m_resultRenderer)
+    {
+        m_resultRenderer->Shutdown();
+        m_resultRenderer.reset();
+    }
+
     if (m_hudRenderer)
     {
         m_hudRenderer->Shutdown();
@@ -3052,6 +3091,10 @@ void SceneGame::HandleGuidelineAdvance(float triggerHeight)
     }
 
     ApplyGuidelineBonus(triggerHeight);
+    if (m_phaseUpCount >= m_clearPhaseCount)
+    {
+        m_isGameClear = true;
+    }
     OnGuidelineCrossed();
 }
 
@@ -3393,7 +3436,12 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         DrawPhysicsDebugOverlay();
 #endif
 
-        if (m_hudRenderer)
+        bool isTimeUp = (m_stageState == StageState::TimeUp)
+            || (m_stageState == StageState::Cleared)
+            || (m_stageState == StageState::ShowingResult);
+
+        // こっちで後から作ったisTimeUpを使ってないのは時間がないのに書き換えて急にぶっ壊れたらとても嫌な気持ちになるからなので時間がある時に書き換えてください(すみません) by越智
+        if (m_hudRenderer && !isTimeUp)
         {
                 HudDisplayData hudData{};
                   hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
@@ -3418,6 +3466,33 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                 }
 
                 m_hudRenderer->Draw(hudData);
+        }
+
+        if (m_resultRenderer && isTimeUp)
+        {
+            ResultDisplayData resultData{};
+            resultData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+            resultData.currentHeight = m_currentTowerHeight;
+            resultData.peakHeight = m_peakTowerHeight;
+            resultData.score = ComputeScore();
+            resultData.sweetsCount = GetSweetsCount();
+            resultData.timeUp = (m_stageState == StageState::TimeUp)
+                || (m_stageState == StageState::Cleared)
+                || (m_stageState == StageState::ShowingResult);
+            resultData.moveSpeedMultiplier = m_playerSpeedMultiplier;
+            if (player)
+            {
+                resultData.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+            }
+
+            float guidelineClip = 0.0f;
+            if (TryGetGuidelineClipY(*activeCamera, guidelineClip))
+            {
+                resultData.guidelineVisible = true;
+                resultData.guidelineClipY = guidelineClip;
+            }
+
+            m_resultRenderer->Draw(resultData);
         }
 
         m_timerDisplay.Draw(m_remainingCountdownSeconds);
