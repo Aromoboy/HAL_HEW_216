@@ -3596,13 +3596,17 @@ namespace SweetsSpace
         if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
         {
             OnPhaseConfigurationChanged(m_currentPhase);
+            if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+            {
+                return;
+            }
         }
 
         if (!(deltaSeconds > 0.0f))
         {
             return;
         }
-        const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
+        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
@@ -3791,8 +3795,12 @@ namespace SweetsSpace
             return {};
         }
 
-        const int clampedIndex = std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
-        const auto& config = m_phaseConfigs[clampedIndex];
+        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+        {
+            return {};
+        }
+
+        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
         if (config.weights.empty())
         {
             return {};
@@ -3842,13 +3850,26 @@ namespace SweetsSpace
 
     void SweetsManager::OnPhaseConfigurationChanged(int newPhase)
     {
-        EnsurePhaseConfigAvailable(newPhase);
+        const int sanitizedPhase = std::max(0, newPhase);
+        const int maxExistingIndex = std::max(0, static_cast<int>(m_phaseConfigs.size()) - 1);
+        EnsurePhaseConfigAvailable(std::min(sanitizedPhase, maxExistingIndex));
         if (m_phaseConfigs.empty())
         {
             return;
         }
 
-        const int target = std::max(0, newPhase);
+        const int loopModulo = static_cast<int>(m_phaseConfigs.size());
+        int target = sanitizedPhase;
+        if (loopModulo > 0 && target >= loopModulo)
+        {
+            const int loopIndex = target % loopModulo;
+            std::ostringstream loopLog;
+            loopLog << kLogPrefix << "[Spawn] phase=" << sanitizedPhase << " -> reused config index=" << loopIndex
+                << " (loopModulo=" << loopModulo << ")\n";
+            DebugTrace(loopLog.str());
+            target = loopIndex;
+        }
+
         if (target >= static_cast<int>(m_phaseConfigs.size()))
         {
             return;
@@ -3859,13 +3880,14 @@ namespace SweetsSpace
             return;
         }
 
+        const auto& activeConfig = m_phaseConfigs[target];
         m_activePhaseConfigIndex = target;
         ForceSpawnRefresh();
-        const float interval = std::max(m_phaseConfigs[target].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        const float interval = std::max(activeConfig.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_spawnTimer = std::max(m_spawnTimer, interval);
-        m_activeBurstInterval = std::max(m_phaseConfigs[target].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
-        m_batchStackTarget = std::max(1, m_phaseConfigs[target].simultaneousSpawnCount);
-        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[target].simultaneousLiveTarget);
+        m_activeBurstInterval = std::max(activeConfig.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        m_batchStackTarget = std::max(1, activeConfig.simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, activeConfig.simultaneousLiveTarget);
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
@@ -3873,10 +3895,10 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
             << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
-            << " plannedSimultaneous=" << m_phaseConfigs[target].simultaneousSpawnCount
+            << " plannedSimultaneous=" << activeConfig.simultaneousSpawnCount
             << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
         DebugTrace(oss.str());
-        LogActiveSpawnParameters(m_phaseConfigs[target], target);
+        LogActiveSpawnParameters(activeConfig, target);
     }
 
     void SweetsManager::EnsurePhaseConfigAvailable(int phaseIndex)
