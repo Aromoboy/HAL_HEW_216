@@ -93,6 +93,10 @@ namespace
     constexpr float kAutoBurstIntervalFactor = 0.9f;
     constexpr int kAutoSimultaneousIncrement = 1;
     constexpr int kAutoSimultaneousCap = 6;
+    constexpr float kMinimumAutoGrowthFactor = 0.01f;
+    constexpr float kDefaultAutoGrowthFactor = 0.9f;
+    constexpr int kDefaultAutoSimultaneousIncrement = 1;
+    constexpr int kDefaultAutoSimultaneousCap = 6;
     constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
@@ -130,6 +134,24 @@ namespace
 
     bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon);
     bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kHorizontalBoundsEpsilon);
+    float SanitizeGrowthFactor(float value, float fallback = kDefaultAutoGrowthFactor)
+    {
+        if (!(value > 0.0f))
+        {
+            return fallback;
+        }
+        return std::max(kMinimumAutoGrowthFactor, value);
+    }
+
+    int SanitizeSimultaneousIncrement(int value, int fallback = kDefaultAutoSimultaneousIncrement)
+    {
+        return (value >= 0) ? value : fallback;
+    }
+
+    int SanitizeSimultaneousCap(int value, int fallback = kDefaultAutoSimultaneousCap)
+    {
+        return (value > 0) ? value : fallback;
+    }
 
     void ReportInvalidBox2DConfig(SweetsType type, const std::string& reason)
     {
@@ -2796,6 +2818,11 @@ namespace SweetsSpace
         bool parseError = false;
         std::string line;
         size_t lineNumber = 0;
+        float loadedAutoIntervalFactor = SanitizeGrowthFactor(kAutoSpawnIntervalFactor);
+        float loadedAutoBurstFactor = SanitizeGrowthFactor(kAutoBurstIntervalFactor);
+        int loadedAutoSimultaneousIncrement = SanitizeSimultaneousIncrement(kAutoSimultaneousIncrement);
+        int loadedAutoSimultaneousCap = SanitizeSimultaneousCap(kAutoSimultaneousCap);
+        bool autoGrowthConfigured = false;
 
         while (std::getline(file, line))
         {
@@ -2824,6 +2851,71 @@ namespace SweetsSpace
 
             const std::string key = TrimToken(line.substr(0, delimiterPos));
             const std::string value = TrimToken(line.substr(delimiterPos + 1));
+
+            if (key == "autoIntervalFactor")
+            {
+                try
+                {
+                    loadedAutoIntervalFactor = SanitizeGrowthFactor(std::stof(value), loadedAutoIntervalFactor);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoIntervalFactor が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoBurstFactor")
+            {
+                try
+                {
+                    loadedAutoBurstFactor = SanitizeGrowthFactor(std::stof(value), loadedAutoBurstFactor);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoBurstFactor が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoSimultaneousIncrement")
+            {
+                try
+                {
+                    loadedAutoSimultaneousIncrement = SanitizeSimultaneousIncrement(std::stoi(value), loadedAutoSimultaneousIncrement);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoSimultaneousIncrement が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoSimultaneousCap")
+            {
+                try
+                {
+                    loadedAutoSimultaneousCap = SanitizeSimultaneousCap(std::stoi(value), loadedAutoSimultaneousCap);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoSimultaneousCap が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
 
             if (key == "phase")
             {
@@ -2978,6 +3070,11 @@ namespace SweetsSpace
             }
         }
 
+        m_autoSpawnIntervalFactor = loadedAutoIntervalFactor;
+        m_autoBurstIntervalFactor = loadedAutoBurstFactor;
+        m_autoSimultaneousIncrement = loadedAutoSimultaneousIncrement;
+        m_autoSimultaneousCap = loadedAutoSimultaneousCap;
+
         m_phaseConfigs.clear();
         for (const auto& entry : parsed)
         {
@@ -3029,11 +3126,25 @@ namespace SweetsSpace
         {
             DebugTrace(std::string(kLogPrefix) + "有効なフェーズ設定を読み込めなかったので、デフォルトを当てるね \n");
             ApplyDefaultPhaseConfigs();
+            m_autoSpawnIntervalFactor = loadedAutoIntervalFactor;
+            m_autoBurstIntervalFactor = loadedAutoBurstFactor;
+            m_autoSimultaneousIncrement = loadedAutoSimultaneousIncrement;
+            m_autoSimultaneousCap = loadedAutoSimultaneousCap;
+            LogAutoGenerationPolicy("config-empty");
             return false;
         }
 
         m_activePhaseConfigIndex = -1;
         OnPhaseConfigurationChanged(m_currentPhase);
+        if (autoGrowthConfigured)
+        {
+            std::ostringstream autoOss;
+            autoOss << kLogPrefix << "[Spawn] auto-growth overrides intervalFactor=" << loadedAutoIntervalFactor
+                << " burstFactor=" << loadedAutoBurstFactor
+                << " simultaneousIncrement=" << loadedAutoSimultaneousIncrement
+                << " simultaneousCap=" << loadedAutoSimultaneousCap << "\n";
+            DebugTrace(autoOss.str());
+        }
         LogAutoGenerationPolicy("config-load");
 
         std::ostringstream oss;
@@ -3737,19 +3848,24 @@ namespace SweetsSpace
             return;
         }
 
-        const int clamped = std::clamp(newPhase, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
-        if (m_activePhaseConfigIndex == clamped)
+        const int target = std::max(0, newPhase);
+        if (target >= static_cast<int>(m_phaseConfigs.size()))
         {
             return;
         }
 
-        m_activePhaseConfigIndex = clamped;
+        if (m_activePhaseConfigIndex == target)
+        {
+            return;
+        }
+
+        m_activePhaseConfigIndex = target;
         ForceSpawnRefresh();
-        const float interval = std::max(m_phaseConfigs[clamped].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        const float interval = std::max(m_phaseConfigs[target].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_spawnTimer = std::max(m_spawnTimer, interval);
-        m_activeBurstInterval = std::max(m_phaseConfigs[clamped].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
-        m_batchStackTarget = std::max(1, m_phaseConfigs[clamped].simultaneousSpawnCount);
-        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[clamped].simultaneousLiveTarget);
+        m_activeBurstInterval = std::max(m_phaseConfigs[target].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        m_batchStackTarget = std::max(1, m_phaseConfigs[target].simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[target].simultaneousLiveTarget);
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
@@ -3757,10 +3873,10 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
             << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
-            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount
+            << " plannedSimultaneous=" << m_phaseConfigs[target].simultaneousSpawnCount
             << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
         DebugTrace(oss.str());
-        LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
+        LogActiveSpawnParameters(m_phaseConfigs[target], target);
     }
 
     void SweetsManager::EnsurePhaseConfigAvailable(int phaseIndex)
@@ -3787,7 +3903,7 @@ namespace SweetsSpace
             const int generatedIndex = static_cast<int>(m_phaseConfigs.size());
             m_phaseConfigs.push_back(generated);
             std::ostringstream oss;
-            oss << kLogPrefix << "[Spawn] phase " << generatedIndex << " を自動生成したよ (from " << previousIndex << ") interval="
+            oss << kLogPrefix << "[Spawn] phase=" << generatedIndex << " (auto-generated from " << previousIndex << ") interval="
                 << std::fixed << std::setprecision(2) << generated.spawnIntervalSeconds
                 << " burstInterval=" << generated.burstIntervalSeconds
                 << " simultaneous=" << generated.simultaneousSpawnCount
@@ -3841,18 +3957,27 @@ namespace SweetsSpace
         PhaseSpawnConfig generated = previous;
         generated.autoGenerated = true;
         generated.generatedFromPhase = previousIndex;
+        const float sanitizedIntervalFactor = SanitizeGrowthFactor(m_autoSpawnIntervalFactor);
+        const float sanitizedBurstFactor = SanitizeGrowthFactor(m_autoBurstIntervalFactor);
         generated.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds,
-            previous.spawnIntervalSeconds * m_autoSpawnIntervalFactor);
+            previous.spawnIntervalSeconds * sanitizedIntervalFactor);
         generated.burstIntervalSeconds = std::max(kMinimumBurstIntervalSeconds,
-            previous.burstIntervalSeconds * m_autoBurstIntervalFactor);
+            previous.burstIntervalSeconds * sanitizedBurstFactor);
 
-        const int nextSimultaneous = std::min(m_autoSimultaneousCap,
-            previous.simultaneousSpawnCount + m_autoSimultaneousIncrement);
-        const int nextLiveTarget = std::min(m_autoSimultaneousCap,
-            previous.simultaneousLiveTarget + m_autoSimultaneousIncrement);
+        const int sanitizedIncrement = SanitizeSimultaneousIncrement(m_autoSimultaneousIncrement);
+        const int sanitizedCap = SanitizeSimultaneousCap(m_autoSimultaneousCap);
+        const int nextSimultaneous = std::min(sanitizedCap,
+            previous.simultaneousSpawnCount + sanitizedIncrement);
+        const int nextLiveTarget = std::min(sanitizedCap,
+            previous.simultaneousLiveTarget + sanitizedIncrement);
         generated.simultaneousSpawnCount = std::max(1, nextSimultaneous);
         generated.simultaneousLiveTarget = std::max(1, nextLiveTarget);
         generated.weights = NormalizeWeights(previous.weights);
+        if (generated.weights.empty())
+        {
+            DebugTrace(std::string(kLogPrefix) + "[Spawn] auto-generationに使える weight が無かったからデフォルトで補うね\n");
+            generated.weights = NormalizeWeights(BuildDefaultWeights());
+        }
         return generated;
     }
 
@@ -3917,10 +4042,10 @@ namespace SweetsSpace
         m_phaseConfigs.push_back(phase1);
         m_phaseConfigs.push_back(phase2);
 
-        m_autoSpawnIntervalFactor = kAutoSpawnIntervalFactor;
-        m_autoBurstIntervalFactor = kAutoBurstIntervalFactor;
-        m_autoSimultaneousIncrement = kAutoSimultaneousIncrement;
-        m_autoSimultaneousCap = kAutoSimultaneousCap;
+        m_autoSpawnIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
+        m_autoBurstIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
+        m_autoSimultaneousIncrement = SanitizeSimultaneousIncrement(kDefaultAutoSimultaneousIncrement);
+        m_autoSimultaneousCap = SanitizeSimultaneousCap(kDefaultAutoSimultaneousCap);
         m_activePhaseConfigIndex = -1;
         ForceSpawnRefresh();
 
