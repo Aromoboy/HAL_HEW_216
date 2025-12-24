@@ -2,6 +2,7 @@
 
 #include "DirectX.h"
 #include "ModelDX.h"
+#include <array>
 
 #include <map>
 
