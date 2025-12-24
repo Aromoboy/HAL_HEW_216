@@ -650,18 +650,10 @@ namespace Systems
             float radius{ 0.0f };
         };
 
-        const auto toScaledVector = [&](const b2Vec2& vertex)
+        const auto toBox2DVector = [](const b2Vec2& vertex)
         {
-            return b2Vec2{ vertex.x * transform.scale.x, vertex.y * transform.scale.y };
+            return Entities::PhysicalEntity::ToBox2DVector(float3{ vertex.x, vertex.y, 0.0f });
         };
-
-        const auto toBox2DVector = [&](const b2Vec2& vertex)
-        {
-            const b2Vec2 scaledVertex = toScaledVector(vertex);
-            return Entities::PhysicalEntity::ToBox2DVector(float3{ scaledVertex.x, scaledVertex.y, 0.0f });
-        };
-
-        const float uniformScale = std::max(transform.scale.x, transform.scale.y);
 
         const auto toBox2DVertices = [&](const std::vector<b2Vec2>& vertices)
         {
@@ -690,7 +682,7 @@ namespace Systems
                 scaled.center = shape.vertices.empty()
                     ? b2Vec2{ 0.0f, 0.0f }
                     : toBox2DVector(shape.vertices.front());
-                scaled.radius = Entities::PhysicalEntity::ToBox2DLength(shape.radius * uniformScale);
+                scaled.radius = Entities::PhysicalEntity::ToBox2DLength(shape.radius);
                 break;
             }
             case Physics::ColliderShapeType::Box:
