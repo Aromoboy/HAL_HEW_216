@@ -139,11 +139,5 @@ namespace SweetsSpace
     {
         // 描画のたびに合成しないようキャッシュした変換を頼る
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
-
-        if (m_model)
-        {
-            const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(m_model, m_visual.scale);
-            m_renderTransform.position.y += pivotInfo.offsetY;
-        }
     }
 }

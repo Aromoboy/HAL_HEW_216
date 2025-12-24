@@ -1970,7 +1970,7 @@ namespace SweetsSpace
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
                         << " colliderId='" << resolvedKind << "'"
-                        << " policy=" << Render::kPivotPolicyName << " で描画したよ\n";
+                        << " policy=PhysicsAligned (OriginBottom disabled for sweets)\n";
                     Diagnostics::LogInfo(created.str());
                 }
 
