@@ -2,6 +2,7 @@
 
 #include "ModelPivot.h"
 
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -102,18 +103,35 @@ namespace SweetsSpace
 
             SetTransform(updatedTransform);
 
-            m_visual.position = updatedTransform.position;
-            m_visual.position.x += renderOffset.x;
-            m_visual.position.y += renderOffset.y;
+            const float offsetAngle = updatedTransform.rotation.z;
+            const float cosAngle = std::cos(offsetAngle);
+            const float sinAngle = std::sin(offsetAngle);
+            // colliderOffset はローカル座標なので回転を反映させる
+            const float3 rotatedOffset{
+                renderOffset.x * cosAngle - renderOffset.y * sinAngle,
+                renderOffset.x * sinAngle + renderOffset.y * cosAngle,
+                0.0f
+            };
+
+            m_visual.position = updatedTransform.position + rotatedOffset;
             m_visual.rotation = updatedTransform.rotation;
             RefreshRenderTransform();
             return;
         }
 
-        m_visual.position = m_transform.position;
-        m_visual.position.x += renderOffset.x;
-        m_visual.position.y += renderOffset.y;
-        m_visual.rotation = m_transform.rotation;
+        Transform updatedTransform = m_transform;
+        const float offsetAngle = updatedTransform.rotation.z;
+        const float cosAngle = std::cos(offsetAngle);
+        const float sinAngle = std::sin(offsetAngle);
+        // colliderOffset はローカル座標なので回転を反映させる
+        const float3 rotatedOffset{
+            renderOffset.x * cosAngle - renderOffset.y * sinAngle,
+            renderOffset.x * sinAngle + renderOffset.y * cosAngle,
+            0.0f
+        };
+
+        m_visual.position = updatedTransform.position + rotatedOffset;
+        m_visual.rotation = updatedTransform.rotation;
         RefreshRenderTransform();
     }
 
