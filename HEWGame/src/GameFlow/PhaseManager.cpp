@@ -6,6 +6,11 @@
 
 namespace GameFlow
 {
+    namespace
+    {
+        constexpr float kAutoThresholdFallbackStep = 10.0f;
+    }
+
     PhaseManager::PhaseManager()
         : m_nextThresholdIndex(0)
         , m_currentPhase(0)
@@ -182,6 +187,53 @@ namespace GameFlow
         }
 
         m_lastReportedHeight = std::max(m_lastReportedHeight, currentMaxHeight);
+
+        if (m_nextThresholdIndex >= m_thresholds.size() && !m_thresholds.empty())
+        {
+            while (true)
+            {
+                float step = kAutoThresholdFallbackStep;
+                if (m_thresholds.size() >= 2)
+                {
+                    const float last = m_thresholds[m_thresholds.size() - 1];
+                    const float prev = m_thresholds[m_thresholds.size() - 2];
+                    const float candidate = last - prev;
+                    if (std::isfinite(candidate) && candidate > 0.0f)
+                    {
+                        step = candidate;
+                    }
+                }
+
+                const float target = m_thresholds.back() + step;
+                if (m_lastReportedHeight < target)
+                {
+                    break;
+                }
+
+                const float newThreshold = target;
+                m_thresholds.push_back(newThreshold);
+
+                const std::size_t requiredMultiplierCount = m_thresholds.size() + 1;
+                if (m_rewardMultipliers.empty())
+                {
+                    m_rewardMultipliers.push_back(1.0f);
+                }
+                if (m_rewardMultipliers.size() < requiredMultiplierCount)
+                {
+                    m_rewardMultipliers.resize(requiredMultiplierCount, m_rewardMultipliers.back());
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "auto-threshold=" << (m_thresholds.size() - 1)
+                    << " value=" << newThreshold << "\n";
+                DebugTrace(oss.str());
+
+                if (newThreshold <= 0.0f || !std::isfinite(newThreshold))
+                {
+                    break;
+                }
+            }
+        }
 
         while (m_nextThresholdIndex < m_thresholds.size()
             && m_lastReportedHeight >= m_thresholds[m_nextThresholdIndex])
