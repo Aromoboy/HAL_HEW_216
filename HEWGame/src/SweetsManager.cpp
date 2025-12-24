@@ -557,9 +557,19 @@ namespace
 
     float2 ComputeColliderCenterFromModel(const std::shared_ptr<Render::Model>& model)
     {
-        if (model && model->HasLocalBounds())
+        if (!model)
         {
-            const float2 center = ComputeColliderCenterFromBounds(model->GetLocalBounds());
+            return float2{ 0.0f, 0.0f };
+        }
+
+        const std::string& modelPath = model->GetPath();
+        if (!modelPath.empty())
+        {
+            const MeshHullSummary summary = ::SweetsSpace::AnalyzeModelGeometry(
+                modelPath,
+                kDefaultGeneratedThicknessPadding,
+                kMinimumColliderThickness);
+            const float2 center = summary.centroidOffset;
             if (std::isfinite(center.x) && std::isfinite(center.y))
             {
                 return center;

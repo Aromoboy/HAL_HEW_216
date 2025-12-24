@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "AABB.h"
@@ -12,7 +13,10 @@
 class ModelDX
 {
 public:
-        ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs, std::optional<AABB> localBounds = std::nullopt);
+        ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes,
+                std::vector<std::shared_ptr<MaterialDX>> a_MaterialDXs,
+                std::optional<AABB> localBounds = std::nullopt,
+                std::string sourcePath = {});
         ~ModelDX();
 
         unsigned int GetMeshCount() const;
@@ -23,6 +27,7 @@ public:
         bool HasLocalBounds() const;
         const AABB& GetLocalBounds() const;
         void SetLocalBounds(const AABB& bounds);
+        const std::string& GetPath() const noexcept { return m_sourcePath; }
 
 private:
 
@@ -33,6 +38,7 @@ private:
 
         AABB m_localBounds{};
         bool m_hasLocalBounds{ false };
+        std::string m_sourcePath{};
 };
 
 
