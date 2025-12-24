@@ -599,7 +599,11 @@ namespace Systems
             DebugTrace(oss.str());
         }
 
-        if (!isFiniteVec2(colliderComponent->colliderOffset))
+        const b2Vec2 colliderOffset = shapeConfig
+            ? shapeConfig->offset
+            : colliderComponent->colliderOffset;
+
+        if (!isFiniteVec2(colliderOffset))
         {
             return failBodyCreation("Collider offset is not finite for");
         }
@@ -666,6 +670,7 @@ namespace Systems
             return converted;
         };
 
+        const b2Vec2 offsetInBox2D = toBox2DVector(colliderOffset);
         std::vector<Physics::ColliderShapeDescriptor> sourceShapes = colliderComponent->shapes;
 
         std::vector<ScaledShape> scaledShapes;
@@ -682,6 +687,8 @@ namespace Systems
                 scaled.center = shape.vertices.empty()
                     ? b2Vec2{ 0.0f, 0.0f }
                     : toBox2DVector(shape.vertices.front());
+                scaled.center.x += offsetInBox2D.x;
+                scaled.center.y += offsetInBox2D.y;
                 scaled.radius = Entities::PhysicalEntity::ToBox2DLength(shape.radius);
                 break;
             }
@@ -690,6 +697,11 @@ namespace Systems
             default:
             {
                 scaled.vertices = toBox2DVertices(shape.vertices);
+                for (auto& vertex : scaled.vertices)
+                {
+                    vertex.x += offsetInBox2D.x;
+                    vertex.y += offsetInBox2D.y;
+                }
                 break;
             }
             }
