@@ -315,6 +315,42 @@ namespace SweetsSpace
             int sweetsContacts{ 0 };
         };
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
+        struct JointPairKey
+        {
+            ActiveSweets* first{ nullptr };
+            ActiveSweets* second{ nullptr };
+
+            static JointPairKey Make(ActiveSweets* a, ActiveSweets* b)
+            {
+                JointPairKey key{};
+                if (a < b)
+                {
+                    key.first = a;
+                    key.second = b;
+                }
+                else
+                {
+                    key.first = b;
+                    key.second = a;
+                }
+                return key;
+            }
+
+            bool operator==(const JointPairKey& other) const noexcept
+            {
+                return first == other.first && second == other.second;
+            }
+        };
+        struct JointPairHash
+        {
+            std::size_t operator()(const JointPairKey& key) const noexcept
+            {
+                std::size_t h1 = std::hash<ActiveSweets*>{}(key.first);
+                std::size_t h2 = std::hash<ActiveSweets*>{}(key.second);
+                return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+            }
+        };
+        std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
 
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
@@ -352,6 +388,8 @@ namespace SweetsSpace
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void ClearContactState(ActiveSweets* sweets);
+        void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
+        void ClearCreamWeldJoints(const char* context);
 
         static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
         static bool ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber);

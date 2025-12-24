@@ -117,6 +117,10 @@ namespace
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr float kMinimumBerryColliderRadius = 0.15f;
     constexpr float kMinimumBlueberryColliderRadius = 0.2f;
+    constexpr float kCreamWeldLinearHertz = 6.0f;
+    constexpr float kCreamWeldAngularHertz = 6.0f;
+    constexpr float kCreamWeldLinearDampingRatio = 0.7f;
+    constexpr float kCreamWeldAngularDampingRatio = 0.7f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -869,6 +873,12 @@ namespace SweetsSpace
         return normalized;
     }
 
+    bool IsCreamTag(const std::string& tag)
+    {
+        static const std::string kCreamKey = NormalizeKey(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
+        return NormalizeKey(tag) == kCreamKey;
+    }
+
     bool TryParseFloat(const std::string& token, float* out)
     {
         try
@@ -1388,6 +1398,69 @@ namespace SweetsSpace
         }
 
         m_contactStates.erase(sweets);
+    }
+
+    void SweetsManager::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
+    {
+        if (!sweets || m_creamWeldJoints.empty())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (!m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
+        for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
+        {
+            if (it->first.first == sweets || it->first.second == sweets)
+            {
+                if (m_physicsMachine)
+                {
+                    m_physicsMachine->DestroyJoint(it->second);
+                }
+                it = m_creamWeldJoints.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void SweetsManager::ClearCreamWeldJoints(const char* context)
+    {
+        if (m_creamWeldJoints.empty())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (!m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
+        for (const auto& entry : m_creamWeldJoints)
+        {
+            if (m_physicsMachine)
+            {
+                m_physicsMachine->DestroyJoint(entry.second);
+            }
+        }
+        m_creamWeldJoints.clear();
     }
 
     std::optional<SweetsManager::FactoryPreset> SweetsManager::BuildDefaultFactoryPreset(SweetsType type)
@@ -1920,6 +1993,7 @@ namespace SweetsSpace
 
     SweetsManager::~SweetsManager()
     {
+        ClearCreamWeldJoints("~SweetsManager");
         if (m_scheduler && m_lateUpdateNode)
         {
             m_scheduler->Unregister(*m_lateUpdateNode);
@@ -2246,6 +2320,7 @@ namespace SweetsSpace
         ForceSpawnRefresh();
 
         m_contactStates.clear();
+        ClearCreamWeldJoints("ClearAllSweets");
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
@@ -2850,6 +2925,7 @@ namespace SweetsSpace
         const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
         UpdateBatchUsage(batchContext, outcome);
 
+        RemoveCreamWeldJointsForSweets(sweets.get(), context);
         UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
@@ -3436,6 +3512,54 @@ namespace SweetsSpace
             UpdateContactStateBegin(sweetsB, a);
         }
 
+        ActiveSweets* cream = nullptr;
+        ActiveSweets* other = nullptr;
+        if (sweetsA && sweetsB)
+        {
+            if (IsCreamTag(sweetsA->GetTag()))
+            {
+                cream = sweetsA;
+                other = sweetsB;
+            }
+            else if (IsCreamTag(sweetsB->GetTag()))
+            {
+                cream = sweetsB;
+                other = sweetsA;
+            }
+        }
+
+        if (cream && other)
+        {
+            if (m_physicsMachine)
+            {
+                const JointPairKey key = JointPairKey::Make(cream, other);
+                if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
+                {
+                    const auto& posA = cream->GetTransform().position;
+                    const auto& posB = other->GetTransform().position;
+                    const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
+                    const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                        *cream,
+                        *other,
+                        anchor,
+                        kCreamWeldLinearHertz,
+                        kCreamWeldLinearDampingRatio,
+                        kCreamWeldAngularHertz,
+                        kCreamWeldAngularDampingRatio,
+                        false);
+                    if (b2Joint_IsValid(jointId))
+                    {
+                        m_creamWeldJoints.emplace(key, jointId);
+                    }
+                }
+            }
+            else if (!m_warnedMissingPhysicsMachine)
+            {
+                DebugTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
@@ -3467,6 +3591,32 @@ namespace SweetsSpace
         if (sweetsB)
         {
             UpdateContactStateEnd(sweetsB, a);
+        }
+
+        ActiveSweets* cream = nullptr;
+        ActiveSweets* other = nullptr;
+        if (sweetsA && sweetsB)
+        {
+            if (IsCreamTag(sweetsA->GetTag()))
+            {
+                cream = sweetsA;
+                other = sweetsB;
+            }
+            else if (IsCreamTag(sweetsB->GetTag()))
+            {
+                cream = sweetsB;
+                other = sweetsA;
+            }
+        }
+
+        if (cream && other)
+        {
+            const JointPairKey key = JointPairKey::Make(cream, other);
+            auto it = m_creamWeldJoints.find(key);
+            if (it != m_creamWeldJoints.end() && !b2Joint_IsValid(it->second))
+            {
+                m_creamWeldJoints.erase(it);
+            }
         }
 
         if (!m_loggedContactNotification)

@@ -65,6 +65,15 @@ namespace Systems
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
         b2WorldId GetWorldId() const;
+        b2JointId CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
+            const Entities::PhysicalEntity& bodyB,
+            const b2Vec2& worldAnchor,
+            float linearHertz,
+            float linearDampingRatio,
+            float angularHertz,
+            float angularDampingRatio,
+            bool collideConnected = false);
+        void DestroyJoint(b2JointId jointId, bool wakeAttached = true);
 
         void SyncBodies(float dt);
         void OnUpdate(Core::UpdateContext& ctx) override;
