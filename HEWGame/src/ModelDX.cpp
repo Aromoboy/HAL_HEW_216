@@ -3,11 +3,15 @@
 #include "ModelDX.h"
 
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, std::optional<AABB> localBounds)
+ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes,
+                 std::vector<std::shared_ptr<MaterialDX>> a_materials,
+                 std::optional<AABB> localBounds,
+                 std::string sourcePath)
 {
         m_meshes = std::move(a_meshes);
         m_materials = std::move(a_materials);
         m_meshCount = static_cast<unsigned int>(m_meshes.size());
+        m_sourcePath = std::move(sourcePath);
 
         if (localBounds)
         {

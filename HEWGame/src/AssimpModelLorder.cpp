@@ -419,7 +419,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, bounds);
+    return std::make_shared<ModelDX>(meshes, materials, bounds, path);
 }
 
 // メッシュ作成
