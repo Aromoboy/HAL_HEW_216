@@ -15,6 +15,7 @@ namespace Physics
     {
         std::vector<ColliderShapeDescriptor> shapes;
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
+        float linearDamping{ 0.0f };
     };
 
     class ColliderRegistry
@@ -31,4 +32,3 @@ namespace Physics
         static std::string NormalizeKey(const std::string& id);
     };
 }
-
