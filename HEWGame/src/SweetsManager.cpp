@@ -456,6 +456,7 @@ namespace
             config.density = std::max(0.0f, registryDefinition->shapeDef.density);
             config.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
             config.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            config.linearDamping = std::max(0.0f, registryDefinition->linearDamping);
         }
         else
         {

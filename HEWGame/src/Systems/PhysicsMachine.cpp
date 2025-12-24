@@ -756,6 +756,10 @@ namespace Systems
         {
             bodyDef.angularDamping = shapeConfig->angularDamping;
         }
+        if (shapeConfig && shapeConfig->linearDamping > 0.0f)
+        {
+            bodyDef.linearDamping = shapeConfig->linearDamping;
+        }
         // 重力スケール（動的ボディのみ適用）
         bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
         bodyDef.userData = &body;
@@ -842,6 +846,7 @@ namespace Systems
         << " bodyType=" << ToString(bodyDef.type)
         << " lockAngularZ=" << std::boolalpha << bodyDef.motionLocks.angularZ
         << " angularDamping=" << bodyDef.angularDamping
+        << " linearDamping=" << bodyDef.linearDamping
         << " shapes=" << colliderComponent->shapes.size()
         << " density=" << shapeDef.density
         << " friction=" << shapeDef.material.friction

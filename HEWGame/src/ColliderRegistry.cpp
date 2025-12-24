@@ -194,6 +194,7 @@ namespace Physics
         float width = 0.0f;
         b2Vec2 offset{ 0.0f, 0.0f };
         b2ShapeDef shapeDef = b2DefaultShapeDef();
+        float linearDamping = 0.0f;
 
         const auto flush = [&]()
         {
@@ -204,6 +205,7 @@ namespace Physics
 
             ColliderRegistryDefinition def{};
             def.shapeDef = shapeDef;
+            def.linearDamping = linearDamping;
 
             switch (*currentKind)
             {
@@ -291,6 +293,7 @@ namespace Physics
                 width = 0.0f;
                 offset = b2Vec2{ 0.0f, 0.0f };
                 shapeDef = b2DefaultShapeDef();
+                linearDamping = 0.0f;
                 continue;
             }
 
@@ -356,6 +359,15 @@ namespace Physics
                 }
                 continue;
             }
+
+            if (key == "linearDamping")
+            {
+                if (auto parsed = ParseFloat(value))
+                {
+                    linearDamping = std::max(0.0f, *parsed);
+                }
+                continue;
+            }
         }
 
         flush();
@@ -381,4 +393,3 @@ namespace Physics
         return std::nullopt;
     }
 }
-
