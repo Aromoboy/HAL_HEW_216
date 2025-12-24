@@ -65,6 +65,16 @@ namespace SweetsSpace
 
 namespace
 {
+    struct MeshHullSummary;
+}
+
+namespace SweetsSpace
+{
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding, float minThickness);
+}
+
+namespace
+{
 #if defined(_WIN32) && defined(_DEBUG)
     void DebugTrace(const std::string& message)
     {
@@ -565,7 +575,7 @@ namespace
         const std::string& modelPath = model->GetPath();
         if (!modelPath.empty())
         {
-            const MeshHullSummary summary = ::SweetsSpace::AnalyzeModelGeometry(
+            const MeshHullSummary summary = SweetsSpace::AnalyzeModelGeometry(
                 modelPath,
                 kDefaultGeneratedThicknessPadding,
                 kMinimumColliderThickness);
