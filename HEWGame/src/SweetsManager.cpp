@@ -549,6 +549,73 @@ namespace
         return vertices;
     }
 
+    float2 ComputeColliderCenterFromBounds(const AABB& bounds)
+    {
+        const float3 center = bounds.Center();
+        return float2{ center.x, center.y };
+    }
+
+    float2 ComputeColliderCenterFromModel(const std::shared_ptr<Render::Model>& model)
+    {
+        if (model && model->HasLocalBounds())
+        {
+            const float2 center = ComputeColliderCenterFromBounds(model->GetLocalBounds());
+            if (std::isfinite(center.x) && std::isfinite(center.y))
+            {
+                return center;
+            }
+        }
+
+        return float2{ 0.0f, 0.0f };
+    }
+
+    float2 ScaleColliderOffset(const float2& offset, const float3& scale)
+    {
+        return float2{ offset.x * scale.x, offset.y * scale.y };
+    }
+
+    void ApplyColliderCenterOffset(std::vector<Physics::ColliderShapeDescriptor>& shapes, const float2& offset)
+    {
+        if (std::fabs(offset.x) <= 1e-6f && std::fabs(offset.y) <= 1e-6f)
+        {
+            return;
+        }
+
+        for (auto& shape : shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+            {
+                if (shape.vertices.empty())
+                {
+                    shape.vertices.push_back(b2Vec2{ offset.x, offset.y });
+                }
+                else
+                {
+                    for (auto& vertex : shape.vertices)
+                    {
+                        vertex.x += offset.x;
+                        vertex.y += offset.y;
+                    }
+                }
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                for (auto& vertex : shape.vertices)
+                {
+                    vertex.x += offset.x;
+                    vertex.y += offset.y;
+                }
+                break;
+            }
+            }
+        }
+    }
+
     using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
 }
 
@@ -568,15 +635,16 @@ namespace SweetsSpace
         bool allowMeshPhysics)
     {
         (void)kind;
-        (void)transform;
         (void)modelPath;
         (void)model;
-        (void)colliderCenter;
         (void)allowMeshPhysics;
 
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
+        const float2 scaledCenter = ScaleColliderOffset(colliderCenter, transform.scale);
+        result.shapeConfig.offset = b2Vec2{ scaledCenter.x, scaledCenter.y };
         result.source = ColliderSource::Config;
+        result.centroidOffset = scaledCenter;
         return result;
     }
 
@@ -1731,16 +1799,22 @@ namespace SweetsSpace
 
                 Transform physicsTransform = transform;
                 physicsTransform.scale = preset.scale;
+                const float2 colliderCenter = ComputeColliderCenterFromModel(model);
+                const float2 colliderOffset = ScaleColliderOffset(colliderCenter, physicsTransform.scale);
                 VisualTransform visualTransform{};
                 visualTransform.position = physicsTransform.position;
+                visualTransform.position.x += colliderOffset.x;
+                visualTransform.position.y += colliderOffset.y;
                 visualTransform.rotation = physicsTransform.rotation;
                 visualTransform.scale = physicsTransform.scale;
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
                 auto shapeConfig = BuildBaseShapeConfig(type);
+                shapeConfig.offset = b2Vec2{ colliderOffset.x, colliderOffset.y };
 
                 Physics::BoxColliderComponent colliderComponent{};
+                colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
                 std::string colliderLookupId = resolvedKind;
                 auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 if (!registryDefinition && resolvedKind != ToString(type))
@@ -1754,6 +1828,8 @@ namespace SweetsSpace
                     colliderComponent.colliderId = colliderLookupId;
                     colliderComponent.shapes = registryDefinition->shapes;
                     colliderComponent.shapeDef = registryDefinition->shapeDef;
+                    colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+                    ApplyColliderCenterOffset(colliderComponent.shapes, colliderOffset);
 
                     shapeConfig.type = InferShapeType(registryDefinition->shapes);
                     shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);

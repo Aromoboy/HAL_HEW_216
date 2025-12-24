@@ -80,6 +80,13 @@ namespace SweetsSpace
 
     void BaseSweets::SyncFromPhysics()
     {
+        float3 renderOffset{};
+        if (const auto& colliderComponent = GetBoxColliderComponent())
+        {
+            renderOffset.x = colliderComponent->colliderOffset.x;
+            renderOffset.y = colliderComponent->colliderOffset.y;
+        }
+
         if (HasBox2DBody())
         {
             const b2Vec2 position = b2Body_GetPosition(GetBox2DBodyId());
@@ -94,12 +101,16 @@ namespace SweetsSpace
             SetTransform(updatedTransform);
 
             m_visual.position = updatedTransform.position;
+            m_visual.position.x += renderOffset.x;
+            m_visual.position.y += renderOffset.y;
             m_visual.rotation = updatedTransform.rotation;
             RefreshRenderTransform();
             return;
         }
 
         m_visual.position = m_transform.position;
+        m_visual.position.x += renderOffset.x;
+        m_visual.position.y += renderOffset.y;
         m_visual.rotation = m_transform.rotation;
         RefreshRenderTransform();
     }
@@ -110,4 +121,3 @@ namespace SweetsSpace
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };
     }
 }
-
