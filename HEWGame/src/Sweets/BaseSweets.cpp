@@ -107,13 +107,13 @@ namespace SweetsSpace
             const float cosAngle = std::cos(offsetAngle);
             const float sinAngle = std::sin(offsetAngle);
             // colliderOffset はローカル座標なので回転を反映させる
-            const float3 rotatedOffset{
-                renderOffset.x * cosAngle - renderOffset.y * sinAngle,
-                renderOffset.x * sinAngle + renderOffset.y * cosAngle,
-                0.0f
-            };
+            const float rotatedX = renderOffset.x * cosAngle - renderOffset.y * sinAngle;
+            const float rotatedY = renderOffset.x * sinAngle + renderOffset.y * cosAngle;
 
-            m_visual.position = updatedTransform.position + rotatedOffset;
+            m_visual.position = updatedTransform.position;
+            m_visual.position.x += rotatedX;
+            m_visual.position.y += rotatedY;
+            m_visual.position.z = updatedTransform.position.z;
             m_visual.rotation = updatedTransform.rotation;
             RefreshRenderTransform();
             return;
@@ -124,13 +124,13 @@ namespace SweetsSpace
         const float cosAngle = std::cos(offsetAngle);
         const float sinAngle = std::sin(offsetAngle);
         // colliderOffset はローカル座標なので回転を反映させる
-        const float3 rotatedOffset{
-            renderOffset.x * cosAngle - renderOffset.y * sinAngle,
-            renderOffset.x * sinAngle + renderOffset.y * cosAngle,
-            0.0f
-        };
+        const float rotatedX = renderOffset.x * cosAngle - renderOffset.y * sinAngle;
+        const float rotatedY = renderOffset.x * sinAngle + renderOffset.y * cosAngle;
 
-        m_visual.position = updatedTransform.position + rotatedOffset;
+        m_visual.position = updatedTransform.position;
+        m_visual.position.x += rotatedX;
+        m_visual.position.y += rotatedY;
+        m_visual.position.z = updatedTransform.position.z;
         m_visual.rotation = updatedTransform.rotation;
         RefreshRenderTransform();
     }
