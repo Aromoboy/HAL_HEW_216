@@ -258,6 +258,14 @@ namespace Physics
             }
             else
             {
+                if (offset.x != 0.0f || offset.y != 0.0f)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Collider '" << currentName << "' offset applied ("
+                        << offset.x << ", " << offset.y << ").\n";
+                    DebugTrace(oss.str());
+                }
+
                 const std::string normalized = NormalizeKey(currentName);
                 m_definitions[normalized] = def;
             }
