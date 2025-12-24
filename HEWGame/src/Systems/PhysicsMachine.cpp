@@ -259,6 +259,54 @@ namespace Systems
         return m_box2dSystem ? m_box2dSystem->GetWorldId() : b2_nullWorldId;
     }
 
+    b2JointId PhysicsMachine::CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
+        const Entities::PhysicalEntity& bodyB,
+        const b2Vec2& worldAnchor,
+        float linearHertz,
+        float linearDampingRatio,
+        float angularHertz,
+        float angularDampingRatio,
+        bool collideConnected)
+    {
+        const b2WorldId worldId = GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            DebugTrace("[PhysicsMachine] Box2D world is invalid; cannot create weld joint.\n");
+            return b2_nullJointId;
+        }
+
+        const b2BodyId bodyIdA = FindBody(bodyA);
+        const b2BodyId bodyIdB = FindBody(bodyB);
+        if (!b2Body_IsValid(bodyIdA) || !b2Body_IsValid(bodyIdB))
+        {
+            DebugTrace("[PhysicsMachine] Missing Box2D body; cannot create weld joint.\n");
+            return b2_nullJointId;
+        }
+
+        b2WeldJointDef jointDef = b2DefaultWeldJointDef();
+        jointDef.base.bodyIdA = bodyIdA;
+        jointDef.base.bodyIdB = bodyIdB;
+        jointDef.base.localFrameA.p = b2Body_GetLocalPoint(bodyIdA, worldAnchor);
+        jointDef.base.localFrameB.p = b2Body_GetLocalPoint(bodyIdB, worldAnchor);
+        jointDef.base.collideConnected = collideConnected;
+        jointDef.linearHertz = linearHertz;
+        jointDef.linearDampingRatio = linearDampingRatio;
+        jointDef.angularHertz = angularHertz;
+        jointDef.angularDampingRatio = angularDampingRatio;
+
+        return b2CreateWeldJoint(worldId, &jointDef);
+    }
+
+    void PhysicsMachine::DestroyJoint(b2JointId jointId, bool wakeAttached)
+    {
+        if (!b2Joint_IsValid(jointId))
+        {
+            return;
+        }
+
+        b2DestroyJoint(jointId, wakeAttached);
+    }
+
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
