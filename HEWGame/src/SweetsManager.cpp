@@ -1802,9 +1802,8 @@ namespace SweetsSpace
                 const float2 colliderCenter = ComputeColliderCenterFromModel(model);
                 const float2 colliderOffset = ScaleColliderOffset(colliderCenter, physicsTransform.scale);
                 VisualTransform visualTransform{};
+                // colliderOffset は BaseSweets::SyncFromPhysics() 側で一元適用する
                 visualTransform.position = physicsTransform.position;
-                visualTransform.position.x += colliderOffset.x;
-                visualTransform.position.y += colliderOffset.y;
                 visualTransform.rotation = physicsTransform.rotation;
                 visualTransform.scale = physicsTransform.scale;
 
