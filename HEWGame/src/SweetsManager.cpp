@@ -1820,7 +1820,8 @@ namespace SweetsSpace
                 Transform physicsTransform = transform;
                 physicsTransform.scale = preset.scale;
                 const float2 colliderCenter = ComputeColliderCenterFromModel(model);
-                const float2 colliderOffset = ScaleColliderOffset(colliderCenter, physicsTransform.scale);
+                const float2 modelColliderOffset = ScaleColliderOffset(colliderCenter, physicsTransform.scale);
+                float2 colliderOffset{ 0.0f, 0.0f };
                 VisualTransform visualTransform{};
                 // colliderOffset は BaseSweets::SyncFromPhysics() 側で一元適用する
                 visualTransform.position = physicsTransform.position;
@@ -1830,10 +1831,8 @@ namespace SweetsSpace
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
                 auto shapeConfig = BuildBaseShapeConfig(type);
-                shapeConfig.offset = b2Vec2{ colliderOffset.x, colliderOffset.y };
 
                 Physics::BoxColliderComponent colliderComponent{};
-                colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
                 std::string colliderLookupId = resolvedKind;
                 auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 if (!registryDefinition && resolvedKind != ToString(type))
@@ -1842,13 +1841,20 @@ namespace SweetsSpace
                     registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 }
 
+                if (!registryDefinition)
+                {
+                    colliderOffset = modelColliderOffset;
+                }
+
+                shapeConfig.offset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+                colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+
                 if (registryDefinition)
                 {
                     colliderComponent.colliderId = colliderLookupId;
                     colliderComponent.shapes = registryDefinition->shapes;
                     colliderComponent.shapeDef = registryDefinition->shapeDef;
-                    colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
-                    ApplyColliderCenterOffset(colliderComponent.shapes, colliderOffset);
+                    // registry offset is authoritative; avoid applying model-based offsets.
 
                     shapeConfig.type = InferShapeType(registryDefinition->shapes);
                     shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
