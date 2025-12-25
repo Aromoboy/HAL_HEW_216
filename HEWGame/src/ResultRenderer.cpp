@@ -9,7 +9,6 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
-#include "PowerUpRenderer.h"
 
 namespace
 {
@@ -289,7 +288,7 @@ void ResultRenderer::RenderFream(const ResultDisplayData& data)
         Sprite::SetTexture(m_resultTexture[i].get());
         Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
         Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-        Sprite::SetColor(m_config.guidelineColor);
+        Sprite::SetColor(m_config.normalTextColor);
         Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
         Sprite::Draw();

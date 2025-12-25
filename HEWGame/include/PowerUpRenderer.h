@@ -22,15 +22,12 @@ struct PowerUpHudLayoutConfig
 	float shadowOffsetY = 2.0f;
 	DirectX::XMFLOAT4 normalTextColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT4 warningTextColor{ 1.0f, 0.6f, 0.2f, 1.0f };
-	float guidelineThicknessPixels = 3.0f;
-	float guidelinePatternPixels = 32.0f;
-	DirectX::XMFLOAT4 guidelineColor{ 0.95f, 0.95f, 0.95f, 0.8f };
 };
 
 
 
 
-// ‹£‡‚ğ”ğ‚¯‚é‚½‚ß‚±‚¿‚ç‚Éì¬AŒã‚Å‡•¹‚·‚é‚©ƒtƒHƒ“ƒgƒAƒgƒ‰ƒX‚ğÀ‘•‚µ‚½‚¢
+// ç«¶åˆã‚’é¿ã‘ã‚‹ãŸã‚ã“ã¡ã‚‰ã«ä½œæˆã€å¾Œã§åˆä½µã™ã‚‹ã‹ãƒ•ã‚©ãƒ³ãƒˆã‚¢ãƒˆãƒ©ã‚¹ã‚’å®Ÿè£…ã—ãŸã„
 
 enum PowerUpTextureType
 {
@@ -96,10 +93,10 @@ public:
 	}
 
 private:
-	// Še•¶š—ñ‚ÌƒeƒNƒXƒ`ƒƒƒTƒCƒY
+	// å„æ–‡å­—åˆ—ã®ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚µã‚¤ã‚º
 	float2 m_stringTextureScale;
 
-	// ƒeƒNƒXƒ`ƒƒ‚Ì•\¦”ÍˆÍ
+	// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã®è¡¨ç¤ºç¯„å›²
 	TextBounds bound;
 };
 
@@ -118,7 +115,7 @@ public:
 		float2 drawScale;
 
 		
-		// Node‚É•`‰æ‚·‚é•¶š—ñ‹y‚Ñ”’l
+		// Nodeã«æç”»ã™ã‚‹æ–‡å­—åˆ—åŠã³æ•°å€¤
 		bool dirty;
 		std::string powerUpName;
 		std::string powerUpInfomation;
@@ -197,24 +194,21 @@ private:
 	};
 
 
-	// ƒXƒvƒ‰ƒCƒg•`‰æ—pŠÖ”
-	void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
-	void DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
-	void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix);
+};
 	void MeshDraw();
 
-	// ”Â‚Æ‚µ‚Ä•`‰æ‚·‚é‚½‚ß‚ÌƒƒbƒVƒ…‹y‚ÑƒVƒF[ƒ_[AƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Å©ì‚·‚é 
+	// æ¿ã¨ã—ã¦æç”»ã™ã‚‹ãŸã‚ã®ãƒ¡ãƒƒã‚·ãƒ¥åŠã³ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã€ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§è‡ªä½œã™ã‚‹ 
 	std::shared_ptr<MeshDX> m_spriteMesh;
 	std::shared_ptr<Shader> vs;
 	std::shared_ptr<Shader> ps;
 
-	// •`‰æ—pƒeƒNƒXƒ`ƒƒ
+	// æç”»ç”¨ãƒ†ã‚¯ã‚¹ãƒãƒ£
 	std::shared_ptr<Texture2D> m_cost;
 	std::shared_ptr<Texture2D> m_iconFrame;
 	std::shared_ptr<Texture2D> m_backFrame;
 
 
-	// •¶š•`‰æ—pŠÖ”
+	// æ–‡å­—æç”»ç”¨é–¢æ•°
 	bool CreateTextResources();
 	bool CreateGuidelineTexture();
 	void DestroyTextResources();
@@ -228,10 +222,10 @@ private:
 	std::string BuildHudString(const NodeRenderData& data) const;
 
 
-	// ŠeƒŠƒ\[ƒX
+	// å„ãƒªã‚½ãƒ¼ã‚¹
 	PowerUpHudLayoutConfig m_config{};
 	std::shared_ptr<PowerUpStringTexture> m_texture;
-	// ƒtƒH[ƒ}ƒbƒg‚©‚çì¬‚·‚é‚Ì‚ÅCache‚ğg‚í‚È‚¢
+	// ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆã‹ã‚‰ä½œæˆã™ã‚‹ã®ã§Cacheã‚’ä½¿ã‚ãªã„
 	std::shared_ptr<Texture> m_guidelineTexture;
 	std::vector<uint8_t> m_rgbaBuffer;
 	bool m_ready = false;
