@@ -731,7 +731,6 @@ std::string PowerUpRenderer::BuildHudString(const NodeRenderData& data) const
 {
 
 	std::ostringstream stream;
-}
 	stream << 'l' << '\n';
 
 	stream << data.powerUpName << '\n';
