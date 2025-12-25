@@ -3103,7 +3103,7 @@ void SceneGame::OnGuidelineCrossed()
     }
 
     const float previousHeight = m_guidelineHeightMeters;
-    m_guidelineHeightMeters += 1.0f;
+    m_guidelineHeightMeters += 2.5f;
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
