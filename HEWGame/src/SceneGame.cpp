@@ -3069,10 +3069,9 @@ bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
                 if (m_guidelineTriggeredThisHeight.insert(sweets.get()).second)
                 {
                     crossedSweets = sweets;
+                    outTriggerHeight = bounds.max.y;
                     break;
                 }
-                outTriggerHeight = bounds.max.y;
-                return true;
             }
         }
 
