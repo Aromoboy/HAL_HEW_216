@@ -183,7 +183,6 @@ private:
     std::unique_ptr<HudRenderer> m_hudRenderer;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
-    float m_guidelineStartHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
     float m_guidelineThicknessPixels = 0.0f;
     float m_guidelineWidthPaddingWorld = 0.0f;
