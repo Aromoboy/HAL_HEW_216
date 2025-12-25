@@ -885,7 +885,6 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
     // アニメーション設定
     using XMVectorKey = std::pair<float, DirectX::XMVECTOR>;
     using XMVectorKeys = std::map<float, DirectX::XMVECTOR>;
-    info.totalTime = 0.0f;
     float fbxToGameFrame = static_cast<float>(assimpAnime->mTicksPerSecond);
     info.totalTime = static_cast<float>(assimpAnime->mDuration) / fbxToGameFrame;
     info.speed = 1.0f;

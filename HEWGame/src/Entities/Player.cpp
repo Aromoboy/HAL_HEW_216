@@ -469,11 +469,6 @@ namespace Entities
             }
             m_wasMovingLastFrame = isMovingNow;
 
-            if (m_animation)
-            {
-                m_animation->Step(0.000001f);
-            }
-
             ClampVerticalPosition();
             ClampScreenBounds();
             SyncVisualTransformFromPhysics();
