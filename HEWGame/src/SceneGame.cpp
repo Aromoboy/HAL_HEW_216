@@ -3094,6 +3094,12 @@ bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
 
 void SceneGame::OnGuidelineCrossed()
 {
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Guideline] Crossing with guidelineHeightMeters=" << m_guidelineHeightMeters
+            << " guidelineStepMeters=" << m_guidelineStepMeters << "\n";
+        ::DebugTrace(oss.str());
+    }
     if (!(m_guidelineHeightMeters > 0.0f) || !(m_guidelineStepMeters > 0.0f))
     {
         m_guidelineTriggerCooldownSeconds = kGuidelineGlobalCooldownSeconds;
@@ -3121,10 +3127,8 @@ void SceneGame::OnGuidelineCrossed()
 
 void SceneGame::ResetGuidelineHeight()
 {
-    const float stageGuidelineHeight = m_stageData.GetGuidelineHeight();
-    const float stageGuidelineStep = m_stageData.GetGuidelineStep();
-    m_guidelineHeightMeters = stageGuidelineHeight;
-    m_guidelineStepMeters = stageGuidelineStep;
+    m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
+    m_guidelineStepMeters = m_stageData.GetGuidelineStep();
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
@@ -3133,10 +3137,10 @@ void SceneGame::ResetGuidelineHeight()
 
     std::ostringstream oss;
     oss << kLogPrefix << "[Guideline] Reset height to " << m_guidelineHeightMeters
-        << " (stage=" << stageGuidelineHeight << ")"
+        << " (stage=" << m_stageData.GetGuidelineHeight() << ")"
         << " guidelineHeightMeters=" << m_guidelineHeightMeters
         << " guidelineStepMeters=" << m_guidelineStepMeters
-        << " (stageStep=" << stageGuidelineStep << ")\n";
+        << " (stageStep=" << m_stageData.GetGuidelineStep() << ")\n";
     ::DebugTrace(oss.str());
 }
 
