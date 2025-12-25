@@ -1679,22 +1679,20 @@ namespace Stage
 
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
-        if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
+        if (!std::isfinite(guidelineHeight))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight value " << guidelineHeight
-                << " invalid; using default " << kDefaultGuidelineHeight << "\n";
+                << " invalid; keeping parsed value.\n";
             DebugTrace(oss.str());
-            guidelineHeight = kDefaultGuidelineHeight;
         }
 
-        if (!std::isfinite(guidelineStep) || guidelineStep <= 0.0f)
+        if (!std::isfinite(guidelineStep))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineStep value " << guidelineStep
-                << " invalid; using default " << kDefaultGuidelineStep << "\n";
+                << " invalid; keeping parsed value.\n";
             DebugTrace(oss.str());
-            guidelineStep = kDefaultGuidelineStep;
         }
         if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
         {
