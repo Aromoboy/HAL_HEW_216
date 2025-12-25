@@ -428,6 +428,16 @@ namespace Entities
         b2Body_SetLinearVelocity(m_physical.bodyId, ToBox2DVector(velocity));
     }
 
+    void PhysicalEntity::SetAngularVelocity(float radiansPerSec)
+    {
+        if (!HasBox2DBody())
+        {
+            return;
+        }
+
+        b2Body_SetAngularVelocity(m_physical.bodyId, radiansPerSec);
+    }
+
     float PhysicalEntity::GetGravityScale() const
     {
         return HasBox2DBody() ? b2Body_GetGravityScale(m_physical.bodyId) : 0.0f;
@@ -718,4 +728,3 @@ namespace Entities
         entity.SyncBox2DBodyFromTransform();
     }
 }
-
