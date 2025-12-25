@@ -2989,6 +2989,7 @@ namespace SweetsSpace
             bool hasSimultaneous = false;
             bool hasSimultaneousTarget = false;
             bool hasInitialPerLane = false;
+            bool hasPhaseStartBonusPerLane = false;
             bool hasWeights = false;
         };
 
@@ -3212,6 +3213,22 @@ namespace SweetsSpace
                     parseError = true;
                 }
             }
+            else if (key == "phaseStartBonusPerLane" || key == "phaseBonusPerLane")
+            {
+                try
+                {
+                    partial.config.phaseStartBonusPerLane = std::max(0, std::stoi(value));
+                    partial.hasPhaseStartBonusPerLane = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber
+                        << "行目の phaseStartBonusPerLane が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "weights")
             {
                 bool weightError = false;
@@ -3320,6 +3337,12 @@ namespace SweetsSpace
                 config.initialSpawnPerLane = 0;
             }
             config.initialSpawnPerLane = std::max(0, config.initialSpawnPerLane);
+
+            if (!entry.second.hasPhaseStartBonusPerLane)
+            {
+                config.phaseStartBonusPerLane = 0;
+            }
+            config.phaseStartBonusPerLane = std::max(0, config.phaseStartBonusPerLane);
 
             if (config.weights.empty())
             {
@@ -4179,12 +4202,26 @@ namespace SweetsSpace
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
         const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
+        const int phaseStartBonusPerLane = std::max(0, activeConfig.phaseStartBonusPerLane);
         const int initialPerLane = std::max(0, activeConfig.initialSpawnPerLane);
-        if (initialPerLane > 0 && activeLaneCount > 0)
+        const int phaseStartBonusCount = (phaseStartBonusPerLane > 0 && activeLaneCount > 0)
+            ? phaseStartBonusPerLane * activeLaneCount
+            : 0;
+        const int initialSpawnCount = (initialPerLane > 0 && activeLaneCount > 0)
+            ? initialPerLane * activeLaneCount
+            : 0;
+        const int phaseStartTotal = phaseStartBonusCount + initialSpawnCount;
+        if (phaseStartTotal > 0)
         {
-            const int initialSpawnCount = initialPerLane * activeLaneCount;
-            m_activeBurstPlanned = std::max(m_activeBurstPlanned, initialSpawnCount);
-            EnqueueSpawns(initialSpawnCount);
+            m_activeBurstPlanned = std::max(m_activeBurstPlanned, phaseStartTotal);
+            if (phaseStartBonusCount > 0)
+            {
+                EnqueueSpawns(phaseStartBonusCount);
+            }
+            if (initialSpawnCount > 0)
+            {
+                EnqueueSpawns(initialSpawnCount);
+            }
             m_burstTimer = m_activeBurstInterval;
         }
 
@@ -4250,6 +4287,7 @@ namespace SweetsSpace
             << " simultaneous=" << config.simultaneousSpawnCount
             << " liveTarget=" << config.simultaneousLiveTarget
             << " initialPerLane=" << config.initialSpawnPerLane
+            << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
             << " weights=";
 
         if (config.weights.empty())
