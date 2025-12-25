@@ -187,6 +187,9 @@ private:
     float m_guidelineThicknessPixels = 0.0f;
     float m_guidelineWidthPaddingWorld = 0.0f;
     float m_guidelineZOffset = 0.0f;
+    float m_guidelineCenterX = 0.0f;
+    float m_guidelineWidthWorld = 0.0f;
+    float m_guidelineThicknessWorld = 0.0f;
     float m_guidelineCooldownDurationSeconds = 0.0f;
     float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;

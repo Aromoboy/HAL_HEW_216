@@ -95,6 +95,7 @@ namespace
         constexpr float kPlayerMinimumYMargin = 1.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
+        constexpr float kGuidelineThicknessMeters = 0.05f;
         constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
         constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
         constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
@@ -2080,6 +2081,46 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
         m_guidelineStepMeters = 0.0f;
     }
+    m_guidelineCenterX = 0.0f;
+    m_guidelineWidthWorld = 0.0f;
+    m_guidelineThicknessWorld = kGuidelineThicknessMeters;
+    {
+        bool boundsValid = false;
+        float minX = std::numeric_limits<float>::max();
+        float maxX = std::numeric_limits<float>::lowest();
+        for (std::size_t i = 0; i < m_stageData.GetPlatformCount(); ++i)
+        {
+            const auto& descriptor = m_stageData.GetPlatform(i);
+            if (!std::isfinite(descriptor.center.x) || !std::isfinite(descriptor.widthWorld) || descriptor.widthWorld <= 0.0f)
+            {
+                continue;
+            }
+
+            const float halfWidth = descriptor.widthWorld * 0.5f;
+            if (!std::isfinite(halfWidth) || halfWidth <= 0.0f)
+            {
+                continue;
+            }
+
+            minX = std::min(minX, descriptor.center.x - halfWidth);
+            maxX = std::max(maxX, descriptor.center.x + halfWidth);
+            boundsValid = true;
+        }
+
+        if (boundsValid)
+        {
+            m_guidelineCenterX = (minX + maxX) * 0.5f;
+            m_guidelineWidthWorld = maxX - minX;
+        }
+
+        const float widthPadding = std::max(0.0f, m_guidelineWidthPaddingWorld);
+        float paddedWidth = m_guidelineWidthWorld + (widthPadding * 2.0f);
+        if (!std::isfinite(paddedWidth) || paddedWidth <= 0.0f)
+        {
+            paddedWidth = 0.01f;
+        }
+        m_guidelineWidthWorld = paddedWidth;
+    }
     m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
     if (!std::isfinite(m_heightBonusThresholdMeters) || m_heightBonusThresholdMeters <= 0.0f)
     {
@@ -2154,8 +2195,13 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_guidelineActor = std::make_unique<GuidelineActor>();
         if (m_guidelineActor)
         {
-            auto& transform = m_guidelineActor->GetTransform();
-            transform.position.y = m_guidelineHeightMeters;
+            const float guidelineZ = m_stageData.GetPlaneZ() + m_guidelineZOffset;
+            m_guidelineActor->UpdateGuideline(
+                m_guidelineCenterX,
+                m_guidelineHeightMeters,
+                guidelineZ,
+                m_guidelineWidthWorld,
+                m_guidelineThicknessWorld);
             m_drawSystem->RegisterRenderable(*m_guidelineActor);
         }
     }
@@ -2795,17 +2841,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     UpdateTowerHeightTelemetry();
 
     
-    
-    float viewportWidth = static_cast<float>(SCREEN_WIDTH);
-    float viewportHeight = static_cast<float>(SCREEN_HEIGHT);
-    bool viewportFromDefault = true;
-    bool boundsIssueThisFrame = false;
-    if (RenderTarget* rtv = GetDefaultRTV())
-    {
-        viewportWidth = static_cast<float>(rtv->GetWidth());
-        viewportHeight = static_cast<float>(rtv->GetHeight());
-    }
-
     float deltaTime = ctx.timer.DeltaTime();
     for (auto& obj : m_stageObjects)
     {
@@ -2841,29 +2876,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         const float minX = camPos.x - halfWidth;
         const float maxX = camPos.x + halfWidth;
         const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
-
-        if (m_guidelineActor && m_guidelineHeightMeters > 0.0f)
-        {
-            const float widthPadding = std::max(0.0f, m_guidelineWidthPaddingWorld);
-            float lineWidth = (maxX - minX) + (widthPadding * 2.0f);
-            if (!std::isfinite(lineWidth) || lineWidth <= 0.0f)
-            {
-                lineWidth = std::max(0.01f, maxX - minX);
-            }
-
-            float thicknessWorld = 0.0f;
-            if (std::isfinite(viewportHeight) && viewportHeight > 0.0f && std::isfinite(halfHeight) && halfHeight > 0.0f)
-            {
-                thicknessWorld = (m_guidelineThicknessPixels / viewportHeight) * (2.0f * halfHeight);
-            }
-            if (!std::isfinite(thicknessWorld) || thicknessWorld <= 0.0f)
-            {
-                thicknessWorld = 0.01f;
-            }
-
-            const float guidelineZ = m_stageData.GetPlaneZ() + m_guidelineZOffset;
-            m_guidelineActor->UpdateGuideline(camPos.x, m_guidelineHeightMeters, guidelineZ, lineWidth, thicknessWorld);
-        }
 
         // Log bounds if changed
         const bool changed =
@@ -3110,6 +3122,7 @@ void SceneGame::OnGuidelineCrossed()
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
+        transform.position.x = m_guidelineCenterX;
         transform.position.y = m_guidelineHeightMeters;
     }
     m_guidelineTriggeredThisHeight.clear();
@@ -3131,6 +3144,7 @@ void SceneGame::ResetGuidelineHeight()
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
+        transform.position.x = m_guidelineCenterX;
         transform.position.y = m_guidelineHeightMeters;
     }
 
