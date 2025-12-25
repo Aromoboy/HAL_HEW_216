@@ -11,7 +11,7 @@
 #include <array>
 #include <algorithm>
 
-// ŠeOffset
+// å„Offset
 constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
 constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
 constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
@@ -28,7 +28,7 @@ constexpr float kNameScaleOffset = 0.08f;
 constexpr float kInfomationScaleOffset = 0.05f;
 constexpr float kLevelScaleOffset = 0.06f;
 constexpr float kCostScaleOffset = 0.07f;
-// ƒeƒNƒXƒ`ƒƒ–¼
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£å
 constexpr const char* kCostTextureName = "Cost";
 constexpr const char* kFrameTextureName = "Frame";
 constexpr const char* kBackFrameTexturenName = "BackFrame";
@@ -143,12 +143,6 @@ bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 		return false;
 	}
 
-	if (!CreateGuidelineTexture())
-	{
-		Shutdown();
-		return false;
-	}
-
 	m_ready = true;
 	m_textureDirty = false;
 	return true;
@@ -161,7 +155,6 @@ void PowerUpRenderer::Shutdown()
 {
 	DestroyTextResources();
 	m_texture.reset();
-	m_guidelineTexture.reset();
 	m_rgbaBuffer.clear();
 	m_ready = false;
 	m_textureDirty = false;
@@ -181,7 +174,7 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	float2 offset;
 
 
-	// ƒoƒbƒNƒtƒŒ[ƒ€•`‰æ
+	// ãƒãƒƒã‚¯ãƒ•ãƒ¬ãƒ¼ãƒ æç”»
 	offset.x = kHudCostIconPositionOffset.x;
 	offset.y = kHudCostIconPositionOffset.y;
 	position.x = offset.x;
@@ -242,7 +235,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	float2 offset;
 	
 	
-	// ƒoƒbƒNƒtƒŒ[ƒ€•`‰æ
+	// ãƒãƒƒã‚¯ãƒ•ãƒ¬ãƒ¼ãƒ æç”»
 	offset.x = kBackFramePositionOffset.x * data.drawScale.x;
 	offset.y = kBackFramePositionOffset.y * data.drawScale.y;
 	position.x = data.drawPosition.x + offset.x;
@@ -256,7 +249,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawSprite(m_backFrame, world, view, proj);
 
-	// ƒAƒCƒRƒ“ƒtƒŒ[ƒ€•`‰æ
+	// ã‚¢ã‚¤ã‚³ãƒ³ãƒ•ãƒ¬ãƒ¼ãƒ æç”»
 	offset.x = kFramePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kFramePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -270,7 +263,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawSprite(m_iconFrame, world, view, proj);
 
-	// ƒAƒCƒRƒ“•`‰æ
+	// ã‚¢ã‚¤ã‚³ãƒ³æç”»
 	offset.x = kIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -284,7 +277,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawSprite(data.texture, world, view, proj);
 
-	// ƒRƒXƒgƒAƒCƒRƒ“•`‰æ
+	// ã‚³ã‚¹ãƒˆã‚¢ã‚¤ã‚³ãƒ³æç”»
 	offset.x = kCostIconPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kCostIconPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -300,7 +293,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	
 
 
-	// ‹­‰»–¼•`‰æ
+	// å¼·åŒ–åæç”»
 	offset.x = kNamePositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kNamePositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -315,7 +308,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	RenderString(data, world, view, proj, NodeName);
 
-	// à–¾•`‰æ
+	// èª¬æ˜æç”»
 	offset.x = kInfomationPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kInfomationPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -332,7 +325,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	RenderString(data, world, view, proj, NodeInfomation);
 
 
-	// ƒRƒXƒg•`‰æ
+	// ã‚³ã‚¹ãƒˆæç”»
 	offset.x = kLevelPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kLevelPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
 	position.x = data.drawPosition.x + offset.x;
@@ -362,23 +355,23 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
-	// Šeƒ}ƒgƒŠƒNƒX‚Æ•`‰æ—p‚Ìƒpƒ‰ƒ[ƒ^[
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã¨æç”»ç”¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	// Šeƒ}ƒgƒŠƒNƒX‚ğİ’è
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã‚’è¨­å®š
 	wvp[0] = worldMatrix;
 	wvp[1] = viewMatrix;
 	wvp[2] = projMatrix;
 
 	
-	// ƒXƒe[ƒ^ƒX‚ğİ’è
+	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
 	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
 	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
-	// ƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
@@ -388,7 +381,7 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 	ps->SetTexture(0, texture->Get());
 	ps->Bind();
 
-	// •`‰æ
+	// æç”»
 	MeshDraw();
 
 
@@ -396,23 +389,23 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
-	// Šeƒ}ƒgƒŠƒNƒX‚Æ•`‰æ—p‚Ìƒpƒ‰ƒ[ƒ^[
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã¨æç”»ç”¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	// Šeƒ}ƒgƒŠƒNƒX‚ğİ’è
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã‚’è¨­å®š
 	wvp[0] = worldMatrix;
 	wvp[1] = viewMatrix;
 	wvp[2] = projMatrix;
 
 
-	// ƒXƒe[ƒ^ƒX‚ğİ’è
+	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 	param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 	param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 
-	// ƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
@@ -422,7 +415,7 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 	ps->SetTexture(0, texture->Get());
 	ps->Bind();
 
-	// •`‰æ
+	// æç”»
 	MeshDraw();
 
 }
@@ -430,24 +423,24 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
-	// Šeƒ}ƒgƒŠƒNƒX‚Æ•`‰æ—p‚Ìƒpƒ‰ƒ[ƒ^[
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã¨æç”»ç”¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	// Šeƒ}ƒgƒŠƒNƒX‚ğİ’è
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã‚’è¨­å®š
 	wvp[0] = worldMatrix;
 	wvp[1] = viewMatrix;
 	wvp[2] = projMatrix;
 
 
-	// ƒXƒe[ƒ^ƒX‚ğİ’è
+	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
 	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
 	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
 
-	// ƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
@@ -456,7 +449,7 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 	ps->SetTexture(0, texture->GetResource());
 	ps->Bind();
 
-	// •`‰æ
+	// æç”»
 	MeshDraw();
 }
 
@@ -467,15 +460,15 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 
 void PowerUpRenderer::MeshDraw()
 {
-	// ƒRƒ“ƒeƒLƒXƒg‚ğæ“¾
+	// ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã‚’å–å¾—
 	ID3D11DeviceContext* pContext = GetContext();
 	UINT offset = 0;
 
-	// ’¸“_‚ğƒoƒCƒ“ƒh
+	// é ‚ç‚¹ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
 	vertexBuffer.Bind(0, offset);
 
-	// ’¸“_ƒoƒbƒtƒ@‚Ì‚İ‚Å•`‰æ
+	// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ã¿ã§æç”»
 	GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	pContext->Draw(vertexBuffer.GetCount(), 0);
 
@@ -526,38 +519,6 @@ bool PowerUpRenderer::CreateTextResources()
 #endif
 }
 
-bool PowerUpRenderer::CreateGuidelineTexture()
-{
-	m_guidelineTexture = std::make_shared<Texture>();
-	if (!m_guidelineTexture)
-	{
-		return false;
-	}
-
-	constexpr size_t kSize = 4;
-	std::array<uint32_t, kSize* kSize> pixels{};
-	for (size_t y = 0; y < kSize; ++y)
-	{
-		for (size_t x = 0; x < kSize; ++x)
-		{
-			const bool opaque = (x % 2) == 0;
-			pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
-		}
-	}
-
-	const HRESULT hr = m_guidelineTexture->Create(
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		static_cast<UINT>(kSize),
-		static_cast<UINT>(kSize),
-		pixels.data());
-	if (FAILED(hr))
-	{
-		m_guidelineTexture.reset();
-		return false;
-	}
-
-	return true;
-}
 
 void PowerUpRenderer::DestroyTextResources()
 {
@@ -620,7 +581,7 @@ void PowerUpRenderer::UploadTexture(const NodeRenderData& data)
 	data.stringTexture->UpdatePixels(m_rgbaBuffer.data(), data.stringTexture->GetWidth() * 4);
 	m_textureDirty = false;
 
-	// •¶š‚Ì‘‚©‚ê‚Ä‚¢‚é”ÍˆÍ‚ğŠi”[
+	// æ–‡å­—ã®æ›¸ã‹ã‚Œã¦ã„ã‚‹ç¯„å›²ã‚’æ ¼ç´
 	DetectTextBounds(data.stringTexture->GetBound(), m_rgbaBuffer.data(), data.stringTexture->GetWidth(), data.stringTexture->GetHeight());
 	
 	TEXTMETRIC tm;
@@ -688,12 +649,6 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 
 void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum)
 {
-	if (!m_guidelineTexture)
-	{
-		return;
-	}
-
-
 	float viewportWidth = 0.0f;
 	float viewportHeight = 0.0f;
 	if (!TryGetViewportSize(viewportWidth, viewportHeight))
@@ -725,19 +680,19 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 void PowerUpRenderer::DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, int width, int height)
 {
 	TextBounds result{};
-	result.top = height;     // ‰Šú’l‚ÍÅ‘å
-	result.bottom = 0;       // ‰Šú’l‚ÍÅ¬
+	result.top = height;     // åˆæœŸå€¤ã¯æœ€å¤§
+	result.bottom = 0;       // åˆæœŸå€¤ã¯æœ€å°
 
 	const int stride = width * 4;
 
-	// F‚ª“h‚ç‚ê‚Ä‚¢‚éÅ‰‚ÌƒsƒNƒZƒ‹‚ÆÅŒã‚ÌƒsƒNƒZƒ‹‚Ì‚‚³‚ğæ“¾
+	// è‰²ãŒå¡—ã‚‰ã‚Œã¦ã„ã‚‹æœ€åˆã®ãƒ”ã‚¯ã‚»ãƒ«ã¨æœ€å¾Œã®ãƒ”ã‚¯ã‚»ãƒ«ã®é«˜ã•ã‚’å–å¾—
 	for (int y = 0; y < height; ++y)
 	{
 		const uint8_t* row = rgba + y * stride;
 
 		for (int x = 0; x < width; ++x)
 		{
-			uint8_t alpha = row[x * 4 + 3]; // © intensity ‚ª alpha ‚É“ü‚Á‚Ä‚¢‚é‘O’ñ
+			uint8_t alpha = row[x * 4 + 3]; // â† intensity ãŒ alpha ã«å…¥ã£ã¦ã„ã‚‹å‰æ
 
 			if (alpha > 30)
 			{
@@ -747,7 +702,7 @@ void PowerUpRenderer::DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, 
 		}
 	}
 
-	// ˆê•¶š‚à•`‚©‚ê‚Ä‚È‚©‚Á‚½ê‡‚Ì•ÛŒ¯
+	// ä¸€æ–‡å­—ã‚‚æã‹ã‚Œã¦ãªã‹ã£ãŸå ´åˆã®ä¿é™º
 	if (result.top > result.bottom)
 	{
 		result.top = 0;
@@ -776,7 +731,7 @@ std::string PowerUpRenderer::BuildHudString(const NodeRenderData& data) const
 {
 
 	std::ostringstream stream;
-	// ƒ_ƒ~[•`‰æ
+}
 	stream << 'l' << '\n';
 
 	stream << data.powerUpName << '\n';

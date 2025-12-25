@@ -25,8 +25,6 @@ struct ResultDisplayData
     float peakHeight = 0.0f;
     int score = 0;
     bool timeUp = false;
-    bool guidelineVisible = false;
-    float guidelineClipY = 0.0f;
     float moveSpeedMultiplier = 1.0f;
     float moveSpeedUnitsPerSecond = 0.0f;
     int sweetsCount = 0;
@@ -44,9 +42,6 @@ struct ResultLayoutConfig
     float shadowOffsetY = 2.0f;
     DirectX::XMFLOAT4 normalTextColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     DirectX::XMFLOAT4 warningTextColor{ 1.0f, 0.6f, 0.2f, 1.0f };
-    float guidelineThicknessPixels = 3.0f;
-    float guidelinePatternPixels = 32.0f;
-    DirectX::XMFLOAT4 guidelineColor{ 0.95f, 0.95f, 0.95f, 0.8f };
 };
 
 
@@ -90,4 +85,3 @@ private:
 
     DirectX::XMFLOAT4X4 m_identityMatrix;
 };
-

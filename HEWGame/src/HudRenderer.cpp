@@ -8,7 +8,6 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
-#include "PowerUpRenderer.h"
 
 namespace
 {

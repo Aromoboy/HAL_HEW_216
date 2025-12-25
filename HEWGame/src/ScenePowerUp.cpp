@@ -62,10 +62,7 @@ namespace SceneSpace
                         1.5f,
                         2.0f,
                         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-                        DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f),
-                        3.0f,
-                        32.0f,
-                        DirectX::XMFLOAT4(0.95f, 0.95f, 1.0f, 0.8f) });
+                        DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f) });
         }
 
         void ScenePowerUp::Update(Core::StepTimer& timer, Core::Input& input)
@@ -260,4 +257,3 @@ namespace SceneSpace
                 m_camera.reset();
         }
 }
-
