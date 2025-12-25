@@ -471,7 +471,7 @@ namespace Entities
 
             if (m_animation)
             {
-                m_animation->Step(0.000001f);
+                m_animation->Step(1 / 600);
             }
 
             ClampVerticalPosition();

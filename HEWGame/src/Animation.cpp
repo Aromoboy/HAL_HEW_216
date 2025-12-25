@@ -78,6 +78,8 @@ void Animation::CalcAnime(AnimePatternDX kind)
 	for (auto channelIt = m_channels.begin(); channelIt != m_channels.end(); ++channelIt)
 	{
 		// アニメーションで変更するボーンがなければスキップ
+
+		// TODO ここ数値と-1の比較で本当にあってる？
 		if (channelIt->node == kNodeNone) { continue; }
 
 		// タイムラインの設定がなければスキップ
