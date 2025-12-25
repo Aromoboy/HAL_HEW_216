@@ -129,6 +129,9 @@
     <ClCompile Include="src\Entities\Player.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
+    <ClCompile Include="src\GuidelineActor.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
     <ClCompile Include="src\GameFlow\PhaseManager.cpp">
       <Filter>GameFlow</Filter>
     </ClCompile>
@@ -396,6 +399,9 @@
       <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\Entities\Player.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GuidelineActor.h">
       <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\Entity.h">

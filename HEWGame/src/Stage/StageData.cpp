@@ -41,6 +41,10 @@ namespace
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
     constexpr float kDefaultGuidelineHeight = 2.0f;
     constexpr float kDefaultGuidelineStep = 1.0f;
+    constexpr float kDefaultGuidelineThicknessPixels = 3.0f;
+    constexpr float kDefaultGuidelineWidthPaddingWorld =
+        (kDefaultPlatformWidthFraction * kPlatformGridWidthCells * kDefaultCellSizeWorld) * 0.5f;
+    constexpr float kDefaultGuidelineZOffset = 0.1f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
@@ -299,6 +303,9 @@ namespace Stage
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_guidelineStep(kDefaultGuidelineStep)
+        , m_guidelineThicknessPixels(kDefaultGuidelineThicknessPixels)
+        , m_guidelineWidthPaddingWorld(kDefaultGuidelineWidthPaddingWorld)
+        , m_guidelineZOffset(kDefaultGuidelineZOffset)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
         , m_heightBonusThreshold(kDefaultHeightBonusThreshold)
         , m_heightBonusSeconds(kDefaultHeightBonusSeconds)
@@ -359,6 +366,12 @@ namespace Stage
         bool guidelineHeightSet = false;
         float guidelineStep = kDefaultGuidelineStep;
         bool guidelineStepSet = false;
+        float guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        bool guidelineThicknessSet = false;
+        float guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        bool guidelineWidthPaddingSet = false;
+        float guidelineZOffset = kDefaultGuidelineZOffset;
+        bool guidelineZOffsetSet = false;
         float heightBonusThreshold = kDefaultHeightBonusThreshold;
         bool heightBonusThresholdSet = false;
         float heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -951,6 +964,54 @@ namespace Stage
                     parseError = true;
                 }
             }
+            else if (key == "guidelineThicknessPixels")
+            {
+                try
+                {
+                    guidelineThicknessPixels = std::stof(rawValue);
+                    guidelineThicknessSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineThicknessPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineWidthPaddingWorld")
+            {
+                try
+                {
+                    guidelineWidthPaddingWorld = std::stof(rawValue);
+                    guidelineWidthPaddingSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineWidthPaddingWorld on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineZOffset")
+            {
+                try
+                {
+                    guidelineZOffset = std::stof(rawValue);
+                    guidelineZOffsetSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineZOffset on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "heightBonusThreshold")
             {
                 try
@@ -1055,6 +1116,30 @@ namespace Stage
             guidelineStep = kDefaultGuidelineStep;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineThicknessSet)
+        {
+            guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessPixels not specified; defaulting to "
+                << guidelineThicknessPixels << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineWidthPaddingSet)
+        {
+            guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineWidthPaddingWorld not specified; defaulting to "
+                << guidelineWidthPaddingWorld << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineZOffsetSet)
+        {
+            guidelineZOffset = kDefaultGuidelineZOffset;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineZOffset not specified; defaulting to "
+                << guidelineZOffset << "\n";
             DebugTrace(oss.str());
         }
 
@@ -1611,6 +1696,30 @@ namespace Stage
             DebugTrace(oss.str());
             guidelineStep = kDefaultGuidelineStep;
         }
+        if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessPixels value " << guidelineThicknessPixels
+                << " invalid; using default " << kDefaultGuidelineThicknessPixels << "\n";
+            DebugTrace(oss.str());
+            guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        }
+        if (!std::isfinite(guidelineWidthPaddingWorld) || guidelineWidthPaddingWorld < 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineWidthPaddingWorld value " << guidelineWidthPaddingWorld
+                << " invalid; using default " << kDefaultGuidelineWidthPaddingWorld << "\n";
+            DebugTrace(oss.str());
+            guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        }
+        if (!std::isfinite(guidelineZOffset))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineZOffset value " << guidelineZOffset
+                << " invalid; using default " << kDefaultGuidelineZOffset << "\n";
+            DebugTrace(oss.str());
+            guidelineZOffset = kDefaultGuidelineZOffset;
+        }
 
         if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
         {
@@ -1678,6 +1787,9 @@ namespace Stage
         m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = guidelineHeight;
         m_guidelineStep = guidelineStep;
+        m_guidelineThicknessPixels = guidelineThicknessPixels;
+        m_guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
+        m_guidelineZOffset = guidelineZOffset;
         m_heightBonusThreshold = heightBonusThreshold;
         m_heightBonusSeconds = heightBonusSeconds;
         m_backgroundTexturePath = backgroundTexturePath;
@@ -1827,6 +1939,21 @@ namespace Stage
         return m_guidelineStep;
     }
 
+    float StageData::GetGuidelineThicknessPixels() const noexcept
+    {
+        return m_guidelineThicknessPixels;
+    }
+
+    float StageData::GetGuidelineWidthPaddingWorld() const noexcept
+    {
+        return m_guidelineWidthPaddingWorld;
+    }
+
+    float StageData::GetGuidelineZOffset() const noexcept
+    {
+        return m_guidelineZOffset;
+    }
+
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -1889,6 +2016,9 @@ namespace Stage
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_guidelineStep = kDefaultGuidelineStep;
+        m_guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        m_guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        m_guidelineZOffset = kDefaultGuidelineZOffset;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
         m_heightBonusThreshold = kDefaultHeightBonusThreshold;
         m_heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -1920,6 +2050,9 @@ namespace Stage
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_guidelineHeight
             << " guidelineStep=" << m_guidelineStep
+            << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
+            << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
+            << " guidelineZOffset=" << m_guidelineZOffset
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
