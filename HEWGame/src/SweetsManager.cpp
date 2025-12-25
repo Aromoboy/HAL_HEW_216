@@ -2988,6 +2988,7 @@ namespace SweetsSpace
             bool hasBurstInterval = false;
             bool hasSimultaneous = false;
             bool hasSimultaneousTarget = false;
+            bool hasInitialPerLane = false;
             bool hasWeights = false;
         };
 
@@ -3196,6 +3197,21 @@ namespace SweetsSpace
                     parseError = true;
                 }
             }
+            else if (key == "initialPerLane")
+            {
+                try
+                {
+                    partial.config.initialSpawnPerLane = std::max(0, std::stoi(value));
+                    partial.hasInitialPerLane = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の initialPerLane が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "weights")
             {
                 bool weightError = false;
@@ -3298,6 +3314,12 @@ namespace SweetsSpace
             {
                 config.weights = defaultWeights;
             }
+
+            if (!entry.second.hasInitialPerLane)
+            {
+                config.initialSpawnPerLane = 0;
+            }
+            config.initialSpawnPerLane = std::max(0, config.initialSpawnPerLane);
 
             if (config.weights.empty())
             {
@@ -4156,6 +4178,15 @@ namespace SweetsSpace
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
+        const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
+        const int initialPerLane = std::max(0, activeConfig.initialSpawnPerLane);
+        if (initialPerLane > 0 && activeLaneCount > 0)
+        {
+            const int initialSpawnCount = initialPerLane * activeLaneCount;
+            m_activeBurstPlanned = std::max(m_activeBurstPlanned, initialSpawnCount);
+            EnqueueSpawns(initialSpawnCount);
+            m_burstTimer = m_activeBurstInterval;
+        }
 
         std::ostringstream oss;
         oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
@@ -4218,6 +4249,7 @@ namespace SweetsSpace
             << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
             << " liveTarget=" << config.simultaneousLiveTarget
+            << " initialPerLane=" << config.initialSpawnPerLane
             << " weights=";
 
         if (config.weights.empty())
