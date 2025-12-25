@@ -132,7 +132,6 @@ private:
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
-    bool TryGetGuidelineClipY(const ::CameraSpace::ICamera& camera, float& outClipY) const;
     bool LoadStageLayout(const std::string& csvPath);
     void ValidatePlayerPhysicsRegistration();
     int ComputeScore() const;
@@ -203,8 +202,6 @@ private:
         float triggerHeight = 0.0f;
     };
     std::deque<PendingTimeBonus> m_pendingTimeBonuses;
-    mutable bool m_guidelineInvalidLogged = false;
-    mutable bool m_guidelineClampLogged = false;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
@@ -215,10 +212,10 @@ private:
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
     bool m_forceConfigPlayerCollider = false;
-    // ƒNƒŠƒA‚Å‚«‚½‚©‚Ç‚¤‚©‚Ì”»’è
+    // ã‚¯ãƒªã‚¢ã§ããŸã‹ã©ã†ã‹ã®åˆ¤å®š
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
-    // ‰¼‚Åì‚Á‚½‰½‰ñƒtƒF[ƒY‚ğ’´‚¦‚½‚çƒNƒŠƒA‚É‚È‚é‚©‚Ì”»’è
+    // ä»®ã§ä½œã£ãŸä½•å›ãƒ•ã‚§ãƒ¼ã‚ºã‚’è¶…ãˆãŸã‚‰ã‚¯ãƒªã‚¢ã«ãªã‚‹ã‹ã®åˆ¤å®š
     int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
