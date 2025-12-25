@@ -303,16 +303,14 @@ namespace Entities
         const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
 
         const auto* descriptor = manifest.Find("Fairy");
-        std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
+        const std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
         if (!descriptor)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタが見つかりません プレースホルダーにフォールバックします \n");
-            modelPath = kFairyFallbackPath;
         }
         else if (modelPath.empty())
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタのパスが空です プレースホルダーにフォールバックします \n");
-            modelPath = kFairyFallbackPath;
         }
         else
         {
@@ -328,15 +326,21 @@ namespace Entities
 
         m_animation = animationCache.Get(playerAnimationPath);
 
-        m_fairyModel = CreateProceduralFairyModel();
-        if (!m_fairyModel)
+        if (!modelPath.empty())
         {
             m_fairyModel = cache.Get(modelPath);
-            if (!m_fairyModel && modelPath != kFairyFallbackPath)
-            {
-                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーの一次モデルの読み込みに失敗しました プレースホルダーを試します \n");
-                m_fairyModel = cache.Get(kFairyFallbackPath);
-            }
+        }
+
+        if (!m_fairyModel)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーの一次モデルの読み込みに失敗しました プレースホルダーを試します \n");
+            m_fairyModel = cache.Get(kFairyFallbackPath);
+        }
+
+        if (!m_fairyModel)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーモデルの読み込みに失敗しました プロシージャルモデルを生成します \n");
+            m_fairyModel = CreateProceduralFairyModel();
         }
 
         if (!m_fairyModel)
