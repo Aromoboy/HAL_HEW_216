@@ -223,6 +223,7 @@ namespace SweetsSpace
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
+        bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
     private:
@@ -315,6 +316,7 @@ namespace SweetsSpace
             int sweetsContacts{ 0 };
         };
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
+        std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         struct JointPairKey
         {
             ActiveSweets* first{ nullptr };
