@@ -250,7 +250,12 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-    float4 texColor = tex.Sample(samp, pin.uv);
+    float4 texColor = objDiffuse;
+    if (objAmbient.a >= 1.0f)
+    {
+        texColor = tex.Sample(samp, pin.uv);
+    }
+    // Fallback to material color when texture is missing.
     texColor.a = 1.0f;
 
     float3 N = normalize(pin.normal);
