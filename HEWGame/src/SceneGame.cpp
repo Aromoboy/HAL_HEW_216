@@ -2065,22 +2065,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     m_guidelineZOffset = m_stageData.GetGuidelineZOffset();
     m_guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
     m_guidelineCooldownRemainingSeconds = 0.0f;
-    if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Guideline height " << m_guidelineHeightMeters
-            << " invalid; overlay guideline disabled.\n";
-        ::DebugTrace(oss.str());
-        m_guidelineHeightMeters = 0.0f;
-    }
-    if (!std::isfinite(m_guidelineStepMeters) || m_guidelineStepMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Guideline step " << m_guidelineStepMeters
-            << " invalid; guideline will not advance.\n";
-        ::DebugTrace(oss.str());
-        m_guidelineStepMeters = 0.0f;
-    }
     m_guidelineCenterX = 0.0f;
     m_guidelineWidthWorld = 0.0f;
     m_guidelineThicknessWorld = kGuidelineThicknessMeters;
@@ -3114,7 +3098,7 @@ void SceneGame::OnGuidelineCrossed()
     }
 
     const float previousHeight = m_guidelineHeightMeters;
-    m_guidelineHeightMeters += m_guidelineStepMeters;
+    m_guidelineHeightMeters += 1.0f;
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
