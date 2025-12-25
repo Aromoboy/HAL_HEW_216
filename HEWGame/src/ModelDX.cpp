@@ -39,6 +39,16 @@ DirectX::XMMATRIX ModelDX::GetBoneMatrix(unsigned int index)
     return DirectX::XMLoadFloat4x4(&m_bones[index].invOffset);
 }
 
+NodeIndexDX ModelDX::GetBoneNodeIndex(unsigned int index) const
+{
+    if (index >= m_bones.size())
+    {
+        return static_cast<NodeIndexDX>(-1);
+    }
+
+    return m_bones[index].nodeIndex;
+}
+
 std::weak_ptr<MeshDX> ModelDX::GetMesh(int a_meshIndex) const
 {
         return m_meshes[a_meshIndex];

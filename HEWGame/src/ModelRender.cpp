@@ -39,7 +39,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     {
         for (size_t i = 0; i < limitedBoneCount; ++i)
         {
-            DirectX::XMStoreFloat4x4(&bones[i], a_model.GetBoneMatrix(i) * animation->GetNodeMatrix(static_cast<NodeIndexDX>(i)));
+            const NodeIndexDX nodeIndex = a_model.GetBoneNodeIndex(static_cast<unsigned int>(i));
+            DirectX::XMStoreFloat4x4(&bones[i], a_model.GetBoneMatrix(i) * animation->GetNodeMatrix(nodeIndex));
         }
     }
 

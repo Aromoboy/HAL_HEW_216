@@ -51,6 +51,7 @@ public:
         unsigned int GetBoneCount() const;
 
         DirectX::XMMATRIX GetBoneMatrix(unsigned int index);
+        NodeIndexDX GetBoneNodeIndex(unsigned int index) const;
         std::weak_ptr<MeshDX> GetMesh(int a_meshIndex) const;
         std::weak_ptr<MaterialDX> GetMaterial(int a_materialIndex) const;
 
