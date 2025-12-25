@@ -264,10 +264,6 @@ bool ResultRenderer::TryGetViewportSize(float& width, float& height) const
 
 void ResultRenderer::RenderFream(const ResultDisplayData& data)
 {
-    if (!data.guidelineVisible)
-    {
-        return;
-    }
 
     for (int i = 0; i < MAX_RESULT_SPRITE; i++)
     {
