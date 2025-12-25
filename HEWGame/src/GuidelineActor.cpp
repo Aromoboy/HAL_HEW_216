@@ -16,7 +16,7 @@
 namespace
 {
     constexpr const char* kGuidelineTag = "Guideline";
-    const DirectX::XMFLOAT4 kGuidelineColor{ 0.95f, 0.95f, 0.95f, 0.8f };
+    const DirectX::XMFLOAT4 kGuidelineColor{ 0.80f, 0.65f, 0.20f, 0.8f };
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
