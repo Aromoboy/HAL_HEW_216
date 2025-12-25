@@ -1,5 +1,9 @@
 ﻿#include "ModelRender.h"
 
+#include <algorithm>
+#include <array>
+
+#include "Animation.h"
 #include "DrawMatrix.h"
 #include "ShaderList.h"
 #include "Defines.h"
@@ -9,7 +13,7 @@
 ModelRender::ModelRender() = default;
 ModelRender::~ModelRender() = default;
 
-void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera)
+void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera, Animation* animation)
 {
     if (!camera)
     {
@@ -20,6 +24,25 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     wvp[1] = camera->GetView();
     wvp[2] = camera->GetProjection();
 
+    constexpr size_t kMaxBones = 200;
+    std::array<DirectX::XMFLOAT4X4, kMaxBones> bones{};
+    const unsigned int boneCount = a_model.GetBoneCount();
+    const size_t limitedBoneCount = std::min<size_t>(boneCount, kMaxBones);
+
+    for (size_t i = 0; i < kMaxBones; ++i)
+    {
+        DirectX::XMStoreFloat4x4(&bones[i], DirectX::XMMatrixIdentity());
+    }
+
+    const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
+    if (useAnimationShader)
+    {
+        for (size_t i = 0; i < limitedBoneCount; ++i)
+        {
+            DirectX::XMStoreFloat4x4(&bones[i], animation->GetNodeMatrix(static_cast<NodeIndexDX>(i)));
+        }
+    }
+
     DrawMatrix::CreateWorldMatrix(
         wvp[0],
         transform.position,
@@ -28,8 +51,9 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     );
 
     ShaderList::SetWVP(wvp);
+    ShaderList::SetBones(bones.data());
 
-    VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
+    VertexShader* pVTX = ShaderList::GetVS(useAnimationShader ? ShaderList::VS_ANIME : ShaderList::VS_WORLD);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
     pVTX->Bind();

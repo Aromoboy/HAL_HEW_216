@@ -326,7 +326,7 @@ namespace Systems
                     continue;
                 }
 
-                m_renderer->Draw(*command.model, command.transform, camera.get());
+                m_renderer->Draw(*command.model, command.transform, camera.get(), command.animation);
             }
 
 

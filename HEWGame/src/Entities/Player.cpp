@@ -488,7 +488,7 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*m_model, m_renderTransform, &camera);
+        renderer.Draw(*m_model, m_renderTransform, &camera, m_animation.get());
     }
 
     Transform Player::GetRenderTransform() const
