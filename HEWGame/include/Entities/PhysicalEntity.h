@@ -108,6 +108,7 @@ namespace Entities
 
         float3 GetLinearVelocity() const;
         void SetLinearVelocity(const float3& velocity);
+        void SetAngularVelocity(float radiansPerSec);
         float GetGravityScale() const;
         void SetGravityScale(float scale);
 

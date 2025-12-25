@@ -3608,6 +3608,24 @@ namespace SweetsSpace
                     if (b2Joint_IsValid(jointId))
                     {
                         m_creamWeldJoints.emplace(key, jointId);
+                        cream->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                        cream->SetAngularVelocity(0.0f);
+                        other->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                        other->SetAngularVelocity(0.0f);
+                        if (cream->HasBox2DBody())
+                        {
+                            b2Body_SetAwake(cream->GetBox2DBodyId(), false);
+                        }
+
+                        if (other->HasBox2DBody())
+                        {
+                            b2Body_SetAwake(other->GetBox2DBodyId(), false);
+                        }
+
+                        std::ostringstream cementLog;
+                        cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
+                                  << "' を溶接したよ \n";
+                        DebugTrace(cementLog.str());
                     }
                 }
             }
