@@ -297,6 +297,12 @@
     <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="EffectSystem.cpp" />
     <ClCompile Include="src\ResultRenderer.cpp" />
+    <ClCompile Include="src\AnimationCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Animation.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h">
@@ -595,6 +601,12 @@
     <ClInclude Include="include\EffectTestScene.h" />
     <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\ResultRenderer.h" />
+    <ClInclude Include="include\Animation.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AnimationCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

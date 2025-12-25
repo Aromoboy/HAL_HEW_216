@@ -237,7 +237,8 @@ namespace
 
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat});
+            std::vector<std::shared_ptr<MaterialDX>>{mat},
+            std::vector<BoneDX>());
 
         if (bounds)
         {
@@ -320,6 +321,12 @@ namespace Entities
                 << "' path='" << descriptor->modelPath << "'.\n";
             PlayerDebugTrace(oss.str());
         }
+
+        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
+
+        const std::string playerAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
+
+        m_animation = animationCache.Get(playerAnimationPath);
 
         m_fairyModel = CreateProceduralFairyModel();
         if (!m_fairyModel)
@@ -481,7 +488,7 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*m_model, m_renderTransform, &camera);
+        renderer.Draw(*m_model, m_renderTransform, &camera, m_animation.get());
     }
 
     Transform Player::GetRenderTransform() const

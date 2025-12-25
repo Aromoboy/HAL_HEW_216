@@ -14,6 +14,7 @@
 #include "BoxColliderComponent.h"
 #include "ModelCache.h"
 #include "TextureCache.h"
+#include "AnimationCache.h"
 #include "DirectX.h"
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
@@ -2056,6 +2057,11 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
     }
 
+    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
+    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
+    // （ローダーやデバイスの切り替え漏れによるハングを防止）
+    cache.Clear();
+
     NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
@@ -2346,7 +2352,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     else
     {
         cache.SetLoader(m_loader, device, TextureCache::Instance());
+        animeCache.SetLoader(m_loader, device);
     }
+
+
 
     const auto* fairyDescriptor = manifest.Find("Fairy");
     if (!fairyDescriptor && !m_playerModel)
@@ -2377,6 +2386,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     {
         DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.\n");
     }
+
+    
+    
+
     // ModelCacheの設定後、ステージレイアウトをロード
     LoadStageLayout("Assets/StageLayout.csv");
 
@@ -3460,7 +3473,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                             renderTransform.rotation.z += obj.currentRotation;
                     }
 
-                    m_render->Draw(*obj.model, renderTransform, activeCamera.get());
+                    m_render->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
                 }
                 else
                 {

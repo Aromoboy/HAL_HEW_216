@@ -11,6 +11,7 @@
 #include "PickupConfig.h"
 #include "SweetsManager.h"
 #include "VisualTransform.h"
+#include "AnimationCache.h"
 
 namespace SweetsSpace
 {

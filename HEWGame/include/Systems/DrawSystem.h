@@ -15,6 +15,7 @@ namespace CameraSpace
 }
 
 class ModelRender;
+class Animation;
 
 extern bool g_DrawColliders;
 extern bool g_DrawColliderBounds;
@@ -46,6 +47,7 @@ namespace Systems
                 {
                         Entities::Entity* source;
                         Render::Model* model;
+                        Animation* animation;
                         Transform transform;
                 };
 
