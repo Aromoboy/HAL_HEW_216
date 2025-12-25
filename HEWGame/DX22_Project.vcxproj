@@ -226,6 +226,7 @@
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="src\Entities\Player.cpp" />
+    <ClCompile Include="src\GuidelineActor.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
     <ClCompile Include="src\PowerUpNode.cpp" />
@@ -314,6 +315,7 @@
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Entities\Player.h" />
+    <ClInclude Include="include\GuidelineActor.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />

@@ -9,6 +9,7 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
+#include "GuidelineActor.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
@@ -153,6 +154,7 @@ private:
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
+    std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unique_ptr<ResultRenderer> m_resultRenderer;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
@@ -181,6 +183,9 @@ private:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
+    float m_guidelineThicknessPixels = 0.0f;
+    float m_guidelineWidthPaddingWorld = 0.0f;
+    float m_guidelineZOffset = 0.0f;
     float m_guidelineCooldownDurationSeconds = 0.0f;
     float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
