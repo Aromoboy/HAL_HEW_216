@@ -2828,6 +2828,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_sweetsManager->OnUpdate(ctx);
     }
 
+#if defined(_DEBUG)
     const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
     ::DebugTrace("[DEBUG] stacked.size=" + std::to_string(stacked.size()) + "\n");
     for (const auto& sweets : stacked)
@@ -2836,6 +2837,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         const AABB bounds = sweets->GetAABB();
         ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
     }
+#endif
 
     //高さボーナス判定
     UpdateTowerHeightTelemetry();
