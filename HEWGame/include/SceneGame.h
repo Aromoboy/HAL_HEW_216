@@ -130,6 +130,7 @@ private:
     void OnGuidelineCrossed();
     void ApplyGuidelineBonus(float triggerHeight);
     void HandleGuidelineAdvance(float triggerHeight);
+    void ResetGuidelineHeight();
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
@@ -182,6 +183,7 @@ private:
     std::unique_ptr<HudRenderer> m_hudRenderer;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
+    float m_guidelineStartHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
     float m_guidelineThicknessPixels = 0.0f;
     float m_guidelineWidthPaddingWorld = 0.0f;

@@ -2083,6 +2083,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
         m_guidelineStepMeters = 0.0f;
     }
+    m_guidelineStartHeightMeters = m_guidelineHeightMeters;
 
     m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
     if (!std::isfinite(m_heightBonusThresholdMeters) || m_heightBonusThresholdMeters <= 0.0f)
@@ -2158,6 +2159,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_guidelineActor = std::make_unique<GuidelineActor>();
         if (m_guidelineActor)
         {
+            auto& transform = m_guidelineActor->GetTransform();
+            transform.position.y = m_guidelineHeightMeters;
             m_drawSystem->RegisterRenderable(*m_guidelineActor);
         }
     }
@@ -3104,6 +3107,11 @@ void SceneGame::OnGuidelineCrossed()
 
     const float previousHeight = m_guidelineHeightMeters;
     m_guidelineHeightMeters += m_guidelineStepMeters;
+    if (m_guidelineActor)
+    {
+        auto& transform = m_guidelineActor->GetTransform();
+        transform.position.y = m_guidelineHeightMeters;
+    }
     m_guidelineTriggeredThisHeight.clear();
     m_guidelineCooldownRemainingSeconds = 0.0f;
 
@@ -3112,6 +3120,16 @@ void SceneGame::OnGuidelineCrossed()
         << " to " << m_guidelineHeightMeters << " step=" << m_guidelineStepMeters << "\n";
     ::DebugTrace(oss.str());
     m_guidelineTriggerCooldownSeconds = kGuidelineGlobalCooldownSeconds;
+}
+
+void SceneGame::ResetGuidelineHeight()
+{
+    m_guidelineHeightMeters = m_guidelineStartHeightMeters;
+    if (m_guidelineActor)
+    {
+        auto& transform = m_guidelineActor->GetTransform();
+        transform.position.y = m_guidelineHeightMeters;
+    }
 }
 
 void SceneGame::ApplyGuidelineBonus(float triggerHeight)
@@ -3763,6 +3781,7 @@ void SceneGame::SetStageState(StageState newState)
     }
 
     m_stageState = newState;
+    ResetGuidelineHeight();
 
     switch (newState)
     {
@@ -3902,6 +3921,7 @@ void SceneGame::ResetPlaySession()
     m_pendingTimeBonuses.clear();
     //m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
     m_guidelineTriggeredThisHeight.clear();
+    ResetGuidelineHeight();
     m_guidelineCooldownRemainingSeconds = 0.0f;
     m_guidelineTriggerCooldownSeconds = 0.0f;
     ToggleGameplaySystems(true);
