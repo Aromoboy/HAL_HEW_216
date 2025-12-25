@@ -1098,11 +1098,11 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
         {
             // assimp側で階層情報が細かく分割されている場合の処理
             std::string name = assimpNode->mName.data;
+            DirectX::XMMATRIX localTransform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
             if (name.find("$AssimpFbx") != std::string::npos)
             {
                 // 分割前のノードに到達するまで、各行列を掛け合わせていく
-                DirectX::XMMATRIX transform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
-                mat = transform * mat;
+                mat = localTransform * mat;
                 return func(assimpNode->mChildren[0], parent, mat);
             }
 
@@ -1111,7 +1111,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             node.name = name;
             node.parent = parent;
             node.children.resize(assimpNode->mNumChildren);
-            node.mat = mat;
+            node.mat = localTransform * mat;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1132,14 +1132,31 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
     func(pScene->mRootNode, kNodeNone, DirectX::XMMatrixIdentity());
 
     // アニメーション計算領域に、ノード数分の初期データを作成
-    Animation::AnimeTransformDX init = {
-        DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
-    };
     for (int i = 0; i < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++i)
     {
-        a_outAnimeTransform[i].resize(a_outNodes.size(), init);
+        a_outAnimeTransform[i].resize(a_outNodes.size());
+    }
+    for (size_t nodeIndex = 0; nodeIndex < a_outNodes.size(); ++nodeIndex)
+    {
+        DirectX::XMVECTOR scale;
+        DirectX::XMVECTOR rotation;
+        DirectX::XMVECTOR translation;
+        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].mat))
+        {
+            scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+            rotation = DirectX::XMQuaternionIdentity();
+            translation = DirectX::XMVectorZero();
+        }
+
+        Animation::AnimeTransformDX init;
+        DirectX::XMStoreFloat3(&init.translate, translation);
+        DirectX::XMStoreFloat4(&init.quaternion, rotation);
+        DirectX::XMStoreFloat3(&init.scale, scale);
+
+        for (int pattern = 0; pattern < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++pattern)
+        {
+            a_outAnimeTransform[pattern][nodeIndex] = init;
+        }
     }
 }
 
