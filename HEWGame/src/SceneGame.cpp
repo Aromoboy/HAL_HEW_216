@@ -2012,6 +2012,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
             << " guidelineStep=" << m_stageData.GetGuidelineStep()
+            << " guidelineThicknessPixels=" << m_stageData.GetGuidelineThicknessPixels()
+            << " guidelineWidthPaddingWorld=" << m_stageData.GetGuidelineWidthPaddingWorld()
+            << " guidelineZOffset=" << m_stageData.GetGuidelineZOffset()
             << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
             << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
@@ -2062,6 +2065,9 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
     m_guidelineStepMeters = m_stageData.GetGuidelineStep();
+    m_guidelineThicknessPixels = m_stageData.GetGuidelineThicknessPixels();
+    m_guidelineWidthPaddingWorld = m_stageData.GetGuidelineWidthPaddingWorld();
+    m_guidelineZOffset = m_stageData.GetGuidelineZOffset();
     m_guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
     m_guidelineCooldownRemainingSeconds = 0.0f;
     if (!std::isfinite(m_guidelineHeightMeters) || m_guidelineHeightMeters <= 0.0f)
@@ -2149,6 +2155,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     if (m_drawSystem)
     {
         m_drawSystem->SetStagePlaneZ(m_stageData.GetPlaneZ());
+    }
+    if (m_drawSystem && m_guidelineHeightMeters > 0.0f)
+    {
+        m_guidelineActor = std::make_unique<GuidelineActor>();
+        if (m_guidelineActor)
+        {
+            m_drawSystem->RegisterRenderable(*m_guidelineActor);
+        }
     }
     m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
     if (m_contactListener)
@@ -2832,6 +2846,29 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         const float minX = camPos.x - halfWidth;
         const float maxX = camPos.x + halfWidth;
         const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
+
+        if (m_guidelineActor && m_guidelineHeightMeters > 0.0f)
+        {
+            const float widthPadding = std::max(0.0f, m_guidelineWidthPaddingWorld);
+            float lineWidth = (maxX - minX) + (widthPadding * 2.0f);
+            if (!std::isfinite(lineWidth) || lineWidth <= 0.0f)
+            {
+                lineWidth = std::max(0.01f, maxX - minX);
+            }
+
+            float thicknessWorld = 0.0f;
+            if (std::isfinite(viewportHeight) && viewportHeight > 0.0f && std::isfinite(halfHeight) && halfHeight > 0.0f)
+            {
+                thicknessWorld = (m_guidelineThicknessPixels / viewportHeight) * (2.0f * halfHeight);
+            }
+            if (!std::isfinite(thicknessWorld) || thicknessWorld <= 0.0f)
+            {
+                thicknessWorld = 0.01f;
+            }
+
+            const float guidelineZ = m_stageData.GetPlaneZ() + m_guidelineZOffset;
+            m_guidelineActor->UpdateGuideline(camPos.x, m_guidelineHeightMeters, guidelineZ, lineWidth, thicknessWorld);
+        }
 
         // Log bounds if changed
         const bool changed =

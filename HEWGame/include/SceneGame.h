@@ -9,6 +9,7 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
+#include "GuidelineActor.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
@@ -154,6 +155,7 @@ private:
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
+    std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unique_ptr<ResultRenderer> m_resultRenderer;
     std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
@@ -182,6 +184,9 @@ private:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
+    float m_guidelineThicknessPixels = 0.0f;
+    float m_guidelineWidthPaddingWorld = 0.0f;
+    float m_guidelineZOffset = 0.0f;
     float m_guidelineCooldownDurationSeconds = 0.0f;
     float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
@@ -215,10 +220,10 @@ private:
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
     bool m_playerColliderConfigLoaded = false;
     bool m_forceConfigPlayerCollider = false;
-    // ƒNƒŠƒA‚Å‚«‚½‚©‚Ç‚¤‚©‚Ì”»’è
+    // ã‚¯ãƒªã‚¢ã§ããŸã‹ã©ã†ã‹ã®åˆ¤å®š
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
-    // ‰¼‚Åì‚Á‚½‰½‰ñƒtƒF[ƒY‚ğ’´‚¦‚½‚çƒNƒŠƒA‚É‚È‚é‚©‚Ì”»’è
+    // ä»®ã§ä½œã£ãŸä½•å›ãƒ•ã‚§ãƒ¼ã‚ºã‚’è¶…ãˆãŸã‚‰ã‚¯ãƒªã‚¢ã«ãªã‚‹ã‹ã®åˆ¤å®š
     int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
