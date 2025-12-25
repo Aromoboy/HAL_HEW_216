@@ -2080,8 +2080,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         ::DebugTrace(oss.str());
         m_guidelineStepMeters = 0.0f;
     }
-    m_guidelineStartHeightMeters = m_guidelineHeightMeters;
-
     m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
     if (!std::isfinite(m_heightBonusThresholdMeters) || m_heightBonusThresholdMeters <= 0.0f)
     {
@@ -3121,12 +3119,18 @@ void SceneGame::OnGuidelineCrossed()
 
 void SceneGame::ResetGuidelineHeight()
 {
-    m_guidelineHeightMeters = m_guidelineStartHeightMeters;
+    const float stageGuidelineHeight = m_stageData.GetGuidelineHeight();
+    m_guidelineHeightMeters = stageGuidelineHeight;
     if (m_guidelineActor)
     {
         auto& transform = m_guidelineActor->GetTransform();
         transform.position.y = m_guidelineHeightMeters;
     }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Guideline] Reset height to " << m_guidelineHeightMeters
+        << " (stage=" << stageGuidelineHeight << ")\n";
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::ApplyGuidelineBonus(float triggerHeight)
