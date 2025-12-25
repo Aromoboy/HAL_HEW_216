@@ -3154,10 +3154,6 @@ void SceneGame::ApplyGuidelineBonus(float triggerHeight)
 void SceneGame::HandleGuidelineAdvance(float triggerHeight)
 {
     ApplyGuidelineBonus(triggerHeight);
-    if (m_phaseUpCount >= m_clearPhaseCount)
-    {
-        m_isGameClear = true;
-    }
     OnGuidelineCrossed();
 }
 
@@ -4043,11 +4039,19 @@ void SceneGame::UpdateTowerHeightTelemetry()
     m_currentTowerHeight = highestTop;
     m_maxTowerHeight = std::max(m_maxTowerHeight, highestTop);
 
+    const int previousPhase = m_phaseManager.GetCurrentPhase();
     const GameFlow::PhaseManager::PhaseUpdateResult phaseUpdate =
         m_phaseManager.UpdateHeight(m_maxTowerHeight);
-    if (phaseUpdate.phaseAdvanced)
+    const int currentPhase = m_phaseManager.GetCurrentPhase();
+    if (phaseUpdate.phaseAdvanced && currentPhase > previousPhase)
     {
-        BroadcastPhaseAdvance(m_phaseManager.GetCurrentPhase());
+        m_phaseUpCount += currentPhase - previousPhase;
+        if (m_phaseUpCount >= m_clearPhaseCount)
+        {
+            m_isGameClear = true;
+        }
+
+        BroadcastPhaseAdvance(currentPhase);
     }
 
     if (highestTop > m_peakTowerHeight)
