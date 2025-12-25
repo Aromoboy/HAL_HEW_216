@@ -1328,6 +1328,11 @@ namespace SweetsSpace
         return hasFoundation || hasSweetsContact;
     }
 
+    bool SweetsManager::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
+    {
+        return m_hasSweetsContact.find(const_cast<ActiveSweets*>(&sweets)) != m_hasSweetsContact.end();
+    }
+
    
     int SweetsManager::GetSweetsCount() const
     {
@@ -1354,6 +1359,7 @@ namespace SweetsSpace
         else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
         {
             ++state.sweetsContacts;
+            m_hasSweetsContact.insert(sweets);
         }
     }
 
@@ -2283,6 +2289,11 @@ namespace SweetsSpace
         targetList.push_back(sweets);
         m_lookup[sweets] = state;
 
+        if (state == SweetsState::Carried)
+        {
+            m_hasSweetsContact.erase(sweets.get());
+        }
+
         if (state == SweetsState::Stacked && previousState != SweetsState::Stacked)
         {
             ++m_stackedInBatch;
@@ -2320,6 +2331,7 @@ namespace SweetsSpace
         ForceSpawnRefresh();
 
         m_contactStates.clear();
+        m_hasSweetsContact.clear();
         ClearCreamWeldJoints("ClearAllSweets");
 
         std::size_t staged = 0;
@@ -2919,6 +2931,7 @@ namespace SweetsSpace
 
         const SweetsState previousState = found->second;
         ClearContactState(sweets.get());
+        m_hasSweetsContact.erase(sweets.get());
         sweets->MarkPendingDestroy();
         sweets->Enable(false);
 

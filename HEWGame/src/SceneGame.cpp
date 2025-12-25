@@ -3060,6 +3060,11 @@ bool SceneGame::CheckGuidelineCrossing(float& outTriggerHeight)
                 continue;
             }
 
+            if (!m_sweetsManager->HasEverCollidedWithSweets(*sweets))
+            {
+                continue;
+            }
+
             sweets->SyncColliderBounds();
             const AABB bounds = sweets->GetAABB();
             if (bounds.max.y >= m_guidelineHeightMeters)
