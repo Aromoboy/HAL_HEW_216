@@ -46,6 +46,7 @@ namespace Systems
                 {
                         Entities::Entity* source;
                         Render::Model* model;
+                        Animation* animation;
                         Transform transform;
                 };
 

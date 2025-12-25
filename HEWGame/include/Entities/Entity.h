@@ -7,6 +7,7 @@
 #include "Transform.h"
 #include "ModelRender.h"
 #include "ICamera.h"
+#include "Animation.h"
 
 namespace Entities
 {
@@ -40,10 +41,12 @@ namespace Entities
         virtual Render::Model* GetRenderableModel();
         virtual const Render::Model* GetRenderableModel() const;
         bool IsRenderable() const;
+        Animation* GetAnimation();
 
     protected:
         Transform m_transform;
         std::shared_ptr<Render::Model> m_model;
+        std::shared_ptr<Animation> m_animation;
         std::string m_tag;
     };
 }

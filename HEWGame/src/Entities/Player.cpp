@@ -322,6 +322,12 @@ namespace Entities
             PlayerDebugTrace(oss.str());
         }
 
+        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
+
+        const std::string playerAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
+
+        m_animation = animationCache.Get(playerAnimationPath);
+
         m_fairyModel = CreateProceduralFairyModel();
         if (!m_fairyModel)
         {
