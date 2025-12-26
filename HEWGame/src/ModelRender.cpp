@@ -57,14 +57,12 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
 
         constexpr size_t kMaxBones = 200;
-        std::array<DirectX::XMFLOAT4X4, kMaxBones> newBones{};
+        std::array<DirectX::XMFLOAT4X4, kMaxBones> newBones;
         const unsigned int boneCount = mesh->GetBoneCount();
         const size_t limitedBoneCount = std::min<size_t>(boneCount, kMaxBones);
-
-        for (size_t i = 0; i < kMaxBones; ++i)
-        {
-            DirectX::XMStoreFloat4x4(&newBones[i], DirectX::XMMatrixIdentity());
-        }
+        DirectX::XMFLOAT4X4 identityMatrix;
+        DirectX::XMStoreFloat4x4(&identityMatrix, DirectX::XMMatrixIdentity());
+        newBones.fill(identityMatrix);
 
         const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
         //if (useAnimationShader)
