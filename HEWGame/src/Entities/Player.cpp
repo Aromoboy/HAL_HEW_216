@@ -563,10 +563,11 @@ namespace Entities
             if (nextAnimation != m_animation)
             {
                 m_animation = nextAnimation;
-                if (m_animation)
-                {
-                    m_animation->ResetTime();
-                }
+            }
+
+            if (m_animation)
+            {
+                m_animation->ResetTime();
             }
         }
 
