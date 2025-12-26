@@ -11,7 +11,7 @@ Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, 
 	, m_channels(a_channel)
 	, m_animeTransform(a_array)
 	, m_nodes(a_nodes)
-	
+	, isPlayEnd(false)
 {
 }
 
@@ -66,6 +66,17 @@ void Animation::Step(float a_tick)
 	//	UpdateAnime(m_parametric[0], a_tick);
 	//	UpdateAnime(m_parametric[1], a_tick);
 	//}
+}
+
+void Animation::Play()
+{
+	isPlayEnd = false;
+	m_info.nowTime = 0.0f;
+}
+
+bool Animation::IsPlayEnd()
+{
+	return isPlayEnd;
 }
 
 DirectX::XMMATRIX Animation::GetNodeMatrix(NodeIndexDX a_index)

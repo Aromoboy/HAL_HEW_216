@@ -72,6 +72,10 @@ public:
 	
 	void Step(float a_tick);
 
+	void Play();
+
+	bool IsPlayEnd();
+
 	DirectX::XMMATRIX GetNodeMatrix(NodeIndexDX);
 
 private:
@@ -89,6 +93,8 @@ private:
 	void UpdateAnime(float tick);
 
 	AnimationArray m_animeTransform;
+
+	bool isPlayEnd;
 
 	void LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a, const AnimeTransformDX& b, float rate);
 	
