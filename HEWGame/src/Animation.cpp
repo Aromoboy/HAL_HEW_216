@@ -38,12 +38,6 @@ void Animation::Step(float a_tick)
 
 	// アニメーション行列に基づいて骨行列を更新
 	CalcBones(0, DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f));
-
-void Animation::ResetTime()
-{
-	m_info.nowTime = 0.0f;
-}
-
 	//--- アニメーションの時間更新
 	// メインアニメ
 	UpdateAnime(a_tick);
@@ -67,6 +61,11 @@ void Animation::ResetTime()
 	//	UpdateAnime(m_parametric[0], a_tick);
 	//	UpdateAnime(m_parametric[1], a_tick);
 	//}
+}
+
+void Animation::ResetTime()
+{
+	m_info.nowTime = 0.0f;
 }
 
 DirectX::XMMATRIX Animation::GetNodeMatrix(NodeIndexDX a_index)
@@ -215,4 +214,3 @@ void Animation::LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a,
 	DirectX::XMStoreFloat4(&pOut->quaternion, vec[1][0]);
 	DirectX::XMStoreFloat3(&pOut->scale, vec[2][0]);
 }
-
