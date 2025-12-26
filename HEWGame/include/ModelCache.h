@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include "ModelDX.h"
 #include "IModelLoader.h"
 
@@ -20,6 +21,9 @@ namespace Render
         std::shared_ptr<Render::Model> Get(const std::string& path);
         void SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache);
         void Clear();
+        void Reset();
+        void SetTextureLoadingEnabled(bool enabled) noexcept { m_textureLoadingEnabled = enabled; }
+        bool IsTextureLoadingEnabled() const noexcept { return m_textureLoadingEnabled; }
 
     private:
         ModelCache() = default;
@@ -32,6 +36,8 @@ namespace Render
         ID3D11Device* m_device = nullptr;
         TextureCache* m_textureCache = nullptr;
         std::map<std::string, std::shared_ptr<Render::Model>> m_models;
+        std::unordered_set<std::string> m_inFlightKeys;
+        bool m_textureLoadingEnabled = true;
     };
 }
 

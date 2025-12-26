@@ -80,8 +80,8 @@ void Shader::WriteBuffer(UINT slot, void* pData)
 }
 void Shader::SetTexture(UINT slot, Texture* tex)
 {
-	if (!tex || slot >= m_pTextures.size()) { return; }
-	ID3D11ShaderResourceView* pTex = tex->GetResource();
+	if (slot >= m_pTextures.size()) { return; }
+	ID3D11ShaderResourceView* pTex = tex ? tex->GetResource() : nullptr;
 	m_pTextures[slot] = pTex;
 	switch (m_kind)
 	{
@@ -92,7 +92,7 @@ void Shader::SetTexture(UINT slot, Texture* tex)
 
 void Shader::SetTexture(UINT slot, ID3D11ShaderResourceView* tex)
 {
-	if (!tex || slot >= m_pTextures.size()) { return; }
+	if (slot >= m_pTextures.size()) { return; }
 	ID3D11ShaderResourceView* pTex = tex;
 	m_pTextures[slot] = pTex;
 	switch (m_kind)

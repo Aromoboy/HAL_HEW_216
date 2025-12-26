@@ -3,17 +3,37 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32) && defined(_DEBUG)
+#    include <windows.h>
+#endif
 
 #include "Core/IUpdatable.h"
 #include "Entities/Entity.h"
-#include "Entities/CollisionEntity.h"
-#include "Collision2D.h"
+#include "Entities/PhysicalEntity.h"
+#include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
 #include "Geometory.h"
+#include "DebugColliderRenderer.h"
+#include "Systems/PhysicsMachine.h"
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
         bool IsFiniteFloat(float value)
         {
                 return std::isfinite(value) != 0;
@@ -23,6 +43,11 @@ namespace
         {
                 return IsFiniteFloat(vec.x) && IsFiniteFloat(vec.y) && IsFiniteFloat(vec.z);
         }
+
+        constexpr float kMinRenderableScale = 1e-3f;
+        constexpr float kMaxRenderableScale = 1.0e4f;
+        constexpr float kMaxDepthMagnitude = 1.0e5f;
+        constexpr float kPlaneZTolerance = 5.0f;
 
         bool ReadDebugColliderCvar()
         {
@@ -34,9 +59,22 @@ namespace
 
                 return std::atoi(value) != 0;
         }
+
+        bool ReadDebugColliderBoundsCvar()
+        {
+                const char* value = std::getenv("r.DebugColliderBounds");
+                if (!value)
+                {
+                        return false;
+                }
+
+                return std::atoi(value) != 0;
+        }
 }
 
 bool g_DrawColliders = ReadDebugColliderCvar();
+bool g_DrawColliderBounds = ReadDebugColliderBoundsCvar();
+bool g_DebugDrawEnabled = false;
 
 namespace Systems
 {
@@ -46,6 +84,8 @@ namespace Systems
                 , m_renderables()
                 , m_commands()
                 , m_colliderCommands()
+                , m_hasStagePlaneZ(false)
+                , m_stagePlaneZ(0.0f)
         {
         }
 
@@ -81,34 +121,37 @@ namespace Systems
 
                 m_renderables.erase(it, m_renderables.end());
 
-                std::unordered_map<Entities::Entity*, Collision::ICollider*>::iterator colIt = m_colliderRenderables.find(entityPtr);
-
-                if (colIt != m_colliderRenderables.end())
+                if (auto* physical = dynamic_cast<Entities::PhysicalEntity*>(entityPtr))
                 {
-                    m_colliderRenderables.erase(colIt);
+                        m_physicalColliderRenderables.erase(physical);
                 }
 
         }
 
-        void DrawSystem::RegisterRenderable(Entities::CollisionEntity& entity)
+        void DrawSystem::RegisterCollider(Entities::PhysicalEntity& entity)
         {
-            Entities::CollisionEntity* entityPtr = &entity;
-            if (std::find(m_renderables.begin(), m_renderables.end(), entityPtr) != m_renderables.end())
-            {
-                return;
-            }
-
-            m_renderables.push_back(entityPtr);
-
-            m_colliderRenderables[entityPtr] = entityPtr->GetCollider();
+                m_physicalColliderRenderables.insert(&entity);
         }
 
         void DrawSystem::ClearRenderables()
         {
                 m_renderables.clear();
-                m_colliderRenderables.clear();
+                m_physicalColliderRenderables.clear();
                 m_commands.clear();
                 m_colliderCommands.clear();
+                m_missingModelLogged.clear();
+                m_invalidTransformLogged.clear();
+        }
+
+        void DrawSystem::SetStagePlaneZ(float planeZ)
+        {
+                if (!std::isfinite(planeZ))
+                {
+                        return;
+                }
+
+                m_stagePlaneZ = planeZ;
+                m_hasStagePlaneZ = true;
         }
 
         void DrawSystem::OnUpdate(Core::UpdateContext& ctx)
@@ -132,28 +175,41 @@ namespace Systems
                         Render::Model* model = entity->GetRenderableModel();
                         if (!model)
                         {
+                                if (m_missingModelLogged.insert(entity).second)
+                                {
+                                        std::ostringstream oss;
+                                        oss << "[DrawSystem] Entity '" << entity->GetTag() << "' 描画モデル欠落のため描画コマンドをスキップ\n";
+                                        DebugTrace(oss.str());
+                                }
                                 continue;
                         }
 
-                        const Transform& transform = entity->GetTransform();
+                        Animation* animation = entity->GetAnimation();
+
+                        const Transform transform = entity->GetRenderTransform();
                         if (!ValidateTransform(transform, entity))
                         {
                                 continue;
                         }
 
-                        m_commands.push_back(DrawCommand{ entity, model, transform });
+                        m_commands.push_back(DrawCommand{ entity, model, animation, transform });
                 }
 
-                for (auto it : m_colliderRenderables)
+                for (auto* physical : m_physicalColliderRenderables)
                 {
-                    auto* collisionEntity = dynamic_cast<Entities::CollisionEntity*>(it.first);
-                    if (!collisionEntity || !it.second)
-                    {
-                        continue;
-                    }
+                        if (!physical)
+                        {
+                                continue;
+                        }
 
-                    m_colliderCommands.push_back(DrawColliderCommand{ collisionEntity });
+                        const auto& boxCollider = physical->GetBoxColliderComponent();
+                        const bool hasCollider = boxCollider && (!boxCollider->Empty() || boxCollider->createdFixtureCount > 0);
+                        if (!hasCollider)
+                        {
+                                continue;
+                        }
 
+                        m_colliderCommands.push_back(DrawColliderCommand{ physical });
                 }
         }
 
@@ -169,6 +225,12 @@ namespace Systems
 
         void DrawSystem::DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
+                if (!g_DebugDrawEnabled)
+                {
+                        m_colliderCommands.clear();
+                        return;
+                }
+
                 if (m_colliderCommands.empty())
                 {
                         return;
@@ -196,12 +258,62 @@ namespace Systems
 
         bool DrawSystem::ValidateTransform(const Transform& transform, const Entities::Entity* source) const
         {
-                (void)source;
-                if (IsFiniteVector(transform.position) && IsFiniteVector(transform.rotation) && IsFiniteVector(transform.scale))
+                if (!IsFiniteVector(transform.position) || !IsFiniteVector(transform.rotation) || !IsFiniteVector(transform.scale))
                 {
-                        return true;
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] 変換値が非有限のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
                 }
-                return false;
+
+                const auto scaleInvalid = [](float component)
+                {
+                        return std::fabs(component) < kMinRenderableScale || std::fabs(component) > kMaxRenderableScale;
+                };
+
+                if (scaleInvalid(transform.scale.x) || scaleInvalid(transform.scale.y) || scaleInvalid(transform.scale.z))
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] スケール範囲外のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 (" << transform.scale.x << ','
+                                        << transform.scale.y << ',' << transform.scale.z << ")\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                if (std::fabs(transform.position.z) > kMaxDepthMagnitude)
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] Z位置が極端なためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 z=" << transform.position.z << "\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                if (m_hasStagePlaneZ && transform.position.z < (m_stagePlaneZ - kPlaneZTolerance))
+                {
+                        if (m_invalidTransformLogged.insert(source).second)
+                        {
+                                std::ostringstream oss;
+                                oss << "[DrawSystem] ステージ平面より背面のためエンティティ '" << (source ? source->GetTag() : "<null>")
+                                        << "' を却下 (z=" << transform.position.z
+                                        << " planeZ=" << m_stagePlaneZ << ")\n";
+                                DebugTrace(oss.str());
+                        }
+                        return false;
+                }
+
+                return true;
         }
         void DrawSystem::RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
@@ -210,6 +322,10 @@ namespace Systems
                 return;
             }
 
+            SetBlendMode(BLEND_ALPHA);
+            SetCullingMode(D3D11_CULL_NONE);
+            SetDepthTest(true);
+
             for (const DrawCommand& command : m_commands)
             {
                 if (!command.model)
@@ -217,7 +333,7 @@ namespace Systems
                     continue;
                 }
 
-                m_renderer->Draw(*command.model, command.transform, camera.get());
+                m_renderer->Draw(*command.model, command.transform, camera.get(), command.animation);
             }
 
 
@@ -234,15 +350,107 @@ namespace Systems
 
             for (const DrawColliderCommand& command : m_colliderCommands)
             {
-                if (!command.source)
+                if (command.physicalEntity)
                 {
-                    continue;
+                        RenderColliderComponent(*command.physicalEntity);
                 }
-
-                command.source->DebugDraw();
             }
 
             m_colliderCommands.clear();
             Geometory::DrawLines();
+        }
+
+        void DrawSystem::RenderColliderComponent(const Entities::PhysicalEntity& entity) const
+        {
+                const auto& colliderComponent = entity.GetBoxColliderComponent();
+                if (!colliderComponent || colliderComponent->createdFixtureCount <= 0)
+                {
+                        return;
+                }
+
+                b2Transform bodyTransform{};
+                std::vector<b2ShapeId> shapes;
+                if (!entity.CollectBox2DShapes(shapes, bodyTransform))
+                {
+                        return;
+                }
+
+                if (shapes.empty())
+                {
+                        return;
+                }
+
+                constexpr Color kColliderColor{ 0.9f, 0.3f, 0.3f, 1.0f };
+                constexpr Color kBoundsColor{ 1.0f, 1.0f, 0.0f, 1.0f };
+
+                const Transform& transform = entity.GetTransform();
+                const float z = transform.position.z;
+
+                auto toWorldFloat2 = [](const b2Vec2& v)
+                {
+                        const float3 world = Entities::PhysicalEntity::ToWorldVector(v);
+                        return float2{ world.x, world.y };
+                };
+
+                for (const b2ShapeId shapeId : shapes)
+                {
+                        switch (b2Shape_GetType(shapeId))
+                        {
+                        case b2_circleShape:
+                        {
+                                const b2Circle circle = b2Shape_GetCircle(shapeId);
+                                const b2Vec2 worldCenter = b2TransformPoint(bodyTransform, circle.center);
+                                const float2 center = toWorldFloat2(worldCenter);
+                                const float radius = Entities::PhysicalEntity::ToWorldLength(circle.radius);
+                                DebugColliderRenderer::DrawCircle(center, radius, z, kColliderColor);
+                                break;
+                        }
+                        case b2_polygonShape:
+                        {
+                                const b2Polygon polygon = b2Shape_GetPolygon(shapeId);
+                                if (polygon.count < 2)
+                                {
+                                        break;
+                                }
+
+                                std::vector<float2> hull;
+                                hull.reserve(static_cast<size_t>(polygon.count));
+
+                                for (int i = 0; i < polygon.count; ++i)
+                                {
+                                        const b2Vec2 worldVertex = b2TransformPoint(bodyTransform, polygon.vertices[i]);
+                                        hull.push_back(toWorldFloat2(worldVertex));
+                                }
+
+                                DebugColliderRenderer::DrawHull(hull, z, kColliderColor);
+                                break;
+                        }
+                        case b2_capsuleShape:
+                        {
+                                const b2Capsule capsule = b2Shape_GetCapsule(shapeId);
+                                const b2Vec2 worldP0 = b2TransformPoint(bodyTransform, capsule.center1);
+                                const b2Vec2 worldP1 = b2TransformPoint(bodyTransform, capsule.center2);
+                                const float radius = Entities::PhysicalEntity::ToWorldLength(capsule.radius);
+                                DebugColliderRenderer::DrawCapsule(toWorldFloat2(worldP0), toWorldFloat2(worldP1), radius, z, kColliderColor);
+                                break;
+                        }
+                        default:
+                                break;
+                        }
+                }
+
+                if (g_DrawColliderBounds && !shapes.empty())
+                {
+                        const AABB bounds = entity.GetAABB();
+                        DebugColliderRenderer::DrawHull(
+                                {
+                                        float2{ bounds.min.x, bounds.min.y },
+                                        float2{ bounds.max.x, bounds.min.y },
+                                        float2{ bounds.max.x, bounds.max.y },
+                                        float2{ bounds.min.x, bounds.max.y },
+                                },
+                                transform.position.z,
+                                kBoundsColor);
+                }
         }
 }

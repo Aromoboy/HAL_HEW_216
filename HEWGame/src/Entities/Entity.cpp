@@ -4,6 +4,7 @@ namespace Entities
 {
     Entity::Entity(const Transform& transform, std::shared_ptr<Render::Model> model, Core::UpdatePhase phase, int priority, std::string tag)
         : Core::UpdateNode(phase, priority)
+        , m_animation(nullptr)
         , m_transform(transform)
         , m_model(std::move(model))
         , m_tag(std::move(tag))
@@ -36,6 +37,11 @@ namespace Entities
         return m_transform;
     }
 
+    Transform Entity::GetRenderTransform() const
+    {
+        return m_transform;
+    }
+
     std::shared_ptr<Render::Model> Entity::GetModel() const
     {
         return m_model;
@@ -49,6 +55,11 @@ namespace Entities
     Render::Model* Entity::GetRenderableModel()
     {
         return m_model.get();
+    }
+
+    Animation* Entity::GetAnimation()
+    {
+        return m_animation.get();
     }
 
     const Render::Model* Entity::GetRenderableModel() const

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -28,8 +29,7 @@
 #include <vector>
 #include "DirectX.h"
 #include "AABB.h"
-#include "ColliderConfigLoader.h"
-#include "Collision2D.h"
+#include "ColliderRegistry.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
@@ -40,7 +40,10 @@
 #include "Systems/DrawSystem.h"
 #include "Systems/PhysicsMachine.h"
 #include "Entities/PhysicalEntity.h"
+#include "Physics/ShapeConstants.h"
+#include "Diagnostics/Logger.h"
 #include <DirectXMath.h>
+#include <ModelPivot.h>
 
 namespace SweetsSpace
 {
@@ -52,10 +55,22 @@ namespace SweetsSpace
             return "Box";
         case ColliderShape::Capsule:
             return "Capsule";
+        case ColliderShape::Circle:
+            return "Circle";
         default:
             return "Unknown";
         }
     }
+}
+
+namespace
+{
+    struct MeshHullSummary;
+}
+
+namespace SweetsSpace
+{
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding, float minThickness);
 }
 
 namespace
@@ -84,13 +99,28 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr const char* kColliderConfigPath = "Assets/Config/colliders_sweets.cfg";
+    constexpr float kAutoSpawnIntervalFactor = 0.9f;
+    constexpr float kAutoBurstIntervalFactor = 0.9f;
+    constexpr int kAutoSimultaneousIncrement = 1;
+    constexpr int kAutoSimultaneousCap = 6;
+    constexpr float kMinimumAutoGrowthFactor = 0.01f;
+    constexpr float kDefaultAutoGrowthFactor = 0.9f;
+    constexpr int kDefaultAutoSimultaneousIncrement = 1;
+    constexpr int kDefaultAutoSimultaneousCap = 6;
+    constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
     constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
+    constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
+    constexpr float kMinimumBerryColliderRadius = 0.15f;
+    constexpr float kMinimumBlueberryColliderRadius = 0.2f;
+    constexpr float kCreamWeldLinearHertz = 6.0f;
+    constexpr float kCreamWeldAngularHertz = 6.0f;
+    constexpr float kCreamWeldLinearDampingRatio = 0.7f;
+    constexpr float kCreamWeldAngularDampingRatio = 0.7f;
 
     using ::SweetsSpace::SweetsPrototypeManifest;
 
@@ -113,7 +143,38 @@ namespace
     using ::SweetsSpace::ColliderShape;
     using ::SweetsSpace::SweetsPrototypeManifest;
     using ::SweetsSpace::SweetsType;
+    using ::SweetsSpace::ToString;
     using ::SweetsSpace::SweetsTypeHash;
+
+    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon);
+    bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kHorizontalBoundsEpsilon);
+    float SanitizeGrowthFactor(float value, float fallback = kDefaultAutoGrowthFactor)
+    {
+        if (!(value > 0.0f))
+        {
+            return fallback;
+        }
+        return std::max(kMinimumAutoGrowthFactor, value);
+    }
+
+    int SanitizeSimultaneousIncrement(int value, int fallback = kDefaultAutoSimultaneousIncrement)
+    {
+        return (value >= 0) ? value : fallback;
+    }
+
+    int SanitizeSimultaneousCap(int value, int fallback = kDefaultAutoSimultaneousCap)
+    {
+        return (value > 0) ? value : fallback;
+    }
+
+    void ReportInvalidBox2DConfig(SweetsType type, const std::string& reason)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ConfigError] type='" << ToString(type) << "' " << reason << "\n";
+        Diagnostics::LogInfo(oss.str());
+
+        assert(false && "Invalid Box2DShapeConfig for sweets type");
+    }
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -154,14 +215,14 @@ namespace
         static std::weak_ptr<Render::Model> cached;
         if (auto reused = cached.lock())
         {
-            DebugTrace(std::string(kLogPrefix) + "Reusing cached procedural fairy.\n");
+            DebugTrace(std::string(kLogPrefix) + "キャッシュしてたフェアリーをそのまま使うよ\n");
             return reused;
         }
 
         ID3D11Device* device = GetDevice();
         if (!device)
         {
-            DebugTrace(std::string(kLogPrefix) + "Cannot create procedural fairy: device missing.\n");
+            DebugTrace(std::string(kLogPrefix) + "プロシージャルフェアリー作れないや、デバイスが見つからないっぽい\n");
             return nullptr;
         }
 
@@ -255,6 +316,7 @@ namespace
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
             std::vector<std::shared_ptr<MaterialDX>>{mat});
+            
 
         if (bounds)
         {
@@ -303,10 +365,10 @@ namespace
     {
         if (!std::isfinite(value) || value <= 0.0f)
         {
-            return std::numeric_limits<float>::min();
+            return kMinimumColliderThickness;
         }
 
-        return std::max(value, std::numeric_limits<float>::min());
+        return std::max(value, kMinimumColliderThickness);
     }
 
     float ApplyThicknessEpsilon(float thickness, float minThickness)
@@ -359,7 +421,7 @@ namespace
         return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
     }
 
-    bool HasMeaningfulDifference(float previous, float current, float epsilon = kHorizontalBoundsEpsilon)
+    bool HasMeaningfulDifference(float previous, float current, float epsilon)
     {
         if (!std::isfinite(previous) || !std::isfinite(current))
         {
@@ -369,13 +431,32 @@ namespace
         return std::fabs(previous - current) > epsilon;
     }
 
-    struct ColliderBuildResult
+    bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon)
     {
-        Box2DShapeConfig shapeConfig{};
-        std::optional<Physics::BoxColliderComponent> colliderComponent{};
-        std::vector<std::vector<b2Vec2>> meshPolygons;
-        std::vector<b2Vec2> meshBoundary;
-    };
+        return HasMeaningfulDifference(a.x, b.x, epsilon)
+            || HasMeaningfulDifference(a.y, b.y, epsilon)
+            || HasMeaningfulDifference(a.z, b.z, epsilon);
+    }
+
+    Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
+    {
+        if (shapes.empty())
+        {
+            return Box2DShapeConfig::Type::None;
+        }
+
+        switch (shapes.front().type)
+        {
+        case Physics::ColliderShapeType::Box:
+            return Box2DShapeConfig::Type::Box;
+        case Physics::ColliderShapeType::Polygon:
+            return Box2DShapeConfig::Type::Polygon;
+        case Physics::ColliderShapeType::Circle:
+            return Box2DShapeConfig::Type::Circle;
+        default:
+            return Box2DShapeConfig::Type::None;
+        }
+    }
 
     Box2DShapeConfig BuildBaseShapeConfig(SweetsType type)
     {
@@ -383,80 +464,23 @@ namespace
         config.allowRotation = true;
         config.angularDamping = 0.2f;
 
-        switch (type)
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (registryDefinition)
         {
-        case SweetsType::Cake:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.allowRotation = false;
-            config.angularDamping = 6.0f;
-            config.density = 1.2f;
-            config.friction = 0.72f;
-            config.restitution = 0.03f;
-            break;
-        case SweetsType::Pudding:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.5f, -0.45f },
-                b2Vec2{ 0.5f, -0.45f },
-                b2Vec2{ 0.0f, 0.55f },
-            };
-            config.allowRotation = false;
-            config.angularDamping = 0.65f;
-            config.density = 0.95f;
-            config.friction = 0.6f;
-            config.restitution = 0.06f;
-            break;
-        case SweetsType::Sherbet:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.5f;
-            config.angularDamping = 0.75f;
-            config.density = 0.75f;
-            config.friction = 0.35f;
-            config.restitution = 0.28f;
-            break;
-        case SweetsType::Strawberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.45f;
-            config.angularDamping = 0.85f;
-            config.density = 0.85f;
-            config.friction = 0.5f;
-            config.restitution = 0.12f;
-            break;
-        case SweetsType::Blueberry:
-            config.type = Box2DShapeConfig::Type::Circle;
-            config.radius = 0.35f;
-            config.angularDamping = 0.7f;
-            config.density = 0.7f;
-            config.friction = 0.42f;
-            config.restitution = 0.18f;
-            break;
-        case SweetsType::Pineapple:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.5f;
-            config.density = 1.05f;
-            config.friction = 0.68f;
-            config.restitution = 0.04f;
-            break;
-        case SweetsType::Banana:
-            config.type = Box2DShapeConfig::Type::Polygon;
-            config.vertices = {
-                b2Vec2{ -0.6f, -0.08f },
-                b2Vec2{ 0.6f, 0.08f },
-                b2Vec2{ 0.55f, 0.24f },
-                b2Vec2{ -0.45f, 0.24f },
-            };
-            config.angularDamping = 0.65f;
-            config.density = 0.9f;
-            config.friction = 0.55f;
-            config.restitution = 0.08f;
-            break;
-        default:
-            config.type = Box2DShapeConfig::Type::Box;
-            config.angularDamping = 0.9f;
-            config.density = 0.9f;
-            config.friction = 0.6f;
-            config.restitution = 0.05f;
-            break;
+            config.type = InferShapeType(registryDefinition->shapes);
+            config.density = std::max(0.0f, registryDefinition->shapeDef.density);
+            config.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+            config.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            config.linearDamping = std::max(0.0f, registryDefinition->linearDamping);
+        }
+        else
+        {
+            ReportInvalidBox2DConfig(type, "is missing a collider registry definition");
+        }
+
+        if (config.type == Box2DShapeConfig::Type::None)
+        {
+            ReportInvalidBox2DConfig(type, "is missing an explicit collider shape definition");
         }
 
         if (!config.allowRotation)
@@ -468,93 +492,184 @@ namespace
         return config;
     }
 
-    void ApplyMaterialToCollider(Physics::BoxColliderComponent& component, const Box2DShapeConfig& shapeConfig)
+    bool ValidateBaseShapeDefinition(SweetsType type)
     {
-        component.shapeDef.density = shapeConfig.density;
-        component.shapeDef.material.friction = shapeConfig.friction;
-        component.shapeDef.material.restitution = shapeConfig.restitution;
+        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
+        if (!registryDefinition)
+        {
+            ReportInvalidBox2DConfig(type, "cannot resolve collider registry entry");
+            return false;
+        }
+
+        if (registryDefinition->shapes.empty())
+        {
+            ReportInvalidBox2DConfig(type, "collider registry entry is missing shapes");
+            return false;
+        }
+
+        for (const auto& shape : registryDefinition->shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+                if (!(shape.radius > 0.0f))
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry circle has non-positive radius");
+                    return false;
+                }
+                break;
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+                if (shape.vertices.size() < 3)
+                {
+                    ReportInvalidBox2DConfig(type, "collider registry polygon/box is missing vertices");
+                    return false;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+
+        return InferShapeType(registryDefinition->shapes) != Box2DShapeConfig::Type::None;
     }
 
-    ColliderBuildResult BuildColliderForSweets(SweetsType type, const Transform& transform, const std::shared_ptr<Render::Model>& model)
+    std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
     {
+        std::vector<b2Vec2> vertices;
+        vertices.reserve(points.size());
+
+        const float effectiveScale = std::max(scale, 0.0f);
+        for (const auto& pt : points)
+        {
+            float2 scaled{ (pt.x + offset.x) * effectiveScale, (pt.y + offset.y) * effectiveScale };
+            if (std::abs(margin) > 1e-6f)
+            {
+                const float lenSq = (scaled.x * scaled.x) + (scaled.y * scaled.y);
+                if (lenSq > 1e-8f)
+                {
+                    const float invLen = 1.0f / std::sqrt(lenSq);
+                    scaled.x += scaled.x * invLen * margin;
+                    scaled.y += scaled.y * invLen * margin;
+                }
+                else
+                {
+                    scaled.x += margin;
+                }
+            }
+
+            vertices.push_back(b2Vec2{ scaled.x, scaled.y });
+        }
+
+        return vertices;
+    }
+
+    float2 ComputeColliderCenterFromBounds(const AABB& bounds)
+    {
+        const float3 center = bounds.Center();
+        return float2{ center.x, center.y };
+    }
+
+    float2 ComputeColliderCenterFromModel(const std::shared_ptr<Render::Model>& model)
+    {
+        if (!model)
+        {
+            return float2{ 0.0f, 0.0f };
+        }
+
+        const std::string& modelPath = model->GetPath();
+        if (!modelPath.empty())
+        {
+            const MeshHullSummary summary = SweetsSpace::AnalyzeModelGeometry(
+                modelPath,
+                kDefaultGeneratedThicknessPadding,
+                kMinimumColliderThickness);
+            const float2 center = summary.centroidOffset;
+            if (std::isfinite(center.x) && std::isfinite(center.y))
+            {
+                return center;
+            }
+        }
+
+        return float2{ 0.0f, 0.0f };
+    }
+
+    float2 ScaleColliderOffset(const float2& offset, const float3& scale)
+    {
+        return float2{ offset.x * scale.x, offset.y * scale.y };
+    }
+
+    void ApplyColliderCenterOffset(std::vector<Physics::ColliderShapeDescriptor>& shapes, const float2& offset)
+    {
+        if (std::fabs(offset.x) <= 1e-6f && std::fabs(offset.y) <= 1e-6f)
+        {
+            return;
+        }
+
+        for (auto& shape : shapes)
+        {
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+            {
+                if (shape.vertices.empty())
+                {
+                    shape.vertices.push_back(b2Vec2{ offset.x, offset.y });
+                }
+                else
+                {
+                    for (auto& vertex : shape.vertices)
+                    {
+                        vertex.x += offset.x;
+                        vertex.y += offset.y;
+                    }
+                }
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                for (auto& vertex : shape.vertices)
+                {
+                    vertex.x += offset.x;
+                    vertex.y += offset.y;
+                }
+                break;
+            }
+            }
+        }
+    }
+
+    using ColliderBuildResult = ::SweetsSpace::SweetsManager::ColliderBuildResult;
+}
+
+namespace SweetsSpace
+{
+
+    std::string NormalizeKey(const std::string& key);
+    MeshHullSummary AnalyzeModelGeometry(const std::string& path, float thicknessPadding, float minThickness);
+
+
+    SweetsManager::ColliderBuildResult SweetsManager::BuildColliderForSweets(const std::string& kind,
+        SweetsType type,
+        const Transform& transform,
+        const std::string& modelPath,
+        const std::shared_ptr<Render::Model>& model,
+        const float2& colliderCenter,
+        bool allowMeshPhysics)
+    {
+        (void)kind;
+        (void)modelPath;
+        (void)model;
+        (void)allowMeshPhysics;
+
         ColliderBuildResult result{};
         result.shapeConfig = BuildBaseShapeConfig(type);
-
-        Physics::BoxColliderComponent colliderComponent{};
-        ApplyMaterialToCollider(colliderComponent, result.shapeConfig);
-
-        // Keep collider vertices in local space; PhysicsMachine::CreateBody applies the sweets transform scale when creating fixtures.
-
-        switch (type)
-        {
-        case SweetsType::Cake:
-            colliderComponent.AddBox(0.5f, 0.5f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Pudding:
-            colliderComponent.AddPolygon({
-                b2Vec2{ -0.5f, -0.45f },
-                b2Vec2{ 0.5f, -0.45f },
-                b2Vec2{ 0.0f, 0.55f },
-            });
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Sherbet:
-            colliderComponent.AddCircle(0.5f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Strawberry:
-            colliderComponent.AddCircle(0.45f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Blueberry:
-            colliderComponent.AddCircle(0.35f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Pineapple:
-            colliderComponent.AddBox(0.32f, 0.6f);
-            result.colliderComponent = colliderComponent;
-            break;
-        case SweetsType::Banana:
-            colliderComponent.AddPolygon({
-                b2Vec2{ -0.6f, -0.08f },
-                b2Vec2{ 0.6f, 0.08f },
-                b2Vec2{ 0.55f, 0.24f },
-                b2Vec2{ -0.45f, 0.24f },
-            });
-            result.colliderComponent = colliderComponent;
-            break;
-        default:
-            if (model && model->HasLocalBounds())
-            {
-                const AABB& bounds = model->GetLocalBounds();
-                const float minX = std::min(bounds.min.x, bounds.max.x);
-                const float maxX = std::max(bounds.min.x, bounds.max.x);
-                const float minY = std::min(bounds.min.y, bounds.max.y);
-                const float maxY = std::max(bounds.min.y, bounds.max.y);
-
-                std::vector<b2Vec2> polygon = {
-                    b2Vec2{ minX, minY },
-                    b2Vec2{ maxX, minY },
-                    b2Vec2{ maxX, maxY },
-                    b2Vec2{ minX, maxY },
-                };
-
-                result.meshBoundary = polygon;
-                result.meshPolygons.emplace_back(std::move(polygon));
-            }
-            break;
-        }
-
-        const float scaleFactor = transform.scale.x * transform.scale.y * transform.scale.z;
-        result.shapeConfig.density *= scaleFactor;
-        if (result.colliderComponent)
-        {
-            result.colliderComponent->shapeDef.density = result.shapeConfig.density;
-            result.colliderComponent->shapeDef.material.friction = result.shapeConfig.friction;
-            result.colliderComponent->shapeDef.material.restitution = result.shapeConfig.restitution;
-        }
-
+        const float2 scaledCenter = ScaleColliderOffset(colliderCenter, transform.scale);
+        result.shapeConfig.offset = b2Vec2{ scaledCenter.x, scaledCenter.y };
+        result.source = ColliderSource::Config;
+        result.centroidOffset = scaledCenter;
         return result;
     }
 
@@ -577,7 +692,8 @@ namespace
             return ::SweetsSpace::SweetsState::Active;
         }
 
-        bool touching = manager.HasSupportingContact(sweets);
+        bool foundationOnly = false;
+        bool touching = manager.HasSupportingContact(sweets, &foundationOnly);
         if (!touching)
         {
             if (auto* physicsMachine = sweets.GetPhysicsMachine())
@@ -605,7 +721,16 @@ namespace
 
         if (touching)
         {
-            return ::SweetsSpace::SweetsState::Stacked;
+            if (foundationOnly)
+            {
+                return ::SweetsSpace::SweetsState::Active;
+            }
+
+            // Keep previously stacked sweets stacked, but leave newly supported sweets Active so
+            // pickup eligibility is not blocked by contact flags alone.
+            return currentState == ::SweetsSpace::SweetsState::Stacked
+                ? ::SweetsSpace::SweetsState::Stacked
+                : ::SweetsSpace::SweetsState::Active;
         }
 
         return ::SweetsSpace::SweetsState::Active;
@@ -699,8 +824,8 @@ namespace
                         }
 
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Failed to parse weight token '" << weightToken
-                            << "' from '" << raw << "': " << ex.what() << "\n";
+                        oss << kLogPrefix << "重量トークン '" << weightToken
+                            << "' (元='" << raw << "') のパースに失敗しちゃった: " << ex.what() << "\n";
                         DebugTrace(oss.str());
                         return {};
                     }
@@ -721,8 +846,8 @@ namespace
                 }
 
                 std::ostringstream oss;
-                oss << kLogPrefix << "Unknown sweets key '" << kind
-                    << "' in weight definition '" << raw << "'.\n";
+                oss << kLogPrefix << "重量指定 '" << raw << "' に知らないスイーツキー '" << kind
+                    << "' が混じってたよ \n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -747,6 +872,12 @@ namespace
             normalized.push_back(static_cast<char>(std::tolower(ch)));
         }
         return normalized;
+    }
+
+    bool IsCreamTag(const std::string& tag)
+    {
+        static const std::string kCreamKey = NormalizeKey(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
+        return NormalizeKey(tag) == kCreamKey;
     }
 
     bool TryParseFloat(const std::string& token, float* out)
@@ -950,8 +1081,9 @@ namespace
         if (!scene || !scene->HasMeshes())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to load model for geometry analysis path='" << path
-                << "' reason='" << (scene ? "No meshes" : importer.GetErrorString()) << "'\n";
+            oss << kLogPrefix
+                << "ジオメトリ確認用のモデル読み込みに失敗したよ path='" << path << "'"
+                << " reason='" << (scene ? "メッシュなし" : importer.GetErrorString()) << "'\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -986,7 +1118,7 @@ namespace
                     continue;
                 }
 
-                // aiProcess_Triangulate guarantees triangles
+                // aiProcess_Triangulate をかけてるからここは三角形になるよ
                 indices.push_back(baseIndex + face.mIndices[0]);
                 indices.push_back(baseIndex + face.mIndices[1]);
                 indices.push_back(baseIndex + face.mIndices[2]);
@@ -996,7 +1128,7 @@ namespace
         if (positions.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Geometry analysis found no positions for '" << path << "'.\n";
+            oss << kLogPrefix << "ジオメトリ解析で '" << path << "' の頂点が一つも見つからなかったよ\n";
             DebugTrace(oss.str());
             return summary;
         }
@@ -1038,7 +1170,7 @@ namespace
 
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Analyzed geometry path='" << path
+        oss << kLogPrefix << "ジオメトリ解析したよ path='" << path
             << "' format=" << format
             << " vertices=" << positions.size()
             << " indices=" << indices.size()
@@ -1055,7 +1187,7 @@ namespace
         if (!summary.hull.empty() && summary.bounds.valid)
         {
             std::ostringstream debugHull;
-            debugHull << kLogPrefix << "Hull points (centroid-relative)=";
+            debugHull << kLogPrefix << "凸包ポイント（重心基準）一覧=";
             for (const auto& p : summary.hull)
             {
                 debugHull << '(' << p.x << ',' << p.y << ") ";
@@ -1086,6 +1218,14 @@ namespace
             halfExtents = float3{ radius, height * 0.5f, radius };
             break;
         }
+        case ColliderShape::Circle:
+        {
+            const float radius = std::max(
+                (scaledMax.x - scaledMin.x) * 0.5f,
+                (scaledMax.y - scaledMin.y) * 0.5f);
+            halfExtents = float3{ radius, radius, radius };
+            break;
+        }
         case ColliderShape::Box:
         default:
             halfExtents = float3{
@@ -1100,17 +1240,6 @@ namespace
         halfExtents.y += preset.padding.y;
         halfExtents.z += preset.padding.z;
         return halfExtents;
-    }
-
-    float3 ComputeColliderOffset(const ModelBounds& bounds, const float3& scale)
-    {
-        const float3 scaledMin = ScaleVector(bounds.min, scale);
-        const float3 scaledMax = ScaleVector(bounds.max, scale);
-        return float3{
-            (scaledMax.x + scaledMin.x) * 0.5f,
-            (scaledMax.y + scaledMin.y) * 0.5f,
-            (scaledMax.z + scaledMin.z) * 0.5f,
-        };
     }
 
     float3 ComputeExpandFromHalfExtents(const float3& halfExtents, const float3& transformScale)
@@ -1133,10 +1262,7 @@ namespace
         return expand;
     }
 
-}
-
-namespace SweetsSpace
-{
+    
     const char* ToString(DeleteReason reason)
     {
         switch (reason)
@@ -1180,17 +1306,44 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets) const
+    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
     {
+        if (foundationOnly)
+        {
+            *foundationOnly = false;
+        }
+
         auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
         if (it == m_contactStates.end())
         {
             return false;
         }
 
-        return (it->second.foundationContacts > 0) || (it->second.sweetsContacts > 0);
+        const bool hasFoundation = it->second.foundationContacts > 0;
+        const bool hasSweetsContact = it->second.sweetsContacts > 0;
+        if (foundationOnly)
+        {
+            *foundationOnly = hasFoundation && !hasSweetsContact;
+        }
+
+        return hasFoundation || hasSweetsContact;
     }
 
+    bool SweetsManager::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
+    {
+        return m_hasSweetsContact.find(const_cast<ActiveSweets*>(&sweets)) != m_hasSweetsContact.end();
+    }
+
+   
+    int SweetsManager::GetSweetsCount() const
+    {
+        int count = 0;
+        for (const auto& pair : m_byState)
+        {
+            count += static_cast<int>(pair.second.size());
+        }
+        return count;
+    }
     void SweetsManager::UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other)
     {
         if (!sweets || !other)
@@ -1207,6 +1360,7 @@ namespace SweetsSpace
         else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
         {
             ++state.sweetsContacts;
+            m_hasSweetsContact.insert(sweets);
         }
     }
 
@@ -1253,57 +1407,102 @@ namespace SweetsSpace
         m_contactStates.erase(sweets);
     }
 
+    void SweetsManager::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
+    {
+        if (!sweets || m_creamWeldJoints.empty())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (!m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
+        for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
+        {
+            if (it->first.first == sweets || it->first.second == sweets)
+            {
+                if (m_physicsMachine)
+                {
+                    m_physicsMachine->DestroyJoint(it->second);
+                }
+                it = m_creamWeldJoints.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void SweetsManager::ClearCreamWeldJoints(const char* context)
+    {
+        if (m_creamWeldJoints.empty())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (!m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
+        for (const auto& entry : m_creamWeldJoints)
+        {
+            if (m_physicsMachine)
+            {
+                m_physicsMachine->DestroyJoint(entry.second);
+            }
+        }
+        m_creamWeldJoints.clear();
+    }
+
     std::optional<SweetsManager::FactoryPreset> SweetsManager::BuildDefaultFactoryPreset(SweetsType type)
     {
         FactoryPreset preset{};
         preset.spawnWeight = 0.0f;
-        preset.minScale = float3{ 1.0f, 1.0f, 1.0f };
-        preset.maxScale = float3{ 1.0f, 1.0f, 1.0f };
+        preset.scale = float3{ 1.0f, 1.0f, 1.0f };
         preset.colliderPreset = ColliderPreset{};
 
         switch (type)
         {
-        case SweetsType::Cake:
+        case SweetsType::Cream:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.35f, 1.35f, 1.35f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.02f, 0.02f } };
-            return preset;
-        case SweetsType::Pudding:
-            preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.9f, 0.9f, 0.9f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.04f, 0.01f } };
-            return preset;
-        case SweetsType::Sherbet:
-            preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.75f, 0.75f, 0.75f };
-            preset.maxScale = float3{ 1.4f, 1.4f, 1.4f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
             return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.25f, 1.25f, 1.25f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.0125f, 0.0125f, 0.0125f } };
+            preset.scale = float3{ 0.24f, 0.24f, 0.24f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.01f, 0.01f, 0.01f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.minScale = float3{ 0.65f, 0.65f, 0.65f };
-            preset.maxScale = float3{ 1.15f, 1.15f, 1.15f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.18f, 0.18f, 0.18f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.minScale = float3{ 0.85f, 0.85f, 0.85f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.02f, 0.05f, 0.02f } };
+            preset.scale = float3{ 0.34f, 0.34f, 0.34f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.016f, 0.01f } };
             return preset;
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
-            preset.minScale = float3{ 0.8f, 0.8f, 0.8f };
-            preset.maxScale = float3{ 1.2f, 1.2f, 1.2f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.015f, 0.015f, 0.015f } };
+            preset.scale = float3{ 0.32f, 0.32f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.005f, 0.005f, 0.005f } };
             return preset;
         default:
             return std::nullopt;
@@ -1312,39 +1511,48 @@ namespace SweetsSpace
 
     bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
     {
-        if (tokens.size() < 11)
+        if (tokens.size() < 8)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset row on line " << lineNumber
-                << " had " << tokens.size() << " tokens; expected at least 11.\n";
+            oss << kLogPrefix << "工場プリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
+                << "個で足りてないよ（最低8個欲しい） \n";
             DebugTrace(oss.str());
             return false;
         }
 
         bool parseError = false;
         parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.minScale.x);
-        parseError |= !TryParseFloat(tokens[3], &outPreset.minScale.y);
-        parseError |= !TryParseFloat(tokens[4], &outPreset.minScale.z);
-        parseError |= !TryParseFloat(tokens[5], &outPreset.maxScale.x);
-        parseError |= !TryParseFloat(tokens[6], &outPreset.maxScale.y);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.maxScale.z);
-        parseError |= !TryParseFloat(tokens[9], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[10], &outPreset.colliderPreset.padding.y);
-
-        if (tokens.size() > 11)
+        parseError |= !TryParseFloat(tokens[2], &outPreset.scale.x);
+        outPreset.scale.y = outPreset.scale.x;
+        outPreset.scale.z = outPreset.scale.x;
+        if (tokens.size() > 3 && !tokens[3].empty())
         {
-            parseError |= !TryParseFloat(tokens[11], &outPreset.colliderPreset.padding.z);
+            parseError |= !TryParseFloat(tokens[3], &outPreset.scale.y);
+        }
+        if (tokens.size() > 4 && !tokens[4].empty())
+        {
+            parseError |= !TryParseFloat(tokens[4], &outPreset.scale.z);
+        }
+        parseError |= !TryParseFloat(tokens[6], &outPreset.colliderPreset.padding.x);
+        parseError |= !TryParseFloat(tokens[7], &outPreset.colliderPreset.padding.y);
+
+        if (tokens.size() > 8)
+        {
+            parseError |= !TryParseFloat(tokens[8], &outPreset.colliderPreset.padding.z);
         }
         else
         {
             outPreset.colliderPreset.padding.z = 0.0f;
         }
 
-        const std::string colliderShape = NormalizeKey(tokens[8]);
+        const std::string colliderShape = NormalizeKey(tokens[5]);
         if (colliderShape == "capsule")
         {
             outPreset.colliderPreset.shape = ColliderShape::Capsule;
+        }
+        else if (colliderShape == "circle")
+        {
+            outPreset.colliderPreset.shape = ColliderShape::Circle;
         }
         else if (colliderShape == "box" || colliderShape.empty())
         {
@@ -1353,8 +1561,8 @@ namespace SweetsSpace
         else
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Unknown collider preset '" << tokens[10]
-                << "' on line " << lineNumber << "; defaulting to Box.\n";
+            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[5]
+                << "' が知らない形だったから、とりあえず Box にしとくね\n";
             DebugTrace(oss.str());
             outPreset.colliderPreset.shape = ColliderShape::Box;
         }
@@ -1370,8 +1578,8 @@ namespace SweetsSpace
         if (!file.is_open())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Factory preset CSV missing at '" << kFactoryPresetCsvPath
-                << "'; falling back to legacy defaults.\n";
+            oss << kLogPrefix << "工場プリセットの CSV が '" << kFactoryPresetCsvPath
+                << "' に見当たらないので、昔のデフォルトに戻すね\n";
             DebugTrace(oss.str());
             return overrides;
         }
@@ -1421,14 +1629,14 @@ namespace SweetsSpace
             overrides[normalizedKey] = preset;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Loaded factory preset for key '" << tokens[0]
-                << "' resolvedKey='" << resolvedKey << "'"
-                << "' spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
-                    << " collider=" << ToString(preset.colliderPreset.shape)
-                    << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
-                    << preset.colliderPreset.padding.z << ")\n";
+            oss << kLogPrefix
+                << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
+                << " resolvedKey='" << resolvedKey << "'"
+                << " spawnWeight=" << preset.spawnWeight
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
+                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
+                << preset.colliderPreset.padding.z << ")\n";
             DebugTrace(oss.str());
         }
 
@@ -1492,8 +1700,12 @@ namespace SweetsSpace
         , m_spawnTimer(kDefaultSpawnIntervalSeconds)
         , m_burstTimer(0.0f)
         , m_spawnQueue()
-        , m_spawnOrigins()
+        , m_spawnOriginsPrimary()
+        , m_spawnOriginsSecondary()
         , m_spawnHeightOffset(kDefaultSpawnHeightOffset)
+        , m_nextSpawnUsesPrimary(true)
+        , m_spawnOriginCursorPrimary(0)
+        , m_spawnOriginCursorSecondary(0)
         , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
         , m_activeBurstPlanned(0)
         , m_currentBurstRemaining(0)
@@ -1502,12 +1714,14 @@ namespace SweetsSpace
         , m_batchInitialSpawnDone(false)
         , m_batchStackTarget(kDefaultSimultaneousSpawnCount)
         , m_batchCoolingDown(false)
+        , m_autoSpawnIntervalFactor(kAutoSpawnIntervalFactor)
+        , m_autoBurstIntervalFactor(kAutoBurstIntervalFactor)
+        , m_autoSimultaneousIncrement(kAutoSimultaneousIncrement)
+        , m_autoSimultaneousCap(kAutoSimultaneousCap)
         , m_random(std::random_device{}())
         , m_pendingTopUpAfterDrop(false)
-        , m_enableRandomRotation(false)
         , m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f }
-        , m_randomRotationMaxDegrees{ 0.0f, 360.0f, 0.0f }
-        , m_enableRandomScale(true)
+        , m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f }
         , m_liveSweetsCap(kDefaultLiveSweetsCap)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
@@ -1523,9 +1737,11 @@ namespace SweetsSpace
         , m_maxHorizontalBound(0.0f)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
-        , m_generatedColliderMinThickness(SanitizeMinThickness(0.0f))
+        , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
         , m_forceGeneratedColliders(false)
-        , m_colliderConfigOverridesEnabled(false)
+        , m_forceConfigColliders(false)
+        , m_forceConfigColliderKinds()
+        , m_colliderConfigOverridesEnabled(true)
         , m_warnedMissingHorizontalBounds(false)
         , m_spawnPausedDueToLiveSweets(false)
         , m_lastLiveSweetsCount(0)
@@ -1535,28 +1751,12 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Ground, SweetsList{});
         m_byState.emplace(SweetsState::Carried, SweetsList{});
 
-        if (!Collision::LoadColliderDefinitions(kColliderConfigPath, m_colliderDefinitions))
+        if (!Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath))
         {
-            DebugTrace(std::string(kLogPrefix) + "Failed to load collider definitions; using AABB fallbacks.\n");
-        }
-        else
-        {
-            std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
-            for (const auto& entry : m_colliderDefinitions)
-            {
-                const std::string normalizedKey = NormalizeKey(entry.first);
-                normalizedDefinitions[normalizedKey] = entry.second;
-
-                if (normalizedKey != entry.first)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Collider definition key normalized from '" << entry.first
-                        << "' to '" << normalizedKey << "'.\n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-            m_colliderDefinitions.swap(normalizedDefinitions);
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ConfigError] collider registry '" << kColliderRegistryPath
+                << "' を読み込めなかったからデフォルト形状に頼るかもしれないよ\n";
+            Diagnostics::LogInfo(oss.str());
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
@@ -1568,7 +1768,7 @@ namespace SweetsSpace
         const auto prototypes = manifest.Enumerate();
         if (prototypes.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "No sweets prototypes registered; spawner map will remain empty.\n");
+            DebugTrace(std::string(kLogPrefix) + "スイーツのプロトタイプが一つも登録されてないから、スポナー表は空のままだよ\n");
         }
 
         for (const auto& prototype : prototypes)
@@ -1577,8 +1777,8 @@ namespace SweetsSpace
             if (!descriptor)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Prototype lookup failed for type '" << ToString(prototype.type)
-                    << "'; skipping.\n";
+                oss << kLogPrefix << "タイプ '" << ToString(prototype.type)
+                    << "' のプロトタイプを探せなかったのでスキップするね \n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -1596,8 +1796,8 @@ namespace SweetsSpace
             if (!hasOverride && !defaultPreset)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "No factory preset available for kind '" << kind
-                    << "' (type=" << ToString(prototype.type) << "); skipping registration.\n";
+                warn << kLogPrefix << "種類 '" << kind
+                    << "' (type=" << ToString(prototype.type) << ") に使える工場プリセットがないから、登録はパスするよ\n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -1606,15 +1806,14 @@ namespace SweetsSpace
             m_factoryPresets[normalizedKind] = preset;
 
             std::ostringstream presetLog;
-            presetLog << kLogPrefix << "Resolved factory preset for kind '" << resolvedKind;
+            presetLog << kLogPrefix << "種類 '" << resolvedKind << "' の工場プリセットを決めたよ";
             if (isAliasedKind)
             {
-                presetLog << "' (from key '" << kind << "')";
+                presetLog << " (from key '" << kind << "')";
             }
-            presetLog << "' source=" << (hasOverride ? "config" : "fallback")
+            presetLog << " source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
-                << " minScale=(" << preset.minScale.x << ',' << preset.minScale.y << ',' << preset.minScale.z << ')'
-                << " maxScale=(" << preset.maxScale.x << ',' << preset.maxScale.y << ',' << preset.maxScale.z << ')'
+                << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
                 << " collider=" << ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")"
@@ -1623,11 +1822,17 @@ namespace SweetsSpace
 
             const std::string registeredPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
             std::ostringstream oss;
-            oss << kLogPrefix << "Registering sweets kind '" << kind
-                << "' with asset '" << registeredPath << "'.\n";
+            oss << kLogPrefix << "スイーツの種類 '" << kind
+                << "' をアセット '" << registeredPath << "' と一緒に登録するね\n";
             DebugTrace(oss.str());
 
             const SweetsType type = prototype.type;
+
+            if (!ValidateBaseShapeDefinition(type))
+            {
+                DebugTrace(std::string(kLogPrefix) + "スイーツの形状設定に問題があるから、ファクトリー登録をスキップするね\n");
+                continue;
+            }
 
             auto factory = [this, &cache, kind, type, preset,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
@@ -1641,86 +1846,140 @@ namespace SweetsSpace
                 if (!descriptor)
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "Prototype descriptor missing for kind '" << resolvedKind
-                        << "'" << aliasSuffix << "; using placeholder path '" << kPlaceholderModelPath << "'.\n";
+                    warn << kLogPrefix << "種類 '" << resolvedKind
+                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないから、プレースホルダー '" << kPlaceholderModelPath << "' を使うよ\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
                 else if (descriptorPath.empty())
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "Descriptor for kind '" << descriptorKey << "' path empty;"
-                        << " falling back to placeholder '" << kPlaceholderModelPath << "'.\n";
+                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったから、プレースホルダー '" << kPlaceholderModelPath << "' に頼るね\n";
                     DebugTrace(warn.str());
                     descriptorPath = kPlaceholderModelPath;
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Resolved prototype for kind '" << descriptorKey << "'"
+                    oss << kLogPrefix << "種類 '" << descriptorKey << "' のプロトタイプを解決したよ"
                         << aliasSuffix << " path='" << descriptor->modelPath << "'.\n";
                     DebugTrace(oss.str());
                 }
 
-                auto model = type == SweetsType::Fairy ? CreateProceduralFairyModel() : nullptr;
-                if (!model)
+                const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
+                auto model = cache.Get(primaryPath);
+                if (!model && primaryPath != kPlaceholderModelPath)
                 {
-                    const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
-                    model = cache.Get(primaryPath);
-                    if (!model && primaryPath != kPlaceholderModelPath)
-                    {
-                        std::ostringstream warn;
-                        warn << kLogPrefix << "Model load failed for sweets kind '" << descriptorKey
-                            << "' path='" << primaryPath << "'; trying placeholder '" << kPlaceholderModelPath
-                            << "'.\n";
-                        DebugTrace(warn.str());
-                        model = cache.Get(kPlaceholderModelPath);
-                    }
+                    std::ostringstream warn;
+                    warn << kLogPrefix << "スイーツ '" << descriptorKey
+                        << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
+                        << "' を試してみるね \n";
+                    DebugTrace(warn.str());
+                    model = cache.Get(kPlaceholderModelPath);
                 }
 
                 if (!model)
                 {
                     std::ostringstream fail;
-                    fail << kLogPrefix << "No model available for sweets kind '" << descriptorKey
-                        << "' after fallbacks.\n";
+                    fail << kLogPrefix << "スイーツ '" << descriptorKey
+                        << "' は代替も全部外れでモデルが用意できなかったよ\n";
                     DebugTrace(fail.str());
 
                     return nullptr;
                 }
 
-                Transform scaledTransform = transform;
-                const auto sampleScale = [&](float minValue, float maxValue)
+                static std::unordered_set<std::string> s_loggedModelLoads;
+                if (s_loggedModelLoads.insert(primaryPath).second)
                 {
-                    if (!m_enableRandomScale)
+                    std::ostringstream modelLog;
+                    modelLog << kLogPrefix << "[SpawnModel] kind='" << descriptorKey
+                        << "' path='" << primaryPath << "' loaded=" << std::boolalpha << static_cast<bool>(model) << "\n";
+                    Diagnostics::LogInfo(modelLog.str());
+                }
+
+                Transform physicsTransform = transform;
+                physicsTransform.scale = preset.scale;
+                const float2 colliderCenter = ComputeColliderCenterFromModel(model);
+                const float2 modelColliderOffset = ScaleColliderOffset(colliderCenter, physicsTransform.scale);
+                float2 colliderOffset{ 0.0f, 0.0f };
+                VisualTransform visualTransform{};
+                // colliderOffset は BaseSweets::SyncFromPhysics() 側で一元適用する
+                visualTransform.position = physicsTransform.position;
+                visualTransform.rotation = physicsTransform.rotation;
+                visualTransform.scale = physicsTransform.scale;
+
+                const bool allowMeshPhysics = descriptor->allowMeshPhysics;
+
+                auto shapeConfig = BuildBaseShapeConfig(type);
+
+                Physics::BoxColliderComponent colliderComponent{};
+                std::string colliderLookupId = resolvedKind;
+                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+                if (!registryDefinition && resolvedKind != ToString(type))
+                {
+                    colliderLookupId = ToString(type);
+                    registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+                }
+
+                if (!registryDefinition)
+                {
+                    colliderOffset = modelColliderOffset;
+                }
+
+                shapeConfig.offset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+                colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+
+                if (registryDefinition)
+                {
+                    colliderComponent.colliderId = colliderLookupId;
+                    colliderComponent.shapes = registryDefinition->shapes;
+                    colliderComponent.shapeDef = registryDefinition->shapeDef;
+                    // registry offset is authoritative; avoid applying model-based offsets.
+
+                    shapeConfig.type = InferShapeType(registryDefinition->shapes);
+                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+                }
+                else
+                {
+                    colliderComponent.colliderId = resolvedKind;
+                    if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
                     {
-                        return 1.0f;
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "colliderId='" << resolvedKind
+                            << "' のレジストリエントリが見つからないから、フィクスチャの構築はスキップされるかも\n";
+                        DebugTrace(warn.str());
                     }
+                }
 
-                    const float lo = std::min(minValue, maxValue);
-                    const float hi = std::max(minValue, maxValue);
-                    if (lo == hi)
-                    {
-                        return lo;
-                    }
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
+                    Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
-                    std::uniform_real_distribution<float> dist(lo, hi);
-                    return dist(m_random);
-                };
+                if (sweets)
+                {
+                    const std::string colliderIdForLog = colliderComponent.colliderId;
+                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
+                    sweets->SetVisualTransform(visualTransform);
 
-                const float3 sampledScale{
-                    sampleScale(preset.minScale.x, preset.maxScale.x),
-                    sampleScale(preset.minScale.y, preset.maxScale.y),
-                    sampleScale(preset.minScale.z, preset.maxScale.z)
-                };
+#if defined(_DEBUG)
+                    std::ostringstream colliderLog;
+                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
+                        << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
+                        << ") colliderId='" << colliderIdForLog << "'"
+                        << "\n";
+                    DebugTrace(colliderLog.str());
+#endif
 
-                scaledTransform.scale.x *= sampledScale.x;
-                scaledTransform.scale.y *= sampledScale.y;
-                scaledTransform.scale.z *= sampledScale.z;
-
-                const auto colliderBuild = BuildColliderForSweets(type, scaledTransform, model);
-
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, scaledTransform, colliderBuild.shapeConfig, Collision::CollisionLayer::Sweets,
-                    Core::UpdatePhase::Physics, 0);
+                    std::ostringstream created;
+                    created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
+                        << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
+                        << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
+                        << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
+                        << " colliderId='" << resolvedKind << "'"
+                        << " policy=PhysicsAligned (OriginBottom disabled for sweets)\n";
+                    Diagnostics::LogInfo(created.str());
+                }
 
                 return sweets;
             };
@@ -1729,19 +1988,19 @@ namespace SweetsSpace
             if (!inserted)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Spawner for kind '" << kind
-                    << "' already existed. New factory ignored.\n";
+                warn << kLogPrefix << "種類 '" << kind
+                    << "' のスポナーはもうあったから、新しいファクトリーは無視したよ \n";
                 DebugTrace(warn.str());
             }
         }
 
-        ApplyDefaultPhaseConfigs();
         ApplyDefaultPhaseConfigs();
 
     }
 
     SweetsManager::~SweetsManager()
     {
+        ClearCreamWeldJoints("~SweetsManager");
         if (m_scheduler && m_lateUpdateNode)
         {
             m_scheduler->Unregister(*m_lateUpdateNode);
@@ -1777,8 +2036,8 @@ namespace SweetsSpace
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Purging null sweets entry from state "
-                        << StateToString(bucketState) << "\n";
+                    oss << kLogPrefix << "状態 " << StateToString(bucketState)
+                        << " から null のスイーツを掃除したよ\n";
                     DebugTrace(oss.str());
 #endif
                     it = sweetsList.erase(it);
@@ -1795,9 +2054,8 @@ namespace SweetsSpace
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Purging sweets ptr=" << sweets.get()
-                        << " from state " << StateToString(bucketState)
-                        << " because update node was disabled.\n";
+                    oss << kLogPrefix << "Update 無効化中だったから、状態 " << StateToString(bucketState)
+                        << " から sweets ptr=" << sweets.get() << " を片付けたよ \n";
                     DebugTrace(oss.str());
 #endif
                     m_lookup.erase(sweets);
@@ -1819,8 +2077,8 @@ namespace SweetsSpace
                     if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Horizontal bounds fallback active; using platform width limit="
-                            << fallbackHorizontalLimit << " (half-width + margin).\n";
+                        oss << kLogPrefix << "水平境界のフォールバックを使うね 幅制限="
+                            << fallbackHorizontalLimit << " (半幅＋マージン) \n";
                         DebugTrace(oss.str());
                         m_warnedMissingHorizontalBounds = true;
                     }
@@ -1852,7 +2110,7 @@ namespace SweetsSpace
             SetState(change.sweets, change.state);
 #if defined(_DEBUG)
             std::ostringstream oss;
-            oss << kLogPrefix << "State change ptr=" << change.sweets.get()
+            oss << kLogPrefix << "状態変更 ptr=" << change.sweets.get()
                 << " " << StateToString(previousState) << " -> "
                 << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
@@ -1923,10 +2181,9 @@ namespace SweetsSpace
         if (removed > 0 || markedSafe > 0 || stagedThisFrame > 0)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Late prune staged " << stagedThisFrame
-                << " pending entries, marked " << markedSafe
-                << " ready for deletion, removed " << removed
-                << " finalized sweets.\n";
+            oss << kLogPrefix << "後処理で " << stagedThisFrame << " 件を待機、 " << markedSafe
+                << " 件を削除OKにして、 " << removed
+                << " 件のスイーツを消したよ \n";
             DebugTrace(oss.str());
         }
 #endif
@@ -1970,8 +2227,23 @@ namespace SweetsSpace
 
     float SweetsManager::GetHighestStackedHeight() const
     {
-        float maxHeight = 0.0f;
+        //確認用のログ
+  /*      ::DebugTrace("[SweetsDEBUG] ENTER 1\n");
+
+        ::DebugTrace("[SweetsDEBUG] before GetByState\n");
         const auto& stacked = GetByState(SweetsState::Stacked);
+        ::DebugTrace("[SweetsDEBUG] after GetByState\n");
+
+        if (stacked.empty())
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked EMPTY\n");
+        }OnUpdate
+        else
+        {
+            ::DebugTrace("[SweetsDEBUG] stacked NOT empty\n");
+        }*/
+        float maxHeight = 0.0f;
+       const auto& stacked = GetByState(SweetsState::Stacked);
         for (const auto& sweets : stacked)
         {
             if (!sweets || sweets->IsPendingDestroy())
@@ -2018,13 +2290,18 @@ namespace SweetsSpace
         targetList.push_back(sweets);
         m_lookup[sweets] = state;
 
+        if (state == SweetsState::Carried)
+        {
+            m_hasSweetsContact.erase(sweets.get());
+        }
+
         if (state == SweetsState::Stacked && previousState != SweetsState::Stacked)
         {
             ++m_stackedInBatch;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Stacked sweets progress=" << m_stackedInBatch
-                << '/' << m_batchStackTarget << " tag='" << sweets->GetTag() << "'.\n";
+            oss << kLogPrefix << "積み上げ進捗=" << m_stackedInBatch
+                << '/' << m_batchStackTarget << " tag='" << sweets->GetTag() << "' だよ \n";
             DebugTrace(oss.str());
         }
     }
@@ -2046,7 +2323,7 @@ namespace SweetsSpace
         {
             return;
         }
-
+        
         sweets->MarkPendingDestroy();
     }
 
@@ -2055,6 +2332,8 @@ namespace SweetsSpace
         ForceSpawnRefresh();
 
         m_contactStates.clear();
+        m_hasSweetsContact.clear();
+        ClearCreamWeldJoints("ClearAllSweets");
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
@@ -2085,9 +2364,9 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets staged " << staged
-            << " sweets for pending destroy (" << alreadyPending << " already pending) across "
-            << m_byState.size() << " states.\n";
+        oss << kLogPrefix << "ClearAllSweets で " << staged
+            << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
+            << m_byState.size() << " 状態分 \n";
         DebugTrace(oss.str());
     }
 
@@ -2145,7 +2424,7 @@ namespace SweetsSpace
         m_currentPhase = newPhase;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Phase changed to " << m_currentPhase << "\n";
+        oss << kLogPrefix << "フェーズが " << m_currentPhase << " に変わったよ\n";
         DebugTrace(oss.str());
 
         OnPhaseConfigurationChanged(m_currentPhase);
@@ -2156,7 +2435,7 @@ namespace SweetsSpace
         }
         else if (!m_warnedMissingPhaseCallback)
         {
-            DebugTrace(std::string(kLogPrefix) + "Phase change callback missing; spawn layout unchanged.\n");
+            DebugTrace(std::string(kLogPrefix) + "フェーズ変更のコールバックがないので、スポーン配置はそのままにしとくね \n");
             m_warnedMissingPhaseCallback = true;
         }
     }
@@ -2201,10 +2480,10 @@ namespace SweetsSpace
         if (it == m_spawner.end())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn requested for unknown kind '" << kind
-                << "' (resolved='" << resolvedKind
+            oss << kLogPrefix << "知らない種類 '" << kind << "' でスポーン要求が来たよ"
+                << " (resolved='" << resolvedKind
                 << "' normalizedRaw='" << normalizedKind
-                << "' normalizedResolved='" << normalizedResolvedKind << "'). Registered kinds:";
+                << "' normalizedResolved='" << normalizedResolvedKind << "') 登録済みの種類:";
             if (m_spawner.empty())
             {
                 oss << " (none)";
@@ -2227,13 +2506,19 @@ namespace SweetsSpace
         if (!sweets)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawner for kind '" << kind << "' returned null instance.\n";
+            oss << kLogPrefix << "種類 '" << kind << "' のスポナーが null を返しちゃった \n";
             DebugTrace(oss.str());
             return nullptr;
         }
 
+        sweets->SetWasEverCarried(false);
+
+        if (!RegisterWithSystems(sweets))
+        {
+            return nullptr;
+        }
+
         SetState(sweets, SweetsState::Active);
-        RegisterWithSystems(sweets);
 
         if (m_physicsMachine && sweets)
         {
@@ -2251,15 +2536,77 @@ namespace SweetsSpace
         return sweets;
     }
 
-    std::shared_ptr<ActiveSweets> SweetsManager::FindNearestCarryable(const float3& position, float halfWidth, float halfHeight) const
+    PickupQueryResult SweetsManager::FindNearestCarryable(
+        const float3& pickupCenter,
+        float halfWidth,
+        float halfHeight,
+        float halfDepth,
+        float depthThreshold,
+        const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
+        float maxDistance) const
     {
+        PickupQueryResult result{};
+        result.failReason = PickupFailReason::InvalidConfiguration;
+
+        const auto sanitizeCoordinate = [](float value)
+        {
+            return std::isfinite(value) ? value : 0.0f;
+        };
+
+        const float3 sanitizedCenter
+        {
+            sanitizeCoordinate(pickupCenter.x),
+            sanitizeCoordinate(pickupCenter.y),
+            sanitizeCoordinate(pickupCenter.z),
+        };
         if (!(halfWidth > 0.0f) || !(halfHeight > 0.0f))
         {
-            return nullptr;
+            return result;
         }
+        const float sanitizedHalfDepth = std::max(0.0f, std::isfinite(halfDepth) ? halfDepth : 0.0f);
+        const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
+            ? depthThreshold
+            : std::numeric_limits<float>::infinity();
+        const float sanitizedMaxDistance = (std::isfinite(maxDistance) && maxDistance > 0.0f)
+            ? maxDistance
+            : std::numeric_limits<float>::infinity();
+
+        const float broadPhaseHalfWidth = halfWidth + sanitizedMaxDistance;
+        const float broadPhaseHalfHeight = halfHeight + sanitizedMaxDistance;
+        const float broadPhaseHalfDepth = std::max(sanitizedHalfDepth, sanitizedDepthThreshold);
+
+        AABB pickupBounds{};
+        pickupBounds.min.x = sanitizedCenter.x - broadPhaseHalfWidth;
+        pickupBounds.max.x = sanitizedCenter.x + broadPhaseHalfWidth;
+        pickupBounds.min.y = sanitizedCenter.y - broadPhaseHalfHeight;
+        pickupBounds.max.y = sanitizedCenter.y + broadPhaseHalfHeight;
+        pickupBounds.min.z = sanitizedCenter.z - broadPhaseHalfDepth;
+        pickupBounds.max.z = sanitizedCenter.z + broadPhaseHalfDepth;
+
+        const auto intersects = [&](const AABB& bounds)
+        {
+            const float overlapX = std::min(bounds.max.x, pickupBounds.max.x) - std::max(bounds.min.x, pickupBounds.min.x);
+            const float overlapY = std::min(bounds.max.y, pickupBounds.max.y) - std::max(bounds.min.y, pickupBounds.min.y);
+            const float overlapZ = std::min(bounds.max.z, pickupBounds.max.z) - std::max(bounds.min.z, pickupBounds.min.z);
+            return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
+        };
+
+        const auto computeDepthDelta = [&](const AABB& bounds)
+        {
+            const float frontExcess = bounds.min.z - (sanitizedCenter.z + sanitizedHalfDepth);
+            const float backExcess = (sanitizedCenter.z - sanitizedHalfDepth) - bounds.max.z;
+            const float outside = std::max(frontExcess, backExcess);
+            return outside > 0.0f ? outside : 0.0f;
+        };
+
+        const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
+        {
+            return std::find(exclude.begin(), exclude.end(), sweets) != exclude.end();
+        };
 
         std::shared_ptr<ActiveSweets> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
+        float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
 
         const auto scanState = [&](SweetsState state)
         {
@@ -2276,38 +2623,62 @@ namespace SweetsSpace
                     continue;
                 }
 
+                if (isExcluded(sweets))
+                {
+                    continue;
+                }
+
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                const float minX = position.x - halfWidth;
-                const float maxX = position.x + halfWidth;
-                const float minY = position.y - halfHeight;
-                const float maxY = position.y + halfHeight;
-
-                const bool overlaps = !(bounds.max.x < minX || bounds.min.x > maxX || bounds.max.y < minY || bounds.min.y > maxY);
-                if (!overlaps)
+                if (!intersects(bounds))
                 {
                     continue;
                 }
 
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
-                const float centerZ = (bounds.min.z + bounds.max.z) * 0.5f;
-                const float dx = centerX - position.x;
-                const float dy = centerY - position.y;
-                const float dz = centerZ - position.z;
-                const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+                const float dx = centerX - sanitizedCenter.x;
+                const float dy = centerY - sanitizedCenter.y;
+                const float distanceSq = (dx * dx) + (dy * dy);
                 if (distanceSq <= bestDistanceSq)
                 {
                     bestDistanceSq = distanceSq;
                     best = sweets;
+                    nearestMeasuredDepthDelta = computeDepthDelta(bounds);
                 }
             }
         };
 
         scanState(SweetsState::Ground);
         scanState(SweetsState::Active);
+        scanState(SweetsState::Stacked);
 
-        return best;
+        if (bestDistanceSq == std::numeric_limits<float>::max())
+        {
+            result.failReason = PickupFailReason::NoCandidates;
+            return result;
+        }
+
+        const float bestDistance = std::sqrt(bestDistanceSq);
+        result.distance = bestDistance;
+        result.depthDelta = nearestMeasuredDepthDelta;
+
+        if (bestDistance > sanitizedMaxDistance)
+        {
+            result.failReason = PickupFailReason::DistanceExceeded;
+            return result;
+        }
+
+        if (nearestMeasuredDepthDelta > sanitizedDepthThreshold)
+        {
+            result.failReason = PickupFailReason::DepthExceeded;
+            return result;
+        }
+
+        result.result = PickupResult::Success;
+        result.failReason = PickupFailReason::None;
+        result.sweets = best;
+        return result;
     }
 
     bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)
@@ -2322,31 +2693,24 @@ namespace SweetsSpace
             return false;
         }
 
-        auto it = m_lookup.find(sweets);
-        const SweetsState current = (it != m_lookup.end()) ? it->second : SweetsState::Active;
-        if (current != SweetsState::Active && current != SweetsState::Ground)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "TryMarkAsCarried rejected tag='" << sweets->GetTag()
-                << "' currentState=" << StateToString(current) << "\n";
-            DebugTrace(oss.str());
-            return false;
-        }
+        sweets->SetWasEverCarried(true);
+        ClearContactState(sweets.get());
+        RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets);
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
-            DebugTrace(std::string(kLogPrefix) + "TryMarkAsCarried missing physics machine; body may keep simulating.\n");
+            DebugTrace(std::string(kLogPrefix) + "TryMarkAsCarried で物理マシンが見つからないから、このままシミュレーションしちゃうかも \n");
             m_warnedMissingPhysicsMachine = true;
         }
 
         SetState(sweets, SweetsState::Carried);
 
         std::ostringstream oss;
-        oss << kLogPrefix << "TryMarkAsCarried success tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "TryMarkAsCarried 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
@@ -2367,13 +2731,14 @@ namespace SweetsSpace
         if (it == m_lookup.end() || it->second != SweetsState::Carried)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "ReleaseCarriedSweets rejected tag='" << sweets->GetTag() << "' state="
+            oss << kLogPrefix << "ReleaseCarriedSweets 却下 tag='" << sweets->GetTag() << "' state="
                 << (it == m_lookup.end() ? "<unknown>" : StateToString(it->second)) << "\n";
             DebugTrace(oss.str());
             return false;
         }
 
         SetState(sweets, SweetsState::Active);
+        RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
 
         if (m_physicsMachine)
         {
@@ -2381,12 +2746,12 @@ namespace SweetsSpace
         }
         else if (!m_warnedMissingPhysicsMachine)
         {
-            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets missing physics machine; body will not simulate.\n");
+            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ \n");
             m_warnedMissingPhysicsMachine = true;
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ReleaseCarriedSweets success tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
@@ -2401,12 +2766,31 @@ namespace SweetsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
-    void SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
+    bool SweetsManager::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
-            return;
+            return false;
         }
+
+        const auto cleanupFailedRegistration = [&](const std::string& reason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Error] " << reason << '\n';
+            DebugTrace(oss.str());
+
+            ClearContactState(sweets.get());
+            sweets->MarkPendingDestroy();
+            sweets->Enable(false);
+            UnregisterSweetsFromSystems(sweets, "RegisterWithSystems", false);
+
+            for (auto& entry : m_byState)
+            {
+                entry.second.remove(sweets);
+            }
+            m_lookup.erase(sweets);
+            return false;
+        };
 
         if (m_scheduler)
         {
@@ -2415,8 +2799,8 @@ namespace SweetsSpace
         else if (!m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing scheduler registration: scheduler not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' をスケジューラに登録できなかったよ スケジューラが設定されてないみたい \n";
             DebugTrace(oss.str());
             m_warnedMissingScheduler = true;
         }
@@ -2424,18 +2808,13 @@ namespace SweetsSpace
         if (m_physicsMachine)
         {
             const auto& colliderComponent = sweets->GetBoxColliderComponent();
-            const bool hasColliderComponent = colliderComponent && !colliderComponent->Empty();
-            const auto shapeConfig = sweets->GetBox2DShapeConfig();
-            const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-            const bool hasMeshFixtures = sweets->HasBox2DMesh() || !sweets->GetBox2DBoundary().empty();
+            const bool hasColliderComponent = static_cast<bool>(colliderComponent);
 
-            if (!hasColliderComponent && !hasShapeConfig && !hasMeshFixtures)
+            if (!hasColliderComponent)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Skipping physics registration for sweets '" << sweets->GetTag()
-                    << "': collider configuration missing.\n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
+                return cleanupFailedRegistration(oss.str());
             }
 
             const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
@@ -2445,17 +2824,15 @@ namespace SweetsSpace
                 m_physicsMachine->RegisterBody(*sweets);
             }
 
-            const int fixtureCount = colliderComponent ? static_cast<int>(colliderComponent->fixtures.size()) : 0;
+            const int fixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
             const bool hasBody = sweets->HasBox2DBody();
 
             if (!hasBody || fixtureCount <= 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Physics registration failed for sweets '" << sweets->GetTag()
-                    << "' hasBody=" << std::boolalpha << hasBody
-                    << " fixtures=" << fixtureCount << "\n";
-                DebugTrace(oss.str());
-                return;
+                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
+                    << " fixtures=" << fixtureCount;
+                return cleanupFailedRegistration(oss.str());
             }
 
             m_registeredPhysicsBodies.insert(sweets.get());
@@ -2463,8 +2840,8 @@ namespace SweetsSpace
         else if (!m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing physics registration: physics machine not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' を物理に登録できなかったよ 物理マシンが設定されてない \n";
             DebugTrace(oss.str());
             m_warnedMissingPhysicsMachine = true;
         }
@@ -2476,11 +2853,13 @@ namespace SweetsSpace
         else if (!m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawned sweets '" << sweets->GetTag()
-                << "' missing draw registration: draw system not configured.\n";
+            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+                << "' を描画登録できなかったよ ドローシステムが設定されてない \n";
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
+
+        return true;
     }
 
     void SweetsManager::UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings)
@@ -2497,8 +2876,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister sweets '" << sweets->GetTag()
-                << "': scheduler not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' をスケジューラから外せなかったよ スケジューラ未設定 \n";
             DebugTrace(oss.str());
             m_warnedMissingScheduler = true;
         }
@@ -2514,8 +2893,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister physics for sweets '" << sweets->GetTag()
-                << "': physics machine not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' の物理登録を外せなかったよ 物理マシン未設定 \n";
             DebugTrace(oss.str());
             m_warnedMissingPhysicsMachine = true;
         }
@@ -2527,8 +2906,8 @@ namespace SweetsSpace
         else if (logWarnings && !m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " could not unregister draw entry for sweets '" << sweets->GetTag()
-                << "': draw system not configured.\n";
+            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+                << "' の描画登録を外せなかったよ ドローシステム未設定 \n";
             DebugTrace(oss.str());
             m_warnedMissingDrawSystem = true;
         }
@@ -2558,12 +2937,15 @@ namespace SweetsSpace
 
         const SweetsState previousState = found->second;
         ClearContactState(sweets.get());
+        m_hasSweetsContact.erase(sweets.get());
+        sweets->SetWasEverCarried(false);
         sweets->MarkPendingDestroy();
         sweets->Enable(false);
 
         const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
         UpdateBatchUsage(batchContext, outcome);
 
+        RemoveCreamWeldJointsForSweets(sweets.get(), context);
         UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
@@ -2574,7 +2956,7 @@ namespace SweetsSpace
             m_pendingTopUpAfterDrop = true;
 
             std::ostringstream oss;
-            oss << kLogPrefix << context << " detected live sweets drop below target; scheduling delayed top-up. live="
+            oss << kLogPrefix << context << " で目標より生存スイーツが減ったから、あとで補充するね  live="
                 << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
                 << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
                 << " queue=" << m_spawnQueue.size()
@@ -2585,8 +2967,8 @@ namespace SweetsSpace
 #if defined(_DEBUG)
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << context << " removed sweets tag='" << sweets->GetTag()
-            << "' state=" << StateToString(previousState)
+        oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
+            << "' を削除 state=" << StateToString(previousState)
             << " deleteReason=" << ::SweetsSpace::ToString(reason)
             << " outcome=" << ::SweetsSpace::ToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
@@ -2601,9 +2983,8 @@ namespace SweetsSpace
         if (!file.is_open())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Phase spawn config not found at '" << path << "'. Using defaults.\n";
+            oss << kLogPrefix << "フェーズのスポーン設定が '" << path << "' に見つからないから、デフォルトを使うね \n";
             DebugTrace(oss.str());
-            ApplyDefaultPhaseConfigs();
             return false;
         }
 
@@ -2614,6 +2995,8 @@ namespace SweetsSpace
             bool hasBurstInterval = false;
             bool hasSimultaneous = false;
             bool hasSimultaneousTarget = false;
+            bool hasInitialPerLane = false;
+            bool hasPhaseStartBonusPerLane = false;
             bool hasWeights = false;
         };
 
@@ -2635,6 +3018,11 @@ namespace SweetsSpace
         bool parseError = false;
         std::string line;
         size_t lineNumber = 0;
+        float loadedAutoIntervalFactor = SanitizeGrowthFactor(kAutoSpawnIntervalFactor);
+        float loadedAutoBurstFactor = SanitizeGrowthFactor(kAutoBurstIntervalFactor);
+        int loadedAutoSimultaneousIncrement = SanitizeSimultaneousIncrement(kAutoSimultaneousIncrement);
+        int loadedAutoSimultaneousCap = SanitizeSimultaneousCap(kAutoSimultaneousCap);
+        bool autoGrowthConfigured = false;
 
         while (std::getline(file, line))
         {
@@ -2655,7 +3043,7 @@ namespace SweetsSpace
             if (delimiterPos == std::string::npos)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Spawn config line " << lineNumber << " missing '=' : " << line << "\n";
+                oss << kLogPrefix << "スポーン設定の" << lineNumber << "行目に '=' がないよ: " << line << "\n";
                 DebugTrace(oss.str());
                 parseError = true;
                 continue;
@@ -2663,6 +3051,71 @@ namespace SweetsSpace
 
             const std::string key = TrimToken(line.substr(0, delimiterPos));
             const std::string value = TrimToken(line.substr(delimiterPos + 1));
+
+            if (key == "autoIntervalFactor")
+            {
+                try
+                {
+                    loadedAutoIntervalFactor = SanitizeGrowthFactor(std::stof(value), loadedAutoIntervalFactor);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoIntervalFactor が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoBurstFactor")
+            {
+                try
+                {
+                    loadedAutoBurstFactor = SanitizeGrowthFactor(std::stof(value), loadedAutoBurstFactor);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoBurstFactor が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoSimultaneousIncrement")
+            {
+                try
+                {
+                    loadedAutoSimultaneousIncrement = SanitizeSimultaneousIncrement(std::stoi(value), loadedAutoSimultaneousIncrement);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoSimultaneousIncrement が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
+            else if (key == "autoSimultaneousCap")
+            {
+                try
+                {
+                    loadedAutoSimultaneousCap = SanitizeSimultaneousCap(std::stoi(value), loadedAutoSimultaneousCap);
+                    autoGrowthConfigured = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の autoSimultaneousCap が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+                continue;
+            }
 
             if (key == "phase")
             {
@@ -2674,8 +3127,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse phase index on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目のフェーズ番号が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                     currentPhase = -1;
@@ -2686,8 +3138,7 @@ namespace SweetsSpace
             if (currentPhase < 0)
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Encountered key '" << key << "' on line " << lineNumber
-                    << " before declaring a phase index.\n";
+                oss << kLogPrefix << "フェーズ番号を決める前にキー '" << key << "' (" << lineNumber << "行目) が来たので無視するね \n";
                 DebugTrace(oss.str());
                 parseError = true;
                 continue;
@@ -2704,8 +3155,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse interval on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の interval が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2720,8 +3170,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse burst interval on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の burstInterval が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2736,8 +3185,7 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse simultaneous count on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の simultaneous が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2752,8 +3200,38 @@ namespace SweetsSpace
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse simultaneous target on line " << lineNumber
-                        << ": " << ex.what() << "\n";
+                    oss << kLogPrefix << "" << lineNumber << "行目の simultaneousTarget が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "initialPerLane")
+            {
+                try
+                {
+                    partial.config.initialSpawnPerLane = std::max(0, std::stoi(value));
+                    partial.hasInitialPerLane = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber << "行目の initialPerLane が読めなかったよ: " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "phaseStartBonusPerLane" || key == "phaseBonusPerLane")
+            {
+                try
+                {
+                    partial.config.phaseStartBonusPerLane = std::max(0, std::stoi(value));
+                    partial.hasPhaseStartBonusPerLane = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << lineNumber
+                        << "行目の phaseStartBonusPerLane が読めなかったよ: " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2775,8 +3253,8 @@ namespace SweetsSpace
                     if (!descriptor)
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets type '"
-                            << ToString(entry.kind) << "'.\n";
+                        oss << kLogPrefix << "フェーズ " << currentPhase << " が知らないスイーツタイプ '"
+                            << ToString(entry.kind) << "' を参照してるからスキップするね \n";
                         DebugTrace(oss.str());
                         continue;
                     }
@@ -2785,8 +3263,8 @@ namespace SweetsSpace
                     if (registeredKindsNormalized.find(normalizedKind) == registeredKindsNormalized.end())
                     {
                         std::ostringstream oss;
-                        oss << kLogPrefix << "Phase " << currentPhase << " references unknown sweets kind '"
-                            << descriptor->key << "'.\n";
+                        oss << kLogPrefix << "フェーズ " << currentPhase << " が知らないスイーツ種類 '"
+                            << descriptor->key << "' を参照してるからスキップするね \n";
                         DebugTrace(oss.str());
                         continue;
                     }
@@ -2805,8 +3283,8 @@ namespace SweetsSpace
                 if (partial.config.weights.empty())
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Phase " << currentPhase
-                        << " weights resolved to zero valid entries; falling back to defaults.\n";
+                    oss << kLogPrefix << "フェーズ " << currentPhase
+                        << " の weight が有効な値ゼロになったからデフォルトに戻すね \n";
                     DebugTrace(oss.str());
                     parseError = true;
                 }
@@ -2818,10 +3296,15 @@ namespace SweetsSpace
             else
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Unknown spawn config key '" << key << "' on line " << lineNumber << "\n";
+                oss << kLogPrefix << "" << lineNumber << "行目のキー '" << key << "' は知らない設定だよ \n";
                 DebugTrace(oss.str());
             }
         }
+
+        m_autoSpawnIntervalFactor = loadedAutoIntervalFactor;
+        m_autoBurstIntervalFactor = loadedAutoBurstFactor;
+        m_autoSimultaneousIncrement = loadedAutoSimultaneousIncrement;
+        m_autoSimultaneousCap = loadedAutoSimultaneousCap;
 
         m_phaseConfigs.clear();
         for (const auto& entry : parsed)
@@ -2856,11 +3339,23 @@ namespace SweetsSpace
                 config.weights = defaultWeights;
             }
 
+            if (!entry.second.hasInitialPerLane)
+            {
+                config.initialSpawnPerLane = 0;
+            }
+            config.initialSpawnPerLane = std::max(0, config.initialSpawnPerLane);
+
+            if (!entry.second.hasPhaseStartBonusPerLane)
+            {
+                config.phaseStartBonusPerLane = 0;
+            }
+            config.phaseStartBonusPerLane = std::max(0, config.phaseStartBonusPerLane);
+
             if (config.weights.empty())
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Skipping phase " << entry.first
-                    << " because no valid weights were available even after defaults.\n";
+                oss << kLogPrefix << "フェーズ " << entry.first
+                    << " はデフォルト補填しても weight が残らなかったからスキップするよ \n";
                 DebugTrace(oss.str());
                 continue;
             }
@@ -2872,17 +3367,32 @@ namespace SweetsSpace
 
         if (m_phaseConfigs.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "No valid phase configs parsed; applying defaults.\n");
+            DebugTrace(std::string(kLogPrefix) + "有効なフェーズ設定を読み込めなかったので、デフォルトを当てるね \n");
             ApplyDefaultPhaseConfigs();
+            m_autoSpawnIntervalFactor = loadedAutoIntervalFactor;
+            m_autoBurstIntervalFactor = loadedAutoBurstFactor;
+            m_autoSimultaneousIncrement = loadedAutoSimultaneousIncrement;
+            m_autoSimultaneousCap = loadedAutoSimultaneousCap;
+            LogAutoGenerationPolicy("config-empty");
             return false;
         }
 
         m_activePhaseConfigIndex = -1;
         OnPhaseConfigurationChanged(m_currentPhase);
+        if (autoGrowthConfigured)
+        {
+            std::ostringstream autoOss;
+            autoOss << kLogPrefix << "[Spawn] auto-growth overrides intervalFactor=" << loadedAutoIntervalFactor
+                << " burstFactor=" << loadedAutoBurstFactor
+                << " simultaneousIncrement=" << loadedAutoSimultaneousIncrement
+                << " simultaneousCap=" << loadedAutoSimultaneousCap << "\n";
+            DebugTrace(autoOss.str());
+        }
+        LogAutoGenerationPolicy("config-load");
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Loaded " << m_phaseConfigs.size()
-            << " spawn phases from '" << path << "' (parseError=" << std::boolalpha << parseError << ").\n";
+        oss << kLogPrefix << "'" << path << "' から " << m_phaseConfigs.size()
+            << " 個のスポーンフェーズを読んだよ (parseError=" << std::boolalpha << parseError << ")\n";
         DebugTrace(oss.str());
         return !parseError;
     }
@@ -2932,8 +3442,8 @@ namespace SweetsSpace
         });
 
         std::ostringstream warn;
-        warn << kLogPrefix << "[Spawn] Phase " << phaseIndex
-            << " missing spawn weights for registered kinds:";
+        warn << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
+            << " で登録済みの種類に weight が足りないよ:";
         for (auto missing : missingTypes)
         {
             warn << ' ' << ToString(missing);
@@ -2960,10 +3470,10 @@ namespace SweetsSpace
             presentNormalized.insert(NormalizeKey(ToString(missing)));
 
             std::ostringstream added;
-            added << kLogPrefix << "[Spawn] Phase " << phaseIndex
-                << " auto-added missing kind '" << ToString(missing)
-                << "' with fallback weight=" << std::fixed << std::setprecision(2) << fallbackWeight
-                << " (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
+            added << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
+                << " に不足してた種類 '" << ToString(missing)
+                << "' をフォールバック weight=" << std::fixed << std::setprecision(2) << fallbackWeight
+                << " で自動追加したよ (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
             DebugTrace(added.str());
         }
     }
@@ -2972,7 +3482,7 @@ namespace SweetsSpace
     {
         if (!(std::isfinite(minX) && std::isfinite(maxX)))
         {
-            DebugTrace(std::string(kLogPrefix) + "Ignored horizontal bounds update with non-finite values.\n");
+            DebugTrace(std::string(kLogPrefix) + "有限値じゃない水平境界の更新は無視したよ \n");
             return;
         }
 
@@ -2999,7 +3509,7 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Horizontal bounds updated to min=" << m_minHorizontalBound
+        oss << kLogPrefix << "水平境界を更新したよ min=" << m_minHorizontalBound
             << " max=" << m_maxHorizontalBound
             << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
         DebugTrace(oss.str());
@@ -3013,14 +3523,14 @@ namespace SweetsSpace
         m_generatedColliderThicknessPadding = sanitized;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Generated collider thickness padding set to " << sanitized
-            << (clamped ? " (clamped to minimum of 1.0)" : "")
-            << "; cached colliders will retain previously generated thickness values until regeneration.\n";
+        oss << kLogPrefix << "自動生成コライダーの厚みパディングを " << sanitized
+            << (clamped ? " (最小1.0に丸めた)" : "")
+            << " にしたよ キャッシュ済みコライダーは再生成まで前の厚みのまま \n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Thickness padding unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "厚みパディングは前回と同じだよ \n");
         }
     }
 
@@ -3032,14 +3542,14 @@ namespace SweetsSpace
         m_generatedColliderMinThickness = sanitized;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Generated collider minimum thickness set to " << sanitized
-            << (clamped ? " (clamped to smallest positive float)" : "")
-            << "; new colliders will use flattened thickness.\n";
+        oss << kLogPrefix << "自動生成コライダーの最小厚みを " << sanitized
+            << (clamped ? " (物理下限に丸めた)" : "")
+            << " にしたよ 新しく作るコライダーはその薄さで使うね \n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Minimum thickness unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "最小厚みは前から変わってないよ \n");
         }
     }
 
@@ -3067,10 +3577,97 @@ namespace SweetsSpace
             UpdateContactStateBegin(sweetsB, a);
         }
 
+        ActiveSweets* cream = nullptr;
+        ActiveSweets* other = nullptr;
+        if (sweetsA && sweetsB)
+        {
+            if (IsCreamTag(sweetsA->GetTag()))
+            {
+                cream = sweetsA;
+                other = sweetsB;
+            }
+            else if (IsCreamTag(sweetsB->GetTag()))
+            {
+                cream = sweetsB;
+                other = sweetsA;
+            }
+        }
+
+        if (cream && other)
+        {
+            if (!cream->WasEverCarried())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム '" << cream->GetTag()
+                    << "' はまだ運ばれてないから接着をスキップするよ \n";
+                DebugTrace(oss.str());
+            }
+            else if (m_physicsMachine)
+            {
+                const JointPairKey key = JointPairKey::Make(cream, other);
+                auto existing = m_creamWeldJoints.find(key);
+                if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
+                        << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                    DebugTrace(oss.str());
+                    m_creamWeldJoints.erase(existing);
+                    existing = m_creamWeldJoints.end();
+                }
+
+                if (existing == m_creamWeldJoints.end())
+                {
+                    const auto& posA = cream->GetTransform().position;
+                    const auto& posB = other->GetTransform().position;
+                    const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
+                    const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                        *cream,
+                        *other,
+                        anchor,
+                        kCreamWeldLinearHertz,
+                        kCreamWeldLinearDampingRatio,
+                        kCreamWeldAngularHertz,
+                        kCreamWeldAngularDampingRatio,
+                        false);
+                    if (b2Joint_IsValid(jointId))
+                    {
+                        m_creamWeldJoints.emplace(key, jointId);
+                        cream->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                        cream->SetAngularVelocity(0.0f);
+                        other->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                        other->SetAngularVelocity(0.0f);
+                        const bool creamSupported = HasSupportingContact(*cream, nullptr);
+                        const bool otherSupported = HasSupportingContact(*other, nullptr);
+                        const bool shouldSleep = creamSupported && otherSupported;
+                        if (cream->HasBox2DBody())
+                        {
+                            b2Body_SetAwake(cream->GetBox2DBodyId(), !shouldSleep);
+                        }
+
+                        if (other->HasBox2DBody())
+                        {
+                            b2Body_SetAwake(other->GetBox2DBodyId(), !shouldSleep);
+                        }
+
+                        std::ostringstream cementLog;
+                        cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
+                                  << "' を溶接したよ \n";
+                        DebugTrace(cementLog.str());
+                    }
+                }
+            }
+            else if (!m_warnedMissingPhysicsMachine)
+            {
+                DebugTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
+                m_warnedMissingPhysicsMachine = true;
+            }
+        }
+
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Contact begin between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' が接触し始めたよ \n";
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
         }
@@ -3100,10 +3697,44 @@ namespace SweetsSpace
             UpdateContactStateEnd(sweetsB, a);
         }
 
+        ActiveSweets* cream = nullptr;
+        ActiveSweets* other = nullptr;
+        if (sweetsA && sweetsB)
+        {
+            if (IsCreamTag(sweetsA->GetTag()))
+            {
+                cream = sweetsA;
+                other = sweetsB;
+            }
+            else if (IsCreamTag(sweetsB->GetTag()))
+            {
+                cream = sweetsB;
+                other = sweetsA;
+            }
+        }
+
+        if (cream && other)
+        {
+            const JointPairKey key = JointPairKey::Make(cream, other);
+            auto it = m_creamWeldJoints.find(key);
+            if (it != m_creamWeldJoints.end())
+            {
+                if (m_physicsMachine && b2Joint_IsValid(it->second))
+                {
+                    m_physicsMachine->DestroyJoint(it->second);
+                    std::ostringstream cementLog;
+                    cementLog << kLogPrefix << "cementの溶接を外したよ '" << cream->GetTag() << "' と '"
+                              << other->GetTag() << "'\n";
+                    DebugTrace(cementLog.str());
+                }
+                m_creamWeldJoints.erase(it);
+            }
+        }
+
         if (!m_loggedContactNotification)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Contact end between '" << a->GetTag() << "' and '" << b->GetTag() << "'.\n";
+            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' の接触が終わったよ \n";
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
         }
@@ -3115,15 +3746,58 @@ namespace SweetsSpace
         m_forceGeneratedColliders = force;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Force-generated colliders " << (force ? "enabled" : "disabled")
-            << "; config collider definitions "
-            << (force ? "will be ignored when generated geometry is available." : "may be used as overrides or fallbacks.")
+        oss << kLogPrefix << "生成コライダー強制 " << (force ? "ON" : "OFF")
+            << " 設定ファイルのコライダー定義は"
+            << (force ? "生成ジオメトリがあるときは無視するね " : "上書きやフォールバックとして使うかも ")
             << "\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Force-generated collider flag unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "生成コライダー強制フラグは前回と同じだよ \n");
+        }
+    }
+
+    void SweetsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    {
+        std::unordered_set<std::string> normalizedKinds;
+        normalizedKinds.reserve(kinds.size());
+        for (const auto& kind : kinds)
+        {
+            const auto resolved = ResolveKindKey(kind);
+            normalizedKinds.insert(NormalizeKey(resolved));
+        }
+
+        const bool changed = (m_forceConfigColliders != force) || (normalizedKinds != m_forceConfigColliderKinds);
+        m_forceConfigColliders = force;
+        m_forceConfigColliderKinds = std::move(normalizedKinds);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "設定コライダー強制 " << (force ? "ON" : "OFF")
+            << " kindOverrides=";
+        if (m_forceConfigColliderKinds.empty())
+        {
+            oss << "<none>";
+        }
+        else
+        {
+            bool first = true;
+            for (const auto& kind : m_forceConfigColliderKinds)
+            {
+                if (!first)
+                {
+                    oss << ',';
+                }
+                oss << kind;
+                first = false;
+            }
+        }
+        oss << " 設定ファイルの形状があるなら必ず使うね\n";
+        DebugTrace(oss.str());
+
+        if (!changed)
+        {
+            DebugTrace(std::string(kLogPrefix) + "設定コライダー強制フラグは前と同じだよ \n");
         }
     }
 
@@ -3133,44 +3807,48 @@ namespace SweetsSpace
         m_colliderConfigOverridesEnabled = enabled;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Collider config overrides " << (enabled ? "enabled" : "disabled")
-            << "; config definitions will "
-            << (enabled ? "replace generated colliders when available (unless force-generated is enabled)."
-                : "only be used when generated colliders are unavailable or forced off.")
+        oss << kLogPrefix << "コライダー設定の上書きは " << (enabled ? "有効" : "無効")
+            << " "
+            << (enabled ? "生成済みがあっても（強制生成が有効でなければ）そっちに差し替えるよ "
+                : "生成コライダーがない／オフのときだけ設定を使うよ ")
             << "\n";
         DebugTrace(oss.str());
 
         if (!changed)
         {
-            DebugTrace(std::string(kLogPrefix) + "Collider config override flag unchanged from prior value.\n");
+            DebugTrace(std::string(kLogPrefix) + "コライダー設定の上書きフラグは前と変わらないよ \n");
         }
     }
 
-    void SweetsManager::SetSpawnOrigins(const std::vector<float3>& origins)
+    void SweetsManager::SetSpawnOrigins(
+        const std::vector<float3>& primary,
+        const std::vector<float3>& secondary,
+        std::optional<float> spawnHeightOffset)
     {
-        m_spawnOrigins = origins;
-        m_warnedMissingSpawnOrigins = m_spawnOrigins.empty();
+        m_spawnOriginsPrimary = primary;
+        m_spawnOriginsSecondary = secondary;
+        m_nextSpawnUsesPrimary = true;
+        m_spawnOriginCursorPrimary = 0;
+        m_spawnOriginCursorSecondary = 0;
+        m_warnedMissingSpawnOrigins = m_spawnOriginsPrimary.empty() && m_spawnOriginsSecondary.empty();
+        if (spawnHeightOffset.has_value())
+        {
+            m_spawnHeightOffset = *spawnHeightOffset;
+        }
         const auto seed = std::random_device{}();
         m_random.seed(seed);
 
-
+        const bool hasPrimary = !m_spawnOriginsPrimary.empty();
+        const bool hasSecondary = !m_spawnOriginsSecondary.empty();
+        const bool alternatingLanes = hasPrimary && hasSecondary;
+        const char* laneStrategy = alternatingLanes ? "alternate" : (hasPrimary ? "primary-only" : "secondary-only");
         std::ostringstream oss;
-        oss << kLogPrefix << "Configured " << m_spawnOrigins.size()
-            << " spawn origins (heightOffset=" << m_spawnHeightOffset
-            << " seed=" << seed << ").\n";
-        DebugTrace(oss.str());
-    }
-
-    void SweetsManager::SetRandomRotationEnabled(bool enabled)
-    {
-        m_enableRandomRotation = enabled;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "Random rotation " << (enabled ? "enabled" : "disabled")
-            << " (minYawPitchRollDeg=" << m_randomRotationMinDegrees.x << ',' << m_randomRotationMinDegrees.y
-            << ',' << m_randomRotationMinDegrees.z << " maxYawPitchRollDeg="
-            << m_randomRotationMaxDegrees.x << ',' << m_randomRotationMaxDegrees.y << ','
-            << m_randomRotationMaxDegrees.z << ").\n";
+        oss << kLogPrefix << "スポーン元を設定したよ primary=" << m_spawnOriginsPrimary.size()
+            << " secondary=" << m_spawnOriginsSecondary.size()
+            << " (heightOffset=" << m_spawnHeightOffset
+            << " alternateLanes=" << std::boolalpha << alternatingLanes
+            << " laneStrategy=" << laneStrategy
+            << " seed=" << seed << ") \n";
         DebugTrace(oss.str());
     }
 
@@ -3180,19 +3858,10 @@ namespace SweetsSpace
         m_randomRotationMaxDegrees = maxDegrees;
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Random rotation range updated to minYawPitchRollDeg="
+        oss << kLogPrefix << "スポーン回転の範囲を更新したよ minYawPitchRollDeg="
             << minDegrees.x << ',' << minDegrees.y << ',' << minDegrees.z
             << " maxYawPitchRollDeg=" << maxDegrees.x << ',' << maxDegrees.y << ','
-            << maxDegrees.z << " (enabled=" << std::boolalpha << m_enableRandomRotation << ").\n";
-        DebugTrace(oss.str());
-    }
-
-    void SweetsManager::SetRandomScaleEnabled(bool enabled)
-    {
-        m_enableRandomScale = enabled;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "Random scale " << (enabled ? "enabled" : "disabled") << ".\n";
+            << maxDegrees.z << " (deterministic midpoint適用中)\n";
         DebugTrace(oss.str());
     }
 
@@ -3204,9 +3873,9 @@ namespace SweetsSpace
         const bool capActive = (m_liveSweetsCap > 0);
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Live sweets cap " << (sanitizedCap > 0 ? "set" : "disabled")
+        oss << kLogPrefix << "同時出現上限は " << (sanitizedCap > 0 ? "設定" : "無効")
             << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
-            << ", liveCount=" << m_lastLiveSweetsCount << ").\n";
+            << ", liveCount=" << m_lastLiveSweetsCount << ") にしたよ\n";
         DebugTrace(oss.str());
 
         if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))
@@ -3230,7 +3899,7 @@ namespace SweetsSpace
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Clearing pending spawn queue (" << m_spawnQueue.size() << ").\n";
+            oss << kLogPrefix << "保留中のスポーンキューをクリアするね (" << m_spawnQueue.size() << ") \n";
             DebugTrace(oss.str());
         }
         m_spawnQueue.clear();
@@ -3291,13 +3960,17 @@ namespace SweetsSpace
         if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
         {
             OnPhaseConfigurationChanged(m_currentPhase);
+            if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+            {
+                return;
+            }
         }
 
         if (!(deltaSeconds > 0.0f))
         {
             return;
         }
-        const auto& config = m_phaseConfigs[std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1)];
+        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
@@ -3439,8 +4112,8 @@ namespace SweetsSpace
         if (enqueued != allowedCount)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Spawn enqueue shortfall: enqueued=" << enqueued
-                << " expected=" << allowedCount << "; queueSize=" << m_spawnQueue.size() << ".\n";
+            oss << kLogPrefix << "スポーンキューへの積み込みが足りなかったよ enqueued=" << enqueued
+                << " expected=" << allowedCount << " queueSize=" << m_spawnQueue.size() << ".\n";
             DebugTrace(oss.str());
         }
 
@@ -3468,15 +4141,9 @@ namespace SweetsSpace
                 --m_currentBurstRemaining;
             }
 
-            const std::vector<float3> emitOrigins = m_spawnOrigins.empty()
-                ? std::vector<float3>{ NextSpawnOrigin() }
-                : m_spawnOrigins;
-            for (std::size_t originIndex = 0; originIndex < emitOrigins.size(); ++originIndex)
-            {
-                const float3& origin = emitOrigins[originIndex];
-                Transform transform = BuildSpawnTransform(origin);
-                Spawn(kind, transform);
-            }
+            const SpawnOriginSelection originSelection = NextSpawnOrigin();
+            Transform transform = BuildSpawnTransform(kind, originSelection);
+            Spawn(kind, transform);
         }
 
         if (m_currentBurstRemaining < 0)
@@ -3492,8 +4159,12 @@ namespace SweetsSpace
             return {};
         }
 
-        const int clampedIndex = std::clamp(m_activePhaseConfigIndex, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
-        const auto& config = m_phaseConfigs[clampedIndex];
+        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+        {
+            return {};
+        }
+
+        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
         if (config.weights.empty())
         {
             return {};
@@ -3532,8 +4203,8 @@ namespace SweetsSpace
         if (!descriptor)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to resolve descriptor for sweets type '" << ToString(*chosenType)
-                << "' when choosing spawn kind.\n";
+            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ToString(*chosenType)
+                << "' のデスクリプタを見つけられなかったよ \n";
             DebugTrace(oss.str());
             return {};
         }
@@ -3543,45 +4214,134 @@ namespace SweetsSpace
 
     void SweetsManager::OnPhaseConfigurationChanged(int newPhase)
     {
+        const int sanitizedPhase = std::max(0, newPhase);
+        const int maxExistingIndex = std::max(0, static_cast<int>(m_phaseConfigs.size()) - 1);
+        EnsurePhaseConfigAvailable(std::min(sanitizedPhase, maxExistingIndex));
         if (m_phaseConfigs.empty())
         {
             return;
         }
 
-        const int clamped = std::clamp(newPhase, 0, static_cast<int>(m_phaseConfigs.size()) - 1);
-        if (m_activePhaseConfigIndex == clamped)
+        const int loopModulo = static_cast<int>(m_phaseConfigs.size());
+        int target = sanitizedPhase;
+        if (loopModulo > 0 && target >= loopModulo)
+        {
+            const int loopIndex = target % loopModulo;
+            std::ostringstream loopLog;
+            loopLog << kLogPrefix << "[Spawn] phase=" << sanitizedPhase << " -> reused config index=" << loopIndex
+                << " (loopModulo=" << loopModulo << ")\n";
+            DebugTrace(loopLog.str());
+            target = loopIndex;
+        }
+
+        if (target >= static_cast<int>(m_phaseConfigs.size()))
         {
             return;
         }
 
-        m_activePhaseConfigIndex = clamped;
+        if (m_activePhaseConfigIndex == target)
+        {
+            return;
+        }
+
+        const auto& activeConfig = m_phaseConfigs[target];
+        m_activePhaseConfigIndex = target;
         ForceSpawnRefresh();
-        const float interval = std::max(m_phaseConfigs[clamped].spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        const float interval = std::max(activeConfig.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_spawnTimer = std::max(m_spawnTimer, interval);
-        m_activeBurstInterval = std::max(m_phaseConfigs[clamped].burstIntervalSeconds, kMinimumBurstIntervalSeconds);
-        m_batchStackTarget = std::max(1, m_phaseConfigs[clamped].simultaneousSpawnCount);
-        m_simultaneousLiveTarget = std::max(1, m_phaseConfigs[clamped].simultaneousLiveTarget);
+        m_activeBurstInterval = std::max(activeConfig.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        m_batchStackTarget = std::max(1, activeConfig.simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, activeConfig.simultaneousLiveTarget);
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_stackedInBatch = 0;
+        const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
+        const int phaseStartBonusPerLane = std::max(0, activeConfig.phaseStartBonusPerLane);
+        const int initialPerLane = std::max(0, activeConfig.initialSpawnPerLane);
+        const int phaseStartBonusCount = (phaseStartBonusPerLane > 0 && activeLaneCount > 0)
+            ? phaseStartBonusPerLane * activeLaneCount
+            : 0;
+        const int initialSpawnCount = (initialPerLane > 0 && activeLaneCount > 0)
+            ? initialPerLane * activeLaneCount
+            : 0;
+        const int phaseStartTotal = phaseStartBonusCount + initialSpawnCount;
+        if (phaseStartTotal > 0)
+        {
+            m_activeBurstPlanned = std::max(m_activeBurstPlanned, phaseStartTotal);
+            if (phaseStartBonusCount > 0)
+            {
+                EnqueueSpawns(phaseStartBonusCount);
+            }
+            if (initialSpawnCount > 0)
+            {
+                EnqueueSpawns(initialSpawnCount);
+            }
+            m_burstTimer = m_activeBurstInterval;
+        }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Phase change primed next batch with interval="
+        oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
             << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
-            << " plannedSimultaneous=" << m_phaseConfigs[clamped].simultaneousSpawnCount
+            << " plannedSimultaneous=" << activeConfig.simultaneousSpawnCount
             << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
         DebugTrace(oss.str());
-        LogActiveSpawnParameters(m_phaseConfigs[clamped], clamped);
+        LogActiveSpawnParameters(activeConfig, target);
+    }
+
+    void SweetsManager::EnsurePhaseConfigAvailable(int phaseIndex)
+    {
+        if (phaseIndex < 0)
+        {
+            phaseIndex = 0;
+        }
+
+        if (m_phaseConfigs.empty())
+        {
+            ApplyDefaultPhaseConfigs();
+        }
+
+        if (m_phaseConfigs.empty())
+        {
+            return;
+        }
+
+        while (static_cast<int>(m_phaseConfigs.size()) <= phaseIndex)
+        {
+            const int previousIndex = static_cast<int>(m_phaseConfigs.size()) - 1;
+            PhaseSpawnConfig generated = GenerateAutoPhaseConfig(m_phaseConfigs.back(), previousIndex);
+            const int generatedIndex = static_cast<int>(m_phaseConfigs.size());
+            m_phaseConfigs.push_back(generated);
+            std::ostringstream oss;
+            oss << kLogPrefix << "[Spawn] phase=" << generatedIndex << " (auto-generated from " << previousIndex << ") interval="
+                << std::fixed << std::setprecision(2) << generated.spawnIntervalSeconds
+                << " burstInterval=" << generated.burstIntervalSeconds
+                << " simultaneous=" << generated.simultaneousSpawnCount
+                << " liveTarget=" << generated.simultaneousLiveTarget << "\n";
+            DebugTrace(oss.str());
+            LogActiveSpawnParameters(generated, generatedIndex);
+        }
     }
 
     void SweetsManager::LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "[Spawn] phase=" << phaseIndex
+        oss << kLogPrefix << "[Spawn] phase=" << phaseIndex;
+        if (config.autoGenerated)
+        {
+            oss << " (auto-generated";
+            if (config.generatedFromPhase >= 0)
+            {
+                oss << " from " << config.generatedFromPhase;
+            }
+            oss << ")";
+        }
+        oss
             << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
             << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
             << " liveTarget=" << config.simultaneousLiveTarget
+            << " initialPerLane=" << config.initialSpawnPerLane
+            << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
             << " weights=";
 
         if (config.weights.empty())
@@ -3603,13 +4363,74 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
+    PhaseSpawnConfig SweetsManager::GenerateAutoPhaseConfig(const PhaseSpawnConfig& previous, int previousIndex) const
+    {
+        PhaseSpawnConfig generated = previous;
+        generated.autoGenerated = true;
+        generated.generatedFromPhase = previousIndex;
+        const float sanitizedIntervalFactor = SanitizeGrowthFactor(m_autoSpawnIntervalFactor);
+        const float sanitizedBurstFactor = SanitizeGrowthFactor(m_autoBurstIntervalFactor);
+        generated.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds,
+            previous.spawnIntervalSeconds * sanitizedIntervalFactor);
+        generated.burstIntervalSeconds = std::max(kMinimumBurstIntervalSeconds,
+            previous.burstIntervalSeconds * sanitizedBurstFactor);
+
+        const int sanitizedIncrement = SanitizeSimultaneousIncrement(m_autoSimultaneousIncrement);
+        const int sanitizedCap = SanitizeSimultaneousCap(m_autoSimultaneousCap);
+        const int nextSimultaneous = std::min(sanitizedCap,
+            previous.simultaneousSpawnCount + sanitizedIncrement);
+        const int nextLiveTarget = std::min(sanitizedCap,
+            previous.simultaneousLiveTarget + sanitizedIncrement);
+        generated.simultaneousSpawnCount = std::max(1, nextSimultaneous);
+        generated.simultaneousLiveTarget = std::max(1, nextLiveTarget);
+        generated.weights = NormalizeWeights(previous.weights);
+        if (generated.weights.empty())
+        {
+            DebugTrace(std::string(kLogPrefix) + "[Spawn] auto-generationに使える weight が無かったからデフォルトで補うね\n");
+            generated.weights = NormalizeWeights(BuildDefaultWeights());
+        }
+        return generated;
+    }
+
+    std::vector<WeightedSweetsType> SweetsManager::NormalizeWeights(const std::vector<WeightedSweetsType>& weights) const
+    {
+        float total = 0.0f;
+        for (const auto& entry : weights)
+        {
+            total += entry.weight;
+        }
+
+        if (!(total > 0.0f))
+        {
+            return weights;
+        }
+
+        std::vector<WeightedSweetsType> normalized;
+        normalized.reserve(weights.size());
+        for (const auto& entry : weights)
+        {
+            normalized.push_back({ entry.kind, entry.weight / total });
+        }
+        return normalized;
+    }
+
+    void SweetsManager::LogAutoGenerationPolicy(const char* context) const
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[Spawn] auto-generation policy (" << context << ") intervalFactor=" << m_autoSpawnIntervalFactor
+            << " burstFactor=" << m_autoBurstIntervalFactor
+            << " simultaneousIncrement=" << m_autoSimultaneousIncrement
+            << " simultaneousCap=" << m_autoSimultaneousCap << "\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsManager::ApplyDefaultPhaseConfigs()
     {
         m_phaseConfigs.clear();
         std::vector<WeightedSweetsType> baseWeights = BuildDefaultWeights();
         if (baseWeights.empty())
         {
-            DebugTrace(std::string(kLogPrefix) + "Cannot build default spawn configs: no sweets registered.\n");
+            DebugTrace(std::string(kLogPrefix) + "デフォルトのスポーン設定を作れないよ スイーツが何も登録されてない \n");
             return;
         }
 
@@ -3632,12 +4453,17 @@ namespace SweetsSpace
         m_phaseConfigs.push_back(phase1);
         m_phaseConfigs.push_back(phase2);
 
+        m_autoSpawnIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
+        m_autoBurstIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
+        m_autoSimultaneousIncrement = SanitizeSimultaneousIncrement(kDefaultAutoSimultaneousIncrement);
+        m_autoSimultaneousCap = SanitizeSimultaneousCap(kDefaultAutoSimultaneousCap);
         m_activePhaseConfigIndex = -1;
         ForceSpawnRefresh();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "Applied default spawn configs (" << m_phaseConfigs.size() << " phases).\n";
+        oss << kLogPrefix << "デフォルトのスポーン設定を適用したよ (" << m_phaseConfigs.size() << " phases) \n";
         DebugTrace(oss.str());
+        LogAutoGenerationPolicy("defaults");
     }
 
     std::vector<WeightedSweetsType> SweetsManager::BuildDefaultWeights() const
@@ -3656,16 +4482,16 @@ namespace SweetsSpace
             /*else if (m_warnedMissingFactoryPresetKinds.insert(entry.first).second)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "No factory preset found for kind '" << entry.first
-                    << "' while building default weights; using fallback weight=" << spawnWeight << ".\n";
+                warn << kLogPrefix << "種類 '" << entry.first
+                    << "' に工場プリセットが見つからなかったから、デフォルトウェイト=" << spawnWeight << " で代用するね \n";
                 DebugTrace(warn.str());
-            }*/ //̃CoOĂ̂ŃRgAEgi~nCj
+            }*/ // ここは足りないプリセットに気付いたとき用のデバッグ痕跡
 
             if (spawnWeight <= 0.0f)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Skipping default spawn weight for kind '" << entry.first
-                    << "' because spawnWeight=" << spawnWeight << "<= 0.\n";
+                warn << kLogPrefix << "種類 '" << entry.first
+                    << "' のデフォルトウェイトが " << spawnWeight << "<= 0 だったのでスキップするね \n";
                 DebugTrace(warn.str());
                 continue;
             }
@@ -3674,46 +4500,78 @@ namespace SweetsSpace
             if (!resolvedType)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Skipping default spawn weight for unknown sweets type key '" << entry.first
-                    << "'.\n";
+                warn << kLogPrefix << "知らないスイーツキー '" << entry.first
+                    << "' のデフォルトウェイトはスキップするよ \n";
                 DebugTrace(warn.str());
                 continue;
             }
+
+            std::ostringstream resolved;
+            resolved << kLogPrefix << "[SpawnWeights] key='" << entry.first << "' -> type="
+                << ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
+            Diagnostics::LogInfo(resolved.str());
 
             weights.push_back({ *resolvedType, spawnWeight });
         }
         return weights;
     }
 
-    float3 SweetsManager::NextSpawnOrigin()
+    SweetsManager::SpawnOriginSelection SweetsManager::NextSpawnOrigin()
     {
-        if (m_spawnOrigins.empty())
+        const bool hasPrimary = !m_spawnOriginsPrimary.empty();
+        const bool hasSecondary = !m_spawnOriginsSecondary.empty();
+        if (!hasPrimary && !hasSecondary)
         {
             if (!m_warnedMissingSpawnOrigins)
             {
-                DebugTrace(std::string(kLogPrefix) + "Spawn origin list is empty; using world origin.\n");
+                DebugTrace(std::string(kLogPrefix) + "スポーン元リストが空だから、ワールド原点を使うね \n");
                 m_warnedMissingSpawnOrigins = true;
             }
-            return float3{ 0.0f, 0.0f, 0.0f };
+            return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, "fallback" };
         }
 
-        std::uniform_int_distribution<std::size_t> dist(0, m_spawnOrigins.size() - 1);
-        const std::size_t chosenIndex = dist(m_random);
-        const float3 origin = m_spawnOrigins[chosenIndex];
+        auto selectFromLane = [](std::vector<float3>& origins, std::size_t& cursor, const char* label)
+        {
+            if (origins.empty())
+            {
+                return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, label };
+            }
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Selected spawn origin index=" << chosenIndex
-            << " position=(" << origin.x << ',' << origin.y << ',' << origin.z
-            << ") of " << m_spawnOrigins.size() << " configured origins.\n";
-        DebugTrace(oss.str());
+            cursor = cursor % origins.size();
+            const std::size_t chosenIndex = cursor;
+            cursor = (cursor + 1) % origins.size();
+            const float3 origin = origins[chosenIndex];
 
-        return origin;
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnOrigin] lane=" << label
+                << " index=" << chosenIndex << "/" << origins.size()
+                << " position=(" << origin.x << ',' << origin.y << ',' << origin.z << ")\n";
+            DebugTrace(oss.str());
+
+            return SpawnOriginSelection{ origin, label };
+        };
+
+        if (hasPrimary && hasSecondary)
+        {
+            SpawnOriginSelection selection = m_nextSpawnUsesPrimary
+                ? selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary")
+                : selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
+            m_nextSpawnUsesPrimary = !m_nextSpawnUsesPrimary;
+            return selection;
+        }
+
+        if (hasPrimary)
+        {
+            return selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary");
+        }
+
+        return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
     }
-
-    Transform SweetsManager::BuildSpawnTransform(const float3& origin) const
+   
+    Transform SweetsManager::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)
     {
         Transform transform{};
-        transform.position = origin;
+        transform.position = originSelection.origin;
         static bool s_flipSpawnSign = false;
         s_flipSpawnSign = !s_flipSpawnSign;
         std::uniform_real_distribution<float> xJitterDist(1.0f, 1.5f);
@@ -3723,33 +4581,55 @@ namespace SweetsSpace
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 
-        if (m_enableRandomRotation)
+        auto presetIt = m_factoryPresets.find(normalizedKind);
+        if (presetIt != m_factoryPresets.end())
         {
-            const auto sampleRotation = [&](float minDeg, float maxDeg)
-            {
-                const float lo = std::min(minDeg, maxDeg);
-                const float hi = std::max(minDeg, maxDeg);
-                if (lo == hi)
-                {
-                    return lo;
-                }
-
-                std::uniform_real_distribution<float> dist(lo, hi);
-                return dist(m_random);
-            };
-
-            const float sampledPitch = sampleRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
-            const float sampledYaw = sampleRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
-            const float sampledRoll = sampleRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
-            transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Spawn rotation sampled pitch/yaw/roll(deg)="
-                << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
-                << " origin=" << origin.x << ',' << origin.y << ',' << origin.z << "\n";
-            DebugTrace(oss.str());
+            transform.scale = presetIt->second.scale;
+        }
+        else if (m_warnedMissingFactoryPresetKinds.insert(normalizedKind).second)
+        {
+            std::ostringstream warn;
+            warn << kLogPrefix << "種類 '" << normalizedKind
+                << "' の工場プリセットが見つからないから、スケールはデフォルト(1,1,1)にしとくね\n";
+            DebugTrace(warn.str());
         }
 
+        const auto computeDeterministicRotation = [](float minDeg, float maxDeg)
+        {
+            const float lo = std::min(minDeg, maxDeg);
+            const float hi = std::max(minDeg, maxDeg);
+            return (lo + hi) * 0.5f;
+        };
+
+        const float sampledPitch = computeDeterministicRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
+        const float sampledYaw = computeDeterministicRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
+        const float sampledRoll = computeDeterministicRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
+        transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
+            << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+            << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
+            << " origin=" << originSelection.origin.x << ',' << originSelection.origin.y << ',' << originSelection.origin.z
+            << " lane=" << originSelection.laneLabel << "\n";
+        DebugTrace(oss.str());
+
         return transform;
+    }
+
+
+    void SweetsManager::OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        const auto lookup = m_lookup.find(sweets);
+        const SweetsState currentState = (lookup != m_lookup.end()) ? lookup->second : SweetsState::Active;
+        if (currentState != SweetsState::Stacked)
+        {
+            SetState(sweets, SweetsState::Stacked);
+        }
     }
 }

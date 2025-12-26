@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Core/UpdateNode.h"
-
 #include <memory>
 #include <vector>
-#include <unordered_map>
-#include "Entities/CollisionEntity.h"
+#include <unordered_set>
+#include <string>
+#include "Core/UpdateNode.h"
+#include "Entities/PhysicalEntity.h"
 #include "Transform.h"
 #include "ModelDX.h"
 
@@ -15,8 +15,11 @@ namespace CameraSpace
 }
 
 class ModelRender;
+class Animation;
 
 extern bool g_DrawColliders;
+extern bool g_DrawColliderBounds;
+extern bool g_DebugDrawEnabled;
 
 namespace Systems
 {
@@ -28,9 +31,11 @@ namespace Systems
 
                 void SetRenderer(ModelRender* renderer);
                 void RegisterRenderable(Entities::Entity& entity);
-                void RegisterRenderable(Entities::CollisionEntity& entity);
+                void RegisterCollider(Entities::PhysicalEntity& entity);
                 void UnregisterRenderable(Entities::Entity& entity);
                 void ClearRenderables();
+
+                void SetStagePlaneZ(float planeZ);
 
                 void OnUpdate(Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
@@ -43,23 +48,29 @@ namespace Systems
                 {
                         Entities::Entity* source;
                         Render::Model* model;
+                        Animation* animation;
                         Transform transform;
                 };
 
                 struct DrawColliderCommand
                 {
-                    Entities::CollisionEntity* source;
+                    Entities::PhysicalEntity* physicalEntity;
                 };
 
                 bool ValidateTransform(const Transform& transform, const Entities::Entity* source) const;
                 void RenderEntity(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void RenderCollision(const std::shared_ptr<CameraSpace::ICamera>& camera);
+                void RenderColliderComponent(const Entities::PhysicalEntity& entity) const;
 
 
                 ModelRender* m_renderer;
                 std::vector<Entities::Entity*> m_renderables;
-                std::unordered_map<Entities::Entity*, Collision::ICollider*> m_colliderRenderables;
+                std::unordered_set<Entities::PhysicalEntity*> m_physicalColliderRenderables;
                 std::vector<DrawCommand> m_commands;
                 std::vector<DrawColliderCommand> m_colliderCommands;
+                bool m_hasStagePlaneZ;
+                float m_stagePlaneZ;
+                mutable std::unordered_set<const Entities::Entity*> m_missingModelLogged;
+                mutable std::unordered_set<const Entities::Entity*> m_invalidTransformLogged;
         };
 }

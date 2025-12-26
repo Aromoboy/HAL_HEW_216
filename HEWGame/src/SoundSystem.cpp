@@ -1,11 +1,11 @@
 #include "SoundSystem.h"
 #include "Debug.h"
-
+#include <mutex>
 
 #ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
 #define fourccDATA 'data'
-#define fourccFMT 'fmt '
+#define fourccFMT  'fmt '
 #define fourccWAVE 'WAVE'
 #define fourccXWMA 'XWMA'
 #define fourccDPDS 'dpds'
@@ -14,255 +14,290 @@
 #ifndef _XBOX //Little-Endian
 #define fourccRIFF 'FFIR'
 #define fourccDATA 'atad'
-#define fourccFMT ' tmf'
+#define fourccFMT  ' tmf'
 #define fourccWAVE 'EVAW'
 #define fourccXWMA 'AMWX'
 #define fourccDPDS 'sdpd'
 #endif
 
-
+namespace
+{
+    std::once_flag g_comInitFlag;
+    HRESULT g_comInitResult = E_FAIL;
+}
 
 SoundSystem::SoundSystem()
+    : m_pAudio2(nullptr)
+    , m_pMasterVoice(nullptr)
+    , m_nextHandle(1)
 {
 #ifdef _DEBUG
-	DebugMessage("SoundSystem‚Í§ì’†‚Å‚·Ag—p‚µ‚È‚¢‚Å‚­‚¾‚³‚¢B");
+    DebugLog::DebugMessage("SoundSystem initializing.");
 #endif
 
+    std::call_once(g_comInitFlag, []()
+        {
+            g_comInitResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        });
 
+    if (FAILED(g_comInitResult))
 
-	m_pAudio2 = nullptr;
-	m_pMasterVoice = nullptr;
-	m_pSourceVoice = nullptr;
+    {
+#ifdef _DEBUG
+        DebugLog::DebugMessage("Failed to initialize COM.");
+#endif
+        return;
+    }
 
-    HRESULT result;
-    result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    HRESULT result = S_OK;
 
-
+    result = XAudio2Create(&m_pAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
     if (FAILED(result))
     {
 #ifdef _DEBUG
-        DebugMessage("COM‚Ì‰Šú‰»‚É¸”s");
-#endif // _DEBUG
-        return;
-    }
-
-
-
-
-    // XAudio2‚Ì‰Šú‰»
-    if (FAILED(result = XAudio2Create(&m_pAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
-    {
-#ifdef _DEBUG
-        DebugMessage("XAudio‚Ìì¬‚É¸”s‚µ‚Ü‚µ‚½B");
+        DebugLog::DebugMessage("Failed to create XAudio2 instance.");
 #endif
         return;
     }
 
-	if (FAILED(result = m_pAudio2->CreateMasteringVoice(&m_pMasterVoice))) 
+    result = m_pAudio2->CreateMasteringVoice(&m_pMasterVoice);
+    if (FAILED(result))
     {
 #ifdef _DEBUG
-        DebugMessage("XAudio‚Ìì¬‚É¸”s‚µ‚Ü‚µ‚½B");
+        DebugLog::DebugMessage("Failed to create mastering voice.");
 #endif
         return;
     }
-
-
-
-
-    
 }
 
 SoundSystem::~SoundSystem()
 {
-	if(m_pSourceVoice) m_pSourceVoice->DestroyVoice();
-    if(m_pMasterVoice) m_pMasterVoice->DestroyVoice();
-    if(m_pAudio2) m_pAudio2->Release();
+    // å…¨ã¦ã®SourceVoiceã‚’åœæ­¢ã—ã¦ç ´æ£„
+    for (auto& pair : m_sourceVoices)
+    {
+        if (pair.second)
+        {
+            pair.second->Stop(0);  // ã™ãã«åœæ­¢
+            pair.second->FlushSourceBuffers();  // ãƒãƒƒãƒ•ã‚¡ã‚’ãƒ•ãƒ©ãƒƒã‚·ãƒ¥
+            pair.second->DestroyVoice();
+        }
+    }
+    m_sourceVoices.clear();
 
-    CoUninitialize();
+    // MasterVoiceã‚’ç ´æ£„
+    if (m_pMasterVoice)
+    {
+        m_pMasterVoice->DestroyVoice();
+        m_pMasterVoice = nullptr;
+    }
+
+    // XAudio2ã‚’è§£æ”¾
+    if (m_pAudio2)
+    {
+        m_pAudio2->Release();
+        m_pAudio2 = nullptr;
+    }
+
 }
 
 
+void SoundSystem::CleanupFinishedVoices()
+{
+    // å†ç”ŸãŒçµ‚ã‚ã£ãŸãƒœã‚¤ã‚¹ã‚’å‰Šé™¤
+    auto it = m_sourceVoices.begin();
+    while (it != m_sourceVoices.end())
+    {
+        if (it->second)
+        {
+            XAUDIO2_VOICE_STATE state;
+            it->second->GetState(&state);
 
+            // ã‚­ãƒ¥ãƒ¼ã«ãƒãƒƒãƒ•ã‚¡ãŒç„¡ã„ = å†ç”Ÿçµ‚äº†
+            if (state.BuffersQueued == 0)
+            {
+                it->second->DestroyVoice();
+                it = m_sourceVoices.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
+}
 
 bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData)
 {
-	// ‰½‚©“ü‚Á‚Ä‚¢‚é‚Æ¢‚é‚½‚ß‰Šú‰»
-	if (outData)
-	{
-		free(outData->m_soundBuffer);
-	}
-	// nullptr‚È‚ç•Ô‚·
-	else return false;
+    if (!outData)
+    {
+        return false;
+    }
 
-	HMMIO mmioHandle = nullptr;
+    // æ—¢ã«èª­ã¿è¾¼ã¿æ¸ˆã¿ãªã‚‰å†èª­ã¿è¾¼ã¿ã—ãªã„
+    if (outData->m_soundBuffer != nullptr && outData->m_size > 0)
+    {
+        return true;
+    }
 
-	// ƒ`ƒƒƒ“ƒNî•ñ
-	MMCKINFO chunkInfo{};
+    delete[] outData->m_soundBuffer;
+    outData->m_soundBuffer = nullptr;
 
-	// RIFFƒ`ƒƒƒ“ƒN—p
-	MMCKINFO riffChunkInfo{};
-
-	// WAVƒtƒ@ƒCƒ‹‚ğŠJ‚­
-	mmioHandle = mmioOpen(
-		(LPSTR)a_wFilePath.data(),
-		nullptr,
-		MMIO_READ
-	);
-
-	if (!mmioHandle) return false;
-
-	riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
-
-	// RIFFƒ`ƒƒƒ“ƒN‚ÉN“ü‚·‚é
-	if (mmioDescend(
-		mmioHandle,		// MMIOƒnƒ“ƒhƒ‹
-		&riffChunkInfo,	// æ“¾‚µ‚½ƒ`ƒƒƒ“ƒN‚Ìî•ñ
-		nullptr,		// eƒ`ƒƒƒ“ƒN
-		MMIO_FINDRIFF	// æ“¾î•ñ‚Ìí—Ş
-	) != MMSYSERR_NOERROR)
-	{
-		// Riffƒ`ƒƒƒ“ƒN‚ÉN“ü¸”s
+    HMMIO mmioHandle = mmioOpenA(const_cast<LPSTR>(a_wFilePath.c_str()), nullptr, MMIO_READ | MMIO_ALLOCBUF);
+    if (!mmioHandle)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:Riffƒ`ƒƒƒ“ƒN‚ÉN“ü¸”s‚µ‚Ü‚µ‚½B");
+        DebugLog::DebugMessage("Failed to open wave file.");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        return false;
+    }
 
-	// N“üæ‚Ìƒ`ƒƒƒ“ƒN‚ğ"fmt "‚Æ‚µ‚Äİ’è‚·‚é
-	chunkInfo.ckid = mmioFOURCC('f', 'm', 't', ' ');
-	if (mmioDescend(
-		mmioHandle,
-		&chunkInfo,
-		&riffChunkInfo,
-		MMIO_FINDCHUNK
-	) != MMSYSERR_NOERROR)
-	{
-		// fmtƒ`ƒƒƒ“ƒN‚ª‚È‚¢
+    MMCKINFO chunkInfo{};
+    MMCKINFO riffChunkInfo{};
+    riffChunkInfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
+
+    if (mmioDescend(mmioHandle, &riffChunkInfo, nullptr, MMIO_FINDRIFF) != MMSYSERR_NOERROR)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:fmtƒ`ƒƒƒ“ƒN‚ª‘¶İ‚µ‚Ü‚¹‚ñB");
+        DebugMessage("Sound.cpp:Riffãƒãƒ£ãƒ³ã‚¯ã«ä¾µå…¥å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
 
-	DWORD readSize = mmioRead(
-		mmioHandle,						// ƒnƒ“ƒhƒ‹
-		(HPSTR)&outData->m_wavFormat,	// “Ç‚İ‚İ—pƒoƒbƒtƒ@
-		chunkInfo.cksize				// ƒoƒbƒtƒ@ƒTƒCƒY
-	);
-
-	if (readSize != chunkInfo.cksize)
-	{
-		// “Ç‚İ‚İƒTƒCƒY‚ªˆê’v‚µ‚Ä‚¢‚Ü‚¹‚ñ
+    chunkInfo.ckid = mmioFOURCC('f', 'm', 't', ' ');
+    if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.h:“Ç‚İ‚İƒTƒCƒY‚ªˆê’v‚µ‚Ä‚¢‚Ü‚¹‚ñB");
+        DebugMessage("Sound.cpp:fmtãƒãƒ£ãƒ³ã‚¯ãŒå­˜åœ¨ã—ã¾ã›ã‚“");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
 
-	// ƒtƒH[ƒ}ƒbƒgƒ`ƒFƒbƒN
-	if (outData->m_wavFormat.wFormatTag != WAVE_FORMAT_PCM)
-	{
-		// waveƒtƒH[ƒ}ƒbƒgƒGƒ‰[‚Å‚·
-
+    DWORD readSize = mmioRead(mmioHandle, (HPSTR)&outData->m_wavFormat, chunkInfo.cksize);
+    if (readSize != chunkInfo.cksize)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:waveƒtƒH[ƒ}ƒbƒgƒGƒ‰[‚Å‚·");
+        DebugMessage("Sound.h:èª­ã¿è¾¼ã¿ã‚µã‚¤ã‚ºãŒä¸€è‡´ã—ã¦ã„ã¾ã›ã‚“");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
 
-	// fmtƒ`ƒƒƒ“ƒN‚ğ‘Şo‚·‚é
-	if (mmioAscend(mmioHandle, &chunkInfo, 0) != MMSYSERR_NOERROR)
-	{
-		// fmtƒ`ƒƒƒ“ƒN‘Şo¸”s
+    if (outData->m_wavFormat.wFormatTag != WAVE_FORMAT_PCM)
+    {
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
+
+    if (mmioAscend(mmioHandle, &chunkInfo, 0) != MMSYSERR_NOERROR)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.h:fmtƒ`ƒƒƒ“ƒN‚©‚ç‚Ì‘Şo‚É¸”s‚µ‚Ü‚µ‚½B");
+        DebugMessage("Sound.h:fmtãƒãƒ£ãƒ³ã‚¯ã‹ã‚‰ã®é€€å‡ºã«å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
 
-	// dataƒ`ƒƒƒ“ƒN‚ÉN“ü
-	chunkInfo.ckid = mmioFOURCC('d', 'a', 't', 'a');
-	if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
-	{
-		// dataƒ`ƒƒƒ“ƒNN“ü¸”s
+    chunkInfo.ckid = mmioFOURCC('d', 'a', 't', 'a');
+    if (mmioDescend(mmioHandle, &chunkInfo, &riffChunkInfo, MMIO_FINDCHUNK) != MMSYSERR_NOERROR)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataƒ`ƒƒƒ“ƒN‚Ö‚ÌN“ü‚É¸”s‚µ‚Ü‚µ‚½B");
+        DebugMessage("Sound.cpp:dataãƒãƒ£ãƒ³ã‚¯ã¸ã®ä¾µå…¥ã«å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        return false;
+    }
 
-	// ƒTƒCƒY•Û‘¶
-	outData->m_size = chunkInfo.cksize;
+    outData->m_size = chunkInfo.cksize;
+    outData->m_soundBuffer = new char[chunkInfo.cksize];
+    readSize = mmioRead(mmioHandle, (HPSTR)outData->m_soundBuffer, chunkInfo.cksize);
 
-	// dataƒ`ƒƒƒ“ƒN“Ç‚İ‚İ
-	outData->m_soundBuffer = new char[chunkInfo.cksize];
-	readSize = mmioRead(mmioHandle, (HPSTR)outData->m_soundBuffer, chunkInfo.cksize);
-	if (readSize != chunkInfo.cksize)
-	{
-		// dataƒ`ƒƒƒ“ƒN“Ç‚İ‚İ¸”s
+    if (readSize != chunkInfo.cksize)
+    {
 #ifdef _DEBUG
-		DebugMessage("Sound.cpp:dataƒ`ƒƒƒ“ƒN‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½B");
+        DebugMessage("Sound.cpp:dataãƒãƒ£ãƒ³ã‚¯ã®èª­ã¿è¾¼ã¿ã«å¤±æ•—ã—ã¾ã—ãŸ");
 #endif
-		mmioClose(mmioHandle, MMIO_FHOPEN);
-		delete[] outData->m_soundBuffer;
-		return false;
-	}
+        mmioClose(mmioHandle, MMIO_FHOPEN);
+        delete[] outData->m_soundBuffer;
+        return false;
+    }
 
-	mmioClose(mmioHandle, MMIO_FHOPEN);
-
-	return true;
+    mmioClose(mmioHandle, MMIO_FHOPEN);
+    return true;
 }
 
-
-bool SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop)
+int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume)
 {
-	if (!LoadWaveFile(fileName, outData))
-	{
-		// Waveƒtƒ@ƒCƒ‹“Ç‚İ‚İ¸”s
-		
-		return false;
-	}
+    CleanupFinishedVoices();
 
-	//SourceVoice‚Ìì¬
-	WAVEFORMATEX waveFormat{};
+    if (!LoadWaveFile(fileName, outData))
+    {
+        return -1;  // å¤±æ•—
+    }
 
-	// ”gŒ`ƒtƒH[ƒ}ƒbƒg‚Ìİ’è
-	memcpy(&waveFormat, &outData->m_wavFormat, sizeof(outData->m_wavFormat));
+    WAVEFORMATEX waveFormat{};
+    memcpy(&waveFormat, &outData->m_wavFormat, sizeof(outData->m_wavFormat));
+    waveFormat.wBitsPerSample = outData->m_wavFormat.nBlockAlign * 8 / outData->m_wavFormat.nChannels;
 
-	// 1ƒTƒ“ƒvƒ‹“–‚½‚è‚Ìƒoƒbƒtƒ@ƒTƒCƒY‚ğZo
-	waveFormat.wBitsPerSample = outData->m_wavFormat.nBlockAlign * 8 / outData->m_wavFormat.nChannels;
+    IXAudio2SourceVoice* pNewSourceVoice = nullptr;
+    HRESULT result = m_pAudio2->CreateSourceVoice(&pNewSourceVoice, (WAVEFORMATEX*)&waveFormat);
+    if (FAILED(result))
+    {
+        DebugMessage("SourceVoiceã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸ");
+        return -1;
+    }
 
-	// ƒ\[ƒXƒ{ƒCƒX‚Ìì¬ ‚±‚±‚Å‚ÍƒtƒH[ƒ}ƒbƒg‚Ì‚İ“n‚Á‚Ä‚¢‚é
-	HRESULT result = m_pAudio2->CreateSourceVoice(&m_pSourceVoice, (WAVEFORMATEX*)&waveFormat);
-	if (FAILED(result))
-	{
-		// SourceVoiceì¬¸”s
-		DebugMessage("SourceVoice‚Ìì¬‚É¸”s‚µ‚Ü‚µ‚½B");
-		return false;
-	}
+    pNewSourceVoice->SetVolume(volume);
 
+    XAUDIO2_BUFFER xAudio2Buffer{};
+    xAudio2Buffer.pAudioData = (BYTE*)outData->m_soundBuffer;
+    xAudio2Buffer.Flags = XAUDIO2_END_OF_STREAM;
+    xAudio2Buffer.AudioBytes = outData->m_size;
+    xAudio2Buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
 
-	// ”gŒ`ƒf[ƒ^(‰¹ƒf[ƒ^–{‘Ì‚ğƒ\[ƒXƒ{ƒCƒX‚É“n‚·)
+    pNewSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
+    pNewSourceVoice->Start();
 
-	XAUDIO2_BUFFER xAudio2Buffer{};
-	xAudio2Buffer.pAudioData = (BYTE*)outData->m_soundBuffer;
-	xAudio2Buffer.Flags = XAUDIO2_END_OF_STREAM;
-	xAudio2Buffer.AudioBytes = outData->m_size;
+    // ãƒãƒ³ãƒ‰ãƒ«ã‚’ç”Ÿæˆã—ã¦ç®¡ç†
+    int handle = m_nextHandle++;
+    m_sourceVoices[handle] = pNewSourceVoice;
 
-	// O€”äŠr‰‰Zq‚ğ—p‚¢‚Äƒ‹[ƒv‚·‚é‚©”Û‚©‚Ìİ’è‚ğ‚·‚é
-	xAudio2Buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
+    return handle;  // ãƒãƒ³ãƒ‰ãƒ«ã‚’è¿”ã™
+}
 
-	m_pSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
+void SoundSystem::SetVolume(int handle, float volume)
+{
+    auto it = m_sourceVoices.find(handle);
+    if (it != m_sourceVoices.end() && it->second)
+    {
+        // 0.0f ~ 1.0f ã«ã‚¯ãƒ©ãƒ³ãƒ—
+        float clampedVolume = std::max(0.0f, std::min(1.0f, volume));
+        it->second->SetVolume(clampedVolume);
+    }
+}
 
-	// ÀÛ‚É‰¹‚ğ–Â‚ç‚·
-	m_pSourceVoice->Start();
+void SoundSystem::StopSound(int handle)
+{
+    auto it = m_sourceVoices.find(handle);
+    if (it != m_sourceVoices.end() && it->second)
+    {
+        it->second->Stop(0);  // ã™ãã«åœæ­¢
+        it->second->FlushSourceBuffers();  // ãƒãƒƒãƒ•ã‚¡ã‚’ãƒ•ãƒ©ãƒƒã‚·ãƒ¥
+        it->second->DestroyVoice();
+        m_sourceVoices.erase(it);
+    }
+}
 
-	return true;
+void SoundSystem::StopAllSounds()
+{
+    for (auto& pair : m_sourceVoices)
+    {
+        if (pair.second)
+        {
+            pair.second->Stop(0);
+            pair.second->FlushSourceBuffers();
+            pair.second->DestroyVoice();
+        }
+    }
+    m_sourceVoices.clear();
 }
 

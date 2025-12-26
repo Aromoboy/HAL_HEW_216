@@ -1,27 +1,42 @@
-// DirectXTK (DirectX Tool Kit) gpoȂ̂ŁA
-// W Windows Imaging Component (WIC) 𒼐ڎgp
-// eNX`[hĂ܂B
-// ̂߁Awincodec.h ̃CN[h
-// windowscodecs.lib ̃J[ݒ肪KvłB
+// DirectXTK (DirectX Tool Kit) を使うため
+// Windows Imaging Component (WIC) を経由して読み込む
+// テクスチャ読み込み関数を使用
+// そのため wincodec.h をインクルード
+// windowscodecs.lib をリンカ設定に追加する必要がある
 #include "TextureCache.h"
 #include "Debug.h"
+#include "Diagnostics/Logger.h"
 #include <iostream>
+#include <filesystem>
 
 //============================================================
-// eNX`[hăLbVɓo^
+// テクスチャをキャッシュへ登録
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Load(const std::string& name, ID3D11Device* device, const std::wstring& path)
 {
-    // LbVɂłɑ݂邩mF
-    auto it = textures.find(name);
-    if (it != textures.end()) return it->second;
+    const std::string cacheKey = name;
 
-    // VeNX`쐬
+    // キャッシュに存在するか確認
+    auto it = textures.find(name);
+    if (it != textures.end())
+    {
+        Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' ヒット\n");
+        return it->second;
+    }
+
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(std::filesystem::path(path), ec);
+    Diagnostics::LogInfo(
+        "[TextureCache] key='" + cacheKey + "' ミス 存在=" + (exists ? "有" : "無") +
+        " path='" + std::string(path.begin(), path.end()) + "'\n");
+
+    // テクスチャ生成
     auto texture = std::make_shared<Texture2D>();
     if (!texture->LoadFromFile(device, path)) return nullptr;
 
-    // LbVɓo^
+    // キャッシュへ保存
     textures[name] = std::move(texture);
+    Diagnostics::LogInfo("[TextureCache] key='" + cacheKey + "' 格納\n");
     return textures[name];
 }
 
@@ -37,7 +52,7 @@ std::shared_ptr<Texture2D> TextureCache::LoadFromMemory(const std::string& name,
     return textures[name];
 }
 //============================================================
-// LbVeNX`擾
+// キャッシュ済みテクスチャ取得
 //============================================================
 std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
 {
@@ -48,18 +63,16 @@ std::shared_ptr<Texture2D> TextureCache::Get(const std::string& name)
     return it->second;
 }
 //============================================================
-// gp
+// 使い方
 //============================================================
 /*
-// VOgȂ̂łǂłANZX\
-// FeNX`[hăLbVɓo^
+// シングルトン経由でロードしてキャッシュへ保存
 auto& playerTex = TextureCache::Instance().Load("player", device, L"textures/player.png");
 auto& enemyTex = TextureCache::Instance().Load("enemy", device, L"textures/enemy.png");
-// `掞FLbVeNX`擾Ďgp
-auto& tex = TextureCache::Instance().Get("player");  // iLbV擾j
+// キャッシュ済みテクスチャを取得して使用
+auto& tex = TextureCache::Instance().Get("player");
 context->PSSetShaderResources(0, 1, tex.textureView.GetAddressOf());
-// ܂͒Z
+// もちろん後から Load() を呼んでも最初だけロードされる
 TextureCache::Instance().Get("enemy");
-// ӁFOŉxLoad()ĂłAŏ1񂾂[h܂
-// 2ڈȍ~̓LbVꂽeNX`Ԃ܂
+// 2回目以降はキャッシュ済みテクスチャを返す
 */

@@ -6,6 +6,7 @@
 
 #include <box2d/box2d.h>
 
+#include "../BoxColliderComponent.h"
 #include "Transform.h"
 
 namespace Systems
@@ -81,18 +82,16 @@ namespace Components
                 BoxColliderSerialized Serialize() const;
 
         private:
-                bool CreateBody(Systems::Box2DPhysicsSystem& physicsSystem, const Transform& transform);
-                bool CreateFixture();
+                Physics::BoxColliderComponent BuildDescriptor(const Transform& transform) const;
                 void ResetHandles();
 
+                b2BodyId m_body{ b2_nullBodyId };
+                b2ShapeId m_fixture{ b2_nullShapeId };
                 Shape m_shapeKind{ Shape::Box };
                 ShapeData m_shapeData{ BoxShape{} };
                 Material m_material{};
 
-                b2BodyId m_body{ b2_nullBodyId };
-                b2ShapeId m_fixture{ b2_nullShapeId };
-                std::variant<std::monostate, b2Polygon, b2Circle> m_runtimeShape;
-                b2WorldId m_cachedWorld{ b2_nullWorldId };
+                Physics::BoxColliderComponent m_descriptor{};
         };
 }
 

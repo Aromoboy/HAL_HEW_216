@@ -1,8 +1,11 @@
 #include "Systems/Box2DPhysicsSystem.h"
 
+#include "Core/StepTimer.h"
+
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <sstream>
 
 #include "Systems/Box2DContactListener.h"
 
@@ -15,6 +18,8 @@
 
 namespace
 {
+        constexpr float kClampSummaryIntervalSeconds = 5.0f;
+
         void DebugTrace(const std::string& message)
         {
 #if defined(_WIN32)
@@ -43,6 +48,11 @@ namespace Systems
                 }
 
                 SetSubStepCount(tuning.subStepCount);
+                m_maxAccumulatedSteps = std::clamp(tuning.maxAccumulatedSteps, 1, 120);
+                m_maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
+                        ? tuning.maxStepDt
+                        : (1.0f / 60.0f);
+
                 m_worldId = b2CreateWorld(&m_worldDef);
                 if (!b2World_IsValid(m_worldId))
                 {
@@ -68,8 +78,34 @@ namespace Systems
                         return;
                 }
 
-                const float step = std::max(0.0f, dt);
-                b2World_Step(m_worldId, step, m_subStepCount);
+                const float clampedInput = std::max(0.0f, dt);
+                const float maxStep = m_maxStepDt > 0.0f ? m_maxStepDt : clampedInput;
+                if (maxStep <= 0.0f)
+                {
+                        return;
+                }
+
+                const float maxAccumulatedTime = maxStep * static_cast<float>(m_maxAccumulatedSteps);
+                const float accumulatedBeforeClamp = m_stepAccumulator + clampedInput;
+                m_stepAccumulator = std::min(accumulatedBeforeClamp, maxAccumulatedTime);
+
+                int stepsSimulated = 0;
+                while (m_stepAccumulator >= maxStep)
+                {
+                        b2World_Step(m_worldId, maxStep, m_subStepCount);
+                        m_stepAccumulator -= maxStep;
+                        ++stepsSimulated;
+                }
+
+                if (stepsSimulated == 0 && m_stepAccumulator > 0.0f)
+                {
+                        b2World_Step(m_worldId, m_stepAccumulator, m_subStepCount);
+                        m_stepAccumulator = 0.0f;
+                        ++stepsSimulated;
+                }
+
+                const bool clampedThisFrame = stepsSimulated > 1 || clampedInput > maxStep || accumulatedBeforeClamp > maxAccumulatedTime;
+                HandleClampState(clampedThisFrame, clampedInput, maxStep, stepsSimulated, accumulatedBeforeClamp, maxAccumulatedTime);
 
                 if (m_contactListener)
                 {
@@ -77,9 +113,97 @@ namespace Systems
                 }
         }
 
+        void Box2DPhysicsSystem::HandleClampState(bool clamped, float clampedInput, float maxStep, int stepsSimulated, float accumulatedBeforeClamp, float maxAccumulatedTime)
+        {
+                if (clamped)
+                {
+                        if (!m_clampActive)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DPhysicsSystem] Entering clamped stepping: dt=" << clampedInput
+                                        << " -> " << maxStep
+                                        << " (accumulator=" << accumulatedBeforeClamp
+                                        << "/" << maxAccumulatedTime << ") with " << stepsSimulated << " step(s)\n";
+                                DebugTrace(oss.str());
+
+                                m_clampActive = true;
+                                ++m_summaryClampActivations;
+                                m_currentClampFrames = 0;
+                                m_currentClampSteps = 0;
+                        }
+
+                        ++m_currentClampFrames;
+                        m_currentClampSteps += stepsSimulated;
+                        ++m_summaryClampFrames;
+                        m_summaryClampSteps += stepsSimulated;
+                }
+                else if (m_clampActive)
+                {
+                        std::ostringstream oss;
+                        oss << "[Box2DPhysicsSystem] Returning to unclamped stepping after "
+                                << m_currentClampFrames << " frame(s) and "
+                                << m_currentClampSteps << " step(s); accumulator=" << m_stepAccumulator << "\n";
+                        DebugTrace(oss.str());
+
+                        m_clampActive = false;
+                        m_currentClampFrames = 0;
+                        m_currentClampSteps = 0;
+                }
+        }
+
+        void Box2DPhysicsSystem::AdvanceClampSummary(float dt)
+        {
+                const float clampedDt = std::max(0.0f, dt);
+                m_summaryElapsed += clampedDt;
+
+                while (m_summaryElapsed >= kClampSummaryIntervalSeconds)
+                {
+                        if (m_summaryClampActivations > 0 || m_summaryClampFrames > 0 || m_summaryClampSteps > 0)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DPhysicsSystem] Clamp summary (" << kClampSummaryIntervalSeconds << "s): activations="
+                                        << m_summaryClampActivations
+                                        << " frames=" << m_summaryClampFrames
+                                        << " steps=" << m_summaryClampSteps
+                                        << (m_clampActive ? " (clamp active)" : "") << "\n";
+                                DebugTrace(oss.str());
+                        }
+
+                        m_summaryElapsed -= kClampSummaryIntervalSeconds;
+                        m_summaryClampActivations = 0;
+                        m_summaryClampFrames = 0;
+                        m_summaryClampSteps = 0;
+                }
+        }
+
+        void Box2DPhysicsSystem::HandleTimerReset(std::uint64_t frameIndex)
+        {
+                if (!m_hasTimerFrame || frameIndex < m_lastTimerFrame)
+                {
+                        ResetSimulationState();
+                }
+
+                m_lastTimerFrame = frameIndex;
+                m_hasTimerFrame = true;
+        }
+
+        void Box2DPhysicsSystem::ResetSimulationState()
+        {
+                m_stepAccumulator = 0.0f;
+                m_clampActive = false;
+                m_currentClampFrames = 0;
+                m_currentClampSteps = 0;
+                m_summaryClampActivations = 0;
+                m_summaryClampFrames = 0;
+                m_summaryClampSteps = 0;
+                m_summaryElapsed = 0.0f;
+        }
+
         void Box2DPhysicsSystem::OnUpdate(Core::UpdateContext& ctx)
         {
+                HandleTimerReset(ctx.timer.FrameIndex());
                 Apply(ctx.dt);
+                AdvanceClampSummary(ctx.dt);
 
                 if (m_physicsMachine)
                 {
@@ -141,6 +265,10 @@ namespace Systems
                 {
                         m_contactListener->SetWorld(b2_nullWorldId);
                 }
+
+                ResetSimulationState();
+                m_hasTimerFrame = false;
+                m_lastTimerFrame = 0;
         }
 }
 

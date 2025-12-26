@@ -72,10 +72,10 @@
     <ClCompile Include="src\ColliderConfigLoader.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
+    <ClCompile Include="src\ColliderRegistry.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Collision2D.cpp">
+    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp">
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Components\BoxColliderComponent.cpp">
@@ -120,9 +120,6 @@
     <ClCompile Include="src\DrawMatrix.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Entities\CollisionEntity.cpp">
-      <Filter>Entities</Filter>
-    </ClCompile>
     <ClCompile Include="src\Entities\Entity.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
@@ -130,6 +127,9 @@
       <Filter>Entities</Filter>
     </ClCompile>
     <ClCompile Include="src\Entities\Player.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GuidelineActor.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
     <ClCompile Include="src\GameFlow\PhaseManager.cpp">
@@ -163,6 +163,9 @@
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\ModelCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ModelPivot.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\ModelDX.cpp">
@@ -222,13 +225,16 @@
     <ClCompile Include="src\SpriteRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp">
-      <Filter>Stage</Filter>
-    </ClCompile>
     <ClCompile Include="src\Stage\StageData.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
+    <ClCompile Include="src\FullscreenManager.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\Startup.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\WindowManager.cpp">
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\Sweets\BaseSweets.cpp">
@@ -282,6 +288,22 @@
     <ClCompile Include="TimerDisplay.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\TitleRenderer.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SettingScene.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="include\EffectTestScene.cpp" />
+    <ClCompile Include="EffectSystem.cpp" />
+    <ClCompile Include="src\ResultRenderer.cpp" />
+    <ClCompile Include="src\AnimationCache.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Animation.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="include\AnimationState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h">
@@ -308,14 +330,11 @@
     <ClInclude Include="include\ColliderConfigLoader.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\ColliderRegistry.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\Collision\ConvexHullBuilder.h">
       <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Collision2D.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\CollisionEntity.h">
-      <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\CollisionLayer.h">
       <Filter>Core</Filter>
@@ -380,9 +399,6 @@
     <ClInclude Include="include\DrawMatrix.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="include\Entities\CollisionEntity.h">
-      <Filter>Entities</Filter>
-    </ClInclude>
     <ClInclude Include="include\Entities\Entity.h">
       <Filter>Entities</Filter>
     </ClInclude>
@@ -390,6 +406,9 @@
       <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\Entities\Player.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GuidelineActor.h">
       <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\Entity.h">
@@ -406,9 +425,6 @@
     </ClInclude>
     <ClInclude Include="include\ICamera.h">
       <Filter>Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ICollider.h">
-      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\IModelLoader.h">
       <Filter>Rendering</Filter>
@@ -432,6 +448,9 @@
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\ModelCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelPivot.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="include\ModelDX.h">
@@ -503,9 +522,6 @@
     <ClInclude Include="include\SpriteRenderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="include\Stage\FoundationPlatform.h">
-      <Filter>Stage</Filter>
-    </ClInclude>
     <ClInclude Include="include\Stage\StageData.h">
       <Filter>Stage</Filter>
     </ClInclude>
@@ -557,6 +573,12 @@
     <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\FullscreenManager.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\WindowManager.h">
+      <Filter>App</Filter>
+    </ClInclude>
     <ClInclude Include="include\Vector.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -566,6 +588,27 @@
     <ClInclude Include="TimerDisplay.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="include\TitleRenderer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SettingScene.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Effect.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />
+    <ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" />
+    <ClInclude Include="include\EffectTestScene.h" />
+    <ClInclude Include="EffectSystem.h" />
+    <ClInclude Include="include\ResultRenderer.h" />
+    <ClInclude Include="include\Animation.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AnimationCache.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AnimationState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

@@ -19,10 +19,9 @@ struct HudDisplayData
     float peakHeight = 0.0f;
     int score = 0;
     bool timeUp = false;
-    bool guidelineVisible = false;
-    float guidelineClipY = 0.0f;
     float moveSpeedMultiplier = 1.0f;
     float moveSpeedUnitsPerSecond = 0.0f;
+    int sweetsCount = 0;
 };
 
 struct HudLayoutConfig
@@ -37,9 +36,6 @@ struct HudLayoutConfig
     float shadowOffsetY = 2.0f;
     DirectX::XMFLOAT4 normalTextColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     DirectX::XMFLOAT4 warningTextColor{ 1.0f, 0.6f, 0.2f, 1.0f };
-    float guidelineThicknessPixels = 3.0f;
-    float guidelinePatternPixels = 32.0f;
-    DirectX::XMFLOAT4 guidelineColor{ 0.95f, 0.95f, 0.95f, 0.8f };
 };
 
 struct PowerUpHudData
@@ -62,18 +58,15 @@ private:
     class DynamicTexture;
 
     bool CreateTextResources();
-    bool CreateGuidelineTexture();
     void DestroyTextResources();
     void UpdateBitmap(const HudDisplayData& data);
     void UploadTexture();
-    void RenderGuideline(const HudDisplayData& data);
     void RenderSprite(const HudDisplayData& data);
     bool TryGetViewportSize(float& width, float& height) const;
     std::string BuildHudString(const HudDisplayData& data) const;
 
     HudLayoutConfig m_config{};
     std::unique_ptr<DynamicTexture> m_texture;
-    std::unique_ptr<Texture> m_guidelineTexture;
     std::vector<uint8_t> m_rgbaBuffer;
     bool m_ready = false;
     bool m_textureDirty = false;

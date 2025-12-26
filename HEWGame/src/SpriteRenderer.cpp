@@ -107,12 +107,7 @@ void SpriteRenderer::Draw(Texture2D& texture, const Transform& transform, const 
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	float3 drawRads;
-	drawRads.x = transform.rotation.x * RAD;
-	drawRads.y = transform.rotation.y * RAD;
-	drawRads.z = transform.rotation.z * RAD;
-
-	DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, drawRads);
+	DrawMatrix::CreateWorldMatrix(wvp[0], transform.position, transform.scale, transform.rotation);
 
 	wvp[1] = camera->GetView();
 	wvp[2] = camera->GetProjection();
@@ -155,7 +150,7 @@ void SpriteRenderer::MeshDraw()
 	}
 	else
 	{
-		// 頂点バッファのみで描画
+		// 鬆らせ繝舌ャ繝輔ぃ縺ｮ縺ｿ縺ｧ謠冗判
 		GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		pContext->Draw(vertexBuffer.GetCount(), 0);
 

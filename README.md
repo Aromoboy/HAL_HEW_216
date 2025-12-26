@@ -347,15 +347,12 @@ namespace Entities {
 }
 SceneSpace_PhysicalEntity <|-- Player
 namespace SweetsSpace {
-  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground }
+  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground Carried }
   class BaseSweets["SweetsSpace::BaseSweets"] {
     - model : shared_ptr<Render_Model>
     +OnUpdate(ctx:Core_UpdateContext)
     +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
   }
-  class Cake["SweetsSpace::Cake"]
-  class Pudding["SweetsSpace::Pudding"]
-  class Sherbet["SweetsSpace::Sherbet"]
   class SweetsManager["SweetsSpace::SweetsManager"] {
     - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
     +OnUpdate(ctx:Core_UpdateContext)
@@ -365,9 +362,6 @@ namespace SweetsSpace {
   }
 }
 SceneSpace_PhysicalEntity <|-- BaseSweets
-BaseSweets <|-- Cake
-BaseSweets <|-- Pudding
-BaseSweets <|-- Sherbet
 SweetsManager *-- BaseSweets
 SweetsManager *-- SweetsState
 Player o-- Render_Model
@@ -521,17 +515,54 @@ UpdateNode:
 - 将来のアップグレード候補（移動速度／時間／出現パターンなど）の中で、どれが一番ゲーム性に効いていそうか
 
 
+## テストシナリオ（3 連続起動での安定確認）
+
+シンプルなスモークとして、以下を 1 セッションとして 3 回連続で実施し、ログが毎回ほぼ同じ順序／情報量で並ぶことを確認する。
+
+1. ゲームを起動し、`SceneGame` をロードする。
+2. スポーンレンジ 5〜10 個の sweets を生成し、プラットフォーム上に配置されるのを確認する。
+3. 1 サイクル分のゲームプレイ（カメラ・プレイヤー操作を含む）を行う。
+4. 正常に終了リクエストを行い、ハングなく抜ける。
+
+### 成功判定
+
+- 3 回連続の起動でハングや異常終了が発生しないこと。
+- プラットフォームが毎回描画され、視認できること。
+- プラットフォーム上に少なくとも 3 種類の sweets が視認できること。
+- プレイヤーの姿勢や挙動が安定していること。
+- ログにはキャッシュのヒット／ミス、スポーン時のレンダー変換（位置／回転／スケール）とピボットオフセットが記録され、起動ごとに比較しやすいこと。
+
+
+
+## Stage spawn anchors
+- `spawnPoints` defines the primary lane as comma/semicolon separated triples (`x,y,z`). Each lane expects at least two anchors. When the primary lane is omitted entirely, a default pair on the configured `planeZ` is injected and logged; parse errors keep the lane empty.
+- `spawnPointsSecondary` (alias `spawnPointsB`) is optional and is never auto-generated; if parsing fails or the key is absent, the secondary lane stays empty.
+- Only when **both** lanes end up empty is a single fallback anchor `(0,0,0)` inserted. Cross-lane `planeZ` mismatches are still logged.
+- SweetsManager alternates lanes only when both are present; otherwise it uses the sole configured lane. Spawn order, lane strategy, and anchor counts are logged when origins are configured.
+
+Example:
+
+```
+# Primary (lane A) – same planeZ as the stage
+spawnPoints = -2.5, 0.0, -5.0; 2.5, 0.0, -5.0
+
+# Secondary (lane B)
+spawnPointsSecondary = -1.25, 0.0, -5.0; 1.25, 0.0, -5.0
+```
 
 ## SweetsPrototype プレースホルダーモデル
 
-`HEWGame/Assets/Model/SweetsPrototype/` には、プロトタイピング用に極めて単純なOBJメッシュを配置している。これらはGitで共有されているため、リポジトリをクローンすればそのまま`ModelCache`から参照できる。プレースホルダーモデルと`SweetsType`の対応は`SweetsPrototypeManifest`に集約されている。
+`SweetsPrototypeManifest` はビルトイン定義と `Assets/Config/sweets_models.csv` のオーバーライドをまとめ、`SweetsType` ごとのモデルパスを提供する。
 
 | SweetsType | ファイル名 | 形状 | 用途 |
 | --- | --- | --- | --- |
-| `Cake` | `Cake.obj` | 1m 立方体（テクスチャ・法線つき） | キューブ状のスポンジケーキ |
-| `Pudding` | `Pudding.obj` | 三角柱（UV展開済み） | 断面が三角形のプリン |
-| `Sherbet` | `Sherbet.obj` | ローポリ球（シェーディング対応） | 丸いシャーベット |
-| `Fairy` | Procedural cross-plane (fallback: `Fairy.obj`) | 青系頂点カラーの板ポリ×2 | プレイヤーフェアリー |
+| `Cream` (`Sherbet` alias) | `cream.fbx` | ローポリ球（シェーディング対応） | ソフトクリーム状のシャーベット |
+| `Strawberry` | `strawberry.fbx` | --- | いちご |
+| `Blueberry` | `blueberry.fbx` | --- | ブルーベリー |
+| `Pineapple` | `pineapple.fbx` | --- | パイナップル |
+| `Banana` | `banana.fbx` | --- | バナナ |
+
+ステージ用の `Cake`/`Osara` ブロックとプレイヤー用の `Fairy` は `SweetsType` には含まれない補助プロトタイプとして `SweetsPrototypeManifest` に登録されます（`Player` エイリアスも `Fairy` にマップされます）。
 
 ### プレースホルダーの使い方
 
@@ -540,3 +571,4 @@ UpdateNode:
 3. `descriptor->modelPath` を `ModelCache::Get` に渡すと OBJ がロードされる。
 
 `SweetsManager` や `Entities::Player` など、`BaseSweets` の派生クラスはすべてこのマニフェストを参照するよう統一されています。新しいスイーツを追加する場合はマニフェストに定義を 1 行追加し、上記の表と README を更新してください。
+ステージ／プレイヤー用の補助プロトタイプを参照するときは、`SweetsPrototypeManifest::Instance().Find("Fairy")` のように文字列版の `Find` を使ってください。

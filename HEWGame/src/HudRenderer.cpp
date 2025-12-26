@@ -5,11 +5,9 @@
 #include "Texture.h"
 
 #include <algorithm>
-#include <array>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
-#include "PowerUpRenderer.h"
 
 namespace
 {
@@ -64,12 +62,6 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
         return false;
     }
 
-    if (!CreateGuidelineTexture())
-    {
-        Shutdown();
-        return false;
-    }
-
     m_ready = true;
     m_textureDirty = true;
     return true;
@@ -79,7 +71,6 @@ void HudRenderer::Shutdown()
 {
     DestroyTextResources();
     m_texture.reset();
-    m_guidelineTexture.reset();
     m_rgbaBuffer.clear();
     m_ready = false;
     m_textureDirty = false;
@@ -174,7 +165,6 @@ void HudRenderer::Draw(const HudDisplayData& data)
 
     UpdateBitmap(data);
     UploadTexture();
-    RenderGuideline(data);
     RenderSprite(data);
 }
 
@@ -256,43 +246,6 @@ bool HudRenderer::TryGetViewportSize(float& width, float& height) const
     return width > 0.0f && height > 0.0f;
 }
 
-void HudRenderer::RenderGuideline(const HudDisplayData& data)
-{
-    if (!data.guidelineVisible || !m_guidelineTexture)
-    {
-        return;
-    }
-
-    float viewportWidth = 0.0f;
-    float viewportHeight = 0.0f;
-    if (!TryGetViewportSize(viewportWidth, viewportHeight))
-    {
-        return;
-    }
-
-    const float thicknessClip = (m_config.guidelineThicknessPixels / viewportHeight) * 2.0f;
-    const float repeatSpacing = std::max(1.0f, m_config.guidelinePatternPixels);
-    const float repeatCount = std::max(1.0f, viewportWidth / repeatSpacing);
-    const float clampedY = std::clamp(data.guidelineClipY, -0.98f, 0.98f);
-
-    
-    SetDepthTest(false);
-    SetBlendMode(BLEND_ALPHA);
-
-    Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_guidelineTexture.get());
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetUVScale(DirectX::XMFLOAT2(repeatCount, 1.0f));
-    Sprite::SetColor(m_config.guidelineColor);
-    Sprite::SetSize(DirectX::XMFLOAT2(2.0f, thicknessClip));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, clampedY));
-    Sprite::Draw();
-
-    SetDepthTest(true);
-}
-
 void HudRenderer::RenderSprite(const HudDisplayData& data)
 {
     if (!m_texture)
@@ -352,39 +305,6 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
     stream << std::fixed << std::setprecision(0);
     stream << "Score " << data.score;
     stream << "  (Enter=Confirm  R=Retry)";
-
+    stream << "\nSweets " << data.sweetsCount;
     return stream.str();
-}
-
-bool HudRenderer::CreateGuidelineTexture()
-{
-    m_guidelineTexture = std::make_unique<Texture>();
-    if (!m_guidelineTexture)
-    {
-        return false;
-    }
-
-    constexpr size_t kSize = 4;
-    std::array<uint32_t, kSize * kSize> pixels{};
-    for (size_t y = 0; y < kSize; ++y)
-    {
-        for (size_t x = 0; x < kSize; ++x)
-        {
-            const bool opaque = (x % 2) == 0;
-            pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
-        }
-    }
-
-    const HRESULT hr = m_guidelineTexture->Create(
-        DXGI_FORMAT_R8G8B8A8_UNORM,
-        static_cast<UINT>(kSize),
-        static_cast<UINT>(kSize),
-        pixels.data());
-    if (FAILED(hr))
-    {
-        m_guidelineTexture.reset();
-        return false;
-    }
-
-    return true;
 }

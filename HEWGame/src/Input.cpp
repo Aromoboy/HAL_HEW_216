@@ -1,5 +1,9 @@
 #include "Core/Input.h"
 
+#include <sstream>
+#include <core/StepTimer.h>
+#include "Diagnostics/Logger.h"
+
 namespace
 {
         constexpr BYTE kKeyPressedMask = 0x80;
@@ -19,8 +23,8 @@ namespace Core
 
         HRESULT Input::Initialize()
         {
-                // 初期化順序: 先に現在のキー状態を取得し、そのスナップショットを前フレームとして保存する。
-                // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える。
+                // 初期化順序: 先に現在のキー状態を取得し、そのスナップショットを前フレームとして保存する 
+                // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える 
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
 
@@ -32,20 +36,39 @@ namespace Core
 
         void Input::Shutdown()
         {
-                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する。
+                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する 
                 m_initialized = false;
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
 
                 m_pad = Gamepad();
                 m_map = InputMap();
+                m_lastPolledFrame = 0;
         }
 
         void Input::OnUpdate(UpdateContext& ctx)
         {
+                const std::uint64_t frameIndex = ctx.timer.FrameIndex();
+
+                if (frameIndex == m_lastPolledFrame)
+                {
+                        return;
+                }
+
+                if (m_initialized && m_lastPolledFrame != 0 && frameIndex > m_lastPolledFrame + 1)
+                {
+                        std::ostringstream oss;
+                        oss << "[Input] polling resumed after skipping "
+                            << (frameIndex - m_lastPolledFrame - 1) << " frame(s) (last=" << m_lastPolledFrame
+                            << ", current=" << frameIndex << ')';
+                        Diagnostics::LogInfo(oss.str());
+                }
                 if (!m_initialized)
                 {
-                        // OnUpdate 経由での遅延初期化。ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする。
+                        std::ostringstream oss;
+                        oss << "[Input] initializing poll pipeline at frame " << frameIndex;
+                        Diagnostics::LogInfo(oss.str());
+                        // OnUpdate 経由での遅延初期化 ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする 
                         PollKeyboardState();
                         m_previousKeys = m_currentKeys;
                         PollPadState();
@@ -53,11 +76,13 @@ namespace Core
                 }
                 else
                 {
-                        // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持。
+                        // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持 
                         m_previousKeys = m_currentKeys;
                         PollKeyboardState();
                         PollPadState();
                 }
+
+                m_lastPolledFrame = frameIndex;
         }
 
         float Input::GetAxis(ActionId action) const
@@ -169,4 +194,3 @@ namespace Core
                 return (m_previousKeys[key] & kKeyPressedMask) != 0;
         }
 }
-

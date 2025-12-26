@@ -1,20 +1,48 @@
 #include "Entities/PhysicalEntity.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <utility>
 
 #include <box2d/box2d.h>
 #include <box2d/math_functions.h>
 
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
 #include "Systems/PhysicsMachine.h"
+#include "Physics/ShapeConstants.h"
 
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
     bool AreFloat3Equal(const float3& lhs, const float3& rhs)
     {
         return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    }
+
+    bool HasPhysicsDefinition(const Entities::PhysicalEntity& entity)
+    {
+        const auto& collider = entity.GetBoxColliderComponent();
+        return static_cast<bool>(collider);
     }
 }
 
@@ -26,11 +54,12 @@ namespace
 
 namespace Entities
 {
-    PhysicalEntity::PhysicalEntity(const Transform& transform, std::optional<Physics::Box2DShapeConfig> shapeConfig, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag)
+    PhysicalEntity::PhysicalEntity(const Transform& transform, std::optional<Physics::Box2DShapeConfig> shapeConfig, Collision::CollisionLayer layer, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::UpdatePhase phase, int priority, std::string tag, bool allowMeshPhysics)
         : Entity(transform, std::move(model), phase, priority, std::move(tag))
         , m_physical()
         , m_physicsMachine(physicsMachine)
         , m_collisionLayer(layer)
+        , m_allowMeshPhysics(allowMeshPhysics)
     {
         m_box2dShapeConfig = std::move(shapeConfig);
         SyncColliderBounds();
@@ -45,8 +74,9 @@ namespace Entities
         std::optional<Physics::Box2DShapeConfig> shapeConfig,
         Collision::CollisionLayer layer,
         Core::UpdatePhase phase,
-        int priority)
-        : PhysicalEntity(Transform{ pos, rot, scl }, std::move(shapeConfig), layer, nullptr, nullptr, phase, priority, tag)
+        int priority,
+        bool allowMeshPhysics)
+        : PhysicalEntity(Transform{ pos, rot, scl }, std::move(shapeConfig), layer, nullptr, nullptr, phase, priority, tag, allowMeshPhysics)
     {
     }
 
@@ -133,6 +163,17 @@ namespace Entities
         SyncColliderBounds();
     }
 
+    void PhysicalEntity::SetAllowMeshPhysics(bool allow)
+    {
+        if (m_allowMeshPhysics == allow)
+        {
+            return;
+        }
+
+        m_allowMeshPhysics = allow;
+        RecreateBox2DBody();
+    }
+
     void PhysicalEntity::SyncColliderBounds()
     {
         float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
@@ -157,32 +198,50 @@ namespace Entities
 
         const Transform& transform = m_transform;
 
-        if (m_boxColliderComponent)
+        b2AABB bodyAabb{};
+        if (GetBox2DBodyAABB(bodyAabb))
         {
-            for (const auto& polygon : m_boxColliderComponent->polygons)
+            const float3 lower = ToWorldVector(bodyAabb.lowerBound);
+            const float3 upper = ToWorldVector(bodyAabb.upperBound);
+            accumulate(lower.x, lower.y, transform.position.z);
+            accumulate(upper.x, upper.y, transform.position.z);
+        }
+        else if (m_boxColliderComponent)
+        {
+            for (const auto& shape : m_boxColliderComponent->shapes)
             {
-                for (int i = 0; i < polygon.count; ++i)
+                switch (shape.type)
                 {
-                    const float3 point{
-                        transform.position.x + polygon.vertices[i].x * transform.scale.x,
-                        transform.position.y + polygon.vertices[i].y * transform.scale.y,
+                case Physics::ColliderShapeType::Circle:
+                {
+                    const b2Vec2 centerOffset = shape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : shape.vertices.front();
+                    const float radius = shape.radius * std::max(transform.scale.x, transform.scale.y);
+                    const float3 center{
+                        transform.position.x + centerOffset.x * transform.scale.x,
+                        transform.position.y + centerOffset.y * transform.scale.y,
                         transform.position.z,
                     };
-                    accumulatePoint(point);
+
+                    accumulate(center.x - radius, center.y - radius, center.z);
+                    accumulate(center.x + radius, center.y + radius, center.z);
+                    break;
                 }
-            }
-
-            for (const auto& circle : m_boxColliderComponent->circles)
-            {
-                const float radius = circle.radius * std::max(transform.scale.x, transform.scale.y);
-                const float3 center{
-                    transform.position.x + circle.center.x * transform.scale.x,
-                    transform.position.y + circle.center.y * transform.scale.y,
-                    transform.position.z,
-                };
-
-                accumulate(center.x - radius, center.y - radius, center.z);
-                accumulate(center.x + radius, center.y + radius, center.z);
+                case Physics::ColliderShapeType::Box:
+                case Physics::ColliderShapeType::Polygon:
+                default:
+                {
+                    for (const auto& vertex : shape.vertices)
+                    {
+                        const float3 point{
+                            transform.position.x + vertex.x * transform.scale.x,
+                            transform.position.y + vertex.y * transform.scale.y,
+                            transform.position.z,
+                        };
+                        accumulatePoint(point);
+                    }
+                    break;
+                }
+                }
             }
         }
 
@@ -192,8 +251,8 @@ namespace Entities
             {
             case Physics::Box2DShapeConfig::Type::Box:
             {
-                const float hx = std::max(0.01f, 0.5f * transform.scale.x);
-                const float hy = std::max(0.01f, 0.5f * transform.scale.y);
+                const float hx = std::max(Physics::kMinimumShapeDimensionMeters, 0.5f * transform.scale.x);
+                const float hy = std::max(Physics::kMinimumShapeDimensionMeters, 0.5f * transform.scale.y);
                 accumulate(transform.position.x - hx, transform.position.y - hy, transform.position.z);
                 accumulate(transform.position.x + hx, transform.position.y + hy, transform.position.z);
                 break;
@@ -213,7 +272,7 @@ namespace Entities
             }
             case Physics::Box2DShapeConfig::Type::Circle:
             {
-                const float radius = std::max(0.01f, m_box2dShapeConfig->radius * std::max(transform.scale.x, transform.scale.y));
+                const float radius = std::max(Physics::kMinimumShapeDimensionMeters, m_box2dShapeConfig->radius * std::max(transform.scale.x, transform.scale.y));
                 accumulate(transform.position.x - radius, transform.position.y - radius, transform.position.z);
                 accumulate(transform.position.x + radius, transform.position.y + radius, transform.position.z);
                 break;
@@ -293,6 +352,62 @@ namespace Entities
         return m_physical.HasBody();
     }
 
+    bool PhysicalEntity::CollectBox2DShapes(std::vector<b2ShapeId>& outShapes, b2Transform& outBodyTransform, b2BodyId* outBodyId) const
+    {
+        Systems::PhysicsMachine* physicsMachine = GetPhysicsMachine();
+        if (!physicsMachine)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = physicsMachine->FindBody(*this);
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        const int shapeCount = b2Body_GetShapeCount(bodyId);
+        if (shapeCount <= 0)
+        {
+            return false;
+        }
+
+        outShapes.resize(static_cast<size_t>(shapeCount));
+        const int writtenShapes = b2Body_GetShapes(bodyId, outShapes.data(), shapeCount);
+        outShapes.resize(static_cast<size_t>(std::max(0, writtenShapes)));
+
+        if (outShapes.empty())
+        {
+            return false;
+        }
+
+        outBodyTransform = b2Body_GetTransform(bodyId);
+        if (outBodyId)
+        {
+            *outBodyId = bodyId;
+        }
+
+        return true;
+    }
+
+    bool PhysicalEntity::GetBox2DBodyAABB(b2AABB& outAabb) const
+    {
+        Systems::PhysicsMachine* physicsMachine = GetPhysicsMachine();
+        if (!physicsMachine)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = physicsMachine->FindBody(*this);
+        if (!b2Body_IsValid(bodyId) || b2Body_GetShapeCount(bodyId) <= 0)
+        {
+            return false;
+        }
+
+        outAabb = b2Body_ComputeAABB(bodyId);
+        return true;
+    }
+
     float3 PhysicalEntity::GetLinearVelocity() const
     {
         if (!HasBox2DBody())
@@ -313,6 +428,16 @@ namespace Entities
         b2Body_SetLinearVelocity(m_physical.bodyId, ToBox2DVector(velocity));
     }
 
+    void PhysicalEntity::SetAngularVelocity(float radiansPerSec)
+    {
+        if (!HasBox2DBody())
+        {
+            return;
+        }
+
+        b2Body_SetAngularVelocity(m_physical.bodyId, radiansPerSec);
+    }
+
     float PhysicalEntity::GetGravityScale() const
     {
         return HasBox2DBody() ? b2Body_GetGravityScale(m_physical.bodyId) : 0.0f;
@@ -323,6 +448,37 @@ namespace Entities
         if (HasBox2DBody())
         {
             b2Body_SetGravityScale(m_physical.bodyId, scale);
+        }
+    }
+
+    bool PhysicalEntity::HasBodyCreationFailed() const
+    {
+        return m_bodyCreationFailed;
+    }
+
+    bool PhysicalEntity::CanAttemptBodyCreation() const
+    {
+        return !m_bodyCreationFailed || m_bodyCreationFailedRevision != m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::ResetBodyCreationFailure()
+    {
+        m_bodyCreationFailed = false;
+        m_bodyCreationFailedRevision = m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::MarkBodyCreationFailed()
+    {
+        m_bodyCreationFailed = true;
+        m_bodyCreationFailedRevision = m_physicsDefinitionRevision;
+    }
+
+    void PhysicalEntity::MarkPhysicsDefinitionChanged()
+    {
+        ++m_physicsDefinitionRevision;
+        if (m_bodyCreationFailed && m_bodyCreationFailedRevision != m_physicsDefinitionRevision)
+        {
+            ResetBodyCreationFailure();
         }
     }
 
@@ -476,7 +632,19 @@ namespace Entities
         {
             if (m_physicsMachine && !m_physical.HasBody())
             {
-                m_physicsMachine->RegisterBody(*this);
+                if (HasPhysicsDefinition(*this))
+                {
+                    m_physicsMachine->RegisterBody(*this);
+                }
+                else
+                {
+#if defined(_DEBUG)
+                    std::ostringstream oss;
+                    oss << "[PhysicalEntity] Deferring physics registration for tag='" << GetTag()
+                        << "' until collider/shape/mesh is ready.\n";
+                    DebugTrace(oss.str());
+#endif
+                }
             }
             return;
         }
@@ -491,7 +659,20 @@ namespace Entities
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->RegisterBody(*this);
+            ResetBodyCreationFailure();
+            if (HasPhysicsDefinition(*this))
+            {
+                m_physicsMachine->RegisterBody(*this);
+            }
+            else
+            {
+#if defined(_DEBUG)
+                std::ostringstream oss;
+                oss << "[PhysicalEntity] Deferring physics registration for tag='" << GetTag()
+                    << "' until collider/shape/mesh is ready.\n";
+                DebugTrace(oss.str());
+#endif
+            }
         }
     }
 
@@ -509,6 +690,8 @@ namespace Entities
 
     void PhysicalEntity::RecreateBox2DBody()
     {
+        MarkPhysicsDefinitionChanged();
+
         if (!m_physicsMachine)
         {
             return;
@@ -520,6 +703,7 @@ namespace Entities
             m_physical.Reset();
         }
 
+        ResetBodyCreationFailure();
         m_physicsMachine->RegisterBody(*this);
     }
 }
@@ -544,4 +728,3 @@ namespace Entities
         entity.SyncBox2DBodyFromTransform();
     }
 }
-

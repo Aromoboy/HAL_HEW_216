@@ -9,7 +9,7 @@
 
 class CameraRig : public Core::UpdateNode
 // Entity をフル定義に合わせたので、カメラのターゲットやアンカーを
-// 直接参照できるようになった。Transform を通して位置取得ができる
+// 直接参照できるようになった Transform を通して位置取得ができる
 
 {
 public:

@@ -5,12 +5,20 @@
 #include <string>
 #include "DebugConsole.h"
 #include "Diagnostics/Logger.h"
+#include "DirectX.h"
+#include "WindowManager.h"
+#include "FullscreenManager.h"
 
 // timeGetTime周りの使用
 #pragma comment(lib, "winmm.lib")
 
 //--- プロトタイプ宣言
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+namespace
+{
+        bool g_canRender = true;
+}
 
 
 // エントリポイント
@@ -23,41 +31,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	HWND hWnd;
 	MSG message;
 
-	// ウィンドクラス情報の設定
-	ZeroMemory(&wcex, sizeof(wcex));
-	wcex.hInstance = hInstance;
-	wcex.lpszClassName = "Class Name";
-	wcex.lpfnWndProc = WndProc;
-	wcex.style = CS_CLASSDC | CS_DBLCLKS;
-	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-	wcex.hIconSm = wcex.hIcon;
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        // ウィンドクラス情報の設定
+        ZeroMemory(&wcex, sizeof(wcex));
+        wcex.hInstance = hInstance;
+        wcex.lpszClassName = L"Class Name";
+        wcex.lpfnWndProc = WndProc;
+        wcex.style = CS_CLASSDC | CS_DBLCLKS;
+        wcex.cbSize = sizeof(WNDCLASSEX);
+        wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+        wcex.hIconSm = wcex.hIcon;
+        wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 
-	// ウィンドウクラス情報の登録
-	if (!RegisterClassEx(&wcex))
-	{
-		MessageBox(NULL, "Failed to RegisterClassEx", "Error", MB_OK);
-		return 0;
-	}
+        // ウィンドウクラス情報の登録
+        if (!RegisterClassEx(&wcex))
+        {
+                MessageBox(NULL, L"Failed to RegisterClassEx", L"Error", MB_OK);
+                return 0;
+        }
 
 	// ウィンドウの作成
 	RECT rect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 	DWORD style = WS_CAPTION | WS_SYSMENU;
 	DWORD exStyle = WS_EX_OVERLAPPEDWINDOW;
-	AdjustWindowRectEx(&rect, style, false, exStyle);
-	hWnd = CreateWindowEx(
-		exStyle, wcex.lpszClassName,
-		APP_TITLE, style,
-		CW_USEDEFAULT,CW_USEDEFAULT,
-		rect.right - rect.left, rect.bottom - rect.top,
-		HWND_DESKTOP,
-		NULL, hInstance, NULL
-	);
+        AdjustWindowRectEx(&rect, style, false, exStyle);
+        hWnd = CreateWindowEx(
+                exStyle, wcex.lpszClassName,
+                APP_TITLE, style,
+                CW_USEDEFAULT,CW_USEDEFAULT,
+                rect.right - rect.left, rect.bottom - rect.top,
+                HWND_DESKTOP,
+                NULL, hInstance, NULL
+        );
+
+        WindowManager::Initialize(hWnd);
+        FullscreenManager::Initialize(hWnd, &g_canRender);
 
 
-	// デバッグコンソールの表示
+        // デバッグコンソールの表示
 #ifdef _DEBUG
 
 	DebugConsole::InitDebugConsole(hWnd);
@@ -105,25 +116,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{
 			DWORD nowTime = timeGetTime();
 			float diff = static_cast<float>(nowTime - preExecTime);
-			if (diff >= 1000.0f / fFPS)
-			{
-				
+                        if (diff >= 1000.0f / fFPS)
+                        {
+                                if (g_canRender)
+                                {
+                                        Update();
+                                        Draw();
 
-				Update();
-				Draw();
+                                        if (nowTime - fpsOldTime >= 1000)
+                                        {
+                                                processingTime = static_cast<float>(timeGetTime() - nowTime);
+                                        }
 
-				if (nowTime - fpsOldTime >= 1000)
-				{
-					processingTime = static_cast<float>(timeGetTime() - nowTime);
-				}
+                                        fpsCount++;
+                                }
 
-				
-				preExecTime = nowTime;
-				fpsCount++;
-			}
-			if (nowTime - fpsOldTime >= 1000)
-			{
-				fpsCount = 0;
+                                preExecTime = nowTime;
+                        }
+                        if (nowTime - fpsOldTime >= 1000)
+                        {
+                                fpsCount = 0;
 				fpsOldTime = nowTime;
 			}
 		}
@@ -141,11 +153,48 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 // ウィンドウプロシージャ
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message)
-	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	}
-	return DefWindowProc(hWnd, message, wParam, lParam);
+        switch (message)
+        {
+        case WM_DESTROY:
+                PostQuitMessage(0);
+                break;
+        case WM_ACTIVATEAPP:
+                g_canRender = (wParam != FALSE) && !IsIconic(hWnd);
+                break;
+        case WM_ACTIVATE:
+        {
+                const WORD state = LOWORD(wParam);
+                g_canRender = (state != WA_INACTIVE) && !IsIconic(hWnd);
+                break;
+        }
+        case WM_SIZE:
+        {
+                const UINT width = LOWORD(lParam);
+                const UINT height = HIWORD(lParam);
+
+                if (wParam == SIZE_MINIMIZED || width == 0 || height == 0)
+                {
+                        g_canRender = false;
+                        break;
+                }
+
+                g_canRender = (GetActiveWindow() == hWnd);
+                if (!IsDirectXReady())
+                {
+                        break;
+                }
+                ResizeDirectX(width, height);
+                break;
+        }
+        case WM_SYSKEYDOWN:
+        {
+                if (wParam == VK_RETURN && (lParam & (1 << 29)))
+                {
+                        FullscreenManager::Toggle();
+                        return 0;
+                }
+                break;
+        }
+        }
+        return DefWindowProc(hWnd, message, wParam, lParam);
 }

@@ -1,3 +1,4 @@
+#if defined(_DEBUG) && defined(PHYSICS_SELF_TEST)
 #include "Systems/PhysicsMachine.h"
 #include "Entities/PhysicalEntity.h"
 #include "BoxColliderComponent.h"
@@ -11,6 +12,7 @@
 
 namespace
 {
+
     // Box2Dで動作する動的ボディを生成する簡易ユーティリティ
     // 旧物理API（ConvexHullCollider2D、weight、damping等）は完全に削除されたため使用不可
     Entities::PhysicalEntity CreateDynamicBody(const std::string& tag, const Transform& transform)
@@ -108,14 +110,50 @@ namespace
 #endif
     }
 
+    void RunFallbackColliderCreationTest()
+    {
+        Systems::PhysicsMachine machine{};
+
+        Transform transform{};
+        transform.scale = float3{ 1.0f, 1.0f, 1.0f };
+
+        Entities::PhysicalEntity entity(
+            "PhysicsFallback",
+            transform.position,
+            transform.rotation,
+            transform.scale,
+            std::nullopt,
+            Collision::CollisionLayer::Default,
+            Core::UpdatePhase::Physics,
+            0);
+
+        Physics::BoxColliderComponent collider{};
+        entity.SetBoxColliderComponent(std::move(collider));
+
+        machine.RegisterBody(entity);
+
+#if defined(_DEBUG)
+        const b2BodyId bodyId = machine.FindBody(entity);
+        assert(b2Body_IsValid(bodyId));
+
+        const auto& colliderComponent = entity.GetBoxColliderComponent();
+        assert(colliderComponent);
+        assert(colliderComponent->createdFixtureCount > 0);
+#endif
+
+        machine.UnregisterBody(entity);
+    }
+
     // テスト自動実行用ランナー
     struct PhysicsMachineTestRunner
     {
         PhysicsMachineTestRunner()
         {
             RunBox2DStepMovesBodiesTest();
+            RunFallbackColliderCreationTest();
         }
     };
 
     static PhysicsMachineTestRunner g_physicsMachineTestRunner;
 }
+#endif

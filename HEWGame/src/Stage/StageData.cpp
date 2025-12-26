@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -19,9 +20,11 @@ namespace
 
     constexpr const char* kLogPrefix = "[StageData] ";
     constexpr float kDefaultPlaneZ = -5.0f;
-    constexpr float kDefaultPlatformCenterY = -1.0f;
+    constexpr float kDefaultPlatformCenterY = 0.0f;
     constexpr float kDefaultPlatformWidthFraction = 0.20f;
     constexpr float kDefaultPlatformHeightFraction = 0.05f;
+    constexpr float kPlatformGridWidthCells = 40.0f;
+    constexpr float kPlatformGridHeightCells = 30.0f;
     constexpr float kDefaultPlatformDepth = 4.0f;
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
@@ -31,22 +34,45 @@ namespace
     constexpr float kDefaultVerticalSpeedCellsPerSec = 12.0f;
     constexpr float kDefaultPickupBoxWidthCells = 5.0f;
     constexpr float kDefaultPickupBoxHeightCells = 5.0f;
+    constexpr float kDefaultPickupMaxDistance = 0.5f;
+    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
+    constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
+    const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     constexpr float kDefaultPlayerMoveSpeed = kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
-    constexpr float kDefaultGuidelineHeight = 20.0f;
+    constexpr float kDefaultGuidelineHeight = 2.0f;
+    constexpr float kDefaultGuidelineStep = 1.0f;
+    constexpr float kDefaultGuidelineThicknessPixels = 3.0f;
+    constexpr float kDefaultGuidelineWidthPaddingWorld =
+        (kDefaultPlatformWidthFraction * kPlatformGridWidthCells * kDefaultCellSizeWorld) * 0.5f;
+    constexpr float kDefaultGuidelineZOffset = 0.1f;
     constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
     constexpr float kDefaultHeightBonusSeconds = 5.0f;
     constexpr const char* kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
     constexpr std::size_t kRequiredSpawnAnchors = 2;
     constexpr std::size_t kSpawnCoordinatesPerAnchor = 3;
+    constexpr float kSpawnPlaneTolerance = 0.01f;
 
-    const float3 kDefaultSpawnPoints[] =
+    std::vector<float3> BuildDefaultSpawnPointsPrimary(float planeZ)
     {
-        { -2.5f, 0.0f, kDefaultPlaneZ },
-        { 2.5f, 0.0f, kDefaultPlaneZ },
-    };
+        return {
+            { -8.0f, 0.0f, planeZ },
+            { -8.0f, 0.0f, planeZ },
+        };
+    }
+
+    std::vector<float3> BuildDefaultSpawnPointsSecondary(float planeZ)
+    {
+        return {
+            { 8.0f, 0.0f, planeZ },
+            { 8.0f, 0.0f, planeZ },
+        };
+    }
 
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
+    const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
+    const float kDefaultMiniRewardMultipliers[] = { 1.0f };
 
     std::string Trim(const std::string& value)
     {
@@ -103,6 +129,49 @@ namespace
             *outError = true;
         }
         return values;
+    }
+
+    std::string ToLowerCopy(const std::string& value)
+    {
+        std::string lowered = value;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+        return lowered;
+    }
+
+    bool TryParsePickupOffsetMode(const std::string& rawValue, Stage::PickupOffsetMode& outMode)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "none")
+        {
+            outMode = Stage::PickupOffsetMode::None;
+            return true;
+        }
+        if (lowered == "facing" || lowered == "facingdirection" || lowered == "facing-direction")
+        {
+            outMode = Stage::PickupOffsetMode::FacingDirection;
+            return true;
+        }
+        if (lowered == "worldx" || lowered == "world-x" || lowered == "world_x")
+        {
+            outMode = Stage::PickupOffsetMode::WorldX;
+            return true;
+        }
+
+        return false;
+    }
+
+    const char* PickupOffsetModeToString(Stage::PickupOffsetMode mode)
+    {
+        switch (mode)
+        {
+        case Stage::PickupOffsetMode::None: return "none";
+        case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
+        case Stage::PickupOffsetMode::WorldX: return "world-x";
+        default: return "unknown";
+        }
     }
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color, const DirectX::XMFLOAT4& fallback, const std::string& label)
@@ -225,8 +294,18 @@ namespace Stage
         , m_pickupBoxHeightCells(kDefaultPickupBoxHeightCells)
         , m_pickupBoxWidthWorld(kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld)
         , m_pickupBoxHeightWorld(kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld)
+        , m_pickupMaxDistance(kDefaultPickupMaxDistance)
+        , m_pickupDepthThreshold(kDefaultPickupDepthThreshold)
+        , m_pickupOffset{ kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
+            kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
+            kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld } }
         , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
+        , m_guidelineStep(kDefaultGuidelineStep)
+        , m_guidelineThicknessPixels(kDefaultGuidelineThicknessPixels)
+        , m_guidelineWidthPaddingWorld(kDefaultGuidelineWidthPaddingWorld)
+        , m_guidelineZOffset(kDefaultGuidelineZOffset)
         , m_backgroundTexturePath(kDefaultBackgroundTexturePath)
         , m_heightBonusThreshold(kDefaultHeightBonusThreshold)
         , m_heightBonusSeconds(kDefaultHeightBonusSeconds)
@@ -249,8 +328,11 @@ namespace Stage
         }
 
         std::vector<float> thresholds;
-        std::vector<float3> spawnPoints;
-        std::vector<float> rewardMultipliers;
+        std::vector<float> minithresholds; //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        std::vector<float3> spawnPointsPrimary;
+        std::vector<float3> spawnPointsSecondary;
+        std::vector<float> rewardMultipliers; //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
         float planeZ = kDefaultPlaneZ;
         bool planeZSet = false;
@@ -274,10 +356,22 @@ namespace Stage
         bool pickupBoxWidthSet = false;
         float pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         bool pickupBoxHeightSet = false;
+        float pickupMaxDistance = kDefaultPickupMaxDistance;
+        float pickupDepthThreshold = kDefaultPickupDepthThreshold;
+        Stage::PickupOffsetMode pickupOffsetMode = kDefaultPickupOffsetMode;
+        float3 pickupOffsetLocalCells = kDefaultPickupOffsetLocalCells;
         float playerMoveSpeed = kDefaultPlayerMoveSpeed;
         bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
         bool guidelineHeightSet = false;
+        float guidelineStep = kDefaultGuidelineStep;
+        bool guidelineStepSet = false;
+        float guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        bool guidelineThicknessSet = false;
+        float guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        bool guidelineWidthPaddingSet = false;
+        float guidelineZOffset = kDefaultGuidelineZOffset;
+        bool guidelineZOffsetSet = false;
         float heightBonusThreshold = kDefaultHeightBonusThreshold;
         bool heightBonusThresholdSet = false;
         float heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -285,9 +379,48 @@ namespace Stage
         std::string backgroundTexturePath = kDefaultBackgroundTexturePath;
         bool backgroundTextureSet = false;
         bool parseError = false;
+        size_t lineNumber = 0;
+        bool primaryProvided = false;
+        bool secondaryProvided = false;
+        bool primaryParseError = false;
+        bool secondaryParseError = false;
+
+        auto appendSpawnPoints = [&](const std::string& label, const std::string& rawValue, std::vector<float3>& targets)
+        {
+            if (label == "spawnPointsPrimary")
+            {
+                primaryProvided = true;
+            }
+            else if (label == "spawnPointsSecondary")
+            {
+                secondaryProvided = true;
+            }
+
+            const size_t beforeCount = targets.size();
+            if (!TryParseSpawnPoint(rawValue, lineNumber, targets))
+            {
+                parseError = true;
+                if (label == "spawnPointsPrimary")
+                {
+                    primaryParseError = true;
+                }
+                else if (label == "spawnPointsSecondary")
+                {
+                    secondaryParseError = true;
+                }
+                return;
+            }
+
+            const size_t added = targets.size() - beforeCount;
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " on line " << lineNumber
+                << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
+                << " (" << targets.size() << " total). Each anchor requires"
+                << " three coordinates. Raw='" << rawValue << "'\n";
+            DebugTrace(oss.str());
+        };
 
         std::string line;
-        size_t lineNumber = 0;
         while (std::getline(file, line))
         {
             ++lineNumber;
@@ -510,30 +643,27 @@ namespace Stage
                     thresholds.insert(thresholds.end(), parsed.begin(), parsed.end());
                 }
             }
-            else if (key == "spawnPoint")
+            //繝溘ル繝輔ぉ繝ｼ繧ｺ
+            else if (key == "phaseMiniThresholds")
             {
-                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
-                {
-                    parseError = true;
-                }
-            }
-            else if (key == "spawnPoints")
-            {
-                size_t beforeCount = spawnPoints.size();
-                if (!TryParseSpawnPoint(rawValue, lineNumber, spawnPoints))
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
                 {
                     parseError = true;
                 }
                 else
                 {
-                    const size_t added = spawnPoints.size() - beforeCount;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "spawnPoints on line " << lineNumber
-                        << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
-                        << " (" << spawnPoints.size() << " total). Each anchor requires"
-                        << " three coordinates. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
+                    minithresholds.insert(minithresholds.end(), parsed.begin(), parsed.end());
                 }
+            }
+            else if (key == "spawnPoints" || key == "spawnPointsPrimary" || key == "spawnPointsA")
+            {
+                appendSpawnPoints("spawnPointsPrimary", rawValue, spawnPointsPrimary);
+            }
+            else if (key == "spawnPointsSecondary" || key == "spawnPointsB")
+            {
+                appendSpawnPoints("spawnPointsSecondary", rawValue, spawnPointsSecondary);
             }
             else if (key == "phaseRewardMultipliers")
             {
@@ -546,6 +676,20 @@ namespace Stage
                 else
                 {
                     rewardMultipliers.insert(rewardMultipliers.end(), parsed.begin(), parsed.end());
+                }
+            }
+            //繝溘ル繝輔ぉ繝ｼ繧ｺ
+            else if (key == "phaseMiniRewardMultipliers")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    minirewardMultipliers.insert(minirewardMultipliers.end(), parsed.begin(), parsed.end());
                 }
             }
             else if (key == "platformCenterY")
@@ -710,6 +854,68 @@ namespace Stage
                     parseError = true;
                 }
             }
+            else if (key == "pickupMaxDistance")
+            {
+                try
+                {
+                    pickupMaxDistance = std::stof(rawValue);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupDepthThreshold")
+            {
+                try
+                {
+                    pickupDepthThreshold = std::stof(rawValue);
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse pickupDepthThreshold on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupOffsetMode")
+            {
+                Stage::PickupOffsetMode parsedMode{};
+                if (TryParsePickupOffsetMode(rawValue, parsedMode))
+                {
+                    pickupOffsetMode = parsedMode;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "pickupOffsetMode on line " << lineNumber
+                        << " is invalid ('" << rawValue << "'); expected none/facing-direction/world-x.\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "pickupOffsetLocalCells")
+            {
+                auto parsed = ParseFloatList(rawValue, nullptr);
+                if (parsed.size() == 3)
+                {
+                    pickupOffsetLocalCells = float3{ parsed[0], parsed[1], parsed[2] };
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "pickupOffsetLocalCells on line " << lineNumber
+                        << " must contain three floats. Raw='" << rawValue << "'\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
             else if (key == "playerMoveSpeed")
             {
                 try
@@ -737,6 +943,70 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineHeight on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineStep")
+            {
+                try
+                {
+                    guidelineStep = std::stof(rawValue);
+                    guidelineStepSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineStep on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineThicknessPixels")
+            {
+                try
+                {
+                    guidelineThicknessPixels = std::stof(rawValue);
+                    guidelineThicknessSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineThicknessPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineWidthPaddingWorld")
+            {
+                try
+                {
+                    guidelineWidthPaddingWorld = std::stof(rawValue);
+                    guidelineWidthPaddingSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineWidthPaddingWorld on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    DebugTrace(oss.str());
+                    parseError = true;
+                }
+            }
+            else if (key == "guidelineZOffset")
+            {
+                try
+                {
+                    guidelineZOffset = std::stof(rawValue);
+                    guidelineZOffsetSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineZOffset on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     DebugTrace(oss.str());
                     parseError = true;
@@ -838,6 +1108,38 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!guidelineStepSet)
+        {
+            guidelineStep = kDefaultGuidelineStep;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineThicknessSet)
+        {
+            guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessPixels not specified; defaulting to "
+                << guidelineThicknessPixels << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineWidthPaddingSet)
+        {
+            guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineWidthPaddingWorld not specified; defaulting to "
+                << guidelineWidthPaddingWorld << "\n";
+            DebugTrace(oss.str());
+        }
+        if (!guidelineZOffsetSet)
+        {
+            guidelineZOffset = kDefaultGuidelineZOffset;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineZOffset not specified; defaulting to "
+                << guidelineZOffset << "\n";
             DebugTrace(oss.str());
         }
 
@@ -1085,26 +1387,134 @@ namespace Stage
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
             DebugTrace(oss.str());
         }
-
-        const std::size_t parsedAnchorCount = spawnPoints.size();
-        if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        if (minithresholds.empty())
         {
-            parseError = true;
-            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+            minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
             std::ostringstream oss;
-            oss << kLogPrefix << "spawnPoints provided " << parsedAnchorCount
-                << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
-                << "; expected at least " << kRequiredSpawnAnchors
-                << ". Falling back to defaults and marking parse error.\n";
+            oss << kLogPrefix << "No phaseMiniThresholds provided; using defaults.\n";
             DebugTrace(oss.str());
         }
 
-        if (spawnPoints.empty())
+        std::sort(minithresholds.begin(), minithresholds.end());
+        minithresholds.erase(
+            std::remove_if(minithresholds.begin(), minithresholds.end(), [](float value)
+                {
+                    return !std::isfinite(value) || value <= 0.0f;
+                }),
+            minithresholds.end());
+
+        minithresholds.erase(std::unique(minithresholds.begin(), minithresholds.end()), minithresholds.end());
+
+        if (minithresholds.empty())
         {
-            spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+            minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
             std::ostringstream oss;
-            oss << kLogPrefix << "No spawnPoint entries found; using defaults.\n";
+            oss << kLogPrefix << "All minithresholds were invalid; falling back to defaults.\n";
             DebugTrace(oss.str());
+        }
+
+        const auto defaultSpawnPointsPrimary = BuildDefaultSpawnPointsPrimary(planeZ);
+        const auto defaultSpawnPointsSecondary = BuildDefaultSpawnPointsSecondary(planeZ);
+
+        auto sanitizeSpawnGroup = [&](std::vector<float3>& spawnPoints, const std::vector<float3>& defaults, const char* label, bool parseFailed, bool allowDefaults, bool& usedDefaults)
+        {
+            const std::size_t parsedAnchorCount = spawnPoints.size();
+            usedDefaults = false;
+            if (parsedAnchorCount > 0 && parsedAnchorCount < kRequiredSpawnAnchors)
+            {
+                parseError = true;
+                parseFailed = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " provided " << parsedAnchorCount
+                    << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
+                    << "; expected at least " << kRequiredSpawnAnchors
+                    << ". Keeping lane empty to avoid silent defaults.\n";
+                DebugTrace(oss.str());
+                spawnPoints.clear();
+            }
+
+            if (spawnPoints.empty() && !parseFailed && allowDefaults)
+            {
+                spawnPoints = defaults;
+                usedDefaults = true;
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " missing; using defaults for this lane.\n";
+                DebugTrace(oss.str());
+            }
+
+            if (!spawnPoints.empty())
+            {
+                const float spawnPlaneZ = spawnPoints.front().z;
+                bool spawnPlaneConsistent = true;
+                for (const auto& spawn : spawnPoints)
+                {
+                    if (std::fabs(spawn.z - spawnPlaneZ) > kSpawnPlaneTolerance)
+                    {
+                        spawnPlaneConsistent = false;
+                        break;
+                    }
+                }
+
+                if (!spawnPlaneConsistent)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << label << " contain multiple planeZ values; anchors may be misaligned.\n";
+                    DebugTrace(oss.str());
+                }
+
+                const float spawnPlaneDelta = std::fabs(spawnPlaneZ - planeZ);
+                if (spawnPlaneDelta > kSpawnPlaneTolerance)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << label << " planeZ=" << spawnPlaneZ
+                        << " differs from configured planeZ=" << planeZ
+                        << " by " << spawnPlaneDelta << "; verify alignment.\n";
+                    DebugTrace(oss.str());
+                }
+            }
+        };
+
+        bool primaryUsedDefaults = false;
+        bool secondaryUsedDefaults = false;
+        bool insertedFallbackAnchor = false;
+        sanitizeSpawnGroup(
+            spawnPointsPrimary,
+            defaultSpawnPointsPrimary,
+            "spawnPointsPrimary",
+            primaryParseError,
+            !primaryProvided,
+            primaryUsedDefaults);
+        sanitizeSpawnGroup(
+            spawnPointsSecondary,
+            defaultSpawnPointsSecondary,
+            "spawnPointsSecondary",
+            secondaryParseError,
+            false,
+            secondaryUsedDefaults);
+
+        if (spawnPointsPrimary.empty() && spawnPointsSecondary.empty())
+        {
+            spawnPointsPrimary.push_back(float3{ 8.0f, -4.0f, 0.0f });
+            spawnPointsSecondary.push_back(float3{ -8.0f, -4.0f, 0.0f });
+            insertedFallbackAnchor = true;
+            parseError = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "Both spawn lanes are empty; inserting single fallback anchor at (+-8,0,0).\n";
+            DebugTrace(oss.str());
+        }
+
+        if (!spawnPointsPrimary.empty() && !spawnPointsSecondary.empty())
+        {
+            const float laneDelta = std::fabs(spawnPointsPrimary.front().z - spawnPointsSecondary.front().z);
+            if (laneDelta > kSpawnPlaneTolerance)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "spawn point lanes use different planeZ values (primary="
+                    << spawnPointsPrimary.front().z << ", secondary=" << spawnPointsSecondary.front().z
+                    << "); verify cross-lane alignment.\n";
+                DebugTrace(oss.str());
+            }
         }
 
         auto sanitizePositive = [](float value, float fallback, const char* label)
@@ -1121,7 +1531,55 @@ namespace Stage
             return fallback;
         };
 
+        auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
+        {
+            if (std::isfinite(value))
+            {
+                if (value >= 0.0f)
+                {
+                    return value;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " value " << value
+                    << " invalid; using fallback " << fallback << "\n";
+                DebugTrace(oss.str());
+                return fallback;
+            }
+
+            if (std::isinf(value))
+            {
+                return value;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " invalid; using fallback " << fallback << "\n";
+            DebugTrace(oss.str());
+            return fallback;
+        };
+
         cellSizeWorld = sanitizePositive(cellSizeWorld, kDefaultCellSizeWorld, "cellSizeWorld");
+
+        auto computeWorldDimension = [&](float fraction, float gridCells, float fallback)
+        {
+            if (std::isfinite(fraction) && fraction > 0.0f && std::isfinite(gridCells) && gridCells > 0.0f)
+            {
+                const float worldDimension = cellSizeWorld * gridCells * fraction;
+                if (std::isfinite(worldDimension) && worldDimension > 0.0f)
+                {
+                    return worldDimension;
+                }
+            }
+
+            return std::max(0.01f, fallback);
+        };
+
+        for (auto& descriptor : platformDescriptors)
+        {
+            descriptor.widthWorld = computeWorldDimension(descriptor.widthFraction, kPlatformGridWidthCells, descriptor.scale.x);
+            descriptor.heightWorld = computeWorldDimension(descriptor.heightFraction, kPlatformGridHeightCells, descriptor.scale.y);
+            descriptor.depthWorld = std::max(0.01f, descriptor.depth * cellSizeWorld);
+        }
 
         if (!horizontalSpeedSet && playerMoveSpeedSet)
         {
@@ -1165,15 +1623,100 @@ namespace Stage
             kDefaultPickupBoxHeightCells,
             "pickupBoxHeightCells");
 
+        pickupMaxDistance = sanitizePositive(
+            pickupMaxDistance,
+            kDefaultPickupMaxDistance,
+            "pickupMaxDistance");
+        pickupDepthThreshold = sanitizeDepthThreshold(
+            pickupDepthThreshold,
+            kDefaultPickupDepthThreshold,
+            "pickupDepthThreshold");
+
+        auto sanitizeVectorFinite = [](const float3& value, const float3& fallback, const char* label)
+        {
+            if (std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z))
+            {
+                return value;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << label << " contains non-finite component; using fallback ("
+                << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
+            DebugTrace(oss.str());
+            return fallback;
+        };
+
+        pickupOffsetLocalCells = sanitizeVectorFinite(
+            pickupOffsetLocalCells,
+            kDefaultPickupOffsetLocalCells,
+            "pickupOffsetLocalCells");
+
+        const float3 pickupOffsetLocalWorld
+        {
+            pickupOffsetLocalCells.x * cellSizeWorld,
+            pickupOffsetLocalCells.y * cellSizeWorld,
+            pickupOffsetLocalCells.z * cellSizeWorld,
+        };
+
+        Stage::PickupOffset pickupOffset
+        {
+            pickupOffsetMode,
+            pickupOffsetLocalWorld,
+        };
+
+        const Stage::PickupOffset defaultPickupOffsetWorld
+        {
+            kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * cellSizeWorld,
+                kDefaultPickupOffsetLocalCells.y * cellSizeWorld,
+                kDefaultPickupOffsetLocalCells.z * cellSizeWorld },
+        };
+
+        pickupOffset.localOffset = sanitizeVectorFinite(
+            pickupOffset.localOffset,
+            defaultPickupOffsetWorld.localOffset,
+            "pickupOffsetLocalWorld");
+
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
-        if (!std::isfinite(guidelineHeight) || guidelineHeight <= 0.0f)
+        if (!std::isfinite(guidelineHeight))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight value " << guidelineHeight
-                << " invalid; using default " << kDefaultGuidelineHeight << "\n";
+                << " invalid; keeping parsed value.\n";
             DebugTrace(oss.str());
-            guidelineHeight = kDefaultGuidelineHeight;
+        }
+
+        if (!std::isfinite(guidelineStep))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineStep value " << guidelineStep
+                << " invalid; keeping parsed value.\n";
+            DebugTrace(oss.str());
+        }
+        if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessPixels value " << guidelineThicknessPixels
+                << " invalid; using default " << kDefaultGuidelineThicknessPixels << "\n";
+            DebugTrace(oss.str());
+            guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        }
+        if (!std::isfinite(guidelineWidthPaddingWorld) || guidelineWidthPaddingWorld < 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineWidthPaddingWorld value " << guidelineWidthPaddingWorld
+                << " invalid; using default " << kDefaultGuidelineWidthPaddingWorld << "\n";
+            DebugTrace(oss.str());
+            guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        }
+        if (!std::isfinite(guidelineZOffset))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineZOffset value " << guidelineZOffset
+                << " invalid; using default " << kDefaultGuidelineZOffset << "\n";
+            DebugTrace(oss.str());
+            guidelineZOffset = kDefaultGuidelineZOffset;
         }
 
         if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
@@ -1200,14 +1743,32 @@ namespace Stage
             DebugTrace(oss.str());
             heightBonusSeconds = 0.0f;
         }
+        else if (std::fabs(heightBonusSeconds - kDefaultHeightBonusSeconds)
+            > std::numeric_limits<float>::epsilon())
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
+                << " overridden to requirement default " << kDefaultHeightBonusSeconds
+                << " (+5s per crossing).\n";
+            DebugTrace(oss.str());
+            heightBonusSeconds = kDefaultHeightBonusSeconds;
+        }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
-        EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount);
+        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
+            kDefaultRewardMultipliers);
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        EnsureRewardMultiplierCoverage(minirewardMultipliers, minirequiredMultiplierCount,
+            kDefaultMiniRewardMultipliers);
 
         m_planeZ = planeZ;
         m_phaseThresholds = thresholds;
         m_phaseRewardMultipliers = rewardMultipliers;
-        m_spawnPoints = spawnPoints;
+        m_phaseMiniThresholds = minithresholds;                  //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        m_phaseRewardMiniMultipliers = minirewardMultipliers;    //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        m_spawnPointsPrimary = spawnPointsPrimary;
+        m_spawnPointsSecondary = spawnPointsSecondary;
         m_platforms = std::move(platformDescriptors);
         m_cellSizeWorld = cellSizeWorld;
         m_playerHorizontalSpeedCellsPerSec = horizontalSpeedCellsPerSec;
@@ -1218,36 +1779,34 @@ namespace Stage
         m_pickupBoxHeightCells = pickupBoxHeightCells;
         m_pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
         m_pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
+        m_pickupMaxDistance = pickupMaxDistance;
+        m_pickupDepthThreshold = pickupDepthThreshold;
+        m_pickupOffset = pickupOffset;
         m_playerMoveSpeed = playerMoveSpeedWorld;
-        m_guidelineHeight = guidelineHeight;
+        m_guidelineHeight = 7.0f;
+        m_guidelineStep = guidelineStep;
+        m_guidelineThicknessPixels = guidelineThicknessPixels;
+        m_guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
+        m_guidelineZOffset = guidelineZOffset;
         m_heightBonusThreshold = heightBonusThreshold;
         m_heightBonusSeconds = heightBonusSeconds;
         m_backgroundTexturePath = backgroundTexturePath;
         m_sourcePath = path;
         m_loadedFromFile = !parseError;
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Loaded stage data from '" << path << "' (planeZ=" << m_planeZ
-            << ", thresholds=" << m_phaseThresholds.size()
-            << ", multipliers=" << m_phaseRewardMultipliers.size()
-            << ", spawnPoints=" << m_spawnPoints.size()
-            << ", platforms=" << m_platforms.size()
-            << ", cellSizeWorld=" << m_cellSizeWorld
-            << ", playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
-            << ", playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
-            << ", pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
-            << ", pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
-            << ", guidelineHeight=" << m_guidelineHeight
-            << ", heightBonusThreshold=" << m_heightBonusThreshold
-            << ", heightBonusSeconds=" << m_heightBonusSeconds
-            << ", backgroundTexture='" << m_backgroundTexturePath << "'"
-            << ", parseError=" << std::boolalpha << parseError << ").\n";
-        DebugTrace(oss.str());
-
-        for (std::size_t i = 0; i < m_platforms.size(); ++i)
-        {
-            LogPlatformSummary(i, m_platforms[i]);
-        }
+        std::ostringstream detail;
+        detail << "source='" << path << "' parseError=" << std::boolalpha << parseError
+            << " primaryDefaulted=" << primaryUsedDefaults
+            << " secondaryDefaulted=" << secondaryUsedDefaults
+            << " primaryProvided=" << primaryProvided
+            << " secondaryProvided=" << secondaryProvided
+            << " primaryParseError=" << primaryParseError
+            << " secondaryParseError=" << secondaryParseError
+            << " fallbackAnchors=" << insertedFallbackAnchor
+            << " minithresholds=" << m_phaseMiniThresholds.size()
+            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size()
+            << " platformCount=" << m_platforms.size();
+        LogSummary("Loaded", detail.str());
 
         return m_loadedFromFile;
     }
@@ -1261,20 +1820,30 @@ namespace Stage
     {
         return m_phaseRewardMultipliers;
     }
-    //ミニフェーズ
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
     const std::vector<float>& StageData::GetPhaseMiniThresholds() const noexcept
     {
         return m_phaseMiniThresholds;
     }
-    //ミニフェーズ
+    //繝溘ル繝輔ぉ繝ｼ繧ｺ
     const std::vector<float>& StageData::GetPhaseRewardMiniMultipliers() const noexcept
     {
         return m_phaseRewardMiniMultipliers;
     }
 
+    const std::vector<float3>& StageData::GetSpawnPointsPrimary() const noexcept
+    {
+        return m_spawnPointsPrimary;
+    }
+
+    const std::vector<float3>& StageData::GetSpawnPointsSecondary() const noexcept
+    {
+        return m_spawnPointsSecondary;
+    }
+
     const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
     {
-        return m_spawnPoints;
+        return m_spawnPointsPrimary;
     }
 
     float StageData::GetPlaneZ() const noexcept
@@ -1296,7 +1865,7 @@ namespace Stage
 
         if (m_platforms.empty())
         {
-            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction, kDefaultPlatformPrimaryColor };
+            static PlatformDescriptor s_fallback{ float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ }, kDefaultPlatformScale, kDefaultPlatformDepth, kDefaultPlatformWidthFraction, kDefaultPlatformHeightFraction };
             return s_fallback;
         }
 
@@ -1343,9 +1912,44 @@ namespace Stage
         return m_pickupBoxHeightWorld;
     }
 
+    float StageData::GetPickupMaxDistance() const noexcept
+    {
+        return m_pickupMaxDistance;
+    }
+
+    float StageData::GetPickupDepthThreshold() const noexcept
+    {
+        return m_pickupDepthThreshold;
+    }
+
+    const PickupOffset& StageData::GetPickupOffset() const noexcept
+    {
+        return m_pickupOffset;
+    }
+
     float StageData::GetGuidelineHeight() const noexcept
     {
         return m_guidelineHeight;
+    }
+
+    float StageData::GetGuidelineStep() const noexcept
+    {
+        return m_guidelineStep;
+    }
+
+    float StageData::GetGuidelineThicknessPixels() const noexcept
+    {
+        return m_guidelineThicknessPixels;
+    }
+
+    float StageData::GetGuidelineWidthPaddingWorld() const noexcept
+    {
+        return m_guidelineWidthPaddingWorld;
+    }
+
+    float StageData::GetGuidelineZOffset() const noexcept
+    {
+        return m_guidelineZOffset;
     }
 
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
@@ -1368,8 +1972,15 @@ namespace Stage
         m_planeZ = kDefaultPlaneZ;
         m_phaseThresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
         m_phaseRewardMultipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
-        EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1);
-        m_spawnPoints.assign(std::begin(kDefaultSpawnPoints), std::end(kDefaultSpawnPoints));
+        //螟ｧ繝輔ぉ繝ｼ繧ｺ
+        EnsureRewardMultiplierCoverage(m_phaseRewardMultipliers, m_phaseThresholds.size() + 1, kDefaultRewardMultipliers);
+        //繝溘ル繝輔ぉ繝ｼ繧ｺ
+        m_phaseMiniThresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
+        m_phaseRewardMiniMultipliers.assign(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
+        EnsureRewardMultiplierCoverage(m_phaseRewardMiniMultipliers, m_phaseMiniThresholds.size() + 1, kDefaultMiniRewardMultipliers);
+
+        m_spawnPointsPrimary = BuildDefaultSpawnPointsPrimary(kDefaultPlaneZ);
+        m_spawnPointsSecondary.clear();
         m_platforms.clear();
         PlatformDescriptor descriptor{};
         descriptor.center = float3{ 0.0f, kDefaultPlatformCenterY, kDefaultPlaneZ };
@@ -1377,6 +1988,9 @@ namespace Stage
         descriptor.depth = kDefaultPlatformDepth;
         descriptor.widthFraction = kDefaultPlatformWidthFraction;
         descriptor.heightFraction = kDefaultPlatformHeightFraction;
+        descriptor.widthWorld = kDefaultPlatformWidthFraction * kPlatformGridWidthCells * kDefaultCellSizeWorld;
+        descriptor.heightWorld = kDefaultPlatformHeightFraction * kPlatformGridHeightCells * kDefaultCellSizeWorld;
+        descriptor.depthWorld = kDefaultPlatformDepth * kDefaultCellSizeWorld;
         descriptor.color = kDefaultPlatformPrimaryColor;
         m_platforms.push_back(descriptor);
         m_cellSizeWorld = kDefaultCellSizeWorld;
@@ -1388,8 +2002,21 @@ namespace Stage
         m_pickupBoxHeightCells = kDefaultPickupBoxHeightCells;
         m_pickupBoxWidthWorld = kDefaultPickupBoxWidthCells * kDefaultCellSizeWorld;
         m_pickupBoxHeightWorld = kDefaultPickupBoxHeightCells * kDefaultCellSizeWorld;
+        m_pickupMaxDistance = kDefaultPickupMaxDistance;
+        m_pickupDepthThreshold = kDefaultPickupDepthThreshold;
+        m_pickupOffset = PickupOffset
+        {
+            kDefaultPickupOffsetMode,
+            float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
+                kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
+                kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld },
+        };
         m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
+        m_guidelineStep = kDefaultGuidelineStep;
+        m_guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
+        m_guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
+        m_guidelineZOffset = kDefaultGuidelineZOffset;
         m_backgroundTexturePath = kDefaultBackgroundTexturePath;
         m_heightBonusThreshold = kDefaultHeightBonusThreshold;
         m_heightBonusSeconds = kDefaultHeightBonusSeconds;
@@ -1404,14 +2031,26 @@ namespace Stage
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
-            << " spawnPoints=" << m_spawnPoints.size()
+            << " minithreshold=" << m_phaseMiniThresholds.size()          //繝溘ル繝輔ぉ繝ｼ繧ｺ
+            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //繝溘ル繝輔ぉ繝ｼ繧ｺ
+            << " spawnPointsPrimary=" << m_spawnPointsPrimary.size()
+            << " spawnPointsSecondary=" << m_spawnPointsSecondary.size()
             << " platforms=" << m_platforms.size()
             << " cellSizeWorld=" << m_cellSizeWorld
             << " playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
             << " playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
             << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
             << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
+            << " pickupMaxDistance=" << m_pickupMaxDistance
+            << " pickupDepthThreshold=" << m_pickupDepthThreshold
+            << " pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
+            << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
+            << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_guidelineHeight
+            << " guidelineStep=" << m_guidelineStep
+            << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
+            << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
+            << " guidelineZOffset=" << m_guidelineZOffset
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
@@ -1430,14 +2069,15 @@ namespace Stage
         oss << kLogPrefix << " platform[" << index << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
             << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
             << descriptor.scale.z << ") depth=" << descriptor.depth
+            << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld << ')'
             << " widthFraction=" << descriptor.widthFraction
-            << " heightFraction=" << descriptor.heightFraction
             << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','
             << descriptor.color.z << ',' << descriptor.color.w << ")\n";
         DebugTrace(oss.str());
     }
 
-    void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount) const
+    void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount,
+        const float* defaultMultipliers) const
     {
         if (requiredCount == 0)
         {
@@ -1464,6 +2104,7 @@ namespace Stage
             multipliers.assign(std::begin(kDefaultRewardMultipliers), std::end(kDefaultRewardMultipliers));
             std::ostringstream oss;
             oss << kLogPrefix << "No phaseRewardMultipliers provided; using defaults." << "\n";
+
             DebugTrace(oss.str());
         }
 

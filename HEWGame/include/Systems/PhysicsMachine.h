@@ -12,7 +12,7 @@
 
 namespace Systems
 // PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する
-// UpdateNode。旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける。
+// UpdateNode 旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける 
 {
     struct PhysicsTuningParameters
     {
@@ -24,6 +24,12 @@ namespace Systems
         float defaultRestitution = 0.0f;
         float restitutionThreshold = 1.0f;
         float hitEventThreshold = 0.0f;
+        float maxStepDt = 1.0f / 60.0f;
+        int maxAccumulatedSteps = 8;
+        bool continuousCollisionForSweets = false;
+        bool continuousCollisionForSmallDynamics = false;
+        float smallDynamicContinuousThreshold = 0.0f;
+        bool continuousCollisionForPlayerProjectiles = false;
     };
 
     class IPhysicsSystem
@@ -54,18 +60,27 @@ namespace Systems
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);
-        void UnregisterBody(Entities::PhysicalEntity& body);
+        void UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData = false);
         void ClearBodies();
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
         b2WorldId GetWorldId() const;
+        b2JointId CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
+            const Entities::PhysicalEntity& bodyB,
+            const b2Vec2& worldAnchor,
+            float linearHertz,
+            float linearDampingRatio,
+            float angularHertz,
+            float angularDampingRatio,
+            bool collideConnected = false);
+        void DestroyJoint(b2JointId jointId, bool wakeAttached = true);
 
         void SyncBodies(float dt);
         void OnUpdate(Core::UpdateContext& ctx) override;
 
     private:
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
-        void DestroyBody(const Entities::PhysicalEntity& body);
+        void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
@@ -74,6 +89,7 @@ namespace Systems
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
+        PhysicsTuningParameters m_tuning{};
         int m_subStepCount = 4;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;

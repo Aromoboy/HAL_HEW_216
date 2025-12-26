@@ -707,7 +707,7 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                                 auto afterIt = indexLookup.find(dep.second);
                                 if (beforeIt == indexLookup.end() || afterIt == indexLookup.end())
                                 {
-                                        // 未登録ノードの依存は無視。登録順によっては起こり得る
+                                        // 未登録ノードの依存は無視 登録順によっては起こり得る
                                         continue;
                                 }
 
@@ -814,7 +814,7 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                                 oss << "[UpdateScheduler] cycle detected; executing remaining nodes in registration order. processed="
                                     << processed.size() << " total=" << nodeCount << '\n';
                                 DebugLog(oss.str());
-                                // ここに到達するのは循環依存があったケース。強制的に残りを順番に実行する
+                                // ここに到達するのは循環依存があったケース 強制的に残りを順番に実行する
                                 std::vector<bool> isProcessed(nodeCount, false);
                                 for (std::size_t index : processed)
                                 {

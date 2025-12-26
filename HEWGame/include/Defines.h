@@ -31,7 +31,7 @@ static const float fFPS = static_cast<float>(FPS);
 static const float GRAVITY = 0.98f;
 
 // タイトル
-static const char* APP_TITLE = "HEW_Team216";
+static const wchar_t* APP_TITLE = L"HEW_Team216";
 
 // 画面サイズ
 static const int SCREEN_WIDTH	= 1280;
@@ -41,7 +41,8 @@ static const int SCREEN_HEIGHT	= 720;
 static const int	DEBUG_GRID_NUM		= 10;			// グリッド中心から端までの線の本数
 static const float	DEBUG_GRID_MARGIN	= METER(1.0f);	// グリッド配置幅
 
-#define PI (3.1415)
-#define RAD (180 / PI)
+static const float PI = 3.14159265358979323846f;
+static const float DEG_TO_RAD = PI / 180.0f;
+static const float RAD_TO_DEG = 180.0f / PI;
 
 #endif // __DEFINES_H__

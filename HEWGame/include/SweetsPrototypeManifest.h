@@ -10,14 +10,11 @@ namespace SweetsSpace
 {
     enum class SweetsType : std::uint8_t
     {
-        Cake,
-        Pudding,
-        Sherbet,
+        Cream,
         Strawberry,
         Blueberry,
         Pineapple,
         Banana,
-        Fairy,
     };
 
     struct SweetsPrototypeDescriptor
@@ -25,6 +22,7 @@ namespace SweetsSpace
         std::string key;
         std::string modelPath;
         std::string description;
+        bool allowMeshPhysics{ false };
     };
 
     struct SweetsPrototypeEntry
@@ -60,11 +58,15 @@ namespace SweetsSpace
 
         void ApplyDefaults();
         bool LoadOverridesFromCsv(const std::string& csvPath);
-        void Register(SweetsType type, std::string key, std::string relativePath, std::string description);
+        void Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
         void RegisterAlias(SweetsType type, const std::string& aliasKey);
+        void RegisterExtra(std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
+        void RegisterExtraAlias(const std::string& key, const std::string& aliasKey);
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;
         std::unordered_map<std::string, SweetsType> m_lookup;
+        std::unordered_map<std::string, SweetsPrototypeDescriptor> m_extras;
+        std::unordered_map<std::string, std::string> m_extraLookup;
     };
 
     std::string ToString(SweetsType type);

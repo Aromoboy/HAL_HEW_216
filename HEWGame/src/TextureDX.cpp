@@ -31,14 +31,14 @@ namespace
         HRESULT hr = device->CreateTexture2D(&desc, &initData, &texture);
         if (FAILED(hr))
         {
-            DebugMessage("[Texture2D] eNX`\\[X̍쐬Ɏs");
+            DebugLog::DebugMessage("[Texture2D] eNX`\\[X̍쐬Ɏs");
             return false;
         }
 
         hr = device->CreateShaderResourceView(texture.Get(), nullptr, outTextureView.GetAddressOf());
         if (FAILED(hr))
         {
-            DebugMessage("[Texture2D] SRV̍쐬Ɏs");
+            DebugLog::DebugMessage("[Texture2D] SRV̍쐬Ɏs");
             return false;
         }
 
@@ -82,7 +82,7 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
-        DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
+        DebugLog::DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
         return false;
     }
 
@@ -112,7 +112,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&factory))))
     {
-        DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
+        DebugLog::DebugMessage("[Texture2D] WICt@Ng[̍쐬Ɏs");
         return false;
     }
 

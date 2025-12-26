@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <array>
+#include <cstdint>
 #include <Xinput.h>
 
 #include "Core/ActionId.h"
@@ -10,9 +11,9 @@
 #include "Core/UpdateNode.h"
 
 // Input/UpdateContext 対応メモ（README のクラス図準拠）
-// - 本クラスは Core::UpdateNode を継承し、UpdatePhase::Input で最初に入力を集約する役割を担う。
-// - UpdateContext は各フェーズで共有され、Input フェーズでポーリング済みのこのインスタンスへの参照を保持する。
-// - ゲームループの更新順序を崩さないため、ポーリングは OnUpdate 内でのみ行い、他フェーズは取得済み状態を参照する方針。
+// - 本クラスは Core::UpdateNode を継承し、UpdatePhase::Input で最初に入力を集約する役割を担う 
+// - UpdateContext は各フェーズで共有され、Input フェーズでポーリング済みのこのインスタンスへの参照を保持する 
+// - ゲームループの更新順序を崩さないため、ポーリングは OnUpdate 内でのみ行い、他フェーズは取得済み状態を参照する方針 
 
 #pragma comment(lib, "xinput.lib")
 
@@ -51,28 +52,28 @@ namespace Core
         void Rebind(ActionId action, const Binding& binding);
 
     private:
-        // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する。
-        // 初期化に失敗した場合は安全側に倒すためゼロクリアする。
+        // 毎フレーム、入力フェーズ開始時に現在のキー状態を取得する 
+        // 初期化に失敗した場合は安全側に倒すためゼロクリアする 
         void PollKeyboardState();
 
-        // XInput ゲームパッドをポーリングする。接続状態が変わった際はデバッグログで通知。
+        // XInput ゲームパッドをポーリングする 接続状態が変わった際はデバッグログで通知 
         void PollPadState(int index = 0);
 
-        // 現フレーム/前フレームの状態を参照するヘルパー。未初期化時は false になる。
+        // 現フレーム/前フレームの状態を参照するヘルパー 未初期化時は false になる 
         InputMap::ActionState GetActionState(ActionId action) const;
 
         bool IsKeyDown(BYTE key) const;
         bool WasKeyDown(BYTE key) const;
 
-        // 配列は UpdatePhase::Input の開始時に current へ読み出し、更新前に previous に退避する。
+        // 配列は UpdatePhase::Input の開始時に current へ読み出し、更新前に previous に退避する 
         std::array<BYTE, 256> m_currentKeys;
         std::array<BYTE, 256> m_previousKeys;
         bool m_initialized;
 
         Gamepad m_pad;
         InputMap m_map;
+        std::uint64_t m_lastPolledFrame = 0;
 
         friend class InputMap;
     };
 }
-

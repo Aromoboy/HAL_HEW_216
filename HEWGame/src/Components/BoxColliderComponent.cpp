@@ -1,12 +1,41 @@
 #include "Components/BoxColliderComponent.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
-#include <box2d/collision.h>
-#include <box2d/math_functions.h>
-
 #include "Systems/Box2DPhysicsSystem.h"
+#include "Entities/PhysicalEntity.h"
+#include "Physics/ShapeConstants.h"
+
+namespace
+{
+        constexpr float kScaleAssertionEpsilon = 0.0001f;
+
+        float ToBox2DLength(float renderLength, float axisScale, const Transform& transform)
+        {
+#if defined(_DEBUG)
+                assert(std::isfinite(renderLength));
+                assert(std::isfinite(axisScale));
+                const float scaleX = transform.scale.x;
+                const float scaleY = transform.scale.y;
+                const float uniformScale = std::max(scaleX, scaleY);
+                const bool matchesAxis = std::fabs(axisScale - scaleX) <= kScaleAssertionEpsilon
+                        || std::fabs(axisScale - scaleY) <= kScaleAssertionEpsilon
+                        || std::fabs(axisScale - uniformScale) <= kScaleAssertionEpsilon;
+                assert(matchesAxis && "Render-space collider length must be scaled by transform.scale before Box2D conversion.");
+#endif
+                return Entities::PhysicalEntity::ToBox2DLength(renderLength * axisScale);
+        }
+
+        b2Vec2 ToBox2DPosition(const b2Vec2& renderPosition, const Transform& transform)
+        {
+                return b2Vec2{
+                    ToBox2DLength(renderPosition.x, transform.scale.x, transform),
+                    ToBox2DLength(renderPosition.y, transform.scale.y, transform),
+                };
+        }
+}
 
 namespace
 {
@@ -23,31 +52,16 @@ namespace
                 }
                 return std::max(0.0f, density);
         }
-
-        bool TryBuildPolygon(const Components::BoxColliderComponent::PolygonShape& polygonShape, b2Polygon& outShape)
-        {
-                if (polygonShape.vertices.size() < 3)
-                {
-                        return false;
-                }
-
-                const b2Hull hull = b2ComputeHull(polygonShape.vertices.data(), static_cast<int>(polygonShape.vertices.size()));
-                if (!b2ValidateHull(&hull))
-                {
-                        return false;
-                }
-
-                outShape = b2MakePolygon(&hull, 0.0f);
-                return true;
-        }
 }
 
 namespace Components
 {
         bool BoxColliderComponent::Initialize(Systems::Box2DPhysicsSystem& physicsSystem, const Transform& transform)
         {
-                Destroy(physicsSystem);
-                return CreateBody(physicsSystem, transform) && CreateFixture();
+                (void)physicsSystem;
+                (void)transform;
+                m_descriptor = BuildDescriptor(transform);
+                return !m_descriptor.Empty();
         }
 
         bool BoxColliderComponent::Initialize(Systems::Box2DPhysicsSystem& physicsSystem, const Transform& transform, const BoxColliderSerialized& serialized)
@@ -80,18 +94,7 @@ namespace Components
 
         void BoxColliderComponent::Destroy(Systems::Box2DPhysicsSystem& physicsSystem)
         {
-                const b2WorldId worldId = physicsSystem.GetWorldId();
-                if (b2World_IsValid(worldId))
-                {
-                        if (b2Shape_IsValid(m_fixture))
-                        {
-                                b2DestroyShape(m_fixture, true);
-                        }
-                        if (b2Body_IsValid(m_body))
-                        {
-                                b2DestroyBody(m_body);
-                        }
-                }
+                (void)physicsSystem;
                 ResetHandles();
         }
 
@@ -168,88 +171,58 @@ namespace Components
                 return data;
         }
 
-        bool BoxColliderComponent::CreateBody(Systems::Box2DPhysicsSystem& physicsSystem, const Transform& transform)
+        Physics::BoxColliderComponent BoxColliderComponent::BuildDescriptor(const Transform& transform) const
         {
-                m_cachedWorld = physicsSystem.GetWorldId();
-                if (!b2World_IsValid(m_cachedWorld))
-                {
-                        return false;
-                }
-
-                b2BodyDef bodyDef = b2DefaultBodyDef();
-                bodyDef.position = b2Vec2{ transform.position.x, transform.position.y };
-                bodyDef.rotation = b2MakeRot(transform.rotation.z);
-                bodyDef.type = (SanitizeDensity(m_material.density) > 0.0f) ? b2_dynamicBody : b2_staticBody;
-                bodyDef.gravityScale = (bodyDef.type == b2_dynamicBody) ? 1.0f : 0.0f;
-
-                m_body = b2CreateBody(m_cachedWorld, &bodyDef);
-                return b2Body_IsValid(m_body);
-        }
-
-        bool BoxColliderComponent::CreateFixture()
-        {
-                if (!b2Body_IsValid(m_body))
-                {
-                        return false;
-                }
-
-                b2ShapeDef shapeDef = b2DefaultShapeDef();
-                shapeDef.density = (b2Body_GetType(m_body) == b2_dynamicBody) ? SanitizeDensity(m_material.density) : 0.0f;
-                shapeDef.material.friction = Clamp01(m_material.friction);
-                shapeDef.material.restitution = Clamp01(m_material.restitution);
-                shapeDef.enableContactEvents = true;
-                shapeDef.userData = b2Body_GetUserData(m_body);
+                Physics::BoxColliderComponent descriptor{};
+                descriptor.shapeDef.density = SanitizeDensity(m_material.density);
+                descriptor.shapeDef.material.friction = Clamp01(m_material.friction);
+                descriptor.shapeDef.material.restitution = Clamp01(m_material.restitution);
 
                 switch (m_shapeKind)
                 {
                 case Shape::Circle:
                 {
                         const CircleShape* circleShape = std::get_if<CircleShape>(&m_shapeData);
-                        const float radius = std::max(0.001f, circleShape ? circleShape->radius : 0.5f);
-                        m_runtimeShape = b2Circle{ b2Vec2{ 0.0f, 0.0f }, radius };
-                        m_fixture = b2CreateCircleShape(m_body, &shapeDef, &std::get<b2Circle>(m_runtimeShape));
+                        const float radius = circleShape ? circleShape->radius : 0.5f;
+                        const float scaledRadius = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, radius), std::max(transform.scale.x, transform.scale.y), transform);
+                        descriptor.AddCircle(scaledRadius);
                         break;
                 }
                 case Shape::Polygon:
                 {
-                        b2Polygon polygon{};
                         const PolygonShape* polygonShape = std::get_if<PolygonShape>(&m_shapeData);
-                        if (!polygonShape || !TryBuildPolygon(*polygonShape, polygon))
+                        if (polygonShape && polygonShape->vertices.size() >= 3)
                         {
-                                return false;
+                                std::vector<b2Vec2> scaledVertices{};
+                                scaledVertices.reserve(polygonShape->vertices.size());
+                                for (const auto& vertex : polygonShape->vertices)
+                                {
+                                        scaledVertices.emplace_back(ToBox2DPosition(vertex, transform));
+                                }
+
+                                descriptor.AddPolygon(scaledVertices);
                         }
-                        m_runtimeShape = polygon;
-                        m_fixture = b2CreatePolygonShape(m_body, &shapeDef, &std::get<b2Polygon>(m_runtimeShape));
                         break;
                 }
                 case Shape::Box:
                 default:
                 {
                         const BoxShape box = std::get<BoxShape>(m_shapeData);
-                        const float hx = std::max(0.001f, box.size.x * 0.5f);
-                        const float hy = std::max(0.001f, box.size.y * 0.5f);
-                        m_runtimeShape = b2MakeBox(hx, hy);
-                        m_fixture = b2CreatePolygonShape(m_body, &shapeDef, &std::get<b2Polygon>(m_runtimeShape));
+                        const float hx = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, box.size.x * 0.5f), transform.scale.x, transform);
+                        const float hy = ToBox2DLength(std::max(Physics::kMinimumShapeDimensionMeters, box.size.y * 0.5f), transform.scale.y, transform);
+                        descriptor.AddBox(hx, hy);
                         break;
                 }
                 }
 
-                if (!b2Shape_IsValid(m_fixture))
-                {
-                        b2DestroyBody(m_body);
-                        ResetHandles();
-                        return false;
-                }
-
-                return true;
+                return descriptor;
         }
 
         void BoxColliderComponent::ResetHandles()
         {
                 m_body = b2_nullBodyId;
                 m_fixture = b2_nullShapeId;
-                m_runtimeShape = std::monostate{};
-                m_cachedWorld = b2_nullWorldId;
+                m_descriptor.Clear();
         }
 }
 

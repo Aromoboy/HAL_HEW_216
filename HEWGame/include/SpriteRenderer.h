@@ -23,7 +23,7 @@ public:
 	void SetUVScale(DirectX::XMFLOAT2 scale);
 
 private:
-	// 板として描画するためのメッシュ、コンストラクタで自作する。
+	// 板として描画するためのメッシュ、コンストラクタで自作する 
 	std::shared_ptr<MeshDX> m_spriteMesh;
 	std::shared_ptr<Shader> vs;
 	std::shared_ptr<Shader> ps;

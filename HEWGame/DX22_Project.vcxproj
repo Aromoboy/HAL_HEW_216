@@ -31,27 +31,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -92,6 +92,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -114,6 +115,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -136,12 +138,14 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;$(ProjectDir)ThirdParty\Effekseer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2dd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
@@ -158,6 +162,8 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)box2d\include;$(ProjectDir)ThirdParty\Effekseer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -165,16 +171,21 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EffectSystem.cpp" />
+    <ClCompile Include="include\AnimationState.cpp" />
+    <ClCompile Include="include\EffectTestScene.cpp" />
+    <ClCompile Include="src\Animation.cpp" />
+    <ClCompile Include="src\AnimationCache.cpp" />
     <ClCompile Include="src\ColliderConfigLoader.cpp" />
+    <ClCompile Include="src\ColliderRegistry.cpp" />
     <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
-    <ClCompile Include="src\Collision2D.cpp" />
     <ClCompile Include="include\PowerUpRenderer.cpp" />
     <ClCompile Include="include\PowerUpTarget.cpp" />
     <ClCompile Include="src\AssimpModelLorder.cpp" />
@@ -197,6 +208,8 @@
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\BaseCamera.cpp" />
+    <ClCompile Include="src\ResultRenderer.cpp" />
+    <ClCompile Include="src\SettingScene.cpp" />
     <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp" />
     <ClCompile Include="src\HudRenderer.cpp" />
     <ClCompile Include="src\BackgroundRenderer.cpp" />
@@ -208,14 +221,15 @@
     <ClCompile Include="src\MeshBuffer.cpp" />
     <ClCompile Include="src\Model.cpp" />
     <ClCompile Include="src\ModelCache.cpp" />
+    <ClCompile Include="src\ModelPivot.cpp" />
     <ClCompile Include="src\ModelRender.cpp" />
     <ClCompile Include="src\MaterialDX.cpp" />
     <ClCompile Include="src\MeshDX.cpp" />
     <ClCompile Include="src\ModelDX.cpp" />
-    <ClCompile Include="src\Entities\CollisionEntity.cpp" />
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="src\Entities\Player.cpp" />
+    <ClCompile Include="src\GuidelineActor.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
     <ClCompile Include="src\PowerUpNode.cpp" />
@@ -224,11 +238,11 @@
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
+    <ClCompile Include="src\TitleRenderer.cpp" />
     <ClCompile Include="src\TitleScene.cpp" />
     <ClCompile Include="src\ScenePowerUp.cpp" />
     <ClCompile Include="src\SpriteRenderer.cpp" />
     <ClCompile Include="src\Stage\StageData.cpp" />
-    <ClCompile Include="src\Stage\FoundationPlatform.cpp" />
     <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
     <ClCompile Include="src\Systems\Box2DContactListener.cpp" />
     <ClCompile Include="src\Systems\DrawSystem.cpp" />
@@ -242,7 +256,9 @@
     <ClCompile Include="src\SoundManagerEX.cpp" />
     <ClCompile Include="src\SoundSystem.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
+    <ClCompile Include="src\FullscreenManager.cpp" />
     <ClCompile Include="src\Startup.cpp" />
+    <ClCompile Include="src\WindowManager.cpp" />
     <ClCompile Include="src\TestObject.cpp" />
     <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\TextureCache.cpp" />
@@ -254,17 +270,22 @@
     <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EffectSystem.h" />
+    <ClInclude Include="include\Animation.h" />
+    <ClInclude Include="include\AnimationCache.h" />
+    <ClInclude Include="include\AnimationState.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
+    <ClInclude Include="include\ColliderRegistry.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
-    <ClInclude Include="include\Collision2D.h" />
-    <ClInclude Include="include\CollisionEntity.h" />
     <ClInclude Include="include\CollisionLayer.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
     <ClInclude Include="include\CameraDebug.h" />
     <ClInclude Include="include\CameraManager.h" />
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\Core\ActionId.h" />
+    <ClInclude Include="include\Effect.h" />
+    <ClInclude Include="include\EffectTestScene.h" />
     <ClInclude Include="include\PowerUpRenderer.h" />
     <ClInclude Include="include\PowerUpTarget.h" />
     <ClInclude Include="include\Core\IUpdatable.h" />
@@ -280,6 +301,8 @@
     <ClInclude Include="include\Core\VertexBuffer.h" />
     <ClInclude Include="include\Debug.h" />
     <ClInclude Include="include\DebugColliderRenderer.h" />
+    <ClInclude Include="include\ResultRenderer.h" />
+    <ClInclude Include="include\SettingScene.h" />
     <ClInclude Include="include\Systems\Box2DContactListener.h" />
     <ClInclude Include="include\PowerUpCursor.h" />
     <ClInclude Include="include\PowerUpManager.h" />
@@ -293,12 +316,12 @@
     <ClInclude Include="include\DirectX.h" />
     <ClInclude Include="include\DrawMatrix.h" />
     <ClInclude Include="include\Entity.h" />
-    <ClInclude Include="include\Entities\CollisionEntity.h" />
     <ClInclude Include="include\Entities\Entity.h" />
     <ClInclude Include="include\Entities\PhysicalEntity.h" />
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Entities\Player.h" />
+    <ClInclude Include="include\GuidelineActor.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />
@@ -306,7 +329,6 @@
     <ClInclude Include="include\BackgroundRenderer.h" />
     <ClInclude Include="include\PerspectiveCamera.h" />
     <ClInclude Include="include\ICamera.h" />
-    <ClInclude Include="include\ICollider.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
     <ClInclude Include="include\Components\BoxColliderComponent.h" />
@@ -314,6 +336,7 @@
     <ClInclude Include="include\MeshBuffer.h" />
     <ClInclude Include="include\Model.h" />
     <ClInclude Include="include\ModelCache.h" />
+    <ClInclude Include="include\ModelPivot.h" />
     <ClInclude Include="include\ModelRender.h" />
     <ClInclude Include="include\MaterialDX.h" />
     <ClInclude Include="include\MeshDX.h" />
@@ -323,10 +346,10 @@
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneManager.h" />
     <ClInclude Include="include\SelectScene.h" />
+    <ClInclude Include="include\TitleRenderer.h" />
     <ClInclude Include="include\TitleScene.h" />
     <ClInclude Include="include\GameFlow\PhaseManager.h" />
     <ClInclude Include="include\Stage\StageData.h" />
-    <ClInclude Include="include\Stage\FoundationPlatform.h" />
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
     <ClInclude Include="include\Systems\IntegrateSystem.h" />
     <ClInclude Include="include\Systems\PhysicsMachine.h" />
@@ -342,11 +365,17 @@
     <ClInclude Include="include\TextureCache.h" />
     <ClInclude Include="include\TextureDX.h" />
     <ClInclude Include="include\UpdatableTimer.h" />
+    <ClInclude Include="include\FullscreenManager.h" />
+    <ClInclude Include="include\WindowManager.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
     <ClInclude Include="include\SweetsManager.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
+    <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />
+    <ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" />
     <ClInclude Include="TimerDisplay.h" />
   </ItemGroup>
   <ItemGroup>

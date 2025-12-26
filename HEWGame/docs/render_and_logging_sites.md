@@ -7,7 +7,7 @@ This file records where the game emits on-screen overlays or logging output, gro
 - **Startup FPS counter**: In debug builds, `WinMain` writes FPS and processing time once per second through the debug console when the main loop advances. This is gated by the `_DEBUG` build guard around the `std::cout` writes and the debug console cursor positioning.【F:src/Startup.cpp†L126-L133】
 
 ## Error, warning, and diagnostic logging
-- **Window creation failures**: `WinMain` shows a modal `MessageBox` when registering the window class fails. General error popups also go through `DebugMessage`, which displays a modal error box attached to the main window handle.【F:src/Startup.cpp†L38-L43】【F:src/Debug.cpp†L5-L13】
+- **Window creation failures**: `WinMain` shows a modal `MessageBox` when registering the window class fails. General error popups now go through `DebugMessage`, which writes to the debugger output stream and stdout without a modal dialog.【F:src/Startup.cpp†L38-L43】【F:src/Debug.cpp†L22-L37】
 - **Scene draw preconditions**: `Scene::RootDraw` logs once via `DebugTrace` when no active camera is set during drawing, preventing repeated spam while the issue persists.【F:src/Scene.cpp†L120-L139】
 - **Draw system safeguards**:
   - `DrawSystem::RenderQueued` warns once if either the renderer or active camera is missing before attempting to render.【F:src/Systems/DrawSystem.cpp†L267-L330】

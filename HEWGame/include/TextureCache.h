@@ -10,14 +10,14 @@
 
 class TextureCache {
 public:
-    // VOgCX^X擾
+    // シングルトン取得
     static TextureCache& Instance()
     {
         static TextureCache instance;
         return instance;
     }
 
-    // Rs[E[u֎~
+    // コピーとムーブを禁止
     TextureCache(const TextureCache&) = delete;
     TextureCache& operator=(const TextureCache&) = delete;
     TextureCache(TextureCache&&) = delete;
@@ -28,7 +28,7 @@ public:
     std::shared_ptr<Texture2D> Get(const std::string& name);
 
 private:
-    // RXgN^private
+    // コンストラクターは private
     TextureCache() = default;
     ~TextureCache() = default;
 

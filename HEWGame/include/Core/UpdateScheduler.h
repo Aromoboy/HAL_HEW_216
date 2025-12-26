@@ -19,10 +19,10 @@ namespace Core
         class UpdateScheduler
         {
         public:
-                // ノードを登録。重複登録は弾くので同じインスタンスを渡しても安全だ
+                // ノードを登録 重複登録は弾くので同じインスタンスを渡しても安全だ
                 void Register(IUpdatable& node);
 
-                // ノードを登録解除。依存関係に含まれている場合もまとめて削除する
+                // ノードを登録解除 依存関係に含まれている場合もまとめて削除する
                 void Unregister(IUpdatable& node);
 
                 // 実行順を動的に変更する
@@ -31,10 +31,10 @@ namespace Core
                 // before → afterの順で実行させたい場合に依存関係を追加する
                 void AddDependency(IUpdatable& before, IUpdatable& after);
 
-                // 依存関係だけを一括でリセット。ノードの登録状況は維持される
+                // 依存関係だけを一括でリセット ノードの登録状況は維持される
                 void ClearDependencies();
 
-                // 毎フレーム呼び出されるメイン処理。内部でトポロジカルソートを行い、
+                // 毎フレーム呼び出されるメイン処理 内部でトポロジカルソートを行い、
                 // 循環依存があってもできるだけ安全側で実行順を確定させる
                 void Tick(UpdateContext& ctx);
 

@@ -4,33 +4,33 @@
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
 
-//============================================================
-// �V�F�[�_�[�v���O�������t�@�C�����烍�[�h
-//============================================================
 bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
     const std::string& vsPath,
     const std::string& psPath)
 {
-    // ���_�V�F�[�_�[���t�@�C������ǂݍ���
+    DebugMessage("[Shader] 頂点シェーダーファイルを読み込みます: " + vsPath);
+    DebugMessage("[Shader] ピクセルシェーダーファイルを読み込みます: " + psPath);
+
+    // 頂点シェーダーをファイルから読み込み
     ID3DBlob* vsBlob = nullptr;
     std::wstring wVsPath(vsPath.begin(), vsPath.end());
     if (FAILED(D3DReadFileToBlob(wVsPath.c_str(), &vsBlob)))
     {
-        DebugMessage("[Shader] ���_�V�F�[�_�[�t�@�C�����J���܂���: " + vsPath);
+        DebugMessage("[Shader] 頂点シェーダーファイルを開けません: " + vsPath);
         return false;
     }
 
-    // �s�N�Z���V�F�[�_�[���t�@�C������ǂݍ���
+    // ピクセルシェーダーをファイルから読み込み
     ID3DBlob* psBlob = nullptr;
     std::wstring wPsPath(psPath.begin(), psPath.end());
     if (FAILED(D3DReadFileToBlob(wPsPath.c_str(), &psBlob)))
     {
         vsBlob->Release();
-        DebugMessage("[Shader] �s�N�Z���V�F�[�_�[�t�@�C�����J���܂���: " + psPath);
+        DebugMessage("[Shader] ピクセルシェーダーファイルを開けません: " + psPath);
         return false;
     }
 
-    // ���_�V�F�[�_�[�I�u�W�F�N�g���쐬
+    // 頂点シェーダーオブジェクトを作成
     if (FAILED(device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -38,7 +38,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // �s�N�Z���V�F�[�_�[�I�u�W�F�N�g���쐬
+    // ピクセルシェーダーオブジェクトを作成
     if (FAILED(device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf())))
     {
         vsBlob->Release();
@@ -46,7 +46,7 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
         return false;
     }
 
-    // Blob�����
+    // Blobを解放
     vsBlob->Release();
     psBlob->Release();
 
@@ -54,29 +54,29 @@ bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
 }
 
 //============================================================
-// �V�F�[�_�[�������_�����O�p�C�v���C���ɐݒ�
+// シェーダーをレンダリングパイプラインに設定
 //============================================================
 void ShaderProgram::Bind(ID3D11DeviceContext* context)
 {
-    // ���_�V�F�[�_�[�ƃs�N�Z���V�F�[�_�[���R���e�L�X�g�ɐݒ�
+    // 頂点シェーダーとピクセルシェーダーをコンテキストに設定
     context->VSSetShader(vertexShader.Get(), nullptr, 0);
     context->PSSetShader(pixelShader.Get(), nullptr, 0);
 }
 
 //============================================================
-// �g�p��
+// 使用例
 //============================================================
 /*
-// �V�F�[�_�[�v���O�������쐬
+// シェーダープログラムを作成
 ShaderProgram shader;
-// �V�F�[�_�[�t�@�C�������[�h�i.cso = �R���p�C���ς݃V�F�[�_�[�I�u�W�F�N�g�j
+// シェーダーファイルをロード（.cso = コンパイル済みシェーダーオブジェクト）
 if (shader.LoadFromFiles(device, "shaders/basic_vs.cso", "shaders/basic_ps.cso"))
 {
-    // �`�掞�ɃV�F�[�_�[���o�C���h
+    // 描画時にシェーダーをバインド
     shader.Bind(context);
-    // �`�揈��...
+    // 描画処理...
     context->Draw(...);
 }
-// ���ӁF�ʏ��ShaderCache���g�p���ăV�F�[�_�[���Ǘ����܂�
-// ShaderProgram�𒼐ڎg���͓̂��ʂȏꍇ�݂̂ł�
+// 注意：通常はShaderCacheを使用してシェーダーを管理します
+// ShaderProgramを直接使うのは特別な場合のみです
 */

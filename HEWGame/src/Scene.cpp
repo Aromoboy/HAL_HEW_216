@@ -21,7 +21,7 @@ public:
 
         void OnUpdate(Core::UpdateContext& ctx) override
         {
-                m_owner.Update(ctx);
+            m_owner.Update(ctx);
         }
 
 private:

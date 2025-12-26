@@ -17,6 +17,7 @@ namespace Core
                 : m_windowHandle(nullptr)
                 , m_width(0)
                 , m_height(0)
+                , m_ready(false)
         {
         }
 
@@ -27,6 +28,7 @@ namespace Core
 
         HRESULT DXContext::Init(HWND hWnd, UINT width, UINT height, bool fullscreen)
         {
+                m_ready = false;
                 m_windowHandle = hWnd;
                 m_width = width;
                 m_height = height;
@@ -34,14 +36,17 @@ namespace Core
                 HRESULT hr = CreateDeviceAndSwapChain(hWnd, width, height, fullscreen);
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] Failed to create device and swap chain.\n");
+                        DebugLog::DebugMessage("[DXContext] Failed to create device and swap chain.\n");
                         return hr;
                 }
+
+                m_ready = true;
 
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))
                 {
                         DebugMessage("[DXContext] Failed to create default render targets.\n");
+                        m_ready = false;
                         return hr;
                 }
 
@@ -70,18 +75,18 @@ namespace Core
 
         HRESULT DXContext::Resize(UINT width, UINT height)
         {
-                if (!m_swapChain)
+                if (width == 0 || height == 0)
                 {
-                        DebugMessage("[DXContext] Resize requested before swap chain creation.\n");
-                        return E_FAIL;
+                        return S_OK;
                 }
 
-                m_width = width;
-                m_height = height;
+                if (!m_ready)
+                {
+                        return S_OK;
+                }
 
                 if (m_context)
                 {
-                        DebugMessage("[DXContext] Clearing render targets and shader resources prior to resize.\n");
                         m_context->OMSetRenderTargets(0, nullptr, nullptr);
 
                         ID3D11ShaderResourceView* nullSrvs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
@@ -98,14 +103,17 @@ namespace Core
                 HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] ResizeBuffers failed.\n");
+                        DebugLog::DebugMessage("[DXContext] ResizeBuffers failed.\n");
                         return hr;
                 }
+
+                m_width = width;
+                m_height = height;
 
                 hr = CreateDefaultTargets();
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] Failed to recreate default render targets after resize.\n");
+                        DebugLog::DebugMessage("[DXContext] Failed to recreate default render targets after resize.\n");
                         return hr;
                 }
 
@@ -118,6 +126,7 @@ namespace Core
         void DXContext::Shutdown()
         {
                 ReleaseTargets();
+                m_ready = false;
                 if (m_context)
                 {
                         m_context->ClearState();
@@ -168,8 +177,10 @@ namespace Core
                 sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
                 sd.BufferCount = 1;
                 sd.OutputWindow = hWnd;
-                sd.Windowed = fullscreen ? FALSE : TRUE;
-                sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+                sd.Windowed = TRUE;
+                sd.Flags = 0;
+
+                static_cast<void>(fullscreen);
 
                 constexpr std::array<D3D_DRIVER_TYPE, 3> driverTypes = {
                         D3D_DRIVER_TYPE_HARDWARE,
@@ -213,7 +224,7 @@ namespace Core
 
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] D3D11CreateDeviceAndSwapChain failed for all driver types.\n");
+                        DebugLog::DebugMessage("[DXContext] D3D11CreateDeviceAndSwapChain failed for all driver types.\n");
                 }
 
                 return hr;
@@ -227,7 +238,7 @@ namespace Core
                 HRESULT hr = m_defaultRTV->CreateFromScreen();
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] Failed to create default render target from swap chain.\n");
+                        DebugLog::DebugMessage("[DXContext] Failed to create default render target from swap chain.\n");
                         m_defaultRTV.reset();
                         return hr;
                 }
@@ -236,7 +247,7 @@ namespace Core
                 hr = m_defaultDSV->Create(m_defaultRTV->GetWidth(), m_defaultRTV->GetHeight(), false);
                 if (FAILED(hr))
                 {
-                        DebugMessage("[DXContext] Failed to create default depth stencil.\n");
+                        DebugLog::DebugMessage("[DXContext] Failed to create default depth stencil.\n");
                         m_defaultDSV.reset();
                         return hr;
                 }
@@ -250,4 +261,3 @@ namespace Core
                 m_defaultRTV.reset();
         }
 }
-

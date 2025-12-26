@@ -4,11 +4,22 @@
 #include <windows.h>
 #include <string>
 
-using namespace std;
+namespace DebugLog
+{
+    void Init(HWND hwnd);
 
-void InitDebug(HWND a_hwnd);
+    void DebugMessage(const std::string& message);
+}
 
-void DebugMessage(std::string a_szMessage);
+[[deprecated("Use DebugLog::Init instead")]] inline void InitDebug(HWND hwnd)
+{
+    DebugLog::Init(hwnd);
+}
+
+[[deprecated("Use DebugLog::DebugMessage instead")]] inline void DebugMessage(const std::string& message)
+{
+    DebugLog::DebugMessage(message);
+}
 
 
 
