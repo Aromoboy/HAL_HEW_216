@@ -64,7 +64,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         DirectX::XMStoreFloat4x4(&identityMatrix, DirectX::XMMatrixIdentity());
         newBones.fill(identityMatrix);
 
-        const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
+        const bool useAnimationShader = (limitedBoneCount > 0) && (animation != nullptr);
         //if (useAnimationShader)
         //{
         //    for (size_t i = 0; i < limitedBoneCount; ++i)
