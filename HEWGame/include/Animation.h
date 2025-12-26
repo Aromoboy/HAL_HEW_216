@@ -14,6 +14,7 @@ constexpr AnimeNoDX	 kAnimeNone = -1;	// 該当アニメーションなし
 static const MorphNoDX  kMorphNone = -1;	// 該当モーフなし
 static const AnimeNoDX  kParametricAnime = -2;	// 合成アニメーション
 
+
 class Animation
 {
 public:
@@ -41,7 +42,8 @@ public:
 	using AnimeTransforms = std::vector<AnimeTransformDX>;
 	using AnimationArray = std::array<std::vector<AnimeTransformDX>, MAX_ANIMEPATTERN>;
 
-	
+	// 一時的にこれで設定、まずはαを終わらせなきゃ
+	void SetLoop(bool isLoop);
 
 	// アニメーション再生情報
 	struct AnimePlayInfo
@@ -91,3 +93,5 @@ private:
 	void LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a, const AnimeTransformDX& b, float rate);
 	
 };
+
+

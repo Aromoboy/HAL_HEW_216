@@ -179,6 +179,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EffectSystem.cpp" />
+    <ClCompile Include="include\AnimationState.cpp" />
     <ClCompile Include="include\EffectTestScene.cpp" />
     <ClCompile Include="src\Animation.cpp" />
     <ClCompile Include="src\AnimationCache.cpp" />
@@ -272,6 +273,7 @@
     <ClInclude Include="EffectSystem.h" />
     <ClInclude Include="include\Animation.h" />
     <ClInclude Include="include\AnimationCache.h" />
+    <ClInclude Include="include\AnimationState.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
     <ClInclude Include="include\ColliderRegistry.h" />

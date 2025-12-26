@@ -325,6 +325,7 @@ namespace Entities
         const std::string playerAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
 
         m_animation = animationCache.Get(playerAnimationPath);
+        m_animation->SetLoop(true);
 
         if (!modelPath.empty())
         {
