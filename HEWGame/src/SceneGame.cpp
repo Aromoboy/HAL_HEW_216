@@ -1178,7 +1178,10 @@ namespace
             shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
             shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
 
-            result.centerOffset = footprint.Center(tuning.offset.z);
+            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
+            result.centerOffset = footprint.Center(scaledOffset.z);
+            result.centerOffset.x += scaledOffset.x;
+            result.centerOffset.y += scaledOffset.y;
             result.halfExtents = footprint.HalfExtents(kMinGeneratedThickness * 0.5f);
 
             const auto& primaryShape = collider.shapes.front();
@@ -1191,7 +1194,7 @@ namespace
                 break;
             case Physics::Box2DShapeConfig::Type::Circle:
                 shapeConfig.radius = primaryShape.radius;
-                shapeConfig.offset = primaryShape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : primaryShape.vertices.front();
+                shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
                 break;
             default:
                 break;
