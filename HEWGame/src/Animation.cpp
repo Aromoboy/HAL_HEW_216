@@ -186,10 +186,6 @@ void Animation::UpdateAnime(float tick)
 		if (m_info.isLoop)
 		{
 			m_info.nowTime = std::fmod(m_info.nowTime, m_info.totalTime);
-			if (m_info.nowTime < 0.0f)
-			{
-				m_info.nowTime += m_info.totalTime;
-			}
 		}
 		else
 		{

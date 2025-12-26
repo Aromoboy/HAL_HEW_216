@@ -891,11 +891,8 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
     info.totalTime = static_cast<float>(assimpAnime->mDuration) / fbxToGameFrame;
     info.speed = 1.0f;
     const std::string normalizedPath = NormalizePath(path);
-    info.isLoop = false;
-    if (normalizedPath.find("idle") != std::string::npos)
-    {
-        info.isLoop = true;
-    }
+    const bool isIdleClip = (normalizedPath.find("idle") != std::string::npos);
+    info.isLoop = isIdleClip ? true : false;
 
     for (UINT channelIdx = 0; channelIdx < assimpAnime->mNumChannels; ++channelIdx)
     {
