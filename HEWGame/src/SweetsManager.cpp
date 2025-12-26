@@ -2695,6 +2695,7 @@ namespace SweetsSpace
 
         sweets->SetWasEverCarried(true);
         ClearContactState(sweets.get());
+        RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
 
         if (m_physicsMachine)
         {
@@ -2737,6 +2738,7 @@ namespace SweetsSpace
         }
 
         SetState(sweets, SweetsState::Active);
+        RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
 
         if (m_physicsMachine)
         {
@@ -3603,7 +3605,18 @@ namespace SweetsSpace
             else if (m_physicsMachine)
             {
                 const JointPairKey key = JointPairKey::Make(cream, other);
-                if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
+                auto existing = m_creamWeldJoints.find(key);
+                if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
+                        << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                    DebugTrace(oss.str());
+                    m_creamWeldJoints.erase(existing);
+                    existing = m_creamWeldJoints.end();
+                }
+
+                if (existing == m_creamWeldJoints.end())
                 {
                     const auto& posA = cream->GetTransform().position;
                     const auto& posB = other->GetTransform().position;
