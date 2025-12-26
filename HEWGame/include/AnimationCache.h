@@ -4,6 +4,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include "Animation.h"
@@ -19,7 +20,7 @@ namespace Render
     public:
         static AnimationCache& Instance();
 
-        std::shared_ptr<Animation>  Get(const std::string& path);
+        std::shared_ptr<Animation>  Get(const std::string& path, std::optional<bool> loopOverride = std::nullopt);
         void SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device);
         void Clear();
         void Reset();

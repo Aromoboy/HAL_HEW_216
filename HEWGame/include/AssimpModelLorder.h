@@ -2,6 +2,7 @@
 #define ___ASSIMP_MODE_LORDER___
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -53,7 +54,7 @@ AssimpModelLorder();
 ~AssimpModelLorder() override = default;
 
     virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
-	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) override;
+	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path, std::optional<bool> loopOverride) override;
 
 private:
 	

@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "ModelDX.h"
@@ -16,5 +17,5 @@ IModelLoader() {};
 virtual ~IModelLoader() = default;
 
         virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) = 0;
-        virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) = 0;
+        virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path, std::optional<bool> loopOverride) = 0;
 };

@@ -347,8 +347,8 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        m_idleAnimation = animationCache.Get(kPlayerIdleAnimationPath);
-        m_moveAnimation = animationCache.Get(kPlayerMoveAnimationPath);
+        m_idleAnimation = animationCache.Get(kPlayerIdleAnimationPath, std::optional<bool>(true));
+        m_moveAnimation = animationCache.Get(kPlayerMoveAnimationPath, std::optional<bool>(true));
         if (!m_moveAnimation)
         {
             std::ostringstream oss;
@@ -356,8 +356,8 @@ namespace Entities
             PlayerDebugTrace(oss.str());
             m_missingMoveAnimationLogged = true;
         }
-        m_fallAnimation = animationCache.Get(kPlayerFallAnimationPath);
-        m_attackAnimation = animationCache.Get(kPlayerAttackAnimationPath);
+        m_fallAnimation = animationCache.Get(kPlayerFallAnimationPath, std::optional<bool>(true));
+        m_attackAnimation = animationCache.Get(kPlayerAttackAnimationPath, std::optional<bool>(false));
         m_animation = m_idleAnimation;
 
         if (!modelPath.empty())

@@ -47,6 +47,23 @@ namespace
         return value;
     }
 
+    std::optional<bool> ResolveLoopSettingFromPath(const std::string& normalizedPath)
+    {
+        if (normalizedPath.find("attack") != std::string::npos)
+        {
+            return false;
+        }
+
+        if (normalizedPath.find("idle") != std::string::npos
+            || normalizedPath.find("move") != std::string::npos
+            || normalizedPath.find("fall") != std::string::npos)
+        {
+            return true;
+        }
+
+        return std::nullopt;
+    }
+
     std::string NormalizeSeparators(std::string value)
     {
         for (char& c : value)
@@ -845,7 +862,7 @@ AssimpModelLorder::MakeMaterial(
     return materials;
 }
 
-std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& path)
+std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& path, std::optional<bool> loopOverride)
 {
 
     // assimpの設定
@@ -891,8 +908,19 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
     info.totalTime = static_cast<float>(assimpAnime->mDuration) / fbxToGameFrame;
     info.speed = 1.0f;
     const std::string normalizedPath = NormalizePath(path);
-    const bool isIdleClip = (normalizedPath.find("idle") != std::string::npos);
-    info.isLoop = isIdleClip ? true : false;
+    const std::optional<bool> autoLoopSetting = ResolveLoopSettingFromPath(normalizedPath);
+    if (loopOverride.has_value())
+    {
+        info.isLoop = loopOverride.value();
+    }
+    else if (autoLoopSetting.has_value())
+    {
+        info.isLoop = autoLoopSetting.value();
+    }
+    else
+    {
+        info.isLoop = false;
+    }
 
     for (UINT channelIdx = 0; channelIdx < assimpAnime->mNumChannels; ++channelIdx)
     {
