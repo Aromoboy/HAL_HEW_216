@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -68,13 +67,6 @@ namespace Entities
         Transform GetRenderTransform() const override;
 
     private:
-        enum class PlayerAnimationState : std::uint8_t
-        {
-            Idle,
-            Move,
-            Stab
-        };
-
         struct ColliderFootprint
         {
             float3 halfExtents{ 0.0f, 0.0f, 0.0f };
@@ -137,15 +129,5 @@ namespace Entities
         void DropCarriedSweets();
         void ClampVerticalPosition();
         void ClampScreenBounds();
-
-        void SetAnimationState(PlayerAnimationState state, bool forceRestart = false);
-        void UpdateAnimationState(bool isMoving);
-        void StartStabAnimation();
-
-        PlayerAnimationState m_animationState{ PlayerAnimationState::Idle };
-        std::shared_ptr<Animation> m_idleAnimation;
-        std::shared_ptr<Animation> m_moveAnimation;
-        std::shared_ptr<Animation> m_stabAnimation;
-        float m_stabTimer;
     };
 }
