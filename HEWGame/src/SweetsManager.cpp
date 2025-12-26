@@ -3613,14 +3613,17 @@ namespace SweetsSpace
                         cream->SetAngularVelocity(0.0f);
                         other->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
                         other->SetAngularVelocity(0.0f);
+                        const bool creamSupported = HasSupportingContact(*cream, nullptr);
+                        const bool otherSupported = HasSupportingContact(*other, nullptr);
+                        const bool shouldSleep = creamSupported && otherSupported;
                         if (cream->HasBox2DBody())
                         {
-                            b2Body_SetAwake(cream->GetBox2DBodyId(), false);
+                            b2Body_SetAwake(cream->GetBox2DBodyId(), !shouldSleep);
                         }
 
                         if (other->HasBox2DBody())
                         {
-                            b2Body_SetAwake(other->GetBox2DBodyId(), false);
+                            b2Body_SetAwake(other->GetBox2DBodyId(), !shouldSleep);
                         }
 
                         std::ostringstream cementLog;
