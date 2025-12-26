@@ -1783,7 +1783,7 @@ namespace Stage
         m_pickupDepthThreshold = pickupDepthThreshold;
         m_pickupOffset = pickupOffset;
         m_playerMoveSpeed = playerMoveSpeedWorld;
-        m_guidelineHeight = guidelineHeight;
+        m_guidelineHeight = 7.0f;
         m_guidelineStep = guidelineStep;
         m_guidelineThicknessPixels = guidelineThicknessPixels;
         m_guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
