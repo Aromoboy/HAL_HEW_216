@@ -812,6 +812,7 @@ namespace
             float3 halfExtents{ 0.0f, 0.0f, 0.0f };
             float3 centerOffset{ 0.0f, 0.0f, 0.0f };
             std::string source{ "Unknown" };
+            std::string shapeSource{ "None" };
             bool registryHit{ false };
             bool registryHasShapes{ false };
         };
@@ -887,13 +888,8 @@ namespace
             const std::string& colliderId,
             const Transform& transform,
             const SceneGame::PlayerColliderTuning& tuning,
-            float fallbackWidth,
-            float fallbackHeight,
             b2BodyType bodyType)
         {
-            (void)fallbackWidth;
-            (void)fallbackHeight;
-
             PlayerColliderBuildResult result{};
             result.source = "RegistryMissing";
 
@@ -924,15 +920,14 @@ namespace
             collider.colliderId = colliderId;
             collider.shapeDef = registryDefinition->shapeDef;
             collider.shapes = registryDefinition->shapes;
+            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
+            collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
 
             Physics::Box2DShapeConfig shapeConfig{};
             shapeConfig.bodyType = bodyType;
             shapeConfig.fixedRotation = true;
             shapeConfig.allowRotation = false;
             shapeConfig.angularDamping = 5.0f;
-            shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-            shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-            shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
 
             FootprintAccumulator footprint{};
             const float paddedThickness = std::max(
@@ -980,40 +975,28 @@ namespace
                 return result;
             }
 
-            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
             result.centerOffset = footprint.Center(scaledOffset.z);
             result.centerOffset.x += scaledOffset.x;
             result.centerOffset.y += scaledOffset.y;
             result.halfExtents = footprint.HalfExtents(kMinGeneratedThickness * 0.5f);
 
-            const auto& primaryShape = collider.shapes.front();
-            switch (shapeConfig.type)
-            {
-            case Physics::Box2DShapeConfig::Type::Polygon:
-            case Physics::Box2DShapeConfig::Type::Box:
-                shapeConfig.vertices = primaryShape.vertices;
-                shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
-                break;
-            case Physics::Box2DShapeConfig::Type::Circle:
-                shapeConfig.radius = primaryShape.radius;
-                shapeConfig.offset = primaryShape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : primaryShape.vertices.front();
-                break;
-            default:
-                break;
-            }
+            shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+            shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+            shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            shapeConfig.offset = collider.colliderOffset;
 
             result.collider = collider;
             result.shapeConfig = shapeConfig;
             result.source = "Registry";
+            result.shapeSource = "Registry";
             return result;
         }
 
-        PlayerColliderBuildResult BuildPlayerCollider(
+        PlayerColliderBuildResult BuildPlayerColliderFromConfig(
             const std::string& resolvedKey,
             const Transform& transform,
             const SceneGame::PlayerColliderTuning& tuning,
             const std::map<std::string, Collision::ColliderDefinition>& definitions,
-            bool forceConfig,
             b2BodyType bodyType)
         {
             PlayerColliderBuildResult result{};
@@ -1029,37 +1012,12 @@ namespace
             result.registryHit = registryDefinition.has_value();
             result.registryHasShapes = registryDefinition && !registryDefinition->shapes.empty();
 
-            if (!registryDefinition)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Registry materials missing for collider='" << resolvedKey
-                    << "'; player collider cannot be built.\n";
-                DebugTrace(oss.str());
-                result.source = "RegistryMissing";
-                return result;
-            }
-
-            if (!result.registryHasShapes)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Registry collider '" << resolvedKey
-                    << "' has no shapes; player collider cannot be built.\n";
-                DebugTrace(oss.str());
-                result.source = "RegistryEmpty";
-                return result;
-            }
-
             const auto configIt = definitions.find(resolvedKey);
             if (configIt == definitions.end())
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[PlayerCollider] Definition missing for key='" << resolvedKey
-                    << "'; model-based generation is disabled";
-                if (forceConfig)
-                {
-                    oss << " (forceConfigCollider=true)";
-                }
-                oss << "; player collider cannot be created from config.\n";
+                    << "'; model-based generation is disabled; player collider cannot be created from config.\n";
                 DebugTrace(oss.str());
                 result.source = "ConfigMissing";
                 return result;
@@ -1069,7 +1027,12 @@ namespace
 
             Physics::BoxColliderComponent collider{};
             collider.colliderId = resolvedKey;
-            collider.shapeDef = registryDefinition->shapeDef;
+            if (registryDefinition)
+            {
+                collider.shapeDef = registryDefinition->shapeDef;
+            }
+            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
+            collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
 
             FootprintAccumulator footprint{};
             const auto appendDefinition = [&](const Collision::ColliderDefinition& def, const b2Vec2& parentOffset, float parentScale, const auto& self) -> void
@@ -1175,35 +1138,65 @@ namespace
                 return result;
             }
 
-            shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-            shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-            shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            if (registryDefinition)
+            {
+                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            }
 
-            const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
             result.centerOffset = footprint.Center(scaledOffset.z);
             result.centerOffset.x += scaledOffset.x;
             result.centerOffset.y += scaledOffset.y;
             result.halfExtents = footprint.HalfExtents(kMinGeneratedThickness * 0.5f);
-
-            const auto& primaryShape = collider.shapes.front();
-            switch (shapeConfig.type)
-            {
-            case Physics::Box2DShapeConfig::Type::Polygon:
-            case Physics::Box2DShapeConfig::Type::Box:
-                shapeConfig.vertices = primaryShape.vertices;
-                shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
-                break;
-            case Physics::Box2DShapeConfig::Type::Circle:
-                shapeConfig.radius = primaryShape.radius;
-                shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
-                break;
-            default:
-                break;
-            }
+            shapeConfig.offset = collider.colliderOffset;
 
             result.collider = collider;
             result.shapeConfig = shapeConfig;
-            result.source = "Config";
+            result.source = registryDefinition ? "Config" : "ConfigNoRegistry";
+            result.shapeSource = "Config";
+            return result;
+        }
+
+        PlayerColliderBuildResult BuildFallbackPlayerCollider(
+            const std::string& resolvedKey,
+            const Transform& transform,
+            const SceneGame::PlayerColliderTuning& tuning,
+            b2BodyType bodyType)
+        {
+            PlayerColliderBuildResult result{};
+            result.source = "Fallback";
+
+            Physics::BoxColliderComponent collider{};
+            collider.colliderId = resolvedKey;
+
+            const float3 scaledSize = ScaleVector(tuning.fallbackSize, transform.scale);
+            const float3 scaledPadding = ScaleVector(tuning.fallbackPadding, transform.scale);
+            const float3 scaledOffset = ScaleVector(tuning.fallbackOffset, transform.scale);
+
+            const float halfWidth = std::max(kMinGeneratedThickness * 0.5f, scaledSize.x * 0.5f + scaledPadding.x);
+            const float halfHeight = std::max(kMinGeneratedThickness * 0.5f, scaledSize.y * 0.5f + scaledPadding.y);
+
+            collider.AddBox(halfWidth, halfHeight);
+            collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
+
+            Physics::Box2DShapeConfig shapeConfig{};
+            shapeConfig.bodyType = bodyType;
+            shapeConfig.fixedRotation = true;
+            shapeConfig.allowRotation = false;
+            shapeConfig.angularDamping = 5.0f;
+            shapeConfig.type = InferShapeType(collider.shapes);
+            shapeConfig.offset = collider.colliderOffset;
+
+            result.centerOffset = float3{ scaledOffset.x, scaledOffset.y, scaledOffset.z };
+            result.halfExtents = float3{
+                halfWidth,
+                halfHeight,
+                std::max(kMinGeneratedThickness * 0.5f, scaledSize.z * 0.5f + scaledPadding.z)
+            };
+            result.collider = collider;
+            result.shapeConfig = shapeConfig;
+            result.shapeSource = "Fallback";
             return result;
         }
 
@@ -2385,12 +2378,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
     const bool playerConfigAvailable = m_playerColliderConfigLoaded && hasConfigDefinition;
 
-    PlayerColliderBuildResult colliderBuild = BuildPlayerCollider(
+    PlayerColliderBuildResult colliderBuild = BuildPlayerColliderFromRegistry(
         resolvedColliderKey,
         trans,
         m_playerColliderTuning,
-        m_playerColliderDefinitions,
-        m_forceConfigPlayerCollider,
         playerBodyType);
     const auto colliderHasShapes = [](const PlayerColliderBuildResult& build)
     {
@@ -2401,52 +2392,53 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         return build.shapeConfig && build.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     };
 
-    bool registryFallbackUsed = false;
-    bool attemptedRegistryFallback = false;
-    if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && !playerConfigAvailable && !m_forceConfigPlayerCollider)
+    bool attemptedConfigFallback = false;
+    bool attemptedFallback = false;
+    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
     {
-        attemptedRegistryFallback = true;
-
+        if (playerConfigAvailable)
         {
+            attemptedConfigFallback = true;
             std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Player collider config unavailable; attempting registry fallback for key='"
+            oss << kLogPrefix << "[PlayerCollider] Registry build unavailable; attempting config fallback for key='"
                 << resolvedColliderKey << "'.\n";
             DebugTrace(oss.str());
-        }
 
-        PlayerColliderBuildResult registryBuild = BuildPlayerColliderFromRegistry(
+            PlayerColliderBuildResult configBuild = BuildPlayerColliderFromConfig(
+                resolvedColliderKey,
+                trans,
+                m_playerColliderTuning,
+                m_playerColliderDefinitions,
+                playerBodyType);
+
+            if (colliderHasShapes(configBuild) && shapeConfigIsValid(configBuild))
+            {
+                colliderBuild = configBuild;
+            }
+        }
+    }
+
+    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
+    {
+        attemptedFallback = true;
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] Registry/config build failed; using fallback collider for key='"
+            << resolvedColliderKey << "'.\n";
+        DebugTrace(oss.str());
+
+        PlayerColliderBuildResult fallbackBuild = BuildFallbackPlayerCollider(
             resolvedColliderKey,
             trans,
             m_playerColliderTuning,
-            m_playerPickupBoxWidth,
-            m_playerPickupBoxHeight,
             playerBodyType);
-
-        if (colliderHasShapes(registryBuild) && shapeConfigIsValid(registryBuild))
-        {
-            colliderBuild = registryBuild;
-            registryFallbackUsed = true;
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Registry fallback failed for key='" << resolvedColliderKey
-                << "'; collider will remain unavailable.\n";
-            DebugTrace(oss.str());
-        }
+        colliderBuild = fallbackBuild;
     }
-    else if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && playerConfigAvailable)
+
+    if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && playerConfigAvailable)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[PlayerCollider] Collider definition for key='" << resolvedColliderKey
             << "' is invalid; physics registration will be skipped.\n";
-        DebugTrace(oss.str());
-    }
-    else if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && m_forceConfigPlayerCollider)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] forceConfigCollider=true; skipping registry fallback for key='"
-            << resolvedColliderKey << "'.\n";
         DebugTrace(oss.str());
     }
 
@@ -2467,10 +2459,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     }
 
     const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
-    const std::string appliedSource = registryFallbackUsed ? "RegistryFallback" : colliderBuild.source;
-    const std::string appliedPath = registryFallbackUsed
-        ? "RegistryFallback"
-        : (colliderBuild.source.rfind("Registry", 0) == 0 ? "Registry" : "Config");
+    const std::string appliedSource = colliderBuild.shapeSource;
+    const std::string appliedPath = colliderBuild.shapeSource;
 
     {
         std::ostringstream oss;
@@ -2486,15 +2476,18 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         };
 
         oss << kLogPrefix << "[PlayerCollider] source=" << colliderBuild.source
+            << " shapeSource=" << colliderBuild.shapeSource
             << " appliedSource=" << appliedSource
             << " appliedPath=" << appliedPath
-            << " key='" << resolvedColliderKey << "' forceConfig=" << std::boolalpha << m_forceConfigPlayerCollider
-            << " forceConfigPolicy=" << (m_forceConfigPlayerCollider ? "ConfigOnly" : "AllowRegistryFallback")
+            << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << m_forceConfigPlayerCollider
+            << " shapePolicy=RegistryPrimary"
             << " modelGeneration=Disabled"
             << " configLoaded=" << m_playerColliderConfigLoaded
             << " configAvailable=" << hasConfigDefinition
             << " registryHit=" << colliderBuild.registryHit
             << " registryShapes=" << colliderBuild.registryHasShapes
+            << " configFallback=" << std::boolalpha << attemptedConfigFallback
+            << " fallback=" << attemptedFallback
             << " applied=" << colliderReady
             << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
             << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
@@ -2585,7 +2578,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
                 << " appliedSource=" << appliedSource
                 << " shapes=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
                 << " shapeType=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
-                << (attemptedRegistryFallback ? " (registry fallback unavailable)" : "")
+                << (attemptedConfigFallback ? " (config fallback attempted)" : "")
+                << (attemptedFallback ? " (fallback attempted)" : "")
                 << "\n";
             ::DebugTrace(oss.str());
         }
