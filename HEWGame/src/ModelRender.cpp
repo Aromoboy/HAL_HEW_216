@@ -57,13 +57,13 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
 
         constexpr size_t kMaxBones = 200;
-        std::array<DirectX::XMFLOAT4X4, kMaxBones> bones{};
+        std::array<DirectX::XMFLOAT4X4, kMaxBones> newBones{};
         const unsigned int boneCount = mesh->GetBoneCount();
         const size_t limitedBoneCount = std::min<size_t>(boneCount, kMaxBones);
 
         for (size_t i = 0; i < kMaxBones; ++i)
         {
-            DirectX::XMStoreFloat4x4(&bones[i], DirectX::XMMatrixIdentity());
+            DirectX::XMStoreFloat4x4(&newBones[i], DirectX::XMMatrixIdentity());
         }
 
         const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
@@ -75,14 +75,11 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         //       DirectX::XMStoreFloat4x4(&bones[i], a_model.GetBoneMatrix(i) * animation->GetNodeMatrix(nodeIndex));
         //    }
         //}
-
-
-        DirectX::XMFLOAT4X4 newBones[200];
         if (useAnimationShader)
         {
             pVTX = ShaderList::GetVS(ShaderList::VS_ANIME);
             pVTX->Bind();
-            for (size_t boneIdx = 0; boneIdx < 47; ++boneIdx)
+            for (size_t boneIdx = 0; boneIdx < limitedBoneCount; ++boneIdx)
             {
                 DirectX::XMStoreFloat4x4(
                     &newBones[boneIdx],
@@ -91,7 +88,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             }
         }
 
-        ShaderList::SetBones(newBones);
+        ShaderList::SetBones(newBones.data());
 
 
         if (material)

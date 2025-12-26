@@ -1,5 +1,8 @@
 #include "Animation.h"
 
+#include <algorithm>
+#include <cmath>
+
 
 Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, Animation::AnimationArray a_array, std::vector<NodeDX> a_nodes)
 	: m_info(a_info)
@@ -156,7 +159,21 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 	transform = m_animeTransform[MAIN][index];
 	
 
-	// 該当ノードの姿勢行列を計算
+	if (m_info.totalTime > 0.0f)
+	{
+		if (m_info.isLoop)
+		{
+			m_info.nowTime = std::fmod(m_info.nowTime, m_info.totalTime);
+			if (m_info.nowTime < 0.0f)
+			{
+				m_info.nowTime += m_info.totalTime;
+			}
+		}
+		else
+		{
+			m_info.nowTime = std::min(m_info.nowTime, m_info.totalTime);
+		}
+	}
 	NodeDX& node = m_nodes[index];
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&transform.translate));
 	DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&transform.quaternion));
