@@ -74,6 +74,7 @@ namespace
 
 bool g_DrawColliders = ReadDebugColliderCvar();
 bool g_DrawColliderBounds = ReadDebugColliderBoundsCvar();
+bool g_DebugDrawEnabled = true;
 
 namespace Systems
 {
@@ -224,6 +225,12 @@ namespace Systems
 
         void DrawSystem::DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera)
         {
+                if (!g_DebugDrawEnabled)
+                {
+                        m_colliderCommands.clear();
+                        return;
+                }
+
                 if (m_colliderCommands.empty())
                 {
                         return;

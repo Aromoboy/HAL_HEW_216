@@ -19,6 +19,7 @@ class Animation;
 
 extern bool g_DrawColliders;
 extern bool g_DrawColliderBounds;
+extern bool g_DebugDrawEnabled;
 
 namespace Systems
 {

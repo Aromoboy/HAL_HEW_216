@@ -3174,6 +3174,15 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         }
 
         Core::Input& input = ctx.input;
+        if (input.IsTrigger(Core::ActionId::DebugToggle))
+        {
+                g_DebugDrawEnabled = !g_DebugDrawEnabled;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[DebugDraw] r.DebugDrawEnabled="
+                        << (g_DebugDrawEnabled ? 1 : 0) << " (F5).\n";
+                DebugTrace(oss.str());
+        }
+
         if (input.IsTrigger(VK_F4))
         {
                 g_DrawColliders = !g_DrawColliders;
@@ -3183,12 +3192,12 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 DebugTrace(oss.str());
         }
 
-        if (input.IsTrigger(VK_F5))
+        if (input.IsTrigger(VK_F6))
         {
                 g_DrawColliderBounds = !g_DrawColliderBounds;
                 std::ostringstream oss;
                 oss << kLogPrefix << "[ColliderDebug] r.DebugColliderBounds="
-                        << (g_DrawColliderBounds ? 1 : 0) << " (F5).\n";
+                        << (g_DrawColliderBounds ? 1 : 0) << " (F6).\n";
                 DebugTrace(oss.str());
         }
         constexpr float kDebugNudge = 0.25f;
@@ -3226,6 +3235,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
 void SceneGame::DrawPhysicsDebugOverlay()
 {
+    if (!g_DebugDrawEnabled)
+    {
+        return;
+    }
+
     if (!g_DrawColliders)
     {
         return;
@@ -3508,7 +3522,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
             || (m_stageState == StageState::ShowingResult);
 
         // こっちで後から作ったisTimeUpを使ってないのは時間がないのに書き換えて急にぶっ壊れたらとても嫌な気持ちになるからなので時間がある時に書き換えてください(すみません) by越智
-        if (m_hudRenderer && !isTimeUp)
+        if (m_hudRenderer && !isTimeUp && g_DebugDrawEnabled)
         {
                 HudDisplayData hudData{};
                   hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
