@@ -883,8 +883,6 @@ namespace
             }
         };
 
-        std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin);
-
         PlayerColliderBuildResult BuildPlayerColliderFromRegistry(
             const std::string& colliderId,
             const Transform& transform,
@@ -1013,7 +1011,6 @@ namespace
         PlayerColliderBuildResult BuildPlayerCollider(
             const std::string& resolvedKey,
             const Transform& transform,
-            const std::string& modelPath,
             const SceneGame::PlayerColliderTuning& tuning,
             const std::map<std::string, Collision::ColliderDefinition>& definitions,
             bool forceConfig,
@@ -1055,103 +1052,16 @@ namespace
             const auto configIt = definitions.find(resolvedKey);
             if (configIt == definitions.end())
             {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerCollider] Definition missing for key='" << resolvedKey
+                    << "'; model-based generation is disabled";
                 if (forceConfig)
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Definition missing for key='" << resolvedKey
-                        << "'; forceConfigCollider=true so player collider cannot be created.\n";
-                    DebugTrace(oss.str());
-                    result.source = "ConfigMissing";
-                    return result;
+                    oss << " (forceConfigCollider=true)";
                 }
-                if (modelPath.empty())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Definition missing for key='" << resolvedKey
-                        << "' and model path is empty; unable to generate collider.\n";
-                    DebugTrace(oss.str());
-                    result.source = "GeneratedMissing";
-                    return result;
-                }
-
-                const PlayerColliderGeometry geometry = AnalyzePlayerModelGeometry(modelPath, tuning.thicknessPadding);
-                if (!geometry.bounds.valid)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Model geometry invalid for generation; path='" << modelPath
-                        << "' key='" << resolvedKey << "'.\n";
-                    DebugTrace(oss.str());
-                    result.source = "GeneratedInvalid";
-                    return result;
-                }
-
-                std::vector<float2> paddedHull = BuildPaddedHull(geometry, tuning, transform.scale);
-                if (paddedHull.empty())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Generated hull empty for path='" << modelPath
-                        << "' key='" << resolvedKey << "'.\n";
-                    DebugTrace(oss.str());
-                    result.source = "GeneratedEmpty";
-                    return result;
-                }
-
-                const float3 scaledOffset = ScaleVector(tuning.offset, transform.scale);
-                const float2 hullOffset{
-                    geometry.centroidOffset.x * transform.scale.x + scaledOffset.x,
-                    geometry.centroidOffset.y * transform.scale.y + scaledOffset.y
-                };
-                std::vector<b2Vec2> vertices = BuildHullVertices(paddedHull, hullOffset, 1.0f, 0.0f);
-
-                Physics::BoxColliderComponent collider{};
-                collider.colliderId = resolvedKey;
-                collider.shapeDef = registryDefinition->shapeDef;
-                collider.AddPolygon(vertices);
-
-                FootprintAccumulator footprint{};
-                footprint.IncludeVertices(vertices);
-                const float paddedThickness = std::max(
-                    kMinGeneratedThickness,
-                    geometry.paddedThickness * transform.scale.z + tuning.padding.z * 2.0f);
-                footprint.ExpandHalfZ(paddedThickness);
-
-                shapeConfig.type = InferShapeType(collider.shapes);
-                if (shapeConfig.type == Physics::Box2DShapeConfig::Type::None)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Generated hull lacks supported shape type for key='"
-                        << resolvedKey << "'.\n";
-                    DebugTrace(oss.str());
-                    result.source = "GeneratedInvalid";
-                    return result;
-                }
-
-                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
-
-                result.centerOffset = footprint.Center(scaledOffset.z);
-                result.halfExtents = footprint.HalfExtents(kMinGeneratedThickness * 0.5f);
-
-                const auto& primaryShape = collider.shapes.front();
-                switch (shapeConfig.type)
-                {
-                case Physics::Box2DShapeConfig::Type::Polygon:
-                case Physics::Box2DShapeConfig::Type::Box:
-                    shapeConfig.vertices = primaryShape.vertices;
-                    shapeConfig.offset = b2Vec2{ result.centerOffset.x, result.centerOffset.y };
-                    break;
-                case Physics::Box2DShapeConfig::Type::Circle:
-                    shapeConfig.radius = primaryShape.radius;
-                    shapeConfig.offset = primaryShape.vertices.empty() ? b2Vec2{ 0.0f, 0.0f } : primaryShape.vertices.front();
-                    break;
-                default:
-                    break;
-                }
-
-                result.collider = collider;
-                result.shapeConfig = shapeConfig;
-                result.source = "Generated";
+                oss << "; player collider cannot be created from config.\n";
+                DebugTrace(oss.str());
+                result.source = "ConfigMissing";
                 return result;
             }
 
@@ -1296,36 +1206,6 @@ namespace
             result.source = "Config";
             return result;
         }
-
-    std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin)
-    {
-        std::vector<b2Vec2> vertices;
-        vertices.reserve(points.size());
-
-        const float effectiveScale = std::max(scale, 0.0f);
-        for (const auto& pt : points)
-        {
-            float2 scaled{ (pt.x + offset.x) * effectiveScale, (pt.y + offset.y) * effectiveScale };
-            if (std::abs(margin) > 1e-6f)
-            {
-                const float lenSq = (scaled.x * scaled.x) + (scaled.y * scaled.y);
-                if (lenSq > 1e-8f)
-                {
-                    const float invLen = 1.0f / std::sqrt(lenSq);
-                    scaled.x += scaled.x * invLen * margin;
-                    scaled.y += scaled.y * invLen * margin;
-                }
-                else
-                {
-                    scaled.x += margin;
-                }
-            }
-
-            vertices.push_back(b2Vec2{ scaled.x, scaled.y });
-        }
-
-        return vertices;
-    }
 
         bool ParseBool(const std::string& value, bool& outValue)
         {
@@ -2508,7 +2388,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     PlayerColliderBuildResult colliderBuild = BuildPlayerCollider(
         resolvedColliderKey,
         trans,
-        resolvedModelPath,
         m_playerColliderTuning,
         m_playerColliderDefinitions,
         m_forceConfigPlayerCollider,
@@ -2591,7 +2470,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const std::string appliedSource = registryFallbackUsed ? "RegistryFallback" : colliderBuild.source;
     const std::string appliedPath = registryFallbackUsed
         ? "RegistryFallback"
-        : (colliderBuild.source == "Generated" ? "Generated" : "Config");
+        : (colliderBuild.source.rfind("Registry", 0) == 0 ? "Registry" : "Config");
 
     {
         std::ostringstream oss;
@@ -2610,7 +2489,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " appliedSource=" << appliedSource
             << " appliedPath=" << appliedPath
             << " key='" << resolvedColliderKey << "' forceConfig=" << std::boolalpha << m_forceConfigPlayerCollider
-            << " forceConfigPolicy=" << (m_forceConfigPlayerCollider ? "ConfigOnly" : "AllowGenerated")
+            << " forceConfigPolicy=" << (m_forceConfigPlayerCollider ? "ConfigOnly" : "AllowRegistryFallback")
+            << " modelGeneration=Disabled"
             << " configLoaded=" << m_playerColliderConfigLoaded
             << " configAvailable=" << hasConfigDefinition
             << " registryHit=" << colliderBuild.registryHit
