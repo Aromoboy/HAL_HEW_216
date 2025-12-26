@@ -46,7 +46,6 @@ public:
 	// アニメーション再生情報
 	struct AnimePlayInfo
 	{
-	void ResetTime();
 		AnimeTime		nowTime;	// 現在の再生時間
 		AnimeTime		totalTime;	// 最大再生時間
 		float			speed;		// 再生速度
@@ -70,6 +69,7 @@ public:
 	// OnUpdateで保持しているアニメーションを更新する
 	
 	void Step(float a_tick);
+	void ResetTime();
 
 	DirectX::XMMATRIX GetNodeMatrix(NodeIndexDX);
 
