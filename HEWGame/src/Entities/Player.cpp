@@ -284,6 +284,7 @@ namespace Entities
         , m_minimumY(0.0f)
         , m_missingBodyLogged(false)
         , m_missingModelWarned(false)
+        , m_missingMoveAnimationLogged(false)
         , m_hasScreenBounds(false)
         , m_minScreenX(0.0f)
         , m_maxScreenX(0.0f)
@@ -336,6 +337,13 @@ namespace Entities
 
         m_idleAnimation = animationCache.Get(kPlayerIdleAnimationPath);
         m_moveAnimation = animationCache.Get(kPlayerMoveAnimationPath);
+        if (!m_moveAnimation)
+        {
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "Move animation missing: path=" << kPlayerMoveAnimationPath << '\n';
+            PlayerDebugTrace(oss.str());
+            m_missingMoveAnimationLogged = true;
+        }
         m_fallAnimation = animationCache.Get(kPlayerFallAnimationPath);
         m_attackAnimation = animationCache.Get(kPlayerAttackAnimationPath);
         m_animation = m_idleAnimation;
@@ -526,6 +534,18 @@ namespace Entities
                 || std::abs(velocity.y) > kAnimMoveSpeedThreshold)
             {
                 nextState = PlayerAnimState::Move;
+            }
+
+            if (nextState == PlayerAnimState::Move && !m_moveAnimation)
+            {
+                if (!m_missingMoveAnimationLogged)
+                {
+                    std::ostringstream oss;
+                    oss << kPlayerLogPrefix << "Move animation missing: path=" << kPlayerMoveAnimationPath << '\n';
+                    PlayerDebugTrace(oss.str());
+                    m_missingMoveAnimationLogged = true;
+                }
+                nextState = PlayerAnimState::Idle;
             }
 
             if (nextState == m_animState)
