@@ -883,6 +883,8 @@ namespace
             }
         };
 
+        std::vector<b2Vec2> BuildHullVertices(const std::vector<float2>& points, const float2& offset, float scale, float margin);
+
         PlayerColliderBuildResult BuildPlayerColliderFromRegistry(
             const std::string& colliderId,
             const Transform& transform,
