@@ -1,14 +1,6 @@
 #include "AnimationState.h"
 #include "Animation.h"
 
-
-
-
-void AnimationState::AddState(std::string, std::shared_ptr<Animation>, std::string)
-{
-
-}
-
 AnimationStateMachine::AnimationStateMachine()
 {
 	animationStates["NotAnimation"] = AnimationState();
