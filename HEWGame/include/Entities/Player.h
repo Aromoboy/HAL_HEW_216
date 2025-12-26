@@ -86,6 +86,9 @@ namespace Entities
         VisualTransform m_visual{};
         Transform m_renderTransform{};
         std::shared_ptr<Render::Model> m_fairyModel;
+        std::shared_ptr<Animation> m_activeAnimation;
+        std::shared_ptr<Animation> m_idleAnimation;
+        std::shared_ptr<Animation> m_stabAnimation;
         SweetsSpace::SweetsManager* m_sweetsManager;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;

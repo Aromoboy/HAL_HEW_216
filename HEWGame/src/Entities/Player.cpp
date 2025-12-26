@@ -256,6 +256,9 @@ namespace Entities
     Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
         : PhysicalEntity(transform, std::nullopt, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_fairyModel(nullptr)
+        , m_activeAnimation(nullptr)
+        , m_idleAnimation(nullptr)
+        , m_stabAnimation(nullptr)
         , m_sweetsManager(sweetsManager)
         , m_carrieds()
         , m_carriedRotations()
@@ -322,10 +325,24 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        const std::string playerAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+        const std::string playerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+        const std::string playerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
 
-        m_animation = animationCache.Get(playerAnimationPath);
-        m_animation->SetLoop(true);
+        m_idleAnimation = animationCache.Get(playerIdleAnimationPath);
+        m_stabAnimation = animationCache.Get(playerStabAnimationPath);
+
+        if (m_idleAnimation)
+        {
+            m_idleAnimation->SetLoop(true);
+        }
+
+        if (m_stabAnimation)
+        {
+            m_stabAnimation->SetLoop(false);
+        }
+
+        m_activeAnimation = m_idleAnimation;
+        m_animation = m_activeAnimation;
 
         if (!modelPath.empty())
         {
@@ -474,9 +491,19 @@ namespace Entities
             }
             m_wasMovingLastFrame = isMovingNow;
 
-            if (m_animation)
+            if (m_activeAnimation)
             {
-                m_animation->Step(1.0f / 60.0f);
+                m_activeAnimation->Step(1.0f / 60.0f);
+
+                if (m_activeAnimation == m_stabAnimation && m_activeAnimation->IsPlayEnd())
+                {
+                    m_activeAnimation = m_idleAnimation;
+                    m_animation = m_activeAnimation;
+                    if (m_idleAnimation)
+                    {
+                        m_idleAnimation->SetLoop(true);
+                    }
+                }
             }
 
             ClampVerticalPosition();
@@ -498,7 +525,7 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*m_model, m_renderTransform, &camera, m_animation.get());
+        renderer.Draw(*m_model, m_renderTransform, &camera, m_activeAnimation.get());
     }
 
     Transform Player::GetRenderTransform() const
@@ -967,6 +994,16 @@ namespace Entities
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "TryPickupNearest invoked\n");
             TryPickupNearest();
+            if (m_lastPickupResult.result == SweetsSpace::PickupResult::Success)
+            {
+                m_activeAnimation = m_stabAnimation;
+                m_animation = m_activeAnimation;
+                if (m_activeAnimation)
+                {
+                    m_activeAnimation->SetLoop(false);
+                    m_activeAnimation->Play();
+                }
+            }
         }
     }
 
