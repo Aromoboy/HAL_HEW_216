@@ -16,6 +16,8 @@ struct AnimationState
 		, priority(-1)
 		, nextState("NotAnimation")
 	{ }
+
+	void AddState(std::string stateKey, std::shared_ptr<Animation> stateAnimation, std::string stateNext);
 };
 
 class AnimationStateMachine
