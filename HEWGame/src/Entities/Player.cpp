@@ -52,6 +52,10 @@ namespace
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
     constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+    constexpr const char* kPlayerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+    constexpr const char* kPlayerMoveAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
+    constexpr const char* kPlayerFallAnimationPath = "Assets/Animation/yousei_fallanimation.fbx";
+    constexpr const char* kPlayerAttackAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
 
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
@@ -60,6 +64,9 @@ namespace
     constexpr float kDefaultPickupHalfExtent = 0.5f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
+
+    constexpr float kAnimMoveSpeedThreshold = 0.01f;
+    constexpr float kAnimFallSpeedThreshold = 0.05f;
 
     const char* PickupOffsetModeName(Stage::PickupOffsetMode mode)
     {
@@ -289,6 +296,11 @@ namespace Entities
         , m_moveSoundFadingOut(false)     
         , m_moveSoundFadeTimer(0.0f)      
         , m_moveSoundFadeDuration(0.4f)
+        , m_animState(PlayerAnimState::Idle)
+        , m_idleAnimation(nullptr)
+        , m_moveAnimation(nullptr)
+        , m_fallAnimation(nullptr)
+        , m_attackAnimation(nullptr)
     {
         if (model)
         {
@@ -322,9 +334,11 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        const std::string playerAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
-
-        m_animation = animationCache.Get(playerAnimationPath);
+        m_idleAnimation = animationCache.Get(kPlayerIdleAnimationPath);
+        m_moveAnimation = animationCache.Get(kPlayerMoveAnimationPath);
+        m_fallAnimation = animationCache.Get(kPlayerFallAnimationPath);
+        m_attackAnimation = animationCache.Get(kPlayerAttackAnimationPath);
+        m_animation = m_idleAnimation;
 
         if (!modelPath.empty())
         {
@@ -429,6 +443,15 @@ namespace Entities
                 SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
             }
 
+            const float3 velocityForAnim = hasBody
+                ? GetLinearVelocity()
+                : float3{
+                    horizontal * effectiveHorizontalSpeed,
+                    vertical * effectiveVerticalSpeed,
+                    0.0f
+                };
+            UpdateAnimationState(ctx, hasBody, velocityForAnim);
+
             // ===== 移動音（フェードアウト付き）=====
             if (auto* sound = SoundManagerEX::GetInstance())
             {
@@ -475,7 +498,7 @@ namespace Entities
 
             if (m_animation)
             {
-                m_animation->Step(1.0f / 60.0f);
+                m_animation->Step(ctx.dt);
             }
 
             ClampVerticalPosition();
@@ -483,6 +506,68 @@ namespace Entities
             SyncVisualTransformFromPhysics();
             HandleCarryInput(ctx);
             UpdateCarriedSweets();
+        }
+
+        void Player::UpdateAnimationState(Core::UpdateContext& ctx, bool hasBody, const float3& velocity)
+        {
+            const bool wantsAttack = ctx.input.IsAction(Core::ActionId::Drop)
+                || ctx.input.IsAction(Core::ActionId::Confirm);
+
+            PlayerAnimState nextState = PlayerAnimState::Idle;
+            if (wantsAttack)
+            {
+                nextState = PlayerAnimState::Attack;
+            }
+            else if (hasBody && std::abs(velocity.y) > kAnimFallSpeedThreshold)
+            {
+                nextState = PlayerAnimState::Fall;
+            }
+            else if (std::abs(velocity.x) > kAnimMoveSpeedThreshold
+                || std::abs(velocity.y) > kAnimMoveSpeedThreshold)
+            {
+                nextState = PlayerAnimState::Move;
+            }
+
+            if (nextState == m_animState)
+            {
+                return;
+            }
+
+            m_animState = nextState;
+
+            std::shared_ptr<Animation> nextAnimation;
+            switch (m_animState)
+            {
+            case PlayerAnimState::Idle:
+                nextAnimation = m_idleAnimation;
+                break;
+            case PlayerAnimState::Move:
+                nextAnimation = m_moveAnimation;
+                break;
+            case PlayerAnimState::Fall:
+                nextAnimation = m_fallAnimation;
+                break;
+            case PlayerAnimState::Attack:
+                nextAnimation = m_attackAnimation;
+                break;
+            default:
+                nextAnimation = m_idleAnimation;
+                break;
+            }
+
+            if (!nextAnimation)
+            {
+                nextAnimation = m_idleAnimation;
+            }
+
+            if (nextAnimation != m_animation)
+            {
+                m_animation = nextAnimation;
+                if (m_animation)
+                {
+                    m_animation->ResetTime();
+                }
+            }
         }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
