@@ -106,25 +106,39 @@ unsigned int MeshDX::GetBoneCount() const
 }
 
 DirectX::XMMATRIX MeshDX::GetBoneMatrix(unsigned int index)
-{
+{/*
     for (int i = 0; i < m_bones.size(); i++)
     {
         if (index == m_bones[i].nodeIndex)
             return DirectX::XMLoadFloat4x4(&m_bones[i].invOffset);
     }
 
-    return DirectX::XMMatrixIdentity();
+    return DirectX::XMMatrixIdentity();*/
+
+    if (index >= m_bones.size() || index < 0)
+    {
+        return DirectX::XMMatrixIdentity();
+    }
+
+    return DirectX::XMLoadFloat4x4(&m_bones[index].invOffset);
 }
 
 NodeIndexDX MeshDX::GetBoneNodeIndex(unsigned int index) const
 {
-    for (int i = 0; i < m_bones.size(); i++)
+    //for (int i = 0; i < m_bones.size(); i++)
+    //{
+    //    if (m_bones[i].nodeIndex == index)
+    //        return m_bones[i].nodeIndex;
+    //}
+
+
+    //return static_cast<NodeIndexDX>(-1);
+
+    if (m_bones.size() <= index || index < 0)
     {
-        if (m_bones[i].nodeIndex == index)
-            return m_bones[i].nodeIndex;
+        return -1;
     }
 
-
-    return static_cast<NodeIndexDX>(-1);
+    return m_bones[index].nodeIndex;
 
 }
