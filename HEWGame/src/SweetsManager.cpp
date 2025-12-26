@@ -2510,7 +2510,9 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             return nullptr;
         }
-    
+
+        sweets->SetWasEverCarried(false);
+
         if (!RegisterWithSystems(sweets))
         {
             return nullptr;
@@ -2691,6 +2693,7 @@ namespace SweetsSpace
             return false;
         }
 
+        sweets->SetWasEverCarried(true);
         ClearContactState(sweets.get());
 
         if (m_physicsMachine)
@@ -2933,6 +2936,7 @@ namespace SweetsSpace
         const SweetsState previousState = found->second;
         ClearContactState(sweets.get());
         m_hasSweetsContact.erase(sweets.get());
+        sweets->SetWasEverCarried(false);
         sweets->MarkPendingDestroy();
         sweets->Enable(false);
 
@@ -3589,7 +3593,14 @@ namespace SweetsSpace
 
         if (cream && other)
         {
-            if (m_physicsMachine)
+            if (!cream->WasEverCarried())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム '" << cream->GetTag()
+                    << "' はまだ運ばれてないから接着をスキップするよ \n";
+                DebugTrace(oss.str());
+            }
+            else if (m_physicsMachine)
             {
                 const JointPairKey key = JointPairKey::Make(cream, other);
                 if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
