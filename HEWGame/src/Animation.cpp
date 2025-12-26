@@ -159,21 +159,6 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 	transform = m_animeTransform[MAIN][index];
 	
 
-	if (m_info.totalTime > 0.0f)
-	{
-		if (m_info.isLoop)
-		{
-			m_info.nowTime = std::fmod(m_info.nowTime, m_info.totalTime);
-			if (m_info.nowTime < 0.0f)
-			{
-				m_info.nowTime += m_info.totalTime;
-			}
-		}
-		else
-		{
-			m_info.nowTime = std::min(m_info.nowTime, m_info.totalTime);
-		}
-	}
 	NodeDX& node = m_nodes[index];
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&transform.translate));
 	DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&transform.quaternion));
@@ -197,6 +182,21 @@ void Animation::UpdateAnime(float tick)
 	// アニメーション時間の更新
 	
 	m_info.nowTime = m_info.nowTime + m_info.speed * tick;
+	if (m_info.totalTime > 0.0f)
+	{
+		if (m_info.isLoop)
+		{
+			m_info.nowTime = std::fmod(m_info.nowTime, m_info.totalTime);
+			if (m_info.nowTime < 0.0f)
+			{
+				m_info.nowTime += m_info.totalTime;
+			}
+		}
+		else
+		{
+			m_info.nowTime = std::min(m_info.nowTime, m_info.totalTime);
+		}
+	}
 	//CheckAnimePlayLoop(anime.info);
 }
 
@@ -215,4 +215,3 @@ void Animation::LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a,
 	DirectX::XMStoreFloat4(&pOut->quaternion, vec[1][0]);
 	DirectX::XMStoreFloat3(&pOut->scale, vec[2][0]);
 }
-
