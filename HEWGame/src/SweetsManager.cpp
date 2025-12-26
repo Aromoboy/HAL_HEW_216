@@ -3693,8 +3693,16 @@ namespace SweetsSpace
         {
             const JointPairKey key = JointPairKey::Make(cream, other);
             auto it = m_creamWeldJoints.find(key);
-            if (it != m_creamWeldJoints.end() && !b2Joint_IsValid(it->second))
+            if (it != m_creamWeldJoints.end())
             {
+                if (m_physicsMachine && b2Joint_IsValid(it->second))
+                {
+                    m_physicsMachine->DestroyJoint(it->second);
+                    std::ostringstream cementLog;
+                    cementLog << kLogPrefix << "cementの溶接を外したよ '" << cream->GetTag() << "' と '"
+                              << other->GetTag() << "'\n";
+                    DebugTrace(cementLog.str());
+                }
                 m_creamWeldJoints.erase(it);
             }
         }
