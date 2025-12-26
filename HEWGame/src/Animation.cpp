@@ -20,8 +20,8 @@ Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, 
 void Animation::Step(float a_tick)
 {
 	
-	////--- ƒAƒjƒ[ƒVƒ‡ƒ“s—ñ‚ÌXV
-	//// ƒpƒ‰ƒƒgƒŠƒbƒN
+	////--- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¡Œåˆ—ã®æ›´æ–°
+	//// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯
 	//if (m_playNo == kParametricAnime || m_blendNo == kParametricAnime)
 	//{
 	//	CalcAnime(PARAMETRIC0, m_parametric[0]);
@@ -29,38 +29,38 @@ void Animation::Step(float a_tick)
 	//}
 	// 
 	
-	// ƒƒCƒ“ƒAƒjƒ
+	// ãƒ¡ã‚¤ãƒ³ã‚¢ãƒ‹ãƒ¡
 	//if (m_playNo != kAnimeNone && m_playNo != kParametricAnime)
 	CalcAnime(MAIN);
 
 
-	//// ƒuƒŒƒ“ƒhƒAƒjƒ
+	//// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡
 	//if (m_blendNo != kAnimeNone && m_blendNo != kParametricAnime)
 	//{
 	//	CalcAnime(BLEND, m_blendNo);
 	//}
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“s—ñ‚ÉŠî‚Ã‚¢‚Äœs—ñ‚ğXV
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³è¡Œåˆ—ã«åŸºã¥ã„ã¦éª¨è¡Œåˆ—ã‚’æ›´æ–°
 	CalcBones(0, DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f));
 
-	//--- ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌŠÔXV
-	// ƒƒCƒ“ƒAƒjƒ
+	//--- ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®æ™‚é–“æ›´æ–°
+	// ãƒ¡ã‚¤ãƒ³ã‚¢ãƒ‹ãƒ¡
 	UpdateAnime(a_tick);
-	//// ƒuƒŒƒ“ƒhƒAƒjƒ
+	//// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡
 	//if (m_blendNo != kAnimeNone)
 	//{
 	//	UpdateAnime(m_blendNo, a_tick);
 	//	m_blendTime += a_tick;
 	//	if (m_blendTime <= m_blendTime)
 	//	{
-	//		// ƒuƒŒƒ“ƒhƒAƒjƒ‚Ì©“®I—¹
+	//		// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡ã®è‡ªå‹•çµ‚äº†
 	//		m_blendTime = 0.0f;
 	//		m_blendTotalTime = 0.0f;
 	//		m_playNo = m_blendNo;
 	//		m_blendNo = kAnimeNone;
 	//	}
 	//}
-	//// ƒpƒ‰ƒƒgƒŠƒbƒN
+	//// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯
 	//if (m_playNo == kParametricAnime || m_blendNo == kParametricAnime)
 	//{
 	//	UpdateAnime(m_parametric[0], a_tick);
@@ -95,21 +95,21 @@ void Animation::CalcAnime(AnimePatternDX kind)
 	std::vector<AnimeChannel>::iterator channelIt = m_channels.begin();
 	for (auto channelIt = m_channels.begin(); channelIt != m_channels.end(); ++channelIt)
 	{
-		// ƒAƒjƒ[ƒVƒ‡ƒ“‚Å•ÏX‚·‚éƒ{[ƒ“‚ª‚È‚¯‚ê‚ÎƒXƒLƒbƒv
+		// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã§å¤‰æ›´ã™ã‚‹ãƒœãƒ¼ãƒ³ãŒãªã‘ã‚Œã°ã‚¹ã‚­ãƒƒãƒ—
 
-		// TODO ‚±‚±”’l‚Æ-1‚Ì”äŠr‚Å–{“–‚É‚ ‚Á‚Ä‚éH
+		// TODO ã“ã“æ•°å€¤ã¨-1ã®æ¯”è¼ƒã§æœ¬å½“ã«ã‚ã£ã¦ã‚‹ï¼Ÿ
 		if (channelIt->node == kNodeNone) { continue; }
 
-		// ƒ^ƒCƒ€ƒ‰ƒCƒ“‚Ìİ’è‚ª‚È‚¯‚ê‚ÎƒXƒLƒbƒv
+		// ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ã®è¨­å®šãŒãªã‘ã‚Œã°ã‚¹ã‚­ãƒƒãƒ—
 		AnimeTimeline& timeline = channelIt->timeline;
 		if (timeline.empty()) { continue; }
 
-		// ƒ{[ƒ“‚Ìp¨‚ğƒ^ƒCƒ€ƒ‰ƒCƒ“‚É‰ˆ‚Á‚ÄXV
+		// ãƒœãƒ¼ãƒ³ã®å§¿å‹¢ã‚’ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ã«æ²¿ã£ã¦æ›´æ–°
 		
 		AnimeTransformDX& transform = m_animeTransform[kind][channelIt->node];
 		if (timeline.size() <= 1)
 		{
-			// ƒL[‚ªˆê‚Â‚µ‚©‚È‚¢‚Ì‚Å’l‚ğ‚»‚Ì‚Ü‚Üg—p
+			// ã‚­ãƒ¼ãŒä¸€ã¤ã—ã‹ãªã„ã®ã§å€¤ã‚’ãã®ã¾ã¾ä½¿ç”¨
 			transform = channelIt->timeline[0];
 		}
 		else
@@ -117,17 +117,17 @@ void Animation::CalcAnime(AnimePatternDX kind)
 			AnimeTimeline::iterator startIt = timeline.begin();
 			if (m_info.nowTime <= startIt->first)
 			{
-				// æ“ªƒL[‚æ‚è‚à‘O‚ÌŠÔ‚È‚çAæ“ª‚Ì’l‚ğg—p
+				// å…ˆé ­ã‚­ãƒ¼ã‚ˆã‚Šã‚‚å‰ã®æ™‚é–“ãªã‚‰ã€å…ˆé ­ã®å€¤ã‚’ä½¿ç”¨
 				transform = startIt->second;
 			}
 			else if (timeline.rbegin()->first <= m_info.nowTime)
 			{
-				// ÅIƒL[‚æ‚è‚àŒã‚ÌŠÔ‚È‚çAÅŒã‚Ì’l‚ğg—p
+				// æœ€çµ‚ã‚­ãƒ¼ã‚ˆã‚Šã‚‚å¾Œã®æ™‚é–“ãªã‚‰ã€æœ€å¾Œã®å€¤ã‚’ä½¿ç”¨
 				transform = timeline.rbegin()->second;
 			}
 			else
 			{
-				// w’è‚³‚ê‚½ŠÔ‚ğ‹²‚Ş2‚Â‚ÌƒL[‚©‚çA•âŠÔ‚³‚ê‚½’l‚ğŒvZ
+				// æŒ‡å®šã•ã‚ŒãŸæ™‚é–“ã‚’æŒŸã‚€2ã¤ã®ã‚­ãƒ¼ã‹ã‚‰ã€è£œé–“ã•ã‚ŒãŸå€¤ã‚’è¨ˆç®—
 				AnimeTimeline::iterator nextIt = timeline.upper_bound(m_info.nowTime);
 				startIt = nextIt;
 				--startIt;
@@ -140,9 +140,9 @@ void Animation::CalcAnime(AnimePatternDX kind)
 
 void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 {
-	AnimeTransformDX transform; // ‡¬Œ‹‰Ê‚ÌŠi”[æ
+	AnimeTransformDX transform; // åˆæˆçµæœã®æ ¼ç´å…ˆ
 
-	//// ƒpƒ‰ƒƒgƒŠƒbƒN‚Ì‡¬
+	//// ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã®åˆæˆ
 	//if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
 	//{
 	//	LerpTransform(&transform,
@@ -150,12 +150,12 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 	//		m_animeTransform[PARAMETRIC1][index],
 	//		m_parametricBlend);
 
-	//	// ‚Ì‚¿‚ÌƒuƒŒƒ“ƒh‚Æ‚Ì‡¬‚Ì‚½‚ß‚ÉAƒpƒ‰ƒƒgƒŠƒbƒN‚ÌŒ‹‰Ê‚ğÄ¶EƒuƒŒƒ“ƒh‚Ì‚¢‚¸‚ê‚©‚ÉŠi”[
+	//	// ã®ã¡ã®ãƒ–ãƒ¬ãƒ³ãƒ‰ã¨ã®åˆæˆã®ãŸã‚ã«ã€ãƒ‘ãƒ©ãƒ¡ãƒˆãƒªãƒƒã‚¯ã®çµæœã‚’å†ç”Ÿãƒ»ãƒ–ãƒ¬ãƒ³ãƒ‰ã®ã„ãšã‚Œã‹ã«æ ¼ç´
 	//	if (m_playNo == PARAMETRIC_ANIME) { m_animeTransform[MAIN][index] = transform; }
 	//	if (m_blendNo == PARAMETRIC_ANIME) { m_animeTransform[BLEND][index] = transform; }
 	//}
 
-	//// ƒuƒŒƒ“ƒhƒAƒjƒ‚Ì‡¬
+	//// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¢ãƒ‹ãƒ¡ã®åˆæˆ
 	//if (m_blendNo != ANIME_NONE)
 	//{
 	//	LerpTransform(&transform,
@@ -165,18 +165,24 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 	//}
 	//else
 	
-	// ‡¬‚Ì•K—v‚ª‚È‚©‚Á‚½‚Ì‚ÅAƒƒCƒ“‚Ìî•ñ‚ğ‚»‚Ì‚Ü‚ÜŠi”[
+	// åˆæˆã®å¿…è¦ãŒãªã‹ã£ãŸã®ã§ã€ãƒ¡ã‚¤ãƒ³ã®æƒ…å ±ã‚’ãã®ã¾ã¾æ ¼ç´
 	transform = m_animeTransform[MAIN][index];
 	
 
-	// ŠY“–ƒm[ƒh‚Ìp¨s—ñ‚ğŒvZ
+	if (!m_info.isLoop && m_info.nowTime >= m_info.totalTime)
+	{
+		m_info.nowTime = m_info.totalTime;
+		isPlayEnd = true;
+		return;
+	}
+	// è©²å½“ãƒãƒ¼ãƒ‰ã®å§¿å‹¢è¡Œåˆ—ã‚’è¨ˆç®—
 	NodeDX& node = m_nodes[index];
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&transform.translate));
 	DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&transform.quaternion));
 	DirectX::XMMATRIX S = DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&transform.scale));
 	node.mat = (S * R * T) * parent;
 
-	// q—v‘f‚Ìp¨‚ğXV
+	// å­è¦ç´ ã®å§¿å‹¢ã‚’æ›´æ–°
 	ChildrenDX::iterator it = node.children.begin();
 	while (it != node.children.end())
 	{
@@ -187,10 +193,10 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 
 void Animation::UpdateAnime(float tick)
 {
-	//// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ`ƒFƒbƒN
+	//// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒã‚§ãƒƒã‚¯
 	//if (no == PARAMETRIC_ANIME) { return; }
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ŠÔ‚ÌXV
+	// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³æ™‚é–“ã®æ›´æ–°
 	
 	m_info.nowTime = m_info.nowTime + m_info.speed * tick;
 	if (m_info.isLoop && m_info.nowTime > m_info.totalTime)
