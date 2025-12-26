@@ -99,7 +99,8 @@ void Animation::CalcAnime(AnimePatternDX kind)
 		if (timeline.size() <= 1)
 		{
 			// キーが一つしかないので値をそのまま使用
-			transform = channelIt->timeline[0];
+			// operator[] は読み取りでも新規キーを作るため使用しない
+			transform = timeline.begin()->second;
 		}
 		else
 		{
