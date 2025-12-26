@@ -12,6 +12,7 @@ namespace Core
         Pause,
         Retry,
         DebugConsole,
+        DebugToggle,
         ToggleFullscreen,
         CameraToggle,
         CameraHeightToggle,
@@ -21,4 +22,3 @@ namespace Core
         ColliderNudgeDown,
     };
 }
-
