@@ -74,7 +74,7 @@ namespace
 
 bool g_DrawColliders = ReadDebugColliderCvar();
 bool g_DrawColliderBounds = ReadDebugColliderBoundsCvar();
-bool g_DebugDrawEnabled = true;
+bool g_DebugDrawEnabled = false;
 
 namespace Systems
 {
