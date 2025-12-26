@@ -39,6 +39,11 @@ void Animation::Step(float a_tick)
 	// アニメーション行列に基づいて骨行列を更新
 	CalcBones(0, DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f));
 
+void Animation::ResetTime()
+{
+	m_info.nowTime = 0.0f;
+}
+
 	//--- アニメーションの時間更新
 	// メインアニメ
 	UpdateAnime(a_tick);

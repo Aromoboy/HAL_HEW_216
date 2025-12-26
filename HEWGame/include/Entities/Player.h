@@ -25,6 +25,14 @@ namespace Entities
     class Player : public PhysicalEntity
     {
     public:
+        enum class PlayerAnimState
+        {
+            Idle,
+            Move,
+            Fall,
+            Attack
+        };
+
         Player(const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
@@ -125,9 +133,16 @@ namespace Entities
         PickupOrigin ComputePickupOrigin() const;
         void UpdateCarriedSweets();
         void HandleCarryInput(Core::UpdateContext& ctx);
+        void UpdateAnimationState(Core::UpdateContext& ctx, bool hasBody, const float3& velocity);
         void TryPickupNearest();
         void DropCarriedSweets();
         void ClampVerticalPosition();
         void ClampScreenBounds();
+
+        PlayerAnimState m_animState;
+        std::shared_ptr<Animation> m_idleAnimation;
+        std::shared_ptr<Animation> m_moveAnimation;
+        std::shared_ptr<Animation> m_fallAnimation;
+        std::shared_ptr<Animation> m_attackAnimation;
     };
 }
