@@ -1,12 +1,16 @@
 #include "AnimationState.h"
 #include "Animation.h"
 
+#include <utility>
 
 
 
-void AnimationState::AddState(std::string, std::shared_ptr<Animation>, std::string)
+
+void AnimationState::AddState(std::string stateKey, std::shared_ptr<Animation> stateAnimation, std::string stateNext)
 {
-
+	(void)stateKey;
+	animation = std::move(stateAnimation);
+	nextState = std::move(stateNext);
 }
 
 AnimationStateMachine::AnimationStateMachine()

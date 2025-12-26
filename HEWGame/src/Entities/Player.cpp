@@ -52,6 +52,10 @@ namespace
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
     constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
+    constexpr const char* kPlayerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+    constexpr const char* kPlayerMoveAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
+    constexpr const char* kPlayerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
+    constexpr float kStabAnimationDurationSeconds = 0.6f;
 
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
@@ -289,6 +293,7 @@ namespace Entities
         , m_moveSoundFadingOut(false)     
         , m_moveSoundFadeTimer(0.0f)      
         , m_moveSoundFadeDuration(0.4f)
+        , m_stabTimer(0.0f)
     {
         if (model)
         {
@@ -322,10 +327,55 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        const std::string playerAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+        m_idleAnimation = animationCache.Get(kPlayerIdleAnimationPath);
+        if (!m_idleAnimation)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Idle アニメーションの読み込みに失敗しました \n");
+        }
+        else
+        {
+            m_idleAnimation->SetLoop(true);
+        }
 
-        m_animation = animationCache.Get(playerAnimationPath);
-        m_animation->SetLoop(true);
+        m_moveAnimation = animationCache.Get(kPlayerMoveAnimationPath);
+        if (!m_moveAnimation)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Move アニメーションの読み込みに失敗しました \n");
+        }
+        else
+        {
+            m_moveAnimation->SetLoop(true);
+        }
+
+        m_stabAnimation = animationCache.Get(kPlayerStabAnimationPath);
+        if (!m_stabAnimation)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Stab アニメーションの読み込みに失敗しました \n");
+        }
+        else
+        {
+            m_stabAnimation->SetLoop(false);
+        }
+
+        if (m_idleAnimation)
+        {
+            m_animation = m_idleAnimation;
+            m_animationState = PlayerAnimationState::Idle;
+        }
+        else if (m_moveAnimation)
+        {
+            m_animation = m_moveAnimation;
+            m_animationState = PlayerAnimationState::Move;
+        }
+        else
+        {
+            m_animation.reset();
+        }
+
+        if (m_animation)
+        {
+            m_animation->Play();
+        }
 
         if (!modelPath.empty())
         {
@@ -474,16 +524,23 @@ namespace Entities
             }
             m_wasMovingLastFrame = isMovingNow;
 
-            if (m_animation)
-            {
-                m_animation->Step(1.0f / 60.0f);
-            }
-
             ClampVerticalPosition();
             ClampScreenBounds();
             SyncVisualTransformFromPhysics();
             HandleCarryInput(ctx);
             UpdateCarriedSweets();
+
+            if (m_animationState == PlayerAnimationState::Stab)
+            {
+                m_stabTimer += ctx.dt;
+            }
+
+            UpdateAnimationState(isMovingNow);
+
+            if (m_animation)
+            {
+                m_animation->Step(ctx.dt);
+            }
         }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -963,6 +1020,13 @@ namespace Entities
             PlayerDebugTrace(oss.str());
         }
 
+        if (confirmTriggered && !m_carrieds.empty())
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Stab animation triggered while carrying sweets\n");
+            StartStabAnimation();
+            return;
+        }
+
         if (confirmTriggered && m_carrieds.size() < m_maxCarry)
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "TryPickupNearest invoked\n");
@@ -1337,5 +1401,68 @@ namespace Entities
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
+    }
+
+    void Player::SetAnimationState(PlayerAnimationState state, bool forceRestart)
+    {
+        if (!forceRestart && m_animationState == state)
+        {
+            return;
+        }
+
+        m_animationState = state;
+
+        switch (state)
+        {
+        case PlayerAnimationState::Move:
+            m_animation = m_moveAnimation ? m_moveAnimation : m_idleAnimation;
+            break;
+
+        case PlayerAnimationState::Stab:
+            m_animation = m_stabAnimation ? m_stabAnimation : m_idleAnimation;
+            break;
+
+        case PlayerAnimationState::Idle:
+        default:
+            m_animation = m_idleAnimation ? m_idleAnimation : m_moveAnimation;
+            break;
+        }
+
+        if (!m_animation)
+        {
+            return;
+        }
+
+        const bool shouldLoop = (state != PlayerAnimationState::Stab);
+        m_animation->SetLoop(shouldLoop);
+        m_animation->Play();
+    }
+
+    void Player::UpdateAnimationState(bool isMoving)
+    {
+        if (m_animationState == PlayerAnimationState::Stab)
+        {
+            if (m_stabTimer >= kStabAnimationDurationSeconds)
+            {
+                const PlayerAnimationState fallback = isMoving ? PlayerAnimationState::Move : PlayerAnimationState::Idle;
+                SetAnimationState(fallback, true);
+            }
+            return;
+        }
+
+        const PlayerAnimationState desired = isMoving ? PlayerAnimationState::Move : PlayerAnimationState::Idle;
+        SetAnimationState(desired, false);
+    }
+
+    void Player::StartStabAnimation()
+    {
+        if (!m_stabAnimation)
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "Stab アニメーションがないため再生できません \n");
+            return;
+        }
+
+        m_stabTimer = 0.0f;
+        SetAnimationState(PlayerAnimationState::Stab, true);
     }
 }
