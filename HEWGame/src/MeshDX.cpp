@@ -8,11 +8,10 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
         , m_hasIndexBuffer(false)
 {
         HRESULT hr;
-
         // 各種ステータスを設定
         m_indexCount = desc.idxCount;
-
         m_materialID = materialID;
+        m_bones = desc.bones;
 
         // 頂点バッファ作成
         hr = CreateVertexBuffer(desc.pVtx, desc.vtxSize, desc.vtxCount);
@@ -36,6 +35,8 @@ MeshDX::MeshDX(const MeshDX::Description& desc, unsigned long materialID)
                 }
         }
 }
+
+
 
 MeshDX::~MeshDX()
 {
@@ -97,4 +98,33 @@ HRESULT MeshDX::CreateIndexBuffer(const void* pIdx, UINT size, UINT count)
         }
 
         return hr;
+}
+
+unsigned int MeshDX::GetBoneCount() const
+{
+    return m_bones.size();
+}
+
+DirectX::XMMATRIX MeshDX::GetBoneMatrix(unsigned int index)
+{
+    for (int i = 0; i < m_bones.size(); i++)
+    {
+        if (index == m_bones[i].nodeIndex)
+            return DirectX::XMLoadFloat4x4(&m_bones[i].invOffset);
+    }
+
+    return DirectX::XMMatrixIdentity();
+}
+
+NodeIndexDX MeshDX::GetBoneNodeIndex(unsigned int index) const
+{
+    for (int i = 0; i < m_bones.size(); i++)
+    {
+        if (m_bones[i].nodeIndex == index)
+            return m_bones[i].nodeIndex;
+    }
+
+
+    return static_cast<NodeIndexDX>(-1);
+
 }

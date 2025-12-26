@@ -3,13 +3,14 @@
 #include "ModelDX.h"
 
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, const std::vector<BoneDX>& a_bones, std::optional<AABB> localBounds)
+// �^��`
+
+ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, std::optional<AABB> localBounds)
 {
         m_meshes = std::move(a_meshes);
         m_materials = std::move(a_materials);
         m_meshCount = static_cast<unsigned int>(m_meshes.size());
-        m_bones = a_bones;
-
+       
         if (localBounds)
         {
                 m_localBounds = *localBounds;
@@ -25,28 +26,6 @@ ModelDX::~ModelDX()
 unsigned int ModelDX::GetMeshCount() const
 {
 	return m_meshCount;
-}
-
-unsigned int ModelDX::GetBoneCount() const
-{
-    return m_bones.size();
-}
-
-DirectX::XMMATRIX ModelDX::GetBoneMatrix(unsigned int index)
-{
-    if (index < 0 || index >= m_bones.size()) return DirectX::XMMatrixIdentity();
-
-    return DirectX::XMLoadFloat4x4(&m_bones[index].invOffset);
-}
-
-NodeIndexDX ModelDX::GetBoneNodeIndex(unsigned int index) const
-{
-    if (index >= m_bones.size())
-    {
-        return static_cast<NodeIndexDX>(-1);
-    }
-
-    return m_bones[index].nodeIndex;
 }
 
 std::weak_ptr<MeshDX> ModelDX::GetMesh(int a_meshIndex) const

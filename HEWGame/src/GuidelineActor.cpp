@@ -130,8 +130,7 @@ namespace
 
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{ mesh },
-            std::vector<std::shared_ptr<MaterialDX>>{ material },
-            std::vector<BoneDX>{});
+            std::vector<std::shared_ptr<MaterialDX>>{ material });
         const auto bounds = ComputeBounds(vertices);
         if (bounds)
         {

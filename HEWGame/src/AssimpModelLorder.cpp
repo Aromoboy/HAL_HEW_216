@@ -411,7 +411,6 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // ノード作成
     std::vector<NodeDX> nodes;
-    std::vector<BoneDX> bones;
     Animation::AnimationArray animationarray;
 
     MakeNode(pScene, nodes, animationarray);
@@ -419,19 +418,19 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     // メッシュ作成
     AABB localBounds{};
     bool hasBounds = false;
-    auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes, bones);
+    auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes);
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, bones, bounds);
+    return std::make_shared<ModelDX>(meshes, materials, bounds);
 }
 
 // メッシュ作成
 std::vector<std::shared_ptr<MeshDX>>
-AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_outBones)
+AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MeshDX>> meshes;
@@ -573,8 +572,9 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             DebugLog::DebugMessage(oss.str());
         }
 
+        std::vector<BoneDX> bones;
         // ボーン生成
-        MakeVertexWeight(pScene, i, a_nodes, vertices, a_outBones);
+        MakeVertexWeight(pScene, i, a_nodes, vertices, bones);
 
         // インデックス
         indices.resize(mesh->mNumFaces * 3);
@@ -599,6 +599,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         desc.idxSize = sizeof(unsigned long);
         desc.idxCount = static_cast<unsigned int>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        desc.bones = bones;
 
         meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
     }

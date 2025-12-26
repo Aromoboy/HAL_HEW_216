@@ -237,8 +237,8 @@ namespace
 
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat},
-            std::vector<BoneDX>());
+            std::vector<std::shared_ptr<MaterialDX>>{mat}
+        );
 
         if (bounds)
         {
@@ -322,7 +322,7 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        const std::string playerAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
+        const std::string playerAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
 
         m_animation = animationCache.Get(playerAnimationPath);
 
@@ -475,7 +475,7 @@ namespace Entities
 
             if (m_animation)
             {
-                m_animation->Step(1 / 600);
+                m_animation->Step(1.0f / 60.0f);
             }
 
             ClampVerticalPosition();

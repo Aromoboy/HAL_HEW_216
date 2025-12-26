@@ -70,7 +70,7 @@ private:
 
 	void MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes, Animation::AnimationArray& a_outAnimeTransform);
 	// Model生成用関数
-	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_outBones);
+	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes);
 	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, const std::string& modelFilename, ID3D11Device* device, TextureCache& textureCache);
 
 	void MakeVertexWeightHasBone(const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
