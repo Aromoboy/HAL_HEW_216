@@ -518,7 +518,7 @@ namespace Entities
             {
                 nextState = PlayerAnimState::Attack;
             }
-            else if (hasBody && std::abs(velocity.y) > kAnimFallSpeedThreshold)
+            else if (hasBody && velocity.y < -kAnimFallSpeedThreshold)
             {
                 nextState = PlayerAnimState::Fall;
             }
