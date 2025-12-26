@@ -68,6 +68,18 @@ namespace
     constexpr float kAnimMoveSpeedThreshold = 0.01f;
     constexpr float kAnimFallSpeedThreshold = 0.05f;
 
+    const char* PlayerAnimStateName(Entities::Player::PlayerAnimState state)
+    {
+        switch (state)
+        {
+        case Entities::Player::PlayerAnimState::Idle: return "idle";
+        case Entities::Player::PlayerAnimState::Move: return "move";
+        case Entities::Player::PlayerAnimState::Fall: return "fall";
+        case Entities::Player::PlayerAnimState::Attack: return "attack";
+        default: return "unknown";
+        }
+    }
+
     const char* PickupOffsetModeName(Stage::PickupOffsetMode mode)
     {
         switch (mode)
@@ -553,7 +565,16 @@ namespace Entities
                 return;
             }
 
+            const PlayerAnimState previousState = m_animState;
             m_animState = nextState;
+            {
+                std::ostringstream oss;
+                oss << kPlayerLogPrefix << "animation state switch: "
+                    << PlayerAnimStateName(previousState) << " -> "
+                    << PlayerAnimStateName(m_animState)
+                    << " (model.use_count=" << (m_model ? m_model.use_count() : 0) << ")\n";
+                PlayerDebugTrace(oss.str());
+            }
 
             std::shared_ptr<Animation> nextAnimation;
             switch (m_animState)
