@@ -315,8 +315,8 @@ namespace
 
         auto model = std::make_shared<ModelDX>(
             std::vector<std::shared_ptr<MeshDX>>{mesh},
-            std::vector<std::shared_ptr<MaterialDX>>{mat},
-            std::vector<BoneDX>());
+            std::vector<std::shared_ptr<MaterialDX>>{mat});
+            
 
         if (bounds)
         {

@@ -303,6 +303,7 @@
     <ClCompile Include="src\Animation.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="include\AnimationState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssimpModelLorder.h">
@@ -607,6 +608,7 @@
     <ClInclude Include="include\AnimationCache.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="include\AnimationState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

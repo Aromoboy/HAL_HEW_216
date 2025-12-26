@@ -411,7 +411,6 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // ノード作成
     std::vector<NodeDX> nodes;
-    std::vector<BoneDX> bones;
     Animation::AnimationArray animationarray;
 
     MakeNode(pScene, nodes, animationarray);
@@ -419,19 +418,19 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     // メッシュ作成
     AABB localBounds{};
     bool hasBounds = false;
-    auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes, bones);
+    auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes);
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, bones, bounds);
+    return std::make_shared<ModelDX>(meshes, materials, bounds);
 }
 
 // メッシュ作成
 std::vector<std::shared_ptr<MeshDX>>
-AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_outBones)
+AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MeshDX>> meshes;
@@ -573,8 +572,9 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             DebugLog::DebugMessage(oss.str());
         }
 
+        std::vector<BoneDX> bones;
         // ボーン生成
-        MakeVertexWeight(pScene, i, a_nodes, vertices, a_outBones);
+        MakeVertexWeight(pScene, i, a_nodes, vertices, bones);
 
         // インデックス
         indices.resize(mesh->mNumFaces * 3);
@@ -599,6 +599,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         desc.idxSize = sizeof(unsigned long);
         desc.idxCount = static_cast<unsigned int>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        desc.bones = bones;
 
         meshes[i] = std::make_shared<MeshDX>(desc, materialIndex);
     }
@@ -885,6 +886,7 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
     // アニメーション設定
     using XMVectorKey = std::pair<float, DirectX::XMVECTOR>;
     using XMVectorKeys = std::map<float, DirectX::XMVECTOR>;
+    info.nowTime = 0.0f;
     float fbxToGameFrame = static_cast<float>(assimpAnime->mTicksPerSecond);
     info.totalTime = static_cast<float>(assimpAnime->mDuration) / fbxToGameFrame;
     info.speed = 1.0f;
@@ -1097,11 +1099,11 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
         {
             // assimp側で階層情報が細かく分割されている場合の処理
             std::string name = assimpNode->mName.data;
+            DirectX::XMMATRIX localTransform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
             if (name.find("$AssimpFbx") != std::string::npos)
             {
                 // 分割前のノードに到達するまで、各行列を掛け合わせていく
-                DirectX::XMMATRIX transform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
-                mat = transform * mat;
+                mat = localTransform * mat;
                 return func(assimpNode->mChildren[0], parent, mat);
             }
 
@@ -1110,7 +1112,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             node.name = name;
             node.parent = parent;
             node.children.resize(assimpNode->mNumChildren);
-            node.mat = mat;
+            node.mat = localTransform * mat;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1131,14 +1133,31 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
     func(pScene->mRootNode, kNodeNone, DirectX::XMMatrixIdentity());
 
     // アニメーション計算領域に、ノード数分の初期データを作成
-    Animation::AnimeTransformDX init = {
-        DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-        DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
-    };
     for (int i = 0; i < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++i)
     {
-        a_outAnimeTransform[i].resize(a_outNodes.size(), init);
+        a_outAnimeTransform[i].resize(a_outNodes.size());
+    }
+    for (size_t nodeIndex = 0; nodeIndex < a_outNodes.size(); ++nodeIndex)
+    {
+        DirectX::XMVECTOR scale;
+        DirectX::XMVECTOR rotation;
+        DirectX::XMVECTOR translation;
+        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].mat))
+        {
+            scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+            rotation = DirectX::XMQuaternionIdentity();
+            translation = DirectX::XMVectorZero();
+        }
+
+        Animation::AnimeTransformDX init;
+        DirectX::XMStoreFloat3(&init.translate, translation);
+        DirectX::XMStoreFloat4(&init.quaternion, rotation);
+        DirectX::XMStoreFloat3(&init.scale, scale);
+
+        for (int pattern = 0; pattern < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++pattern)
+        {
+            a_outAnimeTransform[pattern][nodeIndex] = init;
+        }
     }
 }
 

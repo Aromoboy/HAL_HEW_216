@@ -4,6 +4,33 @@
 #include "Core/VertexBuffer.h"
 #include "Core/IndexBuffer.h"
 #include <DirectXMath.h>
+#include <vector>
+#include <string>
+
+
+using NodeIndexDX = int;	// �{�[��(�K�w)�ԍ�
+using ChildrenDX = std::vector<NodeIndexDX>;
+
+struct BoneDX
+{
+	NodeIndexDX			nodeIndex;	// �ό`���͊K�w���Ɋi�[
+	DirectX::XMFLOAT4X4	invOffset;	// �t�s��
+};
+
+
+
+// �{�[�����
+struct NodeDX
+{
+	std::string			name;		// �{�[����
+	NodeIndexDX			parent;		// �e�{�[��
+	ChildrenDX			children;	// �q�{�[��
+	DirectX::XMMATRIX	mat;		// �ϊ��s��
+};
+
+
+
+constexpr float kNodeNone = -1.0f;
 
 class MeshDX
 {
@@ -29,6 +56,7 @@ public:
 		UINT idxSize;
 		UINT idxCount;
 		D3D11_PRIMITIVE_TOPOLOGY topology;
+		std::vector<BoneDX> bones;
 	};
 
 	// コンストラクタ、デストラクタ
@@ -46,6 +74,12 @@ public:
 	// Index数の取得
 	unsigned int GetIndexCount();
 
+
+	unsigned int GetBoneCount() const;
+
+	DirectX::XMMATRIX GetBoneMatrix(unsigned int index);
+	NodeIndexDX GetBoneNodeIndex(unsigned int index) const;
+
 private:
 
 	// 各バッファ
@@ -58,6 +92,9 @@ private:
 
 	// Index数
 	unsigned int m_indexCount;
+
+	// Bone
+	std::vector<BoneDX> m_bones;
 
 	// コンストラクタで使用するバッファ作成処理
         HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);

@@ -1,6 +1,11 @@
 #include "Animation.h"
 
 
+void Animation::SetLoop(bool isLoop)
+{
+	m_info.isLoop = isLoop;
+}
+
 Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, Animation::AnimationArray a_array, std::vector<NodeDX> a_nodes)
 	: m_info(a_info)
 	, m_channels(a_channel)
@@ -9,6 +14,8 @@ Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, 
 	
 {
 }
+
+
 
 void Animation::Step(float a_tick)
 {
@@ -78,6 +85,8 @@ void Animation::CalcAnime(AnimePatternDX kind)
 	for (auto channelIt = m_channels.begin(); channelIt != m_channels.end(); ++channelIt)
 	{
 		// アニメーションで変更するボーンがなければスキップ
+
+		// TODO ここ数値と-1の比較で本当にあってる？
 		if (channelIt->node == kNodeNone) { continue; }
 
 		// タイムラインの設定がなければスキップ
@@ -173,6 +182,11 @@ void Animation::UpdateAnime(float tick)
 	// アニメーション時間の更新
 	
 	m_info.nowTime = m_info.nowTime + m_info.speed * tick;
+	if (m_info.isLoop && m_info.nowTime > m_info.totalTime)
+	{
+		m_info.nowTime = 0.0f;
+	}
+
 	//CheckAnimePlayLoop(anime.info);
 }
 
