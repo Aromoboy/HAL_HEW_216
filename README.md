@@ -236,12 +236,17 @@ ModelRenderer ..> CameraSpace_ICamera
 ModelRenderer ..> Render_Model
 namespace Systems {
   class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
+  class DrawSystem["Systems::DrawSystem"] {
+    +OnUpdate(ctx:Core_UpdateContext)
+    +SetRenderer(renderer:ModelRender)
+  }
   class PhysicsMachine["Systems::PhysicsMachine"] {
     - system : IPhysicsSystem
     +OnUpdate(ctx:Core_UpdateContext)
     +SetSystem(sys:IPhysicsSystem)
   }
 }
+Core_UpdateNode <|-- DrawSystem
 Core_UpdateNode <|-- PhysicsMachine
 PhysicsMachine ..> IPhysicsSystem
 namespace GameFlow {
@@ -300,6 +305,12 @@ namespace SceneSpace {
     +Register(node:Core_IUpdatable*)
     +Unregister(node:Core_IUpdatable*)
   }
+  class SceneUpdateNode["SceneSpace::SceneUpdateNode"] {
+    +OnUpdate(ctx:Core_UpdateContext)
+  }
+  class CameraUpdateNode["SceneSpace::CameraUpdateNode"] {
+    +OnUpdate(ctx:Core_UpdateContext)
+  }
   class SceneManager["SceneSpace::SceneManager"] {
     - current : shared_ptr<IScene>
     +SetScene(scene:shared_ptr<IScene>)
@@ -336,6 +347,8 @@ Scene o-- CameraSpace_CameraManager
 Scene o-- Systems_PhysicsMachine
 Scene o-- Render_ModelRenderer
 Scene o-- Core_UpdateScheduler
+Scene o-- SceneUpdateNode
+Scene o-- CameraUpdateNode
 PlayScene o-- Stage_StageData
 PlayScene o-- GameFlow_PhaseManager
 PlayScene o-- GameFlow_UpgradeMenu
@@ -356,6 +369,9 @@ namespace SweetsSpace {
     +OnUpdate(ctx:Core_UpdateContext)
     +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
   }
+  class LateUpdateNode["SweetsSpace::LateUpdateNode"] {
+    +OnUpdate(ctx:Core_UpdateContext)
+  }
   class SweetsManager["SweetsSpace::SweetsManager"] {
     - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
     +OnUpdate(ctx:Core_UpdateContext)
@@ -367,10 +383,14 @@ namespace SweetsSpace {
 SceneSpace_PhysicalEntity <|-- BaseSweets
 SweetsManager *-- BaseSweets
 SweetsManager *-- SweetsState
+SweetsManager o-- LateUpdateNode
 Player o-- Render_Model
 BaseSweets o-- Render_Model
 Core_UpdateNode <|-- BaseSweets
 Core_UpdateNode <|-- SweetsManager
+Core_UpdateNode <|-- SceneUpdateNode
+Core_UpdateNode <|-- CameraUpdateNode
+Core_UpdateNode <|-- LateUpdateNode
 namespace App {
   class Game["App::Game"] {
     - dx       : Core_DXContext
@@ -434,3 +454,4 @@ Initialize → Update → Draw で完結
 UpdateNode:
 毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
 現在の標準フェーズ順は Input → Physics → Gameplay → Camera → Late（PrePhysics/PostPhysics/UI は必要時のみ利用）。
+`SceneGame::ConfigureUpdates` での登録順と実際の実行順は `docs/scene-lifecycle.md` にまとめた。
