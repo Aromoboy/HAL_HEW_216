@@ -8,13 +8,13 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
-#include "GameplayRules.h"
+#include "GameplayProgression.h"
 #include "GuidelineActor.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Core/StepTimer.h"
-#include "Systems/PhysicsBinder.h"
+#include "Systems/IPhysicsBinder.h"
 #include "Vector.h"
 #include "Transform.h"
 #include "Stage/StageData.h"
@@ -22,6 +22,7 @@
 #include "BackgroundRenderer.h"
 #include "ColliderConfigLoader.h"
 #include "StageLayoutLoader.h"
+#include "SceneGameConfigTypes.h"
 #include <cstddef>
 #include <memory>
 #include <map>
@@ -68,22 +69,8 @@ public:
         ShowingResult,
     };
 
-    struct PlayerColliderTuning
-    {
-        float thicknessPadding = 1.0f;
-        float3 padding{ 0.0f, 0.0f, 0.0f };
-        float3 offset{ 0.0f, 0.0f, 0.0f };
-        float3 fallbackPadding{ 0.0f, 0.0f, 0.0f };
-        float3 fallbackOffset{ 0.0f, 0.0f, 0.0f };
-        float3 fallbackSize{ 1.0f, 1.0f, 1.0f };
-    };
-
-    struct PlayerSpawnTransform
-    {
-        Transform transform{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
-        bool loadedFromFile = false;
-        bool rotationFromDegrees = false;
-    };
+    using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
+    using PlayerSpawnTransform = SceneGameConfig::PlayerSpawnTransform;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -124,7 +111,7 @@ private:
     std::shared_ptr<IModelLoader> m_loader;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
-    std::unique_ptr<Systems::PhysicsBinder> m_physicsBinder;
+    std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
@@ -172,7 +159,7 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    std::deque<GameplayRules::PendingTimeBonus> m_pendingTimeBonuses;
+    std::deque<GameplayProgression::PendingTimeBonus> m_pendingTimeBonuses;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();

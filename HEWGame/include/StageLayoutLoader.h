@@ -24,7 +24,6 @@ struct StageObject
     std::shared_ptr<ModelDX> model;
     float currentRotation = 0.0f;
     std::string colliderPresetId;
-    std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 
 struct StageLayoutLoadRequest
