@@ -55,6 +55,8 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
+class SceneComposer;
+
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
 public:
@@ -95,6 +97,32 @@ public:
     void Update(Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
 private:
+    struct Composition
+    {
+        std::vector<StageObject> stageObjects;
+        std::shared_ptr<CameraSpace::PerspectiveCamera> gameCamera;
+        std::unique_ptr<CameraRig> cameraRig;
+        std::shared_ptr<Entities::Entity> cameraAnchor;
+        std::unique_ptr<SoundManagerEX> soundManager;
+        std::shared_ptr<IModelLoader> loader;
+        std::unique_ptr<ModelRender> render;
+        std::unique_ptr<Entities::Player> player;
+        std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
+        std::unique_ptr<Systems::DrawSystem> drawSystem;
+        std::unique_ptr<GuidelineActor> guidelineActor;
+        std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
+        std::unique_ptr<UIManager> uiManager;
+        std::unique_ptr<BackgroundRenderer> backgroundRenderer;
+        std::shared_ptr<Render::Model> playerModel;
+        float playerPickupBoxWidth = 0.0f;
+        float playerPickupBoxHeight = 0.0f;
+        float3 playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
+    };
+
+    friend class SceneComposer;
+
+    void InitializeConfiguration();
+    void AttachComposition(Composition&& composition);
     void ConfigureCamera(const CameraPrototypeSettings& settings);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(Core::UpdateContext& ctx);
@@ -188,6 +216,8 @@ private:
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
     std::unordered_set<SweetsSpace::ActiveSweets*> m_guidelineTriggeredThisHeight;
+    bool m_configurationReady = false;
+    bool m_compositionAttached = false;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;
