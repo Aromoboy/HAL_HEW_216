@@ -1016,28 +1016,9 @@ namespace
 
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
-class SceneComposer
-{
-public:
-    SceneGame::Composition ComposeSceneGame(SceneGame& scene) const;
-};
-
 void SceneGame::Load(Core::Input& input)
 {
     (void)input;
-    if (!m_configurationReady)
-    {
-        InitializeConfiguration();
-        m_configurationReady = true;
-    }
-
-    if (!m_compositionAttached)
-    {
-        SceneComposer composer;
-        AttachComposition(composer.ComposeSceneGame(*this));
-        m_compositionAttached = true;
-    }
-
     std::ostringstream oss;
     oss << kLogPrefix << "Load scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
@@ -1102,30 +1083,30 @@ void SceneGame::NormalizePlayerColliderDefinitions()
     m_playerColliderDefinitions.swap(normalizedDefinitions);
 }
 
-
-
-void SceneGame::InitializeConfiguration()
+SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
+    : m_manager(&a_manager)
 {
-    m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
-        kGameplayConfigPath,
-        GameplayConfig::kSectionPlayerColliders,
-        m_playerColliderDefinitions);
-    m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
+m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
+    kGameplayConfigPath,
+    GameplayConfig::kSectionPlayerColliders,
+    m_playerColliderDefinitions);
+m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
     m_playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(kGameplayConfigPath);
     m_playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
-            << " definitions=" << m_playerColliderDefinitions.size()
-            << " tuningPadding=" << m_playerColliderTuning.thicknessPadding
-            << " padXYZ=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
-            << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
-            << " fallbackPadXYZ=(" << m_playerColliderTuning.fallbackPadding.x << ',' << m_playerColliderTuning.fallbackPadding.y << ',' << m_playerColliderTuning.fallbackPadding.z << ')'
-            << " fallbackOffsetXYZ=(" << m_playerColliderTuning.fallbackOffset.x << ',' << m_playerColliderTuning.fallbackOffset.y << ',' << m_playerColliderTuning.fallbackOffset.z << ')'
-            << " fallbackSizeXYZ=(" << m_playerColliderTuning.fallbackSize.x << ',' << m_playerColliderTuning.fallbackSize.y << ',' << m_playerColliderTuning.fallbackSize.z << ")\n";
-        ::DebugTrace(oss.str());
-    }
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
+        << " definitions=" << m_playerColliderDefinitions.size()
+        << " tuningPadding=" << m_playerColliderTuning.thicknessPadding
+        << " padXYZ=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
+        << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
+        << " fallbackPadXYZ=(" << m_playerColliderTuning.fallbackPadding.x << ',' << m_playerColliderTuning.fallbackPadding.y << ',' << m_playerColliderTuning.fallbackPadding.z << ')'
+        << " fallbackOffsetXYZ=(" << m_playerColliderTuning.fallbackOffset.x << ',' << m_playerColliderTuning.fallbackOffset.y << ',' << m_playerColliderTuning.fallbackOffset.z << ')'
+        << " fallbackSizeXYZ=(" << m_playerColliderTuning.fallbackSize.x << ',' << m_playerColliderTuning.fallbackSize.y << ',' << m_playerColliderTuning.fallbackSize.z << ")\n";
+    ::DebugTrace(oss.str());
+}
 
+    std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
@@ -1234,6 +1215,41 @@ void SceneGame::InitializeConfiguration()
         ::DebugTrace(oss.str());
     }
 
+    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const bool manifestLoaded = manifest.ReloadFromCsv();
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Manifest config " << (manifestLoaded ? "applied" : "missing; using defaults")
+            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultConfigPath << "'\n";
+        const auto prototypes = manifest.Enumerate();
+        oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
+        for (const auto& entry : prototypes)
+        {
+            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(entry.type) << " key='"
+                << entry.descriptor.key << "' model='" << entry.descriptor.modelPath << "'\n";
+        }
+        ::DebugTrace(oss.str());
+    }
+
+    Render::ModelCache& cache = Render::ModelCache::Instance();
+    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
+    // （ローダーやデバイスの切り替え漏れによるハングを防止）
+    cache.Clear();
+
+    const bool modelTexturesEnabled = SceneGameConfig::LoadModelTextureLoadingSetting();
+    cache.SetTextureLoadingEnabled(modelTexturesEnabled);
+
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Render settings: loadModelTextures=" << std::boolalpha << modelTexturesEnabled << "\n";
+        ::DebugTrace(oss.str());
+    }
+
+    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
+    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
+    // （ローダーやデバイスの切り替え漏れによるハングを防止）
+    cache.Clear();
+
     NormalizePlayerColliderDefinitions();
 
     m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
@@ -1309,100 +1325,24 @@ void SceneGame::InitializeConfiguration()
         ::DebugTrace(oss.str());
         m_heightBonusSeconds = 0.0f;
     }
-}
 
-SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
-    : m_manager(&a_manager)
-{
-}
-
-void SceneGame::AttachComposition(Composition&& composition)
-{
-    m_stageObjects = std::move(composition.stageObjects);
-    m_gameCamera = std::move(composition.gameCamera);
-    m_cameraRig = std::move(composition.cameraRig);
-    m_cameraAnchor = std::move(composition.cameraAnchor);
-    m_pManager = std::move(composition.soundManager);
-    m_loader = std::move(composition.loader);
-    m_render = std::move(composition.render);
-    player = std::move(composition.player);
-    m_physicsBinder = std::move(composition.physicsBinder);
-    m_drawSystem = std::move(composition.drawSystem);
-    m_guidelineActor = std::move(composition.guidelineActor);
-    m_sweetsManager = std::move(composition.sweetsManager);
-    m_uiManager = std::move(composition.uiManager);
-    m_backgroundRenderer = std::move(composition.backgroundRenderer);
-    m_playerModel = std::move(composition.playerModel);
-    m_playerPickupBoxWidth = composition.playerPickupBoxWidth;
-    m_playerPickupBoxHeight = composition.playerPickupBoxHeight;
-    m_playerPickupOriginOffset = composition.playerPickupOriginOffset;
-
-    m_countdownTimer.Reset();
-    m_totalPlaySeconds = kDefaultPlaySeconds;
-    m_remainingCountdownSeconds = m_totalPlaySeconds;
-    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
-}
-
-SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
-{
-    SceneGame::Composition composition{};
-
-    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-    const bool manifestLoaded = manifest.ReloadFromCsv();
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Manifest config " << (manifestLoaded ? "applied" : "missing; using defaults")
-            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultConfigPath << "'\n";
-        const auto prototypes = manifest.Enumerate();
-        oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
-        for (const auto& entry : prototypes)
-        {
-            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(entry.type) << " key='"
-                << entry.descriptor.key << "' model='" << entry.descriptor.modelPath << "'\n";
-        }
-        ::DebugTrace(oss.str());
-    }
-
-    Render::ModelCache& cache = Render::ModelCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
-
-    const bool modelTexturesEnabled = SceneGameConfig::LoadModelTextureLoadingSetting();
-    cache.SetTextureLoadingEnabled(modelTexturesEnabled);
-
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Render settings: loadModelTextures=" << std::boolalpha << modelTexturesEnabled << "\n";
-        ::DebugTrace(oss.str());
-    }
-
-    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
-
-    composition.playerPickupBoxWidth = scene.m_playerPickupBoxWidth;
-    composition.playerPickupBoxHeight = scene.m_playerPickupBoxHeight;
-
-    const std::string backgroundTexture = scene.m_stageData.GetBackgroundTexturePath();
+    const std::string backgroundTexture = m_stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
         BackgroundRendererConfig backgroundConfig{};
         backgroundConfig.texturePath = backgroundTexture;
-        composition.backgroundRenderer = std::make_unique<BackgroundRenderer>();
-        if (!composition.backgroundRenderer->Initialize(backgroundConfig))
+        m_backgroundRenderer = std::make_unique<BackgroundRenderer>();
+        if (!m_backgroundRenderer->Initialize(backgroundConfig))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
             ::DebugTrace(oss.str());
-            composition.backgroundRenderer.reset();
+            m_backgroundRenderer.reset();
         }
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "Background texture path empty; background renderer skipped.
-");
+        DebugTrace(std::string(kLogPrefix) + "Background texture path empty; background renderer skipped.\n");
     }
 
     const SceneGameConfig::PhysicsTuningSettings tuning = SceneGameConfig::LoadPhysicsTuningSettings();
@@ -1421,61 +1361,60 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
-    composition.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
-    Systems::PhysicsMachine* physicsMachine = composition.physicsBinder ? composition.physicsBinder->GetPhysicsMachine() : nullptr;
-    composition.drawSystem = std::make_unique<Systems::DrawSystem>();
-    if (composition.drawSystem)
+    m_physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
+    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
+    m_drawSystem = std::make_unique<Systems::DrawSystem>();
+    if (m_drawSystem)
     {
-        composition.drawSystem->SetStagePlaneZ(scene.m_stageData.GetPlaneZ());
+        m_drawSystem->SetStagePlaneZ(m_stageData.GetPlaneZ());
     }
-    if (composition.drawSystem && scene.m_guidelineHeightMeters > 0.0f)
+    if (m_drawSystem && m_guidelineHeightMeters > 0.0f)
     {
-        composition.guidelineActor = std::make_unique<GuidelineActor>();
-        if (composition.guidelineActor)
+        m_guidelineActor = std::make_unique<GuidelineActor>();
+        if (m_guidelineActor)
         {
-            const float guidelineZ = scene.m_stageData.GetPlaneZ() + scene.m_guidelineZOffset;
-            composition.guidelineActor->UpdateGuideline(
-                scene.m_guidelineCenterX,
-                scene.m_guidelineHeightMeters,
+            const float guidelineZ = m_stageData.GetPlaneZ() + m_guidelineZOffset;
+            m_guidelineActor->UpdateGuideline(
+                m_guidelineCenterX,
+                m_guidelineHeightMeters,
                 guidelineZ,
-                scene.m_guidelineWidthWorld,
-                scene.m_guidelineThicknessWorld);
-            composition.drawSystem->RegisterRenderable(*composition.guidelineActor);
+                m_guidelineWidthWorld,
+                m_guidelineThicknessWorld);
+            m_drawSystem->RegisterRenderable(*m_guidelineActor);
         }
     }
-    if (composition.drawSystem && physicsMachine)
+    if (m_drawSystem && physicsMachine)
     {
-        composition.sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
-            *composition.drawSystem,
+        m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
+            *m_drawSystem,
             *physicsMachine,
-            scene.GetUpdateScheduler());
+            GetUpdateScheduler());
     }
-    if (composition.physicsBinder)
+    if (m_physicsBinder)
     {
-        SweetsSpace::SweetsManager* sweetsManager = composition.sweetsManager.get();
-        composition.physicsBinder->AddContactHandler(
-            [sweetsManager](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+        m_physicsBinder->AddContactHandler(
+            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
             {
-                if (sweetsManager)
+                if (m_sweetsManager)
                 {
-                    sweetsManager->OnContactBegin(&a, &b);
+                    m_sweetsManager->OnContactBegin(&a, &b);
                 }
             },
-            [sweetsManager](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
             {
-                if (sweetsManager)
+                if (m_sweetsManager)
                 {
-                    sweetsManager->OnContactEnd(&a, &b);
+                    m_sweetsManager->OnContactEnd(&a, &b);
                 }
             });
     }
 
-    if (composition.sweetsManager)
+    if (m_sweetsManager)
     {
-        composition.sweetsManager->SetSpawnOrigins(
-            scene.m_stageData.GetSpawnPointsPrimary(),
-            scene.m_stageData.GetSpawnPointsSecondary());
-        const bool spawnConfigLoaded = composition.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
+        m_sweetsManager->SetSpawnOrigins(
+            m_stageData.GetSpawnPointsPrimary(),
+            m_stageData.GetSpawnPointsSecondary());
+        const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
@@ -1483,7 +1422,7 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             ::DebugTrace(oss.str());
         }
         {
-            const auto presets = composition.sweetsManager->EnumerateFactoryPresets();
+            const auto presets = m_sweetsManager->EnumerateFactoryPresets();
             const auto colliderShapeToString = [](SweetsSpace::ColliderShape shape)
             {
                 switch (shape)
@@ -1512,72 +1451,69 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             }
             ::DebugTrace(oss.str());
         }
-        composition.sweetsManager->SetPhaseChangeCallback([&scene](int newPhase)
+        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
         {
-            scene.ForwardSweetsPhaseChange(newPhase);
+            ForwardSweetsPhaseChange(newPhase);
         });
     }
 
-    composition.uiManager = std::make_unique<UIManager>();
-    if (composition.uiManager && !composition.uiManager->Initialize(kHudLayoutConfig, kResultLayoutConfig))
+    m_uiManager = std::make_unique<UIManager>();
+    if (m_uiManager && !m_uiManager->Initialize(kHudLayoutConfig, kResultLayoutConfig))
     {
-        DebugTrace(std::string(kLogPrefix) + "UI manager failed to initialize; HUD/Result overlay disabled.
-");
-        composition.uiManager.reset();
+        DebugTrace(std::string(kLogPrefix) + "UI manager failed to initialize; HUD/Result overlay disabled.\n");
+        m_uiManager.reset();
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
-    composition.cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
+    m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
 
     const auto& cameraSettings = kFixedSideViewCameraPreset;
-    composition.gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
-    auto registeredCamera = scene.AddCamera(composition.gameCamera);
+    m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
+    auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
     {
-        DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.
-");
+        DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
     }
     else
     {
-        scene.SetActiveCamera(registeredCamera);
+        SetActiveCamera(registeredCamera);
     }
 
-    if (composition.gameCamera)
+    if (m_gameCamera)
     {
-        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(composition.gameCamera);
-        composition.cameraRig = std::make_unique<CameraRig>(baseCamera);
-        scene.ConfigureCamera(cameraSettings);
-        if (composition.cameraAnchor)
+        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
+        m_cameraRig = std::make_unique<CameraRig>(baseCamera);
+        ConfigureCamera(cameraSettings);
+        if (m_cameraAnchor)
         {
-            composition.cameraRig->Attach(composition.cameraAnchor);
+            m_cameraRig->Attach(m_cameraAnchor);
         }
     }
 
-    composition.soundManager = std::make_unique<SoundManagerEX>();
+    m_pManager = std::make_unique<SoundManagerEX>();
 
-    composition.loader = std::make_shared<AssimpModelLorder>();
+    m_loader = std::make_shared<AssimpModelLorder>();
 
     ID3D11Device* device = GetDevice();
     if (!device)
     {
-        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.
-");
+        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
     }
     else
     {
-        cache.SetLoader(composition.loader, device, TextureCache::Instance());
-        animeCache.SetLoader(composition.loader, device);
+        cache.SetLoader(m_loader, device, TextureCache::Instance());
+        animeCache.SetLoader(m_loader, device);
     }
 
-    std::string playerColliderKey = "Player";
+
+
     const auto* fairyDescriptor = manifest.Find("Fairy");
-    if (!fairyDescriptor && !composition.playerModel)
+    if (!fairyDescriptor && !m_playerModel)
     {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using procedural fallback.
-");
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using procedural fallback.\n");
     }
 
     const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string{};
@@ -1585,83 +1521,84 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
     std::string resolvedModelPath = primaryModelPath;
     if (!primaryModelPath.empty())
     {
-        composition.playerModel = cache.Get(primaryModelPath);
-        if (!composition.playerModel)
+        m_playerModel = cache.Get(primaryModelPath);
+        if (!m_playerModel)
         {
-            DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; player will use procedural fallback.
-");
+            DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; player will use procedural fallback.\n");
         }
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy model path missing; player will use procedural fallback.
-");
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy model path missing; player will use procedural fallback.\n");
     }
 
-    if (composition.playerModel)
+
+    if (m_playerModel)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[ModelLoad] Player model ready path='" << resolvedModelPath
-            << "' refCount=" << composition.playerModel.use_count() << "\n";
+            << "' refCount=" << m_playerModel.use_count() << "\n";
         ::DebugTrace(oss.str());
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.
-");
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.\n");
     }
+
+    
+    
 
     // ModelCacheの設定後、ステージレイアウトをロード
     StageLayoutLoadRequest stageLayoutRequest{
         "Assets/Config/StageLayout.csv",
         kGameplayConfigPath,
         cache,
-        composition.physicsBinder != nullptr,
+        m_physicsBinder != nullptr,
         kLogPrefix
     };
     StageLayoutLoadResult stageLayoutResult = StageLayoutLoader::LoadFromCsv(stageLayoutRequest);
-    composition.stageObjects = std::move(stageLayoutResult.stageObjects);
-    if (composition.physicsBinder)
+    m_stageObjects = std::move(stageLayoutResult.stageObjects);
+    if (m_physicsBinder)
     {
         for (const auto& entity : stageLayoutResult.physicsEntities)
         {
             if (entity)
             {
-                composition.physicsBinder->RegisterPhysicsBody(*entity);
+                m_physicsBinder->RegisterPhysicsBody(*entity);
             }
         }
     }
 
-    composition.render = std::make_unique<ModelRender>();
-    if (composition.drawSystem && composition.render)
+    m_render = std::make_unique<ModelRender>();
+    if (m_drawSystem && m_render)
     {
-        composition.drawSystem->SetRenderer(composition.render.get());
+        m_drawSystem->SetRenderer(m_render.get());
     }
     std::optional<Physics::BoxColliderComponent> boxColliderComponent;
     std::optional<Physics::Box2DShapeConfig> playerShapeConfig;
     float3 playerColliderHalfExtents{ 0.0f, 0.0f, 0.0f };
     float3 playerColliderOffset{ 0.0f, 0.0f, 0.0f };
-    Transform trans = scene.m_playerSpawnTransform.transform;
+    Transform trans = m_playerSpawnTransform.transform;
 
     const bool playerIsKinematic = false;
     const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
 
-    const std::string resolvedColliderKey = NormalizeColliderKey(scene.ResolvePlayerColliderKey(playerColliderKey));
-    const bool hasConfigDefinition = scene.m_playerColliderDefinitions.find(resolvedColliderKey) != scene.m_playerColliderDefinitions.end();
-    const bool playerConfigAvailable = scene.m_playerColliderConfigLoaded && hasConfigDefinition;
+    const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
+    const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
+    const bool playerConfigAvailable = m_playerColliderConfigLoaded && hasConfigDefinition;
 
-    const bool forceConfigCollider = scene.m_forceConfigPlayerCollider && playerConfigAvailable;
+    const bool forceConfigCollider = m_forceConfigPlayerCollider && playerConfigAvailable;
     PlayerColliderBuildResult colliderBuild = forceConfigCollider
         ? BuildPlayerColliderFromConfig(
             resolvedColliderKey,
             trans,
-            scene.m_playerColliderTuning,
-            scene.m_playerColliderDefinitions,
+            m_playerColliderTuning,
+            m_playerColliderDefinitions,
             playerBodyType)
         : BuildPlayerColliderFromRegistry(
             resolvedColliderKey,
             trans,
-            scene.m_playerColliderTuning,
+            m_playerColliderTuning,
             playerBodyType);
     const auto colliderHasShapes = [](const PlayerColliderBuildResult& build)
     {
@@ -1688,7 +1625,7 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             PlayerColliderBuildResult registryBuild = BuildPlayerColliderFromRegistry(
                 resolvedColliderKey,
                 trans,
-                scene.m_playerColliderTuning,
+                m_playerColliderTuning,
                 playerBodyType);
 
             if (colliderHasShapes(registryBuild) && shapeConfigIsValid(registryBuild))
@@ -1707,8 +1644,8 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             PlayerColliderBuildResult configBuild = BuildPlayerColliderFromConfig(
                 resolvedColliderKey,
                 trans,
-                scene.m_playerColliderTuning,
-                scene.m_playerColliderDefinitions,
+                m_playerColliderTuning,
+                m_playerColliderDefinitions,
                 playerBodyType);
 
             if (colliderHasShapes(configBuild) && shapeConfigIsValid(configBuild))
@@ -1729,7 +1666,7 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
         PlayerColliderBuildResult fallbackBuild = BuildFallbackPlayerCollider(
             resolvedColliderKey,
             trans,
-            scene.m_playerColliderTuning,
+            m_playerColliderTuning,
             playerBodyType);
         colliderBuild = fallbackBuild;
     }
@@ -1754,8 +1691,8 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
     playerColliderOffset = colliderBuild.centerOffset;
     if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f)
     {
-        composition.playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
-        composition.playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
+        m_playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
+        m_playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
     }
 
     const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
@@ -1779,10 +1716,10 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             << " shapeSource=" << colliderBuild.shapeSource
             << " appliedSource=" << appliedSource
             << " appliedPath=" << appliedPath
-            << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << scene.m_forceConfigPlayerCollider
+            << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << m_forceConfigPlayerCollider
             << " shapePolicy=" << (forceConfigCollider ? "ConfigPrimary" : "RegistryPrimary")
             << " modelGeneration=Disabled"
-            << " configLoaded=" << scene.m_playerColliderConfigLoaded
+            << " configLoaded=" << m_playerColliderConfigLoaded
             << " configAvailable=" << hasConfigDefinition
             << " registryHit=" << colliderBuild.registryHit
             << " registryShapes=" << colliderBuild.registryHasShapes
@@ -1794,63 +1731,61 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
             << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
             << " offset=(" << playerColliderOffset.x << ',' << playerColliderOffset.y << ',' << playerColliderOffset.z << ')'
             << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ')'
-            << " pickupBox=(" << composition.playerPickupBoxWidth << ',' << composition.playerPickupBoxHeight << ")\n";
+            << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ")\n";
         DebugTrace(oss.str());
     }
 
-    composition.playerPickupOriginOffset = playerColliderOffset;
-    if (!std::isfinite(composition.playerPickupOriginOffset.x)
-        || !std::isfinite(composition.playerPickupOriginOffset.y)
-        || !std::isfinite(composition.playerPickupOriginOffset.z))
+    m_playerPickupOriginOffset = playerColliderOffset;
+    if (!std::isfinite(m_playerPickupOriginOffset.x) || !std::isfinite(m_playerPickupOriginOffset.y) || !std::isfinite(m_playerPickupOriginOffset.z))
     {
-        composition.playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
+        m_playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
     }
 
-    composition.player = std::make_unique<Entities::Player>(
+    player = std::make_unique<Entities::Player>(
         trans,
-        composition.playerModel,
+        m_playerModel,
         physicsMachine,
-        composition.sweetsManager.get(),
+        m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
         playerIsKinematic,
         Core::UpdatePhase::Gameplay,
         0,
         "player");
 
-    if (composition.player)
+    if (player)
     {
-        if (composition.physicsBinder)
+        if (m_physicsBinder)
         {
-            composition.physicsBinder->SetPlayer(composition.player.get());
+            m_physicsBinder->SetPlayer(player.get());
         }
         if (boxColliderComponent)
         {
-            composition.player->SetBoxColliderComponent(boxColliderComponent);
+            player->SetBoxColliderComponent(boxColliderComponent);
         }
         if (playerShapeConfig)
         {
-            composition.player->SetBox2DShapeConfig(playerShapeConfig);
+            player->SetBox2DShapeConfig(playerShapeConfig);
         }
         if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f && playerColliderHalfExtents.z > 0.0f)
         {
-            composition.player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
+            player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
         }
-        composition.player->SetBaseMoveSpeed(scene.m_playerBaseHorizontalSpeed, scene.m_playerBaseVerticalSpeed);
-        composition.player->SetSpeedMultiplier(scene.m_playerSpeedMultiplier);
-        composition.player->SetPickupArea(composition.playerPickupBoxWidth, composition.playerPickupBoxHeight, scene.m_playerPickupOffset);
-        composition.player->SetPickupMaxDistance(scene.m_playerPickupMaxDistance);
-        composition.player->SetPickupDepthThreshold(scene.m_playerPickupDepthThreshold);
-        composition.player->SetPickupOriginOffset(composition.playerPickupOriginOffset);
+        player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+        player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
+        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         if (colliderReady)
         {
-            if (composition.physicsBinder)
+            if (m_physicsBinder)
             {
-                composition.physicsBinder->RegisterPhysicsBody(*composition.player);
+                m_physicsBinder->RegisterPhysicsBody(*player);
             }
             {
                 std::ostringstream oss;
                 const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
-                const b2BodyType createdBodyType = composition.player->GetPhysical().GetBodyType();
+                const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
                 const auto bodyTypeToString = [](b2BodyType type)
                 {
                     switch (type)
@@ -1893,18 +1828,19 @@ SceneGame::Composition SceneComposer::ComposeSceneGame(SceneGame& scene) const
                 << "\n";
             ::DebugTrace(oss.str());
         }
-        if (composition.drawSystem)
+        if (m_drawSystem)
         {
-            composition.drawSystem->RegisterRenderable(*composition.player);
+            m_drawSystem->RegisterRenderable(*player);
         }
     }
 
-    return composition;
+    m_countdownTimer.Reset();
+    m_totalPlaySeconds = kDefaultPlaySeconds;
+    m_remainingCountdownSeconds = m_totalPlaySeconds;
+    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
 }
 
 SceneGame::~SceneGame()
-
-
 {
     if (m_uiManager)
     {
