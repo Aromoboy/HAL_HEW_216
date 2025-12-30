@@ -2849,12 +2849,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_guidelineTriggerCooldownSeconds = std::max(0.0f, m_guidelineTriggerCooldownSeconds - ctx.dt);
     }
 
-    // スイーツの状態更新
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->OnUpdate(ctx);
-    }
-
 #if defined(_DEBUG)
     const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
     for (const auto& sweets : stacked)
