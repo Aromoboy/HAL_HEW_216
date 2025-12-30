@@ -114,7 +114,7 @@ namespace Systems
     
     PhysicsMachine::PhysicsMachine(const PhysicsTuningParameters& tuning)
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
-        , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(tuning))
+        , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(*this, tuning))
         , m_system(m_box2dSystem)
         , m_contactListener()
         , m_bodies()
@@ -152,10 +152,6 @@ namespace Systems
 
         SetSubStepCount(tuning.subStepCount);
         m_tuning.subStepCount = m_subStepCount;
-        if (m_box2dSystem)
-        {
-            m_box2dSystem->SetPhysicsMachine(this);
-        }
     }
 
     PhysicsMachine::~PhysicsMachine()
@@ -186,7 +182,6 @@ namespace Systems
         if (m_box2dSystem)
         {
             m_box2dSystem->SetSubStepCount(m_subStepCount);
-            m_box2dSystem->SetPhysicsMachine(this);
         }
 
         if (m_box2dSystem && m_contactListener)
@@ -204,10 +199,6 @@ namespace Systems
             m_box2dSystem->SetContactListener(m_contactListener);
         }
 
-        if (m_contactListener)
-        {
-            m_contactListener->SetPhysicsMachine(this);
-        }
     }
 
     void PhysicsMachine::SetSubStepCount(int subStepCount)

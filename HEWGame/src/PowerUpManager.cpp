@@ -67,10 +67,6 @@ int PowerUpManager::GetLevel(int num)
 	return m_nodes.at(num).second->GetLevel();
 }
 
-void PowerUpManager::SetUpdateScheduler(Core::UpdateScheduler& scheduler)
-{
-	m_scheduler = scheduler;
-}
 
 int PowerUpManager::GetNodeCount()
 {

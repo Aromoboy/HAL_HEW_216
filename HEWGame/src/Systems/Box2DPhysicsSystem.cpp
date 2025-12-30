@@ -37,9 +37,11 @@ namespace
 
 namespace Systems
 {
-        Box2DPhysicsSystem::Box2DPhysicsSystem(const PhysicsTuningParameters& tuning)
+        Box2DPhysicsSystem::Box2DPhysicsSystem(PhysicsMachine& physicsMachine,
+                const PhysicsTuningParameters& tuning)
                 : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
                 , m_worldDef(b2DefaultWorldDef())
+                , m_physicsMachine(&physicsMachine)
         {
                 m_worldDef.gravity = b2Vec2{ 0.0f, -(std::isfinite(tuning.gravity) ? tuning.gravity : 9.8f) };
                 m_worldDef.restitutionThreshold = std::max(0.0f, tuning.restitutionThreshold);
@@ -252,11 +254,6 @@ namespace Systems
                 {
                         m_contactListener->SetWorld(m_worldId);
                 }
-        }
-
-        void Box2DPhysicsSystem::SetPhysicsMachine(PhysicsMachine* physicsMachine)
-        {
-                m_physicsMachine = physicsMachine;
         }
 
         PhysicsMachine* Box2DPhysicsSystem::GetPhysicsMachine() const

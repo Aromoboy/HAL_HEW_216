@@ -39,6 +39,11 @@ namespace
 
 namespace Systems
 {
+        Box2DContactListener::Box2DContactListener(PhysicsMachine& physicsMachine)
+                : m_physicsMachine(&physicsMachine)
+        {
+        }
+
         void Box2DContactListener::ProcessContacts()
         {
                 if (!b2World_IsValid(m_worldId))
@@ -366,11 +371,6 @@ namespace Systems
                 m_worldId = worldId;
         }
 
-        void Box2DContactListener::SetPhysicsMachine(PhysicsMachine* physicsMachine)
-        {
-                m_physicsMachine = physicsMachine;
-        }
-
         void Box2DContactListener::NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes)
         {
                 if (b2Body_IsValid(bodyId))
@@ -501,4 +501,3 @@ namespace Systems
                 DebugTrace(oss.str());
         }
 }
-

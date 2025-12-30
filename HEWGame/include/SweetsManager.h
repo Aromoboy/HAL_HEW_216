@@ -169,7 +169,9 @@ namespace SweetsSpace
             ColliderPreset colliderPreset;
         };
 
-        SweetsManager();
+        SweetsManager(Systems::DrawSystem& drawSystem,
+            Systems::PhysicsMachine& physicsMachine,
+            Core::UpdateScheduler& scheduler);
         ~SweetsManager();
 
         void OnUpdate(Core::UpdateContext& ctx) override;
@@ -186,9 +188,6 @@ namespace SweetsSpace
         void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
 
-        void SetDrawSystem(Systems::DrawSystem* drawSystem);
-        void SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine);
-        void SetUpdateScheduler(Core::UpdateScheduler* scheduler);
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
         void SetSpawnOrigins(
