@@ -13,6 +13,13 @@ namespace Core
     class UpdateScheduler;
 }
 
+class UIManager;
+
+namespace Systems
+{
+    class PhysicsBinder;
+}
+
 class SceneComposer
 {
 public:
