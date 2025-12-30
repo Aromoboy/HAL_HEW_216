@@ -1,517 +1,553 @@
-# HAL_HEW_216
+HAL_HEW_216
 
-## 必須アセット
-本リポジトリでは、以下のプリビルド済み DirectXTex ライブラリを常にバージョン管理下に置いています。
+本リポジトリは、DirectX 11 ベースの 2.5D ゲーム用プロトタイプです。
+更新は UpdateScheduler を中心にフェーズ駆動で行い、描画は Scene::RootDraw から別経路で実行します。
 
-- `HEWGame/DirectXTex/Win32/Debug`
-- `HEWGame/DirectXTex/Win32/Release`
-- `HEWGame/DirectXTex/x64/Debug`
-- `HEWGame/DirectXTex/x64/Release`
+ビルド
 
-これらの `.lib` / `.dll` ファイルはリンカ設定で直接参照されており、リポジトリから削除するとビルドが失敗します。ツールチェーン（Visual Studio、Windows SDK、プラットフォーム ツールセットなど）を更新してライブラリを再生成する必要がある場合は、DirectXTex のソリューションを同じ構成でビルドし直し、上記ディレクトリに成果物を上書きしてください。その後、差分を確認したうえでコミットし、常に最新のバイナリを共有できるようにしてください。
+Visual Studio: VS2022 推奨
 
-また、`HEWGame/DX22_Project.vcxproj.user` も意図的にバージョン管理されています。このファイルには Visual Studio 固有のユーザー設定が保存され、チーム全員のデバッガ設定やツールセット指定 (`ToolsVersion="Current"`) をそろえる役割を担っています。空の `<PropertyGroup>` を含めた最小構成ですが、Visual Studio が環境依存の値を勝手に書き込むのを防ぎ、設定差分を抑制する目的で維持しています。削除・無視すると開発環境ごとに挙動がばらつく原因になるため、リポジトリから除外しないでください。
+PlatformToolset: v143
 
-## ステージ設定
-ステージパラメータの唯一の参照元は `HEWGame/Assets/Config/gameplay.cfg` の `[stage.checklist]` セクションです。
+Windows SDK: 10.0
 
-クラス図（Mermaid用）：
----
-config:
-  class:
-    hideEmptyMembersBox: false
-  look: neo
-  layout: elk
----
+プロジェクト: HEWGame/DX22_Project.vcxproj
+
+構成: Debug/Release × Win32/x64
+
+NOTE: 現状、Box2D のリンクは HEWGame/box2d/build/... をライブラリ探索パスとして参照している構成があります。
+box2d/build を削除する場合は、先に依存の “正規パッケージ化（repack）” を行ってからにしてください。
+
+必須アセット / 必須バイナリ（削除禁止）
+DirectXTex（プリビルド成果物）
+
+本リポジトリでは、以下のプリビルド済み DirectXTex ライブラリを 常にバージョン管理下 に置きます。
+
+HEWGame/DirectXTex/Win32/Debug
+
+HEWGame/DirectXTex/Win32/Release
+
+HEWGame/DirectXTex/x64/Debug
+
+HEWGame/DirectXTex/x64/Release
+
+これらの成果物（主に .lib、構成によっては .dll）はリンカ設定で直接参照されており、リポジトリから削除するとビルドが失敗します。
+ツールチェーン更新などで再生成が必要になった場合は、DirectXTex のソリューションを 同じ構成 でビルドし直し、上記ディレクトリへ成果物を上書きしてください。差分確認のうえコミットし、常に最新のバイナリを共有できる状態を維持します。
+
+Visual Studio ユーザー設定（.vcxproj.user）
+
+HEWGame/DX22_Project.vcxproj.user は意図的にバージョン管理されています。
+このファイルは Visual Studio 固有のユーザー設定（主にデバッグ実行設定など）を保持し、チームでの環境差分を抑える目的があります。
+
+削除しない
+
+gitignore しない
+
+必要最小構成を維持する（環境依存の値が増えすぎないようにする）
+
+ステージ設定（唯一の参照元）
+
+ステージパラメータの 唯一の参照元（source of truth） は以下です。
+
+HEWGame/Assets/Config/gameplay.cfg の [stage.checklist] セクション
+
+Stage::StageData はこのセクションを読み込み、デフォルト適用・サニタイズを行ってステージ設定として保持します。
+
+設定ローダー（概要）
+
+ConfigLoader
+
+ゲーム設定・コライダー設定の読み込み
+
+主に SceneGameConfigLoader / ColliderConfigLoader / ConfigSectionReader
+
+StageLayoutLoader
+
+Assets/Config/StageLayout.csv からステージ配置を読み込み、ステージオブジェクト（transform 等）を生成するローダー
+
+物理登録は Scene 側（または Binder 側）で行う方針
+
+クラス図（Mermaid）
+
+Mermaid 対応ビューアで表示してください。
+
 classDiagram
 direction TB
-namespace Core {
-  class UpdatePhase["Core::UpdatePhase"] { <<enumeration>>
-    Input
-    PrePhysics
-    Physics
-    PostPhysics
-    Gameplay
-    Camera
-    UI
-    Late
-  }
-  class UpdateContext["Core::UpdateContext"] { <<struct>>
-    dt : float
-    time : StepTimer&
-    input : Input&
-    scene : SceneSpace_Scene*
-  }
-  class IUpdatable["Core::IUpdatable"] { <<interface>>
-    +OnUpdate(ctx:UpdateContext)
-    +GetPhase() UpdatePhase
-    +GetPriority() int
-    +IsEnabled() bool
-  }
-  class UpdateNode["Core::UpdateNode"] { <<abstract>>
-    - phase : UpdatePhase
-    - priority : int
-    - enabled : bool
-    +UpdateNode(phase:UpdatePhase, priority:int=0)
-    +OnUpdate(ctx:UpdateContext)
-    +GetPhase() UpdatePhase
-    +GetPriority() int
-    +SetPriority(p:int)
-    +SetPhase(ph:UpdatePhase)
-    +Enable(v:bool)
-  }
-  class UpdateScheduler["Core::UpdateScheduler"] {
-    - nodes : list<IUpdatable*>
-    - deps  : list<pair<IUpdatable*,IUpdatable*>>
-    +Register(node:IUpdatable*)
-    +Unregister(node:IUpdatable*)
-    +SetOrder(node:IUpdatable*, phase:UpdatePhase, priority:int)
-    +AddDependency(before:IUpdatable*, after:IUpdatable*)
-    +Tick(ctx:UpdateContext)
-  }
-  class DXContext["Core::DXContext"] {
-    +Init(window)
-    +BeginDraw()
-    +EndDraw()
-    +Resize(width, height)
-    +Shutdown()
-  }
-  class StepTimer["Core::StepTimer"] {
-    +Tick()
-    +DeltaTime() float
-    +SetFixedStep(dt:float)
-  }
-  class ActionId["Core::ActionId"] { <<enumeration>>
-    MoveX
-    RotateYaw
-    Drop
-    Confirm
-    Cancel
-    Pause
-    Retry
-    DebugConsole
-    CameraToggle
-    CameraHeightToggle
-    SpeedBoost
-    SpeedReset
-    ColliderNudgeUp
-    ColliderNudgeDown
-  }
-  class Binding["Core::Binding"] { <<struct>>
-    key:int
-    btn:int
-    axis:int
-    sign:float
-  }
-  class Gamepad["Core::Gamepad"] {
-    +IsConnected() bool
-    +AxisLX() float
-    +AxisRX() float
-    +IsButtonDown(code:int) bool
-  }
-  class Input["Core::Input"] {
-    - pad : Gamepad
-    - map : InputMap
-    +OnUpdate(ctx:Core_UpdateContext)
-    +GetAxis(a:ActionId) float
-    +IsAction(a:ActionId) bool
-    +IsPress(vk:int) bool
-    +IsTrigger(vk:int) bool
-    +IsRelease(vk:int) bool
-  }
-  class InputMap["Core::InputMap"] {
-    - bindings : map<ActionId, Binding>
-    +GetAxis(a:ActionId) float
-    +Is(a:ActionId) bool
-    +Rebind(a:ActionId, b:Binding)
-  }
-  class ShaderProgram["Core::ShaderProgram"] { +Bind() }
-  class ShaderCache["Core::ShaderCache"] {
-    - programs : map<string, ShaderProgram>
-    +Get(name) ShaderProgram&
-    +Load(name, vsPath, psPath)
-  }
-  class Texture2D["Core::Texture2D"] { +LoadFromFile(path) +BindPS(slot) }
-  class TextureCache["Core::TextureCache"] {
-    - textures : map<string, shared_ptr<Texture2D>>
-    +Get(path) shared_ptr<Texture2D>
-  }
-  class VertexBuffer["Core::VertexBuffer"] { +Init(data,stride,count) +Bind(slot) +Shutdown() }
-  class IndexBuffer["Core::IndexBuffer"]  { +Init(indices,count) +Bind() +Shutdown() }
+
+%% =========================
+%% Core update contracts
+%% =========================
+class Core_UpdatePhase["Core::UpdatePhase"] {
+  <<enumeration>>
+  Input
+  PrePhysics
+  Physics
+  PostPhysics
+  Gameplay
+  Camera
+  UI
+  Late
 }
-UpdateNode ..|> IUpdatable
-UpdateNode <|-- Input
-UpdateScheduler o-- IUpdatable
-Input o-- Gamepad
-Input o-- InputMap
-InputMap *-- Binding
-InputMap *-- ActionId
-ShaderCache *-- ShaderProgram
-TextureCache *-- Texture2D
-namespace Components {
-  class Transform["Components::Transform"] { <<struct>>
-    position : float3
-    rotation : float3
-    scale    : float3
-  }
-  class Physical["Components::Physical"] { <<struct>>
-    velocity : float3
-    force    : float3
-    weight   : float
-    damping  : float
-  }
-  class ICollider["Components::ICollider"] { <<interface>>
-    +CheckCollision(other:ICollider) bool
-    +UpdateBounds(t:Transform)
-  }
+
+class Core_StepTimer["Core::StepTimer"] {
+  +Tick()
+  +DeltaTime() float
+  +FrameIndex() uint64
 }
-namespace CameraSpace {
-  class ICamera["CameraSpace::ICamera"] { <<interface>> +GetView() +GetProjection() }
-  class BaseCamera["CameraSpace::BaseCamera"] {
-    - transform : Components_Transform
-    - priority  : int
-    +GetView()
-    +GetProjection()
-  }
-  class PerspectiveCamera["CameraSpace::PerspectiveCamera"] {
-    - fov   : float
-    - aspect: float
-    - nearZ : float
-    - farZ  : float
-  }
-  class CameraManager["CameraSpace::CameraManager"] {
-    - cameras : list<ICamera>
-    +GetActiveCamera() ICamera&
-    +Update()
-  }
-  class CameraRig["CameraSpace::CameraRig"] {
-    - target : SceneSpace_Entity*
-    - offset : float3
-    - yaw:float
-    - pitch:float
-    +Attach(target:SceneSpace_Entity*)
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
+
+class Core_UpdateContext["Core::UpdateContext"] {
+  +dt: float
+  +time: Core_StepTimer&
+  +input: Core_Input&
 }
-BaseCamera ..|> ICamera
-BaseCamera <|-- PerspectiveCamera
-CameraManager *-- ICamera
-Core_UpdateNode <|-- CameraRig
-CameraRig ..> BaseCamera
-namespace Render {
-  class Mesh["Render::Mesh"] {
-    - vbo      : Core_VertexBuffer
-    - ibo      : Core_IndexBuffer
-  }
-  class Material["Render::Material"] {
-    - albedo : shared_ptr<Core_Texture2D>
-    - params : float4
-  }
-  class Model["Render::Model"] {
-    - meshes    : vector<Mesh>
-    - materials : vector<Material>
-    +GetMeshCount() int
-  }
-  class IModelLoader["Render::IModelLoader"] { <<interface>> +Load(path:string) shared_ptr<Model> }
-  class AssimpModelLoader["Render::AssimpModelLoader"] { +Load(path:string) shared_ptr<Model> }
-  class ModelCache["Render::ModelCache"] {
-    - loader : IModelLoader
-    - models : map<string, shared_ptr<Model>>
-    +Get(path:string) shared_ptr<Model>
-    +SetLoader(loader:IModelLoader)
-  }
-  class ModelRenderer["Render::ModelRenderer"] {
-    +Draw(model:Model, world:Components_Transform, cam:CameraSpace_ICamera)
-  }
+
+class Core_IUpdatable["Core::IUpdatable"] {
+  <<interface>>
+  +OnUpdate(ctx: Core_UpdateContext)
+  +GetPhase() Core_UpdatePhase
+  +GetPriority() int
+  +IsEnabled() bool
 }
-AssimpModelLoader ..|> IModelLoader
-ModelCache ..> IModelLoader
-ModelCache *-- Model
-Mesh *-- Core_VertexBuffer
-Mesh *-- Core_IndexBuffer
-Material *-- Core_Texture2D
-ModelRenderer ..> Core_DXContext
-ModelRenderer ..> Core_ShaderCache
-ModelRenderer ..> CameraSpace_ICamera
-ModelRenderer ..> Render_Model
-namespace Systems {
-  class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
-  class IPhysicsBinder["Systems::IPhysicsBinder"] { <<interface>>
-    +GetPhysicsMachine() PhysicsMachine*
-    +SetPlayer(player:SceneSpace_PhysicalEntity*)
-    +Enable(enabled:bool)
-    +RegisterPhysicsBody(entity:SceneSpace_PhysicalEntity)
-    +UnregisterPhysicsBody(entity:SceneSpace_PhysicalEntity*)
-    +UnregisterAllPhysicsBodies()
-    +ValidatePlayerPhysicsRegistration()
-    +AddContactHandler(onBegin, onEnd)
-  }
-  class PhysicsBinder["Systems::PhysicsBinder"] {
-    +GetPhysicsMachine() PhysicsMachine*
-    +SetPlayer(player:SceneSpace_PhysicalEntity*)
-    +Enable(enabled:bool)
-  }
-  class DrawSystem["Systems::DrawSystem"] {
-    +OnUpdate(ctx:Core_UpdateContext)
-    +SetRenderer(renderer:ModelRender)
-  }
-  class PhysicsMachine["Systems::PhysicsMachine"] {
-    - system : IPhysicsSystem
-    +OnUpdate(ctx:Core_UpdateContext)
-    +SetSystem(sys:IPhysicsSystem)
-  }
+
+class Core_UpdateNode["Core::UpdateNode"] {
+  -phase: Core_UpdatePhase
+  -priority: int
+  -enabled: bool
+  +UpdateNode(phase: Core_UpdatePhase = Gameplay, priority: int = 0)
+  +OnUpdate(ctx: Core_UpdateContext)
+  +GetPhase() Core_UpdatePhase
+  +GetPriority() int
+  +Enable(v: bool)
+  +SetPhase(ph: Core_UpdatePhase)
+  +SetPriority(p: int)
 }
-Core_UpdateNode <|-- DrawSystem
-Core_UpdateNode <|-- PhysicsMachine
-PhysicsMachine ..> IPhysicsSystem
-PhysicsBinder ..|> IPhysicsBinder
-PhysicsBinder o-- PhysicsMachine
-namespace GameFlow {
-  class PhaseManager["GameFlow::PhaseManager"] {
-    - currentPhase : int
-    - thresholds   : vector<float>
-    +Reset(phases:int, thresholds:vector<float>)
-    +OnUpdate(ctx:Core_UpdateContext)
-    +GetCurrentPhase() int
-    +IsPhaseCleared() bool
-  }
-  class UpgradeId["GameFlow::UpgradeId"] { <<enumeration>>
-    Heavier
-    ControlPlus
-    DropAssist
-  }
-  class UpgradeMenu["GameFlow::UpgradeMenu"] {
-    +Open()
-    +SelectUpgrade(option:int)
-    +ApplyToPlayer(player:Entities_Player, up:UpgradeId)
-  }
+
+class Core_UpdateScheduler["Core::UpdateScheduler"] {
+  -nodes: Core_IUpdatable[*]
+  +Register(node: Core_IUpdatable)
+  +Unregister(node: Core_IUpdatable)
+  +Tick(ctx: Core_UpdateContext)
 }
-Core_UpdateNode <|-- PhaseManager
-namespace Stage {
-  class StageData["Stage::StageData"] {
-    - phaseHeights : vector<float>
-    - spawnPoints  : vector<float3>
-    - planeZ       : float
-    +LoadFromFile(path)
-  }
+
+class Core_Input["Core::Input"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +GetAxis(actionId) float
+  +IsAction(actionId) bool
+  +IsPress(vk:int) bool
+  +IsTrigger(vk:int) bool
+  +IsRelease(vk:int) bool
 }
-namespace ConfigLoader {
-  class ColliderConfigLoader["Collision::LoadColliderDefinitions"] {
-    +LoadColliderDefinitions(path, section, outDefinitions) bool
-  }
-  class SceneGameConfigLoader["SceneGameConfig::Load*"] {
-    +LoadStageColliderConfig(path) StageColliderConfig
-    +LoadPlayerColliderTuning(path) PlayerColliderTuning
-    +LoadPlayerTransformConfig() PlayerSpawnTransform
-    +LoadPhysicsTuningSettings() PhysicsTuningSettings
-    +LoadModelTextureLoadingSetting() bool
-  }
+
+Core_UpdateNode ..|> Core_IUpdatable
+Core_Input --|> Core_UpdateNode
+Core_UpdateScheduler o-- Core_IUpdatable
+
+%% =========================
+%% App / Main loop
+%% =========================
+class App_Main["App::Main"] {
+  +Init()
+  +Update()
+  +Draw()
+  +Uninit()
 }
-class StageLayoutLoader["StageLayoutLoader"] {
-  +LoadFromCsv(request:StageLayoutLoadRequest) StageLayoutLoadResult
-}
-class UIManager["UIManager"] {
-  +Initialize(hudConfig, resultConfig) bool
-  +UpdateHUD(data)
+
+%% =========================
+%% Scene framework
+%% =========================
+class Scene_IScene["SceneSpace::IScene"] {
+  <<interface>>
+  +Load()
+  +OnEnter()
+  +OnExit()
+  +Update()
   +Draw()
 }
-namespace SceneSpace {
-  class IDrawable["SceneSpace::IDrawable"]  { <<interface>> +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera) }
-  class Entity["SceneSpace::Entity"] {
-    - transform : Components_Transform
-    - tag : string
-    +OnUpdate(ctx:Core_UpdateContext)
-    +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-    +GetTransform() Components_Transform&
-  }
-  class CollisionEntity["SceneSpace::CollisionEntity"] {
-    - collider : shared_ptr<Components_ICollider>
-    +GetCollider() Components_ICollider&
-  }
-  class PhysicalEntity["SceneSpace::PhysicalEntity"] {
-    - physical : Components_Physical
-    +GetPhysical() Components_Physical&
-  }
-  class IScene["SceneSpace::IScene"] { <<interface>> +Load() +Update() +Draw() }
-  class Scene["SceneSpace::Scene"] {
-    - cameras  : CameraSpace_CameraManager
-    - physics  : Systems_PhysicsMachine
-    - renderer : Render_ModelRenderer
-    - scheduler: Core_UpdateScheduler
-    +Load() +Update() +Draw()
-    +Register(node:Core_IUpdatable*)
-    +Unregister(node:Core_IUpdatable*)
-  }
-  class SceneUpdateNode["SceneSpace::SceneUpdateNode"] {
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
-  class CameraUpdateNode["SceneSpace::CameraUpdateNode"] {
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
-  class SceneManager["SceneSpace::SceneManager"] {
-    - active  : unique_ptr<IScene>
-    - pending : unique_ptr<IScene>
-    +SetInitialScene(scene:unique_ptr<IScene>)
-    +RequestSceneChange(scene:unique_ptr<IScene>)
-    +Update()
-    +Draw()
-  }
-  class TitleScene["SceneSpace::TitleScene"]
-  class SelectScene["SceneSpace::SelectScene"]
-  class SceneGame["SceneGame"] {
-    - stage       : Stage_StageData
-    - phases      : GameFlow_PhaseManager
-    - upgrades    : GameFlow_UpgradeMenu
-    - player      : Entities_Player
-    - sweets      : SweetsSpace_SweetsManager
-    - rig         : CameraSpace_CameraRig
-    +Load()
-    +Update()
-    +Draw()
-  }
+
+class Scene_Scene["SceneSpace::Scene"] {
+  -scheduler: Core_UpdateScheduler
+  -input: Core_Input&
+  +RootUpdate()
+  +RootDraw()
+  +ConfigureUpdates()
+  +Register(node: Core_IUpdatable)
+  +Unregister(node: Core_IUpdatable)
+  +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority:int)
+  +RegisterCameraUpdateNode(phase: Core_UpdatePhase, priority:int)
 }
-Core_UpdateNode <|-- Entity
-Entity ..|> IDrawable
-Entity *-- Components_Transform
-Entity <|-- CollisionEntity
-CollisionEntity *-- Components_ICollider
-CollisionEntity <|-- PhysicalEntity
-PhysicalEntity *-- Components_Physical
-SceneManager *-- IScene
-IScene <|-- TitleScene
-IScene <|-- SelectScene
-IScene <|-- SceneGame
-Scene <|-- TitleScene
-Scene <|-- SelectScene
-Scene <|-- SceneGame
-Scene o-- CameraSpace_CameraManager
-Scene o-- Systems_PhysicsMachine
-Scene o-- Render_ModelRenderer
-Scene o-- Core_UpdateScheduler
-Scene o-- SceneUpdateNode
-Scene o-- CameraUpdateNode
-SceneGame o-- Stage_StageData
-SceneGame o-- GameFlow_PhaseManager
-SceneGame o-- GameFlow_UpgradeMenu
-SceneGame o-- CameraSpace_CameraRig
-SceneGame o-- Systems_IPhysicsBinder
-SceneGame o-- UIManager
-namespace Entities {
-  class Player["Entities::Player"] {
-    - model : shared_ptr<Render_Model>
-    - planeZ : float
-    +HandleInput(input:Core_Input)
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
+
+class Scene_SceneUpdateNode["SceneSpace::SceneUpdateNode"] {
+  +OnUpdate(ctx: Core_UpdateContext)
 }
-SceneSpace_PhysicalEntity <|-- Player
-namespace SweetsSpace {
-  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground Carried }
-  class BaseSweets["SweetsSpace::BaseSweets"] {
-    - model : shared_ptr<Render_Model>
-    +OnUpdate(ctx:Core_UpdateContext)
-    +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-  }
-  class LateUpdateNode["SweetsSpace::LateUpdateNode"] {
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
-  class SweetsManager["SweetsSpace::SweetsManager"] {
-    - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
-    +OnUpdate(ctx:Core_UpdateContext)
-    +DrawAll(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-    +GetByState(state:SweetsState) list<shared_ptr<BaseSweets>>&
-    +Spawn(kind:string, world:Components_Transform)
-  }
+
+class Scene_CameraUpdateNode["SceneSpace::CameraUpdateNode"] {
+  +OnUpdate(ctx: Core_UpdateContext)
 }
-SceneSpace_PhysicalEntity <|-- BaseSweets
-SweetsManager *-- BaseSweets
-SweetsManager *-- SweetsState
-SweetsManager o-- LateUpdateNode
-Player o-- Render_Model
-BaseSweets o-- Render_Model
-Core_UpdateNode <|-- BaseSweets
-Core_UpdateNode <|-- SweetsManager
-Core_UpdateNode <|-- SceneUpdateNode
-Core_UpdateNode <|-- CameraUpdateNode
-Core_UpdateNode <|-- LateUpdateNode
-class SceneComposer["SceneComposer"] { +Compose() Composition }
-SceneComposer ..> ConfigLoader_ColliderConfigLoader
-SceneComposer ..> ConfigLoader_SceneGameConfigLoader
-SceneComposer ..> StageLayoutLoader
-SceneComposer ..> Systems_PhysicsBinder
-SceneComposer ..> UIManager
-namespace App {
-  class Game["App::Game"] {
-    - dx       : Core_DXContext
-    - input    : Core_Input
-    - timer    : Core_StepTimer
-    - shaders  : Core_ShaderCache
-    - textures : Core_TextureCache
-    - models   : Render_ModelCache
-    - renderer : Render_ModelRenderer
-    - scenes   : SceneSpace_SceneManager
-    +Initialize()
-    +Update()
-    +Draw()
-  }
+
+class Scene_SceneManager["SceneSpace::SceneManager"] {
+  -timer: Core_StepTimer
+  -active: Scene_IScene
+  -pending: Scene_IScene
+  +SetInitialScene(scene: Scene_IScene)
+  +RequestSceneChange(scene: Scene_IScene)
+  +Update()
+  +Draw()
 }
-Game o-- Core_DXContext
-Game o-- Core_Input
-Game o-- Core_StepTimer
-Game o-- Core_ShaderCache
-Game o-- Core_TextureCache
-Game o-- Render_ModelCache
-Game o-- Render_ModelRenderer
-Game o-- SceneSpace_SceneManager
-SceneComposer ..> Core_UpdateScheduler
 
-クラス図ざっくりまとめ：
+Scene_Scene --|> Scene_IScene
+Scene_Scene *-- Core_UpdateScheduler
+Scene_Scene o-- Core_Input
+Scene_SceneUpdateNode --|> Core_UpdateNode
+Scene_CameraUpdateNode --|> Core_UpdateNode
+Scene_Scene *-- Scene_SceneUpdateNode
+Scene_Scene *-- Scene_CameraUpdateNode
 
-Core：
-DirectXまわり。GitHubリポジトリに入ってる初期化コードをそのままラップしてるだけ
-DXContext・Input・Shader/TextureCacheあたりはいじらなくてOK
+Scene_SceneManager *-- Scene_IScene
+Scene_SceneManager o-- Core_StepTimer
 
-Components：
-オブジェクトの基礎データ
-Transform（位置）、Physical（速度とか）、2D コライダー（当たり判定）だけで十分
+App_Main o-- Scene_SceneManager
+App_Main o-- Core_Input
 
-CameraSpace：
-カメラは1個だけ。priorityとかあるけど今は使わない
-3Dの奥行きはあるけど、プレイ自体は横方向（2.5D）固定
+class Scene_TitleScene["SceneSpace::TitleScene"]
+class Scene_SelectScene["SceneSpace::SelectScene"]
+class Scene_SettingScene["SceneSpace::SettingScene"]
+class Scene_ScenePowerUp["SceneSpace::ScenePowerUp"]
+class Scene_SceneGame["SceneSpace::SceneGame"]
 
-Render：
-モデル描画まわり。ModelRenderer.Draw()一発で描ける
-ローダーは仮でOK（立方体とかで代用）
+Scene_TitleScene --|> Scene_Scene
+Scene_SelectScene --|> Scene_Scene
+Scene_SettingScene --|> Scene_Scene
+Scene_ScenePowerUp --|> Scene_Scene
+Scene_SceneGame --|> Scene_Scene
 
-Systems：
-物理系。重力＋減衰だけ
-接地感は、余裕あったら別システムで
-PhysicsBinder は PhysicsMachine/登録処理を束ねて Scene から扱いやすくする薄い仲介
+%% =========================
+%% Composition
+%% =========================
+class Build_SceneComposer["SceneBuild::SceneComposer"] {
+  +ComposeSceneGame()
+}
 
-GameFlow：
-フェーズ管理と強化メニュー
-一定の高さを超えたらフェーズ進行 → 終わったら強化選択 (まだ決まってないので、例になっている)
-ここが今回の新要素
+Build_SceneComposer ..> Scene_SceneGame : composes
 
-ConfigLoader：
-ゲーム設定・コライダー設定の読み込み（`SceneGameConfigLoader` / `ColliderConfigLoader`）
+%% =========================
+%% Systems: physics + contacts + draw
+%% =========================
+class Sys_PhysicsMachine["Systems::PhysicsMachine"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +RegisterBody(entity)
+  +UnregisterBody(entity)
+  +CreateWeldJoint(a,b)
+  +DestroyWeldJoint(jointId)
+}
 
-StageLayoutLoader：
-CSV からステージ配置と物理オブジェクトを生成するローダー
+class Sys_DrawSystem["Systems::DrawSystem"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +SetRenderer(renderer)
+}
 
-UIManager：
-HUD とリザルト UI のレイアウト初期化・描画を一元管理
+class Sys_Box2DPhysicsSystem["Systems::Box2DPhysicsSystem"] {
+  +Apply(dt: float)
+}
 
-Scene / Entities / SweetsSpace：
-SceneGameに全部入ってる
-プレイヤー（横移動＋回転＋落下　←例）とスイーツの管理
-フェーズごとに難易度（出現間隔とか）を調整
+class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
+  +ProcessContacts()
+  +SetBeginContactCallback(cb)
+  +SetEndContactCallback(cb)
+}
 
-App：
-全部まとめて動かすメイン的なやつ
-Initialize → Update → Draw で完結
+class Sys_ContactHandler["Systems::ContactHandler"] {
+  <<interface>>
+  +OnBegin(a,b)
+  +OnEnd(a,b)
+}
 
-UpdateNode:
-更新は `SceneManager::Update` → 各シーンの `Update` → `Scene::RootUpdate` → `UpdateScheduler::Tick` → 登録済み `IUpdatable::OnUpdate` の単一路線で進む。更新が必要なクラスは `Core::UpdateNode` を継承し、フェーズと priority を設定して Scene に登録する。順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
-標準フェーズ順は Input → PrePhysics → Physics → PostPhysics → Gameplay → Camera → UI → Late。描画は `Scene::RootDraw` から別経路で行う。
-`SceneGame::ConfigureUpdates` での登録順と実際の実行順は `docs/scene-lifecycle.md` にまとめた。
+class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
+  +DispatchBeginContact(a,b)
+  +DispatchEndContact(a,b)
+  +AddHandler(h: Sys_ContactHandler)
+}
+
+class Sys_IPhysicsBinder["Systems::IPhysicsBinder"] {
+  <<interface>>
+  +GetPhysicsMachine() Sys_PhysicsMachine
+  +RegisterPhysicsBody(entity)
+  +UnregisterPhysicsBody(entity)
+  +AddContactHandler(h: Sys_ContactHandler)
+}
+
+class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
+  +GetPhysicsMachine() Sys_PhysicsMachine
+  +RegisterPhysicsBody(entity)
+  +UnregisterPhysicsBody(entity)
+  +AddContactHandler(h: Sys_ContactHandler)
+}
+
+Sys_PhysicsMachine --|> Core_UpdateNode
+Sys_DrawSystem --|> Core_UpdateNode
+Sys_PhysicsBinder ..|> Sys_IPhysicsBinder
+
+Sys_PhysicsBinder *-- Sys_PhysicsMachine
+Sys_PhysicsBinder *-- Sys_PhysicsRegistration
+Sys_PhysicsRegistration o-- Sys_ContactHandler
+
+Sys_PhysicsMachine ..> Sys_Box2DPhysicsSystem : steps world
+Sys_Box2DPhysicsSystem ..> Sys_Box2DContactListener : calls ProcessContacts
+Sys_Box2DContactListener ..> Sys_PhysicsRegistration : dispatch callbacks
+
+%% =========================
+%% Camera
+%% =========================
+class Cam_ICamera["CameraSpace::ICamera"] {
+  <<interface>>
+  +GetView()
+  +GetProjection()
+}
+
+class Cam_Camera["CameraSpace::Camera"] {
+  +GetView()
+  +GetProjection()
+}
+
+class Cam_CameraRig["CameraSpace::CameraRig"] {
+  +Attach(target)
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+Cam_Camera ..|> Cam_ICamera
+Cam_CameraRig --|> Core_UpdateNode
+
+%% =========================
+%% Entities
+%% =========================
+class Ent_Entity["Entities::Entity"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+class Ent_PhysicalEntity["Entities::PhysicalEntity"] {
+  +GetTransform()
+  +GetPhysical()
+}
+
+class Ent_Player["Entities::Player"] {
+  +HandleInput(input: Core_Input)
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+Ent_Entity --|> Core_UpdateNode
+Ent_PhysicalEntity --|> Ent_Entity
+Ent_Player --|> Ent_PhysicalEntity
+
+%% =========================
+%% Sweets (post-fix: no manual bypass)
+%% =========================
+class Sweets_State["SweetsSpace::SweetsState"] {
+  <<enumeration>>
+  Active
+  Stacked
+  Ground
+  Carried
+}
+
+class Sweets_Base["SweetsSpace::BaseSweets"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +DrawAll()
+}
+
+class Sweets_LateNode["SweetsSpace::LateUpdateNode"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+class Sweets_Manager["SweetsSpace::SweetsManager"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +OnLateUpdate(ctx: Core_UpdateContext)
+  +DrawAll()
+  +Spawn(kind, transform)
+  +LoadPhaseSpawnConfig(path)
+  +OnContactBegin(a,b)
+  +OnContactEnd(a,b)
+  +GetLateUpdateNode() Sweets_LateNode
+}
+
+Sweets_Base --|> Core_UpdateNode
+Sweets_LateNode --|> Core_UpdateNode
+Sweets_Manager --|> Core_UpdateNode
+
+Sweets_Manager *-- Sweets_LateNode
+Sweets_Manager o-- Sweets_Base : owns instances
+Sweets_Manager ..> Core_UpdateScheduler : registers BaseSweets
+Sweets_Manager ..> Sys_PhysicsMachine : joints and physics ops
+
+%% =========================
+%% Stage + Config
+%% =========================
+class Cfg_SectionReader["Config::ConfigSectionReader"] {
+  +ReadSectionLines(path, section)
+}
+
+class Cfg_SceneGameConfigLoader["Config::SceneGameConfigLoader"] {
+  +LoadPhysicsTuningSettings(path)
+  +LoadPlayerTransformConfig(path)
+  +LoadPlayerColliderTuning(path)
+  +LoadStageColliderConfig(path)
+  +LoadModelTextureLoadingSetting(path)
+}
+
+class Stage_StageData["Stage::StageData"] {
+  +LoadFromFile(path, section)
+  +GetGuidelineHeight() float
+  +GetBackgroundTexture() string
+}
+
+class Stage_LayoutLoader["Stage::StageLayoutLoader"] {
+  +LoadFromCsv(path)
+}
+
+Stage_StageData ..> Cfg_SectionReader : reads stage checklist
+Cfg_SceneGameConfigLoader ..> Cfg_SectionReader
+Stage_LayoutLoader ..> Cfg_SectionReader
+
+Sweets_Manager ..> Cfg_SectionReader : reads spawn phases
+Sweets_Manager ..> Stage_StageData : uses stage params
+
+%% =========================
+%% UI
+%% =========================
+class UI_UIManager["UI::UIManager"] {
+  +Initialize()
+  +Shutdown()
+  +UpdateHUD()
+  +Draw()
+}
+
+class UI_HudRenderer["UI::HudRenderer"] {
+  +Initialize()
+  +Shutdown()
+  +Draw()
+}
+
+class UI_ResultRenderer["UI::ResultRenderer"] {
+  +Initialize()
+  +Shutdown()
+  +Draw()
+}
+
+class UI_Overlay["UI::SceneGameUIOverlay"] {
+  +Initialize()
+  +Shutdown()
+  +Update()
+  +Draw()
+}
+
+UI_UIManager *-- UI_HudRenderer
+UI_UIManager *-- UI_ResultRenderer
+UI_Overlay *-- UI_UIManager
+
+%% =========================
+%% PowerUp scene
+%% =========================
+class PU_Manager["PowerUp::PowerUpManager"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+class PU_Cursor["PowerUp::PowerUpCursor"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+class PU_Node["PowerUp::PowerUpNode"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+}
+
+PU_Manager --|> Core_UpdateNode
+PU_Cursor --|> Core_UpdateNode
+PU_Node --|> Core_UpdateNode
+
+Scene_ScenePowerUp *-- PU_Manager
+Scene_ScenePowerUp *-- PU_Cursor
+PU_Manager *-- PU_Node
+
+%% =========================
+%% SceneGame wiring (ownership + registration + contacts)
+%% =========================
+Scene_SceneGame *-- Sys_PhysicsBinder
+Scene_SceneGame *-- Sys_DrawSystem
+Scene_SceneGame *-- Sweets_Manager
+Scene_SceneGame *-- UI_UIManager
+Scene_SceneGame *-- Cam_CameraRig
+Scene_SceneGame *-- Ent_Player
+Scene_SceneGame *-- Stage_StageData
+
+Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
+Scene_SceneGame ..> Sys_PhysicsBinder : registers contact handler
+Scene_SceneGame ..> Sweets_Manager : forwards contacts
+
+クラス図ざっくりまとめ
+Core
+
+DirectX まわり。GitHub リポジトリに入ってる初期化コードをそのままラップしてるだけ。
+DXContext・Input・Shader/TextureCache あたりはいじらなくて OK（必要が出るまで触らない）。
+
+Components
+
+オブジェクトの基礎データ。
+Transform（位置/回転/スケール）、Physical（速度/力/減衰）、2D/Box2D 系のコライダー（当たり判定）だけで十分。
+
+CameraSpace
+
+カメラは基本 1 個。priority とかは今は使わない。
+3D の奥行きはあるけど、プレイ自体は横方向（2.5D）固定。
+
+Render
+
+モデル描画まわり。描画は “一発で描ける” 流儀（Renderer/DrawSystem 経由）。
+ローダーは仮で OK（立方体などの代用でも成立）。
+
+Systems
+
+物理系。基本は重力 + 減衰。
+接地感は余裕があったら別システムで追加する。
+PhysicsBinder は PhysicsMachine と登録処理・コンタクト配信を束ねて Scene から扱いやすくする薄い仲介。
+
+GameFlow
+
+フェーズ管理と強化メニュー。
+一定の高さを超えたらフェーズ進行 → 終わったら強化選択（まだ確定していないので例）。
+ここが今回の新要素。
+
+ConfigLoader
+
+ゲーム設定・コライダー設定の読み込み。
+SceneGameConfigLoader / ColliderConfigLoader / ConfigSectionReader で実装。
+
+StageLayoutLoader
+
+CSV からステージ配置を読み込み、ステージオブジェクト（Transform 等）を生成するローダー。
+
+UIManager
+
+HUD とリザルト UI のレイアウト初期化・更新・描画を一元管理。
+
+Scene / Entities / SweetsSpace
+
+SceneGame に統合されている領域。
+プレイヤー（横移動＋回転＋落下 など）とスイーツの管理。
+フェーズごとに難易度（出現間隔など）を調整。
+
+App
+
+全部まとめて動かすメイン。
+Initialize → Update → Draw で完結。
+
+UpdateNode
+
+更新は 単一路線で進む。
+
+SceneManager::Update → 各シーンの Update → Scene::RootUpdate → UpdateScheduler::Tick → 登録済み IUpdatable::OnUpdate
+
+更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。
+順序を変えたい時はフェーズ/priority を調整するか Enable(false) で無効化するだけ。
+
+標準フェーズ順:
+Input → PrePhysics → Physics → PostPhysics → Gameplay → Camera → UI → Late
+
+描画は Scene::RootDraw から別経路で行う。
+SceneGame::ConfigureUpdates の登録と実行順の説明は docs/scene-lifecycle.md にまとめてある。
