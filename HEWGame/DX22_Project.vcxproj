@@ -231,6 +231,7 @@
     <ClCompile Include="src\GuidelineSystem.cpp" />
     <ClCompile Include="src\GameplayRulesSystem.cpp" />
     <ClCompile Include="src\SceneGameContactForwarder.cpp" />
+    <ClCompile Include="src\SceneGamePlayerColliderBuilder.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
     <ClCompile Include="src\PowerUpNode.cpp" />
@@ -365,6 +366,7 @@
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneGameContactForwarder.h" />
     <ClInclude Include="include\SceneComposer.h" />
+    <ClInclude Include="include\SceneGamePlayerColliderBuilder.h" />
     <ClInclude Include="include\SceneGameUIOverlay.h" />
     <ClInclude Include="include\SceneGameConfigLoader.h" />
     <ClInclude Include="include\GameplayRulesSystem.h" />
