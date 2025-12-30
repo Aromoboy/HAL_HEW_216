@@ -12,6 +12,7 @@
 #include "Core/UpdateNode.h"
 #include "ColliderConfigLoader.h"
 #include "ColliderRegistry.h"
+#include "Physics/ShapeConstants.h"
 #include "Sweets/SweetsKeyUtils.h"
 #include "Sweets/SweetsTypes.h"
 #include "SweetsPrototypeManifest.h"
