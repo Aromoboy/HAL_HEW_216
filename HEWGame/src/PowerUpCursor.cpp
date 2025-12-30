@@ -45,9 +45,6 @@ void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
 		
 	}
 
-	DebugConsole::SetDrawPos(10, 1);
-	std::cout << m_index;
-
 }
 
 
