@@ -11,6 +11,14 @@ namespace SweetsSpace
 {
     class SweetsRegistry
     {
+        struct SweetsStateHash
+        {
+            std::size_t operator()(SweetsState state) const noexcept
+            {
+                return static_cast<std::size_t>(state);
+            }
+        };
+
     public:
         using SweetsList = std::list<std::shared_ptr<ActiveSweets>>;
 
@@ -42,14 +50,6 @@ namespace SweetsSpace
         float GetHighestStackedHeight() const;
 
     private:
-        struct SweetsStateHash
-        {
-            std::size_t operator()(SweetsState state) const noexcept
-            {
-                return static_cast<std::size_t>(state);
-            }
-        };
-
         std::unordered_map<SweetsState, SweetsList, SweetsStateHash> m_byState;
         std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState> m_lookup;
     };
