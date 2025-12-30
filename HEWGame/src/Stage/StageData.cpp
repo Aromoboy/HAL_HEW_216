@@ -399,46 +399,45 @@ namespace Stage
         bool primaryParseError = false;
         bool secondaryParseError = false;
 
-        auto appendSpawnPoints = [&](const std::string& label, const std::string& rawValue, std::vector<float3>& targets)
-        {
-            if (label == "spawnPointsPrimary")
-            {
-                primaryProvided = true;
-            }
-            else if (label == "spawnPointsSecondary")
-            {
-                secondaryProvided = true;
-            }
-
-            const size_t beforeCount = targets.size();
-            if (!TryParseSpawnPoint(rawValue, lineNumber, targets))
-            {
-                parseError = true;
-                if (label == "spawnPointsPrimary")
-                {
-                    primaryParseError = true;
-                }
-                else if (label == "spawnPointsSecondary")
-                {
-                    secondaryParseError = true;
-                }
-                return;
-            }
-
-            const size_t added = targets.size() - beforeCount;
-            std::ostringstream oss;
-            oss << kLogPrefix << label << " on line " << lineNumber
-                << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
-                << " (" << targets.size() << " total). Each anchor requires"
-                << " three coordinates. Raw='" << rawValue << "'\n";
-            DebugTrace(oss.str());
-        };
-
         for (const auto& entry : lines)
         {
             const std::string key = entry.key;
             const std::string rawValue = entry.value;
             const std::size_t lineNumber = entry.lineNumber;
+            auto appendSpawnPoints = [&](const std::string& label, const std::string& rawValue, std::vector<float3>& targets)
+            {
+                if (label == "spawnPointsPrimary")
+                {
+                    primaryProvided = true;
+                }
+                else if (label == "spawnPointsSecondary")
+                {
+                    secondaryProvided = true;
+                }
+
+                const size_t beforeCount = targets.size();
+                if (!TryParseSpawnPoint(rawValue, lineNumber, targets))
+                {
+                    parseError = true;
+                    if (label == "spawnPointsPrimary")
+                    {
+                        primaryParseError = true;
+                    }
+                    else if (label == "spawnPointsSecondary")
+                    {
+                        secondaryParseError = true;
+                    }
+                    return;
+                }
+
+                const size_t added = targets.size() - beforeCount;
+                std::ostringstream oss;
+                oss << kLogPrefix << label << " on line " << lineNumber
+                    << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
+                    << " (" << targets.size() << " total). Each anchor requires"
+                    << " three coordinates. Raw='" << rawValue << "'\n";
+                DebugTrace(oss.str());
+            };
 
             size_t platformIndex = 0;
             if (TryParsePlatformKey(key, "center", platformIndex))
