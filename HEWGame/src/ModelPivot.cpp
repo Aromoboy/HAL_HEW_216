@@ -1,5 +1,7 @@
 #include "ModelPivot.h"
 
+#include "ModelDX.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -55,4 +57,3 @@ namespace Render
         return ComputePivotInfoOriginBottom(model, appliedScale).offsetY;
     }
 }
-
