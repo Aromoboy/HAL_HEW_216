@@ -81,7 +81,7 @@ namespace
             || HasMeaningfulDifference(a.z, b.z, epsilon);
     }
 
-    const char* ToString(DeleteReason reason)
+    const char* DeleteReasonToString(DeleteReason reason)
     {
         switch (reason)
         {
@@ -94,7 +94,7 @@ namespace
         }
     }
 
-    const char* ToString(UseOutcome outcome)
+    const char* UseOutcomeToString(UseOutcome outcome)
     {
         switch (outcome)
         {
@@ -811,8 +811,8 @@ namespace SweetsSpace
         std::ostringstream oss;
         oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
             << "' を削除 state=" << StateToString(previousState)
-            << " deleteReason=" << ToString(reason)
-            << " outcome=" << ToString(outcome)
+            << " deleteReason=" << DeleteReasonToString(reason)
+            << " outcome=" << UseOutcomeToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
