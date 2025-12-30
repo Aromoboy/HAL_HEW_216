@@ -74,6 +74,7 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
+        constexpr bool kEnableStageModelVerboseLogging = false;
         constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
         constexpr const char* kRenderSettingsSection = "render.settings";
         constexpr float kDefaultPlaySeconds = 30.0f;
@@ -3325,6 +3326,8 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     std::string line;
+    size_t stageModelsLoaded = 0;
+    size_t stageModelsFailed = 0;
 
     // ファイルを1行ずつ読み込む
     while (std::getline(file, line))
@@ -3383,16 +3386,21 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
         }
 
         // モデルをロード
-        DebugTrace(std::string(kLogPrefix) + "モデルをロード中\n");
+        if (kEnableStageModelVerboseLogging)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Stage model loading: " + obj.modelPath + "\n");
+        }
         obj.model = cache.Get(obj.modelPath);
         if (!obj.model)
         {
             DebugTrace(std::string(kLogPrefix) + "モデルのロードに失敗: " + obj.modelPath + "\n");
+            ++stageModelsFailed;
             continue;
         }
-        else
+        ++stageModelsLoaded;
+        if (kEnableStageModelVerboseLogging)
         {
-            DebugTrace(std::string(kLogPrefix) + "モデルをロード成功\n");
+            DebugTrace(std::string(kLogPrefix) + "Stage model loaded: " + obj.modelPath + "\n");
         }
 
         if (m_physicsMachine)
@@ -3466,6 +3474,8 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
     }
 
     DebugTrace(std::string(kLogPrefix) + "ステージオブジェクトを" + std::to_string(m_stageObjects.size()) + "個ロードしました\n");
+    DebugTrace(std::string(kLogPrefix) + "Loaded stage models: success=" + std::to_string(stageModelsLoaded)
+        + ", failed=" + std::to_string(stageModelsFailed) + "\n");
     return true;
 }
 
