@@ -100,6 +100,7 @@
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2dd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <!-- Box2D is linked statically; no DLL copy is required. -->
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
@@ -125,6 +126,7 @@
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <!-- Box2D is linked statically; no DLL copy is required. -->
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
@@ -147,6 +149,7 @@
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <!-- Box2D is linked statically; no DLL copy is required. -->
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
@@ -173,6 +176,7 @@
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <!-- Box2D is linked statically; no DLL copy is required. -->
     <PostBuildEvent>
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
