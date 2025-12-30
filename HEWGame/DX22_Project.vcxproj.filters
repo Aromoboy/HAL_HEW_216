@@ -186,6 +186,9 @@
     <ClCompile Include="src\SceneGame.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneGameConfigLoader.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\SceneManager.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -469,6 +472,9 @@
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneGame.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SceneGameConfigLoader.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneManager.h">
