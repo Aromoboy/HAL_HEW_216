@@ -1,4 +1,4 @@
-#include "Transform.h"
+﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -50,6 +50,7 @@
 #include "Physical.h"
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
+#include "SceneGameUIOverlay.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
