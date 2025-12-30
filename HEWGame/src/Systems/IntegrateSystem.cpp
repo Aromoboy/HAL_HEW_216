@@ -1,5 +1,7 @@
 #include "Systems/IntegrateSystem.h"
 
+#include "Entities/PhysicalEntity.h"
+
 #include <algorithm>
 #include <cmath>
 #include <sstream>

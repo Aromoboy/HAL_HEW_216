@@ -7,9 +7,8 @@
 #include <vector>
 
 #include "Entities/PhysicalEntity.h"
-#include "Input.h"
 #include "PickupConfig.h"
-#include "SweetsManager.h"
+#include "Sweets/SweetsTypes.h"
 #include "VisualTransform.h"
 #include "AnimationCache.h"
 
@@ -34,7 +33,7 @@ namespace Entities
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
             int priority = 0,
             std::string tag = "player");
-        ~Player() override = default;
+        ~Player() override;
 
         void OnUpdate(Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;

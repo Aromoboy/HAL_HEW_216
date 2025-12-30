@@ -4,6 +4,7 @@
 
 #include "Physics/ShapeConstants.h"
 #include "ColliderRegistry.h"
+#include "Entities/PhysicalEntity.h"
 
 #include <algorithm>
 #include <cctype>

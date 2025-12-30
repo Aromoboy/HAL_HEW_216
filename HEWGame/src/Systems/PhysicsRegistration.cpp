@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
 #include "Systems/Box2DContactListener.h"
 
