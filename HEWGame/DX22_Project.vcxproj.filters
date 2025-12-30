@@ -99,9 +99,6 @@
     <ClCompile Include="src\Core\UpdateScheduler.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="src\Core\VertexBuffer.cpp">
       <Filter>Core\DirectX</Filter>
     </ClCompile>
@@ -370,9 +367,6 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\UpdateScheduler.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Core\UpdateSchedulerTests.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\Core\VertexBuffer.h">

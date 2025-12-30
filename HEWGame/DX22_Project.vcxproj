@@ -197,7 +197,6 @@
     <ClCompile Include="src\Core\Gamepad.cpp" />
     <ClCompile Include="src\Core\UpdateNode.cpp" />
     <ClCompile Include="src\Core\UpdateScheduler.cpp" />
-    <ClCompile Include="src\Core\UpdateSchedulerTests.cpp" />
     <ClCompile Include="src\Core\DXContext.cpp" />
     <ClCompile Include="src\Core\IndexBuffer.cpp" />
     <ClCompile Include="src\Core\VertexBuffer.cpp" />
@@ -295,7 +294,6 @@
     <ClInclude Include="include\Core\StepTimer.h" />
     <ClInclude Include="include\Core\UpdateNode.h" />
     <ClInclude Include="include\Core\UpdateScheduler.h" />
-    <ClInclude Include="include\Core\UpdateSchedulerTests.h" />
     <ClInclude Include="include\Core\DXContext.h" />
     <ClInclude Include="include\Core\IndexBuffer.h" />
     <ClInclude Include="include\Core\VertexBuffer.h" />
