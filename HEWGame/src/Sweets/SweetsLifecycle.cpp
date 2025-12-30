@@ -124,7 +124,7 @@ namespace
         }
     }
 
-    void UpdateBatchUsage(::SweetsSpace::DeleteBatchContext* batch, ::SweetsSpace::UseOutcome outcome)
+    void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
     {
         if (!batch)
         {
@@ -136,25 +136,25 @@ namespace
             --batch->usesRemaining;
         }
 
-        if (outcome == ::SweetsSpace::UseOutcome::Hit)
+        if (outcome == SweetsSpace::UseOutcome::Hit)
         {
             ++batch->usesRemaining;
         }
     }
 
-    ::SweetsSpace::SweetsState EvaluateState(::SweetsSpace::ActiveSweets& sweets,
-        ::SweetsSpace::SweetsState currentState,
-        const ::SweetsSpace::SweetsContacts& contacts)
+    SweetsSpace::SweetsState EvaluateState(SweetsSpace::ActiveSweets& sweets,
+        SweetsSpace::SweetsState currentState,
+        const SweetsSpace::SweetsContacts& contacts)
     {
-        if (currentState == ::SweetsSpace::SweetsState::Carried)
+        if (currentState == SweetsSpace::SweetsState::Carried)
         {
-            return ::SweetsSpace::SweetsState::Carried;
+            return SweetsSpace::SweetsState::Carried;
         }
 
         const float speedSq = ComputeSpeedSq(sweets);
         if (speedSq > kRestVelocityThresholdSq)
         {
-            return ::SweetsSpace::SweetsState::Active;
+            return SweetsSpace::SweetsState::Active;
         }
 
         bool foundationOnly = false;
@@ -188,15 +188,15 @@ namespace
         {
             if (foundationOnly)
             {
-                return ::SweetsSpace::SweetsState::Active;
+                return SweetsSpace::SweetsState::Active;
             }
 
-            return currentState == ::SweetsSpace::SweetsState::Stacked
-                ? ::SweetsSpace::SweetsState::Stacked
-                : ::SweetsSpace::SweetsState::Active;
+            return currentState == SweetsSpace::SweetsState::Stacked
+                ? SweetsSpace::SweetsState::Stacked
+                : SweetsSpace::SweetsState::Active;
         }
 
-        return ::SweetsSpace::SweetsState::Active;
+        return SweetsSpace::SweetsState::Active;
     }
 
     bool IsHorizontallyOutOfBounds(

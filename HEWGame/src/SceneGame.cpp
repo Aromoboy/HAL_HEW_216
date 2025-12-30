@@ -20,6 +20,7 @@
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Sweets/BaseSweets.h"
+#include "Render/ModelBounds.h"
 #include "Entities/Player.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
@@ -99,13 +100,6 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
-        struct ModelBounds
-        {
-            float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-            float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
-            bool valid{ false };
-        };
-
         struct PlayerColliderGeometry
         {
             ModelBounds bounds{};
