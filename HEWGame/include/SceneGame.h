@@ -8,6 +8,7 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
+#include "GameplayRules.h"
 #include "GuidelineActor.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
@@ -104,17 +105,10 @@ private:
     void OnStageClear();
     void OnStageFail();
     void ResetPlaySession();
-    void UpdateCountdown(Core::UpdateContext& ctx);
-    void UpdateTowerHeightTelemetry();
-    bool CheckGuidelineCrossing(float& outTriggerHeight);
-    void OnGuidelineCrossed();
-    void ApplyGuidelineBonus(float triggerHeight);
-    void HandleGuidelineAdvance(float triggerHeight);
     void ResetGuidelineHeight();
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
-    int ComputeScore() const;
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
     std::string ResolvePlayerColliderKey(const std::string& key) const;  
@@ -176,12 +170,7 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    struct PendingTimeBonus
-    {
-        float seconds = 0.0f;
-        float triggerHeight = 0.0f;
-    };
-    std::deque<PendingTimeBonus> m_pendingTimeBonuses;
+    std::deque<GameplayRules::PendingTimeBonus> m_pendingTimeBonuses;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();

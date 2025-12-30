@@ -186,6 +186,9 @@
     <ClCompile Include="src\SceneGame.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\GameplayRules.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\StageLayoutLoader.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -404,6 +407,9 @@
     </ClInclude>
     <ClInclude Include="include\GuidelineActor.h">
       <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GameplayRules.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Entity.h">
       <Filter>Entities</Filter>
