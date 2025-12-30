@@ -22,6 +22,8 @@ namespace Stage
         DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
+    struct StageConfigNormalized;
+
     class StageData
     {
     public:
@@ -62,6 +64,7 @@ namespace Stage
 
     private:
         void ApplyDefaults();
+        void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
         void LogSummary(const char* prefix, const std::string& detail) const;
         void EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount,
             const float* defaultMultipliers) const;

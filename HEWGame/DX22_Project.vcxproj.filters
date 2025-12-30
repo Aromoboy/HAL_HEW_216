@@ -235,6 +235,12 @@
     <ClCompile Include="src\SpriteRenderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Stage\StageConfigNormalize.cpp">
+      <Filter>Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Stage\StageConfigParser.cpp">
+      <Filter>Stage</Filter>
+    </ClCompile>
     <ClCompile Include="src\Stage\StageData.cpp">
       <Filter>Stage</Filter>
     </ClCompile>
@@ -541,6 +547,12 @@
     </ClInclude>
     <ClInclude Include="include\SpriteRenderer.h">
       <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stage\StageConfigNormalize.h">
+      <Filter>Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stage\StageConfigParser.h">
+      <Filter>Stage</Filter>
     </ClInclude>
     <ClInclude Include="include\Stage\StageData.h">
       <Filter>Stage</Filter>
