@@ -518,9 +518,10 @@ void SceneComposer::ComposeLayout(Composition& result)
     };
     StageLayoutLoadResult stageLayoutResult = StageLayoutLoader::LoadFromCsv(stageLayoutRequest);
     result.stageObjects = std::move(stageLayoutResult.stageObjects);
+    result.stagePhysicsEntities = std::move(stageLayoutResult.physicsEntities);
     if (result.physicsBinder)
     {
-        for (const auto& entity : stageLayoutResult.physicsEntities)
+        for (const auto& entity : result.stagePhysicsEntities)
         {
             if (entity)
             {
