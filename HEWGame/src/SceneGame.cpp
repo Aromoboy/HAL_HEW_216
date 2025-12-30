@@ -30,7 +30,6 @@
 #include "SceneGameUIOverlay.h"
 #include "GameplayConfig.h"
 #include "UIManager.h"
-#include "GameplayRules.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -51,7 +50,6 @@
 #include "Physical.h"
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
-#include "SceneGameUIOverlay.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -1010,44 +1008,37 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
-    m_guidelineHeightMeters = composition->guidelineHeightMeters;
-    m_guidelineStepMeters = composition->guidelineStepMeters;
-    m_guidelineThicknessPixels = composition->guidelineThicknessPixels;
-    m_guidelineWidthPaddingWorld = composition->guidelineWidthPaddingWorld;
-    m_guidelineZOffset = composition->guidelineZOffset;
-    m_guidelineCooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
-    m_guidelineCooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
-    m_guidelineCenterX = composition->guidelineCenterX;
-    m_guidelineWidthWorld = composition->guidelineWidthWorld;
-    m_guidelineThicknessWorld = composition->guidelineThicknessWorld;
     m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
-    m_guidelineActor = std::move(composition->guidelineActor);
     m_sweetsManager = std::move(composition->sweetsManager);
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    GuidelineSystem::Config guidelineConfig{};
+    guidelineConfig.heightMeters = composition->guidelineHeightMeters;
+    guidelineConfig.stepMeters = composition->guidelineStepMeters;
+    guidelineConfig.thicknessPixels = composition->guidelineThicknessPixels;
+    guidelineConfig.widthPaddingWorld = composition->guidelineWidthPaddingWorld;
+    guidelineConfig.zOffset = composition->guidelineZOffset;
+    guidelineConfig.cooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
+    guidelineConfig.cooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
+    guidelineConfig.centerX = composition->guidelineCenterX;
+    guidelineConfig.widthWorld = composition->guidelineWidthWorld;
+    guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
+    m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
+
+    GameplayRulesSystem::Config gameplayRulesConfig{};
+    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
+    gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
+    gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
+    m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
 
     if (m_physicsBinder)
     {
-        m_physicsBinder->AddContactHandler(
-            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
-            {
-                if (m_sweetsManager)
-                {
-                    m_sweetsManager->OnContactBegin(&a, &b);
-                }
-            },
-            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
-            {
-                if (m_sweetsManager)
-                {
-                    m_sweetsManager->OnContactEnd(&a, &b);
-                }
-            });
+        m_contactForwarder.Bind(*m_physicsBinder, m_sweetsManager.get());
     }
 
     if (m_sweetsManager)
@@ -1402,10 +1393,7 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
         }
     }
 
-    m_countdownTimer.Reset();
-    m_totalPlaySeconds = kDefaultPlaySeconds;
-    m_remainingCountdownSeconds = m_totalPlaySeconds;
-    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
+    m_gameplayRules.ResetSession();
 }
 
 SceneGame::~SceneGame()
@@ -1587,39 +1575,23 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const GameplayProgression::CountdownInput countdownInput{
+    const GameplayRulesSystem::UpdateInput rulesInput{
         m_stageState == StageState::Playing,
         ctx.dt,
-        &m_countdownTimer,
-        kCountdownLogIntervalSeconds,
-        DebugTrace,
-        kLogPrefix
+        m_sweetsManager.get(),
+        &m_phaseManager,
+        m_clearPhaseCount
     };
-    GameplayProgression::CountdownState countdownState{
-        m_totalPlaySeconds,
-        m_remainingCountdownSeconds,
-        m_lastAnnouncedCountdownSeconds,
-        m_pendingTimeBonuses
-    };
-    GameplayProgression::CountdownResult countdownResult =
-        GameplayProgression::UpdateCountdown(countdownInput, std::move(countdownState));
-    m_totalPlaySeconds = countdownResult.state.totalSeconds;
-    m_remainingCountdownSeconds = countdownResult.state.remainingSeconds;
-    m_lastAnnouncedCountdownSeconds = countdownResult.state.lastAnnouncedSeconds;
-    m_pendingTimeBonuses = std::move(countdownResult.state.pendingBonuses);
-    if (countdownResult.timeUp && m_stageState == StageState::Playing)
+    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+    if (rulesResult.timeUp && m_stageState == StageState::Playing)
     {
         SetStageState(StageState::TimeUp);
     }
-    if (m_guidelineCooldownRemainingSeconds > 0.0f)
+    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
     {
-        m_guidelineCooldownRemainingSeconds = std::max(0.0f, m_guidelineCooldownRemainingSeconds - ctx.dt);
+        BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
-
-    if (m_guidelineTriggerCooldownSeconds > 0.0f)
-    {
-        m_guidelineTriggerCooldownSeconds = std::max(0.0f, m_guidelineTriggerCooldownSeconds - ctx.dt);
-    }
+    m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
     const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
@@ -1631,35 +1603,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     }
 #endif
 
-    //高さボーナス判定
-    const GameplayProgression::TowerTelemetryInput towerTelemetryInput{
-        m_sweetsManager.get(),
-        &m_phaseManager,
-        m_clearPhaseCount,
-        m_remainingCountdownSeconds,
-        DebugTrace,
-        kLogPrefix
-    };
-    GameplayProgression::TowerTelemetryState towerTelemetryState{
-        m_currentTowerHeight,
-        m_peakTowerHeight,
-        m_maxTowerHeight,
-        m_phaseUpCount,
-        m_isGameClear
-    };
-    GameplayProgression::TowerTelemetryResult towerTelemetryResult =
-        GameplayProgression::UpdateTowerHeightTelemetry(towerTelemetryInput, std::move(towerTelemetryState));
-    m_currentTowerHeight = towerTelemetryResult.state.currentHeight;
-    m_peakTowerHeight = towerTelemetryResult.state.peakHeight;
-    m_maxTowerHeight = towerTelemetryResult.state.maxHeight;
-    m_phaseUpCount = towerTelemetryResult.state.phaseUpCount;
-    m_isGameClear = towerTelemetryResult.state.isGameClear;
-    if (towerTelemetryResult.phaseAdvanced && towerTelemetryResult.currentPhase > towerTelemetryResult.previousPhase)
-    {
-        BroadcastPhaseAdvance(towerTelemetryResult.currentPhase);
-    }
-
-    
     float deltaTime = ctx.timer.DeltaTime();
     for (auto& obj : m_stageObjects)
     {
@@ -1819,47 +1762,16 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleManualRetryInput(ctx);
         fRads.z += 0.001f;
 
-        GameplayProgression::GuidelineState guidelineState{
-            m_guidelineHeightMeters,
-            m_guidelineStepMeters,
-            m_guidelineCooldownRemainingSeconds,
-            m_guidelineCooldownDurationSeconds,
-            m_guidelineTriggerCooldownSeconds,
-            m_guidelineTriggeredThisHeight
-        };
-        const GameplayProgression::GuidelineInput guidelineInput{
+        const GuidelineSystem::UpdateInput guidelineInput{
             m_sweetsManager.get(),
-            m_guidelineActor.get(),
-            m_guidelineCenterX,
             kGuidelineTimeBonusSeconds,
             kGuidelineGlobalCooldownSeconds,
             DebugTrace,
             kLogPrefix
         };
-
-        if (m_guidelineTriggerCooldownSeconds <= 0.0f)
-        {
-            GameplayProgression::GuidelineCheckResult guidelineCheck =
-                GameplayProgression::CheckGuidelineCrossing(guidelineInput, std::move(guidelineState));
-            guidelineState = std::move(guidelineCheck.state);
-            if (guidelineCheck.crossed)
-            {
-                GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
-                    GameplayProgression::HandleGuidelineAdvance(guidelineInput,
-                                                                std::move(guidelineState),
-                                                                std::move(m_pendingTimeBonuses),
-                                                                guidelineCheck.triggerHeight);
-                guidelineState = std::move(guidelineAdvance.state);
-                m_pendingTimeBonuses = std::move(guidelineAdvance.pendingBonuses);
-            }
-        }
-
-        m_guidelineHeightMeters = guidelineState.heightMeters;
-        m_guidelineStepMeters = guidelineState.stepMeters;
-        m_guidelineCooldownRemainingSeconds = guidelineState.cooldownRemainingSeconds;
-        m_guidelineCooldownDurationSeconds = guidelineState.cooldownDurationSeconds;
-        m_guidelineTriggerCooldownSeconds = guidelineState.triggerCooldownSeconds;
-        m_guidelineTriggeredThisHeight = std::move(guidelineState.triggeredThisHeight);
+        GuidelineSystem::UpdateResult guidelineResult =
+            m_guidelineSystem.Update(guidelineInput, {});
+        m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
         break;
     }
     case StageState::TimeUp:
@@ -1882,24 +1794,14 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             || (m_stageState == StageState::ShowingResult);
 
         UIManager::HUDUpdateData uiData{};
-        uiData.hud.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
-        uiData.hud.currentHeight = m_currentTowerHeight;
-        uiData.hud.peakHeight = m_peakTowerHeight;
-        const GameplayRules::ScoreInput scoreInput{
-            &m_phaseManager,
-            kBaseScorePerMeter,
-            DebugTrace,
-            kLogPrefix
-        };
-        GameplayRules::ScoreState scoreState{
-            m_peakTowerHeight,
-            m_lastScoreLogValue,
-            m_lastScoreLogMultiplier
-        };
-        GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
-        m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
-        m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
-        uiData.hud.score = scoreResult.score;
+        const float remainingSeconds = std::max(0.0f, m_gameplayRules.GetRemainingCountdownSeconds());
+        const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        uiData.hud.remainingSeconds = remainingSeconds;
+        uiData.hud.currentHeight = currentHeight;
+        uiData.hud.peakHeight = peakHeight;
+        uiData.hud.score = score;
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -1908,10 +1810,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
         }
 
-        uiData.result.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
-        uiData.result.currentHeight = m_currentTowerHeight;
-        uiData.result.peakHeight = m_peakTowerHeight;
-        uiData.result.score = scoreResult.score;
+        uiData.result.remainingSeconds = remainingSeconds;
+        uiData.result.currentHeight = currentHeight;
+        uiData.result.peakHeight = peakHeight;
+        uiData.result.score = score;
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -1940,14 +1842,8 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
 void SceneGame::ResetGuidelineHeight()
 {
-    m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
-    m_guidelineStepMeters = m_stageData.GetGuidelineStep();
-    if (m_guidelineActor)
-    {
-        auto& transform = m_guidelineActor->GetTransform();
-        transform.position.x = m_guidelineCenterX;
-        transform.position.y = m_guidelineHeightMeters;
-    }
+    m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
+                                  m_stageData.GetGuidelineStep());
 }
 
 
@@ -2256,22 +2152,10 @@ void SceneGame::OnStageClear()
     ToggleGameplaySystems(false);
 
     std::ostringstream oss;
-    const GameplayRules::ScoreInput scoreInput{
-        &m_phaseManager,
-        kBaseScorePerMeter,
-        DebugTrace,
-        kLogPrefix
-    };
-    GameplayRules::ScoreState scoreState{
-        m_peakTowerHeight,
-        m_lastScoreLogValue,
-        m_lastScoreLogMultiplier
-    };
-    GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
-    m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
-    m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
     oss << kLogPrefix << "[Stage] cleared peakTop=" << std::fixed << std::setprecision(2)
-        << m_peakTowerHeight << "m score=" << scoreResult.score << "\n";
+        << peakHeight << "m score=" << score << "\n";
     ::DebugTrace(oss.str());
 }
 
@@ -2280,30 +2164,19 @@ void SceneGame::OnStageFail()
     ToggleGameplaySystems(false);
 
     std::ostringstream oss;
-    const GameplayRules::ScoreInput scoreInput{
-        &m_phaseManager,
-        kBaseScorePerMeter,
-        DebugTrace,
-        kLogPrefix
-    };
-    GameplayRules::ScoreState scoreState{
-        m_peakTowerHeight,
-        m_lastScoreLogValue,
-        m_lastScoreLogMultiplier
-    };
-    GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
-    m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
-    m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
     oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
-        << m_peakTowerHeight << "m score=" << scoreResult.score << "\n";
+        << peakHeight << "m score=" << score << "\n";
     ::DebugTrace(oss.str());
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
     std::ostringstream oss;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     oss << kLogPrefix << "Broadcasting phase " << newPhase
-        << " (stackedPeak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << ")\n";
+        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
     ::DebugTrace(oss.str());
 
     if (m_sweetsManager)
@@ -2365,19 +2238,10 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
     }
 
-    m_countdownTimer.Reset();
-    m_totalPlaySeconds = kDefaultPlaySeconds;
-    m_remainingCountdownSeconds = m_totalPlaySeconds;
-    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
-    m_currentTowerHeight = 0.0f;
-    m_peakTowerHeight = 0.0f;
-    m_maxTowerHeight = 0.0f;
-    m_pendingTimeBonuses.clear();
+    m_gameplayRules.ResetSession();
     //m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
-    m_guidelineTriggeredThisHeight.clear();
+    m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
-    m_guidelineCooldownRemainingSeconds = 0.0f;
-    m_guidelineTriggerCooldownSeconds = 0.0f;
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
@@ -2391,7 +2255,7 @@ void SceneGame::ResetPlaySession()
     }
 
     std::ostringstream oss;
-    oss << kLogPrefix << "[Countdown] start duration=" << m_totalPlaySeconds << "s\n";
+    oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
     ::DebugTrace(oss.str());
 }
 
@@ -2407,22 +2271,10 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     if (input.IsTrigger(Core::ActionId::Confirm))
     {
         std::ostringstream oss;
-        const GameplayRules::ScoreInput scoreInput{
-            &m_phaseManager,
-            kBaseScorePerMeter,
-            DebugTrace,
-            kLogPrefix
-        };
-        GameplayRules::ScoreState scoreState{
-            m_peakTowerHeight,
-            m_lastScoreLogValue,
-            m_lastScoreLogMultiplier
-        };
-        GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
-        m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
-        m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
         oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
-            << m_peakTowerHeight << "m score=" << scoreResult.score << "\n";
+            << peakHeight << "m score=" << score << "\n";
         ::DebugTrace(oss.str());
         SetStageState(StageState::Playing);
         return;
@@ -2431,8 +2283,9 @@ void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
     if (input.IsTrigger(Core::ActionId::Retry))
     {
         std::ostringstream oss;
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
-            << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
+            << std::fixed << std::setprecision(2) << peakHeight << "m\n";
         ::DebugTrace(oss.str());
     }
 }
@@ -2450,9 +2303,12 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
     }
 
     std::ostringstream oss;
+    const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
+        - m_gameplayRules.GetRemainingCountdownSeconds();
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     oss << kLogPrefix << "[Countdown] Retry requested elapsed="
-        << std::fixed << std::setprecision(2) << (m_totalPlaySeconds - m_remainingCountdownSeconds)
-        << "s peak=" << std::fixed << std::setprecision(2) << m_peakTowerHeight << "m\n";
+        << std::fixed << std::setprecision(2) << elapsedSeconds
+        << "s peak=" << std::fixed << std::setprecision(2) << peakHeight << "m\n";
     ::DebugTrace(oss.str());
     SetStageState(StageState::Playing);
 }
