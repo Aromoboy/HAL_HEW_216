@@ -1035,6 +1035,7 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_stageObjects = std::move(composition->stageObjects);
+    m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
 
     if (m_physicsBinder)
     {

@@ -59,6 +59,7 @@ public:
         std::unique_ptr<UIManager> uiManager;
         std::unique_ptr<BackgroundRenderer> backgroundRenderer;
         std::vector<StageObject> stageObjects;
+        std::vector<std::shared_ptr<Entities::PhysicalEntity>> stagePhysicsEntities;
     };
 
     explicit SceneComposer(Core::UpdateScheduler& scheduler);

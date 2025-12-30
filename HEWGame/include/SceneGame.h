@@ -105,6 +105,7 @@ private:
     void Initialize(const Stage::StageData& stageData);
     
     std::vector<StageObject> m_stageObjects;
+    std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
