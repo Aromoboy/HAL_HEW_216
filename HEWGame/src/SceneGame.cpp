@@ -2854,7 +2854,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
 #if defined(_DEBUG)
     const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
-    ::DebugTrace("[DEBUG] stacked.size=" + std::to_string(stacked.size()) + "\n");
     for (const auto& sweets : stacked)
     {
         if (!sweets) continue;
