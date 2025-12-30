@@ -12,6 +12,27 @@
 
 また、`HEWGame/DX22_Project.vcxproj.user` も意図的にバージョン管理されています。このファイルには Visual Studio 固有のユーザー設定が保存され、チーム全員のデバッガ設定やツールセット指定 (`ToolsVersion="Current"`) をそろえる役割を担っています。空の `<PropertyGroup>` を含めた最小構成ですが、Visual Studio が環境依存の値を勝手に書き込むのを防ぎ、設定差分を抑制する目的で維持しています。削除・無視すると開発環境ごとに挙動がばらつく原因になるため、リポジトリから除外しないでください。
 
+## Gameplay/Collider 設定
+`Assets/Config/gameplay.cfg` に collider と factory まわりの設定を集約しています。主なセクションは次の通りです。
+
+- `colliders.registry`: コライダの形状 + 物性（shape/density/friction/restitution/linearDamping）
+- `colliders.player`: プレイヤー用のコライダ定義と `forceConfigCollider`
+- `colliders.player.tuning`: プレイヤーの padding/offset チューニング
+- `colliders.stage`: ステージの collider preset（registryId 参照）
+- `colliders.sweets.factory`: スイーツ生成プリセット
+
+### 優先順位ルール
+1. **プレイヤーのコライダ生成**
+   - `forceConfigCollider=true` かつ `colliders.player` に定義がある場合は **Config 優先**。
+   - それ以外は **Registry 優先**。
+   - いずれのルートでも生成に失敗した場合は **Fallback (単純 Box)** に切り替わります。
+2. **ステージ collider preset**
+   - StageLayout 側の `colliderPresetId` が指定されていれば最優先。
+   - 未指定の場合は `modelKey` に一致する preset を適用。
+   - さらに見つからない場合は `presetId == modelKey` の preset を検索。
+3. **スイーツの factory preset**
+   - `colliders.sweets.factory` の設定がデフォルトを上書きします。
+
 クラス図（Mermaid用）：
 ---
 config:
@@ -430,4 +451,3 @@ Initialize → Update → Draw で完結
 
 UpdateNode:
 毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
-

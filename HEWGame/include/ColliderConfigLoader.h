@@ -30,6 +30,8 @@ namespace Collision
                 std::vector<ColliderDefinition> children;
         };
 
-        bool LoadColliderDefinitions(const std::string& path, std::map<std::string, ColliderDefinition>& outDefinitions);
+        bool LoadColliderDefinitions(
+                const std::string& path,
+                const std::string& section,
+                std::map<std::string, ColliderDefinition>& outDefinitions);
 }
-

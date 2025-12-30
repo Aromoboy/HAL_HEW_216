@@ -25,7 +25,9 @@
 #include "Entities/Player.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
+#include "ConfigSectionReader.h"
 #include "DebugColliderRenderer.h"
+#include "GameplayConfig.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -74,13 +76,10 @@ namespace
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr const char* kStageChecklistConfigPath = "Assets/Config/stage_checklist.cfg";
         constexpr const char* kStageDefaultConfigPath = "Assets/Config/stage_default.cfg";
-        constexpr const char* kStageColliderConfigPath = "Assets/Config/stage_colliders.cfg";
+        constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
         constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
-        constexpr const char* kPlayerColliderConfigPath = "Assets/Config/colliders_player.cfg";
-        constexpr const char* kPlayerColliderTuningPath = "Assets/Config/player_collider.csv";
         constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
         constexpr const char* kRenderSettingsConfigPath = "Assets/Config/render_settings.cfg";
-        constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -254,6 +253,72 @@ namespace
             return fallback;
         }
 
+        std::optional<float> TryParseFloatToken(const std::string& token)
+        {
+            try
+            {
+                return std::stof(token);
+            }
+            catch (...)
+            {
+                return std::nullopt;
+            }
+        }
+
+        std::optional<float2> ParseFloat2Token(const std::string& value)
+        {
+            const auto comma = value.find(',');
+            if (comma == std::string::npos)
+            {
+                return std::nullopt;
+            }
+
+            const auto x = TryParseFloatToken(TrimWhitespace(value.substr(0, comma)));
+            const auto y = TryParseFloatToken(TrimWhitespace(value.substr(comma + 1)));
+            if (!x || !y)
+            {
+                return std::nullopt;
+            }
+
+            return float2{ *x, *y };
+        }
+
+        std::optional<float3> ParseFloat3Token(const std::string& value)
+        {
+            std::vector<float> components;
+            std::stringstream stream(value);
+            std::string token;
+            while (std::getline(stream, token, ','))
+            {
+                token = TrimWhitespace(token);
+                if (token.empty())
+                {
+                    continue;
+                }
+                if (auto parsed = TryParseFloatToken(token))
+                {
+                    components.push_back(*parsed);
+                }
+            }
+
+            if (components.empty())
+            {
+                return std::nullopt;
+            }
+
+            if (components.size() == 1)
+            {
+                return float3{ components[0], components[0], components[0] };
+            }
+
+            if (components.size() == 2)
+            {
+                return float3{ components[0], components[1], components[1] };
+            }
+
+            return float3{ components[0], components[1], components[2] };
+        }
+
         std::string BuildModelKey(const std::string& modelPath)
         {
             std::string key = modelPath;
@@ -273,75 +338,122 @@ namespace
         StageColliderConfig LoadStageColliderConfig(const std::string& path)
         {
             StageColliderConfig config{};
-            std::ifstream file(path);
-            if (!file.is_open())
+
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionStageColliders, lines))
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Stage collider config missing at '" << path << "'\n";
+                oss << kLogPrefix << "Stage collider config missing section '"
+                    << GameplayConfig::kSectionStageColliders << "' at '" << path << "'\n";
                 DebugTrace(oss.str());
                 return config;
             }
 
-            std::string line;
-            size_t lineNumber = 0;
-            while (std::getline(file, line))
+            StageColliderPreset preset{};
+            std::string modelKey;
+            bool hasActive = false;
+
+            const auto flush = [&]()
             {
-                ++lineNumber;
-                line = TrimWhitespace(line);
-                if (line.empty() || line[0] == '#')
+                if (!hasActive || preset.presetId.empty())
                 {
-                    continue;
+                    return;
                 }
 
-                std::vector<std::string> tokens;
-                std::stringstream ss(line);
-                std::string token;
-                while (std::getline(ss, token, ','))
-                {
-                    tokens.push_back(TrimWhitespace(token));
-                }
-
-                if (tokens.size() < 5)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[StageColliders] Line " << lineNumber << " malformed ('" << line
-                        << "'); expected at least 5 tokens.\n";
-                    DebugTrace(oss.str());
-                    continue;
-                }
-
-                StageColliderPreset preset{};
-                preset.presetId = NormalizeColliderKey(tokens[0]);
-                const std::string modelKey = NormalizeColliderKey(tokens[1]);
-                preset.registryId = NormalizeColliderKey(tokens[2]);
-                preset.layer = ParseCollisionLayer(tokens[3], Collision::CollisionLayer::Floor);
-                preset.bodyType = ParseBodyType(tokens[4], b2_staticBody);
-                if (tokens.size() > 5)
-                {
-                    preset.fixedRotation = ParseBoolToken(tokens[5], true);
-                }
-                if (tokens.size() > 6)
-                {
-                    preset.allowRotation = ParseBoolToken(tokens[6], false);
-                }
-                if (tokens.size() > 7)
-                {
-                    try { preset.offset.x = std::stof(tokens[7]); } catch (...) {}
-                }
-                if (tokens.size() > 8)
-                {
-                    try { preset.offset.y = std::stof(tokens[8]); } catch (...) {}
-                }
-
-                if (!preset.presetId.empty())
-                {
-                    config.presetsById[preset.presetId] = preset;
-                }
+                config.presetsById[preset.presetId] = preset;
                 if (!modelKey.empty())
                 {
                     config.presetsByModelKey[modelKey] = preset;
                 }
+
+                hasActive = false;
+            };
+
+            for (const auto& entry : lines)
+            {
+                const std::string key = entry.key;
+                const std::string value = entry.value;
+
+                if (key == "preset" || key == "presetId" || key == "name")
+                {
+                    flush();
+                    preset = StageColliderPreset{};
+                    modelKey.clear();
+                    preset.presetId = NormalizeColliderKey(value);
+                    hasActive = true;
+                    continue;
+                }
+
+                if (!hasActive)
+                {
+                    continue;
+                }
+
+                if (key == "modelKey" || key == "model")
+                {
+                    modelKey = NormalizeColliderKey(value);
+                    continue;
+                }
+
+                if (key == "registryId" || key == "registry")
+                {
+                    preset.registryId = NormalizeColliderKey(value);
+                    continue;
+                }
+
+                if (key == "layer")
+                {
+                    preset.layer = ParseCollisionLayer(value, preset.layer);
+                    continue;
+                }
+
+                if (key == "bodyType")
+                {
+                    preset.bodyType = ParseBodyType(value, preset.bodyType);
+                    continue;
+                }
+
+                if (key == "fixedRotation")
+                {
+                    preset.fixedRotation = ParseBoolToken(value, preset.fixedRotation);
+                    continue;
+                }
+
+                if (key == "allowRotation")
+                {
+                    preset.allowRotation = ParseBoolToken(value, preset.allowRotation);
+                    continue;
+                }
+
+                if (key == "offset")
+                {
+                    const auto comma = value.find(',');
+                    if (comma != std::string::npos)
+                    {
+                        try
+                        {
+                            preset.offset.x = std::stof(TrimWhitespace(value.substr(0, comma)));
+                            preset.offset.y = std::stof(TrimWhitespace(value.substr(comma + 1)));
+                        }
+                        catch (...) {}
+                    }
+                    continue;
+                }
+
+                if (key == "offsetX")
+                {
+                    try { preset.offset.x = std::stof(value); } catch (...) {}
+                    continue;
+                }
+
+                if (key == "offsetY")
+                {
+                    try { preset.offset.y = std::stof(value); } catch (...) {}
+                    continue;
+                }
             }
+
+            flush();
 
             std::ostringstream oss;
             oss << kLogPrefix << "[StageColliders] Loaded " << config.presetsById.size()
@@ -665,97 +777,83 @@ namespace
             tuning.fallbackOffset = kDefaultPlayerFallbackOffset;
             tuning.fallbackSize = kDefaultPlayerFallbackSize;
 
-            std::ifstream file(path);
-            if (!file)
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionPlayerColliderTuning, lines))
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Tuning file missing; using defaults path='" << path << "'.\n";
+                oss << kLogPrefix << "[PlayerCollider] Tuning section missing; using defaults path='" << path << "'.\n";
                 DebugTrace(oss.str());
                 return tuning;
             }
 
-            std::string header;
-            if (!std::getline(file, header))
+            for (const auto& entry : lines)
             {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Tuning file empty; using defaults path='" << path << "'.\n";
-                DebugTrace(oss.str());
-                return tuning;
+                const std::string key = entry.key;
+                const std::string value = entry.value;
+
+                if (key == "thicknessPadding")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        tuning.thicknessPadding = std::max(*parsed, 1.0f);
+                    }
+                    continue;
+                }
+
+                if (key == "padding")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        tuning.padding = *parsed;
+                    }
+                    continue;
+                }
+
+                if (key == "offset")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        tuning.offset = *parsed;
+                    }
+                    continue;
+                }
+
+                if (key == "fallbackPadding")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        tuning.fallbackPadding = *parsed;
+                    }
+                    continue;
+                }
+
+                if (key == "fallbackOffset")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        tuning.fallbackOffset = *parsed;
+                    }
+                    continue;
+                }
+
+                if (key == "fallbackSize")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        tuning.fallbackSize = *parsed;
+                    }
+                    continue;
+                }
             }
 
-            std::string line;
-            while (std::getline(file, line))
-            {
-                if (line.empty() || line[0] == '#')
-                {
-                    continue;
-                }
-
-                std::vector<std::string> tokens;
-                std::stringstream stream(line);
-                std::string token;
-                while (std::getline(stream, token, ','))
-                {
-                    tokens.push_back(token);
-                }
-
-                if (tokens.size() < 7)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Expected at least 7 tokens in tuning CSV; got " << tokens.size() << " from '" << line << "'.\n";
-                    DebugTrace(oss.str());
-                    continue;
-                }
-
-                try
-                {
-                    tuning.thicknessPadding = std::max(std::stof(tokens[0]), 1.0f);
-                    tuning.padding.x = std::stof(tokens[1]);
-                    tuning.padding.y = std::stof(tokens[2]);
-                    tuning.padding.z = std::stof(tokens[3]);
-                    tuning.offset.x = std::stof(tokens[4]);
-                    tuning.offset.y = std::stof(tokens[5]);
-                    tuning.offset.z = std::stof(tokens[6]);
-
-                    if (tokens.size() >= 10)
-                    {
-                        tuning.fallbackPadding.x = std::stof(tokens[7]);
-                        tuning.fallbackPadding.y = std::stof(tokens[8]);
-                        tuning.fallbackPadding.z = std::stof(tokens[9]);
-                    }
-
-                    if (tokens.size() >= 13)
-                    {
-                        tuning.fallbackOffset.x = std::stof(tokens[10]);
-                        tuning.fallbackOffset.y = std::stof(tokens[11]);
-                        tuning.fallbackOffset.z = std::stof(tokens[12]);
-                    }
-
-                    if (tokens.size() >= 16)
-                    {
-                        tuning.fallbackSize.x = std::stof(tokens[13]);
-                        tuning.fallbackSize.y = std::stof(tokens[14]);
-                        tuning.fallbackSize.z = std::stof(tokens[15]);
-                    }
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Failed to parse tuning row: " << ex.what() << "\n";
-                    DebugTrace(oss.str());
-                    continue;
-                }
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Tuning applied pad=(" << tuning.padding.x << ',' << tuning.padding.y << ',' << tuning.padding.z
-                    << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z
-                    << ") fallbackPad=(" << tuning.fallbackPadding.x << ',' << tuning.fallbackPadding.y << ',' << tuning.fallbackPadding.z
-                    << ") fallbackOffset=(" << tuning.fallbackOffset.x << ',' << tuning.fallbackOffset.y << ',' << tuning.fallbackOffset.z
-                    << ") fallbackSize=(" << tuning.fallbackSize.x << ',' << tuning.fallbackSize.y << ',' << tuning.fallbackSize.z
-                    << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
-                DebugTrace(oss.str());
-                break;
-            }
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] Tuning applied pad=(" << tuning.padding.x << ',' << tuning.padding.y << ',' << tuning.padding.z
+                << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z
+                << ") fallbackPad=(" << tuning.fallbackPadding.x << ',' << tuning.fallbackPadding.y << ',' << tuning.fallbackPadding.z
+                << ") fallbackOffset=(" << tuning.fallbackOffset.x << ',' << tuning.fallbackOffset.y << ',' << tuning.fallbackOffset.z
+                << ") fallbackSize=(" << tuning.fallbackSize.x << ',' << tuning.fallbackSize.y << ',' << tuning.fallbackSize.z
+                << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
+            DebugTrace(oss.str());
 
             return tuning;
         }
@@ -1223,53 +1321,38 @@ namespace
             bool forceConfig = defaultForceConfig;
             bool parsed = false;
 
-            std::ifstream file(path);
-            if (!file)
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionPlayerColliders, lines))
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Preference file missing; using default forceConfig=" << std::boolalpha << defaultForceConfig
+                oss << kLogPrefix << "[PlayerCollider] Preference section missing; using default forceConfig=" << std::boolalpha << defaultForceConfig
                     << " path='" << path << "'\n";
                 DebugTrace(oss.str());
                 return forceConfig;
             }
 
-            std::string line;
-            int lineNumber = 0;
-            while (std::getline(file, line))
+            for (const auto& entry : lines)
             {
-                ++lineNumber;
-                const std::string trimmed = TrimWhitespace(line);
-                if (trimmed.empty() || trimmed[0] == '#')
-                {
-                    continue;
-                }
-
-                const std::size_t eq = trimmed.find('=');
-                if (eq == std::string::npos)
-                {
-                    continue;
-                }
-
-                const std::string key = TrimWhitespace(trimmed.substr(0, eq));
+                const std::string key = entry.key;
                 if (key != "forceConfigCollider")
                 {
                     continue;
                 }
 
-                const std::string value = TrimWhitespace(trimmed.substr(eq + 1));
+                const std::string value = entry.value;
                 if (ParseBool(value, forceConfig))
                 {
                     parsed = true;
                     std::ostringstream oss;
                     oss << kLogPrefix << "[PlayerCollider] Parsed forceConfigCollider=" << std::boolalpha << forceConfig
-                        << " from line=" << lineNumber << " path='" << path << "'\n";
+                        << " from line=" << entry.lineNumber << " path='" << path << "'\n";
                     DebugTrace(oss.str());
                 }
                 else
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "[PlayerCollider] Failed to parse forceConfigCollider value='" << value
-                        << "' on line=" << lineNumber << "; using default " << std::boolalpha << defaultForceConfig << "\n";
+                        << "' on line=" << entry.lineNumber << "; using default " << std::boolalpha << defaultForceConfig << "\n";
                     DebugTrace(oss.str());
                 }
                 break;
@@ -1861,9 +1944,12 @@ void SceneGame::NormalizePlayerColliderDefinitions()
 SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     : m_manager(&a_manager)
 {
-m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(kPlayerColliderConfigPath, m_playerColliderDefinitions);
-m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kPlayerColliderConfigPath, false);
-m_playerColliderTuning = LoadPlayerColliderTuning(kPlayerColliderTuningPath);
+m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
+    kGameplayConfigPath,
+    GameplayConfig::kSectionPlayerColliders,
+    m_playerColliderDefinitions);
+m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
+m_playerColliderTuning = LoadPlayerColliderTuning(kGameplayConfigPath);
 m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
 {
     std::ostringstream oss;
@@ -2375,11 +2461,19 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
     const bool playerConfigAvailable = m_playerColliderConfigLoaded && hasConfigDefinition;
 
-    PlayerColliderBuildResult colliderBuild = BuildPlayerColliderFromRegistry(
-        resolvedColliderKey,
-        trans,
-        m_playerColliderTuning,
-        playerBodyType);
+    const bool forceConfigCollider = m_forceConfigPlayerCollider && playerConfigAvailable;
+    PlayerColliderBuildResult colliderBuild = forceConfigCollider
+        ? BuildPlayerColliderFromConfig(
+            resolvedColliderKey,
+            trans,
+            m_playerColliderTuning,
+            m_playerColliderDefinitions,
+            playerBodyType)
+        : BuildPlayerColliderFromRegistry(
+            resolvedColliderKey,
+            trans,
+            m_playerColliderTuning,
+            playerBodyType);
     const auto colliderHasShapes = [](const PlayerColliderBuildResult& build)
     {
         return build.collider && !build.collider->Empty();
@@ -2390,10 +2484,30 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     };
 
     bool attemptedConfigFallback = false;
+    bool attemptedRegistryFallback = false;
     bool attemptedFallback = false;
     if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
     {
-        if (playerConfigAvailable)
+        if (forceConfigCollider)
+        {
+            attemptedRegistryFallback = true;
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerCollider] Config build unavailable; attempting registry fallback for key='"
+                << resolvedColliderKey << "'.\n";
+            DebugTrace(oss.str());
+
+            PlayerColliderBuildResult registryBuild = BuildPlayerColliderFromRegistry(
+                resolvedColliderKey,
+                trans,
+                m_playerColliderTuning,
+                playerBodyType);
+
+            if (colliderHasShapes(registryBuild) && shapeConfigIsValid(registryBuild))
+            {
+                colliderBuild = registryBuild;
+            }
+        }
+        else if (playerConfigAvailable)
         {
             attemptedConfigFallback = true;
             std::ostringstream oss;
@@ -2477,13 +2591,14 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
             << " appliedSource=" << appliedSource
             << " appliedPath=" << appliedPath
             << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << m_forceConfigPlayerCollider
-            << " shapePolicy=RegistryPrimary"
+            << " shapePolicy=" << (forceConfigCollider ? "ConfigPrimary" : "RegistryPrimary")
             << " modelGeneration=Disabled"
             << " configLoaded=" << m_playerColliderConfigLoaded
             << " configAvailable=" << hasConfigDefinition
             << " registryHit=" << colliderBuild.registryHit
             << " registryShapes=" << colliderBuild.registryHasShapes
             << " configFallback=" << std::boolalpha << attemptedConfigFallback
+            << " registryFallback=" << std::boolalpha << attemptedRegistryFallback
             << " fallback=" << attemptedFallback
             << " applied=" << colliderReady
             << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
@@ -3263,13 +3378,13 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
 
     DebugTrace(std::string(kLogPrefix) + "CSVファイルを開きました: " + csvPath + "\n");
 
-    const bool registryLoaded = Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath);
+    const bool registryLoaded = Physics::ColliderRegistry::Instance().LoadFromFile(kGameplayConfigPath);
     if (!registryLoaded)
     {
         DebugTrace(std::string(kLogPrefix) + "Stage collider registry missing; falling back to cached definitions if any.\n");
     }
 
-    const StageColliderConfig stageColliderConfig = LoadStageColliderConfig(kStageColliderConfigPath);
+    const StageColliderConfig stageColliderConfig = LoadStageColliderConfig(kGameplayConfigPath);
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     std::string line;
