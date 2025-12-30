@@ -15,11 +15,6 @@
 
 namespace
 {
-    void DebugTrace(const std::string& message)
-    {
-        (void)message;
-    }
-
     constexpr const char* kLogPrefix = "[StageData] ";
     constexpr float kDefaultPlaneZ = -5.0f;
     constexpr float kDefaultPlatformCenterY = 0.0f;
@@ -122,7 +117,6 @@ namespace
                 std::ostringstream oss;
                 oss << kLogPrefix << "Failed to parse float token '" << token
                     << "' in list '" << source << "': " << ex.what() << "\n";
-                DebugTrace(oss.str());
                 return {};
             }
         }
@@ -187,7 +181,6 @@ namespace
         {
             std::ostringstream oss;
             oss << kLogPrefix << label << " invalid; using fallback color.\n";
-            DebugTrace(oss.str());
             return fallback;
         }
 
@@ -196,7 +189,6 @@ namespace
         {
             std::ostringstream oss;
             oss << kLogPrefix << label << " clamped to (" << sanitized.x << ',' << sanitized.y << ',' << sanitized.z << ',' << sanitized.w << ")\n";
-            DebugTrace(oss.str());
         }
 
         return sanitized;
@@ -214,7 +206,6 @@ namespace
             std::ostringstream oss;
             oss << kLogPrefix << "Spawn point on line " << lineNumber
                 << " could not be parsed. Raw='" << rawValue << "'\n";
-            DebugTrace(oss.str());
             return false;
         }
 
@@ -224,7 +215,6 @@ namespace
             oss << kLogPrefix << "Spawn point on line " << lineNumber
                 << " expected groups of three floats but found " << parsed.size()
                 << " values. Raw='" << rawValue << "'\n";
-            DebugTrace(oss.str());
             return false;
         }
 
@@ -334,7 +324,6 @@ namespace Stage
                 oss << kLogPrefix << "Config section '" << section << "' not found at '" << path
                     << "'. Using defaults.\n";
             }
-            DebugTrace(oss.str());
             ApplyDefaults();
             m_sourcePath.clear();
             m_loadedFromFile = false;
@@ -433,7 +422,6 @@ namespace Stage
                     << " parsed " << added << " anchor" << (added == 1 ? "" : "s")
                     << " (" << targets.size() << " total). Each anchor requires"
                     << " three coordinates. Raw='" << rawValue << "'\n";
-                DebugTrace(oss.str());
             };
 
             size_t platformIndex = 0;
@@ -456,7 +444,6 @@ namespace Stage
                     oss << kLogPrefix << "platform" << platformIndex
                         << ".center on line " << lineNumber
                         << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
                 else
@@ -484,7 +471,6 @@ namespace Stage
                     oss << kLogPrefix << "platform" << platformIndex
                         << ".scale on line " << lineNumber
                         << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
                 else
@@ -514,7 +500,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platform" << platformIndex
                         << ".depth on line " << lineNumber << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -539,7 +524,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platform" << platformIndex
                         << ".widthFraction on line " << lineNumber << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -564,7 +548,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platform" << platformIndex
                         << ".heightFraction on line " << lineNumber << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -587,7 +570,6 @@ namespace Stage
                     oss << kLogPrefix << "platform" << platformIndex
                         << ".color on line " << lineNumber
                         << " expected at least three comma-separated floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
                 else
@@ -613,7 +595,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse planeZ on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -691,7 +672,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platformCenterY on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -707,7 +687,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platformWidthFraction on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -723,7 +702,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platformHeightFraction on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -739,7 +717,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse platformDepth on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -752,7 +729,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "platformScale on line " << lineNumber
                         << " must contain three floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
                 else
@@ -773,7 +749,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse cellSizeWorld on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -789,7 +764,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse horizontalSpeedCellsPerSec on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -805,7 +779,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse verticalSpeedCellsPerSec on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -821,7 +794,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupBoxWidthCells on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -837,7 +809,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupBoxHeightCells on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -852,7 +823,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -867,7 +837,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse pickupDepthThreshold on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -883,7 +852,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "pickupOffsetMode on line " << lineNumber
                         << " is invalid ('" << rawValue << "'); expected none/facing-direction/world-x.\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -899,7 +867,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "pickupOffsetLocalCells on line " << lineNumber
                         << " must contain three floats. Raw='" << rawValue << "'\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -915,7 +882,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineHeight on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -931,7 +897,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineStep on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -947,7 +912,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineThicknessPixels on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -963,7 +927,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineWidthPaddingWorld on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -979,7 +942,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineZOffset on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -995,7 +957,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse heightBonusThreshold on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -1011,7 +972,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse heightBonusSeconds on line " << lineNumber
                         << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
                     parseError = true;
                 }
             }
@@ -1022,7 +982,6 @@ namespace Stage
                     std::ostringstream oss;
                     oss << kLogPrefix << "backgroundTexture on line " << lineNumber
                         << " was empty; background rendering disabled.\n";
-                    DebugTrace(oss.str());
                     backgroundTexturePath.clear();
                     backgroundTextureSet = true;
                 }
@@ -1036,7 +995,6 @@ namespace Stage
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "Unknown key '" << key << "' on line " << lineNumber << "\n";
-                DebugTrace(oss.str());
             }
         }
 
@@ -1045,7 +1003,6 @@ namespace Stage
             planeZ = kDefaultPlaneZ;
             std::ostringstream oss;
             oss << kLogPrefix << "planeZ not specified; defaulting to " << planeZ << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!platformCenterSet)
@@ -1053,7 +1010,6 @@ namespace Stage
             platformCenterY = kDefaultPlatformCenterY;
             std::ostringstream oss;
             oss << kLogPrefix << "platformCenterY not specified; defaulting to " << platformCenterY << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!platformScaleSet)
@@ -1062,7 +1018,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformScale not specified; using default ("
                 << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
-            DebugTrace(oss.str());
         }
 
         if (!guidelineHeightSet)
@@ -1070,7 +1025,6 @@ namespace Stage
             guidelineHeight = kDefaultGuidelineHeight;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!guidelineStepSet)
@@ -1078,7 +1032,6 @@ namespace Stage
             guidelineStep = kDefaultGuidelineStep;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
-            DebugTrace(oss.str());
         }
         if (!guidelineThicknessSet)
         {
@@ -1086,7 +1039,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineThicknessPixels not specified; defaulting to "
                 << guidelineThicknessPixels << "\n";
-            DebugTrace(oss.str());
         }
         if (!guidelineWidthPaddingSet)
         {
@@ -1094,7 +1046,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineWidthPaddingWorld not specified; defaulting to "
                 << guidelineWidthPaddingWorld << "\n";
-            DebugTrace(oss.str());
         }
         if (!guidelineZOffsetSet)
         {
@@ -1102,7 +1053,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineZOffset not specified; defaulting to "
                 << guidelineZOffset << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!heightBonusThresholdSet)
@@ -1110,7 +1060,6 @@ namespace Stage
             heightBonusThreshold = kDefaultHeightBonusThreshold;
             std::ostringstream oss;
             oss << kLogPrefix << "heightBonusThreshold not specified; defaulting to " << heightBonusThreshold << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!heightBonusSecondsSet)
@@ -1118,7 +1067,6 @@ namespace Stage
             heightBonusSeconds = kDefaultHeightBonusSeconds;
             std::ostringstream oss;
             oss << kLogPrefix << "heightBonusSeconds not specified; defaulting to " << heightBonusSeconds << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!backgroundTextureSet)
@@ -1127,7 +1075,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
                 << backgroundTexturePath << "'.\n";
-            DebugTrace(oss.str());
         }
 
         if (!platformWidthFractionSet)
@@ -1136,7 +1083,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformWidthFraction not specified; defaulting to "
                 << platformWidthFraction << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!platformHeightFractionSet)
@@ -1145,7 +1091,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformHeightFraction not specified; defaulting to "
                 << platformHeightFraction << "\n";
-            DebugTrace(oss.str());
         }
 
         if (!platformDepthSet)
@@ -1153,7 +1098,6 @@ namespace Stage
             platformDepth = kDefaultPlatformDepth;
             std::ostringstream oss;
             oss << kLogPrefix << "platformDepth not specified; defaulting to " << platformDepth << "\n";
-            DebugTrace(oss.str());
         }
 
         auto sanitizeFraction = [](float value, float defaultValue, const char* name)
@@ -1175,19 +1119,16 @@ namespace Stage
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << name << " invalid; using default " << defaultValue << "\n";
-                DebugTrace(oss.str());
             }
             else if (treatedAsPercent)
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << name << " treated as percent; normalized to " << sanitized << "\n";
-                DebugTrace(oss.str());
             }
             else if (sanitized != value)
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << name << " clamped to " << sanitized << " (from " << value << ")\n";
-                DebugTrace(oss.str());
             }
 
             return sanitized;
@@ -1204,7 +1145,6 @@ namespace Stage
                 std::ostringstream oss;
                 oss << kLogPrefix << name << " value " << sanitized
                     << " invalid; using default " << defaultValue << "\n";
-                DebugTrace(oss.str());
                 sanitized = defaultValue;
             }
             sanitized = std::max(0.01f, static_cast<float>(std::fabs(sanitized)));
@@ -1229,7 +1169,6 @@ namespace Stage
                 oss << kLogPrefix << name << " values sanitized from ("
                     << raw.x << ',' << raw.y << ',' << raw.z << ") to ("
                     << sanitized.x << ',' << sanitized.y << ',' << sanitized.z << ").\n";
-                DebugTrace(oss.str());
             }
             return sanitized;
         };
@@ -1240,7 +1179,6 @@ namespace Stage
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " invalid; defaulting to " << defaultValue << "\n";
-                DebugTrace(oss.str());
                 return defaultValue;
             }
             return value;
@@ -1329,7 +1267,6 @@ namespace Stage
             thresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
             std::ostringstream oss;
             oss << kLogPrefix << "No phaseThresholds provided; using defaults.\n";
-            DebugTrace(oss.str());
         }
 
         std::sort(thresholds.begin(), thresholds.end());
@@ -1347,7 +1284,6 @@ namespace Stage
             thresholds.assign(std::begin(kDefaultThresholds), std::end(kDefaultThresholds));
             std::ostringstream oss;
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
-            DebugTrace(oss.str());
         }
         //ミニフェーズ
         if (minithresholds.empty())
@@ -1355,7 +1291,6 @@ namespace Stage
             minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
             std::ostringstream oss;
             oss << kLogPrefix << "No phaseMiniThresholds provided; using defaults.\n";
-            DebugTrace(oss.str());
         }
 
         std::sort(minithresholds.begin(), minithresholds.end());
@@ -1373,7 +1308,6 @@ namespace Stage
             minithresholds.assign(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
             std::ostringstream oss;
             oss << kLogPrefix << "All minithresholds were invalid; falling back to defaults.\n";
-            DebugTrace(oss.str());
         }
 
         const auto defaultSpawnPointsPrimary = BuildDefaultSpawnPointsPrimary(planeZ);
@@ -1392,7 +1326,6 @@ namespace Stage
                     << " anchor" << (parsedAnchorCount == 1 ? "" : "s")
                     << "; expected at least " << kRequiredSpawnAnchors
                     << ". Keeping lane empty to avoid silent defaults.\n";
-                DebugTrace(oss.str());
                 spawnPoints.clear();
             }
 
@@ -1402,7 +1335,6 @@ namespace Stage
                 usedDefaults = true;
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " missing; using defaults for this lane.\n";
-                DebugTrace(oss.str());
             }
 
             if (!spawnPoints.empty())
@@ -1422,7 +1354,6 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << label << " contain multiple planeZ values; anchors may be misaligned.\n";
-                    DebugTrace(oss.str());
                 }
 
                 const float spawnPlaneDelta = std::fabs(spawnPlaneZ - planeZ);
@@ -1432,7 +1363,6 @@ namespace Stage
                     oss << kLogPrefix << label << " planeZ=" << spawnPlaneZ
                         << " differs from configured planeZ=" << planeZ
                         << " by " << spawnPlaneDelta << "; verify alignment.\n";
-                    DebugTrace(oss.str());
                 }
             }
         };
@@ -1463,7 +1393,6 @@ namespace Stage
             parseError = true;
             std::ostringstream oss;
             oss << kLogPrefix << "Both spawn lanes are empty; inserting single fallback anchor at (+-8,0,0).\n";
-            DebugTrace(oss.str());
         }
 
         if (!spawnPointsPrimary.empty() && !spawnPointsSecondary.empty())
@@ -1475,7 +1404,6 @@ namespace Stage
                 oss << kLogPrefix << "spawn point lanes use different planeZ values (primary="
                     << spawnPointsPrimary.front().z << ", secondary=" << spawnPointsSecondary.front().z
                     << "); verify cross-lane alignment.\n";
-                DebugTrace(oss.str());
             }
         }
 
@@ -1489,7 +1417,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << label << " value " << value
                 << " invalid; using fallback " << fallback << "\n";
-            DebugTrace(oss.str());
             return fallback;
         };
 
@@ -1505,7 +1432,6 @@ namespace Stage
                 std::ostringstream oss;
                 oss << kLogPrefix << label << " value " << value
                     << " invalid; using fallback " << fallback << "\n";
-                DebugTrace(oss.str());
                 return fallback;
             }
 
@@ -1516,7 +1442,6 @@ namespace Stage
 
             std::ostringstream oss;
             oss << kLogPrefix << label << " invalid; using fallback " << fallback << "\n";
-            DebugTrace(oss.str());
             return fallback;
         };
 
@@ -1555,7 +1480,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "verticalSpeedCellsPerSec not specified; mirroring horizontal speed ("
                 << verticalSpeedCellsPerSec << ").\n";
-            DebugTrace(oss.str());
         }
 
         verticalSpeedCellsPerSec = sanitizePositive(
@@ -1592,7 +1516,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << label << " contains non-finite component; using fallback ("
                 << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
-            DebugTrace(oss.str());
             return fallback;
         };
 
@@ -1634,7 +1557,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineHeight value " << guidelineHeight
                 << " invalid; keeping parsed value.\n";
-            DebugTrace(oss.str());
         }
 
         if (!std::isfinite(guidelineStep))
@@ -1642,14 +1564,12 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineStep value " << guidelineStep
                 << " invalid; keeping parsed value.\n";
-            DebugTrace(oss.str());
         }
         if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineThicknessPixels value " << guidelineThicknessPixels
                 << " invalid; using default " << kDefaultGuidelineThicknessPixels << "\n";
-            DebugTrace(oss.str());
             guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;
         }
         if (!std::isfinite(guidelineWidthPaddingWorld) || guidelineWidthPaddingWorld < 0.0f)
@@ -1657,7 +1577,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineWidthPaddingWorld value " << guidelineWidthPaddingWorld
                 << " invalid; using default " << kDefaultGuidelineWidthPaddingWorld << "\n";
-            DebugTrace(oss.str());
             guidelineWidthPaddingWorld = kDefaultGuidelineWidthPaddingWorld;
         }
         if (!std::isfinite(guidelineZOffset))
@@ -1665,7 +1584,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineZOffset value " << guidelineZOffset
                 << " invalid; using default " << kDefaultGuidelineZOffset << "\n";
-            DebugTrace(oss.str());
             guidelineZOffset = kDefaultGuidelineZOffset;
         }
 
@@ -1674,7 +1592,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "heightBonusThreshold value " << heightBonusThreshold
                 << " invalid; using default " << kDefaultHeightBonusThreshold << "\n";
-            DebugTrace(oss.str());
             heightBonusThreshold = kDefaultHeightBonusThreshold;
         }
 
@@ -1683,14 +1600,12 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "heightBonusSeconds value " << heightBonusSeconds
                 << " invalid; using default " << kDefaultHeightBonusSeconds << "\n";
-            DebugTrace(oss.str());
             heightBonusSeconds = kDefaultHeightBonusSeconds;
         }
         else if (heightBonusSeconds <= 0.0f)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "heightBonusSeconds <= 0. Bonus events disabled.\n";
-            DebugTrace(oss.str());
             heightBonusSeconds = 0.0f;
         }
         else if (std::fabs(heightBonusSeconds - kDefaultHeightBonusSeconds)
@@ -1700,7 +1615,6 @@ namespace Stage
             oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
                 << " overridden to requirement default " << kDefaultHeightBonusSeconds
                 << " (+5s per crossing).\n";
-            DebugTrace(oss.str());
             heightBonusSeconds = kDefaultHeightBonusSeconds;
         }
 
@@ -1983,7 +1897,6 @@ namespace Stage
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
-        DebugTrace(oss.str());
 
         for (std::size_t i = 0; i < m_platforms.size(); ++i)
         {
@@ -2001,7 +1914,6 @@ namespace Stage
             << " widthFraction=" << descriptor.widthFraction
             << " color=(" << descriptor.color.x << ',' << descriptor.color.y << ','
             << descriptor.color.z << ',' << descriptor.color.w << ")\n";
-        DebugTrace(oss.str());
     }
 
     void StageData::EnsureRewardMultiplierCoverage(std::vector<float>& multipliers, std::size_t requiredCount,
@@ -2024,7 +1936,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "Filtered " << (beforeFilter - multipliers.size())
                 << " invalid reward multipliers." << "\n";
-            DebugTrace(oss.str());
         }
 
         if (multipliers.empty())
@@ -2033,7 +1944,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "No phaseRewardMultipliers provided; using defaults." << "\n";
 
-            DebugTrace(oss.str());
         }
 
         if (multipliers.size() < requiredCount)
@@ -2044,14 +1954,12 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "Extended reward multipliers from " << previousSize
                 << " to " << multipliers.size() << " entries using fillValue=" << fillValue << ".\n";
-            DebugTrace(oss.str());
         }
         else if (multipliers.size() > requiredCount)
         {
             multipliers.resize(requiredCount);
             std::ostringstream oss;
             oss << kLogPrefix << "Truncated reward multipliers to match phase count (" << requiredCount << ").\n";
-            DebugTrace(oss.str());
         }
     }
 }
