@@ -233,6 +233,7 @@
     <ClCompile Include="src\PowerUpNode.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\SceneComposer.cpp" />
     <ClCompile Include="src\SceneGameUIOverlay.cpp" />
     <ClCompile Include="src\GameplayRules.cpp" />
     <ClCompile Include="src\GameplayProgression.cpp" />
@@ -352,6 +353,7 @@
     <ClInclude Include="include\SweetsPrototypeManifest.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
+    <ClInclude Include="include\SceneComposer.h" />
     <ClInclude Include="include\SceneGameUIOverlay.h" />
     <ClInclude Include="include\SceneGameConfigLoader.h" />
     <ClInclude Include="include\UIManager.h" />

@@ -186,6 +186,7 @@
     <ClCompile Include="src\SceneGame.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneComposer.cpp">
     <ClCompile Include="src\SceneGameUIOverlay.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -495,6 +496,7 @@
     <ClInclude Include="include\SceneGame.h">
       <Filter>App</Filter>
     </ClInclude>
+    <ClInclude Include="include\SceneComposer.h">
     <ClInclude Include="include\SceneGameUIOverlay.h">
       <Filter>App</Filter>
     </ClInclude>
