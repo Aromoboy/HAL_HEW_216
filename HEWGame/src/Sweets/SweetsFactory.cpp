@@ -34,6 +34,7 @@
 #include "MeshBuffer.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
+#include "Render/ModelBounds.h"
 #include "Physics/ShapeConstants.h"
 #include "Sweets/BaseSweets.h"
 #include "Systems/PhysicsMachine.h"
