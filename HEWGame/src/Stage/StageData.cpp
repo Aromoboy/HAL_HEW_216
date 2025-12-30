@@ -1646,7 +1646,8 @@ namespace Stage
         m_pickupMaxDistance = pickupMaxDistance;
         m_pickupDepthThreshold = pickupDepthThreshold;
         m_pickupOffset = pickupOffset;
-        m_guidelineHeight = 7.0f;
+        // Keep the configured guideline height; do not override valid config with a magic value.
+        m_guidelineHeight = guidelineHeight;
         m_guidelineStep = guidelineStep;
         m_guidelineThicknessPixels = guidelineThicknessPixels;
         m_guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;

@@ -271,7 +271,6 @@
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
-    <ClCompile Include="src\UpdatableTimer.cpp" />
     <ClCompile Include="TimerDisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -376,7 +375,6 @@
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\TextureCache.h" />
     <ClInclude Include="include\TextureDX.h" />
-    <ClInclude Include="include\UpdatableTimer.h" />
     <ClInclude Include="include\FullscreenManager.h" />
     <ClInclude Include="include\WindowManager.h" />
     <ClInclude Include="include\Transform.h" />

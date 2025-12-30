@@ -1484,12 +1484,6 @@ SceneGame::~SceneGame()
     {
         m_drawSystem->ClearRenderables();
     }
-        if (m_sweetsRegistered && m_sweetsManager)
-        {
-                GetUpdateScheduler().Unregister(*m_sweetsManager);
-                m_sweetsRegistered = false;
-        }
-
         if (m_pManager)
         {
             m_pManager->StopAllSounds();

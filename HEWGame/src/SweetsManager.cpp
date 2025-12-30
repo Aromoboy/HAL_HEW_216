@@ -2112,8 +2112,6 @@ namespace SweetsSpace
                         continue;
                     }
 
-                    sweets->OnUpdate(ctx);
-
                     const SweetsState desiredState = EvaluateState(*sweets, bucketState, *this);
                     if (desiredState != bucketState)
                     {
