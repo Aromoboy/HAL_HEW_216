@@ -74,6 +74,7 @@ namespace
         constexpr const char* kLogPrefix = "[SceneGame] ";
         constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
+        constexpr bool kEnablePlayerBoundsLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
         constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
         constexpr const char* kRenderSettingsSection = "render.settings";
@@ -89,6 +90,7 @@ namespace
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float kPlayerMinimumYMargin = 1.0f;
+        constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kGuidelineThicknessMeters = 0.05f;
@@ -2909,16 +2911,26 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             HasMeaningfulDifference(m_cachedPlayerMinX, minX) ||
             HasMeaningfulDifference(m_cachedPlayerMaxX, maxX);
 
-        if (changed)
+        if (kEnablePlayerBoundsLogging)
         {
-            std::ostringstream oss;
-            oss << "[SceneGame] [PlayerBounds] camX=" << camPos.x
-                << " d=" << d
-                << " fovX=" << DirectX::XMConvertToDegrees(fovX)
-                << " halfWidth=" << halfWidth
-                << " => minX=" << minX
-                << " maxX=" << maxX << "\n";
-            ::DebugTrace(oss.str());
+            static float playerBoundsLogCooldownSeconds = 0.0f;
+            if (playerBoundsLogCooldownSeconds > 0.0f)
+            {
+                playerBoundsLogCooldownSeconds = std::max(0.0f, playerBoundsLogCooldownSeconds - ctx.dt);
+            }
+
+            if (changed && playerBoundsLogCooldownSeconds <= 0.0f)
+            {
+                std::ostringstream oss;
+                oss << "[SceneGame] [PlayerBounds] camX=" << camPos.x
+                    << " d=" << d
+                    << " fovX=" << DirectX::XMConvertToDegrees(fovX)
+                    << " halfWidth=" << halfWidth
+                    << " => minX=" << minX
+                    << " maxX=" << maxX << "\n";
+                ::DebugTrace(oss.str());
+                playerBoundsLogCooldownSeconds = kPlayerBoundsLogIntervalSeconds;
+            }
         }
 
         // Apply to player
