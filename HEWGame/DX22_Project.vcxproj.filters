@@ -187,6 +187,7 @@
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\SceneComposer.cpp">
+    <ClCompile Include="src\SceneGameUIOverlay.cpp">
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\GameplayRules.cpp">
@@ -274,6 +275,9 @@
       <Filter>Systems</Filter>
     </ClCompile>
     <ClCompile Include="src\Systems\PhysicsBinder.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\PhysicsRegistration.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
     <ClCompile Include="src\Texture.cpp">
@@ -493,6 +497,7 @@
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneComposer.h">
+    <ClInclude Include="include\SceneGameUIOverlay.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\StageLayoutLoader.h">
@@ -552,7 +557,13 @@
     <ClInclude Include="include\Systems\Box2DContactListener.h">
       <Filter>Systems</Filter>
     </ClInclude>
+    <ClInclude Include="include\Systems\IPhysicsBinder.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
     <ClInclude Include="include\Systems\PhysicsBinder.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\PhysicsRegistration.h">
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h">

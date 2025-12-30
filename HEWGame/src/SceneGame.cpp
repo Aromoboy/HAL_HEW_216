@@ -25,6 +25,11 @@
 #include "ColliderConfigLoader.h"
 #include "DebugColliderRenderer.h"
 #include "SceneComposer.h"
+#include "SceneGameConfigLoader.h"
+#include "SceneGameUIOverlay.h"
+#include "GameplayConfig.h"
+#include "UIManager.h"
+#include "GameplayRules.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -1062,6 +1067,11 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
     Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
+    m_uiOverlay = std::make_unique<SceneGameUIOverlay>();
+    if (m_uiOverlay && !m_uiOverlay->Initialize())
+    {
+        m_uiOverlay.reset();
+    }
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
@@ -1404,10 +1414,10 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
 
 SceneGame::~SceneGame()
 {
-    if (m_uiManager)
+    if (m_uiOverlay)
     {
-        m_uiManager->Shutdown();
-        m_uiManager.reset();
+        m_uiOverlay->Shutdown();
+        m_uiOverlay.reset();
     }
 
     if (m_physicsBinder)
@@ -1587,7 +1597,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const GameplayRules::CountdownInput countdownInput{
+    const GameplayProgression::CountdownInput countdownInput{
         m_stageState == StageState::Playing,
         ctx.dt,
         &m_countdownTimer,
@@ -1595,14 +1605,14 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         DebugTrace,
         kLogPrefix
     };
-    GameplayRules::CountdownState countdownState{
+    GameplayProgression::CountdownState countdownState{
         m_totalPlaySeconds,
         m_remainingCountdownSeconds,
         m_lastAnnouncedCountdownSeconds,
         m_pendingTimeBonuses
     };
-    GameplayRules::CountdownResult countdownResult =
-        GameplayRules::UpdateCountdown(countdownInput, std::move(countdownState));
+    GameplayProgression::CountdownResult countdownResult =
+        GameplayProgression::UpdateCountdown(countdownInput, std::move(countdownState));
     m_totalPlaySeconds = countdownResult.state.totalSeconds;
     m_remainingCountdownSeconds = countdownResult.state.remainingSeconds;
     m_lastAnnouncedCountdownSeconds = countdownResult.state.lastAnnouncedSeconds;
@@ -1632,7 +1642,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #endif
 
     //高さボーナス判定
-    const GameplayRules::TowerTelemetryInput towerTelemetryInput{
+    const GameplayProgression::TowerTelemetryInput towerTelemetryInput{
         m_sweetsManager.get(),
         &m_phaseManager,
         m_clearPhaseCount,
@@ -1640,15 +1650,15 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         DebugTrace,
         kLogPrefix
     };
-    GameplayRules::TowerTelemetryState towerTelemetryState{
+    GameplayProgression::TowerTelemetryState towerTelemetryState{
         m_currentTowerHeight,
         m_peakTowerHeight,
         m_maxTowerHeight,
         m_phaseUpCount,
         m_isGameClear
     };
-    GameplayRules::TowerTelemetryResult towerTelemetryResult =
-        GameplayRules::UpdateTowerHeightTelemetry(towerTelemetryInput, std::move(towerTelemetryState));
+    GameplayProgression::TowerTelemetryResult towerTelemetryResult =
+        GameplayProgression::UpdateTowerHeightTelemetry(towerTelemetryInput, std::move(towerTelemetryState));
     m_currentTowerHeight = towerTelemetryResult.state.currentHeight;
     m_peakTowerHeight = towerTelemetryResult.state.peakHeight;
     m_maxTowerHeight = towerTelemetryResult.state.maxHeight;
@@ -1819,7 +1829,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleManualRetryInput(ctx);
         fRads.z += 0.001f;
 
-        GameplayRules::GuidelineState guidelineState{
+        GameplayProgression::GuidelineState guidelineState{
             m_guidelineHeightMeters,
             m_guidelineStepMeters,
             m_guidelineCooldownRemainingSeconds,
@@ -1827,7 +1837,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             m_guidelineTriggerCooldownSeconds,
             m_guidelineTriggeredThisHeight
         };
-        const GameplayRules::GuidelineInput guidelineInput{
+        const GameplayProgression::GuidelineInput guidelineInput{
             m_sweetsManager.get(),
             m_guidelineActor.get(),
             m_guidelineCenterX,
@@ -1839,16 +1849,16 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         if (m_guidelineTriggerCooldownSeconds <= 0.0f)
         {
-            GameplayRules::GuidelineCheckResult guidelineCheck =
-                GameplayRules::CheckGuidelineCrossing(guidelineInput, std::move(guidelineState));
+            GameplayProgression::GuidelineCheckResult guidelineCheck =
+                GameplayProgression::CheckGuidelineCrossing(guidelineInput, std::move(guidelineState));
             guidelineState = std::move(guidelineCheck.state);
             if (guidelineCheck.crossed)
             {
-                GameplayRules::GuidelineAdvanceResult guidelineAdvance =
-                    GameplayRules::HandleGuidelineAdvance(guidelineInput,
-                                                          std::move(guidelineState),
-                                                          std::move(m_pendingTimeBonuses),
-                                                          guidelineCheck.triggerHeight);
+                GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
+                    GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+                                                                std::move(guidelineState),
+                                                                std::move(m_pendingTimeBonuses),
+                                                                guidelineCheck.triggerHeight);
                 guidelineState = std::move(guidelineAdvance.state);
                 m_pendingTimeBonuses = std::move(guidelineAdvance.pendingBonuses);
             }
@@ -1875,7 +1885,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         ProcessPostGameInput(ctx);
     }
 
-    if (m_uiManager)
+    if (m_uiOverlay)
     {
         const bool isTimeUp = (m_stageState == StageState::TimeUp)
             || (m_stageState == StageState::Cleared)
@@ -1922,7 +1932,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         uiData.showHud = g_DebugDrawEnabled && !isTimeUp;
         uiData.showResult = isTimeUp;
-        m_uiManager->UpdateHUD(uiData);
+        m_uiOverlay->Update(uiData);
     }
 
     if (ctx.input.IsKeyPress(VK_RETURN))
@@ -2141,13 +2151,17 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         DrawPhysicsDebugOverlay();
 #endif
 
-        if (m_uiManager)
-        {
-            m_uiManager->Draw();
-        }
+}
+
+void SceneGame::DrawOverlay()
+{
+    if (m_uiOverlay)
+    {
+        m_uiOverlay->Draw();
+    }
 
 #if defined(_DEBUG)
-        //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
+    //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
 #endif
 }
 

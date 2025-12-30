@@ -86,9 +86,14 @@ void Scene::RootDraw()
         auto activeCamera = m_cameraManager.GetActiveCamera();
 
         Draw(activeCamera);
+        DrawOverlay();
 }
 
         void Scene::ConfigureUpdates()
+        {
+        }
+
+        void Scene::DrawOverlay()
         {
         }
 

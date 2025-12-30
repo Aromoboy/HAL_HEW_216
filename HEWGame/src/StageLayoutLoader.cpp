@@ -255,7 +255,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
                     entity->SetBoxColliderComponent(colliderComponent);
                     entity->SetAllowMeshPhysics(false);
-                    obj.physicsEntity = entity;
                     result.physicsEntities.push_back(entity);
 
                     std::ostringstream oss;

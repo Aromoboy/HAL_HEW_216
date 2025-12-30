@@ -85,8 +85,6 @@ public:
 
 
 	// オブジェクト管理オブジェクトを取得
-	void SetUpdateScheduler(Core::UpdateScheduler& scheduler);
-
 	bool LevelUp(int);
 
 private:

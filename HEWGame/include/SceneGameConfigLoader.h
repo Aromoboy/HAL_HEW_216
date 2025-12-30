@@ -1,8 +1,8 @@
 #ifndef SCENE_GAME_CONFIG_LOADER_H_
 #define SCENE_GAME_CONFIG_LOADER_H_
 
-#include "SceneGame.h"
 #include "CollisionLayer.h"
+#include "SceneGameConfigTypes.h"
 
 #include <box2d/box2d.h>
 
@@ -47,8 +47,8 @@ namespace SceneGameConfig
     };
 
     StageColliderConfig LoadStageColliderConfig(const std::string& path);
-    SceneGame::PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
-    SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig();
+    PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
+    PlayerSpawnTransform LoadPlayerTransformConfig();
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
 }

@@ -234,7 +234,9 @@
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\SceneComposer.cpp" />
+    <ClCompile Include="src\SceneGameUIOverlay.cpp" />
     <ClCompile Include="src\GameplayRules.cpp" />
+    <ClCompile Include="src\GameplayProgression.cpp" />
     <ClCompile Include="src\StageLayoutLoader.cpp" />
     <ClCompile Include="src\SceneGameConfigLoader.cpp" />
     <ClCompile Include="src\UIManager.cpp" />
@@ -252,6 +254,7 @@
     <ClCompile Include="src\Systems\IntegrateSystem.cpp" />
     <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
     <ClCompile Include="src\Systems\PhysicsBinder.cpp" />
+    <ClCompile Include="src\Systems\PhysicsRegistration.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\ShaderCache.cpp" />
     <ClCompile Include="src\ShaderList.cpp" />
@@ -305,7 +308,9 @@
     <ClInclude Include="include\ResultRenderer.h" />
     <ClInclude Include="include\SettingScene.h" />
     <ClInclude Include="include\Systems\Box2DContactListener.h" />
+    <ClInclude Include="include\Systems\IPhysicsBinder.h" />
     <ClInclude Include="include\Systems\PhysicsBinder.h" />
+    <ClInclude Include="include\Systems\PhysicsRegistration.h" />
     <ClInclude Include="include\PowerUpCursor.h" />
     <ClInclude Include="include\PowerUpManager.h" />
     <ClInclude Include="include\PowerUpNode.h" />
@@ -325,6 +330,7 @@
     <ClInclude Include="include\Entities\Player.h" />
     <ClInclude Include="include\GuidelineActor.h" />
     <ClInclude Include="include\GameplayRules.h" />
+    <ClInclude Include="include\GameplayProgression.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />
@@ -348,6 +354,7 @@
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneComposer.h" />
+    <ClInclude Include="include\SceneGameUIOverlay.h" />
     <ClInclude Include="include\SceneGameConfigLoader.h" />
     <ClInclude Include="include\UIManager.h" />
     <ClInclude Include="include\SceneManager.h" />
