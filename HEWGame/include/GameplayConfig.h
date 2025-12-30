@@ -4,6 +4,7 @@ namespace GameplayConfig
 {
     inline constexpr const char* kConfigPath = "Assets/Config/gameplay.cfg";
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
+    inline constexpr const char* kSectionPlayerTransform = "player.transform";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionStageDefault = "stage.default";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";

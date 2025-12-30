@@ -11,6 +11,10 @@ These values capture the tuned parameters after normalizing transforms for Box2D
 
 These values are defined in the `stage.default` section of `Assets/Config/gameplay.cfg`, `StageData` defaults, and the `SceneGame` runtime constants that drive debug boost controls.
 
+## Player spawn transform
+- Initial spawn transform is configured in `Assets/Config/gameplay.cfg` under `[player.transform]`.
+- Keys: `position` (x, y, z), `rotationDegrees` (pitch, yaw, roll), `scale` (x, y, z).
+
 ## Sweets stacking
 - Scales tightened to keep cross-sections compact for predictable contacts:
   - Cake: 0.26–0.32
