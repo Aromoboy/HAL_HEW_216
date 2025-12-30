@@ -51,7 +51,6 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
-    constexpr const char* kFairyFallbackPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
 
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
@@ -309,11 +308,11 @@ namespace Entities
         const std::string modelPath = descriptor ? descriptor->modelPath : std::string{};
         if (!descriptor)
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタが見つかりません プレースホルダーにフォールバックします \n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタが見つかりません プロシージャルモデルにフォールバックします \n");
         }
         else if (modelPath.empty())
         {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタのパスが空です プレースホルダーにフォールバックします \n");
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーディスクリプタのパスが空です プロシージャルモデルにフォールバックします \n");
         }
         else
         {
@@ -347,12 +346,6 @@ namespace Entities
         if (!modelPath.empty())
         {
             m_fairyModel = cache.Get(modelPath);
-        }
-
-        if (!m_fairyModel)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "フェアリーの一次モデルの読み込みに失敗しました プレースホルダーを試します \n");
-            m_fairyModel = cache.Get(kFairyFallbackPath);
         }
 
         if (!m_fairyModel)

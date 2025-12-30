@@ -109,7 +109,6 @@ namespace
     constexpr int kDefaultAutoSimultaneousCap = 6;
     constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
     constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
-    constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
@@ -1820,7 +1819,7 @@ namespace SweetsSpace
                 << " overrideParseError=" << std::boolalpha << factoryParseError << "\n";
             DebugTrace(presetLog.str());
 
-            const std::string registeredPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
+            const std::string registeredPath = descriptorPath.empty() ? std::string("<missing>") : descriptorPath;
             std::ostringstream oss;
             oss << kLogPrefix << "スイーツの種類 '" << kind
                 << "' をアセット '" << registeredPath << "' と一緒に登録するね\n";
@@ -1847,18 +1846,19 @@ namespace SweetsSpace
                 {
                     std::ostringstream warn;
                     warn << kLogPrefix << "種類 '" << resolvedKind
-                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないから、プレースホルダー '" << kPlaceholderModelPath << "' を使うよ\n";
+                        << "'" << aliasSuffix << " のプロトタイプ説明が見当たらないからスポーンをスキップするね\n";
                     DebugTrace(warn.str());
-                    descriptorPath = kPlaceholderModelPath;
+                    return nullptr;
                 }
-                else if (descriptorPath.empty())
+
+                if (descriptorPath.empty())
                 {
                     std::ostringstream warn;
-                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったから、プレースホルダー '" << kPlaceholderModelPath << "' に頼るね\n";
+                    warn << kLogPrefix << "種類 '" << descriptorKey << "' のパスが空だったからスポーンをスキップするね\n";
                     DebugTrace(warn.str());
-                    descriptorPath = kPlaceholderModelPath;
+                    return nullptr;
                 }
-                else
+
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "種類 '" << descriptorKey << "' のプロトタイプを解決したよ"
@@ -1866,17 +1866,8 @@ namespace SweetsSpace
                     DebugTrace(oss.str());
                 }
 
-                const std::string primaryPath = descriptorPath.empty() ? kPlaceholderModelPath : descriptorPath;
+                const std::string primaryPath = descriptorPath;
                 auto model = cache.Get(primaryPath);
-                if (!model && primaryPath != kPlaceholderModelPath)
-                {
-                    std::ostringstream warn;
-                    warn << kLogPrefix << "スイーツ '" << descriptorKey
-                        << "' のモデル読み込みに失敗したから、プレースホルダー '" << kPlaceholderModelPath
-                        << "' を試してみるね \n";
-                    DebugTrace(warn.str());
-                    model = cache.Get(kPlaceholderModelPath);
-                }
 
                 if (!model)
                 {
