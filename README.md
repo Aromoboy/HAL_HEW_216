@@ -430,4 +430,3 @@ Initialize → Update → Draw で完結
 
 UpdateNode:
 毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
-

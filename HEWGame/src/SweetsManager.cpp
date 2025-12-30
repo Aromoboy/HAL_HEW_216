@@ -30,6 +30,7 @@
 #include "DirectX.h"
 #include "AABB.h"
 #include "ColliderRegistry.h"
+#include "ConfigSectionReader.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "Core/UpdateScheduler.h"
 #include "MeshBuffer.h"
@@ -42,6 +43,7 @@
 #include "Entities/PhysicalEntity.h"
 #include "Physics/ShapeConstants.h"
 #include "Diagnostics/Logger.h"
+#include "GameplayConfig.h"
 #include <DirectXMath.h>
 #include <ModelPivot.h>
 
@@ -107,8 +109,7 @@ namespace
     constexpr float kDefaultAutoGrowthFactor = 0.9f;
     constexpr int kDefaultAutoSimultaneousIncrement = 1;
     constexpr int kDefaultAutoSimultaneousCap = 6;
-    constexpr const char* kColliderRegistryPath = "Assets/Config/collider_registry.cfg";
-    constexpr const char* kFactoryPresetCsvPath = "Assets/Config/sweets_factory.csv";
+    constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
@@ -892,6 +893,54 @@ namespace SweetsSpace
         }
     }
 
+    bool ParseFloatList(const std::string& value, std::vector<float>& outValues)
+    {
+        outValues.clear();
+        std::stringstream stream(value);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            token = TrimToken(token);
+            if (token.empty())
+            {
+                continue;
+            }
+
+            float parsed = 0.0f;
+            if (!TryParseFloat(token, &parsed))
+            {
+                return false;
+            }
+            outValues.push_back(parsed);
+        }
+
+        return !outValues.empty();
+    }
+
+    bool ParseFloat3Value(const std::string& value, float3& outValue)
+    {
+        std::vector<float> components;
+        if (!ParseFloatList(value, components))
+        {
+            return false;
+        }
+
+        if (components.size() == 1)
+        {
+            outValue = float3{ components[0], components[0], components[0] };
+            return true;
+        }
+
+        if (components.size() == 2)
+        {
+            outValue = float3{ components[0], components[1], components[1] };
+            return true;
+        }
+
+        outValue = float3{ components[0], components[1], components[2] };
+        return true;
+    }
+
     float3 ScaleVector(const float3& value, const float3& scale)
     {
         return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
@@ -1508,128 +1557,37 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsManager::ParseFactoryRow(const std::vector<std::string>& tokens, FactoryPreset& outPreset, size_t lineNumber)
-    {
-        if (tokens.size() < 8)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "工場プリセットの" << lineNumber << "行目、トークン数が" << tokens.size()
-                << "個で足りてないよ（最低8個欲しい） \n";
-            DebugTrace(oss.str());
-            return false;
-        }
-
-        bool parseError = false;
-        parseError |= !TryParseFloat(tokens[1], &outPreset.spawnWeight);
-        parseError |= !TryParseFloat(tokens[2], &outPreset.scale.x);
-        outPreset.scale.y = outPreset.scale.x;
-        outPreset.scale.z = outPreset.scale.x;
-        if (tokens.size() > 3 && !tokens[3].empty())
-        {
-            parseError |= !TryParseFloat(tokens[3], &outPreset.scale.y);
-        }
-        if (tokens.size() > 4 && !tokens[4].empty())
-        {
-            parseError |= !TryParseFloat(tokens[4], &outPreset.scale.z);
-        }
-        parseError |= !TryParseFloat(tokens[6], &outPreset.colliderPreset.padding.x);
-        parseError |= !TryParseFloat(tokens[7], &outPreset.colliderPreset.padding.y);
-
-        if (tokens.size() > 8)
-        {
-            parseError |= !TryParseFloat(tokens[8], &outPreset.colliderPreset.padding.z);
-        }
-        else
-        {
-            outPreset.colliderPreset.padding.z = 0.0f;
-        }
-
-        const std::string colliderShape = NormalizeKey(tokens[5]);
-        if (colliderShape == "capsule")
-        {
-            outPreset.colliderPreset.shape = ColliderShape::Capsule;
-        }
-        else if (colliderShape == "circle")
-        {
-            outPreset.colliderPreset.shape = ColliderShape::Circle;
-        }
-        else if (colliderShape == "box" || colliderShape.empty())
-        {
-            outPreset.colliderPreset.shape = ColliderShape::Box;
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "" << lineNumber << "行目のコライダープリセット '" << tokens[5]
-                << "' が知らない形だったから、とりあえず Box にしとくね\n";
-            DebugTrace(oss.str());
-            outPreset.colliderPreset.shape = ColliderShape::Box;
-        }
-
-        outPreset.spawnWeight = std::max(0.0f, outPreset.spawnWeight);
-        return !parseError;
-    }
-
     std::map<std::string, SweetsManager::FactoryPreset> SweetsManager::LoadFactoryPresets(bool* parseError)
     {
         std::map<std::string, FactoryPreset> overrides;
-        std::ifstream file(kFactoryPresetCsvPath);
-        if (!file.is_open())
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSweetsFactory, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "工場プリセットの CSV が '" << kFactoryPresetCsvPath
+            oss << kLogPrefix << "工場プリセットの設定が '" << kGameplayConfigPath
+                << "' の section '" << GameplayConfig::kSectionSweetsFactory
                 << "' に見当たらないので、昔のデフォルトに戻すね\n";
             DebugTrace(oss.str());
             return overrides;
         }
 
-        std::string line;
-        size_t lineNumber = 0;
-        while (std::getline(file, line))
+        FactoryPreset preset{};
+        std::string presetKey;
+        bool hasActive = false;
+        const auto flush = [&]()
         {
-            ++lineNumber;
-            std::string trimmed = TrimToken(line);
-            if (trimmed.empty() || trimmed[0] == '#')
+            if (!hasActive || presetKey.empty())
             {
-                continue;
+                return;
             }
 
-            std::vector<std::string> tokens;
-            std::stringstream ss(trimmed);
-            std::string column;
-            while (std::getline(ss, column, ','))
-            {
-                tokens.push_back(TrimToken(column));
-            }
-
-            if (tokens.empty())
-            {
-                continue;
-            }
-
-            const std::string normalizedHeader = NormalizeKey(tokens[0]);
-            if (normalizedHeader == "key")
-            {
-                continue;
-            }
-
-            FactoryPreset preset{};
-            if (!ParseFactoryRow(tokens, preset, lineNumber))
-            {
-                if (parseError)
-                {
-                    *parseError = true;
-                }
-                continue;
-            }
-
-            const std::string resolvedKey = ResolveManifestKeyAlias(tokens[0]);
+            const std::string resolvedKey = ResolveManifestKeyAlias(presetKey);
             const std::string normalizedKey = NormalizeKey(resolvedKey);
             overrides[normalizedKey] = preset;
 
             std::ostringstream oss;
             oss << kLogPrefix
-                << "キー '" << tokens[0] << "' の工場プリセットを読んだよ"
+                << "キー '" << presetKey << "' の工場プリセットを読んだよ"
                 << " resolvedKey='" << resolvedKey << "'"
                 << " spawnWeight=" << preset.spawnWeight
                 << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
@@ -1637,7 +1595,78 @@ namespace SweetsSpace
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
             DebugTrace(oss.str());
+
+            hasActive = false;
+        };
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = entry.key;
+            const std::string value = entry.value;
+
+            if (key == "preset" || key == "key")
+            {
+                flush();
+                preset = FactoryPreset{};
+                preset.scale = float3{ 1.0f, 1.0f, 1.0f };
+                preset.colliderPreset.shape = ColliderShape::Box;
+                preset.colliderPreset.padding = float3{ 0.0f, 0.0f, 0.0f };
+                presetKey = value;
+                hasActive = true;
+                continue;
+            }
+
+            if (!hasActive)
+            {
+                continue;
+            }
+
+            bool localError = false;
+            if (key == "spawnWeight")
+            {
+                localError |= !TryParseFloat(value, &preset.spawnWeight);
+                preset.spawnWeight = std::max(0.0f, preset.spawnWeight);
+            }
+            else if (key == "scale")
+            {
+                localError |= !ParseFloat3Value(value, preset.scale);
+            }
+            else if (key == "padding")
+            {
+                localError |= !ParseFloat3Value(value, preset.colliderPreset.padding);
+            }
+            else if (key == "colliderPreset" || key == "colliderShape")
+            {
+                const std::string colliderShape = NormalizeKey(value);
+                if (colliderShape == "capsule")
+                {
+                    preset.colliderPreset.shape = ColliderShape::Capsule;
+                }
+                else if (colliderShape == "circle")
+                {
+                    preset.colliderPreset.shape = ColliderShape::Circle;
+                }
+                else if (colliderShape == "box" || colliderShape.empty())
+                {
+                    preset.colliderPreset.shape = ColliderShape::Box;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "" << entry.lineNumber << "行目のコライダープリセット '" << value
+                        << "' が知らない形だったから、とりあえず Box にしとくね\n";
+                    DebugTrace(oss.str());
+                    preset.colliderPreset.shape = ColliderShape::Box;
+                }
+            }
+
+            if (localError && parseError)
+            {
+                *parseError = true;
+            }
         }
+
+        flush();
 
         return overrides;
     }
@@ -1750,10 +1779,10 @@ namespace SweetsSpace
         m_byState.emplace(SweetsState::Ground, SweetsList{});
         m_byState.emplace(SweetsState::Carried, SweetsList{});
 
-        if (!Physics::ColliderRegistry::Instance().LoadFromFile(kColliderRegistryPath))
+        if (!Physics::ColliderRegistry::Instance().LoadFromFile(kGameplayConfigPath))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "[ConfigError] collider registry '" << kColliderRegistryPath
+            oss << kLogPrefix << "[ConfigError] collider registry '" << kGameplayConfigPath
                 << "' を読み込めなかったからデフォルト形状に頼るかもしれないよ\n";
             Diagnostics::LogInfo(oss.str());
         }

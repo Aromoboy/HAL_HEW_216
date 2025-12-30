@@ -1,5 +1,8 @@
 #include "ColliderRegistry.h"
 
+#include "ConfigSectionReader.h"
+#include "GameplayConfig.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -31,29 +34,6 @@ namespace
 
     constexpr const char* kLogPrefix = "[ColliderRegistry] ";
 
-    std::string Trim(const std::string& value)
-    {
-        auto begin = value.begin();
-        while (begin != value.end() && std::isspace(static_cast<unsigned char>(*begin)))
-        {
-            ++begin;
-        }
-
-        auto end = value.end();
-        while (end != begin)
-        {
-            auto prev = end;
-            --prev;
-            if (!std::isspace(static_cast<unsigned char>(*prev)))
-            {
-                break;
-            }
-            end = prev;
-        }
-
-        return std::string(begin, end);
-    }
-
     std::optional<float> ParseFloat(const std::string& token)
     {
         try
@@ -66,10 +46,16 @@ namespace
         }
     }
 
-    std::optional<b2Vec2> ParseOffset(const std::string& xToken, const std::string& yToken)
+    std::optional<b2Vec2> ParseOffsetPair(const std::string& value)
     {
-        const auto x = ParseFloat(xToken);
-        const auto y = ParseFloat(yToken);
+        const auto comma = value.find(',');
+        if (comma == std::string::npos)
+        {
+            return std::nullopt;
+        }
+
+        const auto x = ParseFloat(Config::Trim(value.substr(0, comma)));
+        const auto y = ParseFloat(Config::Trim(value.substr(comma + 1)));
         if (!x || !y)
         {
             return std::nullopt;
@@ -175,18 +161,18 @@ namespace Physics
 
     bool ColliderRegistry::LoadFromFile(const std::string& path)
     {
-        std::ifstream file(path);
-        if (!file)
+        m_definitions.clear();
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(path, GameplayConfig::kSectionColliderRegistry, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Failed to open collider registry at '" << path << "'\n";
+            oss << kLogPrefix << "Failed to read collider registry section '"
+                << GameplayConfig::kSectionColliderRegistry << "' from '" << path << "'\n";
             DebugTrace(oss.str());
             return false;
         }
 
-        m_definitions.clear();
-
-        std::string line;
         std::string currentName;
         std::optional<ShapeKind> currentKind;
         float radius = 0.0f;
@@ -271,25 +257,10 @@ namespace Physics
             }
         };
 
-        while (std::getline(file, line))
+        for (const auto& lineEntry : lines)
         {
-            line = Trim(line);
-            if (line.empty() || line[0] == '#')
-            {
-                continue;
-            }
-
-            const auto eq = line.find('=');
-            if (eq == std::string::npos)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Ignoring malformed line in registry: '" << line << "'\n";
-                DebugTrace(oss.str());
-                continue;
-            }
-
-            const std::string key = Trim(line.substr(0, eq));
-            const std::string value = Trim(line.substr(eq + 1));
+            const std::string key = lineEntry.key;
+            const std::string value = lineEntry.value;
 
             if (key == "collider" || key == "name")
             {
@@ -326,6 +297,15 @@ namespace Physics
             if (key == "width")
             {
                 if (auto parsed = ParseFloat(value)) width = *parsed;
+                continue;
+            }
+
+            if (key == "offset")
+            {
+                if (auto parsed = ParseOffsetPair(value))
+                {
+                    offset = *parsed;
+                }
                 continue;
             }
 

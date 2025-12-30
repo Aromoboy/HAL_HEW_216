@@ -21,4 +21,5 @@ These values are defined in `Assets/Config/stage_default.cfg`, `StageData` defau
   - Cream/Sherbet: 0.75 (Circle)
   - Defaults/others: 0.9
 
-Configuration lives in `Assets/Config/sweets_factory.csv` (scales) and `SweetsManager::BuildBaseShapeConfig` (densities/materials).
+Configuration lives in `Assets/Config/gameplay.cfg` (`colliders.sweets.factory` for scales/padding and
+`colliders.registry` for densities/materials) plus `SweetsManager::BuildBaseShapeConfig`.

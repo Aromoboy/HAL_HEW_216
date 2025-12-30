@@ -1,5 +1,7 @@
 #include "ColliderConfigLoader.h"
 
+#include "ConfigSectionReader.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -401,12 +403,18 @@ namespace
 
 namespace Collision
 {
-        bool LoadColliderDefinitions(const std::string& path, std::map<std::string, ColliderDefinition>& outDefinitions)
+        bool LoadColliderDefinitions(
+                const std::string& path,
+                const std::string& section,
+                std::map<std::string, ColliderDefinition>& outDefinitions)
         {
-                std::ifstream file(path);
-                if (!file)
+                std::vector<Config::SectionLine> lines;
+                if (!Config::ReadSectionLines(path, section, lines))
                 {
-                        Logging::LogWarning(std::string(kLogPrefix) + "Failed to open config: " + path + "\n");
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Failed to read collider definitions section '" << section
+                                << "' from config: " << path << "\n";
+                        Logging::LogWarning(oss.str());
                         return false;
                 }
 
@@ -424,28 +432,10 @@ namespace Collision
                         hasActive = false;
                 };
 
-                std::string line;
-                while (std::getline(file, line))
+                for (const auto& lineEntry : lines)
                 {
-                        line = Trim(line);
-                        if (line.empty() || line[0] == '#')
-                        {
-                                continue;
-                        }
-
-                        const auto eq = line.find('=');
-                        if (eq == std::string::npos)
-                        {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "Ignoring malformed line (missing '=') while parsing collider '"
-                                        << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
-                                        << "': " << line << "\n";
-                                Logging::LogWarning(oss.str());
-                                continue;
-                        }
-
-                        const std::string key = Trim(line.substr(0, eq));
-                        const std::string value = Trim(line.substr(eq + 1));
+                        const std::string key = lineEntry.key;
+                        const std::string value = lineEntry.value;
 
                         if (key == "collider" || key == "name")
                         {
@@ -582,4 +572,3 @@ namespace Collision
         }
 
 }
-
