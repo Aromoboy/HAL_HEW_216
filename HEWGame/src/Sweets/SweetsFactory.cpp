@@ -602,7 +602,7 @@ namespace SweetsSpace
             presetLog << " source=" << (hasOverride ? "config" : "fallback")
                 << " spawnWeight=" << preset.spawnWeight
                 << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
-                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " collider=" << ::ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")"
                 << " overrideParseError=" << std::boolalpha << factoryParseError << "\n";
@@ -1007,7 +1007,7 @@ namespace SweetsSpace
                 << " resolvedKey='" << resolvedKey << "'"
                 << " spawnWeight=" << preset.spawnWeight
                 << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
-                << " collider=" << ToString(preset.colliderPreset.shape)
+                << " collider=" << ::ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
             DebugTrace(oss.str());
