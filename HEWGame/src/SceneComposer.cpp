@@ -33,6 +33,8 @@
 
 namespace
 {
+    constexpr const char* kLogPrefix = "[SceneComposer] ";
+
 #if defined(_WIN32) && defined(_DEBUG)
     void DebugTrace(const std::string& message)
     {
@@ -117,7 +119,6 @@ namespace
         return forceConfig;
     }
 
-    constexpr const char* kLogPrefix = "[SceneComposer] ";
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kFallbackPlayerMoveSpeed = 10.0f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
