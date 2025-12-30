@@ -151,7 +151,6 @@ private:
     std::shared_ptr<IModelLoader> m_loader;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
-    std::vector<std::shared_ptr<TestObject>> m_pObjects;
     std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
     std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;

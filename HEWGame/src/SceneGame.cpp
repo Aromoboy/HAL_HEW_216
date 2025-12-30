@@ -2276,13 +2276,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
     m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
-    if (!m_pObjects.empty())
-    {
-        auto& anchorTransform = m_cameraAnchor->GetTransform();
-        anchorTransform.position = m_pObjects.front()->GetPosition();
-        anchorTransform.rotation = m_pObjects.front()->GetfRads();
-        anchorTransform.scale = m_pObjects.front()->GetScale();
-    }
 
     const auto& cameraSettings = kFixedSideViewCameraPreset;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
@@ -2966,14 +2959,6 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         HandleManualRetryInput(ctx);
         fRads.z += 0.001f;
-
-        if (m_cameraAnchor && !m_pObjects.empty())
-        {
-            auto& anchorTransform = m_cameraAnchor->GetTransform();
-            anchorTransform.position = m_pObjects.front()->GetPosition();
-            anchorTransform.rotation = m_pObjects.front()->GetfRads();
-            anchorTransform.scale = m_pObjects.front()->GetScale();
-        }
 
         float triggerHeight = 0.0f;
         if (m_guidelineTriggerCooldownSeconds <= 0.0f
@@ -3891,13 +3876,6 @@ void SceneGame::ResetPlaySession()
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
-    if (m_cameraAnchor && !m_pObjects.empty())
-    {
-        auto& anchorTransform = m_cameraAnchor->GetTransform();
-        anchorTransform.position = m_pObjects.front()->GetPosition();
-        anchorTransform.rotation = m_pObjects.front()->GetfRads();
-        anchorTransform.scale = m_pObjects.front()->GetScale();
-    }
     else if (!m_cameraAnchor)
     {
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped anchor realignment: camera anchor missing.\n");
