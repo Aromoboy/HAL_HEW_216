@@ -57,9 +57,6 @@
     <ClCompile Include="src\BaseCamera.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
-    <ClCompile Include="src\CameraDebug.cpp">
-      <Filter>Camera</Filter>
-    </ClCompile>
     <ClCompile Include="src\CameraManager.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
@@ -311,9 +308,6 @@
     </ClInclude>
     <ClInclude Include="include\BoxColliderComponent.h">
       <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\CameraDebug.h">
-      <Filter>Camera</Filter>
     </ClInclude>
     <ClInclude Include="include\CameraManager.h">
       <Filter>Camera</Filter>
