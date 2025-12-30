@@ -234,6 +234,7 @@
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
     <ClCompile Include="src\SceneGameConfigLoader.cpp" />
+    <ClCompile Include="src\UIManager.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\SelectScene.cpp" />
     <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
@@ -342,6 +343,7 @@
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
     <ClInclude Include="include\SceneGameConfigLoader.h" />
+    <ClInclude Include="include\UIManager.h" />
     <ClInclude Include="include\SceneManager.h" />
     <ClInclude Include="include\SelectScene.h" />
     <ClInclude Include="include\TitleRenderer.h" />
