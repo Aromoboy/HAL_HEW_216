@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "GuidelineActor.h"
 #include "SceneGame.h"
 #include "StageLayoutLoader.h"
 
