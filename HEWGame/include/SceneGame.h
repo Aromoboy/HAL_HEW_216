@@ -8,7 +8,7 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
-#include "GameplayRules.h"
+#include "GameplayProgression.h"
 #include "GuidelineActor.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
@@ -157,7 +157,7 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    std::deque<GameplayRules::PendingTimeBonus> m_pendingTimeBonuses;
+    std::deque<GameplayProgression::PendingTimeBonus> m_pendingTimeBonuses;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
