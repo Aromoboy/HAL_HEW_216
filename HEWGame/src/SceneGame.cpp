@@ -1505,36 +1505,11 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
         });
     }
 
-    m_hudRenderer = std::make_unique<HudRenderer>();
-    if (m_hudRenderer && !m_hudRenderer->Initialize(kHudLayoutConfig))
+    m_uiManager = std::make_unique<UIManager>();
+    if (m_uiManager && !m_uiManager->Initialize(kHudLayoutConfig, kResultLayoutConfig))
     {
-        DebugTrace(std::string(kLogPrefix) + "HUD renderer failed to initialize; overlay disabled.\n");
-        m_hudRenderer.reset();
-    }
-    else if (m_hudRenderer)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "HUD renderer initialized (texture="
-            << kHudLayoutConfig.textureWidth << 'x' << kHudLayoutConfig.textureHeight
-            << ", margin=" << kHudLayoutConfig.marginPixels
-            << ", warningThreshold=" << kHudLayoutConfig.warningThresholdSeconds << "s).\n";
-        ::DebugTrace(oss.str());
-    }
-
-    m_resultRenderer = std::make_unique<ResultRenderer>();
-    if (m_resultRenderer && !m_resultRenderer->Initialize(kResultLayoutConfig))
-    {
-        DebugTrace(std::string(kLogPrefix) + "HUD renderer failed to initialize; overlay disabled.\n");
-        m_resultRenderer.reset();
-    }
-    else if (m_resultRenderer)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Result renderer initialized (texture="
-            << kResultLayoutConfig.textureWidth << 'x' << kResultLayoutConfig.textureHeight
-            << ", margin=" << kResultLayoutConfig.marginPixels
-            << ", warningThreshold=" << kResultLayoutConfig.warningThresholdSeconds << "s).\n";
-        ::DebugTrace(oss.str());
+        DebugTrace(std::string(kLogPrefix) + "UI manager failed to initialize; HUD/Result overlay disabled.\n");
+        m_uiManager.reset();
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -1893,29 +1868,14 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
     m_totalPlaySeconds = kDefaultPlaySeconds;
     m_remainingCountdownSeconds = m_totalPlaySeconds;
     m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
-    // 数字テクスチャをロード
-    m_numberTexture = new Texture();
-    m_numberTexture->Create("Assets/Texture/number.png"); 
-
-    // タイマー表示を初期化
-    m_timerDisplay.Init(m_numberTexture);
-    m_timerDisplay.SetPosition(700.0f, 50.0f);  // 画面右上
-    m_timerDisplay.SetDigitSize(50.0f, 70.0f);   // 数字のサイズ
-
 }
 
 SceneGame::~SceneGame()
 {
-    if (m_resultRenderer)
+    if (m_uiManager)
     {
-        m_resultRenderer->Shutdown();
-        m_resultRenderer.reset();
-    }
-
-    if (m_hudRenderer)
-    {
-        m_hudRenderer->Shutdown();
-        m_hudRenderer.reset();
+        m_uiManager->Shutdown();
+        m_uiManager.reset();
     }
 
     if (m_physicsBinder)
@@ -1986,11 +1946,6 @@ SceneGame::~SceneGame()
                 m_sweetsRegistered = false;
         }
 
-        if (m_numberTexture)
-        {
-            delete m_numberTexture;
-            m_numberTexture = nullptr;
-        }
         if (m_pManager)
         {
             m_pManager->StopAllSounds();
@@ -2303,6 +2258,42 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     if (m_stageState == StageState::ShowingResult)
     {
         ProcessPostGameInput(ctx);
+    }
+
+    if (m_uiManager)
+    {
+        const bool isTimeUp = (m_stageState == StageState::TimeUp)
+            || (m_stageState == StageState::Cleared)
+            || (m_stageState == StageState::ShowingResult);
+
+        UIManager::HUDUpdateData uiData{};
+        uiData.hud.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+        uiData.hud.currentHeight = m_currentTowerHeight;
+        uiData.hud.peakHeight = m_peakTowerHeight;
+        uiData.hud.score = ComputeScore();
+        uiData.hud.sweetsCount = GetSweetsCount();
+        uiData.hud.timeUp = isTimeUp;
+        uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        if (player)
+        {
+            uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+        }
+
+        uiData.result.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
+        uiData.result.currentHeight = m_currentTowerHeight;
+        uiData.result.peakHeight = m_peakTowerHeight;
+        uiData.result.score = ComputeScore();
+        uiData.result.sweetsCount = GetSweetsCount();
+        uiData.result.timeUp = isTimeUp;
+        uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        if (player)
+        {
+            uiData.result.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+        }
+
+        uiData.showHud = g_DebugDrawEnabled && !isTimeUp;
+        uiData.showResult = isTimeUp;
+        m_uiManager->UpdateHUD(uiData);
     }
 
     if (ctx.input.IsKeyPress(VK_RETURN))
@@ -2821,54 +2812,10 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         DrawPhysicsDebugOverlay();
 #endif
 
-        bool isTimeUp = (m_stageState == StageState::TimeUp)
-            || (m_stageState == StageState::Cleared)
-            || (m_stageState == StageState::ShowingResult);
-
-        // こっちで後から作ったisTimeUpを使ってないのは時間がないのに書き換えて急にぶっ壊れたらとても嫌な気持ちになるからなので時間がある時に書き換えてください(すみません) by越智
-        if (m_hudRenderer && !isTimeUp && g_DebugDrawEnabled)
+        if (m_uiManager)
         {
-                HudDisplayData hudData{};
-                  hudData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
-                  hudData.currentHeight = m_currentTowerHeight;
-                  hudData.peakHeight = m_peakTowerHeight;
-                  hudData.score = ComputeScore();
-                  hudData.sweetsCount = GetSweetsCount();
-                  hudData.timeUp = (m_stageState == StageState::TimeUp)
-                      || (m_stageState == StageState::Cleared)
-                      || (m_stageState == StageState::ShowingResult);
-                  hudData.moveSpeedMultiplier = m_playerSpeedMultiplier;
-                  if (player)
-                  {
-                          hudData.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
-                  }
-
-
-                m_hudRenderer->Draw(hudData);
+            m_uiManager->Draw();
         }
-
-        if (m_resultRenderer && isTimeUp)
-        {
-            ResultDisplayData resultData{};
-            resultData.remainingSeconds = std::max(0.0f, m_remainingCountdownSeconds);
-            resultData.currentHeight = m_currentTowerHeight;
-            resultData.peakHeight = m_peakTowerHeight;
-            resultData.score = ComputeScore();
-            resultData.sweetsCount = GetSweetsCount();
-            resultData.timeUp = (m_stageState == StageState::TimeUp)
-                || (m_stageState == StageState::Cleared)
-                || (m_stageState == StageState::ShowingResult);
-            resultData.moveSpeedMultiplier = m_playerSpeedMultiplier;
-            if (player)
-            {
-                resultData.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
-            }
-
-
-            m_resultRenderer->Draw(resultData);
-        }
-
-        m_timerDisplay.Draw(m_remainingCountdownSeconds);
 
 #if defined(_DEBUG)
         //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい

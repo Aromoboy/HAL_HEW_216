@@ -18,8 +18,7 @@
 #include "Transform.h"
 #include "Stage/StageData.h"
 #include "GameFlow/PhaseManager.h"
-#include "HudRenderer.h"
-#include "TimerDisplay.h"
+#include "UIManager.h"
 #include "BackgroundRenderer.h"
 #include "ColliderConfigLoader.h"
 #include <cstddef>
@@ -32,7 +31,6 @@
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
-#include "ResultRenderer.h"
 
 
 struct CameraPrototypeSettings
@@ -147,7 +145,6 @@ private:
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
-    std::unique_ptr<ResultRenderer> m_resultRenderer;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
@@ -168,7 +165,7 @@ private:
     float m_maxTowerHeight = 0.0f;
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
-    std::unique_ptr<HudRenderer> m_hudRenderer;
+    std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
@@ -214,8 +211,6 @@ private:
     int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
-    TimerDisplay m_timerDisplay;
-    Texture* m_numberTexture;
     std::unordered_set<SweetsSpace::ActiveSweets*> m_guidelineTriggeredThisHeight;
 
 
