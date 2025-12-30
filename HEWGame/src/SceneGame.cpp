@@ -75,7 +75,6 @@ namespace
         constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
-        constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
         constexpr const char* kRenderSettingsSection = "render.settings";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
@@ -1438,7 +1437,7 @@ namespace
             bool continuousCollisionForPlayerProjectiles = true;
         };
 
-        SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig(const std::string& path)
+        SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig()
         {
             SceneGame::PlayerSpawnTransform result{};
             constexpr float kDegToRad = 3.14159265358979323846f / 180.0f;
@@ -1483,35 +1482,22 @@ namespace
                     return true;
                 };
 
-            std::ifstream config(path);
-            if (!config.is_open())
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPlayerTransform, lines))
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerTransform] Config missing; using defaults path='" << path << "'.\n";
+                oss << kLogPrefix << "[PlayerTransform] Config section missing; using defaults path='"
+                    << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionPlayerTransform << "'.\n";
                 DebugTrace(oss.str());
                 return result;
             }
 
-            std::string line;
-            int lineNumber = 0;
             int parsedFields = 0;
-            while (std::getline(config, line))
+            for (const auto& entry : lines)
             {
-                ++lineNumber;
-                const std::string trimmed = TrimWhitespace(line);
-                if (trimmed.empty() || trimmed[0] == '#')
-                {
-                    continue;
-                }
-
-                const std::size_t eq = trimmed.find('=');
-                if (eq == std::string::npos)
-                {
-                    continue;
-                }
-
-                const std::string key = TrimWhitespace(trimmed.substr(0, eq));
-                const std::string value = TrimWhitespace(trimmed.substr(eq + 1));
+                const int lineNumber = static_cast<int>(entry.lineNumber);
+                const std::string key = TrimWhitespace(entry.key);
+                const std::string value = TrimWhitespace(entry.value);
                 if (key.empty() || value.empty())
                 {
                     continue;
@@ -1558,13 +1544,13 @@ namespace
                     oss << kLogPrefix << "[PlayerTransform] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
                     DebugTrace(oss.str());
                 }
-                
             }
 
             result.loadedFromFile = true;
 
             std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerTransform] Applied path='" << path
+            oss << kLogPrefix << "[PlayerTransform] Applied path='" << kGameplayConfigPath
+                << "' section='" << GameplayConfig::kSectionPlayerTransform
                 << "' loaded=" << std::boolalpha << result.loadedFromFile
                 << " parsedFields=" << parsedFields
                 << " position=(" << result.transform.position.x << ',' << result.transform.position.y << ',' << result.transform.position.z << ')'
@@ -1907,7 +1893,7 @@ m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
     m_playerColliderDefinitions);
 m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
 m_playerColliderTuning = LoadPlayerColliderTuning(kGameplayConfigPath);
-m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
+m_playerSpawnTransform = LoadPlayerTransformConfig();
 {
     std::ostringstream oss;
     oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
