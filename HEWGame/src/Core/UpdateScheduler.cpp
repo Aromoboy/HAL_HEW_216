@@ -10,7 +10,7 @@
 
 #if !defined(UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS)
 #if defined(_DEBUG)
-#define UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS 1
+#define UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS 0
 #else
 #define UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS 0
 #endif
@@ -849,4 +849,3 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                 ApplyPendingOperations();
         }
 }
-
