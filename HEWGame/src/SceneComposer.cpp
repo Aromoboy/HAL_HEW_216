@@ -15,7 +15,6 @@
 #include "ColliderConfigLoader.h"
 #include "GameplayConfig.h"
 #include "ModelCache.h"
-#include "AnimationCache.h"
 #include "SceneGameConfigLoader.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
@@ -320,9 +319,9 @@ void SceneComposer::ComposeConfig(Composition& result)
     }
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
+    // シーンのアセット読み込み開始前に、モデルキャッシュの内容のみをクリアする
+    // （ローダーやデバイスは維持して再設定漏れを防止）
+    cache.ClearModels();
 
     const bool modelTexturesEnabled = SceneGameConfig::LoadModelTextureLoadingSetting();
     cache.SetTextureLoadingEnabled(modelTexturesEnabled);
@@ -333,11 +332,7 @@ void SceneComposer::ComposeConfig(Composition& result)
         DebugTrace(oss.str());
     }
 
-    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
-    (void)animeCache;
+    // AnimationCache は SceneGame で SetLoader 済みのため、ここでは触らない
 }
 
 void SceneComposer::ComposeRules(Composition& result)
