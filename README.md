@@ -236,6 +236,21 @@ ModelRenderer ..> CameraSpace_ICamera
 ModelRenderer ..> Render_Model
 namespace Systems {
   class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
+  class IPhysicsBinder["Systems::IPhysicsBinder"] { <<interface>>
+    +GetPhysicsMachine() PhysicsMachine*
+    +SetPlayer(player:SceneSpace_PhysicalEntity*)
+    +Enable(enabled:bool)
+    +RegisterPhysicsBody(entity:SceneSpace_PhysicalEntity)
+    +UnregisterPhysicsBody(entity:SceneSpace_PhysicalEntity*)
+    +UnregisterAllPhysicsBodies()
+    +ValidatePlayerPhysicsRegistration()
+    +AddContactHandler(onBegin, onEnd)
+  }
+  class PhysicsBinder["Systems::PhysicsBinder"] {
+    +GetPhysicsMachine() PhysicsMachine*
+    +SetPlayer(player:SceneSpace_PhysicalEntity*)
+    +Enable(enabled:bool)
+  }
   class DrawSystem["Systems::DrawSystem"] {
     +OnUpdate(ctx:Core_UpdateContext)
     +SetRenderer(renderer:ModelRender)
@@ -249,6 +264,8 @@ namespace Systems {
 Core_UpdateNode <|-- DrawSystem
 Core_UpdateNode <|-- PhysicsMachine
 PhysicsMachine ..> IPhysicsSystem
+PhysicsBinder ..|> IPhysicsBinder
+PhysicsBinder o-- PhysicsMachine
 namespace GameFlow {
   class PhaseManager["GameFlow::PhaseManager"] {
     - currentPhase : int
@@ -277,6 +294,26 @@ namespace Stage {
     - planeZ       : float
     +LoadFromFile(path)
   }
+}
+namespace ConfigLoader {
+  class ColliderConfigLoader["Collision::LoadColliderDefinitions"] {
+    +LoadColliderDefinitions(path, section, outDefinitions) bool
+  }
+  class SceneGameConfigLoader["SceneGameConfig::Load*"] {
+    +LoadStageColliderConfig(path) StageColliderConfig
+    +LoadPlayerColliderTuning(path) PlayerColliderTuning
+    +LoadPlayerTransformConfig() PlayerSpawnTransform
+    +LoadPhysicsTuningSettings() PhysicsTuningSettings
+    +LoadModelTextureLoadingSetting() bool
+  }
+}
+class StageLayoutLoader["StageLayoutLoader"] {
+  +LoadFromCsv(request:StageLayoutLoadRequest) StageLayoutLoadResult
+}
+class UIManager["UIManager"] {
+  +Initialize(hudConfig, resultConfig) bool
+  +UpdateHUD(data)
+  +Draw()
 }
 namespace SceneSpace {
   class IDrawable["SceneSpace::IDrawable"]  { <<interface>> +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera) }
@@ -312,14 +349,16 @@ namespace SceneSpace {
     +OnUpdate(ctx:Core_UpdateContext)
   }
   class SceneManager["SceneSpace::SceneManager"] {
-    - current : shared_ptr<IScene>
-    +SetScene(scene:shared_ptr<IScene>)
+    - active  : unique_ptr<IScene>
+    - pending : unique_ptr<IScene>
+    +SetInitialScene(scene:unique_ptr<IScene>)
+    +RequestSceneChange(scene:unique_ptr<IScene>)
     +Update()
     +Draw()
   }
   class TitleScene["SceneSpace::TitleScene"]
   class SelectScene["SceneSpace::SelectScene"]
-  class PlayScene["SceneSpace::PlayScene"] {
+  class SceneGame["SceneGame"] {
     - stage       : Stage_StageData
     - phases      : GameFlow_PhaseManager
     - upgrades    : GameFlow_UpgradeMenu
@@ -338,21 +377,25 @@ Entity <|-- CollisionEntity
 CollisionEntity *-- Components_ICollider
 CollisionEntity <|-- PhysicalEntity
 PhysicalEntity *-- Components_Physical
-IScene <|-- Scene
 SceneManager *-- IScene
 IScene <|-- TitleScene
 IScene <|-- SelectScene
-IScene <|-- PlayScene
+IScene <|-- SceneGame
+Scene <|-- TitleScene
+Scene <|-- SelectScene
+Scene <|-- SceneGame
 Scene o-- CameraSpace_CameraManager
 Scene o-- Systems_PhysicsMachine
 Scene o-- Render_ModelRenderer
 Scene o-- Core_UpdateScheduler
 Scene o-- SceneUpdateNode
 Scene o-- CameraUpdateNode
-PlayScene o-- Stage_StageData
-PlayScene o-- GameFlow_PhaseManager
-PlayScene o-- GameFlow_UpgradeMenu
-PlayScene o-- CameraSpace_CameraRig
+SceneGame o-- Stage_StageData
+SceneGame o-- GameFlow_PhaseManager
+SceneGame o-- GameFlow_UpgradeMenu
+SceneGame o-- CameraSpace_CameraRig
+SceneGame o-- Systems_IPhysicsBinder
+SceneGame o-- UIManager
 namespace Entities {
   class Player["Entities::Player"] {
     - model : shared_ptr<Render_Model>
@@ -391,6 +434,12 @@ Core_UpdateNode <|-- SweetsManager
 Core_UpdateNode <|-- SceneUpdateNode
 Core_UpdateNode <|-- CameraUpdateNode
 Core_UpdateNode <|-- LateUpdateNode
+class SceneComposer["SceneComposer"] { +Compose() Composition }
+SceneComposer ..> ConfigLoader_ColliderConfigLoader
+SceneComposer ..> ConfigLoader_SceneGameConfigLoader
+SceneComposer ..> StageLayoutLoader
+SceneComposer ..> Systems_PhysicsBinder
+SceneComposer ..> UIManager
 namespace App {
   class Game["App::Game"] {
     - dx       : Core_DXContext
@@ -414,6 +463,7 @@ Game o-- Core_TextureCache
 Game o-- Render_ModelCache
 Game o-- Render_ModelRenderer
 Game o-- SceneSpace_SceneManager
+SceneComposer ..> Core_UpdateScheduler
 
 クラス図ざっくりまとめ：
 
@@ -436,14 +486,24 @@ Render：
 Systems：
 物理系。重力＋減衰だけ
 接地感は、余裕あったら別システムで
+PhysicsBinder は PhysicsMachine/登録処理を束ねて Scene から扱いやすくする薄い仲介
 
 GameFlow：
 フェーズ管理と強化メニュー
 一定の高さを超えたらフェーズ進行 → 終わったら強化選択 (まだ決まってないので、例になっている)
 ここが今回の新要素
 
+ConfigLoader：
+ゲーム設定・コライダー設定の読み込み（`SceneGameConfigLoader` / `ColliderConfigLoader`）
+
+StageLayoutLoader：
+CSV からステージ配置と物理オブジェクトを生成するローダー
+
+UIManager：
+HUD とリザルト UI のレイアウト初期化・描画を一元管理
+
 Scene / Entities / SweetsSpace：
-PlaySceneに全部入ってる
+SceneGameに全部入ってる
 プレイヤー（横移動＋回転＋落下　←例）とスイーツの管理
 フェーズごとに難易度（出現間隔とか）を調整
 
@@ -452,6 +512,6 @@ App：
 Initialize → Update → Draw で完結
 
 UpdateNode:
-毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
-現在の標準フェーズ順は Input → Physics → Gameplay → Camera → Late（PrePhysics/PostPhysics/UI は必要時のみ利用）。
+更新は `SceneManager::Update` → 各シーンの `Update` → `Scene::RootUpdate` → `UpdateScheduler::Tick` → 登録済み `IUpdatable::OnUpdate` の単一路線で進む。更新が必要なクラスは `Core::UpdateNode` を継承し、フェーズと priority を設定して Scene に登録する。順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
+標準フェーズ順は Input → PrePhysics → Physics → PostPhysics → Gameplay → Camera → UI → Late。描画は `Scene::RootDraw` から別経路で行う。
 `SceneGame::ConfigureUpdates` での登録順と実際の実行順は `docs/scene-lifecycle.md` にまとめた。
