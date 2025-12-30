@@ -2166,7 +2166,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(physicsParameters);
-    m_contactListener = std::make_shared<Systems::Box2DContactListener>();
+    m_contactListener = std::make_shared<Systems::Box2DContactListener>(*m_physicsMachine);
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     if (m_drawSystem)
     {
@@ -2187,7 +2187,10 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
             m_drawSystem->RegisterRenderable(*m_guidelineActor);
         }
     }
-    m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>();
+    m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
+        *m_drawSystem,
+        *m_physicsMachine,
+        GetUpdateScheduler());
     if (m_contactListener)
     {
         m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b) {
@@ -2215,9 +2218,6 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
 
     if (m_sweetsManager)
     {
-        m_sweetsManager->SetDrawSystem(m_drawSystem.get());
-        m_sweetsManager->SetPhysicsMachine(m_physicsMachine.get());
-        m_sweetsManager->SetUpdateScheduler(&GetUpdateScheduler());
         m_sweetsManager->SetSpawnOrigins(
             m_stageData.GetSpawnPointsPrimary(),
             m_stageData.GetSpawnPointsSecondary());

@@ -1716,10 +1716,12 @@ namespace SweetsSpace
         ::SweetsSpace::SweetsManager& m_owner;
     };
 
-    SweetsManager::SweetsManager()
-        : m_drawSystem(nullptr)
-        , m_physicsMachine(nullptr)
-        , m_scheduler(nullptr)
+    SweetsManager::SweetsManager(Systems::DrawSystem& drawSystem,
+        Systems::PhysicsMachine& physicsMachine,
+        Core::UpdateScheduler& scheduler)
+        : m_drawSystem(&drawSystem)
+        , m_physicsMachine(&physicsMachine)
+        , m_scheduler(&scheduler)
         , m_lateUpdateNode(std::make_unique<LateUpdateNode>(*this))
         , m_phaseChangeCallback()
         , m_currentPhase(0)
@@ -2388,39 +2390,6 @@ namespace SweetsSpace
             << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
             << m_byState.size() << " 状態分 \n";
         DebugTrace(oss.str());
-    }
-
-    void SweetsManager::SetDrawSystem(Systems::DrawSystem* drawSystem)
-    {
-        if (m_drawSystem == drawSystem)
-        {
-            return;
-        }
-
-        m_drawSystem = drawSystem;
-        m_warnedMissingDrawSystem = false;
-    }
-
-    void SweetsManager::SetPhysicsMachine(Systems::PhysicsMachine* physicsMachine)
-    {
-        if (m_physicsMachine == physicsMachine)
-        {
-            return;
-        }
-
-        m_physicsMachine = physicsMachine;
-        m_warnedMissingPhysicsMachine = false;
-    }
-
-    void SweetsManager::SetUpdateScheduler(Core::UpdateScheduler* scheduler)
-    {
-        if (m_scheduler == scheduler)
-        {
-            return;
-        }
-
-        m_scheduler = scheduler;
-        m_warnedMissingScheduler = false;
     }
 
     void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)

@@ -21,7 +21,7 @@ namespace Systems
         public:
                 using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
 
-                Box2DContactListener() = default;
+                explicit Box2DContactListener(PhysicsMachine& physicsMachine);
 
                 void ProcessContacts();
 
@@ -31,7 +31,6 @@ namespace Systems
                 void SetEndContactCallback(ContactCallback callback);
                 void EnableMeshContactLogging(bool enabled);
                 void EnableDroppedEventLogging(bool enabled);
-                void SetPhysicsMachine(PhysicsMachine* physicsMachine);
                 void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
 
         private:
@@ -51,4 +50,3 @@ namespace Systems
                 std::unordered_set<uint64_t> m_destroyedShapeIds;
         };
 }
-

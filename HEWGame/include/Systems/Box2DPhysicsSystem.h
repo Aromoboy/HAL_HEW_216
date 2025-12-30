@@ -16,7 +16,8 @@ namespace Systems
         class Box2DPhysicsSystem : public Core::UpdateNode, public IPhysicsSystem
         {
         public:
-                explicit Box2DPhysicsSystem(const PhysicsTuningParameters& tuning = {});
+                explicit Box2DPhysicsSystem(PhysicsMachine& physicsMachine,
+                    const PhysicsTuningParameters& tuning = {});
                 ~Box2DPhysicsSystem() override;
 
                 void Apply(float dt) override;
@@ -26,7 +27,6 @@ namespace Systems
                 void SetSubStepCount(int subStepCount);
                 b2WorldId GetWorldId() const;
                 void SetContactListener(std::shared_ptr<Box2DContactListener> listener);
-                void SetPhysicsMachine(PhysicsMachine* physicsMachine);
                 PhysicsMachine* GetPhysicsMachine() const;
 
         private:
