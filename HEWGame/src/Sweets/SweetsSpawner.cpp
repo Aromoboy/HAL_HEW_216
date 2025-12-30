@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "Diagnostics/Logger.h"
+#include "Sweets/BaseSweets.h"
 #include "Sweets/SweetsFactory.h"
 #include "Sweets/SweetsRegistry.h"
 
