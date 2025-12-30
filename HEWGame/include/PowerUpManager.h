@@ -67,6 +67,7 @@ public:
 
 	void SetFormat(const NodeFormat&);
 
+	void AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
 
 	// 全てのノードを描画
 	void DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& Camera);
