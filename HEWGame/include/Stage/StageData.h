@@ -30,6 +30,7 @@ namespace Stage
         // Attempts to load the stage data from a config file.
         // Returns true when data was parsed successfully, false when defaults were used.
         bool LoadFromFile(const std::string& path);
+        bool LoadFromFile(const std::string& path, const std::string& section);
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;

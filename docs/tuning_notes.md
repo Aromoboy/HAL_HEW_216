@@ -9,7 +9,7 @@ These values capture the tuned parameters after normalizing transforms for Box2D
 - Maximum speed multiplier: **2.0x** cap.
 - Fallback/base move speed used when configs are missing or invalid: **10.0 units/s**.
 
-These values are defined in `Assets/Config/stage_default.cfg`, `StageData` defaults, and the `SceneGame` runtime constants that drive debug boost controls.
+These values are defined in the `stage.default` section of `Assets/Config/gameplay.cfg`, `StageData` defaults, and the `SceneGame` runtime constants that drive debug boost controls.
 
 ## Sweets stacking
 - Scales tightened to keep cross-sections compact for predictable contacts:

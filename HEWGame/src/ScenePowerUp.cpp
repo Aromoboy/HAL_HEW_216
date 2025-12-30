@@ -9,18 +9,12 @@
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
 
-#include <filesystem>
-#include <fstream>
-#include <string>
+#include "ConfigSectionReader.h"
+#include "GameplayConfig.h"
 
-constexpr const char* kPowerUpConfigPath = "Assets/Config/PowerUp.cfg";
-constexpr const char* kName = "PowerUpName=";
-constexpr const char* kInfomation = "Infomation=";
-constexpr const char* kTextureKey = "TextureName=";
-constexpr const char* kMaxLevel = "MaxLevel=";
-constexpr const char* kDefaultCost = "DefaultCost=";
-constexpr const char* kCostAdditional = "CostAdditional=";
-constexpr const char* kCostMagnification = "CostMagnification=";
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace SceneSpace
 {
@@ -157,74 +151,57 @@ namespace SceneSpace
 
         bool ScenePowerUp::LoadPowerUpFile()
         {
-                std::ifstream file(kPowerUpConfigPath);
-
-                std::string loadString;
-
-                if (!std::filesystem::exists(kPowerUpConfigPath))
+                std::vector<Config::SectionLine> lines;
+                if (!Config::ReadSectionLines(GameplayConfig::kConfigPath, GameplayConfig::kSectionPowerUps, lines))
                 {
-                        std::ofstream ofs(kPowerUpConfigPath);
-
-                        ofs << "PowerUpName=Cream\n";
-                        ofs << "MaxLevel=5\n";
-                        ofs << "DefaultCost=100\n";
-                        ofs << "CostAdditional=20\n";
-                        ofs << "CostMagnification=1.0\n";
+                        return false;
                 }
 
-                while(std::getline(file, loadString))
+                int loaded = 0;
+                for (const auto& entry : lines)
                 {
-                        std::string name;
+                        if (entry.key != "entry")
+                        {
+                                continue;
+                        }
 
-                        if (!GetValue(name, loadString, kName)) continue;
+                        std::vector<std::string> tokens;
+                        std::stringstream ss(entry.value);
+                        std::string token;
+                        while (std::getline(ss, token, ','))
+                        {
+                                token = Config::Trim(token);
+                                if (!token.empty())
+                                {
+                                        tokens.push_back(token);
+                                }
+                        }
 
-                        std::string infomation;
-                        std::getline(file, loadString);
-                        if (!GetValue(infomation, loadString, kInfomation)) continue;
+                        if (tokens.size() < 7)
+                        {
+                                continue;
+                        }
 
-                        std::string textureKey;
-                        std::getline(file, loadString);
-                        if (!GetValue(textureKey, loadString, kTextureKey)) continue;
+                        try
+                        {
+                                const std::string& name = tokens[0];
+                                const std::string& info = tokens[1];
+                                const std::string& textureKey = tokens[2];
+                                const int maxLevel = std::stoi(tokens[3]);
+                                const int defaultCost = std::stoi(tokens[4]);
+                                const int costAdditional = std::stoi(tokens[5]);
+                                const float costMagnification = std::stof(tokens[6]);
 
-                        std::string maxLevel;
-                        std::getline(file, loadString);
-                        if (!GetValue(maxLevel, loadString, kMaxLevel)) continue;
-                        int finalMaxLevel = std::stoi(maxLevel);
-
-                        std::string defaultCost;
-                        std::getline(file, loadString);
-                        if (!GetValue(defaultCost, loadString, kDefaultCost)) continue;
-                        int finalDefaultCost = std::stoi(defaultCost);
-
-                        std::string costAdditional;
-                        std::getline(file, loadString);
-                        if (!GetValue(costAdditional, loadString, kCostAdditional)) continue;
-                        int finalCostAdditional = std::stoi(costAdditional);
-
-                        std::string costMagnification;
-                        std::getline(file, loadString);
-                        if (!GetValue(costMagnification, loadString, kCostMagnification)) continue;
-                        float finalCostMagnification = std::stof(costMagnification);
-
-
-                        m_powerUpManager->AddNode(name, infomation, textureKey, 0, finalMaxLevel, finalDefaultCost, finalCostAdditional, finalCostMagnification);
+                                m_powerUpManager->AddNode(name, info, textureKey, 0, maxLevel, defaultCost, costAdditional, costMagnification);
+                                ++loaded;
+                        }
+                        catch (const std::exception&)
+                        {
+                                continue;
+                        }
                 }
 
-
-                return true;
-        }
-
-        bool ScenePowerUp::GetValue(std::string& a_outValue, std::string a_status, const char* checkKey)
-        {
-
-                std::string keyWithEq = checkKey;
-
-                if (a_status.rfind(checkKey,0) != 0) return false;
-
-
-                a_outValue = a_status.substr(keyWithEq.size());
-
-                return true;
+                return loaded > 0;
         }
 
         void ScenePowerUp::ShutdownPowerUpSystems()
