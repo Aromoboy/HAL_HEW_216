@@ -59,6 +59,10 @@ x86/
 !HEWGame/DirectXTex/Win32/Release/**
 !HEWGame/DirectXTex/x64/Debug/**
 !HEWGame/DirectXTex/x64/Release/**
+!HEWGame/ThirdParty/Box2D/lib/Win32/Debug/**
+!HEWGame/ThirdParty/Box2D/lib/Win32/Release/**
+!HEWGame/ThirdParty/Box2D/lib/x64/Debug/**
+!HEWGame/ThirdParty/Box2D/lib/x64/Release/**
 
 ### Box2D（vendored）必ず含める
 !HEWGame/box2d/
