@@ -19,7 +19,6 @@
 #include "Transform.h"
 #include "Stage/StageData.h"
 #include "GameFlow/PhaseManager.h"
-#include "UIManager.h"
 #include "BackgroundRenderer.h"
 #include "ColliderConfigLoader.h"
 #include "StageLayoutLoader.h"
@@ -54,6 +53,8 @@ namespace SweetsSpace
 {
     class SweetsManager;
 }
+
+class SceneGameUIOverlay;
 
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
@@ -94,6 +95,7 @@ public:
     void ConfigureUpdates() override;
     void Update(Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
+    void DrawOverlay() override;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
 #if defined(_DEBUG)
@@ -146,7 +148,7 @@ private:
     float m_maxTowerHeight = 0.0f;
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
-    std::unique_ptr<UIManager> m_uiManager;
+    std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
