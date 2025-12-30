@@ -19,6 +19,7 @@
 namespace
 {
         constexpr float kClampSummaryIntervalSeconds = 5.0f;
+        constexpr float kClampLogIntervalSeconds = 2.0f;
 
         void DebugTrace(const std::string& message)
         {
@@ -88,6 +89,7 @@ namespace Systems
                 const float maxAccumulatedTime = maxStep * static_cast<float>(m_maxAccumulatedSteps);
                 const float accumulatedBeforeClamp = m_stepAccumulator + clampedInput;
                 m_stepAccumulator = std::min(accumulatedBeforeClamp, maxAccumulatedTime);
+                m_clampLogElapsed += clampedInput;
 
                 int stepsSimulated = 0;
                 while (m_stepAccumulator >= maxStep)
@@ -119,12 +121,16 @@ namespace Systems
                 {
                         if (!m_clampActive)
                         {
-                                std::ostringstream oss;
-                                oss << "[Box2DPhysicsSystem] Entering clamped stepping: dt=" << clampedInput
-                                        << " -> " << maxStep
-                                        << " (accumulator=" << accumulatedBeforeClamp
-                                        << "/" << maxAccumulatedTime << ") with " << stepsSimulated << " step(s)\n";
-                                DebugTrace(oss.str());
+                                if (m_clampLogElapsed >= kClampLogIntervalSeconds)
+                                {
+                                        std::ostringstream oss;
+                                        oss << "[Box2DPhysicsSystem] Entering clamped stepping: dt=" << clampedInput
+                                                << " -> " << maxStep
+                                                << " (accumulator=" << accumulatedBeforeClamp
+                                                << "/" << maxAccumulatedTime << ") with " << stepsSimulated << " step(s)\n";
+                                        DebugTrace(oss.str());
+                                        m_clampLogElapsed = 0.0f;
+                                }
 
                                 m_clampActive = true;
                                 ++m_summaryClampActivations;
@@ -139,11 +145,15 @@ namespace Systems
                 }
                 else if (m_clampActive)
                 {
-                        std::ostringstream oss;
-                        oss << "[Box2DPhysicsSystem] Returning to unclamped stepping after "
-                                << m_currentClampFrames << " frame(s) and "
-                                << m_currentClampSteps << " step(s); accumulator=" << m_stepAccumulator << "\n";
-                        DebugTrace(oss.str());
+                        if (m_clampLogElapsed >= kClampLogIntervalSeconds)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DPhysicsSystem] Returning to unclamped stepping after "
+                                        << m_currentClampFrames << " frame(s) and "
+                                        << m_currentClampSteps << " step(s); accumulator=" << m_stepAccumulator << "\n";
+                                DebugTrace(oss.str());
+                                m_clampLogElapsed = 0.0f;
+                        }
 
                         m_clampActive = false;
                         m_currentClampFrames = 0;
@@ -191,6 +201,7 @@ namespace Systems
         {
                 m_stepAccumulator = 0.0f;
                 m_clampActive = false;
+                m_clampLogElapsed = 0.0f;
                 m_currentClampFrames = 0;
                 m_currentClampSteps = 0;
                 m_summaryClampActivations = 0;
@@ -271,4 +282,3 @@ namespace Systems
                 m_lastTimerFrame = 0;
         }
 }
-
