@@ -7,6 +7,7 @@
 
 #include <box2d/box2d.h>
 
+#include "Entities/PhysicalEntity.h"
 #include "Systems/Box2DMeshBuilder.h"
 #include "SweetsPrototypeManifest.h"
 #include "Vector.h"

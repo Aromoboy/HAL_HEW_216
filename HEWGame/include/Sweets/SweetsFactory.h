@@ -10,6 +10,7 @@
 #include "CollisionLayer.h"
 #include "Core/UpdateNode.h"
 #include "ColliderRegistry.h"
+#include "Physics/ShapeConstants.h"
 #include "Sweets/SweetsKeyUtils.h"
 #include "Sweets/SweetsTypes.h"
 #include "SweetsPrototypeManifest.h"
