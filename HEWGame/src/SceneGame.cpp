@@ -3506,13 +3506,17 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
 
         if (m_render)
         {
+#if defined(_DEBUG) && SCENEGAME_VERBOSE_DRAW_LOG
             DebugTrace(std::string(kLogPrefix) + "描画開始: " + std::to_string(m_stageObjects.size()) + "個のオブジェクト\n");
+#endif
 
             for (const auto& obj : m_stageObjects)
             {
                 if (obj.model)
                 {
+#if defined(_DEBUG) && SCENEGAME_VERBOSE_DRAW_LOG
                     DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
+#endif
 
                     Transform renderTransform = obj.transform;
                     
