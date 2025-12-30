@@ -90,7 +90,6 @@ namespace
         constexpr float kDefaultPickupMaxDistance = 0.5f;
         constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
         constexpr float kGuidelineAdvanceCooldownSeconds = 0.25f;
-        constexpr const char* kFallbackPlayerModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
         constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float kPlayerMinimumYMargin = 1.0f;
@@ -2327,18 +2326,23 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const auto* fairyDescriptor = manifest.Find("Fairy");
     if (!fairyDescriptor && !m_playerModel)
     {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using placeholder.\n");
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using procedural fallback.\n");
     }
 
-    const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string(kFallbackPlayerModelPath);
+    const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string{};
     playerColliderKey = fairyDescriptor ? fairyDescriptor->key : std::string("Fairy");
     std::string resolvedModelPath = primaryModelPath;
-    m_playerModel = cache.Get(primaryModelPath);
-    if (!m_playerModel && primaryModelPath != kFallbackPlayerModelPath)
+    if (!primaryModelPath.empty())
     {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; trying placeholder.\n");
-        resolvedModelPath = kFallbackPlayerModelPath;
-        m_playerModel = cache.Get(resolvedModelPath);
+        m_playerModel = cache.Get(primaryModelPath);
+        if (!m_playerModel)
+        {
+            DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; player will use procedural fallback.\n");
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy model path missing; player will use procedural fallback.\n");
     }
 
 

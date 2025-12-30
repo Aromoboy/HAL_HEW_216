@@ -300,7 +300,6 @@ namespace
         std::string error;
     };
 
-    constexpr const char* kPlaceholderModelPath = "Assets/Model/SweetsPrototype/FairyPlaceholder.obj";
 }
 
 // モデル読み込み
@@ -352,7 +351,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     if (future.wait_for(kImportTimeout) == std::future_status::timeout)
     {
         DebugLog::DebugMessage(
-            "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消してフォールバック path=" + path);
+            "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消して終了 path=" + path);
 
         std::thread([f = std::move(future)]() mutable
             {
@@ -361,13 +360,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
                     f.wait();
                 }
             }).detach();
-
-        if (NormalizePath(path) == NormalizePath(kPlaceholderModelPath))
-        {
-            return nullptr;
-        }
-
-        return Render::ModelCache::Instance().Get(kPlaceholderModelPath);
+        return nullptr;
     }
 
     ImportResult importResult = future.get();
@@ -385,11 +378,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     }
     if (!pScene)
     {
-        if (NormalizePath(path) == NormalizePath(kPlaceholderModelPath))
-        {
-            return nullptr;
-        }
-        return Render::ModelCache::Instance().Get(kPlaceholderModelPath);
+        return nullptr;
     }
 
     auto importer = std::move(importResult.importer);
