@@ -273,6 +273,9 @@
     <ClCompile Include="src\Systems\PhysicsBinder.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
+    <ClCompile Include="src\Systems\PhysicsRegistration.cpp">
+      <Filter>Systems</Filter>
+    </ClCompile>
     <ClCompile Include="src\Texture.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -546,7 +549,13 @@
     <ClInclude Include="include\Systems\Box2DContactListener.h">
       <Filter>Systems</Filter>
     </ClInclude>
+    <ClInclude Include="include\Systems\IPhysicsBinder.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
     <ClInclude Include="include\Systems\PhysicsBinder.h">
+      <Filter>Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Systems\PhysicsRegistration.h">
       <Filter>Systems</Filter>
     </ClInclude>
     <ClInclude Include="include\Systems\Box2DMeshBuilder.h">
