@@ -39,13 +39,9 @@ namespace Stage
         const std::vector<float3>& GetSpawnPointsPrimary() const noexcept;
         const std::vector<float3>& GetSpawnPointsSecondary() const noexcept;
         // Legacy alias for primary spawn points
-        const std::vector<float3>& GetSpawnPoints() const noexcept;
         float GetPlaneZ() const noexcept;
-        const std::vector<PlatformDescriptor>& GetPlatforms() const noexcept;
         const PlatformDescriptor& GetPlatform(std::size_t index) const;
         std::size_t GetPlatformCount() const noexcept;
-        const std::string& GetSourcePath() const noexcept;
-        float GetPlayerMoveSpeed() const noexcept;
         float GetPlayerHorizontalSpeedWorld() const noexcept;
         float GetPlayerVerticalSpeedWorld() const noexcept;
         float GetCellSizeWorld() const noexcept;

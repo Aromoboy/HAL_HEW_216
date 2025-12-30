@@ -1841,19 +1841,9 @@ namespace Stage
         return m_spawnPointsSecondary;
     }
 
-    const std::vector<float3>& StageData::GetSpawnPoints() const noexcept
-    {
-        return m_spawnPointsPrimary;
-    }
-
     float StageData::GetPlaneZ() const noexcept
     {
         return m_planeZ;
-    }
-
-    const std::vector<PlatformDescriptor>& StageData::GetPlatforms() const noexcept
-    {
-        return m_platforms;
     }
 
     const PlatformDescriptor& StageData::GetPlatform(std::size_t index) const
@@ -1875,16 +1865,6 @@ namespace Stage
     std::size_t StageData::GetPlatformCount() const noexcept
     {
         return m_platforms.size();
-    }
-
-    const std::string& StageData::GetSourcePath() const noexcept
-    {
-        return m_sourcePath;
-    }
-
-    float StageData::GetPlayerMoveSpeed() const noexcept
-    {
-        return m_playerMoveSpeed;
     }
 
     float StageData::GetPlayerHorizontalSpeedWorld() const noexcept
