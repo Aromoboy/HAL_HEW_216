@@ -12,6 +12,7 @@
 #include "Core/UpdateNode.h"
 #include "ColliderConfigLoader.h"
 #include "ColliderRegistry.h"
+#include "Render/Model.h"
 #include "Physics/ShapeConstants.h"
 #include "Sweets/SweetsKeyUtils.h"
 #include "Sweets/SweetsTypes.h"
@@ -21,11 +22,6 @@
 namespace Systems
 {
     class PhysicsMachine;
-}
-
-namespace Render
-{
-    class Model;
 }
 
 namespace SweetsSpace

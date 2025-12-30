@@ -46,16 +46,4 @@ private:
         std::string m_sourcePath{};
 };
 
-
-// Render-layer model abstraction
-// The class diagram groups renderable meshes under Render::Model.
-// ModelDX provides the concrete implementation, so we alias it here to
-// keep a single, unified model type across entities and systems.
-namespace Render
-{
-    using Model = ::ModelDX;
-}
-
-
-
 #endif // MODELDX_H
