@@ -25,8 +25,8 @@ namespace SweetsSpace
 
         int CountAll() const;
 
-        std::unordered_map<SweetsState, SweetsList>& MutableStateMap();
-        const std::unordered_map<SweetsState, SweetsList>& StateMap() const;
+        std::unordered_map<SweetsState, SweetsList, SweetsStateHash>& MutableStateMap();
+        const std::unordered_map<SweetsState, SweetsList, SweetsStateHash>& StateMap() const;
         std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState>& Lookup();
         const std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState>& Lookup() const;
 

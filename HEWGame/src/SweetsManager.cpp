@@ -11,6 +11,8 @@
 #    include <windows.h>
 #endif
 
+#include "Core/UpdateScheduler.h"
+#include "Sweets/BaseSweets.h"
 #include "Systems/PhysicsMachine.h"
 
 namespace

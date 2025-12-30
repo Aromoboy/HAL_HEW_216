@@ -30,6 +30,10 @@
 
 namespace
 {
+    using SweetsSpace::DeleteReason;
+    using SweetsSpace::SweetsState;
+    using SweetsSpace::UseOutcome;
+
 #if defined(_WIN32) && defined(_DEBUG)
     void DebugTrace(const std::string& message)
     {
