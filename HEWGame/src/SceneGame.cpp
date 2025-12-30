@@ -27,7 +27,9 @@
 #include "ConfigSectionReader.h"
 #include "DebugColliderRenderer.h"
 #include "SceneGameConfigLoader.h"
+#include "SceneGameUIOverlay.h"
 #include "GameplayConfig.h"
+#include "UIManager.h"
 #include "GameplayRules.h"
 #include <cassert>
 #include <algorithm>
@@ -103,35 +105,6 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
-        const HudLayoutConfig kHudLayoutConfig
-        {
-            512u,
-            192u,
-            32.0f,
-            12.0f,
-            28.0f,
-            5.0f,
-            1.5f,
-            2.0f,
-            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
-        };
-
-        const ResultLayoutConfig kResultLayoutConfig
-        {
-            512u,
-            192u,
-            32.0f,
-            12.0f,
-            28.0f,
-            5.0f,
-            1.5f,
-            2.0f,
-            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
-        };
-
-
         struct ModelBounds
         {
             float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
@@ -1458,11 +1431,10 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
         });
     }
 
-    m_uiManager = std::make_unique<UIManager>();
-    if (m_uiManager && !m_uiManager->Initialize(kHudLayoutConfig, kResultLayoutConfig))
+    m_uiOverlay = std::make_unique<SceneGameUIOverlay>();
+    if (m_uiOverlay && !m_uiOverlay->Initialize())
     {
-        DebugTrace(std::string(kLogPrefix) + "UI manager failed to initialize; HUD/Result overlay disabled.\n");
-        m_uiManager.reset();
+        m_uiOverlay.reset();
     }
 
     RenderTarget* pRTV = GetDefaultRTV();
@@ -1843,10 +1815,10 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
 
 SceneGame::~SceneGame()
 {
-    if (m_uiManager)
+    if (m_uiOverlay)
     {
-        m_uiManager->Shutdown();
-        m_uiManager.reset();
+        m_uiOverlay->Shutdown();
+        m_uiOverlay.reset();
     }
 
     if (m_physicsBinder)
@@ -2314,7 +2286,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         ProcessPostGameInput(ctx);
     }
 
-    if (m_uiManager)
+    if (m_uiOverlay)
     {
         const bool isTimeUp = (m_stageState == StageState::TimeUp)
             || (m_stageState == StageState::Cleared)
@@ -2361,7 +2333,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         uiData.showHud = g_DebugDrawEnabled && !isTimeUp;
         uiData.showResult = isTimeUp;
-        m_uiManager->UpdateHUD(uiData);
+        m_uiOverlay->Update(uiData);
     }
 
     if (ctx.input.IsKeyPress(VK_RETURN))
@@ -2580,13 +2552,17 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         DrawPhysicsDebugOverlay();
 #endif
 
-        if (m_uiManager)
-        {
-            m_uiManager->Draw();
-        }
+}
+
+void SceneGame::DrawOverlay()
+{
+    if (m_uiOverlay)
+    {
+        m_uiOverlay->Draw();
+    }
 
 #if defined(_DEBUG)
-        //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
+    //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
 #endif
 }
 
