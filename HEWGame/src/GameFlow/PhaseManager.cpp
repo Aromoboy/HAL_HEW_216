@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
 
 namespace GameFlow
 {
@@ -87,25 +86,6 @@ namespace GameFlow
         m_elapsedSeconds = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Initialized with " << m_thresholds.size() << " thresholds"
-            << " and " << m_rewardMultipliers.size() << " multipliers.";
-        if (!m_thresholds.empty())
-        {
-            oss << " nextThreshold=" << m_thresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-        //Mini Phase
-        oss << kLogPrefix << "Initialized with " << m_minithresholds.size() << " minithresholds"
-            << " and " << m_minirewardMultipliers.size() << " minimultipliers.";
-        if (!m_minithresholds.empty())
-        {
-            oss << " nextminiThreshold=" << m_minithresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-        DebugTrace(oss.str());
     }
 
     void PhaseManager::Reset()
@@ -124,27 +104,6 @@ namespace GameFlow
         m_elapsedSeconds = 0.0f;
         m_startTime = std::chrono::steady_clock::now();
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "Reset. thresholdCount=" << m_thresholds.size()
-            << " multiplierCount=" << m_rewardMultipliers.size();
-        if (!m_thresholds.empty())
-        {
-            oss << " nextThreshold=" << m_thresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-
-        //Mini Phase
-        oss << kLogPrefix << "Reset. minithresholdCount=" << m_minithresholds.size()
-            << " minimultiplierCount=" << m_minirewardMultipliers.size();
-        if (!m_minithresholds.empty())
-        {
-            oss << " nextThreshold=" << m_minithresholds.front();
-        }
-        oss << " currentMultiplier=" << GetRewardMultiplier();
-        oss << "\n";
-
-        DebugTrace(oss.str());
     }
 
     bool PhaseManager::AdvancePhase()
@@ -223,11 +182,6 @@ namespace GameFlow
                     m_rewardMultipliers.resize(requiredMultiplierCount, m_rewardMultipliers.back());
                 }
 
-                std::ostringstream oss;
-                oss << kLogPrefix << "auto-threshold=" << (m_thresholds.size() - 1)
-                    << " value=" << newThreshold << "\n";
-                DebugTrace(oss.str());
-
                 if (newThreshold <= 0.0f || !std::isfinite(newThreshold))
                 {
                     break;
@@ -243,7 +197,6 @@ namespace GameFlow
             ++m_currentPhase;
             phaseupdate.phaseAdvanced = true;
             phaseupdate.timeElapsed += GetRewardMultiplierForPhase(m_currentPhase);
-            LogPhaseAdvance(threshold, m_lastReportedHeight, "height");
         }
 
         //Mini Phase
@@ -255,7 +208,6 @@ namespace GameFlow
             ++m_currentMiniPhase;
             phaseupdate.miniPhaseAdvanced = true;
             phaseupdate.timeElapsed += GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
-            LogPhaseAdvance(minithreshold, m_lastReportedHeight, "height");
         }
 
         return phaseupdate;
@@ -286,20 +238,6 @@ namespace GameFlow
     float PhaseManager::GetRewardMiniMultiplier() const noexcept
     {
         return GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
-    }
-
-    void PhaseManager::LogPhaseAdvance(float threshold, float currentValue, const char* metricLabel) const
-    {
-        const auto now = std::chrono::steady_clock::now();
-        const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_startTime).count();
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "{\"phaseupdate\":" << m_currentPhase
-            << ",\"threshold\":" << threshold
-            << ",\"" << (metricLabel ? metricLabel : "value") << "\":" << currentValue
-            << ",\"multiplier\":" << GetRewardMultiplier()
-            << ",\"timeMs\":" << elapsedMs << "}\n";
-        DebugTrace(oss.str());
     }
 
     float PhaseManager::GetRewardMultiplierForPhase(int phaseupdateIndex) const noexcept

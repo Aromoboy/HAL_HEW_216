@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <string>
 #include <chrono>
 #include <algorithm>
 #include <cmath>
@@ -41,12 +40,6 @@ namespace GameFlow
 
     private:
 
-        // logging prefix
-        static constexpr const char* kLogPrefix = "[PhaseManager] ";
-
-
-        inline void DebugTrace(const std::string&) const {}
-
         // time tracking
         std::chrono::steady_clock::time_point m_startTime;
 
@@ -71,6 +64,5 @@ namespace GameFlow
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
         float GetRewardMiniMultiplierForPhase(int phaseminiIndex) const noexcept;
 
-        void LogPhaseAdvance(float threshold, float currentValue, const char* metricLabel) const;
     };
 }
