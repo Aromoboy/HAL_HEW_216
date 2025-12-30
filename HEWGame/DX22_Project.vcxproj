@@ -271,6 +271,12 @@
     <ClCompile Include="src\TextureCache.cpp" />
     <ClCompile Include="src\TextureDX.cpp" />
     <ClCompile Include="src\Sweets\BaseSweets.cpp" />
+    <ClCompile Include="src\Sweets\SweetsContacts.cpp" />
+    <ClCompile Include="src\Sweets\SweetsFactory.cpp" />
+    <ClCompile Include="src\Sweets\SweetsLifecycle.cpp" />
+    <ClCompile Include="src\Sweets\SweetsRegistry.cpp" />
+    <ClCompile Include="src\Sweets\SweetsRenderer.cpp" />
+    <ClCompile Include="src\Sweets\SweetsSpawner.cpp" />
     <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
     <ClCompile Include="src\SweetsManager.cpp" />
     <ClCompile Include="TimerDisplay.cpp" />
@@ -385,6 +391,14 @@
     <ClInclude Include="include\Vector.h" />
     <ClInclude Include="include\conioex.h" />
     <ClInclude Include="include\Sweets\BaseSweets.h" />
+    <ClInclude Include="include\Sweets\SweetsContacts.h" />
+    <ClInclude Include="include\Sweets\SweetsFactory.h" />
+    <ClInclude Include="include\Sweets\SweetsKeyUtils.h" />
+    <ClInclude Include="include\Sweets\SweetsLifecycle.h" />
+    <ClInclude Include="include\Sweets\SweetsRegistry.h" />
+    <ClInclude Include="include\Sweets\SweetsRenderer.h" />
+    <ClInclude Include="include\Sweets\SweetsSpawner.h" />
+    <ClInclude Include="include\Sweets\SweetsTypes.h" />
     <ClInclude Include="include\SweetsManager.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />

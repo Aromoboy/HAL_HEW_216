@@ -256,6 +256,24 @@
     <ClCompile Include="src\Sweets\BaseSweets.cpp">
       <Filter>Sweets</Filter>
     </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsContacts.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsFactory.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsLifecycle.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsRegistry.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsRenderer.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sweets\SweetsSpawner.cpp">
+      <Filter>Sweets</Filter>
+    </ClCompile>
     <ClCompile Include="src\SweetsManager.cpp">
       <Filter>Sweets</Filter>
     </ClCompile>
@@ -558,6 +576,30 @@
       <Filter>Stage</Filter>
     </ClInclude>
     <ClInclude Include="include\Sweets\BaseSweets.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsContacts.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsFactory.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsKeyUtils.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsLifecycle.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsRegistry.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsRenderer.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsSpawner.h">
+      <Filter>Sweets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sweets\SweetsTypes.h">
       <Filter>Sweets</Filter>
     </ClInclude>
     <ClInclude Include="include\SweetsManager.h">
