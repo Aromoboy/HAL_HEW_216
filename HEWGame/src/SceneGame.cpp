@@ -1910,14 +1910,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
     std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
 
-    bool stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, GameplayConfig::kSectionStageChecklist);
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
-    if (!stageLoaded)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Checklist stage config missing; falling back to default stage.\n");
-        stageConfigSectionUsed = GameplayConfig::kSectionStageDefault;
-        stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
-    }
+    bool stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
     m_phaseManager.Initialize(
         m_stageData.GetPhaseThresholds(),
         m_stageData.GetPhaseRewardMultipliers(),

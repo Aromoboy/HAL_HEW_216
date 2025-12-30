@@ -302,7 +302,6 @@ namespace Stage
             float3{ kDefaultPickupOffsetLocalCells.x * kDefaultCellSizeWorld,
             kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
             kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld } }
-        , m_playerMoveSpeed(kDefaultPlayerMoveSpeed)
         , m_guidelineHeight(kDefaultGuidelineHeight)
         , m_guidelineStep(kDefaultGuidelineStep)
         , m_guidelineThicknessPixels(kDefaultGuidelineThicknessPixels)
@@ -375,8 +374,6 @@ namespace Stage
         float pickupDepthThreshold = kDefaultPickupDepthThreshold;
         Stage::PickupOffsetMode pickupOffsetMode = kDefaultPickupOffsetMode;
         float3 pickupOffsetLocalCells = kDefaultPickupOffsetLocalCells;
-        float playerMoveSpeed = kDefaultPlayerMoveSpeed;
-        bool playerMoveSpeedSet = false;
         float guidelineHeight = kDefaultGuidelineHeight;
         bool guidelineHeightSet = false;
         float guidelineStep = kDefaultGuidelineStep;
@@ -906,22 +903,6 @@ namespace Stage
                     parseError = true;
                 }
             }
-            else if (key == "playerMoveSpeed")
-            {
-                try
-                {
-                    playerMoveSpeed = std::stof(rawValue);
-                    playerMoveSpeedSet = true;
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse playerMoveSpeed on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    DebugTrace(oss.str());
-                    parseError = true;
-                }
-            }
             else if (key == "guidelineHeight")
             {
                 try
@@ -1081,15 +1062,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformScale not specified; using default ("
                 << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
-            DebugTrace(oss.str());
-        }
-
-        if (!playerMoveSpeedSet && !horizontalSpeedSet)
-        {
-            playerMoveSpeed = kDefaultPlayerMoveSpeed;
-            std::ostringstream oss;
-            oss << kLogPrefix << "playerMoveSpeed not specified; defaulting to " << playerMoveSpeed
-                << " (legacy fallback).\n";
             DebugTrace(oss.str());
         }
 
@@ -1571,18 +1543,6 @@ namespace Stage
             descriptor.depthWorld = std::max(0.01f, descriptor.depth * cellSizeWorld);
         }
 
-        if (!horizontalSpeedSet && playerMoveSpeedSet)
-        {
-            horizontalSpeedCellsPerSec = playerMoveSpeed / cellSizeWorld;
-            horizontalSpeedSet = true;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Derived horizontalSpeedCellsPerSec=" << horizontalSpeedCellsPerSec
-                << " from legacy playerMoveSpeed=" << playerMoveSpeed
-                << " and cellSizeWorld=" << cellSizeWorld << "\n";
-            DebugTrace(oss.str());
-        }
-
         horizontalSpeedCellsPerSec = sanitizePositive(
             horizontalSpeedCellsPerSec,
             kDefaultHorizontalSpeedCellsPerSec,
@@ -1772,7 +1732,6 @@ namespace Stage
         m_pickupMaxDistance = pickupMaxDistance;
         m_pickupDepthThreshold = pickupDepthThreshold;
         m_pickupOffset = pickupOffset;
-        m_playerMoveSpeed = playerMoveSpeedWorld;
         m_guidelineHeight = 7.0f;
         m_guidelineStep = guidelineStep;
         m_guidelineThicknessPixels = guidelineThicknessPixels;
@@ -1981,7 +1940,6 @@ namespace Stage
                 kDefaultPickupOffsetLocalCells.y * kDefaultCellSizeWorld,
                 kDefaultPickupOffsetLocalCells.z * kDefaultCellSizeWorld },
         };
-        m_playerMoveSpeed = m_playerHorizontalSpeedWorld;
         m_guidelineHeight = kDefaultGuidelineHeight;
         m_guidelineStep = kDefaultGuidelineStep;
         m_guidelineThicknessPixels = kDefaultGuidelineThicknessPixels;

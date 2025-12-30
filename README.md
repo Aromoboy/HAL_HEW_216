@@ -12,6 +12,9 @@
 
 また、`HEWGame/DX22_Project.vcxproj.user` も意図的にバージョン管理されています。このファイルには Visual Studio 固有のユーザー設定が保存され、チーム全員のデバッガ設定やツールセット指定 (`ToolsVersion="Current"`) をそろえる役割を担っています。空の `<PropertyGroup>` を含めた最小構成ですが、Visual Studio が環境依存の値を勝手に書き込むのを防ぎ、設定差分を抑制する目的で維持しています。削除・無視すると開発環境ごとに挙動がばらつく原因になるため、リポジトリから除外しないでください。
 
+## ステージ設定
+ステージパラメータの唯一の参照元は `HEWGame/Assets/Config/gameplay.cfg` の `[stage.checklist]` セクションです。
+
 クラス図（Mermaid用）：
 ---
 config:

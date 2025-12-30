@@ -89,7 +89,6 @@ namespace Stage
         float m_pickupMaxDistance;
         float m_pickupDepthThreshold;
         PickupOffset m_pickupOffset;
-        float m_playerMoveSpeed;
         float m_guidelineHeight;
         float m_guidelineStep;
         float m_guidelineThicknessPixels;
