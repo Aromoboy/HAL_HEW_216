@@ -33,9 +33,6 @@ namespace SceneSpace
         m_timer.Tick();
         ActivatePendingScene();
 
-        Core::UpdateContext inputCtx(m_timer.DeltaTime(), m_timer, m_input, nullptr);
-        m_input.OnUpdate(inputCtx);
-
         if (m_activeScene)
         {
             assert(m_sceneLoaded && m_sceneEntered);
