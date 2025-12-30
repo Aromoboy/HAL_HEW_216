@@ -318,9 +318,9 @@ namespace SceneGameConfig
         return config;
     }
 
-    SceneGame::PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path)
+    PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path)
     {
-        SceneGame::PlayerColliderTuning tuning{};
+        PlayerColliderTuning tuning{};
         tuning.thicknessPadding = kDefaultGeneratedThicknessPadding;
         tuning.padding = kDefaultPlayerColliderPadding;
         tuning.offset = kDefaultPlayerColliderOffset;
@@ -463,9 +463,9 @@ namespace SceneGameConfig
         return enabled;
     }
 
-    SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig()
+    PlayerSpawnTransform LoadPlayerTransformConfig()
     {
-        SceneGame::PlayerSpawnTransform result{};
+        PlayerSpawnTransform result{};
         constexpr float kDegToRad = 3.14159265358979323846f / 180.0f;
 
         auto parseFloat3 = [&](const std::string& value, float3& out, const std::string& key, int lineNumber) -> bool
