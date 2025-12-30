@@ -15,6 +15,9 @@
 #    include <windows.h>
 #endif
 
+#include "ConfigSectionReader.h"
+#include "GameplayConfig.h"
+
 namespace
 {
     constexpr const char* kPrototypeRoot = "Assets/Model/SweetsPrototype/";
@@ -94,7 +97,7 @@ namespace
 
 namespace SweetsSpace
 {
-    constexpr const char* SweetsPrototypeManifest::kDefaultCsvPath;
+    constexpr const char* SweetsPrototypeManifest::kDefaultConfigPath;
 
     SweetsPrototypeManifest& SweetsPrototypeManifest::Instance()
     {
@@ -162,7 +165,7 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsPrototypeManifest::ReloadFromCsv(const std::string& csvPath)
+    bool SweetsPrototypeManifest::ReloadFromCsv(const std::string& configPath)
     {
         m_byType.clear();
         m_lookup.clear();
@@ -171,7 +174,7 @@ namespace SweetsSpace
 
         ApplyDefaults();
 
-        const bool loaded = LoadOverridesFromCsv(csvPath);
+        const bool loaded = LoadOverridesFromConfig(configPath);
 
         const std::array<SweetsType, 5> kTypes{
             SweetsType::Cream,
@@ -201,25 +204,28 @@ namespace SweetsSpace
         return loaded;
     }
 
-    bool SweetsPrototypeManifest::LoadOverridesFromCsv(const std::string& csvPath)
+    bool SweetsPrototypeManifest::LoadOverridesFromConfig(const std::string& configPath)
     {
-        std::ifstream stream(csvPath);
-        if (!stream.is_open())
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(configPath, GameplayConfig::kSectionSweetsManifest, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Config not found at '" << csvPath << "'; using built-in defaults.\n";
+            oss << kLogPrefix << "Config section '" << GameplayConfig::kSectionSweetsManifest
+                << "' not found at '" << configPath << "'; using built-in defaults.\n";
             ManifestDebugTrace(oss.str());
             return false;
         }
 
         std::unordered_set<SweetsType, SweetsTypeHash> touched;
-        std::string line;
-        std::size_t lineNumber = 0;
-        while (std::getline(stream, line))
+        for (const auto& entry : lines)
         {
-            ++lineNumber;
-            const std::string trimmed = Trim(line);
-            if (trimmed.empty() || trimmed[0] == '#')
+            if (entry.key != "entry")
+            {
+                continue;
+            }
+
+            const std::string trimmed = Trim(entry.value);
+            if (trimmed.empty())
             {
                 continue;
             }
@@ -235,7 +241,7 @@ namespace SweetsSpace
             if (tokens.size() < 2)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Line " << lineNumber << " malformed (needs key,modelPath[,description]).\n";
+                warn << kLogPrefix << "Line " << entry.lineNumber << " malformed (needs key,modelPath[,description]).\n";
                 ManifestDebugTrace(warn.str());
                 continue;
             }
@@ -303,7 +309,7 @@ namespace SweetsSpace
             if (!mappedType && !mappedExtraKey)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Unknown sweets key '" << key << "' on line " << lineNumber
+                warn << kLogPrefix << "Unknown sweets key '" << key << "' on line " << entry.lineNumber
                     << "; entry ignored.\n";
                 ManifestDebugTrace(warn.str());
                 continue;
@@ -313,7 +319,7 @@ namespace SweetsSpace
             if (resolvedPath.empty())
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Empty model path for key '" << key << "' on line " << lineNumber
+                warn << kLogPrefix << "Empty model path for key '" << key << "' on line " << entry.lineNumber
                     << "; keeping previous entry.\n";
                 ManifestDebugTrace(warn.str());
                 continue;

@@ -11,6 +11,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "ConfigSectionReader.h"
+
 namespace
 {
     void DebugTrace(const std::string& message)
@@ -315,11 +317,24 @@ namespace Stage
 
     bool StageData::LoadFromFile(const std::string& path)
     {
-        std::ifstream file(path);
-        if (!file.is_open())
+        return LoadFromFile(path, std::string{});
+    }
+
+    bool StageData::LoadFromFile(const std::string& path, const std::string& section)
+    {
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(path, section, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Config not found at '" << path << "'. Using defaults.\n";
+            if (section.empty())
+            {
+                oss << kLogPrefix << "Config not found at '" << path << "'. Using defaults.\n";
+            }
+            else
+            {
+                oss << kLogPrefix << "Config section '" << section << "' not found at '" << path
+                    << "'. Using defaults.\n";
+            }
             DebugTrace(oss.str());
             ApplyDefaults();
             m_sourcePath.clear();
@@ -379,7 +394,6 @@ namespace Stage
         std::string backgroundTexturePath = kDefaultBackgroundTexturePath;
         bool backgroundTextureSet = false;
         bool parseError = false;
-        size_t lineNumber = 0;
         bool primaryProvided = false;
         bool secondaryProvided = false;
         bool primaryParseError = false;
@@ -420,34 +434,11 @@ namespace Stage
             DebugTrace(oss.str());
         };
 
-        std::string line;
-        while (std::getline(file, line))
+        for (const auto& entry : lines)
         {
-            ++lineNumber;
-            const auto commentPos = line.find_first_of("#;");
-            if (commentPos != std::string::npos)
-            {
-                line = line.substr(0, commentPos);
-            }
-
-            line = Trim(line);
-            if (line.empty())
-            {
-                continue;
-            }
-
-            const auto delimiterPos = line.find('=');
-            if (delimiterPos == std::string::npos)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Line " << lineNumber << " missing '=' : " << line << "\n";
-                DebugTrace(oss.str());
-                parseError = true;
-                continue;
-            }
-
-            const std::string key = Trim(line.substr(0, delimiterPos));
-            const std::string rawValue = Trim(line.substr(delimiterPos + 1));
+            const std::string key = entry.key;
+            const std::string rawValue = entry.value;
+            const std::size_t lineNumber = entry.lineNumber;
 
             size_t platformIndex = 0;
             if (TryParsePlatformKey(key, "center", platformIndex))

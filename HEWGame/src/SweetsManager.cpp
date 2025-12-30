@@ -2999,11 +2999,12 @@ namespace SweetsSpace
 
     bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
     {
-        std::ifstream file(path);
-        if (!file.is_open())
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(path, GameplayConfig::kSectionSpawnPhases, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "フェーズのスポーン設定が '" << path << "' に見つからないから、デフォルトを使うね \n";
+            oss << kLogPrefix << "フェーズのスポーン設定[" << GameplayConfig::kSectionSpawnPhases
+                << "]が '" << path << "' に見つからないから、デフォルトを使うね \n";
             DebugTrace(oss.str());
             return false;
         }
@@ -3036,41 +3037,17 @@ namespace SweetsSpace
         std::map<int, PartialConfig> parsed;
         int currentPhase = -1;
         bool parseError = false;
-        std::string line;
-        size_t lineNumber = 0;
         float loadedAutoIntervalFactor = SanitizeGrowthFactor(kAutoSpawnIntervalFactor);
         float loadedAutoBurstFactor = SanitizeGrowthFactor(kAutoBurstIntervalFactor);
         int loadedAutoSimultaneousIncrement = SanitizeSimultaneousIncrement(kAutoSimultaneousIncrement);
         int loadedAutoSimultaneousCap = SanitizeSimultaneousCap(kAutoSimultaneousCap);
         bool autoGrowthConfigured = false;
 
-        while (std::getline(file, line))
+        for (const auto& entry : lines)
         {
-            ++lineNumber;
-            const auto commentPos = line.find_first_of("#;");
-            if (commentPos != std::string::npos)
-            {
-                line = line.substr(0, commentPos);
-            }
-
-            line = TrimToken(line);
-            if (line.empty())
-            {
-                continue;
-            }
-
-            const auto delimiterPos = line.find('=');
-            if (delimiterPos == std::string::npos)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "スポーン設定の" << lineNumber << "行目に '=' がないよ: " << line << "\n";
-                DebugTrace(oss.str());
-                parseError = true;
-                continue;
-            }
-
-            const std::string key = TrimToken(line.substr(0, delimiterPos));
-            const std::string value = TrimToken(line.substr(delimiterPos + 1));
+            const std::string key = TrimToken(entry.key);
+            const std::string value = TrimToken(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
 
             if (key == "autoIntervalFactor")
             {

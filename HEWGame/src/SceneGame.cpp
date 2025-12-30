@@ -72,14 +72,11 @@ namespace
 #endif
 
         constexpr const char* kLogPrefix = "[SceneGame] ";
-        constexpr const char* kPhysicsConfigPath = "Assets/Config/physics_tuning.cfg";
+        constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
-        constexpr const char* kStageChecklistConfigPath = "Assets/Config/stage_checklist.cfg";
-        constexpr const char* kStageDefaultConfigPath = "Assets/Config/stage_default.cfg";
         constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
-        constexpr const char* kSweetsSpawnConfigPath = "Assets/Config/sweets_spawn.cfg";
         constexpr const char* kPlayerTransformConfigPath = "Assets/Config/player_transform.cfg";
-        constexpr const char* kRenderSettingsConfigPath = "Assets/Config/render_settings.cfg";
+        constexpr const char* kRenderSettingsSection = "render.settings";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -1372,42 +1369,23 @@ namespace
         bool LoadModelTextureLoadingSetting()
         {
             bool enabled = true;
-            std::ifstream config(kRenderSettingsConfigPath);
-            if (!config.is_open())
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[RenderSettings] Missing config; defaulting loadModelTextures="
-                    << std::boolalpha << enabled << " path='" << kRenderSettingsConfigPath << "'\n";
+                    << std::boolalpha << enabled << " section='" << kRenderSettingsSection
+                    << "' path='" << kTechnicalConfigPath << "'\n";
                 DebugTrace(oss.str());
                 return enabled;
             }
 
             bool parsed = false;
-            std::string line;
-            std::size_t lineNumber = 0;
-            while (std::getline(config, line))
+            for (const auto& entry : lines)
             {
-                ++lineNumber;
-                const auto commentPos = line.find_first_of("#;");
-                if (commentPos != std::string::npos)
-                {
-                    line = line.substr(0, commentPos);
-                }
-
-                line = TrimWhitespace(line);
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                const auto delimiterPos = line.find('=');
-                if (delimiterPos == std::string::npos)
-                {
-                    continue;
-                }
-
-                std::string key = TrimWhitespace(line.substr(0, delimiterPos));
-                std::string value = TrimWhitespace(line.substr(delimiterPos + 1));
+                std::string key = TrimWhitespace(entry.key);
+                std::string value = TrimWhitespace(entry.value);
+                const std::size_t lineNumber = entry.lineNumber;
                 std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
                     { return static_cast<char>(std::tolower(c)); });
 
@@ -1418,7 +1396,7 @@ namespace
                         parsed = true;
                         std::ostringstream oss;
                         oss << kLogPrefix << "[RenderSettings] Parsed loadModelTextures=" << std::boolalpha << enabled
-                            << " from line=" << lineNumber << " path='" << kRenderSettingsConfigPath << "'\n";
+                            << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
                         DebugTrace(oss.str());
                     }
                     else
@@ -1435,7 +1413,7 @@ namespace
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[RenderSettings] loadModelTextures not found; using default="
-                    << std::boolalpha << enabled << " (path='" << kRenderSettingsConfigPath << "')\n";
+                    << std::boolalpha << enabled << " (path='" << kTechnicalConfigPath << "')\n";
                 DebugTrace(oss.str());
             }
 
@@ -1601,11 +1579,12 @@ namespace
         PhysicsTuningSettings LoadPhysicsTuningSettings()
         {
             PhysicsTuningSettings settings;
-            std::ifstream config(kPhysicsConfigPath);
-            if (!config.is_open())
+            std::vector<Config::SectionLine> lines;
+            if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPhysicsTuning, lines))
             {
                 std::ostringstream oss;
-                oss << kLogPrefix << "Physics tuning config not found at '" << kPhysicsConfigPath
+                oss << kLogPrefix << "Physics tuning config section '" << GameplayConfig::kSectionPhysicsTuning
+                    << "' not found at '" << kGameplayConfigPath
                     << "'. Using defaults (gravity=" << settings.gravity
                     << ", subSteps=" << settings.subStepCount
                     << ", linearDamping=" << settings.linearDamping
@@ -1646,34 +1625,11 @@ namespace
                 return std::nullopt;
             };
 
-            std::string line;
-            size_t lineNumber = 0;
-            while (std::getline(config, line))
+            for (const auto& entry : lines)
             {
-                ++lineNumber;
-                const auto commentPos = line.find_first_of("#;");
-                if (commentPos != std::string::npos)
-                {
-                    line = line.substr(0, commentPos);
-                }
-                line = TrimWhitespace(line);
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                const auto delimiterPos = line.find('=');
-                if (delimiterPos == std::string::npos)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Invalid physics tuning line " << lineNumber
-                        << " (missing '='): " << line << "\n";
-                    ::DebugTrace(oss.str());
-                    continue;
-                }
-
-                std::string key = TrimWhitespace(line.substr(0, delimiterPos));
-                std::string value = TrimWhitespace(line.substr(delimiterPos + 1));
+                const std::size_t lineNumber = entry.lineNumber;
+                std::string key = TrimWhitespace(entry.key);
+                std::string value = TrimWhitespace(entry.value);
                 if (key.empty() || value.empty())
                 {
                     continue;
@@ -1785,7 +1741,8 @@ namespace
             }
 
             std::ostringstream oss;
-            oss << kLogPrefix << "Loaded physics tuning from '" << kPhysicsConfigPath
+            oss << kLogPrefix << "Loaded physics tuning from '" << kGameplayConfigPath
+                << "' section='" << GameplayConfig::kSectionPhysicsTuning
                 << "' (gravity=" << settings.gravity
                 << ", subSteps=" << settings.subStepCount
                 << ", linearDamping=" << settings.linearDamping
@@ -1967,13 +1924,13 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
 
-    bool stageLoaded = m_stageData.LoadFromFile(kStageChecklistConfigPath);
-    const char* stageConfigPathUsed = kStageChecklistConfigPath;
+    bool stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, GameplayConfig::kSectionStageChecklist);
+    const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     if (!stageLoaded)
     {
         DebugTrace(std::string(kLogPrefix) + "Checklist stage config missing; falling back to default stage.\n");
-        stageConfigPathUsed = kStageDefaultConfigPath;
-        stageLoaded = m_stageData.LoadFromFile(stageConfigPathUsed);
+        stageConfigSectionUsed = GameplayConfig::kSectionStageDefault;
+        stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
     }
     m_phaseManager.Initialize(
         m_stageData.GetPhaseThresholds(),
@@ -2044,7 +2001,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         };
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
-            << " from '" << stageConfigPathUsed << "'"
+            << " from '" << kGameplayConfigPath << "' section='" << stageConfigSectionUsed << "'"
             << " planeZ=" << m_stageData.GetPlaneZ()
             << " thresholds=" << m_stageData.GetPhaseThresholds().size()
             << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
@@ -2083,8 +2040,8 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     const bool manifestLoaded = manifest.ReloadFromCsv();
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "Manifest CSV " << (manifestLoaded ? "applied" : "missing; using defaults")
-            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultCsvPath << "'\n";
+        oss << kLogPrefix << "Manifest config " << (manifestLoaded ? "applied" : "missing; using defaults")
+            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultConfigPath << "'\n";
         const auto prototypes = manifest.Enumerate();
         oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
         for (const auto& entry : prototypes)
@@ -2281,11 +2238,11 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
         m_sweetsManager->SetSpawnOrigins(
             m_stageData.GetSpawnPointsPrimary(),
             m_stageData.GetSpawnPointsSecondary());
-        const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kSweetsSpawnConfigPath);
+        const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
-                << " from '" << kSweetsSpawnConfigPath << "'.\n";
+                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnPhases << "'.\n";
             ::DebugTrace(oss.str());
         }
         {
@@ -2441,7 +2398,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig(kPlayerTransformConfigPath);
     
 
     // ModelCacheの設定後、ステージレイアウトをロード
-    LoadStageLayout("Assets/StageLayout.csv");
+    LoadStageLayout("Assets/Config/StageLayout.csv");
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)

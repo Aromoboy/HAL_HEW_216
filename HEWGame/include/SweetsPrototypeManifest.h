@@ -42,7 +42,7 @@ namespace SweetsSpace
     class SweetsPrototypeManifest
     {
     public:
-        static constexpr const char* kDefaultCsvPath = "Assets/Config/sweets_models.csv";
+        static constexpr const char* kDefaultConfigPath = "Assets/Config/gameplay.cfg";
 
         static SweetsPrototypeManifest& Instance();
 
@@ -51,13 +51,13 @@ namespace SweetsSpace
         std::optional<SweetsType> Resolve(const std::string& key) const;
         std::vector<SweetsPrototypeEntry> Enumerate() const;
 
-        bool ReloadFromCsv(const std::string& csvPath = kDefaultCsvPath);
+        bool ReloadFromCsv(const std::string& configPath = kDefaultConfigPath);
 
     private:
         SweetsPrototypeManifest();
 
         void ApplyDefaults();
-        bool LoadOverridesFromCsv(const std::string& csvPath);
+        bool LoadOverridesFromConfig(const std::string& configPath);
         void Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
         void RegisterAlias(SweetsType type, const std::string& aliasKey);
         void RegisterExtra(std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
