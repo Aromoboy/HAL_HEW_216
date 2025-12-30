@@ -99,13 +99,13 @@ namespace SweetsSpace
     }
 
     std::unordered_map<SweetsState, SweetsRegistry::SweetsList, SweetsRegistry::SweetsStateHash>&
-        SweetsRegistry::MutableStateMap()
+    SweetsRegistry::MutableStateMap()
     {
         return m_byState;
     }
 
     const std::unordered_map<SweetsState, SweetsRegistry::SweetsList, SweetsRegistry::SweetsStateHash>&
-        SweetsRegistry::StateMap() const
+    SweetsRegistry::StateMap() const
     {
         return m_byState;
     }
