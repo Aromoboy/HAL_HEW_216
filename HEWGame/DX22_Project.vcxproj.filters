@@ -261,9 +261,6 @@
     <ClCompile Include="src\Systems\PhysicsMachine.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
-    <ClCompile Include="src\Systems\PhysicsMachineTests.cpp">
-      <Filter>Systems</Filter>
-    </ClCompile>
     <ClCompile Include="src\TestObject.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
