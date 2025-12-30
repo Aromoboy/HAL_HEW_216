@@ -233,6 +233,7 @@
     <ClCompile Include="src\PowerUpNode.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\GameplayRules.cpp" />
     <ClCompile Include="src\StageLayoutLoader.cpp" />
     <ClCompile Include="src\SceneGameConfigLoader.cpp" />
     <ClCompile Include="src\UIManager.cpp" />
@@ -322,6 +323,7 @@
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Entities\Player.h" />
     <ClInclude Include="include\GuidelineActor.h" />
+    <ClInclude Include="include\GameplayRules.h" />
     <ClInclude Include="include\Geometory.h" />
     <ClInclude Include="include\BaseCamera.h" />
     <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />
