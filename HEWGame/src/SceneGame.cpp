@@ -8,8 +8,7 @@
 #include "AssimpModelLorder.h"
 #include "MeshBuffer.h"
 #include "Core/Input.h"
-#include "Systems/PhysicsMachine.h"
-#include "Systems/Box2DContactListener.h"
+#include "Systems/PhysicsBinder.h"
 #include "Systems/DrawSystem.h"
 #include "BoxColliderComponent.h"
 #include "ModelCache.h"
@@ -1410,8 +1409,8 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
-    m_physicsMachine = std::make_unique<Systems::PhysicsMachine>(physicsParameters);
-    m_contactListener = std::make_shared<Systems::Box2DContactListener>(*m_physicsMachine);
+    m_physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
+    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
     m_drawSystem = std::make_unique<Systems::DrawSystem>();
     if (m_drawSystem)
     {
@@ -1432,33 +1431,30 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
             m_drawSystem->RegisterRenderable(*m_guidelineActor);
         }
     }
-    m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
-        *m_drawSystem,
-        *m_physicsMachine,
-        GetUpdateScheduler());
-    if (m_contactListener)
+    if (m_drawSystem && physicsMachine)
     {
-        m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b) {
-            if (m_sweetsManager)
-            {
-                m_sweetsManager->OnContactBegin(&a, &b);
-            }
-        });
-
-        m_contactListener->SetEndContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b) {
-            if (m_sweetsManager)
-            {
-                m_sweetsManager->OnContactEnd(&a, &b);
-            }
-        });
+        m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
+            *m_drawSystem,
+            *physicsMachine,
+            GetUpdateScheduler());
     }
-    if (m_physicsMachine && m_contactListener)
+    if (m_physicsBinder)
     {
-        m_physicsMachine->SetContactListener(m_contactListener);
-        m_contactListener->EnableMeshContactLogging(true);
-#if defined(_DEBUG)
-        m_contactListener->EnableDroppedEventLogging(true);
-#endif
+        m_physicsBinder->AddContactHandler(
+            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            {
+                if (m_sweetsManager)
+                {
+                    m_sweetsManager->OnContactBegin(&a, &b);
+                }
+            },
+            [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            {
+                if (m_sweetsManager)
+                {
+                    m_sweetsManager->OnContactEnd(&a, &b);
+                }
+            });
     }
 
     if (m_sweetsManager)
@@ -1803,7 +1799,7 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
     player = std::make_unique<Entities::Player>(
         trans,
         m_playerModel,
-        m_physicsMachine.get(),
+        physicsMachine,
         m_sweetsManager.get(),
         Collision::CollisionLayer::Player,
         playerIsKinematic,
@@ -1813,6 +1809,10 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
 
     if (player)
     {
+        if (m_physicsBinder)
+        {
+            m_physicsBinder->SetPlayer(player.get());
+        }
         if (boxColliderComponent)
         {
             player->SetBoxColliderComponent(boxColliderComponent);
@@ -1833,7 +1833,10 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
         if (colliderReady)
         {
-            RegisterPhysicsBody(*player);
+            if (m_physicsBinder)
+            {
+                m_physicsBinder->RegisterPhysicsBody(*player);
+            }
             {
                 std::ostringstream oss;
                 const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
@@ -1915,7 +1918,10 @@ SceneGame::~SceneGame()
         m_hudRenderer.reset();
     }
 
-    UnregisterAllPhysicsBodies();
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->UnregisterAllPhysicsBodies();
+    }
     if (m_inputRegistered)
     {
         if (auto* input = GetInput())
@@ -1925,10 +1931,13 @@ SceneGame::~SceneGame()
         m_inputRegistered = false;
     }
 
-    if (m_physicsRegistered && m_physicsMachine)
+    if (m_physicsRegistered && m_physicsBinder)
     {
-        GetUpdateScheduler().Unregister(*m_physicsMachine);
-        m_physicsRegistered = false;
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            GetUpdateScheduler().Unregister(*physicsMachine);
+            m_physicsRegistered = false;
+        }
     }
 
     if (m_cameraRigRegistered && m_cameraRig)
@@ -1990,16 +1999,19 @@ SceneGame::~SceneGame()
 
 void SceneGame::ConfigureUpdates()
 {
-        if (m_physicsMachine && !m_physicsRegistered)
+        if (m_physicsBinder && !m_physicsRegistered)
         {
-                GetUpdateScheduler().Register(*m_physicsMachine);
-                m_physicsRegistered = true;
+                if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                {
+                        GetUpdateScheduler().Register(*physicsMachine);
+                        m_physicsRegistered = true;
 
-                std::ostringstream oss;
-                oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
-                    << static_cast<int>(m_physicsMachine->GetPhase())
-                    << ", priority=" << m_physicsMachine->GetPriority() << ").\n";
-                ::DebugTrace(oss.str());
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
+                            << static_cast<int>(physicsMachine->GetPhase())
+                            << ", priority=" << physicsMachine->GetPriority() << ").\n";
+                        ::DebugTrace(oss.str());
+                }
         }
 
         if (auto* input = GetInput())
@@ -2042,10 +2054,9 @@ void SceneGame::ConfigureUpdates()
         {
                 Register(*player);
 
-                const bool tracked = m_registeredPhysicsBodies.find(player.get()) != m_registeredPhysicsBodies.end();
-                if (!tracked)
+                if (m_physicsBinder)
                 {
-                        RegisterPhysicsBody(*player);
+                        m_physicsBinder->RegisterPhysicsBody(*player);
                         std::ostringstream oss;
                         const bool isKinematic = player->IsKinematic();
                         oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
@@ -2059,7 +2070,10 @@ void SceneGame::ConfigureUpdates()
                 if (!player->HasBox2DBody() || playerFixtureCount <= 0)
                 {
                         DebugTrace(std::string(kLogPrefix) + "Player Box2D body missing after registration; attempting repair.\n");
-                        RegisterPhysicsBody(*player);
+                        if (m_physicsBinder)
+                        {
+                            m_physicsBinder->RegisterPhysicsBody(*player);
+                        }
 
                         const int repairedFixtures = player->GetBoxColliderComponent()
                             ? player->GetBoxColliderComponent()->createdFixtureCount
@@ -2082,7 +2096,10 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
 
     
-    ValidatePlayerPhysicsRegistration();
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->ValidatePlayerPhysicsRegistration();
+    }
     UpdateCountdown(ctx);
     if (m_guidelineCooldownRemainingSeconds > 0.0f)
     {
@@ -2575,6 +2592,7 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
     const SceneGameConfig::StageColliderConfig stageColliderConfig = SceneGameConfig::LoadStageColliderConfig(kGameplayConfigPath);
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
+    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
     std::string line;
     size_t stageModelsLoaded = 0;
     size_t stageModelsFailed = 0;
@@ -2653,7 +2671,7 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
             DebugTrace(std::string(kLogPrefix) + "Stage model loaded: " + obj.modelPath + "\n");
         }
 
-        if (m_physicsMachine)
+        if (physicsMachine)
         {
             const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
             if (preset)
@@ -2701,7 +2719,10 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
                     entity->SetAllowMeshPhysics(false);
                     obj.physicsEntity = entity;
 
-                    RegisterPhysicsBody(*entity);
+                    if (m_physicsBinder)
+                    {
+                        m_physicsBinder->RegisterPhysicsBody(*entity);
+                    }
 
                     std::ostringstream oss;
                     oss << kLogPrefix << "[StageColliders] Registered preset='" << preset->presetId
@@ -2915,161 +2936,6 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
 
 }
 
-void SceneGame::RegisterPhysicsBody(Entities::PhysicalEntity& entity)
-{
-    if (!m_physicsMachine)
-        return;
-
-    const bool isPlayerEntity = (player && player.get() == &entity);
-    const auto& boxColliderComponent = entity.GetBoxColliderComponent();
-    const bool hasBoxColliderComponent = boxColliderComponent && !boxColliderComponent->Empty();
-    const auto& shapeConfig = entity.GetBox2DShapeConfig();
-    const bool hasShapeConfig = shapeConfig && shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-    const bool hasMeshData = entity.HasBox2DMesh() || !entity.GetBox2DBoundary().empty();
-    if (!hasBoxColliderComponent && !hasShapeConfig && !hasMeshData)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Cannot register physics for tag='" << entity.GetTag()
-            << "': collider component, shape config, and mesh data are all missing.\n";
-        DebugTrace(oss.str());
-        return;
-    }
-
-    const auto insertResult = m_registeredPhysicsBodies.insert(&entity);
-    if (!insertResult.second)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Skipping duplicate physics registration for tag='" << entity.GetTag() << "'\n";
-        DebugTrace(oss.str());
-        return;
-    }
-
-    entity.AttachPhysicsMachine(m_physicsMachine.get());
-
-    {
-        bool hasBody = entity.HasBox2DBody();
-        int fixtureCount = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
-        if (!hasBody || fixtureCount <= 0)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Physics body incomplete for tag='" << entity.GetTag()
-                << "' (hasBody=" << std::boolalpha << hasBody
-                << ", fixtures=" << fixtureCount << "); attempting immediate rebuild.\n";
-            ::DebugTrace(oss.str());
-
-            entity.DetachPhysicsMachine();
-            entity.AttachPhysicsMachine(m_physicsMachine.get());
-
-            const bool rebuiltHasBody = entity.HasBox2DBody();
-            const int rebuiltFixtures = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
-            if (!rebuiltHasBody || rebuiltFixtures <= 0)
-            {
-                std::ostringstream errorOss;
-                errorOss << kLogPrefix << "Failed to create physics body for tag='" << entity.GetTag()
-                    << "' even after rebuild attempt (hasBody=" << std::boolalpha << rebuiltHasBody
-                    << ", fixtures=" << rebuiltFixtures << ").\n";
-                ::DebugTrace(errorOss.str());
-
-                entity.DetachPhysicsMachine();
-                m_registeredPhysicsBodies.erase(&entity);
-                return;
-            }
-
-            hasBody = rebuiltHasBody;
-            fixtureCount = rebuiltFixtures;
-
-            std::ostringstream recovered;
-            recovered << kLogPrefix << "Recovered physics body for tag='" << entity.GetTag()
-                << "' (fixtures=" << rebuiltFixtures << ").\n";
-            ::DebugTrace(recovered.str());
-        }
-
-        float gravityScale = hasBody ? entity.GetGravityScale() : 0.0f;
-        if (isPlayerEntity && hasBody && std::fabs(gravityScale - 0.0f) > std::numeric_limits<float>::epsilon())
-        {
-            entity.SetGravityScale(0.0f);
-            gravityScale = entity.GetGravityScale();
-            DebugTrace(std::string(kLogPrefix) + "Player gravity disabled to prevent unintended falling.\n");
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "Physics registration complete for tag='" << entity.GetTag()
-            << "' hasBody=" << std::boolalpha << hasBody
-            << " fixtures=" << fixtureCount
-            << " gravityScale=" << gravityScale
-            << ((hasBody && fixtureCount > 0) ? "" : " (incomplete)") << "\n";
-        ::DebugTrace(oss.str());
-    }
-}
-
-void SceneGame::UnregisterPhysicsBody(Entities::PhysicalEntity* entity)
-{
-    if (!entity)
-    {
-        DebugTrace(std::string(kLogPrefix) + "UnregisterPhysicsBody received null entity pointer.\n");
-        return;
-    }
-
-    const bool fixtureBuildFailed = entity->HasFixtureBuildFailure();
-
-    const auto tracked = m_registeredPhysicsBodies.find(entity);
-    if (tracked == m_registeredPhysicsBodies.end())
-    {
-        if (!fixtureBuildFailed)
-        {
-#if defined(_DEBUG)
-            std::ostringstream oss;
-            oss << kLogPrefix << "UnregisterPhysicsBody called for untracked entity=" << entity << "\n";
-            ::DebugTrace(oss.str());
-#endif
-        }
-    }
-    else
-    {
-        m_registeredPhysicsBodies.erase(tracked);
-    }
-
-    if (m_physicsMachine)
-    {
-        entity->DetachPhysicsMachine();
-    }
-    else
-    {
-        if (!fixtureBuildFailed)
-        {
-#if defined(_DEBUG)
-            DebugTrace(std::string(kLogPrefix) + "Physics machine missing during UnregisterPhysicsBody.\n");
-#endif
-        }
-    }
-}
-
-void SceneGame::ValidatePlayerPhysicsRegistration()
-{
-    if (!player || !m_physicsMachine)
-    {
-        return;
-    }
-
-    const auto& physicsBodies = m_physicsMachine->GetBodies();
-    const bool registeredWithPhysics = std::find(physicsBodies.begin(), physicsBodies.end(), player.get()) != physicsBodies.end();
-    if (!registeredWithPhysics)
-    {
-        RegisterPhysicsBody(*player);
-        std::ostringstream oss;
-        oss << kLogPrefix << "Player body missing from PhysicsMachine list; re-registering (kinematic="
-            << std::boolalpha << player->IsKinematic()
-            << ", bodyType=" << (player->GetPhysical().IsDynamic() ? "dynamic" : "static") << ").\n";
-        ::DebugTrace(oss.str());
-        m_loggedPlayerBodyRecovery = true;
-    }
-    else if (m_loggedPlayerBodyRecovery)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Player body present in PhysicsMachine after prior recovery.\n");
-        m_loggedPlayerBodyRecovery = false;
-    }
-}
-
 void SceneGame::SetStageState(StageState newState)
 {
     if (m_stageState == newState)
@@ -3123,20 +2989,6 @@ void SceneGame::OnStageFail()
     oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
         << m_peakTowerHeight << "m score=" << ComputeScore() << "\n";
     ::DebugTrace(oss.str());
-}
-
-void SceneGame::UnregisterAllPhysicsBodies()
-{
-    if (m_registeredPhysicsBodies.empty())
-    {
-        return;
-    }
-
-    std::vector<Entities::PhysicalEntity*> bodies(m_registeredPhysicsBodies.begin(), m_registeredPhysicsBodies.end());
-    for (Entities::PhysicalEntity* body : bodies)
-    {
-        UnregisterPhysicsBody(body);
-    }
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
@@ -3412,9 +3264,9 @@ void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
 
 void SceneGame::ToggleGameplaySystems(bool enabled)
 {
-    if (m_physicsMachine)
+    if (m_physicsBinder)
     {
-        m_physicsMachine->Enable(enabled);
+        m_physicsBinder->Enable(enabled);
     }
     if (m_sweetsManager)
     {

@@ -13,7 +13,7 @@
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Core/StepTimer.h"
-#include "Systems/PhysicsMachine.h"
+#include "Systems/PhysicsBinder.h"
 #include "Vector.h"
 #include "Transform.h"
 #include "Stage/StageData.h"
@@ -60,8 +60,6 @@ struct StageObject
 
 namespace Systems
 {
-    class PhysicsMachine;
-    class Box2DContactListener;
     class DrawSystem;
 }
 
@@ -119,9 +117,6 @@ private:
     void OnStageStart();
     void OnStageClear();
     void OnStageFail();
-    void RegisterPhysicsBody(Entities::PhysicalEntity& entity);
-    void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
-    void UnregisterAllPhysicsBodies();
     void ResetPlaySession();
     void UpdateCountdown(Core::UpdateContext& ctx);
     void UpdateTowerHeightTelemetry();
@@ -134,7 +129,6 @@ private:
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
     bool LoadStageLayout(const std::string& csvPath);
-    void ValidatePlayerPhysicsRegistration();
     int ComputeScore() const;
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();
@@ -149,14 +143,11 @@ private:
     std::shared_ptr<IModelLoader> m_loader;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
-    std::unique_ptr<Systems::PhysicsMachine> m_physicsMachine;
-    std::shared_ptr<Systems::Box2DContactListener> m_contactListener;
+    std::unique_ptr<Systems::PhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
     std::unique_ptr<ResultRenderer> m_resultRenderer;
-    std::unordered_set<Entities::PhysicalEntity*> m_registeredPhysicsBodies;
-    bool m_loggedPlayerBodyRecovery = false;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
