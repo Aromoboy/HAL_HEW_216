@@ -8,8 +8,9 @@
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
-#include "GameplayProgression.h"
-#include "GuidelineActor.h"
+#include "GameplayRulesSystem.h"
+#include "GuidelineSystem.h"
+#include "SceneGameContactForwarder.h"
 #include "IModelLoader.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
@@ -26,10 +27,7 @@
 #include <cstddef>
 #include <memory>
 #include <map>
-#include <unordered_set>
 #include <vector>
-#include <limits>
-#include <deque>
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
@@ -115,8 +113,8 @@ private:
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
-    std::unique_ptr<GuidelineActor> m_guidelineActor;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
+    SceneGameContactForwarder m_contactForwarder;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
@@ -125,34 +123,16 @@ private:
     bool m_sweetsLateRegistered = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
+    GameplayRulesSystem m_gameplayRules;
+    GuidelineSystem m_guidelineSystem;
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
-    Core::StepTimer m_countdownTimer;
     StageState m_stageState = StageState::Intro;
-    float m_totalPlaySeconds = 0.0f;
-    float m_remainingCountdownSeconds = 0.0f;
-    int m_lastAnnouncedCountdownSeconds = 0;
-    float m_currentTowerHeight = 0.0f;
-    float m_peakTowerHeight = 0.0f;
-    float m_maxTowerHeight = 0.0f;
-    mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
-    mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
-    float m_guidelineHeightMeters = 0.0f;
-    float m_guidelineStepMeters = 0.0f;
-    float m_guidelineThicknessPixels = 0.0f;
-    float m_guidelineWidthPaddingWorld = 0.0f;
-    float m_guidelineZOffset = 0.0f;
-    float m_guidelineCenterX = 0.0f;
-    float m_guidelineWidthWorld = 0.0f;
-    float m_guidelineThicknessWorld = 0.0f;
-    float m_guidelineCooldownDurationSeconds = 0.0f;
-    float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
-    float m_guidelineTriggerCooldownSeconds = 0.0f;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;
@@ -162,7 +142,6 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    std::deque<GameplayProgression::PendingTimeBonus> m_pendingTimeBonuses;
     float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
@@ -179,7 +158,6 @@ private:
     int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
-    std::unordered_set<SweetsSpace::ActiveSweets*> m_guidelineTriggeredThisHeight;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;

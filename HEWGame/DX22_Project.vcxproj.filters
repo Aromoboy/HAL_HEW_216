@@ -126,6 +126,15 @@
     <ClCompile Include="src\GuidelineActor.cpp">
       <Filter>Entities</Filter>
     </ClCompile>
+    <ClCompile Include="src\GuidelineSystem.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameplayRulesSystem.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SceneGameContactForwarder.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\GameFlow\PhaseManager.cpp">
       <Filter>GameFlow</Filter>
     </ClCompile>
@@ -520,11 +529,20 @@
     <ClInclude Include="include\SceneGame.h">
       <Filter>App</Filter>
     </ClInclude>
+    <ClInclude Include="include\SceneGameContactForwarder.h">
+      <Filter>App</Filter>
+    </ClInclude>
     <ClInclude Include="include\SceneComposer.h">
     <ClInclude Include="include\SceneGameUIOverlay.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\StageLayoutLoader.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GameplayRulesSystem.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GuidelineSystem.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneGameConfigLoader.h">
