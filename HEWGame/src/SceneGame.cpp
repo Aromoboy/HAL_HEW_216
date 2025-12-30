@@ -19,15 +19,12 @@
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
-#include "BackgroundRenderer.h"
 #include "Sweets/BaseSweets.h"
 #include "Entities/Player.h"
 #include "Collision/ConvexHullBuilder.h"
 #include "ColliderConfigLoader.h"
-#include "ConfigSectionReader.h"
 #include "DebugColliderRenderer.h"
-#include "SceneGameConfigLoader.h"
-#include "GameplayConfig.h"
+#include "SceneComposer.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -74,22 +71,16 @@ namespace
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnablePlayerBoundsLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
-        constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kPlayerSpeedBoostStep = 1.2f;
         constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
-        constexpr float kFallbackPlayerMoveSpeed = 10.0f;
-        constexpr float kDefaultPickupMaxDistance = 0.5f;
-        constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
-        constexpr float kGuidelineAdvanceCooldownSeconds = 0.25f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float kPlayerMinimumYMargin = 1.0f;
         constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
-        constexpr float kGuidelineThicknessMeters = 0.05f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -102,35 +93,6 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
-        const HudLayoutConfig kHudLayoutConfig
-        {
-            512u,
-            192u,
-            32.0f,
-            12.0f,
-            28.0f,
-            5.0f,
-            1.5f,
-            2.0f,
-            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
-        };
-
-        const ResultLayoutConfig kResultLayoutConfig
-        {
-            512u,
-            192u,
-            32.0f,
-            12.0f,
-            28.0f,
-            5.0f,
-            1.5f,
-            2.0f,
-            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-            DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
-        };
-
-
         struct ModelBounds
         {
             float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
@@ -875,78 +837,6 @@ namespace
             return result;
         }
 
-        bool ParseBool(const std::string& value, bool& outValue)
-        {
-            std::string lowered = value;
-            std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on")
-            {
-                outValue = true;
-                return true;
-            }
-
-            if (lowered == "false" || lowered == "0" || lowered == "no" || lowered == "off")
-            {
-                outValue = false;
-                return true;
-            }
-
-            return false;
-        }
-
-        bool LoadPlayerColliderPreference(const std::string& path, bool defaultForceConfig)
-        {
-            bool forceConfig = defaultForceConfig;
-            bool parsed = false;
-
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionPlayerColliders, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Preference section missing; using default forceConfig=" << std::boolalpha << defaultForceConfig
-                    << " path='" << path << "'\n";
-                DebugTrace(oss.str());
-                return forceConfig;
-            }
-
-            for (const auto& entry : lines)
-            {
-                const std::string key = entry.key;
-                if (key != "forceConfigCollider")
-                {
-                    continue;
-                }
-
-                const std::string value = entry.value;
-                if (ParseBool(value, forceConfig))
-                {
-                    parsed = true;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Parsed forceConfigCollider=" << std::boolalpha << forceConfig
-                        << " from line=" << entry.lineNumber << " path='" << path << "'\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerCollider] Failed to parse forceConfigCollider value='" << value
-                        << "' on line=" << entry.lineNumber << "; using default " << std::boolalpha << defaultForceConfig << "\n";
-                    DebugTrace(oss.str());
-                }
-                break;
-            }
-
-            if (!parsed)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] forceConfigCollider not specified; defaulting to "
-                    << std::boolalpha << defaultForceConfig << " (path='" << path << "')\n";
-                DebugTrace(oss.str());
-            }
-
-            return forceConfig;
-        }
-
         DirectX::XMVECTOR LoadFloat3(const float3& value)
         {
             return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
@@ -1086,310 +976,60 @@ void SceneGame::NormalizePlayerColliderDefinitions()
 SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     : m_manager(&a_manager)
 {
-m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
-    kGameplayConfigPath,
-    GameplayConfig::kSectionPlayerColliders,
-    m_playerColliderDefinitions);
-m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
-    m_playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(kGameplayConfigPath);
-    m_playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
-        << " definitions=" << m_playerColliderDefinitions.size()
-        << " tuningPadding=" << m_playerColliderTuning.thicknessPadding
-        << " padXYZ=(" << m_playerColliderTuning.padding.x << ',' << m_playerColliderTuning.padding.y << ',' << m_playerColliderTuning.padding.z << ')'
-        << " offsetXYZ=(" << m_playerColliderTuning.offset.x << ',' << m_playerColliderTuning.offset.y << ',' << m_playerColliderTuning.offset.z << ')'
-        << " fallbackPadXYZ=(" << m_playerColliderTuning.fallbackPadding.x << ',' << m_playerColliderTuning.fallbackPadding.y << ',' << m_playerColliderTuning.fallbackPadding.z << ')'
-        << " fallbackOffsetXYZ=(" << m_playerColliderTuning.fallbackOffset.x << ',' << m_playerColliderTuning.fallbackOffset.y << ',' << m_playerColliderTuning.fallbackOffset.z << ')'
-        << " fallbackSizeXYZ=(" << m_playerColliderTuning.fallbackSize.x << ',' << m_playerColliderTuning.fallbackSize.y << ',' << m_playerColliderTuning.fallbackSize.z << ")\n";
-    ::DebugTrace(oss.str());
-}
-
-    std::string playerColliderKey = "Player";
-    m_playerColliderMismatchLogged = false;
-
-    const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
-    bool stageLoaded = m_stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
-    m_phaseManager.Initialize(
-        m_stageData.GetPhaseThresholds(),
-        m_stageData.GetPhaseRewardMultipliers(),
-        m_stageData.GetPhaseMiniThresholds(),
-        m_stageData.GetPhaseRewardMiniMultipliers()
-    );
-    m_playerBaseHorizontalSpeed = m_stageData.GetPlayerHorizontalSpeedWorld();
-    m_playerBaseVerticalSpeed = m_stageData.GetPlayerVerticalSpeedWorld();
-    m_playerPickupBoxWidth = m_stageData.GetPickupBoxWidthWorld();
-    m_playerPickupBoxHeight = m_stageData.GetPickupBoxHeightWorld();
-    m_playerPickupOffset = m_stageData.GetPickupOffset();
-    m_playerPickupMaxDistance = m_stageData.GetPickupMaxDistance();
-    m_playerPickupDepthThreshold = m_stageData.GetPickupDepthThreshold();
-    const auto sanitizePositive = [](float value, float fallback, const char* label)
-    {
-        if (std::isfinite(value) && value > 0.0f)
-        {
-            return value;
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << label << " " << value
-            << " invalid; using fallback " << fallback << "\n";
-        ::DebugTrace(oss.str());
-        return fallback;
-    };
-
-    const auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
-    {
-        if (std::isfinite(value))
-        {
-            if (value >= 0.0f)
-            {
-                return value;
-            }
-        }
-        else if (std::isinf(value))
-        {
-            return value;
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << label << " " << value
-            << " invalid; using fallback " << fallback << "\n";
-        ::DebugTrace(oss.str());
-        return fallback;
-    };
-
-    m_playerBaseHorizontalSpeed = sanitizePositive(m_playerBaseHorizontalSpeed, kFallbackPlayerMoveSpeed, "Player horizontal speed");
-    m_playerBaseVerticalSpeed = sanitizePositive(m_playerBaseVerticalSpeed, m_playerBaseHorizontalSpeed, "Player vertical speed");
-    const float pickupFallback = std::max(m_stageData.GetCellSizeWorld(), 1.0f);
-    m_playerPickupBoxWidth = sanitizePositive(m_playerPickupBoxWidth, pickupFallback, "Player pickup width");
-    m_playerPickupBoxHeight = sanitizePositive(m_playerPickupBoxHeight, pickupFallback, "Player pickup height");
-    m_playerPickupMaxDistance = sanitizePositive(m_playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
-    m_playerPickupDepthThreshold = sanitizeDepthThreshold(m_playerPickupDepthThreshold, kDefaultPickupDepthThreshold, "Player pickup depth threshold");
-    m_playerSpeedMultiplier = 1.0f;
-    {
-        const auto pickupOffsetModeName = [](Stage::PickupOffsetMode mode)
-        {
-            switch (mode)
-            {
-            case Stage::PickupOffsetMode::None: return "none";
-            case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
-            case Stage::PickupOffsetMode::WorldX: return "world-x";
-            default: return "unknown";
-            }
-        };
-        std::ostringstream oss;
-        oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
-            << " from '" << kGameplayConfigPath << "' section='" << stageConfigSectionUsed << "'"
-            << " planeZ=" << m_stageData.GetPlaneZ()
-            << " thresholds=" << m_stageData.GetPhaseThresholds().size()
-            << " multipliers=" << m_stageData.GetPhaseRewardMultipliers().size()
-            << " spawnPointsPrimary=" << m_stageData.GetSpawnPointsPrimary().size()
-            << " spawnPointsSecondary=" << m_stageData.GetSpawnPointsSecondary().size()
-            << " platforms=" << m_stageData.GetPlatformCount()
-            << " playerSpeedXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
-            << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ')'
-            << " pickupMaxDistance=" << m_playerPickupMaxDistance
-            << " pickupDepthThreshold=" << m_playerPickupDepthThreshold
-            << " pickupOffsetMode=" << pickupOffsetModeName(m_playerPickupOffset.mode)
-            << " pickupOffsetLocalWorld=(" << m_playerPickupOffset.localOffset.x << ','
-            << m_playerPickupOffset.localOffset.y << ',' << m_playerPickupOffset.localOffset.z << ')'
-            << " guidelineHeight=" << m_stageData.GetGuidelineHeight()
-            << " guidelineStep=" << m_stageData.GetGuidelineStep()
-            << " guidelineThicknessPixels=" << m_stageData.GetGuidelineThicknessPixels()
-            << " guidelineWidthPaddingWorld=" << m_stageData.GetGuidelineWidthPaddingWorld()
-            << " guidelineZOffset=" << m_stageData.GetGuidelineZOffset()
-            << " heightBonusThreshold=" << m_stageData.GetHeightBonusThreshold()
-            << " heightBonusSeconds=" << m_stageData.GetHeightBonusSeconds()
-            << " background='" << m_stageData.GetBackgroundTexturePath() << "'\n";
-        for (std::size_t i = 0; i < m_stageData.GetPlatformCount(); ++i)
-        {
-            const auto& descriptor = m_stageData.GetPlatform(i);
-            oss << kLogPrefix << " PlatformDesc[" << i << "] center=(" << descriptor.center.x << ',' << descriptor.center.y
-                << ',' << descriptor.center.z << ") scale=(" << descriptor.scale.x << ',' << descriptor.scale.y << ','
-                << descriptor.scale.z << ") depth=" << descriptor.depth
-                << " worldScale=(" << descriptor.widthWorld << ',' << descriptor.heightWorld << ',' << descriptor.depthWorld
-                << ")"
-                << " widthFraction=" << descriptor.widthFraction << "\n";
-        }
-        ::DebugTrace(oss.str());
-    }
-
-    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-    const bool manifestLoaded = manifest.ReloadFromCsv();
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Manifest config " << (manifestLoaded ? "applied" : "missing; using defaults")
-            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultConfigPath << "'\n";
-        const auto prototypes = manifest.Enumerate();
-        oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
-        for (const auto& entry : prototypes)
-        {
-            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(entry.type) << " key='"
-                << entry.descriptor.key << "' model='" << entry.descriptor.modelPath << "'\n";
-        }
-        ::DebugTrace(oss.str());
-    }
-
     Render::ModelCache& cache = Render::ModelCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
-
-    const bool modelTexturesEnabled = SceneGameConfig::LoadModelTextureLoadingSetting();
-    cache.SetTextureLoadingEnabled(modelTexturesEnabled);
-
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Render settings: loadModelTextures=" << std::boolalpha << modelTexturesEnabled << "\n";
-        ::DebugTrace(oss.str());
-    }
-
     Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-    // シーンのアセット読み込み開始前に、モデルキャッシュを完全にクリアする
-    // （ローダーやデバイスの切り替え漏れによるハングを防止）
-    cache.Clear();
 
-    NormalizePlayerColliderDefinitions();
+    m_pManager = std::make_unique<SoundManagerEX>();
+    m_loader = std::make_shared<AssimpModelLorder>();
 
-    m_guidelineHeightMeters = m_stageData.GetGuidelineHeight();
-    m_guidelineStepMeters = m_stageData.GetGuidelineStep();
-    m_guidelineThicknessPixels = m_stageData.GetGuidelineThicknessPixels();
-    m_guidelineWidthPaddingWorld = m_stageData.GetGuidelineWidthPaddingWorld();
-    m_guidelineZOffset = m_stageData.GetGuidelineZOffset();
-    m_guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
-    m_guidelineCooldownRemainingSeconds = 0.0f;
-    m_guidelineCenterX = 0.0f;
-    m_guidelineWidthWorld = 0.0f;
-    m_guidelineThicknessWorld = kGuidelineThicknessMeters;
+    ID3D11Device* device = GetDevice();
+    if (!device)
     {
-        bool boundsValid = false;
-        float minX = std::numeric_limits<float>::max();
-        float maxX = std::numeric_limits<float>::lowest();
-        for (std::size_t i = 0; i < m_stageData.GetPlatformCount(); ++i)
-        {
-            const auto& descriptor = m_stageData.GetPlatform(i);
-            if (!std::isfinite(descriptor.center.x) || !std::isfinite(descriptor.widthWorld) || descriptor.widthWorld <= 0.0f)
-            {
-                continue;
-            }
-
-            const float halfWidth = descriptor.widthWorld * 0.5f;
-            if (!std::isfinite(halfWidth) || halfWidth <= 0.0f)
-            {
-                continue;
-            }
-
-            minX = std::min(minX, descriptor.center.x - halfWidth);
-            maxX = std::max(maxX, descriptor.center.x + halfWidth);
-            boundsValid = true;
-        }
-
-        if (boundsValid)
-        {
-            m_guidelineCenterX = (minX + maxX) * 0.5f;
-            m_guidelineWidthWorld = maxX - minX;
-        }
-
-        const float widthPadding = std::max(0.0f, m_guidelineWidthPaddingWorld);
-        float paddedWidth = m_guidelineWidthWorld + (widthPadding * 2.0f);
-        if (!std::isfinite(paddedWidth) || paddedWidth <= 0.0f)
-        {
-            paddedWidth = 0.01f;
-        }
-        m_guidelineWidthWorld = paddedWidth;
-    }
-    m_heightBonusThresholdMeters = m_stageData.GetHeightBonusThreshold();
-    if (!std::isfinite(m_heightBonusThresholdMeters) || m_heightBonusThresholdMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus threshold " << m_heightBonusThresholdMeters
-            << " invalid; timer bonus disabled.\n";
-        ::DebugTrace(oss.str());
-        m_heightBonusThresholdMeters = 0.0f;
-    }
-
-    m_heightBonusSeconds = m_stageData.GetHeightBonusSeconds();
-    if (!std::isfinite(m_heightBonusSeconds))
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds " << m_heightBonusSeconds
-            << " invalid; timer bonus disabled.\n";
-        ::DebugTrace(oss.str());
-        m_heightBonusSeconds = 0.0f;
-    }
-    else if (m_heightBonusSeconds <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
-        ::DebugTrace(oss.str());
-        m_heightBonusSeconds = 0.0f;
-    }
-
-    const std::string backgroundTexture = m_stageData.GetBackgroundTexturePath();
-    if (!backgroundTexture.empty())
-    {
-        BackgroundRendererConfig backgroundConfig{};
-        backgroundConfig.texturePath = backgroundTexture;
-        m_backgroundRenderer = std::make_unique<BackgroundRenderer>();
-        if (!m_backgroundRenderer->Initialize(backgroundConfig))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
-            ::DebugTrace(oss.str());
-            m_backgroundRenderer.reset();
-        }
+        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "Background texture path empty; background renderer skipped.\n");
+        cache.SetLoader(m_loader, device, TextureCache::Instance());
+        animeCache.SetLoader(m_loader, device);
     }
 
-    const SceneGameConfig::PhysicsTuningSettings tuning = SceneGameConfig::LoadPhysicsTuningSettings();
-    Systems::PhysicsTuningParameters physicsParameters{};
-    physicsParameters.gravity = tuning.gravity;
-    physicsParameters.subStepCount = tuning.subStepCount;
-    physicsParameters.defaultLinearDamping = tuning.linearDamping;
-    physicsParameters.defaultAngularDamping = tuning.angularDamping;
-    physicsParameters.defaultFriction = tuning.defaultFriction;
-    physicsParameters.defaultRestitution = tuning.defaultRestitution;
-    physicsParameters.restitutionThreshold = tuning.restitutionThreshold;
-    physicsParameters.hitEventThreshold = tuning.hitEventThreshold;
-    physicsParameters.maxStepDt = tuning.maxStepDt;
-    physicsParameters.maxAccumulatedSteps = tuning.maxAccumulatedSteps;
-    physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
-    physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
-    physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
-    physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
-    m_physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
-    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
-    m_drawSystem = std::make_unique<Systems::DrawSystem>();
-    if (m_drawSystem)
-    {
-        m_drawSystem->SetStagePlaneZ(m_stageData.GetPlaneZ());
-    }
-    if (m_drawSystem && m_guidelineHeightMeters > 0.0f)
-    {
-        m_guidelineActor = std::make_unique<GuidelineActor>();
-        if (m_guidelineActor)
-        {
-            const float guidelineZ = m_stageData.GetPlaneZ() + m_guidelineZOffset;
-            m_guidelineActor->UpdateGuideline(
-                m_guidelineCenterX,
-                m_guidelineHeightMeters,
-                guidelineZ,
-                m_guidelineWidthWorld,
-                m_guidelineThicknessWorld);
-            m_drawSystem->RegisterRenderable(*m_guidelineActor);
-        }
-    }
-    if (m_drawSystem && physicsMachine)
-    {
-        m_sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
-            *m_drawSystem,
-            *physicsMachine,
-            GetUpdateScheduler());
-    }
+    SceneComposer composer(GetUpdateScheduler());
+    SceneComposer::Composition composition = composer.Compose();
+    m_playerColliderDefinitions = std::move(composition.playerColliderDefinitions);
+    m_playerColliderConfigLoaded = composition.playerColliderConfigLoaded;
+    m_forceConfigPlayerCollider = composition.forceConfigPlayerCollider;
+    m_playerColliderTuning = composition.playerColliderTuning;
+    m_playerSpawnTransform = composition.playerSpawnTransform;
+    m_stageData = std::move(composition.stageData);
+    m_phaseManager = std::move(composition.phaseManager);
+    m_playerBaseHorizontalSpeed = composition.playerBaseHorizontalSpeed;
+    m_playerBaseVerticalSpeed = composition.playerBaseVerticalSpeed;
+    m_playerPickupBoxWidth = composition.playerPickupBoxWidth;
+    m_playerPickupBoxHeight = composition.playerPickupBoxHeight;
+    m_playerPickupOffset = composition.playerPickupOffset;
+    m_playerPickupMaxDistance = composition.playerPickupMaxDistance;
+    m_playerPickupDepthThreshold = composition.playerPickupDepthThreshold;
+    m_playerSpeedMultiplier = composition.playerSpeedMultiplier;
+    m_guidelineHeightMeters = composition.guidelineHeightMeters;
+    m_guidelineStepMeters = composition.guidelineStepMeters;
+    m_guidelineThicknessPixels = composition.guidelineThicknessPixels;
+    m_guidelineWidthPaddingWorld = composition.guidelineWidthPaddingWorld;
+    m_guidelineZOffset = composition.guidelineZOffset;
+    m_guidelineCooldownDurationSeconds = composition.guidelineCooldownDurationSeconds;
+    m_guidelineCooldownRemainingSeconds = composition.guidelineCooldownRemainingSeconds;
+    m_guidelineCenterX = composition.guidelineCenterX;
+    m_guidelineWidthWorld = composition.guidelineWidthWorld;
+    m_guidelineThicknessWorld = composition.guidelineThicknessWorld;
+    m_heightBonusThresholdMeters = composition.heightBonusThresholdMeters;
+    m_heightBonusSeconds = composition.heightBonusSeconds;
+    m_physicsBinder = std::move(composition.physicsBinder);
+    m_drawSystem = std::move(composition.drawSystem);
+    m_guidelineActor = std::move(composition.guidelineActor);
+    m_sweetsManager = std::move(composition.sweetsManager);
+    m_uiManager = std::move(composition.uiManager);
+    m_backgroundRenderer = std::move(composition.backgroundRenderer);
+    m_stageObjects = std::move(composition.stageObjects);
+
     if (m_physicsBinder)
     {
         m_physicsBinder->AddContactHandler(
@@ -1411,58 +1051,17 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
 
     if (m_sweetsManager)
     {
-        m_sweetsManager->SetSpawnOrigins(
-            m_stageData.GetSpawnPointsPrimary(),
-            m_stageData.GetSpawnPointsSecondary());
-        const bool spawnConfigLoaded = m_sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
-                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnPhases << "'.\n";
-            ::DebugTrace(oss.str());
-        }
-        {
-            const auto presets = m_sweetsManager->EnumerateFactoryPresets();
-            const auto colliderShapeToString = [](SweetsSpace::ColliderShape shape)
-            {
-                switch (shape)
-                {
-                case SweetsSpace::ColliderShape::Box:
-                    return "Box";
-                case SweetsSpace::ColliderShape::Capsule:
-                    return "Capsule";
-                default:
-                    return "Unknown";
-                }
-            };
-            std::ostringstream oss;
-            oss << kLogPrefix << "[SpawnFactory] presets=" << presets.size() << " (key, scale, collider)\n";
-            for (const auto& preset : presets)
-            {
-                oss << kLogPrefix << "  kind='" << preset.first << "' scale=("
-                    << preset.second.scale.x << ','
-                    << preset.second.scale.y << ','
-                    << preset.second.scale.z << ") collider="
-                    << colliderShapeToString(preset.second.colliderPreset.shape)
-                    << " pad=(" << preset.second.colliderPreset.padding.x << ','
-                    << preset.second.colliderPreset.padding.y << ','
-                    << preset.second.colliderPreset.padding.z << ")"
-                    << " spawnWeight=" << preset.second.spawnWeight << "\n";
-            }
-            ::DebugTrace(oss.str());
-        }
         m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
         {
             ForwardSweetsPhaseChange(newPhase);
         });
     }
 
-    m_uiManager = std::make_unique<UIManager>();
-    if (m_uiManager && !m_uiManager->Initialize(kHudLayoutConfig, kResultLayoutConfig))
-    {
-        DebugTrace(std::string(kLogPrefix) + "UI manager failed to initialize; HUD/Result overlay disabled.\n");
-        m_uiManager.reset();
-    }
+    NormalizePlayerColliderDefinitions();
+
+    std::string playerColliderKey = "Player";
+    m_playerColliderMismatchLogged = false;
+    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
@@ -1493,23 +1092,7 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
         }
     }
 
-    m_pManager = std::make_unique<SoundManagerEX>();
-
-    m_loader = std::make_shared<AssimpModelLorder>();
-
-    ID3D11Device* device = GetDevice();
-    if (!device)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
-    }
-    else
-    {
-        cache.SetLoader(m_loader, device, TextureCache::Instance());
-        animeCache.SetLoader(m_loader, device);
-    }
-
-
-
+    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
     const auto* fairyDescriptor = manifest.Find("Fairy");
     if (!fairyDescriptor && !m_playerModel)
     {
@@ -1547,27 +1130,6 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
 
     
     
-
-    // ModelCacheの設定後、ステージレイアウトをロード
-    StageLayoutLoadRequest stageLayoutRequest{
-        "Assets/Config/StageLayout.csv",
-        kGameplayConfigPath,
-        cache,
-        m_physicsBinder != nullptr,
-        kLogPrefix
-    };
-    StageLayoutLoadResult stageLayoutResult = StageLayoutLoader::LoadFromCsv(stageLayoutRequest);
-    m_stageObjects = std::move(stageLayoutResult.stageObjects);
-    if (m_physicsBinder)
-    {
-        for (const auto& entity : stageLayoutResult.physicsEntities)
-        {
-            if (entity)
-            {
-                m_physicsBinder->RegisterPhysicsBody(*entity);
-            }
-        }
-    }
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)

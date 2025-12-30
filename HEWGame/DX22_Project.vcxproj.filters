@@ -186,6 +186,9 @@
     <ClCompile Include="src\SceneGame.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneComposer.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
     <ClCompile Include="src\GameplayRules.cpp">
       <Filter>App</Filter>
     </ClCompile>
@@ -487,6 +490,9 @@
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\SceneGame.h">
+      <Filter>App</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SceneComposer.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\StageLayoutLoader.h">
