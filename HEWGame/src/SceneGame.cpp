@@ -28,6 +28,7 @@
 #include "DebugColliderRenderer.h"
 #include "SceneGameConfigLoader.h"
 #include "GameplayConfig.h"
+#include "GameplayRules.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -2025,7 +2026,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const GameplayRules::CountdownInput countdownInput{
+    const GameplayProgression::CountdownInput countdownInput{
         m_stageState == StageState::Playing,
         ctx.dt,
         &m_countdownTimer,
@@ -2033,14 +2034,14 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         DebugTrace,
         kLogPrefix
     };
-    GameplayRules::CountdownState countdownState{
+    GameplayProgression::CountdownState countdownState{
         m_totalPlaySeconds,
         m_remainingCountdownSeconds,
         m_lastAnnouncedCountdownSeconds,
         m_pendingTimeBonuses
     };
-    GameplayRules::CountdownResult countdownResult =
-        GameplayRules::UpdateCountdown(countdownInput, std::move(countdownState));
+    GameplayProgression::CountdownResult countdownResult =
+        GameplayProgression::UpdateCountdown(countdownInput, std::move(countdownState));
     m_totalPlaySeconds = countdownResult.state.totalSeconds;
     m_remainingCountdownSeconds = countdownResult.state.remainingSeconds;
     m_lastAnnouncedCountdownSeconds = countdownResult.state.lastAnnouncedSeconds;
@@ -2070,7 +2071,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #endif
 
     //高さボーナス判定
-    const GameplayRules::TowerTelemetryInput towerTelemetryInput{
+    const GameplayProgression::TowerTelemetryInput towerTelemetryInput{
         m_sweetsManager.get(),
         &m_phaseManager,
         m_clearPhaseCount,
@@ -2078,15 +2079,15 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         DebugTrace,
         kLogPrefix
     };
-    GameplayRules::TowerTelemetryState towerTelemetryState{
+    GameplayProgression::TowerTelemetryState towerTelemetryState{
         m_currentTowerHeight,
         m_peakTowerHeight,
         m_maxTowerHeight,
         m_phaseUpCount,
         m_isGameClear
     };
-    GameplayRules::TowerTelemetryResult towerTelemetryResult =
-        GameplayRules::UpdateTowerHeightTelemetry(towerTelemetryInput, std::move(towerTelemetryState));
+    GameplayProgression::TowerTelemetryResult towerTelemetryResult =
+        GameplayProgression::UpdateTowerHeightTelemetry(towerTelemetryInput, std::move(towerTelemetryState));
     m_currentTowerHeight = towerTelemetryResult.state.currentHeight;
     m_peakTowerHeight = towerTelemetryResult.state.peakHeight;
     m_maxTowerHeight = towerTelemetryResult.state.maxHeight;
@@ -2257,7 +2258,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         HandleManualRetryInput(ctx);
         fRads.z += 0.001f;
 
-        GameplayRules::GuidelineState guidelineState{
+        GameplayProgression::GuidelineState guidelineState{
             m_guidelineHeightMeters,
             m_guidelineStepMeters,
             m_guidelineCooldownRemainingSeconds,
@@ -2265,7 +2266,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
             m_guidelineTriggerCooldownSeconds,
             m_guidelineTriggeredThisHeight
         };
-        const GameplayRules::GuidelineInput guidelineInput{
+        const GameplayProgression::GuidelineInput guidelineInput{
             m_sweetsManager.get(),
             m_guidelineActor.get(),
             m_guidelineCenterX,
@@ -2277,16 +2278,16 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
         if (m_guidelineTriggerCooldownSeconds <= 0.0f)
         {
-            GameplayRules::GuidelineCheckResult guidelineCheck =
-                GameplayRules::CheckGuidelineCrossing(guidelineInput, std::move(guidelineState));
+            GameplayProgression::GuidelineCheckResult guidelineCheck =
+                GameplayProgression::CheckGuidelineCrossing(guidelineInput, std::move(guidelineState));
             guidelineState = std::move(guidelineCheck.state);
             if (guidelineCheck.crossed)
             {
-                GameplayRules::GuidelineAdvanceResult guidelineAdvance =
-                    GameplayRules::HandleGuidelineAdvance(guidelineInput,
-                                                          std::move(guidelineState),
-                                                          std::move(m_pendingTimeBonuses),
-                                                          guidelineCheck.triggerHeight);
+                GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
+                    GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+                                                                std::move(guidelineState),
+                                                                std::move(m_pendingTimeBonuses),
+                                                                guidelineCheck.triggerHeight);
                 guidelineState = std::move(guidelineAdvance.state);
                 m_pendingTimeBonuses = std::move(guidelineAdvance.pendingBonuses);
             }
