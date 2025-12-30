@@ -252,8 +252,6 @@ namespace SweetsSpace
             float2 centroidOffset{ 0.0f, 0.0f };
             float thickness = 1.0f;
         };
-        std::map<std::string, GeneratedCollider> m_generatedColliders;
-        std::map<std::string, Systems::Box2DMeshFixtures> m_box2dFixtures;
 
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
@@ -410,10 +408,6 @@ namespace SweetsSpace
 
         bool m_spawnPausedDueToLiveSweets;
         int m_lastLiveSweetsCount;
-        //ラインのフラグ
-        bool m_passedGuideline = false;
-        int m_heightBonusSeconds;
-        int m_timeManager;
 
         template<typename T>
         std::shared_ptr<ActiveSweets> MakeSweets(

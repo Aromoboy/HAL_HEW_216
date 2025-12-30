@@ -142,7 +142,6 @@ private:
     void Initialize(const Stage::StageData& stageData);
     
     std::vector<StageObject> m_stageObjects;
-    std::unique_ptr<Model> m_pModel;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
@@ -192,7 +191,6 @@ private:
     float m_guidelineCooldownRemainingSeconds = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
-    float m_groundY = 0.0f;
     float m_guidelineTriggerCooldownSeconds = 0.0f;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
@@ -213,7 +211,6 @@ private:
     float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
     float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
     bool m_cachedPlayerBoundsValid = false;
-    bool m_playerBoundsFailureLogged = false;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
