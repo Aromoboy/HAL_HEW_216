@@ -56,6 +56,7 @@ namespace SweetsSpace
 }
 
 class SceneGameUIOverlay;
+class UIManager;
 
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
 {
@@ -136,6 +137,7 @@ private:
     mutable int m_lastScoreLogValue = std::numeric_limits<int>::min();
     mutable float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
+    std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     float m_guidelineHeightMeters = 0.0f;
     float m_guidelineStepMeters = 0.0f;
