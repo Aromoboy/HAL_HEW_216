@@ -27,6 +27,7 @@
 #include "ColliderConfigLoader.h"
 #include "ConfigSectionReader.h"
 #include "DebugColliderRenderer.h"
+#include "SceneGameConfigLoader.h"
 #include "GameplayConfig.h"
 #include <cassert>
 #include <algorithm>
@@ -72,12 +73,10 @@ namespace
 #endif
 
         constexpr const char* kLogPrefix = "[SceneGame] ";
-        constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnablePlayerBoundsLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
         constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
-        constexpr const char* kRenderSettingsSection = "render.settings";
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
@@ -87,18 +86,12 @@ namespace
         constexpr float kDefaultPickupMaxDistance = 0.5f;
         constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
         constexpr float kGuidelineAdvanceCooldownSeconds = 0.25f;
-        constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
         constexpr float kMinGeneratedThickness = 0.05f;
         constexpr float kPlayerMinimumYMargin = 1.0f;
         constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kGuidelineThicknessMeters = 0.05f;
-        constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
-        constexpr float3 kDefaultPlayerColliderOffset{ 0.0f, 0.0f, 0.0f };
-        constexpr float3 kDefaultPlayerFallbackPadding{ 0.02f, 0.05f, 0.02f };
-        constexpr float3 kDefaultPlayerFallbackOffset{ 0.0f, 0.05f, 0.0f };
-        constexpr float3 kDefaultPlayerFallbackSize{ 0.6f, 0.9f, 0.12f };
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -156,26 +149,6 @@ namespace
             float paddedThickness{ 0.0f };
         };
 
-        std::string TrimWhitespace(const std::string& input)
-        {
-            const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
-            auto begin = input.begin();
-            auto end = input.end();
-            while (begin != end && isSpace(static_cast<unsigned char>(*begin)))
-            {
-                ++begin;
-            }
-            if (begin == end)
-            {
-                return std::string{};
-            }
-            do
-            {
-                --end;
-            } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
-            return std::string(begin, end + 1);
-        }
-
         std::string NormalizeColliderKey(const std::string& key)
         {
             std::string normalized;
@@ -190,132 +163,6 @@ namespace
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
-        }
-
-        struct StageColliderPreset
-        {
-            std::string presetId;
-            std::string registryId;
-            Collision::CollisionLayer layer{ Collision::CollisionLayer::Floor };
-            b2BodyType bodyType{ b2_staticBody };
-            bool fixedRotation{ true };
-            bool allowRotation{ false };
-            b2Vec2 offset{ 0.0f, 0.0f };
-        };
-
-        struct StageColliderConfig
-        {
-            std::unordered_map<std::string, StageColliderPreset> presetsByModelKey;
-            std::unordered_map<std::string, StageColliderPreset> presetsById;
-        };
-
-        std::string ToLowerCopy(const std::string& value)
-        {
-            std::string lowered = value;
-            std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
-                {
-                    return static_cast<char>(std::tolower(c));
-                });
-            return lowered;
-        }
-
-        Collision::CollisionLayer ParseCollisionLayer(const std::string& token, Collision::CollisionLayer fallback)
-        {
-            const std::string lowered = ToLowerCopy(token);
-            if (lowered == "floor") return Collision::CollisionLayer::Floor;
-            if (lowered == "player") return Collision::CollisionLayer::Player;
-            if (lowered == "sweets") return Collision::CollisionLayer::Sweets;
-            if (lowered == "default") return Collision::CollisionLayer::Default;
-            return fallback;
-        }
-
-        b2BodyType ParseBodyType(const std::string& token, b2BodyType fallback)
-        {
-            const std::string lowered = ToLowerCopy(token);
-            if (lowered == "static" || lowered == "staticbody") return b2_staticBody;
-            if (lowered == "dynamic" || lowered == "dynamicbody") return b2_dynamicBody;
-            if (lowered == "kinematic" || lowered == "kinematicbody") return b2_kinematicBody;
-            return fallback;
-        }
-
-        bool ParseBoolToken(const std::string& token, bool fallback)
-        {
-            const std::string lowered = ToLowerCopy(token);
-            if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on")
-            {
-                return true;
-            }
-            if (lowered == "false" || lowered == "0" || lowered == "no" || lowered == "off")
-            {
-                return false;
-            }
-            return fallback;
-        }
-
-        std::optional<float> TryParseFloatToken(const std::string& token)
-        {
-            try
-            {
-                return std::stof(token);
-            }
-            catch (...)
-            {
-                return std::nullopt;
-            }
-        }
-
-        std::optional<float2> ParseFloat2Token(const std::string& value)
-        {
-            const auto comma = value.find(',');
-            if (comma == std::string::npos)
-            {
-                return std::nullopt;
-            }
-
-            const auto x = TryParseFloatToken(TrimWhitespace(value.substr(0, comma)));
-            const auto y = TryParseFloatToken(TrimWhitespace(value.substr(comma + 1)));
-            if (!x || !y)
-            {
-                return std::nullopt;
-            }
-
-            return float2{ *x, *y };
-        }
-
-        std::optional<float3> ParseFloat3Token(const std::string& value)
-        {
-            std::vector<float> components;
-            std::stringstream stream(value);
-            std::string token;
-            while (std::getline(stream, token, ','))
-            {
-                token = TrimWhitespace(token);
-                if (token.empty())
-                {
-                    continue;
-                }
-                if (auto parsed = TryParseFloatToken(token))
-                {
-                    components.push_back(*parsed);
-                }
-            }
-
-            if (components.empty())
-            {
-                return std::nullopt;
-            }
-
-            if (components.size() == 1)
-            {
-                return float3{ components[0], components[0], components[0] };
-            }
-
-            if (components.size() == 2)
-            {
-                return float3{ components[0], components[1], components[1] };
-            }
-
-            return float3{ components[0], components[1], components[2] };
         }
 
         std::string BuildModelKey(const std::string& modelPath)
@@ -334,136 +181,8 @@ namespace
             return NormalizeColliderKey(key);
         }
 
-        StageColliderConfig LoadStageColliderConfig(const std::string& path)
-        {
-            StageColliderConfig config{};
-
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionStageColliders, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Stage collider config missing section '"
-                    << GameplayConfig::kSectionStageColliders << "' at '" << path << "'\n";
-                DebugTrace(oss.str());
-                return config;
-            }
-
-            StageColliderPreset preset{};
-            std::string modelKey;
-            bool hasActive = false;
-
-            const auto flush = [&]()
-            {
-                if (!hasActive || preset.presetId.empty())
-                {
-                    return;
-                }
-
-                config.presetsById[preset.presetId] = preset;
-                if (!modelKey.empty())
-                {
-                    config.presetsByModelKey[modelKey] = preset;
-                }
-
-                hasActive = false;
-            };
-
-            for (const auto& entry : lines)
-            {
-                const std::string key = entry.key;
-                const std::string value = entry.value;
-
-                if (key == "preset" || key == "presetId" || key == "name")
-                {
-                    flush();
-                    preset = StageColliderPreset{};
-                    modelKey.clear();
-                    preset.presetId = NormalizeColliderKey(value);
-                    hasActive = true;
-                    continue;
-                }
-
-                if (!hasActive)
-                {
-                    continue;
-                }
-
-                if (key == "modelKey" || key == "model")
-                {
-                    modelKey = NormalizeColliderKey(value);
-                    continue;
-                }
-
-                if (key == "registryId" || key == "registry")
-                {
-                    preset.registryId = NormalizeColliderKey(value);
-                    continue;
-                }
-
-                if (key == "layer")
-                {
-                    preset.layer = ParseCollisionLayer(value, preset.layer);
-                    continue;
-                }
-
-                if (key == "bodyType")
-                {
-                    preset.bodyType = ParseBodyType(value, preset.bodyType);
-                    continue;
-                }
-
-                if (key == "fixedRotation")
-                {
-                    preset.fixedRotation = ParseBoolToken(value, preset.fixedRotation);
-                    continue;
-                }
-
-                if (key == "allowRotation")
-                {
-                    preset.allowRotation = ParseBoolToken(value, preset.allowRotation);
-                    continue;
-                }
-
-                if (key == "offset")
-                {
-                    const auto comma = value.find(',');
-                    if (comma != std::string::npos)
-                    {
-                        try
-                        {
-                            preset.offset.x = std::stof(TrimWhitespace(value.substr(0, comma)));
-                            preset.offset.y = std::stof(TrimWhitespace(value.substr(comma + 1)));
-                        }
-                        catch (...) {}
-                    }
-                    continue;
-                }
-
-                if (key == "offsetX")
-                {
-                    try { preset.offset.x = std::stof(value); } catch (...) {}
-                    continue;
-                }
-
-                if (key == "offsetY")
-                {
-                    try { preset.offset.y = std::stof(value); } catch (...) {}
-                    continue;
-                }
-            }
-
-            flush();
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[StageColliders] Loaded " << config.presetsById.size()
-                << " presets from '" << path << "'.\n";
-            DebugTrace(oss.str());
-
-            return config;
-        }
-
-        std::optional<StageColliderPreset> ResolveStageColliderPreset(
-            const StageColliderConfig& config,
+        std::optional<SceneGameConfig::StageColliderPreset> ResolveStageColliderPreset(
+            const SceneGameConfig::StageColliderConfig& config,
             const std::string& explicitPreset,
             const std::string& modelPath)
         {
@@ -764,97 +483,6 @@ namespace
             }
 
             return summary;
-        }
-
-        SceneGame::PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path)
-        {
-            SceneGame::PlayerColliderTuning tuning{};
-            tuning.thicknessPadding = kDefaultGeneratedThicknessPadding;
-            tuning.padding = kDefaultPlayerColliderPadding;
-            tuning.offset = kDefaultPlayerColliderOffset;
-            tuning.fallbackPadding = kDefaultPlayerFallbackPadding;
-            tuning.fallbackOffset = kDefaultPlayerFallbackOffset;
-            tuning.fallbackSize = kDefaultPlayerFallbackSize;
-
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(path, GameplayConfig::kSectionPlayerColliderTuning, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Tuning section missing; using defaults path='" << path << "'.\n";
-                DebugTrace(oss.str());
-                return tuning;
-            }
-
-            for (const auto& entry : lines)
-            {
-                const std::string key = entry.key;
-                const std::string value = entry.value;
-
-                if (key == "thicknessPadding")
-                {
-                    if (auto parsed = TryParseFloatToken(value))
-                    {
-                        tuning.thicknessPadding = std::max(*parsed, 1.0f);
-                    }
-                    continue;
-                }
-
-                if (key == "padding")
-                {
-                    if (auto parsed = ParseFloat3Token(value))
-                    {
-                        tuning.padding = *parsed;
-                    }
-                    continue;
-                }
-
-                if (key == "offset")
-                {
-                    if (auto parsed = ParseFloat3Token(value))
-                    {
-                        tuning.offset = *parsed;
-                    }
-                    continue;
-                }
-
-                if (key == "fallbackPadding")
-                {
-                    if (auto parsed = ParseFloat3Token(value))
-                    {
-                        tuning.fallbackPadding = *parsed;
-                    }
-                    continue;
-                }
-
-                if (key == "fallbackOffset")
-                {
-                    if (auto parsed = ParseFloat3Token(value))
-                    {
-                        tuning.fallbackOffset = *parsed;
-                    }
-                    continue;
-                }
-
-                if (key == "fallbackSize")
-                {
-                    if (auto parsed = ParseFloat3Token(value))
-                    {
-                        tuning.fallbackSize = *parsed;
-                    }
-                    continue;
-                }
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Tuning applied pad=(" << tuning.padding.x << ',' << tuning.padding.y << ',' << tuning.padding.z
-                << ") offset=(" << tuning.offset.x << ',' << tuning.offset.y << ',' << tuning.offset.z
-                << ") fallbackPad=(" << tuning.fallbackPadding.x << ',' << tuning.fallbackPadding.y << ',' << tuning.fallbackPadding.z
-                << ") fallbackOffset=(" << tuning.fallbackOffset.x << ',' << tuning.fallbackOffset.y << ',' << tuning.fallbackOffset.z
-                << ") fallbackSize=(" << tuning.fallbackSize.x << ',' << tuning.fallbackSize.y << ',' << tuning.fallbackSize.z
-                << ") thicknessPadding=" << tuning.thicknessPadding << "\n";
-            DebugTrace(oss.str());
-
-            return tuning;
         }
 
         std::vector<float2> BuildPaddedHull(const PlayerColliderGeometry& geometry, const SceneGame::PlayerColliderTuning& tuning, const float3& scale)
@@ -1368,389 +996,6 @@ namespace
             return forceConfig;
         }
 
-        bool LoadModelTextureLoadingSetting()
-        {
-            bool enabled = true;
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[RenderSettings] Missing config; defaulting loadModelTextures="
-                    << std::boolalpha << enabled << " section='" << kRenderSettingsSection
-                    << "' path='" << kTechnicalConfigPath << "'\n";
-                DebugTrace(oss.str());
-                return enabled;
-            }
-
-            bool parsed = false;
-            for (const auto& entry : lines)
-            {
-                std::string key = TrimWhitespace(entry.key);
-                std::string value = TrimWhitespace(entry.value);
-                const std::size_t lineNumber = entry.lineNumber;
-                std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
-                    { return static_cast<char>(std::tolower(c)); });
-
-                if (key == "loadmodeltextures" || key == "modeltextures")
-                {
-                    if (ParseBool(value, enabled))
-                    {
-                        parsed = true;
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "[RenderSettings] Parsed loadModelTextures=" << std::boolalpha << enabled
-                            << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
-                        DebugTrace(oss.str());
-                    }
-                    else
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "[RenderSettings] Invalid loadModelTextures value='" << value
-                            << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << enabled << "\n";
-                        DebugTrace(oss.str());
-                    }
-                }
-            }
-
-            if (!parsed)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[RenderSettings] loadModelTextures not found; using default="
-                    << std::boolalpha << enabled << " (path='" << kTechnicalConfigPath << "')\n";
-                DebugTrace(oss.str());
-            }
-
-            return enabled;
-        }
-
-        struct PhysicsTuningSettings
-        {
-            float gravity = 11.5f;
-            int subStepCount = 8;
-            float linearDamping = 0.97f;
-            float angularDamping = 0.97f;
-            float defaultFriction = 0.52f;
-            float defaultRestitution = 0.06f;
-            float restitutionThreshold = 5.0f;
-            float hitEventThreshold = 0.0f;
-            float maxStepDt = 1.0f / 60.0f;
-            int maxAccumulatedSteps = 8;
-            bool continuousCollisionForSweets = true;
-            bool continuousCollisionForSmallDynamics = false;
-            float smallDynamicContinuousThreshold = 0.6f;
-            bool continuousCollisionForPlayerProjectiles = true;
-        };
-
-        SceneGame::PlayerSpawnTransform LoadPlayerTransformConfig()
-        {
-            SceneGame::PlayerSpawnTransform result{};
-            constexpr float kDegToRad = 3.14159265358979323846f / 180.0f;
-
-            auto parseFloat3 = [&](const std::string& value, float3& out, const std::string& key, int lineNumber) -> bool
-                {
-                    std::vector<float> values;
-                    std::stringstream ss(value);
-                    std::string token;
-                    while (std::getline(ss, token, ','))
-                    {
-                        const std::string trimmed = TrimWhitespace(token);
-                        if (trimmed.empty())
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            values.push_back(std::stof(trimmed));
-                        }
-                        catch (const std::exception& ex)
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "[PlayerTransform] Failed to parse token line=" << lineNumber
-                                << " key='" << key << "' token='" << trimmed << "' reason='" << ex.what() << "'\n";
-                            DebugTrace(oss.str());
-                            return false;
-                        }
-                    }
-
-                    if (values.size() != 3)
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "[PlayerTransform] Expected 3 components for key='" << key
-                            << "' on line " << lineNumber << "; got " << values.size() << "\n";
-                        DebugTrace(oss.str());
-                        return false;
-                    }
-
-                    out = float3{ values[0], values[1], values[2] };
-                    return true;
-                };
-
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPlayerTransform, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerTransform] Config section missing; using defaults path='"
-                    << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionPlayerTransform << "'.\n";
-                DebugTrace(oss.str());
-                return result;
-            }
-
-            int parsedFields = 0;
-            for (const auto& entry : lines)
-            {
-                const int lineNumber = static_cast<int>(entry.lineNumber);
-                const std::string key = TrimWhitespace(entry.key);
-                const std::string value = TrimWhitespace(entry.value);
-                if (key.empty() || value.empty())
-                {
-                    continue;
-                }
-
-                float3 parsed{};
-                if (key == "position" || key == "positionOffset")
-                {
-                    if (parseFloat3(value, parsed, key, lineNumber))
-                    {
-                        result.transform.position = parsed;
-                        ++parsedFields;
-                    }
-                }
-                else if (key == "rotationDegrees" || key == "rotationDeg")
-                {
-                    if (parseFloat3(value, parsed, key, lineNumber))
-                    {
-                        result.transform.rotation = float3{ parsed.x * kDegToRad, parsed.y * kDegToRad, parsed.z * kDegToRad };
-                        result.rotationFromDegrees = true;
-                        ++parsedFields;
-                    }
-                }
-                else if (key == "rotation" || key == "rotationRadians")
-                {
-                    if (parseFloat3(value, parsed, key, lineNumber))
-                    {
-                        result.transform.rotation = parsed;
-                        result.rotationFromDegrees = false;
-                        ++parsedFields;
-                    }
-                }
-                else if (key == "scale")
-                {
-                    if (parseFloat3(value, parsed, key, lineNumber))
-                    {
-                        result.transform.scale = parsed;
-                        ++parsedFields;
-                    }
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerTransform] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
-                    DebugTrace(oss.str());
-                }
-            }
-
-            result.loadedFromFile = true;
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerTransform] Applied path='" << kGameplayConfigPath
-                << "' section='" << GameplayConfig::kSectionPlayerTransform
-                << "' loaded=" << std::boolalpha << result.loadedFromFile
-                << " parsedFields=" << parsedFields
-                << " position=(" << result.transform.position.x << ',' << result.transform.position.y << ',' << result.transform.position.z << ')'
-                << " rotationRad=(" << result.transform.rotation.x << ',' << result.transform.rotation.y << ',' << result.transform.rotation.z << ')'
-                << " scale=(" << result.transform.scale.x << ',' << result.transform.scale.y << ',' << result.transform.scale.z << ')'
-                << " rotationSource=" << (result.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
-            DebugTrace(oss.str());
-
-            return result;
-        }
-
-        PhysicsTuningSettings LoadPhysicsTuningSettings()
-        {
-            PhysicsTuningSettings settings;
-            std::vector<Config::SectionLine> lines;
-            if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPhysicsTuning, lines))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Physics tuning config section '" << GameplayConfig::kSectionPhysicsTuning
-                    << "' not found at '" << kGameplayConfigPath
-                    << "'. Using defaults (gravity=" << settings.gravity
-                    << ", subSteps=" << settings.subStepCount
-                    << ", linearDamping=" << settings.linearDamping
-                    << ", angularDamping=" << settings.angularDamping
-                    << ", defaultFriction=" << settings.defaultFriction
-                    << ", defaultRestitution=" << settings.defaultRestitution
-                    << ", restitutionThreshold=" << settings.restitutionThreshold
-                    << ", hitEventThreshold=" << settings.hitEventThreshold
-                    << ", maxStepDt=" << settings.maxStepDt
-                    << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
-                    << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
-                    << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
-                    << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-                    << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
-                    << ").\n";
-                ::DebugTrace(oss.str());
-                return settings;
-            }
-
-            auto parseBool = [](const std::string& value) -> std::optional<bool>
-            {
-                std::string lower = value;
-                std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c)
-                {
-                    return static_cast<char>(std::tolower(c));
-                });
-
-                if (lower == "1" || lower == "true")
-                {
-                    return true;
-                }
-
-                if (lower == "0" || lower == "false")
-                {
-                    return false;
-                }
-
-                return std::nullopt;
-            };
-
-            for (const auto& entry : lines)
-            {
-                const std::size_t lineNumber = entry.lineNumber;
-                std::string key = TrimWhitespace(entry.key);
-                std::string value = TrimWhitespace(entry.value);
-                if (key.empty() || value.empty())
-                {
-                    continue;
-                }
-
-                try
-                {
-                    if (key == "gravity")
-                    {
-                        settings.gravity = std::stof(value);
-                    }
-                    else if (key == "subSteps")
-                    {
-                        settings.subStepCount = std::max(1, std::stoi(value));
-                    }
-                    else if (key == "linearDamping")
-                    {
-                        settings.linearDamping = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "angularDamping")
-                    {
-                        settings.angularDamping = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "defaultFriction")
-                    {
-                        settings.defaultFriction = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "defaultRestitution")
-                    {
-                        settings.defaultRestitution = std::clamp(std::stof(value), 0.0f, 1.0f);
-                    }
-                    else if (key == "restitutionThreshold")
-                    {
-                        settings.restitutionThreshold = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "hitEventThreshold")
-                    {
-                        settings.hitEventThreshold = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "maxStepDt")
-                    {
-                        settings.maxStepDt = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "maxAccumulatedSteps")
-                    {
-                        settings.maxAccumulatedSteps = std::max(1, std::stoi(value));
-                    }
-                    else if (key == "ccdSweets")
-                    {
-                        if (auto parsed = parseBool(value))
-                        {
-                            settings.continuousCollisionForSweets = *parsed;
-                        }
-                        else
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
-                                << lineNumber << "\n";
-                            ::DebugTrace(oss.str());
-                        }
-                    }
-                    else if (key == "ccdSmallDynamics")
-                    {
-                        if (auto parsed = parseBool(value))
-                        {
-                            settings.continuousCollisionForSmallDynamics = *parsed;
-                        }
-                        else
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
-                                << lineNumber << "\n";
-                            ::DebugTrace(oss.str());
-                        }
-                    }
-                    else if (key == "ccdSmallDynamicThreshold")
-                    {
-                        settings.smallDynamicContinuousThreshold = std::max(0.0f, std::stof(value));
-                    }
-                    else if (key == "ccdPlayerProjectiles")
-                    {
-                        if (auto parsed = parseBool(value))
-                        {
-                            settings.continuousCollisionForPlayerProjectiles = *parsed;
-                        }
-                        else
-                        {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
-                                << lineNumber << "\n";
-                            ::DebugTrace(oss.str());
-                        }
-                    }
-                    else
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Unknown physics tuning key '" << key << "' on line "
-                            << lineNumber << "\n";
-                        ::DebugTrace(oss.str());
-                    }
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse value for key '" << key << "' on line "
-                        << lineNumber << ": " << ex.what() << "\n";
-                    ::DebugTrace(oss.str());
-                }
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << "Loaded physics tuning from '" << kGameplayConfigPath
-                << "' section='" << GameplayConfig::kSectionPhysicsTuning
-                << "' (gravity=" << settings.gravity
-                << ", subSteps=" << settings.subStepCount
-                << ", linearDamping=" << settings.linearDamping
-                << ", angularDamping=" << settings.angularDamping
-                << ", defaultFriction=" << settings.defaultFriction
-                << ", defaultRestitution=" << settings.defaultRestitution
-                << ", restitutionThreshold=" << settings.restitutionThreshold
-                << ", hitEventThreshold=" << settings.hitEventThreshold
-                << ", maxStepDt=" << settings.maxStepDt
-                << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
-                << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
-                << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
-                << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-                << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
-                << ").\n";
-            ::DebugTrace(oss.str());
-            return settings;
-        }
-
         DirectX::XMVECTOR LoadFloat3(const float3& value)
         {
             return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
@@ -1895,8 +1140,8 @@ m_playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
     GameplayConfig::kSectionPlayerColliders,
     m_playerColliderDefinitions);
 m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
-m_playerColliderTuning = LoadPlayerColliderTuning(kGameplayConfigPath);
-m_playerSpawnTransform = LoadPlayerTransformConfig();
+    m_playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(kGameplayConfigPath);
+    m_playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
 {
     std::ostringstream oss;
     oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << m_playerColliderConfigLoaded
@@ -2040,7 +1285,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
     // （ローダーやデバイスの切り替え漏れによるハングを防止）
     cache.Clear();
 
-    const bool modelTexturesEnabled = LoadModelTextureLoadingSetting();
+    const bool modelTexturesEnabled = SceneGameConfig::LoadModelTextureLoadingSetting();
     cache.SetTextureLoadingEnabled(modelTexturesEnabled);
 
     {
@@ -2149,7 +1394,7 @@ m_playerSpawnTransform = LoadPlayerTransformConfig();
         DebugTrace(std::string(kLogPrefix) + "Background texture path empty; background renderer skipped.\n");
     }
 
-    const PhysicsTuningSettings tuning = LoadPhysicsTuningSettings();
+    const SceneGameConfig::PhysicsTuningSettings tuning = SceneGameConfig::LoadPhysicsTuningSettings();
     Systems::PhysicsTuningParameters physicsParameters{};
     physicsParameters.gravity = tuning.gravity;
     physicsParameters.subStepCount = tuning.subStepCount;
@@ -3327,7 +2572,7 @@ bool SceneGame::LoadStageLayout(const std::string& csvPath)
         DebugTrace(std::string(kLogPrefix) + "Stage collider registry missing; falling back to cached definitions if any.\n");
     }
 
-    const StageColliderConfig stageColliderConfig = LoadStageColliderConfig(kGameplayConfigPath);
+    const SceneGameConfig::StageColliderConfig stageColliderConfig = SceneGameConfig::LoadStageColliderConfig(kGameplayConfigPath);
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     std::string line;
