@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
-#include "ModelDX.h"
+#include "Render/Model.h"
 #include "IModelLoader.h"
 
 struct ID3D11Device;

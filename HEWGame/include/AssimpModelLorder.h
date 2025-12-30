@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "AABB.h"
+#include "Render/Model.h"
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"

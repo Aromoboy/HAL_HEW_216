@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ModelDX.h"
+#include "MeshDX.h"
+#include "Render/Model.h"
 #include "ICamera.h"
 #include "Transform.h"
 

@@ -7,7 +7,7 @@
 #include "Core/UpdateNode.h"
 #include "Entities/PhysicalEntity.h"
 #include "Transform.h"
-#include "ModelDX.h"
+#include "Render/Model.h"
 
 namespace CameraSpace
 {

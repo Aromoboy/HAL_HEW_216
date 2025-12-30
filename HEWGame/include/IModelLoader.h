@@ -2,7 +2,7 @@
 #include <memory>
 #include <string>
 
-#include "ModelDX.h"
+#include "Render/Model.h"
 #include "Animation.h"
 
 struct ID3D11Device;

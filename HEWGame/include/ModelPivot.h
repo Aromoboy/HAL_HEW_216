@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "ModelDX.h"
+#include "Render/Model.h"
 #include "Vector.h"
 
 namespace Render
@@ -23,4 +23,3 @@ namespace Render
     float ComputePivotOffsetYOriginBottom(const Model& model, const float3& appliedScale);
     float ComputePivotOffsetYOriginBottom(const std::shared_ptr<Model>& model, const float3& appliedScale);
 }
-
