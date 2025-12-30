@@ -46,6 +46,7 @@ namespace Systems
                 int m_maxAccumulatedSteps = 8;
                 bool m_loggedMissingWorld = false;
                 bool m_clampActive = false;
+                float m_clampLogElapsed = 0.0f;
                 int m_currentClampFrames = 0;
                 int m_currentClampSteps = 0;
                 int m_summaryClampActivations = 0;
@@ -56,4 +57,3 @@ namespace Systems
                 bool m_hasTimerFrame = false;
         };
 }
-
