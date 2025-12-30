@@ -21,6 +21,7 @@
 #include "UIManager.h"
 #include "BackgroundRenderer.h"
 #include "ColliderConfigLoader.h"
+#include "StageLayoutLoader.h"
 #include <cstddef>
 #include <memory>
 #include <map>
@@ -41,19 +42,6 @@ struct CameraPrototypeSettings
     float fovDegrees = 60.0f;
     float yawRadians = 0.0f;
     float pitchRadians = 0.0f;
-};
-
-struct StageObject
-{
-    std::string modelPath;
-    Transform transform;
-    bool spinEnabled = false;
-    float3 spinAxis{ 0.0f, 0.0f, 0.0f };
-    float spinSpeed = 0.0f;
-    std::shared_ptr<ModelDX> model;
-    float currentRotation = 0.0f;
-    std::string colliderPresetId;
-    std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 
 namespace Systems
@@ -126,7 +114,6 @@ private:
     void ProcessPostGameInput(Core::UpdateContext& ctx);
     void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
-    bool LoadStageLayout(const std::string& csvPath);
     int ComputeScore() const;
     int GetSweetsCount() const;
     void NormalizePlayerColliderDefinitions();

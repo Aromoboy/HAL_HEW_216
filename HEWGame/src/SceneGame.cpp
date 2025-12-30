@@ -44,7 +44,6 @@
 #include <string>
 #include <utility>
 #include <iterator>
-#include <filesystem>
 #include <DirectXMath.h>
 #include "Physical.h"
 #include "ColliderRegistry.h"
@@ -162,53 +161,6 @@ namespace
         float3 ScaleVector(const float3& value, const float3& scale)
         {
             return float3{ value.x * scale.x, value.y * scale.y, value.z * scale.z };
-        }
-
-        std::string BuildModelKey(const std::string& modelPath)
-        {
-            std::string key = modelPath;
-            try
-            {
-                const std::filesystem::path path(modelPath);
-                key = path.filename().string();
-            }
-            catch (...)
-            {
-                // そのまま modelPath を使う
-            }
-
-            return NormalizeColliderKey(key);
-        }
-
-        std::optional<SceneGameConfig::StageColliderPreset> ResolveStageColliderPreset(
-            const SceneGameConfig::StageColliderConfig& config,
-            const std::string& explicitPreset,
-            const std::string& modelPath)
-        {
-            const std::string requested = NormalizeColliderKey(explicitPreset);
-            if (!requested.empty())
-            {
-                auto it = config.presetsById.find(requested);
-                if (it != config.presetsById.end())
-                {
-                    return it->second;
-                }
-            }
-
-            const std::string modelKey = BuildModelKey(modelPath);
-            auto byModel = config.presetsByModelKey.find(modelKey);
-            if (byModel != config.presetsByModelKey.end())
-            {
-                return byModel->second;
-            }
-
-            auto fallbackPreset = config.presetsById.find(modelKey);
-            if (fallbackPreset != config.presetsById.end())
-            {
-                return fallbackPreset->second;
-            }
-
-            return std::nullopt;
         }
 
         Physics::Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
@@ -1597,7 +1549,25 @@ m_forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, 
     
 
     // ModelCacheの設定後、ステージレイアウトをロード
-    LoadStageLayout("Assets/Config/StageLayout.csv");
+    StageLayoutLoadRequest stageLayoutRequest{
+        "Assets/Config/StageLayout.csv",
+        kGameplayConfigPath,
+        cache,
+        m_physicsBinder != nullptr,
+        kLogPrefix
+    };
+    StageLayoutLoadResult stageLayoutResult = StageLayoutLoader::LoadFromCsv(stageLayoutRequest);
+    m_stageObjects = std::move(stageLayoutResult.stageObjects);
+    if (m_physicsBinder)
+    {
+        for (const auto& entity : stageLayoutResult.physicsEntities)
+        {
+            if (entity)
+            {
+                m_physicsBinder->RegisterPhysicsBody(*entity);
+            }
+        }
+    }
 
     m_render = std::make_unique<ModelRender>();
     if (m_drawSystem && m_render)
@@ -2561,185 +2531,6 @@ void SceneGame::DrawPhysicsDebugOverlay()
     Geometory::DrawLines();
 }
 #endif
-
-bool SceneGame::LoadStageLayout(const std::string& csvPath)
-{
-    // CSVファイルを開く
-    std::ifstream file(csvPath);
-    if (!file.is_open())
-    {
-        DebugTrace(std::string(kLogPrefix) + "StageLayout.csvを開けませんでした\n");
-        return false;
-    }
-
-    DebugTrace(std::string(kLogPrefix) + "CSVファイルを開きました: " + csvPath + "\n");
-
-    const bool registryLoaded = Physics::ColliderRegistry::Instance().LoadFromFile(kGameplayConfigPath);
-    if (!registryLoaded)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Stage collider registry missing; falling back to cached definitions if any.\n");
-    }
-
-    const SceneGameConfig::StageColliderConfig stageColliderConfig = SceneGameConfig::LoadStageColliderConfig(kGameplayConfigPath);
-
-    Render::ModelCache& cache = Render::ModelCache::Instance();
-    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
-    std::string line;
-    size_t stageModelsLoaded = 0;
-    size_t stageModelsFailed = 0;
-
-    // ファイルを1行ずつ読み込む
-    while (std::getline(file, line))
-    {
-        // コメント行と空行をスキップ
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        // カンマ区切りでパース
-        std::stringstream ss(line);
-        std::string token;
-        std::vector<std::string> values;
-
-        while (std::getline(ss, token, ','))
-        {
-            values.push_back(token);
-        }
-
-        // 最低15個の値が必要（spin情報を含む）
-        if (values.size() < 15)
-            continue;
-
-        // ステージオブジェクトを作成
-        StageObject obj;
-        obj.modelPath = values[0];
-
-        // 位置を設定
-        obj.transform.position.x = std::stof(values[1]);
-        obj.transform.position.y = std::stof(values[2]);
-        obj.transform.position.z = std::stof(values[3]);
-
-        // 回転を設定（度数）
-        obj.transform.rotation.x = std::stof(values[4]);
-        obj.transform.rotation.y = std::stof(values[5]);
-        obj.transform.rotation.z = std::stof(values[6]);
-
-        // スケールを設定
-        obj.transform.scale.x = std::stof(values[7]);
-        obj.transform.scale.y = std::stof(values[8]);
-        obj.transform.scale.z = std::stof(values[9]);
-
-        // 回転アニメーション設定
-        std::string spinValue = values[10];
-        // 小文字に変換
-        std::transform(spinValue.begin(), spinValue.end(), spinValue.begin(), ::tolower);
-        
-        obj.spinEnabled = (spinValue == "true" || spinValue == "1" || spinValue == "yes" || spinValue == "on");
-        obj.spinAxis.x = std::stof(values[11]);
-        obj.spinAxis.y = std::stof(values[12]);
-        obj.spinAxis.z = std::stof(values[13]);
-        obj.spinSpeed = std::stof(values[14]);
-        obj.currentRotation = 0.0f;
-        if (values.size() > 15)
-        {
-            obj.colliderPresetId = NormalizeColliderKey(values[15]);
-        }
-
-        // モデルをロード
-        if (kEnableStageModelVerboseLogging)
-        {
-            DebugTrace(std::string(kLogPrefix) + "Stage model loading: " + obj.modelPath + "\n");
-        }
-        obj.model = cache.Get(obj.modelPath);
-        if (!obj.model)
-        {
-            DebugTrace(std::string(kLogPrefix) + "モデルのロードに失敗: " + obj.modelPath + "\n");
-            ++stageModelsFailed;
-            continue;
-        }
-        ++stageModelsLoaded;
-        if (kEnableStageModelVerboseLogging)
-        {
-            DebugTrace(std::string(kLogPrefix) + "Stage model loaded: " + obj.modelPath + "\n");
-        }
-
-        if (physicsMachine)
-        {
-            const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
-            if (preset)
-            {
-                obj.colliderPresetId = preset->presetId;
-
-                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(preset->registryId);
-                if (!registryDefinition)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[StageColliders] registryId='" << preset->registryId
-                        << "' missing for model '" << obj.modelPath << "' (preset='" << preset->presetId << "').\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    Physics::BoxColliderComponent colliderComponent{};
-                    colliderComponent.colliderId = preset->registryId;
-                    colliderComponent.shapeDef = registryDefinition->shapeDef;
-                    colliderComponent.shapes = registryDefinition->shapes;
-                    colliderComponent.colliderOffset = preset->offset;
-
-                    Physics::Box2DShapeConfig shapeConfig{};
-                    shapeConfig.type = InferShapeType(colliderComponent.shapes);
-                    shapeConfig.bodyType = preset->bodyType;
-                    shapeConfig.fixedRotation = preset->fixedRotation;
-                    shapeConfig.allowRotation = preset->allowRotation;
-                    shapeConfig.angularDamping = preset->allowRotation ? 0.2f : 0.0f;
-                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
-
-                    auto entity = std::make_shared<Entities::PhysicalEntity>(
-                        obj.transform,
-                        shapeConfig,
-                        preset->layer,
-                        obj.model,
-                        nullptr,
-                        Core::UpdatePhase::PrePhysics,
-                        0,
-                        preset->presetId,
-                        false);
-
-                    entity->SetBoxColliderComponent(colliderComponent);
-                    entity->SetAllowMeshPhysics(false);
-                    obj.physicsEntity = entity;
-
-                    if (m_physicsBinder)
-                    {
-                        m_physicsBinder->RegisterPhysicsBody(*entity);
-                    }
-
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[StageColliders] Registered preset='" << preset->presetId
-                        << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(preset->layer)
-                        << ")\n";
-                    DebugTrace(oss.str());
-                }
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[StageColliders] No preset mapped for model '" << obj.modelPath
-                    << "'; collider skipped.\n";
-                DebugTrace(oss.str());
-            }
-        }
-
-        // リストに追加
-        m_stageObjects.push_back(obj);
-    }
-
-    DebugTrace(std::string(kLogPrefix) + "ステージオブジェクトを" + std::to_string(m_stageObjects.size()) + "個ロードしました\n");
-    DebugTrace(std::string(kLogPrefix) + "Loaded stage models: success=" + std::to_string(stageModelsLoaded)
-        + ", failed=" + std::to_string(stageModelsFailed) + "\n");
-    return true;
-}
 
 void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {

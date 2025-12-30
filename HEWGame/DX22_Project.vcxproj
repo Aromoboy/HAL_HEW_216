@@ -233,6 +233,7 @@
     <ClCompile Include="src\PowerUpNode.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneGame.cpp" />
+    <ClCompile Include="src\StageLayoutLoader.cpp" />
     <ClCompile Include="src\SceneGameConfigLoader.cpp" />
     <ClCompile Include="src\UIManager.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
@@ -275,6 +276,7 @@
     <ClInclude Include="include\AnimationState.h" />
     <ClInclude Include="include\BoxColliderComponent.h" />
     <ClInclude Include="include\ColliderConfigLoader.h" />
+    <ClInclude Include="include\StageLayoutLoader.h" />
     <ClInclude Include="include\ColliderRegistry.h" />
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
     <ClInclude Include="include\CollisionLayer.h" />
