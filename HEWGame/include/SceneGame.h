@@ -4,7 +4,6 @@
 #include "Scene.h"
 #include "SceneManager.h"
 #include "Model.h"
-#include "TestObject.h"
 #include "SoundManagerEX.h"
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"

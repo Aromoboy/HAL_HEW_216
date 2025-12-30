@@ -258,9 +258,6 @@
     <ClCompile Include="src\Systems\PhysicsMachine.cpp">
       <Filter>Systems</Filter>
     </ClCompile>
-    <ClCompile Include="src\TestObject.cpp">
-      <Filter>Entities</Filter>
-    </ClCompile>
     <ClCompile Include="src\Texture.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -536,9 +533,6 @@
     </ClInclude>
     <ClInclude Include="include\Systems\PhysicsMachine.h">
       <Filter>Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\TestObject.h">
-      <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="include\Texture.h">
       <Filter>Rendering</Filter>
