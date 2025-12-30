@@ -5,7 +5,6 @@
 #include <unordered_set>
 #include <string>
 #include "Core/UpdateNode.h"
-#include "Entities/PhysicalEntity.h"
 #include "Transform.h"
 #include "Render/Model.h"
 
@@ -20,6 +19,12 @@ class Animation;
 extern bool g_DrawColliders;
 extern bool g_DrawColliderBounds;
 extern bool g_DebugDrawEnabled;
+
+namespace Entities
+{
+        class Entity;
+        class PhysicalEntity;
+}
 
 namespace Systems
 {

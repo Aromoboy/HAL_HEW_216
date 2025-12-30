@@ -1,8 +1,11 @@
 #pragma once
 
-#include "Entities/PhysicalEntity.h"
-
 #include <cstddef>
+
+namespace Entities
+{
+    class PhysicalEntity;
+}
 
 namespace Systems
 {

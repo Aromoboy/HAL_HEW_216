@@ -8,7 +8,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Entities/PhysicalEntity.h"
+namespace Entities
+{
+    class PhysicalEntity;
+}
 
 namespace Systems
 // PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する

@@ -5,8 +5,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Entities/PhysicalEntity.h"
 #include "Systems/PhysicsMachine.h"
+
+namespace Entities
+{
+    class PhysicalEntity;
+}
 
 namespace Systems
 {

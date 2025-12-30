@@ -2,7 +2,6 @@
 
 #include "AABB.h"
 #include "Core/Input.h"
-#include "Entities/Player.h"
 
 #include "ModelCache.h"
 #include "ModelPivot.h"
@@ -999,6 +998,8 @@ namespace Entities
             }
         }
     }
+
+    Player::~Player() = default;
 
     void Player::TryPickupNearest()
     {
