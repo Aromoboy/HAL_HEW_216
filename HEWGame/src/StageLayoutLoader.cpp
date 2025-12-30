@@ -266,9 +266,14 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             }
             else
             {
+                const std::string modelKey = BuildModelKey(obj.modelPath);
                 std::ostringstream oss;
                 oss << logPrefix << "[StageColliders] No preset mapped for model '" << obj.modelPath
-                    << "'; collider skipped.\n";
+                    << "' (modelKey='" << modelKey
+                    << "', explicitPreset='" << obj.colliderPresetId
+                    << "', presetIds=" << stageColliderConfig.presetsById.size()
+                    << ", presetModelKeys=" << stageColliderConfig.presetsByModelKey.size()
+                    << "); collider skipped.\n";
                 DebugTrace(oss.str());
             }
         }
