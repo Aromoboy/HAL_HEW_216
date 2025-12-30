@@ -2,6 +2,8 @@
 
 #include <cstddef>
 
+#include "Vector.h"
+
 namespace Entities
 {
     class PhysicalEntity;
