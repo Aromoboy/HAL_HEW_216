@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -9,6 +10,7 @@
 
 #include "CollisionLayer.h"
 #include "Core/UpdateNode.h"
+#include "ColliderConfigLoader.h"
 #include "ColliderRegistry.h"
 #include "Sweets/SweetsKeyUtils.h"
 #include "Sweets/SweetsTypes.h"
