@@ -73,7 +73,7 @@ namespace
         }
 #endif
 
-        constexpr const char* kLogPrefix = "[SceneGame] ";
+        constexpr const char* kLogPrefix = "[SceneComposer] ";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnablePlayerBoundsLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
