@@ -39,7 +39,8 @@ namespace
     constexpr uint16_t kDefaultCategory = 0x0001;
     constexpr uint16_t kPlayerCategory = 0x0002;
     constexpr uint16_t kFloorCategory = 0x0004;
-    constexpr uint16_t kSweetsCategory = 0x0008;
+    constexpr uint16_t kStageCategory = 0x0008;
+    constexpr uint16_t kSweetsCategory = 0x0010;
     constexpr float kScaleAssertionEpsilon = 0.0001f;
 
     void DebugTrace(const std::string& message)
@@ -63,6 +64,8 @@ namespace
             return kPlayerCategory;
         case Collision::CollisionLayer::Floor:
             return kFloorCategory;
+        case Collision::CollisionLayer::Stage:
+            return kStageCategory;
         case Collision::CollisionLayer::Sweets:
             return kSweetsCategory;
         default:
@@ -76,15 +79,18 @@ namespace
         {
         case Collision::CollisionLayer::Player:
             // プレイヤーは全部と当たる
-            return kDefaultCategory | kFloorCategory | kSweetsCategory | kPlayerCategory;
+            return kDefaultCategory | kFloorCategory | kStageCategory | kSweetsCategory | kPlayerCategory;
         case Collision::CollisionLayer::Floor:
             // 床はプレイヤーとスイーツと当たる
             return kDefaultCategory | kPlayerCategory | kSweetsCategory;
+        case Collision::CollisionLayer::Stage:
+            // ステージ装飾はプレイヤーとスイーツと当たる（接地扱いは別）
+            return kPlayerCategory | kSweetsCategory;
         case Collision::CollisionLayer::Sweets:
             // スイーツ同士も当てたいならここで制御
-            return kDefaultCategory | kFloorCategory | kPlayerCategory | kSweetsCategory;
+            return kDefaultCategory | kFloorCategory | kStageCategory | kPlayerCategory | kSweetsCategory;
         default:
-            return kDefaultCategory | kPlayerCategory | kFloorCategory | kSweetsCategory;
+            return kDefaultCategory | kPlayerCategory | kFloorCategory | kStageCategory | kSweetsCategory;
         }
     }
 

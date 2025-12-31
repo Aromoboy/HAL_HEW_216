@@ -99,7 +99,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
     StageLayoutLoadResult result;
     const std::string logPrefix = request.logPrefix.empty() ? std::string("[StageLayoutLoader] ") : request.logPrefix;
 
-    constexpr Collision::CollisionLayer kStageColliderLayer = Collision::CollisionLayer::Floor;
+    constexpr Collision::CollisionLayer kStageColliderLayer = Collision::CollisionLayer::Stage;
     constexpr b2BodyType kStageBodyType = b2_staticBody;
     constexpr bool kStageFixedRotation = true;
     constexpr bool kStageAllowRotation = false;
