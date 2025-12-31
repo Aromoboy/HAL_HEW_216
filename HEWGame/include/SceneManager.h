@@ -15,7 +15,7 @@ namespace SceneSpace
     {
     public:
         virtual ~IScene() = default;
-        virtual void Load(Core::Input& input) = 0;
+        virtual bool Load(Core::Input& input) = 0;
         virtual void Update(Core::StepTimer& timer, Core::Input& input) = 0;
         virtual void Draw() = 0;
         virtual void OnEnter() {}

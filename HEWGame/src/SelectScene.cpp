@@ -5,9 +5,10 @@
 
 SelectScene::SelectScene() = default;
 
-void SelectScene::Load(Core::Input& input)
+bool SelectScene::Load(Core::Input& input)
 {
     (void)input;
+    return true;
 }
 
 void SelectScene::Update(Core::StepTimer& timer, Core::Input& input)

@@ -6,6 +6,30 @@
 
 #include <cassert>
 #include <memory>
+#include <sstream>
+#include <string>
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+}
 
 namespace SceneSpace
 {
@@ -66,6 +90,13 @@ namespace SceneSpace
             return;
         }
 
+        std::unique_ptr<IScene> nextScene = std::move(m_pendingScene);
+        if (!nextScene->Load(m_input))
+        {
+            LogSceneEvent("Scene load failed; activation canceled.", nextScene.get());
+            return;
+        }
+
         if (m_activeScene)
         {
             if (m_sceneEntered)
@@ -80,14 +111,18 @@ namespace SceneSpace
             }
         }
 
-        m_activeScene = std::move(m_pendingScene);
-        m_sceneLoaded = false;
-        m_sceneEntered = false;
-
-        m_activeScene->Load(m_input);
+        m_activeScene = std::move(nextScene);
         m_sceneLoaded = true;
+        m_sceneEntered = false;
 
         m_activeScene->OnEnter();
         m_sceneEntered = true;
+    }
+
+    void SceneManager::LogSceneEvent(const char* eventLabel, const IScene* scene) const
+    {
+        std::ostringstream oss;
+        oss << "[SceneManager] " << eventLabel << " scenePtr=" << scene << "\n";
+        DebugTrace(oss.str());
     }
 }

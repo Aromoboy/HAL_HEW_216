@@ -21,7 +21,7 @@ namespace SceneSpace
                 explicit ScenePowerUp(SceneSpace::SceneManager& manager);
                 ~ScenePowerUp() = default;
 
-                void Load(Core::Input& input) override;
+                bool Load(Core::Input& input) override;
                 void Update(Core::StepTimer& timer, Core::Input& input) override;
                 void Draw() override;
                 void OnEnter() override;
@@ -47,4 +47,3 @@ namespace SceneSpace
                 int m_cost = 9999;
         };
 }
-
