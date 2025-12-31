@@ -4,6 +4,7 @@
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
 #include "AppGame.h"
+#include "ColliderRegistry.h"
 #include "Physics/ColliderBuilder.h"
 #include "SceneGameUIOverlay.h"
 #include "SweetsManager.h"
@@ -310,14 +311,32 @@ std::string SceneGameLoader::ResolvePlayerColliderKey(const std::string& key)
 {
     const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
     const auto resolvedType = manifest.Resolve(key);
+    std::string resolvedKey = NormalizeColliderKey(key);
     if (resolvedType)
     {
         const auto* descriptor = manifest.Find(*resolvedType);
-        if (descriptor)
+        if (descriptor && !descriptor->key.empty())
         {
-            return NormalizeColliderKey(descriptor->key);
+            resolvedKey = NormalizeColliderKey(descriptor->key);
         }
     }
 
-    return NormalizeColliderKey(key);
+    if (resolvedKey == "fairy")
+    {
+        resolvedKey = "player";
+    }
+
+    const auto& registry = Physics::ColliderRegistry::Instance();
+    if (registry.Find(resolvedKey))
+    {
+        return resolvedKey;
+    }
+
+    const std::string fallbackKey = NormalizeColliderKey("player");
+    if (resolvedKey != fallbackKey && registry.Find(fallbackKey))
+    {
+        return fallbackKey;
+    }
+
+    return resolvedKey;
 }
