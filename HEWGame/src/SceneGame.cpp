@@ -259,45 +259,11 @@ void SceneGame::Load(Core::Input& input)
     std::ostringstream oss;
     oss << kLogPrefix << "Load scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
-}
 
-void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
-{
-    RootUpdate(timer, input);
-}
-
-void SceneGame::Draw()
-{
-    RootDraw();
-}
-
-void SceneGame::OnEnter()
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
-    ::DebugTrace(oss.str());
-
-    // BGMを再生（ループあり、音量40%）
-    if (m_pManager)
+    if (m_isComposed)
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // true = ループ
+        return;
     }
-}
-
-void SceneGame::OnExit()
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
-    ::DebugTrace(oss.str());
-}
-
-
-SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
-    : m_contactHandler()
-    , m_playerController(DebugTrace, kLogPrefix)
-    , m_manager(&a_manager)
-{
-    m_pManager = std::make_unique<SoundManagerEX>();
 
     SceneComposer composer(GetUpdateScheduler());
     auto composition = std::make_unique<SceneComposer::Composition>(composer.Compose());
@@ -420,6 +386,46 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     }
 
     m_gameplayRules.ResetSession();
+    m_isComposed = true;
+}
+
+void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
+{
+    RootUpdate(timer, input);
+}
+
+void SceneGame::Draw()
+{
+    RootDraw();
+}
+
+void SceneGame::OnEnter()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+
+    // BGMを再生（ループあり、音量40%）
+    if (m_pManager)
+    {
+        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // true = ループ
+    }
+}
+
+void SceneGame::OnExit()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+}
+
+
+SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
+    : m_contactHandler()
+    , m_playerController(DebugTrace, kLogPrefix)
+    , m_manager(&a_manager)
+{
+    m_pManager = std::make_unique<SoundManagerEX>();
 }
 
 SceneGame::~SceneGame()
