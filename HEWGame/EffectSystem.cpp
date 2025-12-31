@@ -26,21 +26,21 @@ EffectSystem::~EffectSystem()
 
 void EffectSystem::SpawnEffect(const EffectCreateRequest& a_request)
 {
-	// w’è‚³‚ê‚½key‚©‚çEffect‚ğ•Û‚µ‚Ä‚¢‚é‚©‚Ç‚¤‚©‚ğŠm”FA‘¶İ‚µ‚È‚©‚Á‚½‚ç•Ô‚·
+void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 	std::string nameKey = a_request.effectName;
 	auto pathIt = m_effectCache.find(nameKey);
 	if (pathIt == m_effectCache.end()) return;
 
-	// Effect‚ğæ“¾
+	// Effectã‚’å–å¾—
 	Effekseer::EffectRef effect = m_effectCache.at(nameKey);
 	if (effect == nullptr) return;
-	// À•W‚ğEffekseer—p‚É•ÏŠ·
+	// åº§æ¨™ã‚’Effekseerç”¨ã«å¤‰æ›
 	Effekseer::Vector3D spawnPos(a_request.spawnPosition.x, a_request.spawnPosition.y, a_request.spawnPosition.z);
 
-	// Effect‚Ì“Ç‚İ‚İ
+	// Effectã®èª­ã¿è¾¼ã¿
 	Effekseer::Handle handle = m_manager->Play(effect, spawnPos, a_request.startFrame);
 
-	// ƒnƒ“ƒhƒ‹‚Æî•ñ‚ğƒZƒbƒg‚Å•Û‘¶
+	// ãƒãƒ³ãƒ‰ãƒ«ã¨æƒ…å ±ã‚’ã‚»ãƒƒãƒˆã§ä¿å­˜
 	m_playingEffects.push_back(EffectSystem::PlayingEffect(handle, a_request.moveSpeed));
 	
 }
@@ -49,7 +49,7 @@ void EffectSystem::OnUpdate(Core::UpdateContext& ctx)
 {
 	m_time += ctx.dt / 1000;
 	m_renderer->SetTime(m_time);
-	// íœ—\’è‚ÌƒGƒtƒFƒNƒg
+	// å‰Šé™¤äºˆå®šã®ã‚¨ãƒ•ã‚§ã‚¯ãƒˆ
 	std::vector<int> pendingEffectDelete;
 
 	for (int i = 0; i < m_playingEffects.size(); i++)
@@ -57,20 +57,20 @@ void EffectSystem::OnUpdate(Core::UpdateContext& ctx)
 		auto& it = m_playingEffects[i];
 		if (!m_manager->Exists(it.handle))
 		{
-			// íœ—\’è‚ÌƒGƒtƒFƒNƒg‚Ì—v‘f”Ô†‚ğ•Û
+			// å‰Šé™¤äºˆå®šã®ã‚¨ãƒ•ã‚§ã‚¯ãƒˆã®è¦ç´ ç•ªå·ã‚’ä¿æŒ
 			pendingEffectDelete.push_back(i);
 			continue;
 		}
 		
 		
-		// Effect‚ÌTransformXV
+		// Effectã®Transformæ›´æ–°
 		UpdateEffectTransform(it,ctx.dt);
 	}
 
-	// Œã‚ë‘¤‚©‚çƒCƒeƒŒ[ƒ^‚ğ‰ñ‚µ‚Äíœ
+	// å¾Œã‚å´ã‹ã‚‰ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿ã‚’å›ã—ã¦å‰Šé™¤
 	for (std::vector<int>::reverse_iterator it = pendingEffectDelete.rbegin(),  end = pendingEffectDelete.rend(); it != end; it++)
 	{
-		// ƒCƒeƒŒ[ƒ^‚ğ“ü‚ê‚È‚«‚á“®‚©‚È‚¢‚Ì‚Åˆê”Ô‘O‚ÌƒCƒeƒŒ[ƒ^‚ğo‚µ‚Ä‰ÁZ
+		// ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿ã‚’å…¥ã‚Œãªãã‚ƒå‹•ã‹ãªã„ã®ã§ä¸€ç•ªå‰ã®ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿ã‚’å‡ºã—ã¦åŠ ç®—
 		m_playingEffects.erase(m_playingEffects.begin() + *it);
 	}
 
@@ -80,14 +80,14 @@ void EffectSystem::OnUpdate(Core::UpdateContext& ctx)
 void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
 {
 	// Specify a camera matrix
-	// ƒJƒƒ‰s—ñ‚ğİ’è
+	// ã‚«ãƒ¡ãƒ©è¡Œåˆ—ã‚’è¨­å®š
 	::Effekseer::Matrix44 cameraMatrix;
 	DirectX::XMFLOAT4X4 view = a_camera->GetView();
 	DirectX::XMMATRIX restored = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&view));
 	std::memcpy(&cameraMatrix, &restored, sizeof(cameraMatrix));
 
 	// Specify a projection matrix
-	// “Š‰es—ñ‚ğİ’è
+	// æŠ•å½±è¡Œåˆ—ã‚’è¨­å®š
 	::Effekseer::Matrix44 projectionMatrix;
 	//projectionMatrix.PerspectiveFovRH(90.0f / 180.0f * 3.14f, (float)SCREEN_WIDTH /  (float)SCREEN_HEIGHT, 1.0f, 500.0f);
 	DirectX::XMFLOAT4X4 proj = a_camera->GetProjection();
@@ -95,10 +95,10 @@ void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
 	std::memcpy(&projectionMatrix, &restoredProj, sizeof(projectionMatrix));
 
 
-	// ƒJƒƒ‰s—ñ‚ğİ’è
+	// ã‚«ãƒ¡ãƒ©è¡Œåˆ—ã‚’è¨­å®š
 	m_renderer->SetCameraMatrix(cameraMatrix);	
 
-	// “Š‰es—ñ‚ğİ’è
+	// æŠ•å½±è¡Œåˆ—ã‚’è¨­å®š
 	m_renderer->SetProjectionMatrix(projectionMatrix);
 
 

@@ -62,7 +62,7 @@ public:
 
 	void SpawnEffect(const EffectCreateRequest& a_request);
 
-	// –ˆƒtƒŒ[ƒ€
+	void OnUpdate(const Core::UpdateContext& ctx) override final;
 	void OnUpdate(Core::UpdateContext& ctx) override final;
 	void Draw(const CameraSpace::ICamera* a_camera);
 
