@@ -1,0 +1,1337 @@
+﻿#include "Transform.h"
+#include "SceneGame.h"
+#include "Geometory.h"
+#include "DrawMatrix.h"
+#include "Vector.h"
+#include "ShaderList.h"
+#include "Defines.h"
+#include "Core/Input.h"
+#include "Core/UpdateNode.h"
+#include "Systems/Physics/PhysicsBinder.h"
+#include "Systems/Draw/DrawSystem.h"
+#include "BoxColliderComponent.h"
+#include "DirectX.h"
+#include "BaseCamera.h"
+#include "PerspectiveCamera.h"
+#include "SweetsManager.h"
+#include "Sweets/BaseSweets.h"
+#include "Render/Model.h"
+#include "Render/ModelBounds.h"
+#include "Entities/Player.h"
+#include "DebugColliderRenderer.h"
+#include "SceneComposer.h"
+#include "SceneGameLoader.h"
+#include "SceneGameUIOverlay.h"
+#include "UIManager.h"
+#include "PlayerController.h"
+#include "AppGame.h"
+#include "AnimationCache.h"
+#include "AssimpModelLorder.h"
+#include "ModelCache.h"
+#include <cassert>
+#include <algorithm>
+#include <cctype>
+#include <initializer_list>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <memory>
+#include <unordered_map>
+#include <optional>
+#include <cstdlib>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <iterator>
+#include <DirectXMath.h>
+#include "Physical.h"
+#include "ColliderRegistry.h"
+#include "TitleScene.h"
+
+#if defined(_WIN32)
+#       ifndef NOMINMAX
+#               define NOMINMAX
+#       endif
+#       include <windows.h>
+#endif
+
+namespace
+{
+#if defined(_WIN32) && defined(_DEBUG)
+        void DebugTrace(const std::string& message)
+        {
+                ::OutputDebugStringA(message.c_str());
+        }
+#else
+        void DebugTrace(const std::string& message)
+        {
+                (void)message;
+        }
+#endif
+
+        constexpr const char* kLogPrefix = "[SceneComposer] ";
+        constexpr bool kEnableDrawSystemVerboseLogging = false;
+        constexpr bool kEnableStageModelVerboseLogging = false;
+        constexpr float kDefaultPlaySeconds = 30.0f;
+        constexpr float kCountdownLogIntervalSeconds = 5.0f;
+        constexpr float kBaseScorePerMeter = 100.0f;
+        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
+        constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
+        bool ReadOsaraColliderDebugFlag()
+        {
+                const char* value = std::getenv("r.DebugOsaraColliders");
+                if (!value)
+                {
+                        return true;
+                }
+
+                return std::atoi(value) != 0;
+        }
+
+        bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
+#if defined(_DEBUG)
+        Color MakeColor(float r, float g, float b, float a)
+        {
+            return Color{ r, g, b, a };
+        }
+
+        float2 ApplyTransform2D(const float2& local, const Transform& transform)
+        {
+            const float scaledX = local.x * transform.scale.x;
+            const float scaledY = local.y * transform.scale.y;
+            const float cosR = std::cos(transform.rotation.z);
+            const float sinR = std::sin(transform.rotation.z);
+
+            return float2{
+                transform.position.x + (cosR * scaledX - sinR * scaledY),
+                transform.position.y + (sinR * scaledX + cosR * scaledY),
+            };
+        }
+
+        void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
+        {
+            b2Transform bodyTransform{};
+            std::vector<b2ShapeId> shapes;
+            if (!entity.CollectBox2DShapes(shapes, bodyTransform))
+            {
+                return;
+            }
+
+            const float z = entity.GetTransform().position.z;
+
+            const auto toWorldFloat2 = [](const b2Vec2& v)
+            {
+                const float3 world = Entities::PhysicalEntity::ToWorldVector(v);
+                return float2{ world.x, world.y };
+            };
+
+            for (const b2ShapeId shapeId : shapes)
+            {
+                switch (b2Shape_GetType(shapeId))
+                {
+                case b2_circleShape:
+                {
+                    const b2Circle circle = b2Shape_GetCircle(shapeId);
+                    const b2Vec2 worldCenter = b2TransformPoint(bodyTransform, circle.center);
+                    const float2 center = toWorldFloat2(worldCenter);
+                    const float radius = Entities::PhysicalEntity::ToWorldLength(circle.radius);
+                    DebugColliderRenderer::DrawCircle(center, radius, z, color);
+                    break;
+                }
+                case b2_polygonShape:
+                {
+                    const b2Polygon polygon = b2Shape_GetPolygon(shapeId);
+                    if (polygon.count < 2)
+                    {
+                        break;
+                    }
+
+                    std::vector<float2> hull;
+                    hull.reserve(static_cast<size_t>(polygon.count));
+
+                    for (int i = 0; i < polygon.count; ++i)
+                    {
+                        const b2Vec2 worldVertex = b2TransformPoint(bodyTransform, polygon.vertices[i]);
+                        hull.push_back(toWorldFloat2(worldVertex));
+                    }
+
+                    DebugColliderRenderer::DrawHull(hull, z, color);
+                    break;
+                }
+                case b2_capsuleShape:
+                {
+                    const b2Capsule capsule = b2Shape_GetCapsule(shapeId);
+                    const b2Vec2 worldP0 = b2TransformPoint(bodyTransform, capsule.center1);
+                    const b2Vec2 worldP1 = b2TransformPoint(bodyTransform, capsule.center2);
+                    const float radius = Entities::PhysicalEntity::ToWorldLength(capsule.radius);
+                    DebugColliderRenderer::DrawCapsule(toWorldFloat2(worldP0), toWorldFloat2(worldP1), radius, z, color);
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
+
+        void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
+        {
+            b2AABB bodyAabb{};
+            if (entity.GetBox2DBodyAABB(bodyAabb))
+            {
+                const float3 lower = Entities::PhysicalEntity::ToWorldVector(bodyAabb.lowerBound);
+                const float3 upper = Entities::PhysicalEntity::ToWorldVector(bodyAabb.upperBound);
+                const float2 corners[4] = {
+                    float2{ lower.x, lower.y },
+                    float2{ upper.x, lower.y },
+                    float2{ upper.x, upper.y },
+                    float2{ lower.x, upper.y },
+                };
+
+                std::vector<float2> worldCorners;
+                worldCorners.reserve(4u);
+                for (const auto& corner : corners)
+                {
+                    worldCorners.push_back(corner);
+                }
+
+                DebugColliderRenderer::DrawHull(worldCorners, entity.GetTransform().position.z, color);
+                return;
+            }
+
+            const Render::Model* model = entity.GetRenderableModel();
+            if (!model || !model->HasLocalBounds())
+            {
+                return;
+            }
+
+            const Transform& transform = entity.GetTransform();
+            const AABB bounds = model->GetLocalBounds();
+            const float2 corners[4] = {
+                float2{ bounds.min.x, bounds.min.y },
+                float2{ bounds.max.x, bounds.min.y },
+                float2{ bounds.max.x, bounds.max.y },
+                float2{ bounds.min.x, bounds.max.y },
+            };
+
+            std::vector<float2> worldCorners;
+            worldCorners.reserve(4u);
+            for (const auto& corner : corners)
+            {
+                worldCorners.push_back(ApplyTransform2D(corner, transform));
+            }
+
+            DebugColliderRenderer::DrawHull(worldCorners, transform.position.z, color);
+        }
+#endif
+
+        DirectX::XMVECTOR LoadFloat3(const float3& value)
+        {
+            return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
+        }
+
+        float3 StoreFloat3(DirectX::FXMVECTOR value)
+        {
+            DirectX::XMFLOAT3 temp;
+            DirectX::XMStoreFloat3(&temp, value);
+            return float3{ temp.x, temp.y, temp.z };
+        }
+
+        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
+        {
+            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
+            return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
+        }
+
+        constexpr CameraPrototypeSettings kFixedSideViewCameraPreset
+        {
+            true,
+            0.0f,
+            //カメラ設定
+            float3{ 0.0f, 5.5f, -25.0f },
+            45.0f,
+            DirectX::XMConvertToRadians(0.0f),
+            DirectX::XMConvertToRadians(-10.0f)
+        };
+
+}
+
+float3 fRads = { 0.0f, 0.0f, 0.0f };
+
+bool SceneGame::Load(Core::Input& input)
+{
+    m_inputService = &input;
+    std::ostringstream oss;
+    oss << kLogPrefix << "Load scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+
+    if (m_isComposed)
+    {
+        return !m_loadFailed;
+    }
+
+    ID3D11Device* device = GetDevice();
+    if (device)
+    {
+        TextureCache& textureCache = App::Game::Instance().GetTextureCache();
+        Render::ModelCache& modelCache = Render::ModelCache::Instance();
+        if (!modelCache.IsConfiguredFor(device, textureCache))
+        {
+            modelCache.SetLoader(std::make_unique<AssimpModelLorder>(), device, textureCache);
+        }
+
+        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
+        if (!animationCache.IsConfiguredFor(device))
+        {
+            animationCache.SetLoader(std::make_unique<AssimpModelLorder>(), device);
+        }
+    }
+
+    SceneComposer composer(GetUpdateScheduler());
+    auto composition = std::make_unique<SceneComposer::Composition>(composer.ComposeBootstrap());
+    if (!composition->stageConfigLoaded)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Stage configuration failed; scene load aborted.\n");
+        m_loadFailed = true;
+        return false;
+    }
+    m_loadFailed = false;
+    composer.Compose(*composition);
+    m_playerSpawnTransform = composition->playerSpawnTransform;
+    m_stageData = std::move(composition->stageData);
+    m_phaseManager = std::move(composition->phaseManager);
+    m_playerBaseHorizontalSpeed = composition->playerBaseHorizontalSpeed;
+    m_playerBaseVerticalSpeed = composition->playerBaseVerticalSpeed;
+    m_playerPickupBoxWidth = composition->playerPickupBoxWidth;
+    m_playerPickupBoxHeight = composition->playerPickupBoxHeight;
+    m_playerPickupOffset = composition->playerPickupOffset;
+    m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
+    m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
+    m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
+    m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
+    m_heightBonusSeconds = composition->heightBonusSeconds;
+    m_physicsBinder = std::move(composition->physicsBinder);
+    m_drawSystem = std::move(composition->drawSystem);
+    m_sweetsManager = std::move(composition->sweetsManager);
+    m_uiManager = std::move(composition->uiManager);
+    m_backgroundRenderer = std::move(composition->backgroundRenderer);
+    GuidelineSystem::Config guidelineConfig{};
+    guidelineConfig.heightMeters = composition->guidelineHeightMeters;
+    guidelineConfig.stepMeters = composition->guidelineStepMeters;
+    guidelineConfig.thicknessPixels = composition->guidelineThicknessPixels;
+    guidelineConfig.widthPaddingWorld = composition->guidelineWidthPaddingWorld;
+    guidelineConfig.zOffset = composition->guidelineZOffset;
+    guidelineConfig.cooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
+    guidelineConfig.cooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
+    guidelineConfig.centerX = composition->guidelineCenterX;
+    guidelineConfig.widthWorld = composition->guidelineWidthWorld;
+    guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
+    m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
+
+    GameplayRulesSystem::Config gameplayRulesConfig{};
+    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
+    gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
+    gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
+    m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
+
+    if (m_physicsBinder)
+    {
+        m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
+    }
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
+        {
+            ForwardSweetsPhaseChange(newPhase);
+        });
+    }
+
+    m_playerColliderMismatchLogged = false;
+    SceneGameLoader loader(DebugTrace, kLogPrefix);
+    m_renderer = &App::Game::Instance().GetModelRenderer();
+    SceneGameLoader::Config loaderConfig{};
+    loaderConfig.device = GetDevice();
+    loaderConfig.services = this;
+    loaderConfig.physicsBinder = m_physicsBinder.get();
+    loaderConfig.drawSystem = m_drawSystem.get();
+    loaderConfig.sweetsManager = m_sweetsManager.get();
+    loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
+    loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
+    loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
+    loaderConfig.playerPickupBoxWidth = m_playerPickupBoxWidth;
+    loaderConfig.playerPickupBoxHeight = m_playerPickupBoxHeight;
+    loaderConfig.playerPickupOffset = m_playerPickupOffset;
+    loaderConfig.playerPickupMaxDistance = m_playerPickupMaxDistance;
+    loaderConfig.playerPickupDepthThreshold = m_playerPickupDepthThreshold;
+    loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
+
+    SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
+    m_uiOverlay.reset();
+    if (m_uiManager)
+    {
+        m_uiOverlay = std::make_unique<SceneGameUIOverlay>();
+        if (m_uiOverlay && !m_uiOverlay->Initialize(m_uiManager.get()))
+        {
+            DebugTrace(std::string(kLogPrefix) + "UI overlay failed to bind UI manager; overlay disabled.\n");
+            m_uiOverlay.reset();
+        }
+    }
+    m_playerModel = std::move(loaderResult.playerModel);
+    player = std::move(loaderResult.player);
+    m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
+    m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
+    m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
+    m_stageObjects = std::move(composition->stageObjects);
+    m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+
+#if defined(_DEBUG)
+    {
+        std::ostringstream debugFlagLog;
+        debugFlagLog << kLogPrefix
+            << "[ColliderDebug] Stage colliders r.DebugOsaraColliders="
+            << (g_RegisterOsaraColliders ? 1 : 0)
+            << " (default=1). Toggle overlay with F5 (r.DebugDrawEnabled) and colliders with F4 (r.DebugColliders).\n";
+        DebugTrace(debugFlagLog.str());
+    }
+#endif
+
+    RenderTarget* pRTV = GetDefaultRTV();
+    DepthStencil* pDSV = GetDefaultDSV();
+    SetRenderTargets(1, &pRTV, pDSV);
+    SetDepthTest(true);
+    m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
+
+    const auto& cameraSettings = kFixedSideViewCameraPreset;
+    m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
+    auto registeredCamera = AddCamera(m_gameCamera);
+    if (!registeredCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Failed to register gameplay camera.\n");
+    }
+    else
+    {
+        SetActiveCamera(registeredCamera);
+    }
+
+    if (m_gameCamera)
+    {
+        auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
+        m_cameraRig = std::make_unique<CameraRig>(baseCamera);
+        ConfigureCamera(cameraSettings);
+        if (m_cameraAnchor)
+        {
+            m_cameraRig->Attach(m_cameraAnchor);
+        }
+    }
+
+    m_gameplayRules.ResetSession();
+    m_isComposed = true;
+    return true;
+}
+
+void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
+{
+    if (m_loadFailed)
+    {
+        return;
+    }
+    RootUpdate(timer, input);
+}
+
+void SceneGame::Draw()
+{
+    if (m_loadFailed)
+    {
+        return;
+    }
+    RootDraw();
+}
+
+void SceneGame::OnEnter()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+
+    // BGMを再生（ループあり、音量40%）
+    if (m_pManager)
+    {
+        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // true = ループ
+    }
+}
+
+void SceneGame::OnExit()
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
+    ::DebugTrace(oss.str());
+}
+
+
+SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
+    : m_contactHandler()
+    , m_playerController(DebugTrace, kLogPrefix)
+    , m_manager(&a_manager)
+{
+    m_pManager = std::make_unique<SoundManagerEX>();
+}
+
+SceneGame::~SceneGame()
+{
+    if (m_uiOverlay)
+    {
+        m_uiOverlay->Shutdown();
+        m_uiOverlay.reset();
+    }
+
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->UnregisterAllPhysicsBodies();
+    }
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
+
+    if (m_physicsRegistered && m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            Unregister(*physicsMachine);
+            m_physicsRegistered = false;
+        }
+    }
+
+    if (m_contactDispatchRegistered && m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            if (auto* contactNode = physicsMachine->GetContactDispatchNode())
+            {
+                Unregister(*contactNode);
+            }
+        }
+        m_contactDispatchRegistered = false;
+    }
+
+    if (m_cameraRigRegistered && m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+        m_cameraRigRegistered = false;
+    }
+
+    if (m_drawRegistered && m_drawSystem)
+    {
+        Unregister(*m_drawSystem);
+        m_drawRegistered = false;
+    }
+
+    if (m_sweetsLateRegistered && m_sweetsManager)
+    {
+        if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+        {
+            Unregister(*lateNode);
+        }
+        m_sweetsLateRegistered = false;
+    }
+
+    if (m_sweetsRegistered && m_sweetsManager)
+    {
+        Unregister(*m_sweetsManager);
+        m_sweetsRegistered = false;
+    }
+
+    if (player)
+    {
+        if (m_drawSystem)
+        {
+            m_drawSystem->UnregisterRenderable(*player);
+        }
+        Unregister(*player);
+    }
+
+    if (m_drawSystem)
+    {
+        m_drawSystem->ClearRenderables();
+    }
+        if (m_pManager)
+        {
+            m_pManager->StopAllSounds();
+        }
+}
+
+void SceneGame::ConfigureUpdates()
+{
+        if (m_physicsBinder && !m_physicsRegistered)
+        {
+                if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                {
+                        m_physicsRegistered = Register(*physicsMachine);
+
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
+                            << static_cast<int>(physicsMachine->GetPhase())
+                            << ", priority=" << physicsMachine->GetPriority() << ").\n";
+                        ::DebugTrace(oss.str());
+                }
+        }
+
+        if (m_physicsBinder && !m_contactDispatchRegistered)
+        {
+                if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                {
+                        if (auto* contactNode = physicsMachine->GetContactDispatchNode())
+                        {
+                                m_contactDispatchRegistered = Register(*contactNode);
+                        }
+                }
+        }
+
+        if (!m_inputRegistered)
+        {
+                if (auto* input = GetInput())
+                {
+                        if (Register(*input))
+                        {
+                                m_inputRegistered = true;
+                        }
+                }
+        }
+
+        RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
+
+        if (m_drawSystem && !m_drawRegistered)
+        {
+                m_drawRegistered = Register(*m_drawSystem);
+        }
+
+        if (m_cameraRig && !m_cameraRigRegistered)
+        {
+                m_cameraRigRegistered = Register(*m_cameraRig);
+        }
+
+        if (m_sweetsManager && !m_sweetsRegistered)
+        {
+                m_sweetsRegistered = Register(*m_sweetsManager);
+        }
+
+        if (m_sweetsManager && !m_sweetsLateRegistered)
+        {
+                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+                {
+                        m_sweetsLateRegistered = Register(*lateNode);
+                }
+        }
+
+
+        if (player)
+        {
+                Register(*player);
+
+                if (m_physicsBinder)
+                {
+                        m_physicsBinder->RegisterPhysicsBody(*player);
+                        std::ostringstream oss;
+                        const bool isKinematic = player->IsKinematic();
+                        oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
+                            << std::boolalpha << isKinematic << ").\n";
+                        ::DebugTrace(oss.str());
+                }
+
+                const int playerFixtureCount = player->GetBoxColliderComponent()
+                    ? player->GetBoxColliderComponent()->createdFixtureCount
+                    : 0;
+                if (!player->HasBox2DBody() || playerFixtureCount <= 0)
+                {
+                        DebugTrace(std::string(kLogPrefix) + "Player Box2D body missing after registration; attempting repair.\n");
+                        if (m_physicsBinder)
+                        {
+                            m_physicsBinder->RegisterPhysicsBody(*player);
+                        }
+
+                        const int repairedFixtures = player->GetBoxColliderComponent()
+                            ? player->GetBoxColliderComponent()->createdFixtureCount
+                            : 0;
+                        if (!player->HasBox2DBody() || repairedFixtures <= 0)
+                        {
+                                DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
+                        }
+                }
+        }
+
+        SetStageState(StageState::Playing);
+}
+
+void SceneGame::Update(const Core::UpdateContext& ctx)
+{
+#if defined(_DEBUG)
+    HandleColliderDebugCommands(ctx);
+#endif
+    Core::Input* input = GetInput();
+    
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->ValidatePlayerPhysicsRegistration();
+    }
+    const GameplayRulesSystem::UpdateInput rulesInput{
+        m_stageState == StageState::Playing,
+        ctx.dt,
+        m_sweetsManager.get(),
+        &m_phaseManager,
+        m_clearPhaseCount
+    };
+    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+    if (rulesResult.timeUp && m_stageState == StageState::Playing)
+    {
+        SetStageState(StageState::TimeUp);
+    }
+    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+    {
+        BroadcastPhaseAdvance(rulesResult.currentPhase);
+    }
+    m_guidelineSystem.TickCooldowns(ctx.dt);
+
+#if defined(_DEBUG)
+    if (m_sweetsManager)
+    {
+        const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
+        for (const auto& sweets : stacked)
+        {
+            if (!sweets) continue;
+            const AABB bounds = sweets->GetAABB();
+            ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
+        }
+    }
+#endif
+
+    float deltaTime = ctx.timer.DeltaTime();
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.spinEnabled)
+        {
+            obj.currentRotation += obj.spinSpeed * deltaTime;
+        }
+    }
+
+    m_playerController.UpdatePlayerBounds({
+        player.get(),
+        m_gameCamera.get(),
+        m_sweetsManager.get(),
+        ctx.dt
+    });
+
+    switch (m_stageState)
+    {
+    case StageState::Intro:
+        break;
+    case StageState::Playing:
+    {
+        if (input)
+        {
+            PlayerController::SpeedInput speedInput{
+                *input,
+                player.get(),
+                m_playerBaseHorizontalSpeed,
+                m_playerBaseVerticalSpeed,
+                m_playerSpeedMultiplier
+            };
+            m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+        }
+
+        const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
+            - m_gameplayRules.GetRemainingCountdownSeconds();
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
+        {
+            SetStageState(StageState::Playing);
+        }
+        fRads.z += 0.001f;
+
+        const GuidelineSystem::UpdateInput guidelineInput{
+            m_sweetsManager.get(),
+            kGuidelineTimeBonusSeconds,
+            kGuidelineGlobalCooldownSeconds,
+            DebugTrace,
+            kLogPrefix
+        };
+        GuidelineSystem::UpdateResult guidelineResult =
+            m_guidelineSystem.Update(guidelineInput, {});
+        m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
+        break;
+    }
+    case StageState::TimeUp:
+    case StageState::Cleared:
+        SetStageState(StageState::ShowingResult);
+        break;
+    case StageState::ShowingResult:
+        break;
+    }
+
+    if (m_stageState == StageState::ShowingResult)
+    {
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const auto action = input ? m_playerController.HandlePostGameInput(*input, peakHeight, score)
+            : PlayerController::PostGameAction::None;
+        if (action == PlayerController::PostGameAction::ConfirmRestart)
+        {
+            SetStageState(StageState::Playing);
+            return;
+        }
+    }
+
+    if (m_uiOverlay)
+    {
+        const bool isTimeUp = (m_stageState == StageState::TimeUp)
+            || (m_stageState == StageState::Cleared)
+            || (m_stageState == StageState::ShowingResult);
+
+        UIManager::HUDUpdateData uiData{};
+        const float remainingSeconds = std::max(0.0f, m_gameplayRules.GetRemainingCountdownSeconds());
+        const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        uiData.hud.remainingSeconds = remainingSeconds;
+        uiData.hud.currentHeight = currentHeight;
+        uiData.hud.peakHeight = peakHeight;
+        uiData.hud.score = score;
+        uiData.hud.sweetsCount = GetSweetsCount();
+        uiData.hud.timeUp = isTimeUp;
+        uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        if (player)
+        {
+            uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+        }
+
+        uiData.result.remainingSeconds = remainingSeconds;
+        uiData.result.currentHeight = currentHeight;
+        uiData.result.peakHeight = peakHeight;
+        uiData.result.score = score;
+        uiData.result.sweetsCount = GetSweetsCount();
+        uiData.result.timeUp = isTimeUp;
+        uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        if (player)
+        {
+            uiData.result.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+        }
+
+        uiData.showHud = g_DebugDrawEnabled && !isTimeUp;
+        uiData.showResult = isTimeUp;
+        m_uiOverlay->Update(uiData);
+    }
+
+    if (input && input->IsKeyPress(VK_RETURN))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+        }
+
+        return;
+    }
+
+}
+
+
+void SceneGame::ResetGuidelineHeight()
+{
+    m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
+                                  m_stageData.GetGuidelineStep());
+}
+
+
+#if defined(_DEBUG)
+void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
+{
+        (void)ctx;
+        if (!player)
+        {
+                return;
+        }
+
+        Core::Input* input = GetInput();
+        if (!input)
+        {
+                return;
+        }
+        if (input->IsTrigger(Core::ActionId::DebugToggle))
+        {
+                g_DebugDrawEnabled = !g_DebugDrawEnabled;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[DebugDraw] r.DebugDrawEnabled="
+                        << (g_DebugDrawEnabled ? 1 : 0) << " (F5).\n";
+                DebugTrace(oss.str());
+        }
+
+        if (input->IsTrigger(VK_F4))
+        {
+                g_DrawColliders = !g_DrawColliders;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ColliderDebug] r.DebugColliders="
+                        << (g_DrawColliders ? 1 : 0) << " (F4).\n";
+                DebugTrace(oss.str());
+        }
+
+        if (input->IsTrigger(VK_F6))
+        {
+                g_DrawColliderBounds = !g_DrawColliderBounds;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[ColliderDebug] r.DebugColliderBounds="
+                        << (g_DrawColliderBounds ? 1 : 0) << " (F6).\n";
+                DebugTrace(oss.str());
+        }
+        constexpr float kDebugNudge = 0.25f;
+        float3 delta{ 0.0f, 0.0f, 0.0f };
+
+        if (input->IsTrigger(Core::ActionId::ColliderNudgeUp))
+        {
+                delta.y += kDebugNudge;
+        }
+        if (input->IsTrigger(Core::ActionId::ColliderNudgeDown))
+        {
+                delta.y -= kDebugNudge;
+        }
+
+        if (delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f)
+        {
+                return;
+        }
+
+        Entities::TranslatePhysicalEntity(*player, delta);
+
+        const auto& transform = player->GetTransform();
+
+        player->SyncColliderBounds();
+        const AABB bounds = player->GetAABB();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[ColliderDebug] Nudged player by (" << delta.x << ',' << delta.y << ',' << delta.z << ")"
+            << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
+            << " aabbMin=(" << bounds.min.x << ',' << bounds.min.y << ',' << bounds.min.z << ")"
+            << " aabbMax=(" << bounds.max.x << ',' << bounds.max.y << ',' << bounds.max.z << ")\n";
+        ::DebugTrace(oss.str());
+}
+#endif
+
+#if defined(_DEBUG)
+void SceneGame::DrawPhysicsDebugOverlay()
+{
+    if (!g_DebugDrawEnabled)
+    {
+        return;
+    }
+
+    if (!g_DrawColliders)
+    {
+        return;
+    }
+
+    const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
+    const Color boundsColor = MakeColor(0.0f, 0.7f, 1.0f, 1.0f);
+
+    const auto drawEntity = [&](Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return;
+        }
+
+        if (g_DrawColliderBounds)
+        {
+            DrawModelBoundsOverlay(*entity, boundsColor);
+        }
+        DrawColliderOverlay(*entity, fixtureColor);
+    };
+
+    drawEntity(player.get());
+
+    if (m_sweetsManager)
+    {
+        const auto drawState = [&](SweetsSpace::SweetsState state)
+        {
+            const auto& list = m_sweetsManager->GetByState(state);
+            for (const auto& sweets : list)
+            {
+                drawEntity(sweets.get());
+            }
+        };
+
+        drawState(SweetsSpace::SweetsState::Active);
+        drawState(SweetsSpace::SweetsState::Stacked);
+        drawState(SweetsSpace::SweetsState::Carried);
+    }
+
+    if (g_RegisterOsaraColliders)
+    {
+        for (const auto& entity : m_stagePhysicsEntities)
+        {
+            drawEntity(entity.get());
+        }
+    }
+
+    Geometory::DrawLines();
+}
+#endif
+
+void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
+        if (m_backgroundRenderer)
+        {
+                m_backgroundRenderer->Draw();
+        }
+
+        // 描画確認用の数値
+        if (!activeCamera)
+        {
+                DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
+                return;
+        }
+
+        if (m_renderer)
+        {
+#if defined(_DEBUG) && SCENEGAME_VERBOSE_DRAW_LOG
+            DebugTrace(std::string(kLogPrefix) + "描画開始: " + std::to_string(m_stageObjects.size()) + "個のオブジェクト\n");
+#endif
+
+            for (const auto& obj : m_stageObjects)
+            {
+                if (obj.model)
+                {
+#if defined(_DEBUG) && SCENEGAME_VERBOSE_DRAW_LOG
+                    DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
+#endif
+
+                    Transform renderTransform = obj.transform;
+                    
+                    // 回転アニメーションを適用
+                    if (obj.spinEnabled)
+                    {
+                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
+                            renderTransform.rotation.y += obj.currentRotation;
+                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
+                            renderTransform.rotation.x += obj.currentRotation;
+                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
+                            renderTransform.rotation.z += obj.currentRotation;
+                    }
+
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                }
+                else
+                {
+                    DebugTrace(std::string(kLogPrefix) + "モデルがnull\n");
+                }
+            }
+        }
+        else
+        {
+            DebugTrace(std::string(kLogPrefix) + "m_rendererがnull\n");
+        }
+
+        Geometory::SetView(activeCamera->GetView());
+        Geometory::SetProjection(activeCamera->GetProjection());
+
+        if (!m_drawSystem)
+        {
+                DebugTrace(std::string(kLogPrefix) + "Draw skipped: draw system missing.\n");
+                return;
+        }
+
+        m_drawSystem->RenderQueued(activeCamera);
+
+        m_drawSystem->DebugDrawQueued(activeCamera);
+
+#if defined(_DEBUG)
+        DrawPhysicsDebugOverlay();
+#endif
+
+}
+
+void SceneGame::DrawOverlay()
+{
+    if (m_uiOverlay)
+    {
+        m_uiOverlay->Draw();
+    }
+
+#if defined(_DEBUG)
+#endif
+}
+
+Systems::IPhysicsBinder* SceneGame::GetPhysicsBinder()
+{
+    return m_physicsBinder.get();
+}
+
+Render::ModelRenderer* SceneGame::GetRenderer()
+{
+    return m_renderer;
+}
+
+Core::UpdateScheduler& SceneGame::GetScheduler()
+{
+    return GetUpdateScheduler();
+}
+
+Core::Input* SceneGame::GetInput()
+{
+    Core::Input* sceneInput = SceneSpace::Scene::GetInput();
+    return sceneInput ? sceneInput : m_inputService;
+}
+
+Core::StepTimer* SceneGame::GetTimer()
+{
+    return SceneSpace::Scene::GetTimer();
+}
+
+void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+{
+    if (m_gameCamera)
+    {
+        m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
+    }
+
+    if (m_cameraRig)
+    {
+        m_cameraRig->SetOffset(settings.offset);
+        m_cameraRig->SetYaw(settings.yawRadians);
+        m_cameraRig->SetPitch(settings.pitchRadians);
+        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
+        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
+        m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+    }
+
+    if (!m_gameCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ConfigureCamera skipped: gameplay camera missing.\n");
+        return;
+    }
+
+    float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
+    float3 cameraPosition = settings.offset;
+    if (!settings.fixedPosition && m_cameraAnchor)
+    {
+        const auto& anchorTransform = m_cameraAnchor->GetTransform();
+        cameraRotation.x += anchorTransform.rotation.x;
+        cameraRotation.y += anchorTransform.rotation.y;
+        cameraRotation.z += anchorTransform.rotation.z;
+
+        DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
+        DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        cameraPosition = StoreFloat3(desiredPos);
+    }
+
+    m_gameCamera->SetPosition(cameraPosition);
+    m_gameCamera->SetRotation(cameraRotation);
+// BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
+// BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
+    (void)m_gameCamera->GetView();
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
+        << ", fov=" << settings.fovDegrees
+        << ", followSpeed=" << settings.followSpeed
+        << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
+        << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
+    if (settings.fixedPosition)
+    {
+        const float yawDegrees = DirectX::XMConvertToDegrees(settings.yawRadians);
+        const float pitchDegrees = DirectX::XMConvertToDegrees(settings.pitchRadians);
+        oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
+            << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
+    }
+    ::DebugTrace(oss.str());
+
+}
+
+void SceneGame::SetStageState(StageState newState)
+{
+    if (m_stageState == newState)
+    {
+        if (newState == StageState::Playing)
+        {
+            OnStageStart();
+        }
+        return;
+    }
+
+    m_stageState = newState;
+    ResetGuidelineHeight();
+
+    switch (newState)
+    {
+    case StageState::Playing:
+        OnStageStart();
+        break;
+    case StageState::Cleared:
+        OnStageClear();
+        break;
+    case StageState::TimeUp:
+        OnStageFail();
+        break;
+    default:
+        break;
+    }
+}
+
+void SceneGame::OnStageStart()
+{
+    ResetPlaySession();
+}
+
+void SceneGame::OnStageClear()
+{
+    ToggleGameplaySystems(false);
+
+    std::ostringstream oss;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+    oss << kLogPrefix << "[Stage] cleared peakTop=" << std::fixed << std::setprecision(2)
+        << peakHeight << "m score=" << score << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::OnStageFail()
+{
+    ToggleGameplaySystems(false);
+
+    std::ostringstream oss;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+    oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
+        << peakHeight << "m score=" << score << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::BroadcastPhaseAdvance(int newPhase)
+{
+    std::ostringstream oss;
+    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+    oss << kLogPrefix << "Broadcasting phase " << newPhase
+        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
+    ::DebugTrace(oss.str());
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->NotifyPhaseChanged(newPhase);
+    }
+    // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
+}
+
+void SceneGame::ForwardSweetsPhaseChange(int newPhase)
+{
+    std::ostringstream oss;
+    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
+        << " to spawn pacing system.\n";
+    ::DebugTrace(oss.str());
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->ForceSpawnRefresh();
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
+    }
+}
+void SceneGame::ResetPlaySession()
+{
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->ClearAllSweets();
+        m_sweetsManager->ForceSpawnRefresh();
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
+    }
+
+    if (player)
+    {
+        player->ClearCarriedSweets();
+        if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
+        {
+            m_playerSpeedMultiplier = 1.0f;
+            player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+        }
+
+        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
+        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
+        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+    }
+
+    else if (!m_cameraAnchor)
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped anchor realignment: camera anchor missing.\n");
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
+    }
+
+    m_gameplayRules.ResetSession();
+    m_guidelineSystem.ResetSession();
+    ResetGuidelineHeight();
+    ToggleGameplaySystems(true);
+    m_phaseManager.Reset();
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
+    }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
+    ::DebugTrace(oss.str());
+}
+
+
+
+void SceneGame::ToggleGameplaySystems(bool enabled)
+{
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->Enable(enabled);
+    }
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->Enable(enabled);
+    }
+    if (player)
+    {
+        player->Enable(enabled);
+    }
+}
+
+int SceneGame::GetSweetsCount() const
+{
+    if (m_sweetsManager)
+        return m_sweetsManager->GetSweetsCount();
+    return 0;
+}
+
+
+
+void SceneGame::Initialize(const Stage::StageData& stageData)
+{
+    
+    //高さボーナス設定
+    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
+    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
+
+    //デバッグ確認用
+    std::ostringstream oss;
+    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
+        << " second=" << m_heightBonusSeconds << "\n";
+    ::DebugTrace(oss.str());
+}

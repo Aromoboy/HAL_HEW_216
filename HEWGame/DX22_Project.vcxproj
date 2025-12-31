@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version='1.0' encoding='utf-8'?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -72,16 +72,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -177,265 +177,7 @@
       <Command>if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="EffectSystem.cpp" />
-    <ClCompile Include="include\AnimationState.cpp" />
-    <ClCompile Include="include\EffectTestScene.cpp" />
-    <ClCompile Include="src\Animation.cpp" />
-    <ClCompile Include="src\AnimationCache.cpp" />
-    <ClCompile Include="src\ColliderConfigLoader.cpp" />
-    <ClCompile Include="src\ColliderRegistry.cpp" />
-    <ClCompile Include="src\Collision\ConvexHullBuilder.cpp" />
-    <ClCompile Include="include\PowerUpRenderer.cpp" />
-    <ClCompile Include="include\PowerUpTarget.cpp" />
-    <ClCompile Include="src\AssimpModelLorder.cpp" />
-    <ClCompile Include="src\CameraManager.cpp" />
-    <ClCompile Include="src\CameraRig.cpp" />
-    <ClCompile Include="src\CameraTarget.cpp" />
-    <ClCompile Include="src\Core\InputMap.cpp" />
-    <ClCompile Include="src\Core\Gamepad.cpp" />
-    <ClCompile Include="src\Core\UpdateNode.cpp" />
-    <ClCompile Include="src\Core\RegistrationHandle.cpp" />
-    <ClCompile Include="src\Core\UpdateScheduler.cpp" />
-    <ClCompile Include="src\Core\DXContext.cpp" />
-    <ClCompile Include="src\Core\IndexBuffer.cpp" />
-    <ClCompile Include="src\Core\VertexBuffer.cpp" />
-    <ClCompile Include="src\Debug.cpp" />
-    <ClCompile Include="src\DebugColliderRenderer.cpp" />
-    <ClCompile Include="src\DebugConsole.cpp" />
-    <ClCompile Include="src\DirectX.cpp" />
-    <ClCompile Include="src\AppGame.cpp" />
-    <ClCompile Include="src\DrawMatrix.cpp" />
-    <ClCompile Include="src\Geometory.cpp" />
-    <ClCompile Include="src\BaseCamera.cpp" />
-    <ClCompile Include="src\ResultRenderer.cpp" />
-    <ClCompile Include="src\SettingScene.cpp" />
-    <ClCompile Include="src\Systems\Box2DPhysicsSystem.cpp" />
-    <ClCompile Include="src\HudRenderer.cpp" />
-    <ClCompile Include="src\BackgroundRenderer.cpp" />
-    <ClCompile Include="src\PerspectiveCamera.cpp" />
-    <ClCompile Include="src\IModelLoader.cpp" />
-    <ClCompile Include="src\Input.cpp" />
-    <ClCompile Include="src\Components\BoxColliderComponent.cpp" />
-    <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\MeshBuffer.cpp" />
-    <ClCompile Include="src\Model.cpp" />
-    <ClCompile Include="src\ModelCache.cpp" />
-    <ClCompile Include="src\ModelPivot.cpp" />
-    <ClCompile Include="src\ModelRender.cpp" />
-    <ClCompile Include="src\MaterialDX.cpp" />
-    <ClCompile Include="src\MeshDX.cpp" />
-    <ClCompile Include="src\ModelDX.cpp" />
-    <ClCompile Include="src\Entities\Entity.cpp" />
-    <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
-    <ClCompile Include="src\Entities\Player.cpp" />
-    <ClCompile Include="src\Entities\PlayerModel.cpp" />
-    <ClCompile Include="src\Entities\PlayerMovement.cpp" />
-    <ClCompile Include="src\Entities\PlayerPickupSystem.cpp" />
-    <ClCompile Include="src\Entities\PlayerPhysicsBinder.cpp" />
-    <ClCompile Include="src\GuidelineActor.cpp" />
-    <ClCompile Include="src\GuidelineSystem.cpp" />
-    <ClCompile Include="src\GameplayRulesSystem.cpp" />
-    <ClCompile Include="src\PlayerController.cpp" />
-    <ClCompile Include="src\SceneGameContactHandler.cpp" />
-    <ClCompile Include="src\SceneGameLoader.cpp" />
-    <ClCompile Include="src\ISceneServices.cpp" />
-    <ClCompile Include="src\Physics\ColliderBuilder.cpp" />
-    <ClCompile Include="src\PowerUpCursor.cpp" />
-    <ClCompile Include="src\PowerUpManager.cpp" />
-    <ClCompile Include="src\PowerUpNode.cpp" />
-    <ClCompile Include="src\Scene.cpp" />
-    <ClCompile Include="src\SceneGame.cpp" />
-    <ClCompile Include="src\SceneComposer.cpp" />
-    <ClCompile Include="src\SceneGameUIOverlay.cpp" />
-    <ClCompile Include="src\GameplayRules.cpp" />
-    <ClCompile Include="src\GameplayProgression.cpp" />
-    <ClCompile Include="src\StageLayoutLoader.cpp" />
-    <ClCompile Include="src\SceneGameConfigLoader.cpp" />
-    <ClCompile Include="src\UIManager.cpp" />
-    <ClCompile Include="src\SceneManager.cpp" />
-    <ClCompile Include="src\SelectScene.cpp" />
-    <ClCompile Include="src\GameFlow\PhaseManager.cpp" />
-    <ClCompile Include="src\TitleRenderer.cpp" />
-    <ClCompile Include="src\TitleScene.cpp" />
-    <ClCompile Include="src\ScenePowerUp.cpp" />
-    <ClCompile Include="src\SpriteRenderer.cpp" />
-    <ClCompile Include="src\Stage\StageConfigNormalize.cpp" />
-    <ClCompile Include="src\Stage\StageConfigParser.cpp" />
-    <ClCompile Include="src\Stage\StageData.cpp" />
-    <ClCompile Include="src\Systems\Box2DMeshBuilder.cpp" />
-    <ClCompile Include="src\Systems\Box2DContactListener.cpp" />
-    <ClCompile Include="src\Systems\DrawSystem.cpp" />
-    <ClCompile Include="src\Systems\IntegrateSystem.cpp" />
-    <ClCompile Include="src\Systems\PhysicsMachine.cpp" />
-    <ClCompile Include="src\Systems\PhysicsBinder.cpp" />
-    <ClCompile Include="src\Systems\PhysicsRegistration.cpp" />
-    <ClCompile Include="src\Shader.cpp" />
-    <ClCompile Include="src\ShaderCache.cpp" />
-    <ClCompile Include="src\ShaderList.cpp" />
-    <ClCompile Include="src\ShaderProgram.cpp" />
-    <ClCompile Include="src\SoundManagerEX.cpp" />
-    <ClCompile Include="src\SoundSystem.cpp" />
-    <ClCompile Include="src\Sprite.cpp" />
-    <ClCompile Include="src\FullscreenManager.cpp" />
-    <ClCompile Include="src\Startup.cpp" />
-    <ClCompile Include="src\WindowManager.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
-    <ClCompile Include="src\TextureCache.cpp" />
-    <ClCompile Include="src\TextureDX.cpp" />
-    <ClCompile Include="src\Sweets\BaseSweets.cpp" />
-    <ClCompile Include="src\Sweets\SweetsContacts.cpp" />
-    <ClCompile Include="src\Sweets\SweetsFactory.cpp" />
-    <ClCompile Include="src\Sweets\SweetsLifecycle.cpp" />
-    <ClCompile Include="src\Sweets\SweetsRegistry.cpp" />
-    <ClCompile Include="src\Sweets\SweetsRenderer.cpp" />
-    <ClCompile Include="src\Sweets\SweetsSpawner.cpp" />
-    <ClCompile Include="src\SweetsPrototypeManifest.cpp" />
-    <ClCompile Include="src\SweetsManager.cpp" />
-    <ClCompile Include="TimerDisplay.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="EffectSystem.h" />
-    <ClInclude Include="include\Animation.h" />
-    <ClInclude Include="include\AnimationCache.h" />
-    <ClInclude Include="include\AnimationState.h" />
-    <ClInclude Include="include\BoxColliderComponent.h" />
-    <ClInclude Include="include\ColliderConfigLoader.h" />
-    <ClInclude Include="include\StageLayoutLoader.h" />
-    <ClInclude Include="include\ColliderRegistry.h" />
-    <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
-    <ClInclude Include="include\CollisionLayer.h" />
-    <ClInclude Include="include\AssimpModelLorder.h" />
-    <ClInclude Include="include\AppGame.h" />
-    <ClInclude Include="include\CameraManager.h" />
-    <ClInclude Include="include\CameraRig.h" />
-    <ClInclude Include="include\Core\ActionId.h" />
-    <ClInclude Include="include\Effect.h" />
-    <ClInclude Include="include\EffectTestScene.h" />
-    <ClInclude Include="include\PowerUpRenderer.h" />
-    <ClInclude Include="include\PowerUpTarget.h" />
-    <ClInclude Include="include\Core\IUpdatable.h" />
-    <ClInclude Include="include\Core\Input.h" />
-    <ClInclude Include="include\Core\InputMap.h" />
-    <ClInclude Include="include\Core\Gamepad.h" />
-    <ClInclude Include="include\Core\StepTimer.h" />
-    <ClInclude Include="include\Core\UpdateNode.h" />
-    <ClInclude Include="include\Core\RegistrationHandle.h" />
-    <ClInclude Include="include\Core\UpdateScheduler.h" />
-    <ClInclude Include="include\Core\DXContext.h" />
-    <ClInclude Include="include\Core\IndexBuffer.h" />
-    <ClInclude Include="include\Core\VertexBuffer.h" />
-    <ClInclude Include="include\Debug.h" />
-    <ClInclude Include="include\DebugColliderRenderer.h" />
-    <ClInclude Include="include\ResultRenderer.h" />
-    <ClInclude Include="include\SettingScene.h" />
-    <ClInclude Include="include\Systems\Box2DContactListener.h" />
-    <ClInclude Include="include\Systems\IPhysicsBinder.h" />
-    <ClInclude Include="include\Systems\PhysicsBinder.h" />
-    <ClInclude Include="include\Systems\PhysicsRegistration.h" />
-    <ClInclude Include="include\PowerUpCursor.h" />
-    <ClInclude Include="include\PowerUpManager.h" />
-    <ClInclude Include="include\PowerUpNode.h" />
-    <ClInclude Include="include\ScenePowerUp.h" />
-    <ClInclude Include="include\SpriteRenderer.h" />
-    <ClInclude Include="include\Systems\DrawSystem.h" />
-    <ClInclude Include="include\DebugConsole.h" />
-    <ClInclude Include="include\Diagnostics\Logger.h" />
-    <ClInclude Include="include\Defines.h" />
-    <ClInclude Include="include\DirectX.h" />
-    <ClInclude Include="include\DrawMatrix.h" />
-    <ClInclude Include="include\Entity.h" />
-    <ClInclude Include="include\Entities\Entity.h" />
-    <ClInclude Include="include\Entities\PhysicalEntity.h" />
-    <ClInclude Include="include\Physical.h" />
-    <ClInclude Include="include\PhysicalEntity.h" />
-    <ClInclude Include="include\Entities\Player.h" />
-    <ClInclude Include="include\Entities\PlayerModel.h" />
-    <ClInclude Include="include\Entities\PlayerMovement.h" />
-    <ClInclude Include="include\Entities\PlayerPickupSystem.h" />
-    <ClInclude Include="include\Entities\PlayerPhysicsBinder.h" />
-    <ClInclude Include="include\GuidelineActor.h" />
-    <ClInclude Include="include\GameplayRules.h" />
-    <ClInclude Include="include\GameplayProgression.h" />
-    <ClInclude Include="include\Geometory.h" />
-    <ClInclude Include="include\BaseCamera.h" />
-    <ClInclude Include="include\Systems\Box2DPhysicsSystem.h" />
-    <ClInclude Include="include\HudRenderer.h" />
-    <ClInclude Include="include\BackgroundRenderer.h" />
-    <ClInclude Include="include\PerspectiveCamera.h" />
-    <ClInclude Include="include\ICamera.h" />
-    <ClInclude Include="include\IModelLoader.h" />
-    <ClInclude Include="include\Input.h" />
-    <ClInclude Include="include\ISceneServices.h" />
-    <ClInclude Include="include\Components\BoxColliderComponent.h" />
-    <ClInclude Include="include\Main.h" />
-    <ClInclude Include="include\MeshBuffer.h" />
-    <ClInclude Include="include\Model.h" />
-    <ClInclude Include="include\ModelCache.h" />
-    <ClInclude Include="include\ModelPivot.h" />
-    <ClInclude Include="include\ModelRender.h" />
-    <ClInclude Include="include\MaterialDX.h" />
-    <ClInclude Include="include\MeshDX.h" />
-    <ClInclude Include="include\ModelDX.h" />
-    <ClInclude Include="include\SweetsPrototypeManifest.h" />
-    <ClInclude Include="include\Scene.h" />
-    <ClInclude Include="include\SceneGame.h" />
-    <ClInclude Include="include\PlayerController.h" />
-    <ClInclude Include="include\SceneGameContactHandler.h" />
-    <ClInclude Include="include\SceneGameLoader.h" />
-    <ClInclude Include="include\SceneComposer.h" />
-    <ClInclude Include="include\Physics\ColliderBuilder.h" />
-    <ClInclude Include="include\SceneGameUIOverlay.h" />
-    <ClInclude Include="include\SceneGameConfigLoader.h" />
-    <ClInclude Include="include\GameplayRulesSystem.h" />
-    <ClInclude Include="include\GuidelineSystem.h" />
-    <ClInclude Include="include\UIManager.h" />
-    <ClInclude Include="include\SceneManager.h" />
-    <ClInclude Include="include\SelectScene.h" />
-    <ClInclude Include="include\TitleRenderer.h" />
-    <ClInclude Include="include\TitleScene.h" />
-    <ClInclude Include="include\GameFlow\PhaseManager.h" />
-    <ClInclude Include="include\Stage\StageConfigNormalize.h" />
-    <ClInclude Include="include\Stage\StageConfigParser.h" />
-    <ClInclude Include="include\Stage\StageData.h" />
-    <ClInclude Include="include\Systems\Box2DMeshBuilder.h" />
-    <ClInclude Include="include\Systems\IntegrateSystem.h" />
-    <ClInclude Include="include\Systems\PhysicsMachine.h" />
-    <ClInclude Include="include\Shader.h" />
-    <ClInclude Include="include\ShaderCache.h" />
-    <ClInclude Include="include\ShaderList.h" />
-    <ClInclude Include="include\ShaderProgram.h" />
-    <ClInclude Include="include\SoundManagerEX.h" />
-    <ClInclude Include="include\SoundSystem.h" />
-    <ClInclude Include="include\Sprite.h" />
-    <ClInclude Include="include\Texture.h" />
-    <ClInclude Include="include\TextureCache.h" />
-    <ClInclude Include="include\TextureDX.h" />
-    <ClInclude Include="include\FullscreenManager.h" />
-    <ClInclude Include="include\WindowManager.h" />
-    <ClInclude Include="include\Transform.h" />
-    <ClInclude Include="include\Vector.h" />
-    <ClInclude Include="include\conioex.h" />
-    <ClInclude Include="include\Sweets\BaseSweets.h" />
-    <ClInclude Include="include\Sweets\SweetsContacts.h" />
-    <ClInclude Include="include\Sweets\SweetsFactory.h" />
-    <ClInclude Include="include\Sweets\SweetsKeyUtils.h" />
-    <ClInclude Include="include\Sweets\SweetsLifecycle.h" />
-    <ClInclude Include="include\Sweets\SweetsRegistry.h" />
-    <ClInclude Include="include\Sweets\SweetsRenderer.h" />
-    <ClInclude Include="include\Sweets\SweetsSpawner.h" />
-    <ClInclude Include="include\Sweets\SweetsTypes.h" />
-    <ClInclude Include="include\SweetsManager.h" />
-    <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
-    <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
-    <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />
-    <ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" />
-    <ClInclude Include="TimerDisplay.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cpp.hint" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-</Project>
+<ItemGroup><ClCompile Include="Engine\Camera\BaseCamera.cpp" /><ClCompile Include="Engine\Camera\CameraManager.cpp" /><ClCompile Include="Engine\Camera\CameraRig.cpp" /><ClCompile Include="Engine\Camera\CameraTarget.cpp" /><ClCompile Include="Engine\Camera\PerspectiveCamera.cpp" /><ClCompile Include="Engine\Config\ColliderConfigLoader.cpp" /><ClCompile Include="Engine\Config\ColliderRegistry.cpp" /><ClCompile Include="Engine\Core\AppGame.cpp" /><ClCompile Include="Engine\Core\DXContext.cpp" /><ClCompile Include="Engine\Core\Debug.cpp" /><ClCompile Include="Engine\Core\DebugConsole.cpp" /><ClCompile Include="Engine\Core\Entities\Entity.cpp" /><ClCompile Include="Engine\Core\Entities\PhysicalEntity.cpp" /><ClCompile Include="Engine\Core\FullscreenManager.cpp" /><ClCompile Include="Engine\Core\Gamepad.cpp" /><ClCompile Include="Engine\Core\IndexBuffer.cpp" /><ClCompile Include="Engine\Core\Input.cpp" /><ClCompile Include="Engine\Core\InputMap.cpp" /><ClCompile Include="Engine\Core\RegistrationHandle.cpp" /><ClCompile Include="Engine\Core\SoundManagerEX.cpp" /><ClCompile Include="Engine\Core\SoundSystem.cpp" /><ClCompile Include="Engine\Core\UpdateNode.cpp" /><ClCompile Include="Engine\Core\UpdateScheduler.cpp" /><ClCompile Include="Engine\Core\VertexBuffer.cpp" /><ClCompile Include="Engine\Core\WindowManager.cpp" /><ClCompile Include="Engine\Render\AABB.cpp" /><ClCompile Include="Engine\Render\Animation.cpp" /><ClCompile Include="Engine\Render\AnimationCache.cpp" /><ClCompile Include="Engine\Render\AnimationState.cpp" /><ClCompile Include="Engine\Render\AssimpModelLorder.cpp" /><ClCompile Include="Engine\Render\DebugColliderRenderer.cpp" /><ClCompile Include="Engine\Render\DirectX.cpp" /><ClCompile Include="Engine\Render\DrawMatrix.cpp" /><ClCompile Include="Engine\Render\EffectSystem.cpp" /><ClCompile Include="Engine\Render\Geometory.cpp" /><ClCompile Include="Engine\Render\IModelLoader.cpp" /><ClCompile Include="Engine\Render\Legacy\Model.cpp" /><ClCompile Include="Engine\Render\MaterialDX.cpp" /><ClCompile Include="Engine\Render\MeshBuffer.cpp" /><ClCompile Include="Engine\Render\MeshDX.cpp" /><ClCompile Include="Engine\Render\ModelCache.cpp" /><ClCompile Include="Engine\Render\ModelDX.cpp" /><ClCompile Include="Engine\Render\ModelPivot.cpp" /><ClCompile Include="Engine\Render\ModelRender.cpp" /><ClCompile Include="Engine\Render\Shader.cpp" /><ClCompile Include="Engine\Render\ShaderCache.cpp" /><ClCompile Include="Engine\Render\ShaderList.cpp" /><ClCompile Include="Engine\Render\ShaderProgram.cpp" /><ClCompile Include="Engine\Render\Sprite.cpp" /><ClCompile Include="Engine\Render\SpriteRenderer.cpp" /><ClCompile Include="Engine\Render\Texture.cpp" /><ClCompile Include="Engine\Render\TextureCache.cpp" /><ClCompile Include="Engine\Render\TextureDX.cpp" /><ClCompile Include="Engine\Systems\Draw\DrawSystem.cpp" /><ClCompile Include="Engine\Systems\Physics\Box2DContactListener.cpp" /><ClCompile Include="Engine\Systems\Physics\Box2DMeshBuilder.cpp" /><ClCompile Include="Engine\Systems\Physics\Box2DPhysicsSystem.cpp" /><ClCompile Include="Engine\Systems\Physics\ColliderBuilder.cpp" /><ClCompile Include="Engine\Systems\Physics\Collision\ConvexHullBuilder.cpp" /><ClCompile Include="Engine\Systems\Physics\Components\BoxColliderComponent.cpp" /><ClCompile Include="Engine\Systems\Physics\IntegrateSystem.cpp" /><ClCompile Include="Engine\Systems\Physics\PhysicsBinder.cpp" /><ClCompile Include="Engine\Systems\Physics\PhysicsMachine.cpp" /><ClCompile Include="Engine\Systems\Physics\PhysicsRegistration.cpp" /><ClCompile Include="Game\Entities\Player.cpp" /><ClCompile Include="Game\Entities\PlayerModel.cpp" /><ClCompile Include="Game\Entities\PlayerMovement.cpp" /><ClCompile Include="Game\Entities\PlayerPhysicsBinder.cpp" /><ClCompile Include="Game\Entities\PlayerPickupSystem.cpp" /><ClCompile Include="Game\GameFlow\GameplayProgression.cpp" /><ClCompile Include="Game\GameFlow\PhaseManager.cpp" /><ClCompile Include="Game\Guide\GuidelineActor.cpp" /><ClCompile Include="Game\Guide\GuidelineSystem.cpp" /><ClCompile Include="Game\PowerUp\PowerUpCursor.cpp" /><ClCompile Include="Game\PowerUp\PowerUpManager.cpp" /><ClCompile Include="Game\PowerUp\PowerUpNode.cpp" /><ClCompile Include="Game\PowerUp\PowerUpRenderer.cpp" /><ClCompile Include="Game\PowerUp\PowerUpTarget.cpp" /><ClCompile Include="Game\Rules\GameplayRules.cpp" /><ClCompile Include="Game\Rules\GameplayRulesSystem.cpp" /><ClCompile Include="Game\Rules\PlayerController.cpp" /><ClCompile Include="Game\Scene\EffectTestScene.cpp" /><ClCompile Include="Game\Scene\ISceneServices.cpp" /><ClCompile Include="Game\Scene\Main.cpp" /><ClCompile Include="Game\Scene\Scene.cpp" /><ClCompile Include="Game\Scene\SceneComposer.cpp" /><ClCompile Include="Game\Scene\SceneManager.cpp" /><ClCompile Include="Game\Scene\ScenePowerUp.cpp" /><ClCompile Include="Game\Scene\SelectScene.cpp" /><ClCompile Include="Game\Scene\SettingScene.cpp" /><ClCompile Include="Game\Scene\Startup.cpp" /><ClCompile Include="Game\Scene\TitleScene.cpp" /><ClCompile Include="Game\SceneGame\SceneGame.cpp" /><ClCompile Include="Game\SceneGame\SceneGameConfigLoader.cpp" /><ClCompile Include="Game\SceneGame\SceneGameContactHandler.cpp" /><ClCompile Include="Game\SceneGame\SceneGameLoader.cpp" /><ClCompile Include="Game\Stage\StageConfigNormalize.cpp" /><ClCompile Include="Game\Stage\StageConfigParser.cpp" /><ClCompile Include="Game\Stage\StageData.cpp" /><ClCompile Include="Game\Stage\StageLayoutLoader.cpp" /><ClCompile Include="Game\Sweets\BaseSweets.cpp" /><ClCompile Include="Game\Sweets\SweetsContacts.cpp" /><ClCompile Include="Game\Sweets\SweetsFactory.cpp" /><ClCompile Include="Game\Sweets\SweetsLifecycle.cpp" /><ClCompile Include="Game\Sweets\SweetsManager.cpp" /><ClCompile Include="Game\Sweets\SweetsPrototypeManifest.cpp" /><ClCompile Include="Game\Sweets\SweetsRegistry.cpp" /><ClCompile Include="Game\Sweets\SweetsRenderer.cpp" /><ClCompile Include="Game\Sweets\SweetsSpawner.cpp" /><ClCompile Include="Game\UI\BackgroundRenderer.cpp" /><ClCompile Include="Game\UI\HudRenderer.cpp" /><ClCompile Include="Game\UI\ResultRenderer.cpp" /><ClCompile Include="Game\UI\SceneGameUIOverlay.cpp" /><ClCompile Include="Game\UI\TimerDisplay.cpp" /><ClCompile Include="Game\UI\TitleRenderer.cpp" /><ClCompile Include="Game\UI\UIManager.cpp" /><ClInclude Include="Engine\Camera\BaseCamera.h" /><ClInclude Include="Engine\Camera\CameraManager.h" /><ClInclude Include="Engine\Camera\CameraRig.h" /><ClInclude Include="Engine\Camera\ICamera.h" /><ClInclude Include="Engine\Camera\PerspectiveCamera.h" /><ClInclude Include="Engine\Config\ColliderConfigLoader.h" /><ClInclude Include="Engine\Config\ColliderRegistry.h" /><ClInclude Include="Engine\Config\ConfigSectionReader.h" /><ClInclude Include="Engine\Core\ActionId.h" /><ClInclude Include="Engine\Core\AppGame.h" /><ClInclude Include="Engine\Core\DXContext.h" /><ClInclude Include="Engine\Core\Debug.h" /><ClInclude Include="Engine\Core\DebugConsole.h" /><ClInclude Include="Engine\Core\Defines.h" /><ClInclude Include="Engine\Core\Diagnostics\Logger.h" /><ClInclude Include="Engine\Core\Entities\Entity.h" /><ClInclude Include="Engine\Core\Entities\PhysicalEntity.h" /><ClInclude Include="Engine\Core\FullscreenManager.h" /><ClInclude Include="Engine\Core\Gamepad.h" /><ClInclude Include="Engine\Core\IUpdatable.h" /><ClInclude Include="Engine\Core\IndexBuffer.h" /><ClInclude Include="Engine\Core\Input.h" /><ClInclude Include="Engine\Core\InputMap.h" /><ClInclude Include="Engine\Core\Physical.h" /><ClInclude Include="Engine\Core\RegistrationHandle.h" /><ClInclude Include="Engine\Core\SoundManagerEX.h" /><ClInclude Include="Engine\Core\SoundSystem.h" /><ClInclude Include="Engine\Core\StepTimer.h" /><ClInclude Include="Engine\Core\Transform.h" /><ClInclude Include="Engine\Core\UpdateNode.h" /><ClInclude Include="Engine\Core\UpdateScheduler.h" /><ClInclude Include="Engine\Core\Vector.h" /><ClInclude Include="Engine\Core\VertexBuffer.h" /><ClInclude Include="Engine\Core\VisualTransform.h" /><ClInclude Include="Engine\Core\WindowManager.h" /><ClInclude Include="Engine\Core\conioex.h" /><ClInclude Include="Engine\Render\AABB.h" /><ClInclude Include="Engine\Render\Animation.h" /><ClInclude Include="Engine\Render\AnimationCache.h" /><ClInclude Include="Engine\Render\AnimationState.h" /><ClInclude Include="Engine\Render\AssimpModelLorder.h" /><ClInclude Include="Engine\Render\DebugColliderRenderer.h" /><ClInclude Include="Engine\Render\DirectX.h" /><ClInclude Include="Engine\Render\DrawMatrix.h" /><ClInclude Include="Engine\Render\Effect.h" /><ClInclude Include="Engine\Render\EffectSystem.h" /><ClInclude Include="Engine\Render\Geometory.h" /><ClInclude Include="Engine\Render\IModelLoader.h" /><ClInclude Include="Engine\Render\Legacy\Model.h" /><ClInclude Include="Engine\Render\MaterialDX.h" /><ClInclude Include="Engine\Render\MeshBuffer.h" /><ClInclude Include="Engine\Render\MeshDX.h" /><ClInclude Include="Engine\Render\Model.h" /><ClInclude Include="Engine\Render\ModelBounds.h" /><ClInclude Include="Engine\Render\ModelCache.h" /><ClInclude Include="Engine\Render\ModelDX.h" /><ClInclude Include="Engine\Render\ModelPivot.h" /><ClInclude Include="Engine\Render\ModelRender.h" /><ClInclude Include="Engine\Render\Shader.h" /><ClInclude Include="Engine\Render\ShaderCache.h" /><ClInclude Include="Engine\Render\ShaderList.h" /><ClInclude Include="Engine\Render\ShaderProgram.h" /><ClInclude Include="Engine\Render\Sprite.h" /><ClInclude Include="Engine\Render\SpriteRenderer.h" /><ClInclude Include="Engine\Render\Texture.h" /><ClInclude Include="Engine\Render\TextureCache.h" /><ClInclude Include="Engine\Render\TextureDX.h" /><ClInclude Include="Engine\Systems\Draw\DrawSystem.h" /><ClInclude Include="Engine\Systems\Physics\Box2DContactListener.h" /><ClInclude Include="Engine\Systems\Physics\Box2DMeshBuilder.h" /><ClInclude Include="Engine\Systems\Physics\Box2DPhysicsSystem.h" /><ClInclude Include="Engine\Systems\Physics\BoxColliderComponent.h" /><ClInclude Include="Engine\Systems\Physics\ColliderBuilder.h" /><ClInclude Include="Engine\Systems\Physics\Collision\ConvexHullBuilder.h" /><ClInclude Include="Engine\Systems\Physics\CollisionLayer.h" /><ClInclude Include="Engine\Systems\Physics\Components\BoxColliderComponent.h" /><ClInclude Include="Engine\Systems\Physics\IPhysicsBinder.h" /><ClInclude Include="Engine\Systems\Physics\IntegrateSystem.h" /><ClInclude Include="Engine\Systems\Physics\PhysicsBinder.h" /><ClInclude Include="Engine\Systems\Physics\PhysicsMachine.h" /><ClInclude Include="Engine\Systems\Physics\PhysicsRegistration.h" /><ClInclude Include="Engine\Systems\Physics\ShapeConstants.h" /><ClInclude Include="Game\Entities\Player.h" /><ClInclude Include="Game\Entities\PlayerModel.h" /><ClInclude Include="Game\Entities\PlayerMovement.h" /><ClInclude Include="Game\Entities\PlayerPhysicsBinder.h" /><ClInclude Include="Game\Entities\PlayerPickupSystem.h" /><ClInclude Include="Game\GameFlow\GameplayProgression.h" /><ClInclude Include="Game\GameFlow\PhaseManager.h" /><ClInclude Include="Game\Guide\GuidelineActor.h" /><ClInclude Include="Game\Guide\GuidelineSystem.h" /><ClInclude Include="Game\PowerUp\PowerUpCursor.h" /><ClInclude Include="Game\PowerUp\PowerUpManager.h" /><ClInclude Include="Game\PowerUp\PowerUpNode.h" /><ClInclude Include="Game\PowerUp\PowerUpRenderer.h" /><ClInclude Include="Game\PowerUp\PowerUpTarget.h" /><ClInclude Include="Game\Rules\GameplayRules.h" /><ClInclude Include="Game\Rules\GameplayRulesSystem.h" /><ClInclude Include="Game\Rules\PlayerController.h" /><ClInclude Include="Game\Scene\EffectTestScene.h" /><ClInclude Include="Game\Scene\ISceneServices.h" /><ClInclude Include="Game\Scene\Main.h" /><ClInclude Include="Game\Scene\Scene.h" /><ClInclude Include="Game\Scene\SceneComposer.h" /><ClInclude Include="Game\Scene\SceneManager.h" /><ClInclude Include="Game\Scene\ScenePowerUp.h" /><ClInclude Include="Game\Scene\SelectScene.h" /><ClInclude Include="Game\Scene\SettingScene.h" /><ClInclude Include="Game\Scene\TitleScene.h" /><ClInclude Include="Game\SceneGame\GameplayConfig.h" /><ClInclude Include="Game\SceneGame\SceneGame.h" /><ClInclude Include="Game\SceneGame\SceneGameConfigLoader.h" /><ClInclude Include="Game\SceneGame\SceneGameConfigTypes.h" /><ClInclude Include="Game\SceneGame\SceneGameContactHandler.h" /><ClInclude Include="Game\SceneGame\SceneGameLoader.h" /><ClInclude Include="Game\Stage\PickupConfig.h" /><ClInclude Include="Game\Stage\StageConfigNormalize.h" /><ClInclude Include="Game\Stage\StageConfigParser.h" /><ClInclude Include="Game\Stage\StageData.h" /><ClInclude Include="Game\Stage\StageLayoutLoader.h" /><ClInclude Include="Game\Sweets\BaseSweets.h" /><ClInclude Include="Game\Sweets\SweetsContacts.h" /><ClInclude Include="Game\Sweets\SweetsFactory.h" /><ClInclude Include="Game\Sweets\SweetsKeyUtils.h" /><ClInclude Include="Game\Sweets\SweetsLifecycle.h" /><ClInclude Include="Game\Sweets\SweetsManager.h" /><ClInclude Include="Game\Sweets\SweetsPrototypeManifest.h" /><ClInclude Include="Game\Sweets\SweetsRegistry.h" /><ClInclude Include="Game\Sweets\SweetsRenderer.h" /><ClInclude Include="Game\Sweets\SweetsSpawner.h" /><ClInclude Include="Game\Sweets\SweetsTypes.h" /><ClInclude Include="Game\UI\BackgroundRenderer.h" /><ClInclude Include="Game\UI\HudRenderer.h" /><ClInclude Include="Game\UI\ResultRenderer.h" /><ClInclude Include="Game\UI\SceneGameUIOverlay.h" /><ClInclude Include="Game\UI\TimerDisplay.h" /><ClInclude Include="Game\UI\TitleRenderer.h" /><ClInclude Include="Game\UI\UIManager.h" /></ItemGroup><ItemGroup><ClInclude Include="ThirdParty\Effekseer\Effekseer.h" /><ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" /><ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" /><ClInclude Include="ThirdParty\Effekseer\EffekseerRendererDX11.h" /></ItemGroup><ItemGroup><None Include="cpp.hint" /></ItemGroup></Project>

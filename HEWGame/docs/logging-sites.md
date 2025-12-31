@@ -1,6 +1,6 @@
 # Logging sites and trigger conditions
 
-## src/Stage/StageData.cpp
+## Game/Stage/StageData.cpp
 - **Parsing helpers**: `ParseFloatList` logs when a comma-separated float token cannot be parsed and aborts list creation; `TryParseSpawnPoint` logs malformed spawn points (too few values or not grouped in triples). These messages appear during stage config load.
 - **Spawn lane parsing**: `spawnPoints` (primary) emits per-lane counts and uses defaults only when the primary lane is omitted; the optional `spawnPointsSecondary`/`spawnPointsB` stays empty unless explicitly configured. Cross-lane plane mismatches and the final fallback `(0,0,0)` anchor (both lanes empty) are logged.
 - **Color sanitization**: `SanitizeColor` logs if incoming color components are non-finite (fallback used) or if values are clamped into the 0–1 range.
@@ -16,14 +16,14 @@
 - `SetDebugColor` logs the RGBA color applied to the model materials (and notes if the model is not yet loaded).
 - `LoadPlatformModel` logs failure to load the base model asset and logs the clone statistics once the model is loaded successfully.
 
-## src/SceneManager.cpp
+## Game/Scene/SceneManager.cpp
 - `RequestSceneChange` logs scene swap requests with the pending scene pointer.
 - `ActivatePendingScene` logs lifecycle transitions (`Exit`, `Load`, `Enter`) with pointers and RTTI names during scene activation.
 
-## src/SelectScene.cpp
+## Game/Scene/SelectScene.cpp
 - Lifecycle events (`Load`, `Enter`, `Exit`) are logged with the scene pointer to trace scene transitions.
 
-## src/Systems/DrawSystem.cpp
+## Engine/Systems/Draw/DrawSystem.cpp
 - Registration helpers log duplicate registrations or unregister attempts for unknown entities in debug builds.
 - `OnUpdate` logs queued render commands (transform details) when debug logging is enabled; `ValidateTransform` logs and rejects entities with non-finite transforms.
 - Rendering pipeline logs missing renderer/camera only once per session; missing-model warnings are emitted the first time an entity lacks an assigned model.
