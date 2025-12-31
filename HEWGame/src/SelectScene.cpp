@@ -39,7 +39,7 @@ void SelectScene::ConfigureUpdates()
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 }
 
-void SelectScene::Update(Core::UpdateContext& ctx)
+void SelectScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
 }

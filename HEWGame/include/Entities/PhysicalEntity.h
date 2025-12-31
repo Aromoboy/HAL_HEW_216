@@ -93,7 +93,7 @@ namespace Entities
         bool IsTransformDirty() const;
         void ApplyTranslation(const float3& delta);
 
-        void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnUpdate(const Core::UpdateContext& ctx) override;
 
         const AABB& GetAABB() const
         {

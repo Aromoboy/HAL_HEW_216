@@ -63,7 +63,7 @@ public:
 	PowerUpManager(Core::UpdateScheduler& a_scheduler,TextureCache& cache, const NodeFormat& format);
 	~PowerUpManager();
 
-	void OnUpdate(Core::UpdateContext& ctx) final;
+	void OnUpdate(const Core::UpdateContext& ctx) final;
 
 	void SetFormat(const NodeFormat&);
 

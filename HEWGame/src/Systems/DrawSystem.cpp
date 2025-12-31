@@ -154,7 +154,7 @@ namespace Systems
                 m_hasStagePlaneZ = true;
         }
 
-        void DrawSystem::OnUpdate(Core::UpdateContext& ctx)
+        void DrawSystem::OnUpdate(const Core::UpdateContext& ctx)
         {
                 (void)ctx;
 

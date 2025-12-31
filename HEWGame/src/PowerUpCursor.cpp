@@ -19,7 +19,7 @@ PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManage
 {
 }
 
-void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
+void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 {
 	(void)ctx;
 

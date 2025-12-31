@@ -112,12 +112,34 @@ namespace
 
 namespace Systems
 {
-    
+    class PhysicsMachine::ContactDispatchNode : public Core::UpdateNode
+    {
+    public:
+        explicit ContactDispatchNode(PhysicsMachine& owner)
+            : Core::UpdateNode(Core::UpdatePhase::PostPhysics, 0)
+            , m_owner(owner)
+        {
+        }
+
+        void OnUpdate(const Core::UpdateContext& ctx) override
+        {
+            (void)ctx;
+            if (m_owner.m_contactListener)
+            {
+                m_owner.m_contactListener->ProcessContacts();
+            }
+        }
+
+    private:
+        PhysicsMachine& m_owner;
+    };
+
     PhysicsMachine::PhysicsMachine(const PhysicsTuningParameters& tuning)
         : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
         , m_box2dSystem(std::make_shared<Box2DPhysicsSystem>(*this, tuning))
         , m_system(m_box2dSystem)
         , m_contactListener()
+        , m_contactDispatchNode(std::make_unique<ContactDispatchNode>(*this))
         , m_bodies()
         , m_bodyMap()
         , m_defaultBodyDef()
@@ -220,6 +242,11 @@ namespace Systems
     std::shared_ptr<Box2DPhysicsSystem> PhysicsMachine::GetBox2DSystem() const
     {
         return m_box2dSystem;
+    }
+
+    Core::IUpdatable* PhysicsMachine::GetContactDispatchNode() const
+    {
+        return m_contactDispatchNode.get();
     }
 
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
@@ -454,7 +481,7 @@ namespace Systems
         }
     }
 
-    void PhysicsMachine::OnUpdate(Core::UpdateContext& ctx)
+    void PhysicsMachine::OnUpdate(const Core::UpdateContext& ctx)
     {
         if (!m_system)
         {
@@ -540,7 +567,18 @@ namespace Systems
             ++it;
         }
 
+        if (m_box2dSystem)
+        {
+            m_box2dSystem->PrepareFrame(ctx.timer.FrameIndex());
+        }
+
         m_system->Apply(ctx.dt);
+
+        if (m_box2dSystem)
+        {
+            m_box2dSystem->AdvanceClampSummary(ctx.dt);
+        }
+
         SyncBodies(ctx.dt);
     }
 

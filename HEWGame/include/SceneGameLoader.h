@@ -29,8 +29,6 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-class SceneGameUIOverlay;
-
 class SceneGameLoader
 {
 public:
@@ -56,7 +54,6 @@ public:
 
     struct Result
     {
-        std::unique_ptr<SceneGameUIOverlay> uiOverlay;
         std::shared_ptr<Render::Model> playerModel;
         std::unique_ptr<Entities::Player> player;
         float playerPickupBoxWidth = 0.0f;

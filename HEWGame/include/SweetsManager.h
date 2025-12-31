@@ -81,9 +81,9 @@ namespace SweetsSpace
             Core::UpdateScheduler& scheduler);
         ~SweetsManager();
 
-        void OnUpdate(Core::UpdateContext& ctx) override;
-        void OnLateUpdate(Core::UpdateContext& ctx);
-        void Update(Core::UpdateContext& ctx);
+        void OnUpdate(const Core::UpdateContext& ctx) override;
+        void OnLateUpdate(const Core::UpdateContext& ctx);
+        void Update(const Core::UpdateContext& ctx);
         void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera);
 
         SweetsList& GetByState(SweetsState state);

@@ -27,7 +27,7 @@ namespace Core
         HRESULT Initialize();
         void Shutdown();
 
-        void OnUpdate(UpdateContext& ctx) override;
+        void OnUpdate(const UpdateContext& ctx) override;
 
         float GetAxis(ActionId action) const;
 

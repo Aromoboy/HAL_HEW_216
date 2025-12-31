@@ -28,7 +28,7 @@ namespace SceneSpace
                 void OnExit() override;
 
                 void ConfigureUpdates() override;
-                void Update(Core::UpdateContext& ctx) final;
+                void Update(const Core::UpdateContext& ctx) final;
                 void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
 
         private:

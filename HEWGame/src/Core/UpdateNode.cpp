@@ -13,6 +13,11 @@ namespace Core
         {
         }
 
+        UpdateNode::~UpdateNode()
+        {
+                m_registrationHandle.Reset();
+        }
+
         void UpdateNode::SetPhase(UpdatePhase phase)
         {
                 // 例えばメニュー中だけフェーズをUIに切り替えるなど、柔軟な制御が可能だ
@@ -31,14 +36,14 @@ namespace Core
                 m_enabled = value;
         }
 
-        void UpdateNode::SetRegistrationHandle(RegistrationHandle handle)
+        void UpdateNode::SetRegistrationHandle(RegistrationHandle&& handle)
         {
                 if (handle.IsValid())
                 {
                         if (m_registrationHandle.IsValid())
                         {
                                 DebugLog::DebugMessage("[UpdateNode] Registration handle already valid. Releasing before reassign.\n");
-                                m_registrationHandle.Release();
+                                m_registrationHandle.Reset();
                         }
                         m_registrationHandle = std::move(handle);
                 }
@@ -46,7 +51,7 @@ namespace Core
 
         void UpdateNode::ReleaseRegistrationHandle()
         {
-                m_registrationHandle.Release();
+                m_registrationHandle.Reset();
         }
 
         UpdatePhase UpdateNode::GetPhase() const

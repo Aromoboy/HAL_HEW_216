@@ -336,7 +336,7 @@ namespace Entities
         }
     }
 
-    void PlayerPickupSystem::HandleCarryInput(Player& player, PlayerModel& model, Core::UpdateContext& ctx, Core::Input& input)
+    void PlayerPickupSystem::HandleCarryInput(Player& player, PlayerModel& model, const Core::UpdateContext& ctx, Core::Input& input)
     {
         const bool dropTriggered = input.IsTrigger(Core::ActionId::Drop);
         const bool confirmTriggered = input.IsTrigger(Core::ActionId::Confirm);

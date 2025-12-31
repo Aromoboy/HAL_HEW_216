@@ -37,7 +37,7 @@ public:
 
         void Attach(const std::shared_ptr<Entities::Entity>& target);
 
-        void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnUpdate(const Core::UpdateContext& ctx) override;
 
 private:
         std::shared_ptr<CameraSpace::BaseCamera> m_camera;

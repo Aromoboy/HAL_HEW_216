@@ -6,7 +6,6 @@
 #include "AppGame.h"
 #include "ColliderRegistry.h"
 #include "Physics/ColliderBuilder.h"
-#include "SceneGameUIOverlay.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/DrawSystem.h"
@@ -57,12 +56,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     {
         cache.SetLoader(std::move(loader), config.device, App::Game::Instance().GetTextureCache());
         animeCache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device);
-    }
-
-    result.uiOverlay = std::make_unique<SceneGameUIOverlay>();
-    if (result.uiOverlay && !result.uiOverlay->Initialize())
-    {
-        result.uiOverlay.reset();
     }
 
     auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();

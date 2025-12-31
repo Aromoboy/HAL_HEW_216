@@ -42,7 +42,7 @@ namespace Systems
 
                 void SetStagePlaneZ(float planeZ);
 
-                void OnUpdate(Core::UpdateContext& ctx) override;
+                void OnUpdate(const Core::UpdateContext& ctx) override;
                 void RenderQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
                 void DebugDrawQueued(const std::shared_ptr<CameraSpace::ICamera>& camera);
 

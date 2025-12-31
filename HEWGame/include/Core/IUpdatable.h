@@ -74,7 +74,7 @@ namespace Core
 
                 // OnUpdateは各派生クラスで実際の処理を書く場所だ
                 // Contextを受け取り、必要なシステム情報にアクセスできる
-                virtual void OnUpdate(UpdateContext& ctx) = 0;
+                virtual void OnUpdate(const UpdateContext& ctx) = 0;
 
                 // GetPhaseまたはGetPriorityはスケジューラが実行順を決めるために参照する
                 virtual UpdatePhase GetPhase() const = 0;

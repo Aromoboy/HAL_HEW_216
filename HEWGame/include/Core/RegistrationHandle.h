@@ -1,15 +1,17 @@
 #pragma once
 
+#include <cstdint>
 #include <utility>
 
 namespace Core
 {
     class UpdateScheduler;
-    class IUpdatable;
 
     class RegistrationHandle
     {
     public:
+        using NodeId = std::uint64_t;
+
         RegistrationHandle() = default;
         ~RegistrationHandle();
 
@@ -27,10 +29,9 @@ namespace Core
     private:
         friend class UpdateScheduler;
 
-        RegistrationHandle(UpdateScheduler* scheduler, IUpdatable* node);
+        RegistrationHandle(UpdateScheduler* scheduler, NodeId nodeId);
 
         UpdateScheduler* m_scheduler = nullptr;
-        IUpdatable* m_node = nullptr;
-        bool m_active = false;
+        NodeId m_nodeId = 0;
     };
 }

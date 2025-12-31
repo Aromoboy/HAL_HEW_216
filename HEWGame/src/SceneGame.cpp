@@ -347,7 +347,16 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
 
     SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
-    m_uiOverlay = std::move(loaderResult.uiOverlay);
+    m_uiOverlay.reset();
+    if (m_uiManager)
+    {
+        m_uiOverlay = std::make_unique<SceneGameUIOverlay>();
+        if (m_uiOverlay && !m_uiOverlay->Initialize(m_uiManager.get()))
+        {
+            DebugTrace(std::string(kLogPrefix) + "UI overlay failed to bind UI manager; overlay disabled.\n");
+            m_uiOverlay.reset();
+        }
+    }
     m_playerModel = std::move(loaderResult.playerModel);
     player = std::move(loaderResult.player);
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
@@ -473,10 +482,21 @@ SceneGame::~SceneGame()
     {
         if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
         {
-            GetUpdateScheduler().Unregister(*physicsMachine);
-            physicsMachine->ReleaseRegistrationHandle();
+            Unregister(*physicsMachine);
             m_physicsRegistered = false;
         }
+    }
+
+    if (m_contactDispatchRegistered && m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            if (auto* contactNode = physicsMachine->GetContactDispatchNode())
+            {
+                Unregister(*contactNode);
+            }
+        }
+        m_contactDispatchRegistered = false;
     }
 
     if (m_cameraRigRegistered && m_cameraRig)
@@ -487,8 +507,7 @@ SceneGame::~SceneGame()
 
     if (m_drawRegistered && m_drawSystem)
     {
-        GetUpdateScheduler().Unregister(*m_drawSystem);
-        m_drawSystem->ReleaseRegistrationHandle();
+        Unregister(*m_drawSystem);
         m_drawRegistered = false;
     }
 
@@ -496,19 +515,14 @@ SceneGame::~SceneGame()
     {
         if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
         {
-            GetUpdateScheduler().Unregister(*lateNode);
-            if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(lateNode))
-            {
-                updateNode->ReleaseRegistrationHandle();
-            }
+            Unregister(*lateNode);
         }
         m_sweetsLateRegistered = false;
     }
 
     if (m_sweetsRegistered && m_sweetsManager)
     {
-        GetUpdateScheduler().Unregister(*m_sweetsManager);
-        m_sweetsManager->ReleaseRegistrationHandle();
+        Unregister(*m_sweetsManager);
         m_sweetsRegistered = false;
     }
 
@@ -537,9 +551,7 @@ void SceneGame::ConfigureUpdates()
         {
                 if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
                 {
-                        auto handle = GetUpdateScheduler().Register(*physicsMachine);
-                        physicsMachine->SetRegistrationHandle(std::move(handle));
-                        m_physicsRegistered = true;
+                        m_physicsRegistered = Register(*physicsMachine);
 
                         std::ostringstream oss;
                         oss << kLogPrefix << "ConfigureUpdates registered PhysicsMachine (phase="
@@ -549,44 +561,44 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
+        if (m_physicsBinder && !m_contactDispatchRegistered)
+        {
+                if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                {
+                        if (auto* contactNode = physicsMachine->GetContactDispatchNode())
+                        {
+                                m_contactDispatchRegistered = Register(*contactNode);
+                        }
+                }
+        }
+
         if (auto* input = GetInput())
         {
-                Register(*input);
-                m_inputRegistered = true;
+                m_inputRegistered = Register(*input);
         }
 
         RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 
         if (m_drawSystem && !m_drawRegistered)
         {
-                auto handle = GetUpdateScheduler().Register(*m_drawSystem);
-                m_drawSystem->SetRegistrationHandle(std::move(handle));
-                m_drawRegistered = true;
+                m_drawRegistered = Register(*m_drawSystem);
         }
 
         if (m_cameraRig && !m_cameraRigRegistered)
         {
-                Register(*m_cameraRig);
-                m_cameraRigRegistered = true;
+                m_cameraRigRegistered = Register(*m_cameraRig);
         }
 
         if (m_sweetsManager && !m_sweetsRegistered)
         {
-                auto handle = GetUpdateScheduler().Register(*m_sweetsManager);
-                m_sweetsManager->SetRegistrationHandle(std::move(handle));
-                m_sweetsRegistered = true;
+                m_sweetsRegistered = Register(*m_sweetsManager);
         }
 
         if (m_sweetsManager && !m_sweetsLateRegistered)
         {
                 if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
                 {
-                        auto handle = GetUpdateScheduler().Register(*lateNode);
-                        if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(lateNode))
-                        {
-                                updateNode->SetRegistrationHandle(std::move(handle));
-                        }
-                        m_sweetsLateRegistered = true;
+                        m_sweetsLateRegistered = Register(*lateNode);
                 }
         }
 
@@ -629,7 +641,7 @@ void SceneGame::ConfigureUpdates()
         SetStageState(StageState::Playing);
 }
 
-void SceneGame::Update(Core::UpdateContext& ctx)
+void SceneGame::Update(const Core::UpdateContext& ctx)
 {
 #if defined(_DEBUG)
     HandleColliderDebugCommands(ctx);
@@ -808,7 +820,7 @@ void SceneGame::ResetGuidelineHeight()
 
 
 #if defined(_DEBUG)
-void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
+void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 {
         (void)ctx;
         if (!player)

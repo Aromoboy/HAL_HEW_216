@@ -66,7 +66,7 @@ void SceneSpace::SettingScene::ConfigureUpdates()
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 }
 
-void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
+void SceneSpace::SettingScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();

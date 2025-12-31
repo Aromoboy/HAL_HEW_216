@@ -24,7 +24,7 @@ namespace SweetsSpace
 
         ~BaseSweets() override = default;
 
-        void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnUpdate(const Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
         Transform GetRenderTransform() const override;

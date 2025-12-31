@@ -42,7 +42,7 @@ namespace Entities
             std::string tag = "player");
         ~Player() override;
 
-        void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnUpdate(const Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);

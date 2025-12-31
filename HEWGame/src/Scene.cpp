@@ -4,7 +4,9 @@
 #include "Core/UpdateNode.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
+#include "Debug.h"
 
+#include <cassert>
 #include <memory>
 #include <utility>
 
@@ -19,7 +21,7 @@ public:
         {
         }
 
-        void OnUpdate(Core::UpdateContext& ctx) override
+        void OnUpdate(const Core::UpdateContext& ctx) override
         {
             m_owner.Update(ctx);
         }
@@ -37,7 +39,7 @@ public:
         {
         }
 
-        void OnUpdate(Core::UpdateContext& ctx) override
+        void OnUpdate(const Core::UpdateContext& ctx) override
         {
                 m_owner.m_cameraManager.Update(ctx);
         }
@@ -113,8 +115,7 @@ void Scene::RootDraw()
 
                 if (!m_sceneUpdateRegistered)
                 {
-                        Register(*m_sceneUpdateNode);
-                        m_sceneUpdateRegistered = true;
+                        m_sceneUpdateRegistered = Register(*m_sceneUpdateNode);
                 }
         }
 
@@ -151,8 +152,7 @@ void Scene::RootDraw()
 
                 if (!m_cameraUpdateRegistered)
                 {
-                        Register(*m_cameraUpdateNode);
-                        m_cameraUpdateRegistered = true;
+                        m_cameraUpdateRegistered = Register(*m_cameraUpdateNode);
                 }
         }
 
@@ -175,21 +175,36 @@ void Scene::RootDraw()
                 return m_cameraUpdateNode.get();
         }
 
-        void Scene::Register(Core::IUpdatable& node)
+        bool Scene::Register(Core::IUpdatable& node)
         {
                 auto handle = m_scheduler.Register(node);
+                if (!handle.IsValid())
+                {
+                        DebugLog::DebugMessage("[Scene] Register failed; scheduler returned invalid handle.\n");
+                        assert(false && "Scene::Register failed.");
+                        return false;
+                }
+
                 if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(&node))
                 {
                         updateNode->SetRegistrationHandle(std::move(handle));
                 }
+                else
+                {
+                        handle.Release();
+                }
+                return true;
         }
 
         void Scene::Unregister(Core::IUpdatable& node)
         {
-                m_scheduler.Unregister(node);
                 if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(&node))
                 {
                         updateNode->ReleaseRegistrationHandle();
+                }
+                else
+                {
+                        m_scheduler.Unregister(node);
                 }
         }
 

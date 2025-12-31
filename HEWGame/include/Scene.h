@@ -28,7 +28,7 @@ virtual void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) =
 
 protected:
 virtual void ConfigureUpdates();
-virtual void Update(Core::UpdateContext& ctx) = 0;
+virtual void Update(const Core::UpdateContext& ctx) = 0;
 virtual void DrawOverlay();
 void RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority);
 void UnregisterSceneUpdateNode();
@@ -39,7 +39,7 @@ void UnregisterCameraUpdateNode();
 Core::IUpdatable* GetCameraUpdateNode();
 const Core::IUpdatable* GetCameraUpdateNode() const;
 
-void Register(Core::IUpdatable& node);
+bool Register(Core::IUpdatable& node);
 void Unregister(Core::IUpdatable& node);
 
 Core::UpdateScheduler& GetUpdateScheduler();

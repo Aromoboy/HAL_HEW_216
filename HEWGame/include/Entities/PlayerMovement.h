@@ -13,7 +13,7 @@ namespace Entities
     class PlayerMovement
     {
     public:
-        void Update(Player& player, Core::UpdateContext& ctx, Core::Input& input);
+        void Update(Player& player, const Core::UpdateContext& ctx, Core::Input& input);
 
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);

@@ -46,7 +46,7 @@ namespace Core
                 m_lastPolledFrame = 0;
         }
 
-        void Input::OnUpdate(UpdateContext& ctx)
+        void Input::OnUpdate(const UpdateContext& ctx)
         {
                 const std::uint64_t frameIndex = ctx.timer.FrameIndex();
 

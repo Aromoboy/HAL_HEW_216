@@ -79,7 +79,7 @@ void TitleScene::ConfigureUpdates()
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 }
 
-void TitleScene::Update(Core::UpdateContext& ctx)
+void TitleScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();

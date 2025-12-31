@@ -59,6 +59,7 @@ namespace Systems
         void SetSubStepCount(int subStepCount);
         SystemPtr GetSystem() const;
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
+        Core::IUpdatable* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
 
         void SetGravity(float gravity);
@@ -79,15 +80,18 @@ namespace Systems
         void DestroyJoint(b2JointId jointId, bool wakeAttached = true);
 
         void SyncBodies(float dt);
-        void OnUpdate(Core::UpdateContext& ctx) override;
+        void OnUpdate(const Core::UpdateContext& ctx) override;
 
     private:
+        class ContactDispatchNode;
+
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
         ContactListenerPtr m_contactListener;
+        std::unique_ptr<ContactDispatchNode> m_contactDispatchNode;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
