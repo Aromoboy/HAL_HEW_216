@@ -152,6 +152,7 @@ namespace Systems
         m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
+        m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
             ? tuning.maxStepDt
             : (1.0f / 60.0f);
@@ -852,6 +853,12 @@ namespace Systems
             {
                 enableContinuousCollision = true;
             }
+        }
+
+        if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayer
+            && layer == Collision::CollisionLayer::Player)
+        {
+            enableContinuousCollision = true;
         }
 
         if (enableContinuousCollision)

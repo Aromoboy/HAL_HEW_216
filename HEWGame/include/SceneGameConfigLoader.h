@@ -23,6 +23,7 @@ namespace SceneGameConfig
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.6f;
         bool continuousCollisionForPlayerProjectiles = true;
+        bool continuousCollisionForPlayer = false;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
