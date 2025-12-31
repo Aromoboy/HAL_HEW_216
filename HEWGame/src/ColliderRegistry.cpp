@@ -161,14 +161,15 @@ namespace Physics
 
     bool ColliderRegistry::LoadFromFile(const std::string& path)
     {
-        m_definitions.clear();
+        std::map<std::string, ColliderRegistryDefinition> definitions;
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(path, GameplayConfig::kSectionColliderRegistry, lines))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Failed to read collider registry section '"
-                << GameplayConfig::kSectionColliderRegistry << "' from '" << path << "'\n";
+                << GameplayConfig::kSectionColliderRegistry << "' from '" << path
+                << "'; keep cache.\n";
             DebugTrace(oss.str());
             return false;
         }
@@ -253,7 +254,7 @@ namespace Physics
                 }
 
                 const std::string normalized = NormalizeKey(currentName);
-                m_definitions[normalized] = def;
+                definitions[normalized] = def;
             }
         };
 
@@ -360,14 +361,16 @@ namespace Physics
 
         flush();
 
-        if (m_definitions.empty())
+        if (definitions.empty())
         {
             std::ostringstream oss;
             oss << kLogPrefix << "No collider definitions loaded from '" << path << "'\n";
             DebugTrace(oss.str());
+            return false;
         }
 
-        return !m_definitions.empty();
+        m_definitions = std::move(definitions);
+        return true;
     }
 
     std::optional<ColliderRegistryDefinition> ColliderRegistry::Find(const std::string& id) const
