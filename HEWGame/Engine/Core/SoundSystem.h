@@ -1,4 +1,4 @@
-#ifndef ___SOUND_H___
+﻿#ifndef ___SOUND_H___
 #define ___SOUND_H___
 
 #include <windows.h>
@@ -50,7 +50,7 @@ public:
     ~SoundSystem();
 
     bool LoadWaveFile(const std::string& a_wFilePath, WaveData* outData);
-#endif
+    int PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume = 1.0f);
     void StopSound(int handle);  // 音を止める
     void StopAllSounds();  // 全ての音を止める
     void SetVolume(int handle, float volume);

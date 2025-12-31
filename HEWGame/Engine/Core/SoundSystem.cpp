@@ -2,7 +2,7 @@
 #include "Debug.h"
 #include "Main.h"
 
-#ifdef _XBOX // ビッグエンディアン
+#ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
 #define fourccDATA 'data'
 #define fourccFMT  'fmt '
@@ -11,7 +11,7 @@
 #define fourccDPDS 'dpds'
 #endif
 
-#ifndef _XBOX // リトルエンディアン
+#ifndef _XBOX //Little-Endian
 #define fourccRIFF 'FFIR'
 #define fourccDATA 'atad'
 #define fourccFMT  ' tmf'

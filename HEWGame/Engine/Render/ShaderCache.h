@@ -9,7 +9,6 @@
 
 class ShaderCache {
 public:
-#endif
     static ShaderCache& Instance()
     {
         static ShaderCache instance;
