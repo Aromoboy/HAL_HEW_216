@@ -21,13 +21,11 @@
 #include "Stage/StageData.h"
 #include "GameFlow/PhaseManager.h"
 #include "BackgroundRenderer.h"
-#include "ColliderConfigLoader.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
 #include "ISceneServices.h"
 #include <cstddef>
 #include <memory>
-#include <map>
 #include <vector>
 #include <string>
 #include"SettingScene.h"
@@ -148,15 +146,11 @@ private:
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
-    std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
-    bool m_playerColliderConfigLoaded = false;
-    bool m_forceConfigPlayerCollider = false;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
     // 仮で作った何回フェーズを超えたらクリアになるかの判定
     int m_clearPhaseCount = 10;
-    PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
 
