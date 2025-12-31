@@ -223,14 +223,30 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             const std::string modelKey = BuildModelKey(obj.modelPath);
             const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
             SceneGameConfig::StageColliderPreset resolvedPreset{};
+            const std::string registryId = preset && !preset->registryId.empty() ? preset->registryId : modelKey;
             if (preset)
             {
                 resolvedPreset = *preset;
                 obj.colliderPresetId = preset->presetId;
             }
 
-            const std::string registryId = !resolvedPreset.registryId.empty() ? resolvedPreset.registryId : modelKey;
-            auto registryDefinition = Physics::ColliderRegistry::Instance().Find(registryId);
+            std::optional<Physics::ColliderRegistryDefinition> registryDefinition;
+            if (preset)
+            {
+                registryDefinition = Physics::ColliderRegistry::Instance().Find(registryId);
+            }
+            else
+            {
+                registryDefinition = Physics::ColliderRegistry::Instance().Find(modelKey);
+                if (registryDefinition)
+                {
+                    std::ostringstream fallbackLog;
+                    fallbackLog << logPrefix << "[StageColliders] fallback registryId='" << modelKey
+                        << "' from modelKey\n";
+                    DebugTrace(fallbackLog.str());
+                }
+            }
+
             if (!registryDefinition)
             {
                 std::ostringstream oss;
@@ -242,7 +258,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             else
             {
                 Physics::BoxColliderComponent colliderComponent{};
-                colliderComponent.colliderId = registryId;
+                colliderComponent.colliderId = preset ? registryId : modelKey;
                 colliderComponent.shapeDef = registryDefinition->shapeDef;
                 colliderComponent.shapes = registryDefinition->shapes;
                 colliderComponent.colliderOffset = resolvedPreset.offset;
@@ -257,7 +273,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                 shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
                 shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
 
-                const std::string presetId = !resolvedPreset.presetId.empty() ? resolvedPreset.presetId : registryId;
+                const std::string presetId = !resolvedPreset.presetId.empty() ? resolvedPreset.presetId : colliderComponent.colliderId;
                 auto entity = std::make_shared<Entities::PhysicalEntity>(
                     obj.transform,
                     shapeConfig,
@@ -274,7 +290,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                 result.physicsEntities.push_back(entity);
 
                 std::ostringstream oss;
-                oss << logPrefix << "[StageColliders] Registered registryId='" << registryId
+                oss << logPrefix << "[StageColliders] Registered registryId='" << colliderComponent.colliderId
                     << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(resolvedPreset.layer)
                     << ")\n";
                 DebugTrace(oss.str());
