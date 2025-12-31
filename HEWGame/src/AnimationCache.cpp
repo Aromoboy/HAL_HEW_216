@@ -40,9 +40,6 @@ namespace
 namespace Render
 {
     //============================================================
-    void AnimationCache::SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device)
-        const bool loaderChanged = m_loader && m_loader.get() != loader.get();
-        m_loader = std::move(loader);              // VOgɃ[_[ێ
     AnimationCache& AnimationCache::Instance()
     {
         static AnimationCache instance;
@@ -53,11 +50,11 @@ namespace Render
     // ローダーの設定
     // 実際のロード処理を担う IModelLoader と必要な依存を登録する
     //============================================================
-    void AnimationCache::SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device)
+    void AnimationCache::SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device)
     {
-        const bool loaderChanged = m_loader && m_loader != loader;
+        const bool loaderChanged = m_loader && m_loader.get() != loader.get();
         const bool deviceChanged = m_device && m_device != device;
-        
+
         const bool reconfiguringWithCachedModels = (!m_animations.empty()) && (loaderChanged || deviceChanged);
 
         if (reconfiguringWithCachedModels)
@@ -67,9 +64,8 @@ namespace Render
             Clear();
         }
 
-        m_loader = loader;              // シングルトン内にローダーを保持
+        m_loader = std::move(loader);   // シングルトン内にローダーを保持
         m_device = device;              // 描画デバイス
-    
 
         if (!m_loader)
         {
@@ -80,8 +76,6 @@ namespace Render
         {
             //MODELCACHE_LOG("デバイスが未設定のためモデルをロードできない ID3D11Device* を正しく渡すこと");
         }
-
-
     }
 
     //============================================================
