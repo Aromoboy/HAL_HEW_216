@@ -112,11 +112,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
 
     const b2BodyType playerBodyType = kPlayerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
     const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
-    const bool hasConfigDefinition = config.playerColliderDefinitions
-        && config.playerColliderDefinitions->find(resolvedColliderKey) != config.playerColliderDefinitions->end();
-    const bool playerConfigAvailable = config.playerColliderConfigLoaded && hasConfigDefinition;
-
-    const bool forceConfigCollider = config.forceConfigPlayerCollider && playerConfigAvailable;
     Physics::ColliderBuilder colliderBuilder(m_log, m_logPrefix);
     Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
     colliderRequest.key = resolvedColliderKey;
@@ -127,10 +122,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     colliderRequest.angularDamping = 5.0f;
     colliderRequest.linearDamping = 0.0f;
     colliderRequest.scaleOffset = true;
-    colliderRequest.tuning = config.playerColliderTuning;
-    colliderRequest.configDefinitions = playerConfigAvailable ? config.playerColliderDefinitions : nullptr;
-    colliderRequest.forceConfig = forceConfigCollider;
-    colliderRequest.allowFallback = true;
+    colliderRequest.allowFallback = false;
 
     Physics::ColliderBuilder::BuildResult colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
     const auto colliderHasShapes = [](const Physics::ColliderBuilder::BuildResult& build)
@@ -142,7 +134,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         return build.shapeConfig && build.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     };
 
-    if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && playerConfigAvailable)
+    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
     {
         std::ostringstream oss;
         oss << m_logPrefix << "[PlayerCollider] Collider definition for key='" << resolvedColliderKey
@@ -172,11 +164,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
 
     const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
-    const std::string appliedSource = colliderBuild.shapeSource;
-    const std::string appliedPath = colliderBuild.shapeSource;
-    const bool attemptedConfigFallback = colliderBuild.attemptedConfigFallback;
-    const bool attemptedRegistryFallback = colliderBuild.attemptedRegistryFallback;
-    const bool attemptedFallback = colliderBuild.attemptedFallback;
 
     {
         std::ostringstream oss;
@@ -193,18 +180,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
 
         oss << m_logPrefix << "[PlayerCollider] source=" << colliderBuild.source
             << " shapeSource=" << colliderBuild.shapeSource
-            << " appliedSource=" << appliedSource
-            << " appliedPath=" << appliedPath
-            << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << config.forceConfigPlayerCollider
-            << " shapePolicy=" << (forceConfigCollider ? "ConfigPrimary" : "RegistryPrimary")
-            << " modelGeneration=Disabled"
-            << " configLoaded=" << config.playerColliderConfigLoaded
-            << " configAvailable=" << hasConfigDefinition
-            << " registryHit=" << colliderBuild.registryHit
+            << " key='" << resolvedColliderKey << "' registryHit=" << colliderBuild.registryHit
             << " registryShapes=" << colliderBuild.registryHasShapes
-            << " configFallback=" << std::boolalpha << attemptedConfigFallback
-            << " registryFallback=" << std::boolalpha << attemptedRegistryFallback
-            << " fallback=" << attemptedFallback
             << " applied=" << colliderReady
             << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
             << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
@@ -304,11 +281,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
             std::ostringstream oss;
             oss << m_logPrefix << "[PlayerCollider] Skipping physics registration; colliderReady="
                 << std::boolalpha << colliderReady
-                << " appliedSource=" << appliedSource
                 << " shapes=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
                 << " shapeType=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
-                << (attemptedConfigFallback ? " (config fallback attempted)" : "")
-                << (attemptedFallback ? " (fallback attempted)" : "")
                 << "\n";
             LogMessage(m_log, oss.str());
         }
@@ -319,20 +293,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
 
     return result;
-}
-
-std::map<std::string, Collision::ColliderDefinition> SceneGameLoader::NormalizePlayerColliderDefinitions(
-    std::map<std::string, Collision::ColliderDefinition> definitions)
-{
-    std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
-
-    for (const auto& entry : definitions)
-    {
-        const std::string canonicalKey = ResolvePlayerColliderKey(entry.first);
-        normalizedDefinitions[canonicalKey] = entry.second;
-    }
-
-    return normalizedDefinitions;
 }
 
 std::string SceneGameLoader::NormalizeColliderKey(const std::string& key)
