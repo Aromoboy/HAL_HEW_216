@@ -1,6 +1,8 @@
 #include "Texture.h"
 #include "TextureLoad.h"
+#include "Diagnostics/Logger.h"
 #include <cstring>
+#include <sstream>
 #include <string>
 
 /// <summary>
@@ -21,6 +23,12 @@ HRESULT Texture::Create(const char* fileName)
 {
 	HRESULT hr = S_OK;
 
+	if (!fileName)
+	{
+		Diagnostics::LogInfo("[Texture] Create called with null fileName.");
+		return E_INVALIDARG;
+	}
+
 	// 字変換
 	wchar_t wPath[MAX_PATH];
 	size_t wLen = 0;
@@ -29,12 +37,20 @@ HRESULT Texture::Create(const char* fileName)
 	// ファイル別読み込み
 	DirectX::TexMetadata mdata;
 	DirectX::ScratchImage image;
-	if (strstr(fileName, ".tga"))
+	const bool isTga = strstr(fileName, ".tga") != nullptr;
+	if (isTga)
 		hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
 	else
 		hr = DirectX::LoadFromWICFile(wPath, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
-	if (FAILED(hr)) {
-		return E_FAIL;
+	if (FAILED(hr))
+	{
+		if (!isTga)
+		{
+			std::ostringstream oss;
+			oss << "[Texture] LoadFromWICFile failed for " << fileName << " hr=0x" << std::hex << hr;
+			Diagnostics::LogInfo(oss.str());
+		}
+		return hr;
 	}
 
 	// シェーダリソース生

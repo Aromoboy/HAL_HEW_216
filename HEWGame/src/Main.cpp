@@ -1,6 +1,7 @@
 #include "Main.h"
 
 #include <memory>
+#include <objbase.h>
 #include <sstream>
 
 #include "DirectX.h"
@@ -21,6 +22,7 @@ namespace
         Core::StepTimer g_stepTimer;
         Core::Input g_input;
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
+        HRESULT g_comInitResult = E_FAIL;
 
         void LogBootScenario()
         {
@@ -34,6 +36,15 @@ namespace
 
 HRESULT Init(HWND hWnd, UINT width, UINT height)
 {
+        g_comInitResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (FAILED(g_comInitResult))
+        {
+                std::ostringstream oss;
+                oss << "[COM] CoInitializeEx failed. hr=0x" << std::hex << g_comInitResult;
+                Diagnostics::LogInfo(oss.str());
+                return g_comInitResult;
+        }
+
         HRESULT hr = InitDirectX(hWnd, width, height, false);
         if (FAILED(hr))
         {
@@ -62,6 +73,11 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         return hr;
 }
 
+HRESULT GetComInitResult()
+{
+        return g_comInitResult;
+}
+
 void Uninit()
 {
         g_input.Shutdown();
@@ -72,6 +88,12 @@ void Uninit()
         Sprite::Uninit();
         Geometory::Uninit();
         UninitDirectX();
+
+        if (SUCCEEDED(g_comInitResult))
+        {
+                CoUninitialize();
+                g_comInitResult = E_FAIL;
+        }
 }
 
 void Update()

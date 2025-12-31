@@ -1,8 +1,10 @@
 #include "BackgroundRenderer.h"
 
+#include "Diagnostics/Logger.h"
 #include "DirectX.h"
 #include "Sprite.h"
 #include "Texture.h"
+#include <sstream>
 
 BackgroundRenderer::BackgroundRenderer()
 {
@@ -69,8 +71,12 @@ bool BackgroundRenderer::LoadTexture(const std::string& path)
         return false;
     }
 
-    if (FAILED(m_texture->Create(path.c_str())))
+    const HRESULT hr = m_texture->Create(path.c_str());
+    if (FAILED(hr))
     {
+        std::ostringstream oss;
+        oss << "[BackgroundRenderer] Failed to load texture: " << path << " hr=0x" << std::hex << hr;
+        Diagnostics::LogInfo(oss.str());
         m_texture.reset();
         return false;
     }

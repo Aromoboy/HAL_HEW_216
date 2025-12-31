@@ -7,5 +7,6 @@ HRESULT Init(HWND hWnd, UINT width, UINT height);
 void Uninit();
 void Update();
 void Draw();
+HRESULT GetComInitResult();
 
 #endif // __MAIN_H__
