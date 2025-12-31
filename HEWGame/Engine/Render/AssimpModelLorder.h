@@ -1,6 +1,3 @@
-// 外部モデルの読み込みを行う役目を持つ
-// モデルキャッシュや読み込み処理から呼ばれる
-
 #ifndef ___ASSIMP_MODE_LORDER___
 #define ___ASSIMP_MODE_LORDER___
 

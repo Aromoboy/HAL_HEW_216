@@ -1,6 +1,3 @@
-// éŸ³å£°å†ç”Ÿã®è³‡æºã¨åˆ¶å¾¡ã‚’ã¾ã¨ã‚ã¦ã„ã‚‹
-// ã‚²ãƒ¼ãƒ å†…ã®åŠ¹æžœéŸ³å†ç”Ÿã‹ã‚‰å‘¼ã°ã‚Œã‚‹
-
 #include "SoundManagerEX.h"
 
 SoundManagerEX* SoundManagerEX::s_instance = nullptr;
@@ -13,16 +10,16 @@ SoundManagerEX::SoundManagerEX()
 
 SoundManagerEX::~SoundManagerEX()
 {
-    // SÄ‚Ì‰~
+    // ‘S‚Ä‚Ì‰¹‚ð’âŽ~
     if (m_pSoundSystem)
     {
         m_pSoundSystem->StopAllSounds();
     }
 
-    // SoundSystemÉ”jiSÄ‚SourceVoicejj
+    // SoundSystem‚ðæ‚É”jŠüi‘S‚Ä‚ÌSourceVoice‚ð”jŠüj
     m_pSoundSystem.reset();
 
-    // ÌŒWaveDataN[Abv
+    // ‚»‚ÌŒã‚ÅWaveData‚ðƒNƒŠ[ƒ“ƒAƒbƒv
     for (auto& pair : m_cachedWaveDatas)
     {
         if (pair.second)
@@ -32,7 +29,7 @@ SoundManagerEX::~SoundManagerEX()
     }
     m_cachedWaveDatas.clear();
 
-    // O[oCX^XNA
+    // ƒOƒ[ƒoƒ‹ƒCƒ“ƒXƒ^ƒ“ƒX‚ðƒNƒŠƒA
     if (s_instance == this)
     {
         s_instance = nullptr;

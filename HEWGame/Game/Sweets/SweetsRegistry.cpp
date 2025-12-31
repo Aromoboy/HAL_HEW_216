@@ -1,6 +1,3 @@
-// スイーツ定義の登録と取得をまとめている
-// 生成処理や判定処理から参照される
-
 #include "Sweets/SweetsRegistry.h"
 
 #include <algorithm>

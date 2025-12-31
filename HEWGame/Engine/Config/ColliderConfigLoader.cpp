@@ -1,6 +1,3 @@
-// コライダー設定を読み込む役目を持つ
-// ゲーム設定の読み込みから呼ばれる
-
 #include "ColliderConfigLoader.h"
 
 #include "ConfigSectionReader.h"

@@ -1,6 +1,3 @@
-// シェーダの種類と識別をまとめている
-// 描画初期化や取得処理から参照される
-
 #ifndef __SHADER_LIST_H__
 #define __SHADER_LIST_H__
 

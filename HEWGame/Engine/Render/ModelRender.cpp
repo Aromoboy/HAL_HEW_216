@@ -1,6 +1,3 @@
-// モデルを描画する処理をまとめている
-// シーンや描画システムから呼ばれる
-
 ﻿#include "ModelRender.h"
 #include "ModelDX.h"
 

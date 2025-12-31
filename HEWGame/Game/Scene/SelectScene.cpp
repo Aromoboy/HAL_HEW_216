@@ -1,6 +1,3 @@
-// 選択画面のシーンをまとめている
-// シーン管理から読み込まれて更新と描画を行う
-
 #include "SelectScene.h"
 
 #include "Core/Input.h"

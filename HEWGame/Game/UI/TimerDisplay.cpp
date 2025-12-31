@@ -1,6 +1,3 @@
-// 制限時間などの表示を描く役目を持つ
-// 画面表示の更新と描画から呼ばれる
-
 #include "TimerDisplay.h"
 #include <DirectXMath.h>
 #include "Defines.h"
@@ -43,7 +40,7 @@ void TimerDisplay::Draw(float remainingSeconds)
 {
     if (!m_numberTexture) return;
 
-    // Ԃ𕪂ƕbɕϊ
+    // ���Ԃ𕪂ƕb�ɕϊ�
     int totalSeconds = static_cast<int>(remainingSeconds);
     if (totalSeconds < 0) totalSeconds = 0;
 

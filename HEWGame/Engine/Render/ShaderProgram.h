@@ -1,6 +1,3 @@
-// シェーダの組み合わせ設定を扱う
-// 描画初期化や描画処理から参照される
-
 #ifndef __SHADERPROGRAM_H__
 #define __SHADERPROGRAM_H__
 

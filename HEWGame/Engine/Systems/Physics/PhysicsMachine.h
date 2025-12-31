@@ -1,6 +1,3 @@
-// 物理更新の中心で剛体の計算を進める
-// 更新スケジューラや物理登録から呼ばれる
-
 #pragma once
 
 #include "Core/UpdateNode.h"

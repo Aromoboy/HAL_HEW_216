@@ -1,6 +1,3 @@
-// ガイドラインの表示用オブジェクトを扱う
-// ガイドライン更新と描画から参照される
-
 #pragma once
 
 #include "Entities/Entity.h"

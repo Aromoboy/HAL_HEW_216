@@ -1,6 +1,3 @@
-// プレイヤーの拾い物判定をまとめている
-// プレイヤー更新がこの判定を使う
-
 #include "Entities/PlayerPickupSystem.h"
 
 #include "AABB.h"

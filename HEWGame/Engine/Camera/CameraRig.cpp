@@ -1,6 +1,3 @@
-// 追従カメラの動きを計算する
-// プレイヤーなどの対象に合わせて更新される
-
 #include "CameraRig.h"
 #include "Entities/Entity.h"
 // カメラの追従や回転計算がしやすくなった

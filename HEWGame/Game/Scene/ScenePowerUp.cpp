@@ -1,6 +1,3 @@
-// 強化選択用のシーンをまとめている
-// シーン管理から読み込まれて更新と描画を行う
-
 #include "ScenePowerUp.h"
 
 #include "DirectX.h"

@@ -1,6 +1,3 @@
-// 強化項目の一つを表すデータと動きを扱う
-// 強化選択の更新と描画から参照される
-
 #pragma once
 #include "Core/UpdateNode.h"
 #include "TextureDX.h"

@@ -1,6 +1,3 @@
-// ゲーム進行の段階を進める計算を行う
-// ゲーム本編の進行判定が参照する
-
 #include "GameFlow/PhaseManager.h"
 
 #include <algorithm>

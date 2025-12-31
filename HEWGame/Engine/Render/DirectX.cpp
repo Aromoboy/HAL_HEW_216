@@ -1,6 +1,3 @@
-// 描画基盤との接続に必要な型や補助をまとめている
-// 描画初期化や資源生成で使われる
-
 #include "DirectX.h"
 #include "Texture.h"
 #include "AppGame.h"

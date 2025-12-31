@@ -1,6 +1,3 @@
-// 物理用の形状をメッシュから作る役目を持つ
-// コライダー生成処理から呼ばれる
-
 #include "Systems/Physics/Box2DMeshBuilder.h"
 
 #include <algorithm>

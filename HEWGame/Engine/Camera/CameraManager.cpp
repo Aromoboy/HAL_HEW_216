@@ -1,6 +1,3 @@
-// エンジン内のカメラ切り替えをまとめている
-// シーン描画が現在のカメラを参照する
-
 #include "CameraManager.h"
 
 #include <algorithm>

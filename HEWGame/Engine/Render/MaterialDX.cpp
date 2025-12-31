@@ -1,6 +1,3 @@
-// 描画で使う材質情報を扱う
-// モデル描画やシェーダ設定が参照する
-
 #include "MaterialDX.h"
 
 MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)

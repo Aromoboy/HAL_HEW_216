@@ -1,6 +1,3 @@
-// シーンゲームに必要な資源を読み込む
-// シーンゲームの開始時に呼ばれる
-
 #include "SceneGameLoader.h"
 
 #include "AnimationCache.h"

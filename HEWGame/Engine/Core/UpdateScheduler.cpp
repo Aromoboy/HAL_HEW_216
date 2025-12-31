@@ -1,6 +1,3 @@
-// 更新フェーズの順序を組み立てて実行する
-// シーン更新がこのスケジューラを呼ぶ
-
 #include "Core/UpdateScheduler.h"
 
 #include "Core/StepTimer.h"

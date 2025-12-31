@@ -1,6 +1,3 @@
-// 入力アクションとキーの割り当てをまとめている
-// 入力判定や設定変更から参照される
-
 #include "Core/InputMap.h"
 #include "Core/Input.h"
 

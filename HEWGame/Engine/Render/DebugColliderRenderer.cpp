@@ -1,6 +1,3 @@
-// デバッグ用にコライダー形状を描画する
-// 開発中の表示確認から呼ばれる
-
 #include "DebugColliderRenderer.h"
 
 #include <cmath>

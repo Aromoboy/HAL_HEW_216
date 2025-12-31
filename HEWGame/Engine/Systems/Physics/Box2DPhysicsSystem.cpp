@@ -1,6 +1,3 @@
-// 物理エンジンのステップを進める役目を持つ
-// 物理機械が更新フェーズで呼び出す
-
 #include "Systems/Physics/Box2DPhysicsSystem.h"
 
 #include <algorithm>

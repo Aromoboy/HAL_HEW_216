@@ -1,6 +1,3 @@
-// 描画で使う頂点と索引のバッファをまとめている
-// モデル描画がこのバッファを参照する
-
 #include "MeshBuffer.h"
 
 #include <cstring>

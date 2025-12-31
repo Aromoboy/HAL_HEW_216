@@ -1,6 +1,3 @@
-// スイーツの出現タイミングを管理する
-// シーンゲームの更新から呼ばれる
-
 #include "Sweets/SweetsSpawner.h"
 
 #include <algorithm>

@@ -1,6 +1,3 @@
-// シーンゲームの接触イベントを受け取る
-// 物理システムから通知されて処理される
-
 #pragma once
 
 namespace Entities

@@ -1,6 +1,3 @@
-// 物理ボディの登録と解除を行う
-// シーン側の登録処理と接触通知が参照する
-
 #include "Systems/Physics/PhysicsRegistration.h"
 
 #include <algorithm>

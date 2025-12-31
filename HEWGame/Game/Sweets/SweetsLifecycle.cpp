@@ -1,6 +1,3 @@
-// スイーツの生成から消滅までの流れを扱う
-// スイーツ管理の更新から呼ばれる
-
 #include "Sweets/SweetsLifecycle.h"
 
 #include <algorithm>

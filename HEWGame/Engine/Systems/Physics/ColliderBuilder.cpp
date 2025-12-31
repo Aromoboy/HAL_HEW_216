@@ -1,6 +1,3 @@
-// コライダー形状を設定から組み立てる
-// ステージやエンティティの初期化で使われる
-
 #include "Systems/Physics/ColliderBuilder.h"
 
 #include "ColliderRegistry.h"

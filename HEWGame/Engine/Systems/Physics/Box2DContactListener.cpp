@@ -1,6 +1,3 @@
-// 物理エンジンの接触情報を集める役目を持つ
-// 物理更新と接触通知から参照される
-
 #include "Systems/Physics/Box2DContactListener.h"
 
 #include <cstddef>

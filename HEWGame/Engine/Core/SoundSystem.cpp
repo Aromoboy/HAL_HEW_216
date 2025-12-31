@@ -1,6 +1,3 @@
-// 音声の更新と再生処理をまとめている
-// 更新フェーズから呼ばれて音が鳴る
-
 #include "SoundSystem.h"
 #include "Debug.h"
 #include "Main.h"

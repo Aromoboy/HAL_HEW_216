@@ -1,6 +1,3 @@
-// 強化選択画面で使うカーソルを扱う
-// 強化シーンの更新と描画から参照される
-
 #include "PowerUpCursor.h"
 #include "Core/Input.h"
 #include "DebugConsole.h"

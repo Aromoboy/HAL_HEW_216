@@ -1,6 +1,3 @@
-// ã‚·ã‚§ãƒ¼ãƒ€è³‡æºã‚’å…±æœ‰ã™ã‚‹ä¿ç®¡åº«ã‚’ã¾ã¨ã‚ã¦ã„ã‚‹
-// æç”»åˆæœŸåŒ–ã¨æç”»å‡¦ç†ã‹ã‚‰å‚ç…§ã•ã‚Œã‚‹
-
 #ifndef __SHADERCACHE_H__
 #define __SHADERCACHE_H__
 
@@ -11,18 +8,18 @@
 #include "ShaderProgram.h"
 
 //============================================================
-// ShaderCache - VF[_[Ç—
+// ShaderCache - ƒVƒF[ƒ_[ŠÇ—
 //============================================================
 class ShaderCache {
 public:
-    // VOgCX^Xæ“¾
+    // ƒVƒ“ƒOƒ‹ƒgƒ“ƒCƒ“ƒXƒ^ƒ“ƒX‚ğæ“¾
     static ShaderCache& Instance()
     {
         static ShaderCache instance;
         return instance;
     }
 
-    // Rs[E[uÖ~
+    // ƒRƒs[Eƒ€[ƒu‚ğ‹Ö~
     ShaderCache(const ShaderCache&) = delete;
     ShaderCache& operator=(const ShaderCache&) = delete;
     ShaderCache(ShaderCache&&) = delete;
@@ -32,7 +29,7 @@ public:
     std::shared_ptr<ShaderProgram> Get(const std::string& name);
 
 private:
-    // RXgN^private
+    // ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ğprivate‚É
     ShaderCache() = default;
     ~ShaderCache() = default;
 

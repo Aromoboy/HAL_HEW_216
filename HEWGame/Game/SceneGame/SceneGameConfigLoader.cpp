@@ -1,6 +1,3 @@
-// シーンゲーム用の設定読み込みを行う
-// シーンゲームの初期化から呼ばれる
-
 #include "SceneGameConfigLoader.h"
 
 #include "ConfigSectionReader.h"

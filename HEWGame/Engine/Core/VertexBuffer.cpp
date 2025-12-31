@@ -1,6 +1,3 @@
-// 描画で使う頂点バッファを扱う
-// モデル描画がこのバッファを参照する
-
 #include "Core/VertexBuffer.h"
 
 #include "Debug.h"

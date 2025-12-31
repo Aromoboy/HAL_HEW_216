@@ -1,6 +1,3 @@
-// éŸ³å£°ã®æ›´æ–°ã¨å†ç”Ÿå‡¦ç†ã‚’ã¾ã¨ã‚ã¦ã„ã‚‹
-// æ›´æ–°ãƒ•ã‚§ãƒ¼ã‚ºã‹ã‚‰å‘¼ã°ã‚Œã¦éŸ³ãŒé³´ã‚‹
-
 #ifndef ___SOUND_H___
 #define ___SOUND_H___
 
@@ -27,14 +24,14 @@ struct WaveData
         memset(&m_wavFormat, 0, sizeof(m_wavFormat));
     }
 
-    // fXgN^Åƒobt@íœÈ‚iXAudio2gpÌ‰Â”\é‚½ßj
+    // ƒfƒXƒgƒ‰ƒNƒ^‚Åƒoƒbƒtƒ@‚ğíœ‚µ‚È‚¢iXAudio2‚ªg—p’†‚Ì‰Â”\«‚ª‚ ‚é‚½‚ßj
     ~WaveData()
     {
-        // È‚ - [Né‚ªANbV}V
-        // SoundManagerEXÌƒfXgN^Å‘SÄíœ
+        // ‰½‚à‚µ‚È‚¢ - ƒƒ‚ƒŠƒŠ[ƒN‚·‚é‚ªAƒNƒ‰ƒbƒVƒ…‚æ‚èƒ}ƒV
+        // Œã‚ÅSoundManagerEX‚ÌƒfƒXƒgƒ‰ƒNƒ^‚Å‘S‚Äíœ‚·‚é
     }
 
-    // è“®ÅƒN[AbvÖ
+    // è“®‚ÅƒNƒŠ[ƒ“ƒAƒbƒv‚·‚éŠÖ”
     void Cleanup()
     {
         if (m_soundBuffer)
@@ -53,16 +50,16 @@ public:
     ~SoundSystem();
 
     bool LoadWaveFile(const std::string& a_wFilePath, WaveData* outData);
-    int PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume = 1.0f);  // intÉ•ÏXinhÔ‚j
-    void StopSound(int handle);  // ~ß‚
-    void StopAllSounds();  // SÄ‚Ì‰~ß‚
+    int PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume = 1.0f);  // int‚É•ÏXiƒnƒ“ƒhƒ‹•Ô‚·j
+    void StopSound(int handle);  // ‰¹‚ğ~‚ß‚é
+    void StopAllSounds();  // ‘S‚Ä‚Ì‰¹‚ğ~‚ß‚é
     void SetVolume(int handle, float volume);
 
 private:
     IXAudio2* m_pAudio2;
     IXAudio2MasteringVoice* m_pMasterVoice;
-    std::map<int, IXAudio2SourceVoice*> m_sourceVoices;  // nhÅŠÇ—
-    int m_nextHandle;  // ÌƒnhID
+    std::map<int, IXAudio2SourceVoice*> m_sourceVoices;  // ƒnƒ“ƒhƒ‹‚ÅŠÇ—
+    int m_nextHandle;  // Ÿ‚Ìƒnƒ“ƒhƒ‹ID
 
     void CleanupFinishedVoices();
 };

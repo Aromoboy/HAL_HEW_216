@@ -1,6 +1,3 @@
-// 物理エンジンのステップを進める役目を持つ
-// 物理機械が更新フェーズで呼び出す
-
 #pragma once
 
 #include "Systems/Physics/PhysicsMachine.h"

@@ -1,6 +1,3 @@
-// スイーツの描画を行う役目を持つ
-// スイーツ管理やシーン描画から呼ばれる
-
 #include "Sweets/SweetsRenderer.h"
 
 #include "Sweets/BaseSweets.h"

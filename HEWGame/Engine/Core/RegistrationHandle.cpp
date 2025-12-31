@@ -1,6 +1,3 @@
-// 更新登録の結果を保持して解除を行う
-// 更新ノードとスケジューラがこれを使う
-
 #include "Core/RegistrationHandle.h"
 
 #include "Core/UpdateScheduler.h"

@@ -1,6 +1,3 @@
-// プレイヤーの移動計算を行う
-// プレイヤー更新がこの計算を使う
-
 #pragma once
 
 namespace Core

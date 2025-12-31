@@ -1,6 +1,3 @@
-// スイーツ同士の接触に関する処理を扱う
-// 物理接触の通知から呼ばれる
-
 #include "Sweets/SweetsContacts.h"
 
 #include <sstream>

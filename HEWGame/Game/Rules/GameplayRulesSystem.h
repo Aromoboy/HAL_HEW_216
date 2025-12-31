@@ -1,6 +1,3 @@
-// ゲームのルール判定を進める役目を持つ
-// シーンゲームの更新から呼ばれる
-
 #pragma once
 
 #include "GameplayProgression.h"

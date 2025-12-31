@@ -1,6 +1,3 @@
-// スイーツ全体の更新と描画をまとめている
-// シーンゲームの更新と描画から呼ばれる
-
 #include "SweetsManager.h"
 
 #include <sstream>

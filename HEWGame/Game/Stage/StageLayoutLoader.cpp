@@ -1,6 +1,3 @@
-// ステージ配置を読み込んでデータ化する
-// シーンゲームの初期化で使われる
-
 ﻿#include "StageLayoutLoader.h"
 
 #include "ColliderRegistry.h"

@@ -1,6 +1,3 @@
-// タイトル画面の表示を描く役目を持つ
-// タイトルシーンの描画から呼ばれる
-
 ﻿#include "TitleRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"

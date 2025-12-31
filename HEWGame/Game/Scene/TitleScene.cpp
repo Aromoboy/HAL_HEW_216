@@ -1,6 +1,3 @@
-// タイトル画面のシーンをまとめている
-// シーン管理から読み込まれて更新と描画を行う
-
 #include "TitleScene.h"
 
 #include "Core/Input.h"

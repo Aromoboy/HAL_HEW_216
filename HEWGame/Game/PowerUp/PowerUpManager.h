@@ -1,6 +1,3 @@
-// 強化選択の流れと登録をまとめている
-// 強化シーンの更新から呼ばれる
-
 #pragma once
 
 #include "Core/UpdateNode.h"

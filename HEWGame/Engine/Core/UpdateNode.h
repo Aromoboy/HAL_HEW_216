@@ -1,6 +1,3 @@
-// 更新フェーズに登録するノードの基礎をまとめている
-// 更新スケジューラがこのノードを実行する
-
 #pragma once
 
 #include "Core/IUpdatable.h"

@@ -1,6 +1,3 @@
-// モデル資源を共有する保管庫をまとめている
-// モデル読み込みと描画から参照される
-
 #include "ModelCache.h"
 #include "Debug.h"
 #include "TextureCache.h"

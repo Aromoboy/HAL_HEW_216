@@ -1,6 +1,3 @@
-// 描画で使う材質情報を扱う
-// モデル描画やシェーダ設定が参照する
-
 #pragma once
 #include "TextureDX.h"
 #include <DirectXMath.h>

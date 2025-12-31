@@ -1,6 +1,3 @@
-// 描画で使う索引バッファを扱う
-// モデル描画がこのバッファを参照する
-
 #include "Core/IndexBuffer.h"
 
 #include "Debug.h"

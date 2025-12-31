@@ -1,6 +1,3 @@
-// テクスチャ資源の読み込みと保持を行う
-// モデル描画や画面表示から参照される
-
 #include "Texture.h"
 #include "TextureLoad.h"
 #include "Diagnostics/Logger.h"

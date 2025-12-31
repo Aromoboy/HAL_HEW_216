@@ -1,6 +1,3 @@
-// シーンゲーム設定の型や項目をまとめている
-// 設定読み込みと初期化から参照される
-
 #ifndef SCENE_GAME_CONFIG_TYPES_H_
 #define SCENE_GAME_CONFIG_TYPES_H_
 

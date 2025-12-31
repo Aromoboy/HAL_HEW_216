@@ -1,6 +1,3 @@
-// 描画基盤向けのテクスチャ資源を保持する
-// テクスチャ読み込みと描画から参照される
-
 #include "TextureDX.h"
 #include "Debug.h"
 #include <wincodec.h>

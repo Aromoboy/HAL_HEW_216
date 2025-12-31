@@ -1,6 +1,3 @@
-// 描画基盤向けのモデルデータを保持する
-// モデル描画やローダーから参照される
-
 #ifndef MODELDX_H
 #define MODELDX_H
 

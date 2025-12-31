@@ -1,6 +1,3 @@
-// ゲームパッド入力の状態を取得する
-// 入力更新や操作判定から参照される
-
 #include "Core/Gamepad.h"
 
 namespace

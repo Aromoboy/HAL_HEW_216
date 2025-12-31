@@ -1,6 +1,3 @@
-// 描画で使う形状データの生成や保持を行う
-// モデル生成やデバッグ描画から参照される
-
 #include "Geometory.h"
 
 #include <cmath>

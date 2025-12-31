@@ -1,6 +1,3 @@
-// 点群から凸形状を作る計算をまとめている
-// コライダー生成の下準備で使われる
-
 #pragma once
 
 #include <string_view>

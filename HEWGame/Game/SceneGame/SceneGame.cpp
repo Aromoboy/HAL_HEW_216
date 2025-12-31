@@ -1,6 +1,3 @@
-// ゲーム本編のシーンをまとめている
-// シーン管理から読み込まれて更新と描画を行う
-
 ﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"

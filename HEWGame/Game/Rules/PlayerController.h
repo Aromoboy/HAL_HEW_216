@@ -1,6 +1,3 @@
-// プレイヤー操作の入力を解釈する
-// プレイヤー更新がこの結果を参照する
-
 #pragma once
 
 #include <functional>

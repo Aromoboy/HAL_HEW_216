@@ -1,6 +1,3 @@
-// スプライトを描く処理をまとめている
-// 画面表示や演出の描画から呼ばれる
-
 #pragma once
 
 
@@ -26,7 +23,7 @@ public:
 	void SetUVScale(DirectX::XMFLOAT2 scale);
 
 private:
-	// Ƃĕ`悷邽߂̃bVARXgN^Ŏ삷 
+	// �Ƃ��ĕ`�悷�邽�߂̃��b�V���A�R���X�g���N�^�Ŏ��삷�� 
 	std::shared_ptr<MeshDX> m_spriteMesh;
 	std::shared_ptr<Shader> vs;
 	std::shared_ptr<Shader> ps;
