@@ -80,7 +80,7 @@ namespace
                 const char* value = std::getenv("r.DebugOsaraColliders");
                 if (!value)
                 {
-                        return false;
+                        return true;
                 }
 
                 return std::atoi(value) != 0;
@@ -356,6 +356,17 @@ bool SceneGame::Load(Core::Input& input)
     composer.Compose(*composition);
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+
+#if defined(_DEBUG)
+    {
+        std::ostringstream debugFlagLog;
+        debugFlagLog << kLogPrefix
+            << "[ColliderDebug] Stage colliders r.DebugOsaraColliders="
+            << (g_RegisterOsaraColliders ? 1 : 0)
+            << " (default=1). Toggle overlay with F5 (r.DebugDrawEnabled) and colliders with F4 (r.DebugColliders).\n";
+        DebugTrace(debugFlagLog.str());
+    }
+#endif
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
