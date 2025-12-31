@@ -408,6 +408,8 @@ void SceneComposer::ComposePhysics(Composition& result)
                     return "Box";
                 case SweetsSpace::ColliderShape::Capsule:
                     return "Capsule";
+                case SweetsSpace::ColliderShape::Circle:
+                    return "Circle";
                 default:
                     return "Unknown";
                 }
