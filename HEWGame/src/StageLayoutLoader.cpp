@@ -12,6 +12,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <string>
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -94,6 +95,34 @@ namespace
         return std::nullopt;
     }
 
+    bool TryParseFloat(const std::string& token, float& value, const std::string& logPrefix, const char* fieldName)
+    {
+        if (token.empty())
+        {
+            DebugTrace(logPrefix + "StageLayout.csv empty token for " + fieldName + "\n");
+            return false;
+        }
+
+        try
+        {
+            value = std::stof(token);
+            return true;
+        }
+        catch (const std::exception& ex)
+        {
+            DebugTrace(logPrefix + "StageLayout.csv invalid token for " + fieldName + ": " + ex.what() + "\n");
+            return false;
+        }
+    }
+
+    bool AreAllTokensEmpty(const std::vector<std::string>& values)
+    {
+        return std::all_of(values.begin(), values.end(), [](const std::string& token)
+            {
+                return token.empty();
+            });
+    }
+
 }
 
 StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadRequest& request)
@@ -144,29 +173,43 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             continue;
         }
 
+        if (AreAllTokensEmpty(values))
+        {
+            continue;
+        }
+
         StageObject obj;
         obj.modelPath = values[0];
+        if (obj.modelPath.empty())
+        {
+            DebugTrace(logPrefix + "StageLayout.csv missing model path; skipped line.\n");
+            continue;
+        }
 
-        obj.transform.position.x = std::stof(values[1]);
-        obj.transform.position.y = std::stof(values[2]);
-        obj.transform.position.z = std::stof(values[3]);
-
-        obj.transform.rotation.x = std::stof(values[4]);
-        obj.transform.rotation.y = std::stof(values[5]);
-        obj.transform.rotation.z = std::stof(values[6]);
-
-        obj.transform.scale.x = std::stof(values[7]);
-        obj.transform.scale.y = std::stof(values[8]);
-        obj.transform.scale.z = std::stof(values[9]);
+        if (!TryParseFloat(values[1], obj.transform.position.x, logPrefix, "position.x")
+            || !TryParseFloat(values[2], obj.transform.position.y, logPrefix, "position.y")
+            || !TryParseFloat(values[3], obj.transform.position.z, logPrefix, "position.z")
+            || !TryParseFloat(values[4], obj.transform.rotation.x, logPrefix, "rotation.x")
+            || !TryParseFloat(values[5], obj.transform.rotation.y, logPrefix, "rotation.y")
+            || !TryParseFloat(values[6], obj.transform.rotation.z, logPrefix, "rotation.z")
+            || !TryParseFloat(values[7], obj.transform.scale.x, logPrefix, "scale.x")
+            || !TryParseFloat(values[8], obj.transform.scale.y, logPrefix, "scale.y")
+            || !TryParseFloat(values[9], obj.transform.scale.z, logPrefix, "scale.z"))
+        {
+            continue;
+        }
 
         std::string spinValue = values[10];
         std::transform(spinValue.begin(), spinValue.end(), spinValue.begin(), ::tolower);
 
         obj.spinEnabled = (spinValue == "true" || spinValue == "1" || spinValue == "yes" || spinValue == "on");
-        obj.spinAxis.x = std::stof(values[11]);
-        obj.spinAxis.y = std::stof(values[12]);
-        obj.spinAxis.z = std::stof(values[13]);
-        obj.spinSpeed = std::stof(values[14]);
+        if (!TryParseFloat(values[11], obj.spinAxis.x, logPrefix, "spinAxis.x")
+            || !TryParseFloat(values[12], obj.spinAxis.y, logPrefix, "spinAxis.y")
+            || !TryParseFloat(values[13], obj.spinAxis.z, logPrefix, "spinAxis.z")
+            || !TryParseFloat(values[14], obj.spinSpeed, logPrefix, "spinSpeed"))
+        {
+            continue;
+        }
         obj.currentRotation = 0.0f;
         if (values.size() > 15)
         {
