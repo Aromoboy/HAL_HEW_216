@@ -93,6 +93,9 @@
     <ClCompile Include="src\Core\UpdateNode.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\RegistrationHandle.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\UpdateScheduler.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -110,6 +113,9 @@
     </ClCompile>
     <ClCompile Include="src\DirectX.cpp">
       <Filter>Core\DirectX</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AppGame.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="src\DrawMatrix.cpp">
       <Filter>Core</Filter>
@@ -136,6 +142,9 @@
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\SceneGameContactHandler.cpp">
+      <Filter>App</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ISceneServices.cpp">
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="src\SceneGameLoader.cpp">
@@ -415,6 +424,9 @@
     <ClInclude Include="include\Core\UpdateNode.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="include\Core\RegistrationHandle.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\Core\UpdateScheduler.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -439,8 +451,14 @@
     <ClInclude Include="include\DirectX.h">
       <Filter>Core\DirectX</Filter>
     </ClInclude>
+    <ClInclude Include="include\AppGame.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="include\DrawMatrix.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ISceneServices.h">
+      <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Entities\Entity.h">
       <Filter>Entities</Filter>

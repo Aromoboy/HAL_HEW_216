@@ -2,12 +2,12 @@
 
 #include <cstddef>
 #include <functional>
-#include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "Core/IUpdatable.h"
+#include "Core/RegistrationHandle.h"
 
 namespace Core
 {
@@ -20,7 +20,7 @@ namespace Core
         {
         public:
                 // ノードを登録 重複登録は弾くので同じインスタンスを渡しても安全だ
-                void Register(IUpdatable& node);
+                RegistrationHandle Register(IUpdatable& node);
 
                 // ノードを登録解除 依存関係に含まれている場合もまとめて削除する
                 void Unregister(IUpdatable& node);
@@ -64,47 +64,15 @@ namespace Core
                         int priority = 0;
                 };
 
-                struct NodeOrderOverride
-                {
-                        UpdatePhase phase = UpdatePhase::Input;
-                        int priority = 0;
-                };
-
                 // sortや準備キューの比較で利用する共通関数
                 bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const;
                 std::size_t GetRegistrationOrder(const IUpdatable* node) const;
-                NodeOrderOverride GetEffectiveOrder(const IUpdatable* node) const;
-                const NodeOrderOverride* FindOrderOverride(const IUpdatable* node) const;
-                struct NodeHandle
-                {
-                        IUpdatable* raw = nullptr;
-                        std::shared_ptr<IUpdatable> handle;
-                        std::weak_ptr<IUpdatable> weak;
-
-                        bool IsExpired() const
-                        {
-                                return raw == nullptr || weak.expired();
-                        }
-
-                        IUpdatable* Get() const
-                        {
-                                return IsExpired() ? nullptr : raw;
-                        }
-
-                        void Expire()
-                        {
-                                raw = nullptr;
-                                handle.reset();
-                                weak.reset();
-                        }
-                };
-                using NodeHandleList = std::vector<NodeHandle>;
-                NodeHandleList::iterator FindNodeHandle(IUpdatable* node);
-                NodeHandleList::const_iterator FindNodeHandle(const IUpdatable* node) const;
+                ExecutionRecord BuildExecutionRecord(const IUpdatable* node, std::size_t sortedIndex, std::size_t executionIndex) const;
 
                 void RegisterInternal(IUpdatable& node);
                 void UnregisterInternal(IUpdatable& node);
                 void SetOrderInternal(IUpdatable& node, UpdatePhase phase, int priority);
+                void RebuildExecutionPlan();
                 void ApplyPendingOperations();
                 void ApplyPendingRegistration(IUpdatable* node);
                 void ApplyPendingUnregistration(IUpdatable* node);
@@ -114,18 +82,17 @@ namespace Core
                 bool IsPendingUnregistration(const IUpdatable* node) const;
                 PendingOrderChange* FindPendingOrderChange(const IUpdatable* node);
 
-                NodeHandleList m_nodes;          // 登録済みノード
+                std::vector<IUpdatable*> m_nodes;          // 登録済みノード
                 std::vector<Dependency> m_dependencies;    // before -> afterの矢印リスト
                 std::unordered_map<const IUpdatable*, std::size_t> m_registrationOrder;
                 std::size_t m_nextRegistrationOrder = 0;
                 ExecutionLogListener m_executionLogListener;
+                std::vector<IUpdatable*> m_executionPlan;
+                bool m_executionPlanDirty = true;
 
                 std::vector<IUpdatable*> m_pendingRegistrations;     // Tick中に要求された登録
                 std::vector<IUpdatable*> m_pendingUnregistrations;   // Tick中に要求された登録解除
                 std::vector<PendingOrderChange> m_pendingOrderChanges; // Tick中に要求された順序変更
                 bool m_isTicking = false; // Tick再入を検知するフラグ
-
-                std::unordered_map<const IUpdatable*, NodeOrderOverride> m_orderOverrides; // UpdateNode以外の順序設定
         };
 }
-

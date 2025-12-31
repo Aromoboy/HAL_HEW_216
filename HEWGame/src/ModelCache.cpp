@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <utility>
 
 #pragma execution_character_set("utf-8")
 
@@ -71,9 +72,9 @@ namespace Render
     // ローダーの設定
     // 実際のロード処理を担う IModelLoader と必要な依存を登録する
     //============================================================
-    void ModelCache::SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache)
+    void ModelCache::SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache)
     {
-        const bool loaderChanged = m_loader && m_loader != loader;
+        const bool loaderChanged = m_loader && m_loader.get() != loader.get();
         const bool deviceChanged = m_device && m_device != device;
         const bool textureCacheChanged = m_textureCache && m_textureCache != &textureCache;
         const bool reconfiguringWithCachedModels = (!m_models.empty()) && (loaderChanged || deviceChanged || textureCacheChanged);
@@ -85,7 +86,7 @@ namespace Render
             Clear();
         }
 
-        m_loader = loader;              // シングルトン内にローダーを保持
+        m_loader = std::move(loader);   // シングルトン内にローダーを保持
         m_device = device;              // 描画デバイス
         m_textureCache = &textureCache; // テクスチャキャッシュ
 

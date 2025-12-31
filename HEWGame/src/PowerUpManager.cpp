@@ -23,6 +23,7 @@ PowerUpManager::~PowerUpManager()
 	for (auto& it : m_nodes)
 	{
 		m_scheduler.Unregister(*it.second);
+		it.second->ReleaseRegistrationHandle();
 	}
 }
 
@@ -48,7 +49,8 @@ void PowerUpManager::AddNode(std::string name, std::string infomation, std::stri
 
 	std::pair<std::string, std::unique_ptr<PowerUpNode>> node(key, std::make_unique<PowerUpNode>(texture, name, infomation, drawPos, drawScale, a_level, a_maxLevel, a_defaultLevelUpCost, a_costAdditional, a_costMagnification));
 	m_nodes.push_back(std::move(node));
-	m_scheduler.Register(*m_nodes.back().second);
+	auto handle = m_scheduler.Register(*m_nodes.back().second);
+	m_nodes.back().second->SetRegistrationHandle(std::move(handle));
 	
 }
 

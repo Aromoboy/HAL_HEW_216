@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <utility>
 
 #pragma execution_character_set("utf-8")
 
@@ -39,9 +40,9 @@ namespace
 namespace Render
 {
     //============================================================
-    // ƒ‚ƒfƒ‹ƒLƒƒƒbƒVƒ…‚Ìæ“¾
-    // ƒVƒ“ƒOƒ‹ƒgƒ“‚Æ‚µ‚Ä•Û‚µ‚Ä‚¢‚éƒCƒ“ƒXƒ^ƒ“ƒX‚ğ•Ô‚·
-    //============================================================
+    void AnimationCache::SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device)
+        const bool loaderChanged = m_loader && m_loader.get() != loader.get();
+        m_loader = std::move(loader);              // VOgÉƒ[_[Û
     AnimationCache& AnimationCache::Instance()
     {
         static AnimationCache instance;
@@ -49,8 +50,8 @@ namespace Render
     }
 
     //============================================================
-    // ƒ[ƒ_[‚Ìİ’è
-    // ÀÛ‚Ìƒ[ƒhˆ—‚ğ’S‚¤ IModelLoader ‚Æ•K—v‚ÈˆË‘¶‚ğ“o˜^‚·‚é
+    // ãƒ­ãƒ¼ãƒ€ãƒ¼ã®è¨­å®š
+    // å®Ÿéš›ã®ãƒ­ãƒ¼ãƒ‰å‡¦ç†ã‚’æ‹…ã† IModelLoader ã¨å¿…è¦ãªä¾å­˜ã‚’ç™»éŒ²ã™ã‚‹
     //============================================================
     void AnimationCache::SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device)
     {
@@ -62,72 +63,72 @@ namespace Render
         if (reconfiguringWithCachedModels)
         {
             //MODELCACHE_LOG(
-                //"ƒ[ƒ_[/ƒfƒoƒCƒX‚ÌØ‚è‘Ö‚¦‘O‚ÉƒLƒƒƒbƒVƒ…‚ğƒNƒŠƒA‚·‚é (Clear ‚ªŒÄ‚Î‚ê‚Ä‚¢‚È‚¢)");
+                //"ãƒ­ãƒ¼ãƒ€ãƒ¼/ãƒ‡ãƒã‚¤ã‚¹ã®åˆ‡ã‚Šæ›¿ãˆå‰ã«ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’ã‚¯ãƒªã‚¢ã™ã‚‹ (Clear ãŒå‘¼ã°ã‚Œã¦ã„ãªã„)");
             Clear();
         }
 
-        m_loader = loader;              // ƒVƒ“ƒOƒ‹ƒgƒ““à‚Éƒ[ƒ_[‚ğ•Û
-        m_device = device;              // •`‰æƒfƒoƒCƒX
+        m_loader = loader;              // ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³å†…ã«ãƒ­ãƒ¼ãƒ€ãƒ¼ã‚’ä¿æŒ
+        m_device = device;              // æç”»ãƒ‡ãƒã‚¤ã‚¹
     
 
         if (!m_loader)
         {
-            //MODELCACHE_LOG("ƒ[ƒ_[‚ª–¢İ’è SetLoader ‚É—LŒø‚Èƒ[ƒ_[‚ğ“n‚·‚±‚Æ");
+            //MODELCACHE_LOG("ãƒ­ãƒ¼ãƒ€ãƒ¼ãŒæœªè¨­å®š SetLoader ã«æœ‰åŠ¹ãªãƒ­ãƒ¼ãƒ€ãƒ¼ã‚’æ¸¡ã™ã“ã¨");
         }
 
         if (!m_device)
         {
-            //MODELCACHE_LOG("ƒfƒoƒCƒX‚ª–¢İ’è‚Ì‚½‚ßƒ‚ƒfƒ‹‚ğƒ[ƒh‚Å‚«‚È‚¢ ID3D11Device* ‚ğ³‚µ‚­“n‚·‚±‚Æ");
+            //MODELCACHE_LOG("ãƒ‡ãƒã‚¤ã‚¹ãŒæœªè¨­å®šã®ãŸã‚ãƒ¢ãƒ‡ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã§ããªã„ ID3D11Device* ã‚’æ­£ã—ãæ¸¡ã™ã“ã¨");
         }
 
 
     }
 
     //============================================================
-    // ƒ‚ƒfƒ‹‚Ìæ“¾iƒLƒƒƒbƒVƒ…‘Î‰j
-    // Šù‚Éƒ[ƒhÏ‚İ‚Å‚ ‚ê‚ÎƒLƒƒƒbƒVƒ…‚©‚çæ‚èo‚µA–³‚¯‚ê‚Îƒ[ƒh‚·‚é
+    // ãƒ¢ãƒ‡ãƒ«ã®å–å¾—ï¼ˆã‚­ãƒ£ãƒƒã‚·ãƒ¥å¯¾å¿œï¼‰
+    // æ—¢ã«ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ã§ã‚ã‚Œã°ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‹ã‚‰å–ã‚Šå‡ºã—ã€ç„¡ã‘ã‚Œã°ãƒ­ãƒ¼ãƒ‰ã™ã‚‹
     //============================================================
     std::shared_ptr<Animation> AnimationCache::Get(const std::string& path)
     {
         const std::string cacheKey = CanonicalizeCacheKey(path);
 
         Diagnostics::LogInfo(
-            std::string("[ModelCache] ƒŠƒNƒGƒXƒg='") + path + "' -> key='" + cacheKey + "'\n");
+            std::string("[ModelCache] ãƒªã‚¯ã‚¨ã‚¹ãƒˆ='") + path + "' -> key='" + cacheKey + "'\n");
 
-        // ƒLƒƒƒbƒVƒ…‚É‘¶İ‚·‚é‚©Šm”F
+        // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«å­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
         auto it = m_animations.find(cacheKey);
         if (it != m_animations.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ƒqƒbƒg\n");
-            //MODELCACHE_VERBOSE(std::string("ƒLƒƒƒbƒVƒ…‚ğ—˜—p‚µ‚Ü‚· [ƒpƒX] ") + path + "\n");
-            return it->second;  // ƒLƒƒƒbƒVƒ…Ï‚İ‚Ìƒ‚ƒfƒ‹‚ğ•Ô‚·
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ãƒ’ãƒƒãƒˆ\n");
+            //MODELCACHE_VERBOSE(std::string("ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’åˆ©ç”¨ã—ã¾ã™ [ãƒ‘ã‚¹] ") + path + "\n");
+            return it->second;  // ã‚­ãƒ£ãƒƒã‚·ãƒ¥æ¸ˆã¿ã®ãƒ¢ãƒ‡ãƒ«ã‚’è¿”ã™
         }
 
         if (m_inFlightKeys.find(cacheKey) != m_inFlightKeys.end())
         {
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ƒuƒƒbƒN: ƒ[ƒh‚ªis’†\n");
-            //MODELCACHE_LOG(std::string("ƒ[ƒh‚ğƒXƒLƒbƒv‚·‚éiŒ»İƒ[ƒh’†‚ÌƒL[‚Ö‚ÌÄ“ü‹Ö~j [ƒpƒX] ") + path + "\n");
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ãƒ–ãƒ­ãƒƒã‚¯: ãƒ­ãƒ¼ãƒ‰ãŒé€²è¡Œä¸­\n");
+            //MODELCACHE_LOG(std::string("ãƒ­ãƒ¼ãƒ‰ã‚’ã‚¹ã‚­ãƒƒãƒ—ã™ã‚‹ï¼ˆç¾åœ¨ãƒ­ãƒ¼ãƒ‰ä¸­ã®ã‚­ãƒ¼ã¸ã®å†å…¥ç¦æ­¢ï¼‰ [ãƒ‘ã‚¹] ") + path + "\n");
             return nullptr;
         }
 
-        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ƒ~ƒX -> ƒ[ƒh\n");
+        Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ãƒŸã‚¹ -> ãƒ­ãƒ¼ãƒ‰\n");
 
-        // ƒ[ƒ_[‚ª—LŒø‚©‚Ç‚¤‚©Šm”F
+        // ãƒ­ãƒ¼ãƒ€ãƒ¼ãŒæœ‰åŠ¹ã‹ã©ã†ã‹ç¢ºèª
         if (!m_loader)
         {
-            //MODELCACHE_LOG(std::string("ƒ[ƒ_[‚ª–¢İ’è‚Ì‚½‚ßƒ[ƒh‚ğ’†~ [ƒpƒX] ") + path + "\n");
-            return nullptr;  // ƒ[ƒ_[‚ª–³‚¯‚ê‚Îƒ[ƒh‚Å‚«‚È‚¢
+            //MODELCACHE_LOG(std::string("ãƒ­ãƒ¼ãƒ€ãƒ¼ãŒæœªè¨­å®šã®ãŸã‚ãƒ­ãƒ¼ãƒ‰ã‚’ä¸­æ­¢ [ãƒ‘ã‚¹] ") + path + "\n");
+            return nullptr;  // ãƒ­ãƒ¼ãƒ€ãƒ¼ãŒç„¡ã‘ã‚Œã°ãƒ­ãƒ¼ãƒ‰ã§ããªã„
         }
 
         if (!m_device)
         {
-            //MODELCACHE_LOG(std::string("ƒfƒoƒCƒX‚ª–¢İ’è‚Ì‚½‚ßƒ[ƒh‚ğ’†~ [ƒpƒX] ") + path + "\n");
+            //MODELCACHE_LOG(std::string("ãƒ‡ãƒã‚¤ã‚¹ãŒæœªè¨­å®šã®ãŸã‚ãƒ­ãƒ¼ãƒ‰ã‚’ä¸­æ­¢ [ãƒ‘ã‚¹] ") + path + "\n");
             return nullptr;
         }
 
 
-        // ƒLƒƒƒbƒVƒ…‚É–³‚©‚Á‚½‚Ì‚Åƒ[ƒh‚ğÀs
-        //MODELCACHE_VERBOSE(std::string("ƒ‚ƒfƒ‹‚Ìƒ[ƒh‚ğŠJn‚µ‚Ü‚· [ƒpƒX] ") + path + "\n");
+        // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ç„¡ã‹ã£ãŸã®ã§ãƒ­ãƒ¼ãƒ‰ã‚’å®Ÿè¡Œ
+        //MODELCACHE_VERBOSE(std::string("ãƒ¢ãƒ‡ãƒ«ã®ãƒ­ãƒ¼ãƒ‰ã‚’é–‹å§‹ã—ã¾ã™ [ãƒ‘ã‚¹] ") + path + "\n");
 
         m_inFlightKeys.insert(cacheKey);
         struct ScopedInFlightRemoval
@@ -148,25 +149,25 @@ namespace Render
 
         std::shared_ptr<Animation> animation = m_loader->LoadAnimation(path);
 
-        // ƒ[ƒhŒ‹‰Ê‚Ì”»’è
+        // ãƒ­ãƒ¼ãƒ‰çµæœã®åˆ¤å®š
         if (animation)
         {
-            // ¬Œ÷‚µ‚½ê‡‚ÍƒLƒƒƒbƒVƒ…‚É•Û‘¶
+            // æˆåŠŸã—ãŸå ´åˆã¯ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã«ä¿å­˜
             m_animations[cacheKey] = animation;
-            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' Ši”[\n");
+            Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' æ ¼ç´\n");
         }
         else
         {
-            // ¸”s‚µ‚½ê‡‚ÍƒGƒ‰[ƒƒO
-            //MODELCACHE_LOG(std::string("ƒ‚ƒfƒ‹‚Ìƒ[ƒh‚É¸”s [ƒpƒX] ") + path + "\n");
+            // å¤±æ•—ã—ãŸå ´åˆã¯ã‚¨ãƒ©ãƒ¼ãƒ­ã‚°
+            //MODELCACHE_LOG(std::string("ãƒ¢ãƒ‡ãƒ«ã®ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•— [ãƒ‘ã‚¹] ") + path + "\n");
         }
 
-        return animation;  // ƒ[ƒhŒ‹‰Êi¸”s‚Í nullptrj
+        return animation;  // ãƒ­ãƒ¼ãƒ‰çµæœï¼ˆå¤±æ•—æ™‚ã¯ nullptrï¼‰
     }
 
     //============================================================
-    // ƒLƒƒƒbƒVƒ…‚ÌŠ®‘SƒNƒŠƒA
-    // “o˜^Ï‚İ‚Ìƒ‚ƒfƒ‹‚ğ‚·‚×‚Ä”jŠü‚·‚é
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã®å®Œå…¨ã‚¯ãƒªã‚¢
+    // ç™»éŒ²æ¸ˆã¿ã®ãƒ¢ãƒ‡ãƒ«ã‚’ã™ã¹ã¦ç ´æ£„ã™ã‚‹
     //============================================================
     void AnimationCache::Clear()
     {
@@ -174,8 +175,8 @@ namespace Render
     }
 
     //============================================================
-    // ƒLƒƒƒbƒVƒ…ó‘Ô‚ÌŠ®‘SƒŠƒZƒbƒg
-    // ƒ‚ƒfƒ‹Aƒ[ƒ_[AƒfƒoƒCƒXAƒeƒNƒXƒ`ƒƒƒLƒƒƒbƒVƒ…‚Ö‚ÌQÆ‚ğ”jŠü‚·‚é
+    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥çŠ¶æ…‹ã®å®Œå…¨ãƒªã‚»ãƒƒãƒˆ
+    // ãƒ¢ãƒ‡ãƒ«ã€ãƒ­ãƒ¼ãƒ€ãƒ¼ã€ãƒ‡ãƒã‚¤ã‚¹ã€ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã¸ã®å‚ç…§ã‚’ç ´æ£„ã™ã‚‹
     //============================================================
     void AnimationCache::Reset()
     {

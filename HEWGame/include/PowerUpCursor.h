@@ -9,10 +9,15 @@
 
 using CursorIndex = int;
 
+namespace Core
+{
+	class Input;
+}
+
 class PowerUpCursor : public Core::UpdateNode
 {
 public:
-	PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost);
+	PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input);
 
 	void OnUpdate(Core::UpdateContext& ctx) final;
 
@@ -22,6 +27,7 @@ public:
 
 private:
 	PowerUpManager* m_powerUpManager;
+	Core::Input* m_input;
 	CursorIndex m_index;
 	PowerUpManager::NodeFormat m_format;
 	std::shared_ptr<Texture2D> m_texture;
@@ -29,5 +35,5 @@ private:
 	float m_keyTimer;
 	int& m_cost;
 
-	void MoveInput(Core::UpdateContext& ctx);
+	void MoveInput(Core::Input& input);
 };

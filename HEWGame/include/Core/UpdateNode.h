@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/IUpdatable.h"
+#include "Core/RegistrationHandle.h"
 
 namespace Core
 {
@@ -20,6 +21,8 @@ namespace Core
                 void SetPhase(UpdatePhase phase);
                 void SetPriority(int priority);
                 void Enable(bool value);
+                void SetRegistrationHandle(RegistrationHandle handle);
+                void ReleaseRegistrationHandle();
 
                 // スケジューラが参照する基本情報 派生先で上書きする必要はない
                 UpdatePhase GetPhase() const override;
@@ -30,6 +33,6 @@ namespace Core
                 UpdatePhase m_phase; // 現在の更新フェーズ
                 int m_priority;      // 同フェーズ内での優先度（数値が小さいほど先に実行）
                 bool m_enabled;      // Updateを呼ぶかどうかのフラグ
+                RegistrationHandle m_registrationHandle;
         };
 }
-

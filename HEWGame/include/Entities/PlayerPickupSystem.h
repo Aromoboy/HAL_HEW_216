@@ -12,6 +12,7 @@
 namespace Core
 {
     struct UpdateContext;
+    class Input;
 }
 
 namespace SweetsSpace
@@ -45,7 +46,7 @@ namespace Entities
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
-        void HandleCarryInput(Player& player, PlayerModel& model, Core::UpdateContext& ctx);
+        void HandleCarryInput(Player& player, PlayerModel& model, Core::UpdateContext& ctx, Core::Input& input);
         void UpdateCarriedSweets(Player& player);
 
     private:

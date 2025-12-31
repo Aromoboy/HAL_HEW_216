@@ -1,54 +1,60 @@
 #include "DirectX.h"
 #include "Texture.h"
-#include "Core/DXContext.h"
+#include "AppGame.h"
 
 namespace
 {
-	Core::DXContext g_dxContext;
 	ID3D11RasterizerState*		g_pRasterizerState[3];
 	ID3D11DepthStencilState*	g_pDepthStencilState[2];
 	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
 	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
 }
 
+namespace
+{
+	Core::DXContext& GetDXContext()
+	{
+		return App::Game::Instance().GetDXContext();
+	}
+}
 
 ID3D11Device* GetDevice()
 {
-	return g_dxContext.GetDevice();
+	return GetDXContext().GetDevice();
 }
 ID3D11DeviceContext* GetContext()
 {
-	return g_dxContext.GetContext();
+	return GetDXContext().GetContext();
 }
 IDXGISwapChain* GetSwapChain()
 {
-	return g_dxContext.GetSwapChain();
+	return GetDXContext().GetSwapChain();
 }
 RenderTarget* GetDefaultRTV()
 {
-	return g_dxContext.GetDefaultRTV();
+	return GetDXContext().GetDefaultRTV();
 }
 DepthStencil* GetDefaultDSV()
 {
-        return g_dxContext.GetDefaultDSV();
+        return GetDXContext().GetDefaultDSV();
 }
 
 bool IsDirectXReady()
 {
-        return g_dxContext.IsReady();
+        return GetDXContext().IsReady();
 }
 
 
 HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 {
-        HRESULT hr = g_dxContext.Init(hWnd, width, height, fullscreen);
+        HRESULT hr = GetDXContext().Init(hWnd, width, height, fullscreen);
         if (FAILED(hr))
         {
                 return hr;
         }
 
-        RenderTarget* defaultRTV = g_dxContext.GetDefaultRTV();
-        SetRenderTargets(1, &defaultRTV, g_dxContext.GetDefaultDSV());
+        RenderTarget* defaultRTV = GetDXContext().GetDefaultRTV();
+        SetRenderTargets(1, &defaultRTV, GetDXContext().GetDefaultDSV());
         
 //--- カリング設定
 	D3D11_RASTERIZER_DESC rasterizer = {};
@@ -150,22 +156,22 @@ void UninitDirectX()
                 SAFE_RELEASE(g_pDepthStencilState[i]);
         for(int i = 0; i < 3; ++ i)
                 SAFE_RELEASE(g_pRasterizerState[i]);
-        g_dxContext.Shutdown();
+        GetDXContext().Shutdown();
 }
 
 void BeginDrawDirectX()
 {
         float color[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
-        g_dxContext.BeginDraw(color);
+        GetDXContext().BeginDraw(color);
 }
 void EndDrawDirectX()
 {
-        g_dxContext.EndDraw();
+        GetDXContext().EndDraw();
 }
 
 HRESULT ResizeDirectX(UINT width, UINT height)
 {
-        return g_dxContext.Resize(width, height);
+        return GetDXContext().Resize(width, height);
 }
 
 

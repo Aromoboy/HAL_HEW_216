@@ -6,6 +6,7 @@
 #include "ShaderList.h"
 #include "Defines.h"
 #include "Core/Input.h"
+#include "Core/UpdateNode.h"
 #include "Systems/PhysicsBinder.h"
 #include "Systems/DrawSystem.h"
 #include "BoxColliderComponent.h"
@@ -23,6 +24,7 @@
 #include "SceneGameUIOverlay.h"
 #include "UIManager.h"
 #include "PlayerController.h"
+#include "AppGame.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -326,8 +328,10 @@ void SceneGame::Load(Core::Input& input)
 
     m_playerColliderMismatchLogged = false;
     SceneGameLoader loader(DebugTrace, kLogPrefix);
+    m_renderer = &App::Game::Instance().GetModelRenderer();
     SceneGameLoader::Config loaderConfig{};
     loaderConfig.device = GetDevice();
+    loaderConfig.services = this;
     loaderConfig.physicsBinder = m_physicsBinder.get();
     loaderConfig.drawSystem = m_drawSystem.get();
     loaderConfig.sweetsManager = m_sweetsManager.get();
@@ -348,7 +352,6 @@ void SceneGame::Load(Core::Input& input)
     SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
     m_uiOverlay = std::move(loaderResult.uiOverlay);
     m_playerModel = std::move(loaderResult.playerModel);
-    m_render = std::move(loaderResult.renderer);
     player = std::move(loaderResult.player);
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
@@ -456,6 +459,7 @@ SceneGame::~SceneGame()
         if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
         {
             GetUpdateScheduler().Unregister(*physicsMachine);
+            physicsMachine->ReleaseRegistrationHandle();
             m_physicsRegistered = false;
         }
     }
@@ -469,6 +473,7 @@ SceneGame::~SceneGame()
     if (m_drawRegistered && m_drawSystem)
     {
         GetUpdateScheduler().Unregister(*m_drawSystem);
+        m_drawSystem->ReleaseRegistrationHandle();
         m_drawRegistered = false;
     }
 
@@ -477,6 +482,10 @@ SceneGame::~SceneGame()
         if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
         {
             GetUpdateScheduler().Unregister(*lateNode);
+            if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(lateNode))
+            {
+                updateNode->ReleaseRegistrationHandle();
+            }
         }
         m_sweetsLateRegistered = false;
     }
@@ -484,6 +493,7 @@ SceneGame::~SceneGame()
     if (m_sweetsRegistered && m_sweetsManager)
     {
         GetUpdateScheduler().Unregister(*m_sweetsManager);
+        m_sweetsManager->ReleaseRegistrationHandle();
         m_sweetsRegistered = false;
     }
 
@@ -512,7 +522,8 @@ void SceneGame::ConfigureUpdates()
         {
                 if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
                 {
-                        GetUpdateScheduler().Register(*physicsMachine);
+                        auto handle = GetUpdateScheduler().Register(*physicsMachine);
+                        physicsMachine->SetRegistrationHandle(std::move(handle));
                         m_physicsRegistered = true;
 
                         std::ostringstream oss;
@@ -533,7 +544,8 @@ void SceneGame::ConfigureUpdates()
 
         if (m_drawSystem && !m_drawRegistered)
         {
-                GetUpdateScheduler().Register(*m_drawSystem);
+                auto handle = GetUpdateScheduler().Register(*m_drawSystem);
+                m_drawSystem->SetRegistrationHandle(std::move(handle));
                 m_drawRegistered = true;
         }
 
@@ -545,7 +557,8 @@ void SceneGame::ConfigureUpdates()
 
         if (m_sweetsManager && !m_sweetsRegistered)
         {
-                GetUpdateScheduler().Register(*m_sweetsManager);
+                auto handle = GetUpdateScheduler().Register(*m_sweetsManager);
+                m_sweetsManager->SetRegistrationHandle(std::move(handle));
                 m_sweetsRegistered = true;
         }
 
@@ -553,7 +566,11 @@ void SceneGame::ConfigureUpdates()
         {
                 if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
                 {
-                        GetUpdateScheduler().Register(*lateNode);
+                        auto handle = GetUpdateScheduler().Register(*lateNode);
+                        if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(lateNode))
+                        {
+                                updateNode->SetRegistrationHandle(std::move(handle));
+                        }
                         m_sweetsLateRegistered = true;
                 }
         }
@@ -602,8 +619,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 #if defined(_DEBUG)
     HandleColliderDebugCommands(ctx);
 #endif
-
-
+    Core::Input* input = GetInput();
     
     if (m_physicsBinder)
     {
@@ -659,19 +675,22 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         break;
     case StageState::Playing:
     {
-        PlayerController::SpeedInput speedInput{
-            ctx.input,
-            player.get(),
-            m_playerBaseHorizontalSpeed,
-            m_playerBaseVerticalSpeed,
-            m_playerSpeedMultiplier
-        };
-        m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+        if (input)
+        {
+            PlayerController::SpeedInput speedInput{
+                *input,
+                player.get(),
+                m_playerBaseHorizontalSpeed,
+                m_playerBaseVerticalSpeed,
+                m_playerSpeedMultiplier
+            };
+            m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+        }
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
             - m_gameplayRules.GetRemainingCountdownSeconds();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        if (m_playerController.HandleManualRetryInput(ctx.input, elapsedSeconds, peakHeight))
+        if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
             SetStageState(StageState::Playing);
         }
@@ -701,7 +720,8 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     {
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-        const auto action = m_playerController.HandlePostGameInput(ctx.input, peakHeight, score);
+        const auto action = input ? m_playerController.HandlePostGameInput(*input, peakHeight, score)
+            : PlayerController::PostGameAction::None;
         if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
             SetStageState(StageState::Playing);
@@ -749,7 +769,7 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         m_uiOverlay->Update(uiData);
     }
 
-    if (ctx.input.IsKeyPress(VK_RETURN))
+    if (input && input->IsKeyPress(VK_RETURN))
     {
         if (m_manager)
         {
@@ -772,13 +792,18 @@ void SceneGame::ResetGuidelineHeight()
 #if defined(_DEBUG)
 void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
 {
+        (void)ctx;
         if (!player)
         {
                 return;
         }
 
-        Core::Input& input = ctx.input;
-        if (input.IsTrigger(Core::ActionId::DebugToggle))
+        Core::Input* input = GetInput();
+        if (!input)
+        {
+                return;
+        }
+        if (input->IsTrigger(Core::ActionId::DebugToggle))
         {
                 g_DebugDrawEnabled = !g_DebugDrawEnabled;
                 std::ostringstream oss;
@@ -787,7 +812,7 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 DebugTrace(oss.str());
         }
 
-        if (input.IsTrigger(VK_F4))
+        if (input->IsTrigger(VK_F4))
         {
                 g_DrawColliders = !g_DrawColliders;
                 std::ostringstream oss;
@@ -796,7 +821,7 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
                 DebugTrace(oss.str());
         }
 
-        if (input.IsTrigger(VK_F6))
+        if (input->IsTrigger(VK_F6))
         {
                 g_DrawColliderBounds = !g_DrawColliderBounds;
                 std::ostringstream oss;
@@ -807,11 +832,11 @@ void SceneGame::HandleColliderDebugCommands(Core::UpdateContext& ctx)
         constexpr float kDebugNudge = 0.25f;
         float3 delta{ 0.0f, 0.0f, 0.0f };
 
-        if (input.IsTrigger(Core::ActionId::ColliderNudgeUp))
+        if (input->IsTrigger(Core::ActionId::ColliderNudgeUp))
         {
                 delta.y += kDebugNudge;
         }
-        if (input.IsTrigger(Core::ActionId::ColliderNudgeDown))
+        if (input->IsTrigger(Core::ActionId::ColliderNudgeDown))
         {
                 delta.y -= kDebugNudge;
         }
@@ -902,7 +927,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                 return;
         }
 
-        if (m_render)
+        if (m_renderer)
         {
 #if defined(_DEBUG) && SCENEGAME_VERBOSE_DRAW_LOG
             DebugTrace(std::string(kLogPrefix) + "描画開始: " + std::to_string(m_stageObjects.size()) + "個のオブジェクト\n");
@@ -929,7 +954,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
                             renderTransform.rotation.z += obj.currentRotation;
                     }
 
-                    m_render->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
                 }
                 else
                 {
@@ -939,7 +964,7 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
         }
         else
         {
-            DebugTrace(std::string(kLogPrefix) + "m_renderがnull\n");
+            DebugTrace(std::string(kLogPrefix) + "m_rendererがnull\n");
         }
 
         Geometory::SetView(activeCamera->GetView());
@@ -971,6 +996,31 @@ void SceneGame::DrawOverlay()
 #if defined(_DEBUG)
     //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
 #endif
+}
+
+Systems::IPhysicsBinder* SceneGame::GetPhysicsBinder()
+{
+    return m_physicsBinder.get();
+}
+
+Render::ModelRenderer* SceneGame::GetRenderer()
+{
+    return m_renderer;
+}
+
+Core::UpdateScheduler& SceneGame::GetScheduler()
+{
+    return GetUpdateScheduler();
+}
+
+Core::Input* SceneGame::GetInput()
+{
+    return SceneSpace::Scene::GetInput();
+}
+
+Core::StepTimer* SceneGame::GetTimer()
+{
+    return SceneSpace::Scene::GetTimer();
 }
 
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)

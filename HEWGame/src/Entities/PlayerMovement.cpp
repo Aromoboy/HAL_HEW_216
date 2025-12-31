@@ -35,10 +35,8 @@ namespace
 
 namespace Entities
 {
-    void PlayerMovement::Update(Player& player, Core::UpdateContext& ctx)
+    void PlayerMovement::Update(Player& player, Core::UpdateContext& ctx, Core::Input& input)
     {
-        Core::Input& input = ctx.input;
-
         const bool hasBody = player.HasBox2DBody();
         if (!hasBody && !m_missingBodyLogged)
         {

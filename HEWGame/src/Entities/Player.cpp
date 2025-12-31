@@ -2,12 +2,13 @@
 
 namespace Entities
 {
-    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Core::Input* input, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
         : PhysicalEntity(transform, std::nullopt, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_modelSystem()
         , m_movementSystem()
         , m_pickupSystem(sweetsManager)
         , m_physicsBinder(kinematic)
+        , m_input(input)
     {
         m_modelSystem.Initialize(*this, m_model);
     }
@@ -17,13 +18,19 @@ namespace Entities
     void Player::OnUpdate(Core::UpdateContext& ctx)
     {
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
-        m_movementSystem.Update(*this, ctx);
+        if (m_input)
+        {
+            m_movementSystem.Update(*this, ctx, *m_input);
+        }
         m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
         m_modelSystem.UpdateAnimation(*this);
         m_physicsBinder.ClampVerticalPosition(*this);
         m_physicsBinder.ClampScreenBounds(*this);
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
-        m_pickupSystem.HandleCarryInput(*this, m_modelSystem, ctx);
+        if (m_input)
+        {
+            m_pickupSystem.HandleCarryInput(*this, m_modelSystem, ctx, *m_input);
+        }
         m_pickupSystem.UpdateCarriedSweets(*this);
     }
 

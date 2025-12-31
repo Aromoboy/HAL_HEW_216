@@ -20,7 +20,7 @@ namespace Render
         static AnimationCache& Instance();
 
         std::shared_ptr<Animation>  Get(const std::string& path);
-        void SetLoader(std::shared_ptr<IModelLoader> loader, ID3D11Device* device);
+        void SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device);
         void Clear();
         void Reset();
        
@@ -32,7 +32,7 @@ namespace Render
         AnimationCache& operator=(const AnimationCache&) = delete;
 
     private:
-        std::shared_ptr<IModelLoader> m_loader;
+        std::unique_ptr<IModelLoader> m_loader;
         ID3D11Device* m_device = nullptr;
         std::map<std::string, std::shared_ptr<Animation>> m_animations;
         std::unordered_set<std::string> m_inFlightKeys;

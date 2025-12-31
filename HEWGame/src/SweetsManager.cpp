@@ -84,6 +84,7 @@ namespace SweetsSpace
         if (m_scheduler && m_lateUpdateNode)
         {
             m_scheduler->Unregister(*m_lateUpdateNode);
+            m_lateUpdateNode->ReleaseRegistrationHandle();
         }
     }
 

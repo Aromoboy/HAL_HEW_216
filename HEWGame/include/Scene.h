@@ -45,6 +45,8 @@ void Unregister(Core::IUpdatable& node);
 Core::UpdateScheduler& GetUpdateScheduler();
 Core::Input* GetInput();
 const Core::Input* GetInput() const;
+Core::StepTimer* GetTimer();
+const Core::StepTimer* GetTimer() const;
 CameraSpace::CameraManager& GetCameraManager();
 const CameraSpace::CameraManager& GetCameraManager() const;
 std::shared_ptr<::CameraSpace::ICamera> AddCamera(std::shared_ptr<::CameraSpace::ICamera> camera);
@@ -55,6 +57,7 @@ private:
 Core::UpdateScheduler m_scheduler;
 bool m_isConfigured;
 Core::Input* m_input;
+Core::StepTimer* m_timer;
 CameraSpace::CameraManager m_cameraManager;
 class SceneUpdateNode;
 std::unique_ptr<SceneUpdateNode> m_sceneUpdateNode;

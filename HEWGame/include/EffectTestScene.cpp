@@ -32,7 +32,14 @@ void EffectTestScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void EffectTestScene::Update(Core::UpdateContext& ctx)
 {
-        if (ctx.input.IsTrigger(Core::ActionId::Cancel))
+        (void)ctx;
+        Core::Input* input = GetInput();
+        if (!input)
+        {
+                return;
+        }
+
+        if (input->IsTrigger(Core::ActionId::Cancel))
         {
                 if (m_manager)
                 {

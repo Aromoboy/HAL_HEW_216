@@ -67,7 +67,9 @@ void SceneSpace::SettingScene::ConfigureUpdates()
 
 void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Cancel))//CancelÅ®ESCkeyÇ≈ê›íËâÊñ Ç©ÇÁÉ^ÉCÉgÉãâÊñ Ç…ñﬂÇÍÇÈ
+    (void)ctx;
+    Core::Input* input = GetInput();
+    if (input && input->IsTrigger(Core::ActionId::Cancel))//CancelESCkey≈ê›í Ç^Cg Ç…ñﬂÇ
     {
         if (m_manager)
         {
