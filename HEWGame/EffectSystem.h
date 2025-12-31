@@ -63,7 +63,6 @@ public:
 	void SpawnEffect(const EffectCreateRequest& a_request);
 
 	void OnUpdate(const Core::UpdateContext& ctx) override final;
-	void OnUpdate(Core::UpdateContext& ctx) override final;
 	void Draw(const CameraSpace::ICamera* a_camera);
 
 	float m_time;
@@ -98,4 +97,3 @@ private:
 	
 };
 #endif //__EFFECTSYSTEM__H__
-

@@ -26,7 +26,6 @@ EffectSystem::~EffectSystem()
 
 void EffectSystem::SpawnEffect(const EffectCreateRequest& a_request)
 {
-void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 	std::string nameKey = a_request.effectName;
 	auto pathIt = m_effectCache.find(nameKey);
 	if (pathIt == m_effectCache.end()) return;
@@ -45,7 +44,7 @@ void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 	
 }
 
-void EffectSystem::OnUpdate(Core::UpdateContext& ctx)
+void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 {
 	m_time += ctx.dt / 1000;
 	m_renderer->SetTime(m_time);
