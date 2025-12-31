@@ -24,6 +24,7 @@
 #include "ColliderConfigLoader.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
+#include "ISceneServices.h"
 #include <cstddef>
 #include <memory>
 #include <map>
@@ -56,7 +57,7 @@ namespace SweetsSpace
 class SceneGameUIOverlay;
 class UIManager;
 
-class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene
+class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene, public SceneSpace::ISceneServices
 {
 public:
     enum class StageState
@@ -82,6 +83,11 @@ public:
     void Update(Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
+    Systems::IPhysicsBinder* GetPhysicsBinder() override;
+    Render::ModelRenderer* GetRenderer() override;
+    Core::UpdateScheduler& GetScheduler() override;
+    Core::Input* GetInput() override;
+    Core::StepTimer* GetTimer() override;
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
 #if defined(_DEBUG)
@@ -104,7 +110,7 @@ private:
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
-    std::unique_ptr<ModelRender> m_render;
+    Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;

@@ -1,5 +1,7 @@
 #include "Core/UpdateNode.h"
 
+#include <utility>
+
 namespace Core
 {
         UpdateNode::UpdateNode(UpdatePhase phase, int priority)
@@ -27,6 +29,19 @@ namespace Core
                 m_enabled = value;
         }
 
+        void UpdateNode::SetRegistrationHandle(RegistrationHandle handle)
+        {
+                if (handle.IsValid())
+                {
+                        m_registrationHandle = std::move(handle);
+                }
+        }
+
+        void UpdateNode::ReleaseRegistrationHandle()
+        {
+                m_registrationHandle.Release();
+        }
+
         UpdatePhase UpdateNode::GetPhase() const
         {
                 return m_phase;
@@ -43,4 +58,3 @@ namespace Core
                 return m_enabled;
         }
 }
-

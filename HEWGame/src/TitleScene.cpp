@@ -81,7 +81,14 @@ void TitleScene::ConfigureUpdates()
 
 void TitleScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Confirm))
+    (void)ctx;
+    Core::Input* input = GetInput();
+    if (!input)
+    {
+        return;
+    }
+
+    if (input->IsTrigger(Core::ActionId::Confirm))
     {
         if (m_manager)
         {
@@ -90,7 +97,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
         return;
     }
 
-    if (ctx.input.IsTrigger('P'))
+    if (input->IsTrigger('P'))
     {
         if (m_manager)
         {
@@ -99,7 +106,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
         return;
     }
 
-    if (ctx.input.IsTrigger(VK_F1))
+    if (input->IsTrigger(VK_F1))
     {
         if (m_manager)
         {
@@ -108,7 +115,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
         return;
     }
 
-    if (ctx.input.IsTrigger(VK_SPACE))
+    if (input->IsTrigger(VK_SPACE))
     {
         if (m_manager)
         {
@@ -117,7 +124,7 @@ void TitleScene::Update(Core::UpdateContext& ctx)
         return;
     }
 
-    if (ctx.input.IsTrigger(Core::ActionId::Cancel))
+    if (input->IsTrigger(Core::ActionId::Cancel))
     {
         if (m_manager)
         {

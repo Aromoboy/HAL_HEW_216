@@ -10,9 +10,9 @@
 #include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
 
-// Input/UpdateContext 対応メモ（README のクラス図準拠）
+// Input/UpdateContext 対応メモ
 // - 本クラスは Core::UpdateNode を継承し、UpdatePhase::Input で最初に入力を集約する役割を担う 
-// - UpdateContext は各フェーズで共有され、Input フェーズでポーリング済みのこのインスタンスへの参照を保持する 
+// - UpdateContext には時間情報のみを保持し、入力参照は各システムから明示的に渡す 
 // - ゲームループの更新順序を崩さないため、ポーリングは OnUpdate 内でのみ行い、他フェーズは取得済み状態を参照する方針 
 
 #pragma comment(lib, "xinput.lib")

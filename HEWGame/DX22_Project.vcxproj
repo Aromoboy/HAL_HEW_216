@@ -195,6 +195,7 @@
     <ClCompile Include="src\Core\InputMap.cpp" />
     <ClCompile Include="src\Core\Gamepad.cpp" />
     <ClCompile Include="src\Core\UpdateNode.cpp" />
+    <ClCompile Include="src\Core\RegistrationHandle.cpp" />
     <ClCompile Include="src\Core\UpdateScheduler.cpp" />
     <ClCompile Include="src\Core\DXContext.cpp" />
     <ClCompile Include="src\Core\IndexBuffer.cpp" />
@@ -203,6 +204,7 @@
     <ClCompile Include="src\DebugColliderRenderer.cpp" />
     <ClCompile Include="src\DebugConsole.cpp" />
     <ClCompile Include="src\DirectX.cpp" />
+    <ClCompile Include="src\AppGame.cpp" />
     <ClCompile Include="src\DrawMatrix.cpp" />
     <ClCompile Include="src\Geometory.cpp" />
     <ClCompile Include="src\BaseCamera.cpp" />
@@ -237,6 +239,7 @@
     <ClCompile Include="src\PlayerController.cpp" />
     <ClCompile Include="src\SceneGameContactHandler.cpp" />
     <ClCompile Include="src\SceneGameLoader.cpp" />
+    <ClCompile Include="src\ISceneServices.cpp" />
     <ClCompile Include="src\SceneGamePlayerColliderBuilder.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
@@ -303,6 +306,7 @@
     <ClInclude Include="include\Collision\ConvexHullBuilder.h" />
     <ClInclude Include="include\CollisionLayer.h" />
     <ClInclude Include="include\AssimpModelLorder.h" />
+    <ClInclude Include="include\AppGame.h" />
     <ClInclude Include="include\CameraManager.h" />
     <ClInclude Include="include\CameraRig.h" />
     <ClInclude Include="include\Core\ActionId.h" />
@@ -316,6 +320,7 @@
     <ClInclude Include="include\Core\Gamepad.h" />
     <ClInclude Include="include\Core\StepTimer.h" />
     <ClInclude Include="include\Core\UpdateNode.h" />
+    <ClInclude Include="include\Core\RegistrationHandle.h" />
     <ClInclude Include="include\Core\UpdateScheduler.h" />
     <ClInclude Include="include\Core\DXContext.h" />
     <ClInclude Include="include\Core\IndexBuffer.h" />
@@ -361,6 +366,7 @@
     <ClInclude Include="include\ICamera.h" />
     <ClInclude Include="include\IModelLoader.h" />
     <ClInclude Include="include\Input.h" />
+    <ClInclude Include="include\ISceneServices.h" />
     <ClInclude Include="include\Components\BoxColliderComponent.h" />
     <ClInclude Include="include\Main.h" />
     <ClInclude Include="include\MeshBuffer.h" />

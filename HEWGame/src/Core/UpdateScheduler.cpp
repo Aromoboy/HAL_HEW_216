@@ -25,8 +25,6 @@
 
 #include "Core/UpdateNode.h"
 
-
-
 namespace Core
 {
         namespace
@@ -61,6 +59,17 @@ namespace Core
 
                         return oss.str();
                 }
+
+                constexpr UpdatePhase kPhaseOrder[] = {
+                        UpdatePhase::Input,
+                        UpdatePhase::PrePhysics,
+                        UpdatePhase::Physics,
+                        UpdatePhase::PostPhysics,
+                        UpdatePhase::Gameplay,
+                        UpdatePhase::Camera,
+                        UpdatePhase::UI,
+                        UpdatePhase::Late
+                };
         }
 
         bool UpdateScheduler::NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const
@@ -79,16 +88,16 @@ namespace Core
                         return false;
                 }
 
-                const NodeOrderOverride lhsOrder = GetEffectiveOrder(lhs);
-                const NodeOrderOverride rhsOrder = GetEffectiveOrder(rhs);
-
-                if (lhsOrder.phase != rhsOrder.phase)
+                const UpdatePhase lhsPhase = lhs->GetPhase();
+                const UpdatePhase rhsPhase = rhs->GetPhase();
+                if (lhsPhase != rhsPhase)
                 {
-                        return static_cast<int>(lhsOrder.phase) < static_cast<int>(rhsOrder.phase);
+                        return static_cast<int>(lhsPhase) < static_cast<int>(rhsPhase);
                 }
-                if (lhsOrder.priority != rhsOrder.priority)
+
+                if (lhs->GetPriority() != rhs->GetPriority())
                 {
-                        return lhsOrder.priority < rhsOrder.priority;
+                        return lhs->GetPriority() < rhs->GetPriority();
                 }
 
                 const std::size_t lhsRegistrationOrder = GetRegistrationOrder(lhs);
@@ -122,61 +131,26 @@ namespace Core
                 return std::numeric_limits<std::size_t>::max();
         }
 
-        const UpdateScheduler::NodeOrderOverride* UpdateScheduler::FindOrderOverride(const IUpdatable* node) const
+        UpdateScheduler::ExecutionRecord UpdateScheduler::BuildExecutionRecord(const IUpdatable* node, std::size_t sortedIndex, std::size_t executionIndex) const
         {
-                if (!node)
+                ExecutionRecord record;
+                record.node = node;
+                if (node)
                 {
-                        return nullptr;
+                        record.phase = node->GetPhase();
+                        record.priority = node->GetPriority();
+                        record.registrationOrder = GetRegistrationOrder(node);
                 }
-
-                auto it = m_orderOverrides.find(node);
-                if (it == m_orderOverrides.end())
-                {
-                        return nullptr;
-                }
-
-                return &it->second;
-        }
-
-        UpdateScheduler::NodeOrderOverride UpdateScheduler::GetEffectiveOrder(const IUpdatable* node) const
-        {
-                NodeOrderOverride result;
-                if (!node)
-                {
-                        return result;
-                }
-
-                if (const NodeOrderOverride* overrideOrder = FindOrderOverride(node))
-                {
-                        return *overrideOrder;
-                }
-
-                result.phase = node->GetPhase();
-                result.priority = node->GetPriority();
-                return result;
+                record.sortedIndex = sortedIndex;
+                record.executionIndex = executionIndex;
+                record.invoked = false;
+                return record;
         }
 
         void UpdateScheduler::SetExecutionLogListener(ExecutionLogListener listener)
         {
                 m_executionLogListener = std::move(listener);
-        }
-
-        UpdateScheduler::NodeHandleList::iterator UpdateScheduler::FindNodeHandle(IUpdatable* node)
-        {
-                return std::find_if(m_nodes.begin(), m_nodes.end(),
-                        [node](const NodeHandle& handle)
-                        {
-                                return handle.Get() == node;
-                        });
-        }
-
-        UpdateScheduler::NodeHandleList::const_iterator UpdateScheduler::FindNodeHandle(const IUpdatable* node) const
-        {
-                return std::find_if(m_nodes.begin(), m_nodes.end(),
-                        [node](const NodeHandle& handle)
-                        {
-                                return handle.Get() == node;
-                        });
+                m_executionPlanDirty = true;
         }
 
         bool UpdateScheduler::IsRegistered(const IUpdatable* node) const
@@ -186,8 +160,7 @@ namespace Core
                         return false;
                 }
 
-                auto it = FindNodeHandle(node);
-                return it != m_nodes.end();
+                return std::find(m_nodes.begin(), m_nodes.end(), node) != m_nodes.end();
         }
 
         bool UpdateScheduler::IsPendingRegistration(const IUpdatable* node) const
@@ -241,15 +214,14 @@ namespace Core
                         return;
                 }
 
-                auto handle = std::shared_ptr<IUpdatable>(std::addressof(node), [](IUpdatable*) {});
-                m_nodes.push_back({ std::addressof(node), handle, handle });
+                m_nodes.push_back(&node);
                 m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
+                m_executionPlanDirty = true;
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
-                const NodeOrderOverride order = GetEffectiveOrder(&node);
                 std::ostringstream oss;
                 oss << "[UpdateScheduler] Registered "
-                    << DescribeNode(&node, order.phase, order.priority)
+                    << DescribeNode(&node, node.GetPhase(), node.GetPriority())
                     << " order=" << (m_nextRegistrationOrder - 1)
                     << '\n';
                 DebugLog(oss.str());
@@ -258,7 +230,7 @@ namespace Core
 
         void UpdateScheduler::UnregisterInternal(IUpdatable& node)
         {
-                auto it = FindNodeHandle(&node);
+                auto it = std::remove(m_nodes.begin(), m_nodes.end(), &node);
                 if (it == m_nodes.end())
                 {
                         std::ostringstream oss;
@@ -267,8 +239,7 @@ namespace Core
                 }
                 else
                 {
-                        it->Expire();
-                        m_nodes.erase(it);
+                        m_nodes.erase(it, m_nodes.end());
                 }
 
                 m_registrationOrder.erase(&node);
@@ -283,18 +254,12 @@ namespace Core
                         m_dependencies.erase(depIt, m_dependencies.end());
                 }
 
-                if (m_orderOverrides.erase(&node) > 0)
-                {
-                        std::ostringstream oss;
-                        oss << "[UpdateScheduler] Removed order override for unregistered node=" << &node << '\n';
-                        DebugLog(oss.str());
-                }
+                m_executionPlanDirty = true;
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                 std::ostringstream oss;
-                const NodeOrderOverride order = GetEffectiveOrder(&node);
                 oss << "[UpdateScheduler] Unregistered "
-                    << DescribeNode(&node, order.phase, order.priority)
+                    << DescribeNode(&node, node.GetPhase(), node.GetPriority())
                     << '\n';
                 DebugLog(oss.str());
 #endif
@@ -305,33 +270,21 @@ namespace Core
                 auto* updateNode = dynamic_cast<UpdateNode*>(&node);
                 if (!updateNode)
                 {
-                        NodeOrderOverride& entry = m_orderOverrides[&node];
-                        entry.phase = phase;
-                        entry.priority = priority;
-
-#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                         std::ostringstream oss;
-                        oss << "[UpdateScheduler] Applied order override to non-UpdateNode node=" << &node
-                            << " requestedPhase=" << static_cast<int>(phase)
-                            << " requestedPriority=" << priority
-                            << " currentPhase=" << static_cast<int>(node.GetPhase())
-                            << " currentPriority=" << node.GetPriority() << '\n';
-                        DebugLog(oss.str());
-#endif
-                        return;
-                }
-
-                updateNode->SetPhase(phase);
-                updateNode->SetPriority(priority);
-                if (m_orderOverrides.erase(&node) > 0)
-                {
-#if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
-                        std::ostringstream oss;
-                        oss << "[UpdateScheduler] Cleared redundant order override for UpdateNode node=" << &node
+                        oss << "[UpdateScheduler] SetOrder ignored because node is not UpdateNode node=" << &node
                             << " phase=" << static_cast<int>(phase)
                             << " priority=" << priority << '\n';
                         DebugLog(oss.str());
-#endif
+                        return;
+                }
+
+                const bool phaseChanged = updateNode->GetPhase() != phase;
+                const bool priorityChanged = updateNode->GetPriority() != priority;
+                updateNode->SetPhase(phase);
+                updateNode->SetPriority(priority);
+                if (phaseChanged || priorityChanged)
+                {
+                        m_executionPlanDirty = true;
                 }
         }
 
@@ -423,64 +376,15 @@ namespace Core
                         }
                         m_pendingOrderChanges.clear();
                 }
-
-                auto cleanupNodeReferences = [this](IUpdatable* raw)
-                {
-                        if (!raw)
-                        {
-                                return;
-                        }
-
-                        m_registrationOrder.erase(raw);
-                        m_orderOverrides.erase(raw);
-                        auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
-                                [raw](const Dependency& dep)
-                                {
-                                        return dep.first == raw || dep.second == raw;
-                                });
-                        if (depIt != m_dependencies.end())
-                        {
-                                m_dependencies.erase(depIt, m_dependencies.end());
-                        }
-                };
-
-                for (auto& handle : m_nodes)
-                {
-                        if (handle.raw && handle.weak.expired())
-                        {
-                                cleanupNodeReferences(handle.raw);
-                                handle.Expire();
-                        }
-                }
-
-auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& handle)
-                {
-                        if (!handle.IsExpired())
-                        {
-                                return false;
-                        }
-
-                        IUpdatable* raw = handle.Get();
-                        cleanupNodeReferences(raw);
-
-                        return true;
-                };
-
-                auto expiredIt = std::remove_if(m_nodes.begin(), m_nodes.end(), removeExpiredHandle);
-                if (expiredIt != m_nodes.end())
-                {
-                        m_nodes.erase(expiredIt, m_nodes.end());
-                }
         }
 
-        void UpdateScheduler::Register(IUpdatable& node)
+        RegistrationHandle UpdateScheduler::Register(IUpdatable& node)
         {
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                 {
-                        const NodeOrderOverride order = GetEffectiveOrder(&node);
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Register requested for "
-                            << DescribeNode(&node, order.phase, order.priority);
+                            << DescribeNode(&node, node.GetPhase(), node.GetPriority());
                         if (m_isTicking)
                         {
                                 oss << " (deferred)";
@@ -492,43 +396,25 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
 
                 if (m_isTicking)
                 {
-                        bool cancelledPendingUnregistration = false;
                         if (IsPendingUnregistration(&node))
                         {
                                 auto it = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), &node);
                                 if (it != m_pendingUnregistrations.end())
                                 {
                                         m_pendingUnregistrations.erase(it, m_pendingUnregistrations.end());
-                                        cancelledPendingUnregistration = true;
                                         std::ostringstream oss;
                                         oss << "[UpdateScheduler] Pending unregistration cancelled due to re-registration node=" << &node << '\n';
                                         DebugLog(oss.str());
-                                        auto handleIt = FindNodeHandle(&node);
-                                        if (handleIt != m_nodes.end() && handleIt->IsExpired())
-                                        {
-                                                auto revived = std::shared_ptr<IUpdatable>(std::addressof(node), [](IUpdatable*) {});
-                                                handleIt->raw = std::addressof(node);
-                                                handleIt->handle = revived;
-                                                handleIt->weak = revived;
-                                        }
+                                        return RegistrationHandle(this, &node);
                                 }
                         }
 
                         if (IsRegistered(&node))
                         {
-                                if (cancelledPendingUnregistration)
-                                {
-                                        std::ostringstream oss;
-                                        oss << "[UpdateScheduler] Re-register preserved node in current frame node=" << &node << '\n';
-                                        DebugLog(oss.str());
-                                }
-                                else
-                                {
-                                        std::ostringstream oss;
-                                        oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
-                                        DebugLog(oss.str());
-                                }
-                                return;
+                                std::ostringstream oss;
+                                oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
+                                DebugLog(oss.str());
+                                return {};
                         }
 
                         if (IsPendingRegistration(&node))
@@ -536,24 +422,32 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                                 std::ostringstream oss;
                                 oss << "[UpdateScheduler] Duplicate pending registration detected for node=" << &node << '\n';
                                 DebugLog(oss.str());
-                                return;
+                                return {};
                         }
 
                         m_pendingRegistrations.emplace_back(&node);
-                        return;
+                        return RegistrationHandle(this, &node);
+                }
+
+                if (IsRegistered(&node))
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
+                        DebugLog(oss.str());
+                        return {};
                 }
 
                 RegisterInternal(node);
+                return RegistrationHandle(this, &node);
         }
 
         void UpdateScheduler::Unregister(IUpdatable& node)
         {
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
                 {
-                        const NodeOrderOverride order = GetEffectiveOrder(&node);
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Unregister requested for "
-                            << DescribeNode(&node, order.phase, order.priority);
+                            << DescribeNode(&node, node.GetPhase(), node.GetPriority());
                         if (m_isTicking)
                         {
                                 oss << " (deferred)";
@@ -648,7 +542,16 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
         {
                 if (&before == &after)
                 {
-                        // 自己依存は無意味なので無視
+                        return;
+                }
+
+                if (before.GetPhase() != after.GetPhase())
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] AddDependency ignored due to phase mismatch before="
+                            << DescribeNode(&before, before.GetPhase(), before.GetPriority())
+                            << " after=" << DescribeNode(&after, after.GetPhase(), after.GetPriority()) << '\n';
+                        DebugLog(oss.str());
                         return;
                 }
 
@@ -657,57 +560,108 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                 if (it == m_dependencies.end())
                 {
                         m_dependencies.emplace_back(candidate);
+                        m_executionPlanDirty = true;
                 }
         }
 
         void UpdateScheduler::ClearDependencies()
         {
-                m_dependencies.clear();
+                if (!m_dependencies.empty())
+                {
+                        m_dependencies.clear();
+                        m_executionPlanDirty = true;
+                }
         }
 
-        void UpdateScheduler::Tick(UpdateContext& ctx)
+        void UpdateScheduler::RebuildExecutionPlan()
         {
-                ApplyPendingOperations();
-                m_isTicking = true;
+                m_executionPlan.clear();
 
-                if (!m_nodes.empty())
+                std::vector<Dependency> filteredDependencies;
+                filteredDependencies.reserve(m_dependencies.size());
+                for (const auto& dep : m_dependencies)
                 {
-                        // 更新リストをコピーしてソート用に使用する
-                        std::vector<IUpdatable*> sortedNodes;
-                        sortedNodes.reserve(m_nodes.size());
-                        for (const auto& handle : m_nodes)
+                        if (!dep.first || !dep.second)
                         {
-                                if (handle.IsExpired())
+                                continue;
+                        }
+                        if (!IsRegistered(dep.first) || !IsRegistered(dep.second))
+                        {
+                                continue;
+                        }
+                        if (dep.first->GetPhase() != dep.second->GetPhase())
+                        {
+                                continue;
+                        }
+                        filteredDependencies.push_back(dep);
+                }
+                if (filteredDependencies.size() != m_dependencies.size())
+                {
+                        m_dependencies = std::move(filteredDependencies);
+                }
+
+                ExecutionLog executionLog;
+                std::size_t executionIndex = 0;
+
+                auto phaseLess = [this](const IUpdatable* lhs, const IUpdatable* rhs)
+                {
+                        if (!lhs)
+                        {
+                                return rhs != nullptr;
+                        }
+                        if (!rhs)
+                        {
+                                return false;
+                        }
+                        if (lhs->GetPriority() != rhs->GetPriority())
+                        {
+                                return lhs->GetPriority() < rhs->GetPriority();
+                        }
+                        return GetRegistrationOrder(lhs) < GetRegistrationOrder(rhs);
+                };
+
+                for (UpdatePhase phase : kPhaseOrder)
+                {
+                        std::vector<IUpdatable*> phaseNodes;
+                        for (IUpdatable* node : m_nodes)
+                        {
+                                if (!node)
                                 {
                                         continue;
                                 }
-
-                                sortedNodes.push_back(handle.Get());
-                        }
-                        sortedNodes.erase(std::remove(sortedNodes.begin(), sortedNodes.end(), nullptr), sortedNodes.end());
-                        std::stable_sort(sortedNodes.begin(), sortedNodes.end(),
-                                [this](const IUpdatable* lhs, const IUpdatable* rhs)
+                                if (node->GetPhase() == phase)
                                 {
-                                        return NodeLess(lhs, rhs);
-                                });
+                                        phaseNodes.push_back(node);
+                                }
+                        }
 
-                        const std::size_t nodeCount = sortedNodes.size();
+                        if (phaseNodes.empty())
+                        {
+                                continue;
+                        }
+
+                        std::stable_sort(phaseNodes.begin(), phaseNodes.end(), phaseLess);
+
+                        const std::size_t nodeCount = phaseNodes.size();
                         std::unordered_map<IUpdatable*, std::size_t> indexLookup;
                         indexLookup.reserve(nodeCount);
                         for (std::size_t i = 0; i < nodeCount; ++i)
                         {
-                                indexLookup.emplace(sortedNodes[i], i);
+                                indexLookup.emplace(phaseNodes[i], i);
                         }
 
                         std::vector<std::vector<std::size_t>> edges(nodeCount);
                         std::vector<std::size_t> indegree(nodeCount, 0);
                         for (const auto& dep : m_dependencies)
                         {
+                                if (dep.first->GetPhase() != phase)
+                                {
+                                        continue;
+                                }
                                 auto beforeIt = indexLookup.find(dep.first);
                                 auto afterIt = indexLookup.find(dep.second);
                                 if (beforeIt == indexLookup.end() || afterIt == indexLookup.end())
                                 {
-                                        // 未登録ノードの依存は無視 登録順によっては起こり得る
                                         continue;
                                 }
 
@@ -715,7 +669,6 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                                 ++indegree[afterIt->second];
                         }
 
-                        // indegree が0のノードは依存を持たないので即時に実行候補とする
                         using ReadyQueue = std::priority_queue<std::size_t, std::vector<std::size_t>, std::greater<std::size_t>>;
                         ReadyQueue ready;
                         for (std::size_t i = 0; i < nodeCount; ++i)
@@ -728,76 +681,18 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
 
                         std::vector<std::size_t> processed;
                         processed.reserve(nodeCount);
-
-                        // ready キューから「フェーズ・優先度が最も早いもの」を選び、安定した順序を維持する
-                        auto popBestReady = [&ready]() -> std::size_t
-                        {
-                                std::size_t value = ready.top();
-                                ready.pop();
-                                return value;
-                        };
-
-                        ExecutionLog executionLog;
-                        executionLog.reserve(nodeCount);
-
-                        ExecutionLog phasePriorityPlan;
-                        phasePriorityPlan.reserve(nodeCount);
-
-                        auto appendExecutionRecord = [this, &executionLog](IUpdatable* node, bool invoked, std::size_t sortedIndex, std::size_t executionIndex)
-                        {
-                                if (!node)
-                                {
-                                        return;
-                                }
-
-                                ExecutionRecord record;
-                                record.node = node;
-                                const NodeOrderOverride order = GetEffectiveOrder(node);
-                                record.phase = order.phase;
-                                record.priority = order.priority;
-                                record.registrationOrder = GetRegistrationOrder(node);
-                                record.sortedIndex = sortedIndex;
-                                record.executionIndex = executionIndex;
-                                record.invoked = invoked;
-                                executionLog.emplace_back(record);
-                        };
-
-                        auto appendPhasePriorityRecord = [this, &phasePriorityPlan](IUpdatable* node, std::size_t sortedIndex)
-                        {
-                                if (!node)
-                                {
-                                        return;
-                                }
-
-                                ExecutionRecord record;
-                                record.node = node;
-                                const NodeOrderOverride order = GetEffectiveOrder(node);
-                                record.phase = order.phase;
-                                record.priority = order.priority;
-                                record.registrationOrder = GetRegistrationOrder(node);
-                                record.sortedIndex = sortedIndex;
-                                record.executionIndex = sortedIndex;
-                                phasePriorityPlan.emplace_back(record);
-                        };
-
-                        for (std::size_t i = 0; i < sortedNodes.size(); ++i)
-                        {
-                                appendPhasePriorityRecord(sortedNodes[i], i);
-                        }
+                        std::vector<bool> processedFlags(nodeCount, false);
 
                         while (!ready.empty())
                         {
-                                std::size_t current = popBestReady();
+                                std::size_t current = ready.top();
+                                ready.pop();
                                 processed.push_back(current);
+                                processedFlags[current] = true;
 
-                                IUpdatable* node = sortedNodes[current];
-                                bool invoked = false;
-                                if (node && node->IsEnabled())
-                                {
-                                        node->OnUpdate(ctx);
-                                        invoked = true;
-                                }
-                                appendExecutionRecord(node, invoked, current, executionLog.size());
+                                IUpdatable* node = phaseNodes[current];
+                                m_executionPlan.push_back(node);
+                                executionLog.emplace_back(BuildExecutionRecord(node, current, executionIndex++));
 
                                 for (std::size_t next : edges[current])
                                 {
@@ -811,37 +706,51 @@ auto removeExpiredHandle = [this, &cleanupNodeReferences](const NodeHandle& hand
                         if (processed.size() != nodeCount)
                         {
                                 std::ostringstream oss;
-                                oss << "[UpdateScheduler] cycle detected; executing remaining nodes in registration order. processed="
-                                    << processed.size() << " total=" << nodeCount << '\n';
+                                oss << "[UpdateScheduler] cycle detected in phase=" << ToString(phase)
+                                    << " processed=" << processed.size() << " total=" << nodeCount << '\n';
                                 DebugLog(oss.str());
-                                // ここに到達するのは循環依存があったケース 強制的に残りを順番に実行する
-                                std::vector<bool> isProcessed(nodeCount, false);
-                                for (std::size_t index : processed)
-                                {
-                                        isProcessed[index] = true;
-                                }
 
                                 for (std::size_t i = 0; i < nodeCount; ++i)
                                 {
-                                        if (isProcessed[i])
+                                        if (processedFlags[i])
                                         {
                                                 continue;
                                         }
-
-                                        IUpdatable* node = sortedNodes[i];
-                                        bool invoked = false;
-                                        if (node && node->IsEnabled())
-                                        {
-                                                node->OnUpdate(ctx);
-                                                invoked = true;
-                                        }
-                                        appendExecutionRecord(node, invoked, i, executionLog.size());
+                                        IUpdatable* node = phaseNodes[i];
+                                        m_executionPlan.push_back(node);
+                                        executionLog.emplace_back(BuildExecutionRecord(node, i, executionIndex++));
                                 }
                         }
+                }
 
-                        if (m_executionLogListener)
+                if (m_executionLogListener)
+                {
+                        m_executionLogListener(executionLog);
+                }
+
+                m_executionPlanDirty = false;
+        }
+
+        void UpdateScheduler::Tick(UpdateContext& ctx)
+        {
+                ApplyPendingOperations();
+                m_isTicking = true;
+
+                if (m_executionPlanDirty)
+                {
+                        RebuildExecutionPlan();
+                }
+
+                for (IUpdatable* node : m_executionPlan)
+                {
+                        if (!node)
                         {
-                                m_executionLogListener(executionLog);
+                                continue;
+                        }
+
+                        if (node->IsEnabled())
+                        {
+                                node->OnUpdate(ctx);
                         }
                 }
 

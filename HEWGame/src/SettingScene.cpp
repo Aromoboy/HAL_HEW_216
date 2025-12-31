@@ -68,7 +68,9 @@ void SceneSpace::SettingScene::ConfigureUpdates()
 
 void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Cancel))//Cancel→ESCkeyで設定画面からタイトル画面に戻れる
+    (void)ctx;
+    Core::Input* input = GetInput();
+    if (input && input->IsTrigger(Core::ActionId::Cancel))//CancelESCkeyŐݒʂ^Cgʂɖ߂
     {
         if (m_manager)
         {

@@ -4,6 +4,7 @@
 #include "Render/Model.h"
 #include "SceneGameConfigTypes.h"
 #include "Vector.h"
+#include "ISceneServices.h"
 
 #include <functional>
 #include <limits>
@@ -34,7 +35,6 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-class ModelRender;
 class SceneGameUIOverlay;
 
 class SceneGameLoader
@@ -45,6 +45,7 @@ public:
     struct Config
     {
         ID3D11Device* device = nullptr;
+        SceneSpace::ISceneServices* services = nullptr;
         Systems::IPhysicsBinder* physicsBinder = nullptr;
         Systems::DrawSystem* drawSystem = nullptr;
         SweetsSpace::SweetsManager* sweetsManager = nullptr;
@@ -67,7 +68,6 @@ public:
     {
         std::unique_ptr<SceneGameUIOverlay> uiOverlay;
         std::shared_ptr<Render::Model> playerModel;
-        std::unique_ptr<ModelRender> renderer;
         std::unique_ptr<Entities::Player> player;
         float playerPickupBoxWidth = 0.0f;
         float playerPickupBoxHeight = 0.0f;

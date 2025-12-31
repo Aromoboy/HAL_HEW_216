@@ -7,8 +7,9 @@ constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 
 
-PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost)
+PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input)
 	:m_powerUpManager(a_powerUpManager)
+	, m_input(&input)
 	, m_index(0)
 	, m_format(a_format)
 	, m_cost(a_cost)
@@ -29,11 +30,14 @@ void PowerUpCursor::OnUpdate(Core::UpdateContext& ctx)
 	if (m_moveTimer <= 0.0f)
 	{
 		m_moveTimer = maxMoveSecond;
-		MoveInput(ctx);
+		if (m_input)
+		{
+			MoveInput(*m_input);
+		}
 	}
 	
 	
-	if (m_keyTimer <= 0.0f && ctx.input.GetAxis(Core::ActionId::Confirm))
+	if (m_input && m_keyTimer <= 0.0f && m_input->GetAxis(Core::ActionId::Confirm))
 	{
 		m_keyTimer = maxPowerUpSecond;
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
@@ -76,25 +80,25 @@ float2 PowerUpCursor::GetDrawPos()
 
 
 
-void PowerUpCursor::MoveInput(Core::UpdateContext& ctx)
+void PowerUpCursor::MoveInput(Core::Input& input)
 {
-	float controllerX = ctx.input.GetAxis(Core::ActionId::MoveX);
-	float controllerY = ctx.input.GetAxis(Core::ActionId::RotateYaw);
+	float controllerX = input.GetAxis(Core::ActionId::MoveX);
+	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
-	if (controllerX < 0 || ctx.input.IsPress('A'))
+	if (controllerX < 0 || input.IsPress('A'))
 	{
 		if (m_index - m_format.y >= 0) m_index -= m_format.y;
 	}
-	else if (controllerX > 0 || ctx.input.IsPress('D'))
+	else if (controllerX > 0 || input.IsPress('D'))
 	{
 		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) m_index += m_format.y;
 	}
 
-	if (controllerY > 0 || ctx.input.IsPress('W'))
+	if (controllerY > 0 || input.IsPress('W'))
 	{
 		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--;
 	}
-	else if (controllerY < 0 || ctx.input.IsPress('S'))
+	else if (controllerY < 0 || input.IsPress('S'))
 	{
 		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0)	m_index++;
 	}

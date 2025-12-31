@@ -3,7 +3,7 @@
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
-#include "ModelRender.h"
+#include "AppGame.h"
 #include "SceneGamePlayerColliderBuilder.h"
 #include "SceneGameUIOverlay.h"
 #include "SweetsManager.h"
@@ -46,7 +46,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-    std::shared_ptr<IModelLoader> loader = std::make_shared<AssimpModelLorder>();
+    std::unique_ptr<IModelLoader> loader = std::make_unique<AssimpModelLorder>();
 
     if (!config.device)
     {
@@ -54,8 +54,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
     else
     {
-        cache.SetLoader(loader, config.device, TextureCache::Instance());
-        animeCache.SetLoader(loader, config.device);
+        cache.SetLoader(std::move(loader), config.device, App::Game::Instance().GetTextureCache());
+        animeCache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device);
     }
 
     result.uiOverlay = std::make_unique<SceneGameUIOverlay>();
@@ -99,10 +99,9 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         LogMessage(m_log, std::string(m_logPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.\n");
     }
 
-    result.renderer = std::make_unique<ModelRender>();
-    if (config.drawSystem && result.renderer)
+    if (config.drawSystem && config.services)
     {
-        config.drawSystem->SetRenderer(result.renderer.get());
+        config.drawSystem->SetRenderer(config.services->GetRenderer());
     }
 
     std::optional<Physics::BoxColliderComponent> boxColliderComponent;
@@ -280,11 +279,13 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
 
     Systems::PhysicsMachine* physicsMachine = config.physicsBinder ? config.physicsBinder->GetPhysicsMachine() : nullptr;
+    Core::Input* input = config.services ? config.services->GetInput() : nullptr;
     result.player = std::make_unique<Entities::Player>(
         trans,
         result.playerModel,
         physicsMachine,
         config.sweetsManager,
+        input,
         Collision::CollisionLayer::Player,
         kPlayerIsKinematic,
         Core::UpdatePhase::Gameplay,

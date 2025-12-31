@@ -20,6 +20,11 @@ namespace SweetsSpace
     struct PickupQueryResult;
 }
 
+namespace Core
+{
+    class Input;
+}
+
 namespace Entities
 {
     class Player : public PhysicalEntity
@@ -29,6 +34,7 @@ namespace Entities
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
             SweetsSpace::SweetsManager* sweetsManager = nullptr,
+            Core::Input* input = nullptr,
             Collision::CollisionLayer collisionLayer = Collision::CollisionLayer::Player,
             bool kinematic = false,
             Core::UpdatePhase phase = Core::UpdatePhase::Gameplay,
@@ -76,5 +82,6 @@ namespace Entities
         PlayerMovement m_movementSystem;
         PlayerPickupSystem m_pickupSystem;
         PlayerPhysicsBinder m_physicsBinder;
+        Core::Input* m_input = nullptr;
     };
 }

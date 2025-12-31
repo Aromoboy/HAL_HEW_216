@@ -5,12 +5,6 @@
 namespace Core
 {
         class StepTimer;
-        class Input;
-}
-
-namespace SceneSpace
-{
-        class Scene;
 }
 
 
@@ -63,14 +57,10 @@ namespace Core
         {
                 float dt;
                 StepTimer& timer;
-                Input& input;
-                SceneSpace::Scene* scene;
 
-                UpdateContext(float deltaTime, StepTimer& timerRef, Input& inputRef, SceneSpace::Scene* owner)
+                UpdateContext(float deltaTime, StepTimer& timerRef)
                         : dt(deltaTime)
                         , timer(timerRef)
-                        , input(inputRef)
-                        , scene(owner)
                 {
                 }
         };
@@ -94,4 +84,3 @@ namespace Core
                 virtual bool IsEnabled() const = 0;
         };
 }
-

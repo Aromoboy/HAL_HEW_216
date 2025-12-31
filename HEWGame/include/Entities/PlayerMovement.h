@@ -3,6 +3,7 @@
 namespace Core
 {
     struct UpdateContext;
+    class Input;
 }
 
 namespace Entities
@@ -12,7 +13,7 @@ namespace Entities
     class PlayerMovement
     {
     public:
-        void Update(Player& player, Core::UpdateContext& ctx);
+        void Update(Player& player, Core::UpdateContext& ctx, Core::Input& input);
 
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);

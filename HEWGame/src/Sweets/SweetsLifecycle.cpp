@@ -693,7 +693,8 @@ namespace SweetsSpace
 
         if (m_scheduler)
         {
-            m_scheduler->Register(*sweets);
+            auto handle = m_scheduler->Register(*sweets);
+            sweets->SetRegistrationHandle(std::move(handle));
         }
         else if (m_warnedMissingScheduler && !*m_warnedMissingScheduler)
         {
@@ -829,6 +830,7 @@ namespace SweetsSpace
         if (m_scheduler)
         {
             m_scheduler->Unregister(*sweets);
+            sweets->ReleaseRegistrationHandle();
         }
         else if (logWarnings && m_warnedMissingScheduler && !*m_warnedMissingScheduler)
         {

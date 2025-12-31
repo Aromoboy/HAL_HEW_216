@@ -49,6 +49,7 @@ private:
 Scene::Scene()
 : m_isConfigured(false)
 , m_input(nullptr)
+, m_timer(nullptr)
 , m_sceneUpdateRegistered(false)
 , m_cameraUpdateRegistered(false)
 {
@@ -63,6 +64,7 @@ Scene::Scene()
         void Scene::RootUpdate(Core::StepTimer& timer, Core::Input& input)
         {
                 m_input = &input;
+                m_timer = &timer;
 
                 if (!m_isConfigured)
                 {
@@ -76,7 +78,7 @@ Scene::Scene()
                 }
 
                 const float deltaTime = timer.DeltaTime();
-                Core::UpdateContext ctx(deltaTime, timer, input, this);
+                Core::UpdateContext ctx(deltaTime, timer);
 
                 m_scheduler.Tick(ctx);
         }
@@ -175,12 +177,20 @@ void Scene::RootDraw()
 
         void Scene::Register(Core::IUpdatable& node)
         {
-                m_scheduler.Register(node);
+                auto handle = m_scheduler.Register(node);
+                if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(&node))
+                {
+                        updateNode->SetRegistrationHandle(std::move(handle));
+                }
         }
 
         void Scene::Unregister(Core::IUpdatable& node)
         {
                 m_scheduler.Unregister(node);
+                if (auto* updateNode = dynamic_cast<Core::UpdateNode*>(&node))
+                {
+                        updateNode->ReleaseRegistrationHandle();
+                }
         }
 
         Core::UpdateScheduler& Scene::GetUpdateScheduler()
@@ -196,6 +206,16 @@ void Scene::RootDraw()
         const Core::Input* Scene::GetInput() const
         {
                 return m_input;
+        }
+
+        Core::StepTimer* Scene::GetTimer()
+        {
+                return m_timer;
+        }
+
+        const Core::StepTimer* Scene::GetTimer() const
+        {
+                return m_timer;
         }
 
 CameraSpace::CameraManager& Scene::GetCameraManager()

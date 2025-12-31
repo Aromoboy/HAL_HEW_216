@@ -5,6 +5,7 @@
 #include "PowerUpManager.h"
 #include "TitleScene.h"
 #include "TextureCache.h"
+#include "AppGame.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -27,7 +28,7 @@ namespace SceneSpace
         {
                 (void)input;
 
-                TextureCache& cache = TextureCache::Instance();
+                TextureCache& cache = App::Game::Instance().GetTextureCache();
                 cache.Load("Star", GetDevice(), L"Assets/Texture/Star.png");
                 cache.Load("Cost", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
                 cache.Load("SpeedUp", GetDevice(), L"Assets/Texture/upgrade_UI_MoveSpeed_icon.png");
@@ -40,7 +41,7 @@ namespace SceneSpace
                 m_rig = std::make_unique<CameraRig>(m_camera);
                 m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
                 m_powerUpRenderer = std::make_unique<PowerUpRenderer>(cache);
-                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost);
+                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input);
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
                 m_rig->Attach(m_target);
@@ -119,7 +120,9 @@ namespace SceneSpace
 
         void ScenePowerUp::Update(Core::UpdateContext& ctx)
         {
-                if (ctx.input.IsTrigger(Core::ActionId::Cancel))
+                (void)ctx;
+                Core::Input* input = GetInput();
+                if (input && input->IsTrigger(Core::ActionId::Cancel))
                 {
                         if (m_manager)
                         {
