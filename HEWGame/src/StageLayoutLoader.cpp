@@ -3,6 +3,7 @@
 #include "BoxColliderComponent.h"
 #include "ColliderRegistry.h"
 #include "ModelCache.h"
+#include "Physics/ColliderBuilder.h"
 #include "SceneGameConfigLoader.h"
 
 #include <algorithm>
@@ -93,25 +94,6 @@ namespace
         return std::nullopt;
     }
 
-    Physics::Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
-    {
-        if (shapes.empty())
-        {
-            return Physics::Box2DShapeConfig::Type::None;
-        }
-
-        switch (shapes.front().type)
-        {
-        case Physics::ColliderShapeType::Box:
-            return Physics::Box2DShapeConfig::Type::Box;
-        case Physics::ColliderShapeType::Polygon:
-            return Physics::Box2DShapeConfig::Type::Polygon;
-        case Physics::ColliderShapeType::Circle:
-            return Physics::Box2DShapeConfig::Type::Circle;
-        default:
-            return Physics::Box2DShapeConfig::Type::None;
-        }
-    }
 }
 
 StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadRequest& request)
@@ -227,53 +209,57 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                 }
             }
 
-            std::optional<Physics::ColliderRegistryDefinition> registryDefinition;
+            bool usedModelFallback = false;
             if (preset)
             {
-                registryDefinition = Physics::ColliderRegistry::Instance().Find(registryId);
-            }
-            else
-            {
-                registryDefinition = Physics::ColliderRegistry::Instance().Find(modelKey);
-                if (registryDefinition)
+                if (!Physics::ColliderRegistry::Instance().Find(registryId))
                 {
-                    std::ostringstream fallbackLog;
-                    fallbackLog << logPrefix << "[StageColliders] fallback registryId='" << modelKey
-                        << "' from modelKey\n";
-                    DebugTrace(fallbackLog.str());
+                    std::ostringstream oss;
+                    oss << logPrefix << "[StageColliders] registryId='" << registryId
+                        << "' missing for model '" << obj.modelPath
+                        << "' (preset='" << resolvedPreset.presetId << "').\n";
+                    DebugTrace(oss.str());
                 }
             }
-
-            if (!registryDefinition)
-            {
-                std::ostringstream oss;
-                oss << logPrefix << "[StageColliders] registryId='" << registryId
-                    << "' missing for model '" << obj.modelPath
-                    << "' (preset='" << resolvedPreset.presetId << "').\n";
-                DebugTrace(oss.str());
-            }
             else
             {
-                Physics::BoxColliderComponent colliderComponent{};
-                colliderComponent.colliderId = preset ? registryId : modelKey;
-                colliderComponent.shapeDef = registryDefinition->shapeDef;
-                colliderComponent.shapes = registryDefinition->shapes;
-                colliderComponent.colliderOffset = resolvedPreset.offset;
+                usedModelFallback = true;
+                std::ostringstream fallbackLog;
+                fallbackLog << logPrefix << "[StageColliders] fallback registryId='" << modelKey
+                    << "' from modelKey\n";
+                DebugTrace(fallbackLog.str());
+            }
 
-                Physics::Box2DShapeConfig shapeConfig{};
-                shapeConfig.type = InferShapeType(colliderComponent.shapes);
-                shapeConfig.bodyType = resolvedPreset.bodyType;
-                shapeConfig.fixedRotation = resolvedPreset.fixedRotation;
-                shapeConfig.allowRotation = resolvedPreset.allowRotation;
-                shapeConfig.angularDamping = resolvedPreset.allowRotation ? 0.2f : 0.0f;
-                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+            const std::string colliderKey = usedModelFallback ? modelKey : registryId;
+            Physics::ColliderBuilder colliderBuilder(
+                [&](const std::string& message)
+                {
+                    DebugTrace(message);
+                },
+                logPrefix.c_str());
 
-                const std::string presetId = !resolvedPreset.presetId.empty() ? resolvedPreset.presetId : colliderComponent.colliderId;
+            Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
+            colliderRequest.key = colliderKey;
+            colliderRequest.transform = obj.transform;
+            colliderRequest.bodyType = resolvedPreset.bodyType;
+            colliderRequest.fixedRotation = resolvedPreset.fixedRotation;
+            colliderRequest.allowRotation = resolvedPreset.allowRotation;
+            colliderRequest.angularDamping = resolvedPreset.allowRotation ? 0.2f : 0.0f;
+            colliderRequest.linearDamping = 0.0f;
+            colliderRequest.offset = float3{ resolvedPreset.offset.x, resolvedPreset.offset.y, 0.0f };
+            colliderRequest.scaleOffset = false;
+            colliderRequest.allowFallback = false;
+
+            auto colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+            const bool colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
+                && colliderBuild.shapeConfig && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+
+            if (colliderReady)
+            {
+                const std::string presetId = !resolvedPreset.presetId.empty() ? resolvedPreset.presetId : colliderKey;
                 auto entity = std::make_shared<Entities::PhysicalEntity>(
                     obj.transform,
-                    shapeConfig,
+                    colliderBuild.shapeConfig,
                     resolvedPreset.layer,
                     obj.model,
                     nullptr,
@@ -282,12 +268,12 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                     presetId,
                     false);
 
-                entity->SetBoxColliderComponent(colliderComponent);
+                entity->SetBoxColliderComponent(colliderBuild.collider);
                 entity->SetAllowMeshPhysics(false);
                 result.physicsEntities.push_back(entity);
 
                 std::ostringstream oss;
-                oss << logPrefix << "[StageColliders] Registered registryId='" << colliderComponent.colliderId
+                oss << logPrefix << "[StageColliders] Registered registryId='" << colliderKey
                     << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(resolvedPreset.layer)
                     << ")\n";
                 DebugTrace(oss.str());

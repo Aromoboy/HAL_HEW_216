@@ -240,7 +240,7 @@
     <ClCompile Include="src\SceneGameContactHandler.cpp" />
     <ClCompile Include="src\SceneGameLoader.cpp" />
     <ClCompile Include="src\ISceneServices.cpp" />
-    <ClCompile Include="src\SceneGamePlayerColliderBuilder.cpp" />
+    <ClCompile Include="src\Physics\ColliderBuilder.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
     <ClCompile Include="src\PowerUpNode.cpp" />
@@ -384,7 +384,7 @@
     <ClInclude Include="include\SceneGameContactHandler.h" />
     <ClInclude Include="include\SceneGameLoader.h" />
     <ClInclude Include="include\SceneComposer.h" />
-    <ClInclude Include="include\SceneGamePlayerColliderBuilder.h" />
+    <ClInclude Include="include\Physics\ColliderBuilder.h" />
     <ClInclude Include="include\SceneGameUIOverlay.h" />
     <ClInclude Include="include\SceneGameConfigLoader.h" />
     <ClInclude Include="include\GameplayRulesSystem.h" />
