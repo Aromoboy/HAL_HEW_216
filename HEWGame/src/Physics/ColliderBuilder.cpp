@@ -178,7 +178,41 @@ namespace
         Physics::BoxColliderComponent collider{};
         collider.colliderId = colliderId;
         collider.shapeDef = registryDefinition->shapeDef;
-        collider.shapes = registryDefinition->shapes;
+
+        collider.shapes.reserve(registryDefinition->shapes.size());
+        const float uniformScale = std::max(request.transform.scale.x, request.transform.scale.y);
+        for (const auto& shape : registryDefinition->shapes)
+        {
+            Physics::ColliderShapeDescriptor scaledShape{};
+            scaledShape.type = shape.type;
+
+            switch (shape.type)
+            {
+            case Physics::ColliderShapeType::Circle:
+            {
+                scaledShape.radius = shape.radius * uniformScale;
+                if (!shape.vertices.empty())
+                {
+                    const b2Vec2& center = shape.vertices.front();
+                    scaledShape.vertices.push_back(b2Vec2{ center.x * request.transform.scale.x, center.y * request.transform.scale.y });
+                }
+                break;
+            }
+            case Physics::ColliderShapeType::Box:
+            case Physics::ColliderShapeType::Polygon:
+            default:
+            {
+                scaledShape.vertices.reserve(shape.vertices.size());
+                for (const auto& vertex : shape.vertices)
+                {
+                    scaledShape.vertices.push_back(b2Vec2{ vertex.x * request.transform.scale.x, vertex.y * request.transform.scale.y });
+                }
+                break;
+            }
+            }
+
+            collider.shapes.push_back(std::move(scaledShape));
+        }
 
         const float3 scaledOffset = request.scaleOffset ? ScaleVector(request.offset, request.transform.scale) : request.offset;
         collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
@@ -198,17 +232,16 @@ namespace
             (tuning.fallbackSize.z + tuning.fallbackPadding.z * 2.0f) * request.transform.scale.z);
         footprint.ExpandHalfZ(paddedThickness);
 
-        const float uniformScale = std::max(request.transform.scale.x, request.transform.scale.y);
         for (const auto& shape : collider.shapes)
         {
             switch (shape.type)
             {
             case Physics::ColliderShapeType::Circle:
             {
-                const float radius = shape.radius * uniformScale;
+                const float radius = shape.radius;
                 const b2Vec2 center = shape.vertices.empty()
                     ? b2Vec2{ 0.0f, 0.0f }
-                    : b2Vec2{ shape.vertices.front().x * request.transform.scale.x, shape.vertices.front().y * request.transform.scale.y };
+                    : shape.vertices.front();
                 footprint.IncludeCircle(center, radius);
                 break;
             }
@@ -216,13 +249,7 @@ namespace
             case Physics::ColliderShapeType::Polygon:
             default:
             {
-                std::vector<b2Vec2> vertices;
-                vertices.reserve(shape.vertices.size());
-                for (const auto& vertex : shape.vertices)
-                {
-                    vertices.push_back(b2Vec2{ vertex.x * request.transform.scale.x, vertex.y * request.transform.scale.y });
-                }
-                footprint.IncludeVertices(vertices);
+                footprint.IncludeVertices(shape.vertices);
                 break;
             }
             }
