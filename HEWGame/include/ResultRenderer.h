@@ -54,7 +54,6 @@ public:
     bool Initialize(const ResultLayoutConfig& config);
     void Shutdown();
     void Draw(const ResultDisplayData& data);
-    //void Draw();
 
 private:
     class DynamicTexture;

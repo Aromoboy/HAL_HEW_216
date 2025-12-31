@@ -227,7 +227,6 @@ bool Model::Load(const char* file, float scale, Flip flip)
 	int flag = 0;
 	flag |= aiProcess_Triangulate;
 	flag |= aiProcess_FlipUVs;
-	//flag |= aiProcess_MakeLeftHanded;
 
 	// assimpで読み込み
 	const aiScene* pScene = importer.ReadFile(file, flag);

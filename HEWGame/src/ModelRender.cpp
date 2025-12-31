@@ -68,15 +68,6 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         }
 
         const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
-        //if (useAnimationShader)
-        //{
-        //    for (size_t i = 0; i < limitedBoneCount; ++i)
-        //    {
-        //        const NodeIndexDX nodeIndex = a_model.GetBoneNodeIndex(static_cast<unsigned int>(i));
-        //       DirectX::XMStoreFloat4x4(&bones[i], a_model.GetBoneMatrix(i) * animation->GetNodeMatrix(nodeIndex));
-        //    }
-        //}
-
 
         DirectX::XMFLOAT4X4 newBones[200];
         if (useAnimationShader)
