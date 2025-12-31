@@ -11,24 +11,24 @@
 #include <string>
 
 
-using NodeIndexDX = int;	// ボーン(階層)番号
+using NodeIndexDX = int;	// �{�[��(�K�w)�ԍ�
 using ChildrenDX = std::vector<NodeIndexDX>;
 
 struct BoneDX
 {
-	NodeIndexDX			nodeIndex;	// ボーンのノード番号
-	DirectX::XMFLOAT4X4	invOffset;	// 逆オフセット行列
+	NodeIndexDX			nodeIndex;	// �ό`���͊K�w���Ɋi�[
+	DirectX::XMFLOAT4X4	invOffset;	// �t�s��
 };
 
 
 
-// ボーン情報
+// �{�[�����
 struct NodeDX
 {
-	std::string			name;		// ボーン名
-	NodeIndexDX			parent;		// 親ボーン
-	ChildrenDX			children;	// 子ボーン
-	DirectX::XMMATRIX	mat;		// 変換行列
+	std::string			name;		// �{�[����
+	NodeIndexDX			parent;		// �e�{�[��
+	ChildrenDX			children;	// �q�{�[��
+	DirectX::XMMATRIX	mat;		// �ϊ��s��
 };
 
 
@@ -103,3 +103,4 @@ private:
         HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);
         HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
 };
+

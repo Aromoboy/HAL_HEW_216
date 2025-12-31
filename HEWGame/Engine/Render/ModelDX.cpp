@@ -6,7 +6,7 @@
 #include "ModelDX.h"
 
 
-// コンストラクタ
+// �^��`
 
 ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, std::optional<AABB> localBounds)
 {
