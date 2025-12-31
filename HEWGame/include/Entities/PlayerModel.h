@@ -3,17 +3,13 @@
 #include <memory>
 
 #include "ModelRender.h"
+#include "Render/Model.h"
 #include "Transform.h"
 #include "VisualTransform.h"
 
 namespace CameraSpace
 {
     class ICamera;
-}
-
-namespace Render
-{
-    class Model;
 }
 
 class Animation;
