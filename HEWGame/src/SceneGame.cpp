@@ -25,6 +25,9 @@
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
+#include "AnimationCache.h"
+#include "AssimpModelLorder.h"
+#include "ModelCache.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -265,6 +268,23 @@ bool SceneGame::Load(Core::Input& input)
     if (m_isComposed)
     {
         return !m_loadFailed;
+    }
+
+    ID3D11Device* device = GetDevice();
+    if (device)
+    {
+        TextureCache& textureCache = App::Game::Instance().GetTextureCache();
+        Render::ModelCache& modelCache = Render::ModelCache::Instance();
+        if (!modelCache.IsConfiguredFor(device, textureCache))
+        {
+            modelCache.SetLoader(std::make_unique<AssimpModelLorder>(), device, textureCache);
+        }
+
+        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
+        if (!animationCache.IsConfiguredFor(device))
+        {
+            animationCache.SetLoader(std::make_unique<AssimpModelLorder>(), device);
+        }
     }
 
     SceneComposer composer(GetUpdateScheduler());

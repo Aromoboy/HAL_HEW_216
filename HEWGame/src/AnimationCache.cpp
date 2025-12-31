@@ -75,6 +75,11 @@ namespace Render
         }
     }
 
+    bool AnimationCache::IsConfiguredFor(ID3D11Device* device) const noexcept
+    {
+        return m_loader && m_device == device;
+    }
+
     //============================================================
     // モデルの取得（キャッシュ対応）
     // 既にロード済みであればキャッシュから取り出し、無ければロードする

@@ -47,7 +47,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
     Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-    std::unique_ptr<IModelLoader> loader = std::make_unique<AssimpModelLorder>();
 
     if (!config.device)
     {
@@ -55,8 +54,15 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
     else
     {
-        cache.SetLoader(std::move(loader), config.device, App::Game::Instance().GetTextureCache());
-        animeCache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device);
+        TextureCache& textureCache = App::Game::Instance().GetTextureCache();
+        if (!cache.IsConfiguredFor(config.device, textureCache))
+        {
+            cache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device, textureCache);
+        }
+        if (!animeCache.IsConfiguredFor(config.device))
+        {
+            animeCache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device);
+        }
     }
 
     result.uiOverlay = std::make_unique<SceneGameUIOverlay>();
