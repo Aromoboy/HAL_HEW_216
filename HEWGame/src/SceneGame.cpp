@@ -267,6 +267,11 @@ void SceneGame::Load(Core::Input& input)
 
     SceneComposer composer(GetUpdateScheduler());
     auto composition = std::make_unique<SceneComposer::Composition>(composer.ComposeBootstrap());
+    if (!composition->stageConfigLoaded)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Stage configuration failed; scene load aborted.\n");
+        return;
+    }
     m_playerColliderDefinitions = std::move(composition->playerColliderDefinitions);
     m_playerColliderConfigLoaded = composition->playerColliderConfigLoaded;
     m_forceConfigPlayerCollider = composition->forceConfigPlayerCollider;
