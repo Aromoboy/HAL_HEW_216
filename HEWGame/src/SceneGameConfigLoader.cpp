@@ -429,6 +429,7 @@ namespace SceneGameConfig
                 << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
                 << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
+                << ", ccdPlayer=" << settings.continuousCollisionForPlayer
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -553,6 +554,20 @@ namespace SceneGameConfig
                         ::DebugTrace(oss.str());
                     }
                 }
+                else if (key == "ccdPlayer")
+                {
+                    if (auto parsed = parseBool(value))
+                    {
+                        settings.continuousCollisionForPlayer = *parsed;
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                            << lineNumber << "\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
                 else
                 {
                     std::ostringstream oss;
@@ -587,6 +602,7 @@ namespace SceneGameConfig
             << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
             << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
+            << ", ccdPlayer=" << settings.continuousCollisionForPlayer
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;
