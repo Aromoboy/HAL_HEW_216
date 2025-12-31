@@ -230,7 +230,9 @@
     <ClCompile Include="src\GuidelineActor.cpp" />
     <ClCompile Include="src\GuidelineSystem.cpp" />
     <ClCompile Include="src\GameplayRulesSystem.cpp" />
-    <ClCompile Include="src\SceneGameContactForwarder.cpp" />
+    <ClCompile Include="src\PlayerController.cpp" />
+    <ClCompile Include="src\SceneGameContactHandler.cpp" />
+    <ClCompile Include="src\SceneGameLoader.cpp" />
     <ClCompile Include="src\SceneGamePlayerColliderBuilder.cpp" />
     <ClCompile Include="src\PowerUpCursor.cpp" />
     <ClCompile Include="src\PowerUpManager.cpp" />
@@ -364,7 +366,9 @@
     <ClInclude Include="include\SweetsPrototypeManifest.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\SceneGame.h" />
-    <ClInclude Include="include\SceneGameContactForwarder.h" />
+    <ClInclude Include="include\PlayerController.h" />
+    <ClInclude Include="include\SceneGameContactHandler.h" />
+    <ClInclude Include="include\SceneGameLoader.h" />
     <ClInclude Include="include\SceneComposer.h" />
     <ClInclude Include="include\SceneGamePlayerColliderBuilder.h" />
     <ClInclude Include="include\SceneGameUIOverlay.h" />

@@ -5,29 +5,23 @@
 #include "Vector.h"
 #include "ShaderList.h"
 #include "Defines.h"
-#include "AssimpModelLorder.h"
 #include "Core/Input.h"
 #include "Systems/PhysicsBinder.h"
 #include "Systems/DrawSystem.h"
 #include "BoxColliderComponent.h"
-#include "ModelCache.h"
-#include "TextureCache.h"
-#include "AnimationCache.h"
 #include "DirectX.h"
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
-#include "SweetsPrototypeManifest.h"
 #include "Sweets/BaseSweets.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
 #include "DebugColliderRenderer.h"
 #include "SceneComposer.h"
-#include "SceneGameConfigLoader.h"
-#include "SceneGamePlayerColliderBuilder.h"
+#include "SceneGameLoader.h"
 #include "SceneGameUIOverlay.h"
-#include "GameplayConfig.h"
 #include "UIManager.h"
+#include "PlayerController.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -72,15 +66,10 @@ namespace
 
         constexpr const char* kLogPrefix = "[SceneComposer] ";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
-        constexpr bool kEnablePlayerBoundsLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kPlayerSpeedBoostStep = 1.2f;
-        constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
-        constexpr float kPlayerMinimumYMargin = 1.0f;
-        constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         bool ReadOsaraColliderDebugFlag()
@@ -95,17 +84,6 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
-        std::string NormalizeColliderKey(const std::string& key)
-        {
-            std::string normalized;
-            normalized.reserve(key.size());
-            for (unsigned char ch : key)
-            {
-                normalized.push_back(static_cast<char>(std::tolower(ch)));
-            }
-            return normalized;
-        }
-
 #if defined(_DEBUG)
         Color MakeColor(float r, float g, float b, float a)
         {
@@ -270,42 +248,6 @@ namespace
             DirectX::XMConvertToRadians(-10.0f)
         };
 
-        constexpr float kStageCenterX = 0.0f;
-        constexpr float kCameraStateEpsilon = 1e-4f;
-
-        bool HasMeaningfulDifference(float previous, float current, float epsilon = kCameraStateEpsilon)
-        {
-            if (!std::isfinite(previous) || !std::isfinite(current))
-            {
-                return true;
-            }
-            return std::fabs(previous - current) > epsilon;
-        }
-
-        bool HasMeaningfulDifference(const float3& a, const float3& b, float epsilon = kCameraStateEpsilon)
-        {
-            return HasMeaningfulDifference(a.x, b.x, epsilon)
-                || HasMeaningfulDifference(a.y, b.y, epsilon)
-                || HasMeaningfulDifference(a.z, b.z, epsilon);
-        }
-
-        Transform BuildPlatformTransformFromDescriptor(
-            const Stage::PlatformDescriptor& descriptor,
-            float stageCenterX)
-        {
-            Transform result{};
-            result.position = float3{
-                stageCenterX + descriptor.center.x,
-                descriptor.center.y,
-                descriptor.center.z };
-            result.rotation = float3{ 0.0f, 0.0f, 0.0f };
-            result.scale = float3{
-                descriptor.widthWorld,
-                descriptor.heightWorld,
-                std::max(0.01f, descriptor.depthWorld)
-            };
-            return result;
-        }
 }
 
 float3 fRads = { 0.0f, 0.0f, 0.0f };
@@ -348,54 +290,13 @@ void SceneGame::OnExit()
     ::DebugTrace(oss.str());
 }
 
-std::string SceneGame::ResolvePlayerColliderKey(const std::string& key) const
-{
-    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-    const auto resolvedType = manifest.Resolve(key);
-    if (resolvedType)
-    {
-        const auto* descriptor = manifest.Find(*resolvedType);
-        if (descriptor)
-        {
-            return NormalizeColliderKey(descriptor->key);
-        }
-    }
-
-    return NormalizeColliderKey(key);
-}
-
-void SceneGame::NormalizePlayerColliderDefinitions()
-{
-    std::map<std::string, Collision::ColliderDefinition> normalizedDefinitions;
-
-    for (const auto& entry : m_playerColliderDefinitions)
-    {
-        const std::string canonicalKey = ResolvePlayerColliderKey(entry.first);
-        normalizedDefinitions[canonicalKey] = entry.second;
-    }
-
-    m_playerColliderDefinitions.swap(normalizedDefinitions);
-}
 
 SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
-    : m_manager(&a_manager)
+    : m_contactHandler()
+    , m_playerController(DebugTrace, kLogPrefix)
+    , m_manager(&a_manager)
 {
-    Render::ModelCache& cache = Render::ModelCache::Instance();
-    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
-
     m_pManager = std::make_unique<SoundManagerEX>();
-    m_loader = std::make_shared<AssimpModelLorder>();
-
-    ID3D11Device* device = GetDevice();
-    if (!device)
-    {
-        DebugTrace(std::string(kLogPrefix) + "Failed to configure ModelCache: device was null.\n");
-    }
-    else
-    {
-        cache.SetLoader(m_loader, device, TextureCache::Instance());
-        animeCache.SetLoader(m_loader, device);
-    }
 
     SceneComposer composer(GetUpdateScheduler());
     auto composition = std::make_unique<SceneComposer::Composition>(composer.Compose());
@@ -444,7 +345,7 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
 
     if (m_physicsBinder)
     {
-        m_contactForwarder.Bind(*m_physicsBinder, m_sweetsManager.get());
+        m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
     }
 
     if (m_sweetsManager)
@@ -455,16 +356,38 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
         });
     }
 
-    NormalizePlayerColliderDefinitions();
+    m_playerColliderDefinitions = SceneGameLoader::NormalizePlayerColliderDefinitions(
+        std::move(m_playerColliderDefinitions));
 
-    std::string playerColliderKey = "Player";
     m_playerColliderMismatchLogged = false;
-    Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
-    m_uiOverlay = std::make_unique<SceneGameUIOverlay>();
-    if (m_uiOverlay && !m_uiOverlay->Initialize())
-    {
-        m_uiOverlay.reset();
-    }
+    SceneGameLoader loader(DebugTrace, kLogPrefix);
+    SceneGameLoader::Config loaderConfig{};
+    loaderConfig.device = GetDevice();
+    loaderConfig.physicsBinder = m_physicsBinder.get();
+    loaderConfig.drawSystem = m_drawSystem.get();
+    loaderConfig.sweetsManager = m_sweetsManager.get();
+    loaderConfig.playerColliderTuning = &m_playerColliderTuning;
+    loaderConfig.playerColliderDefinitions = &m_playerColliderDefinitions;
+    loaderConfig.playerColliderConfigLoaded = m_playerColliderConfigLoaded;
+    loaderConfig.forceConfigPlayerCollider = m_forceConfigPlayerCollider;
+    loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
+    loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
+    loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
+    loaderConfig.playerPickupBoxWidth = m_playerPickupBoxWidth;
+    loaderConfig.playerPickupBoxHeight = m_playerPickupBoxHeight;
+    loaderConfig.playerPickupOffset = m_playerPickupOffset;
+    loaderConfig.playerPickupMaxDistance = m_playerPickupMaxDistance;
+    loaderConfig.playerPickupDepthThreshold = m_playerPickupDepthThreshold;
+    loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
+
+    SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
+    m_uiOverlay = std::move(loaderResult.uiOverlay);
+    m_playerModel = std::move(loaderResult.playerModel);
+    m_render = std::move(loaderResult.renderer);
+    player = std::move(loaderResult.player);
+    m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
+    m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
+    m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
@@ -492,311 +415,6 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
         if (m_cameraAnchor)
         {
             m_cameraRig->Attach(m_cameraAnchor);
-        }
-    }
-
-    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
-    const auto* fairyDescriptor = manifest.Find("Fairy");
-    if (!fairyDescriptor && !m_playerModel)
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy descriptor missing; using procedural fallback.\n");
-    }
-
-    const std::string primaryModelPath = fairyDescriptor ? fairyDescriptor->modelPath : std::string{};
-    playerColliderKey = fairyDescriptor ? fairyDescriptor->key : std::string("Fairy");
-    std::string resolvedModelPath = primaryModelPath;
-    if (!primaryModelPath.empty())
-    {
-        m_playerModel = cache.Get(primaryModelPath);
-        if (!m_playerModel)
-        {
-            DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Primary fairy model missing; player will use procedural fallback.\n");
-        }
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Fairy model path missing; player will use procedural fallback.\n");
-    }
-
-
-    if (m_playerModel)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[ModelLoad] Player model ready path='" << resolvedModelPath
-            << "' refCount=" << m_playerModel.use_count() << "\n";
-        ::DebugTrace(oss.str());
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[ModelLoad] Failed to resolve any fairy model; player will use procedural fallback.\n");
-    }
-
-    
-    
-
-    m_render = std::make_unique<ModelRender>();
-    if (m_drawSystem && m_render)
-    {
-        m_drawSystem->SetRenderer(m_render.get());
-    }
-    std::optional<Physics::BoxColliderComponent> boxColliderComponent;
-    std::optional<Physics::Box2DShapeConfig> playerShapeConfig;
-    float3 playerColliderHalfExtents{ 0.0f, 0.0f, 0.0f };
-    float3 playerColliderOffset{ 0.0f, 0.0f, 0.0f };
-    Transform trans = m_playerSpawnTransform.transform;
-
-    const bool playerIsKinematic = false;
-    const b2BodyType playerBodyType = playerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
-
-    const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
-    const bool hasConfigDefinition = m_playerColliderDefinitions.find(resolvedColliderKey) != m_playerColliderDefinitions.end();
-    const bool playerConfigAvailable = m_playerColliderConfigLoaded && hasConfigDefinition;
-
-    const bool forceConfigCollider = m_forceConfigPlayerCollider && playerConfigAvailable;
-    SceneGamePlayerColliderBuilder colliderBuilder(DebugTrace, kLogPrefix);
-    SceneGamePlayerColliderBuilder::BuildResult colliderBuild = forceConfigCollider
-        ? colliderBuilder.BuildFromConfig(
-            resolvedColliderKey,
-            trans,
-            m_playerColliderTuning,
-            m_playerColliderDefinitions,
-            playerBodyType)
-        : colliderBuilder.BuildFromRegistry(
-            resolvedColliderKey,
-            trans,
-            m_playerColliderTuning,
-            playerBodyType);
-    const auto colliderHasShapes = [](const SceneGamePlayerColliderBuilder::BuildResult& build)
-    {
-        return build.collider && !build.collider->Empty();
-    };
-    const auto shapeConfigIsValid = [](const SceneGamePlayerColliderBuilder::BuildResult& build)
-    {
-        return build.shapeConfig && build.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-    };
-
-    bool attemptedConfigFallback = false;
-    bool attemptedRegistryFallback = false;
-    bool attemptedFallback = false;
-    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
-    {
-        if (forceConfigCollider)
-        {
-            attemptedRegistryFallback = true;
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Config build unavailable; attempting registry fallback for key='"
-                << resolvedColliderKey << "'.\n";
-            DebugTrace(oss.str());
-
-            SceneGamePlayerColliderBuilder::BuildResult registryBuild = colliderBuilder.BuildFromRegistry(
-                resolvedColliderKey,
-                trans,
-                m_playerColliderTuning,
-                playerBodyType);
-
-            if (colliderHasShapes(registryBuild) && shapeConfigIsValid(registryBuild))
-            {
-                colliderBuild = registryBuild;
-            }
-        }
-        else if (playerConfigAvailable)
-        {
-            attemptedConfigFallback = true;
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Registry build unavailable; attempting config fallback for key='"
-                << resolvedColliderKey << "'.\n";
-            DebugTrace(oss.str());
-
-            SceneGamePlayerColliderBuilder::BuildResult configBuild = colliderBuilder.BuildFromConfig(
-                resolvedColliderKey,
-                trans,
-                m_playerColliderTuning,
-                m_playerColliderDefinitions,
-                playerBodyType);
-
-            if (colliderHasShapes(configBuild) && shapeConfigIsValid(configBuild))
-            {
-                colliderBuild = configBuild;
-            }
-        }
-    }
-
-    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
-    {
-        attemptedFallback = true;
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] Registry/config build failed; using fallback collider for key='"
-            << resolvedColliderKey << "'.\n";
-        DebugTrace(oss.str());
-
-        SceneGamePlayerColliderBuilder::BuildResult fallbackBuild = colliderBuilder.BuildFallback(
-            resolvedColliderKey,
-            trans,
-            m_playerColliderTuning,
-            playerBodyType);
-        colliderBuild = fallbackBuild;
-    }
-
-    if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && playerConfigAvailable)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] Collider definition for key='" << resolvedColliderKey
-            << "' is invalid; physics registration will be skipped.\n";
-        DebugTrace(oss.str());
-    }
-
-    if (colliderBuild.collider && !colliderBuild.collider->Empty())
-    {
-        boxColliderComponent = colliderBuild.collider;
-    }
-    if (colliderBuild.shapeConfig && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None)
-    {
-        playerShapeConfig = colliderBuild.shapeConfig;
-    }
-    playerColliderHalfExtents = colliderBuild.halfExtents;
-    playerColliderOffset = colliderBuild.centerOffset;
-    if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f)
-    {
-        m_playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
-        m_playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
-    }
-
-    const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
-    const std::string appliedSource = colliderBuild.shapeSource;
-    const std::string appliedPath = colliderBuild.shapeSource;
-
-    {
-        std::ostringstream oss;
-        const auto shapeToString = [](Physics::Box2DShapeConfig::Type type)
-        {
-            switch (type)
-            {
-            case Physics::Box2DShapeConfig::Type::Box: return "Box";
-            case Physics::Box2DShapeConfig::Type::Polygon: return "Polygon";
-            case Physics::Box2DShapeConfig::Type::Circle: return "Circle";
-            default: return "None";
-            }
-        };
-
-        oss << kLogPrefix << "[PlayerCollider] source=" << colliderBuild.source
-            << " shapeSource=" << colliderBuild.shapeSource
-            << " appliedSource=" << appliedSource
-            << " appliedPath=" << appliedPath
-            << " key='" << resolvedColliderKey << "' forceConfigRequested=" << std::boolalpha << m_forceConfigPlayerCollider
-            << " shapePolicy=" << (forceConfigCollider ? "ConfigPrimary" : "RegistryPrimary")
-            << " modelGeneration=Disabled"
-            << " configLoaded=" << m_playerColliderConfigLoaded
-            << " configAvailable=" << hasConfigDefinition
-            << " registryHit=" << colliderBuild.registryHit
-            << " registryShapes=" << colliderBuild.registryHasShapes
-            << " configFallback=" << std::boolalpha << attemptedConfigFallback
-            << " registryFallback=" << std::boolalpha << attemptedRegistryFallback
-            << " fallback=" << attemptedFallback
-            << " applied=" << colliderReady
-            << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
-            << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
-            << " offset=(" << playerColliderOffset.x << ',' << playerColliderOffset.y << ',' << playerColliderOffset.z << ')'
-            << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ')'
-            << " pickupBox=(" << m_playerPickupBoxWidth << ',' << m_playerPickupBoxHeight << ")\n";
-        DebugTrace(oss.str());
-    }
-
-    m_playerPickupOriginOffset = playerColliderOffset;
-    if (!std::isfinite(m_playerPickupOriginOffset.x) || !std::isfinite(m_playerPickupOriginOffset.y) || !std::isfinite(m_playerPickupOriginOffset.z))
-    {
-        m_playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
-    }
-
-    player = std::make_unique<Entities::Player>(
-        trans,
-        m_playerModel,
-        physicsMachine,
-        m_sweetsManager.get(),
-        Collision::CollisionLayer::Player,
-        playerIsKinematic,
-        Core::UpdatePhase::Gameplay,
-        0,
-        "player");
-
-    if (player)
-    {
-        if (m_physicsBinder)
-        {
-            m_physicsBinder->SetPlayer(player.get());
-        }
-        if (boxColliderComponent)
-        {
-            player->SetBoxColliderComponent(boxColliderComponent);
-        }
-        if (playerShapeConfig)
-        {
-            player->SetBox2DShapeConfig(playerShapeConfig);
-        }
-        if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f && playerColliderHalfExtents.z > 0.0f)
-        {
-            player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
-        }
-        player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
-        player->SetSpeedMultiplier(m_playerSpeedMultiplier);
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
-        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
-        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
-        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
-        if (colliderReady)
-        {
-            if (m_physicsBinder)
-            {
-                m_physicsBinder->RegisterPhysicsBody(*player);
-            }
-            {
-                std::ostringstream oss;
-                const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
-                const b2BodyType createdBodyType = player->GetPhysical().GetBodyType();
-                const auto bodyTypeToString = [](b2BodyType type)
-                {
-                    switch (type)
-                    {
-                    case b2_staticBody: return "static";
-                    case b2_kinematicBody: return "kinematic";
-                    case b2_dynamicBody: return "dynamic";
-                    default: return "unknown";
-                    }
-                };
-
-                const bool typeMatches = configuredBodyType == createdBodyType;
-                oss << kLogPrefix << "Player physics body registered (expected="
-                    << bodyTypeToString(configuredBodyType)
-                    << ", created=" << bodyTypeToString(createdBodyType)
-                    << ", match=" << std::boolalpha << typeMatches << ").\n";
-                ::DebugTrace(oss.str());
-            }
-        }
-        else
-        {
-            const auto shapeToString = [](Physics::Box2DShapeConfig::Type type)
-            {
-                switch (type)
-                {
-                case Physics::Box2DShapeConfig::Type::Box: return "Box";
-                case Physics::Box2DShapeConfig::Type::Polygon: return "Polygon";
-                case Physics::Box2DShapeConfig::Type::Circle: return "Circle";
-                default: return "None";
-                }
-            };
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Skipping physics registration; colliderReady="
-                << std::boolalpha << colliderReady
-                << " appliedSource=" << appliedSource
-                << " shapes=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
-                << " shapeType=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
-                << (attemptedConfigFallback ? " (config fallback attempted)" : "")
-                << (attemptedFallback ? " (fallback attempted)" : "")
-                << "\n";
-            ::DebugTrace(oss.str());
-        }
-        if (m_drawSystem)
-        {
-            m_drawSystem->RegisterRenderable(*player);
         }
     }
 
@@ -1019,80 +637,12 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         }
     }
 
-    // =========================================
-    // SIMPLE & CORRECT PLAYER WORLD-BOUNDS
-    // =========================================
-
-    if (player && m_gameCamera)
-    {
-        const float playerZ = player->GetTransform().position.z;
-        const float3 camPos = m_gameCamera->GetPosition();
-
-        // Distance camera → player plane
-        float d = std::fabs(camPos.z - playerZ);
-        if (d < 0.001f) d = 0.001f;
-
-        // Camera params
-        const float fovY = DirectX::XMConvertToRadians(m_gameCamera->GetFieldOfViewDegrees());
-        const float aspect = m_gameCamera->GetAspectRatio();
-        const float fovX = 2.0f * std::atan(std::tan(fovY * 0.5f) * aspect);
-
-        // Visible half-width
-        const float halfWidth = d * std::tan(fovX * 0.5f);
-        const float halfHeight = d * std::tan(fovY * 0.5f);
-
-        // World bounds on X
-        const float minX = camPos.x - halfWidth;
-        const float maxX = camPos.x + halfWidth;
-        const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
-
-        // Log bounds if changed
-        const bool changed =
-            !m_cachedPlayerBoundsValid ||
-            HasMeaningfulDifference(m_cachedPlayerMinX, minX) ||
-            HasMeaningfulDifference(m_cachedPlayerMaxX, maxX);
-
-        if (kEnablePlayerBoundsLogging)
-        {
-            static float playerBoundsLogCooldownSeconds = 0.0f;
-            if (playerBoundsLogCooldownSeconds > 0.0f)
-            {
-                playerBoundsLogCooldownSeconds = std::max(0.0f, playerBoundsLogCooldownSeconds - ctx.dt);
-            }
-
-            if (changed && playerBoundsLogCooldownSeconds <= 0.0f)
-            {
-                std::ostringstream oss;
-                oss << "[SceneGame] [PlayerBounds] camX=" << camPos.x
-                    << " d=" << d
-                    << " fovX=" << DirectX::XMConvertToDegrees(fovX)
-                    << " halfWidth=" << halfWidth
-                    << " => minX=" << minX
-                    << " maxX=" << maxX << "\n";
-                ::DebugTrace(oss.str());
-                playerBoundsLogCooldownSeconds = kPlayerBoundsLogIntervalSeconds;
-            }
-        }
-
-        // Apply to player
-        if (player)
-        {
-            player->SetScreenBounds(minX, maxX, std::nullopt);
-            player->SetMinimumY(minY);
-        }
-
-        // Apply to sweets manager
-        if (m_sweetsManager)
-            m_sweetsManager->SetHorizontalBounds(minX, maxX);
-
-        // Cache
-        m_cachedPlayerMinX = minX;
-        m_cachedPlayerMaxX = maxX;
-        m_cachedPlayerBoundsValid = true;
-
-
-
-    }
+    m_playerController.UpdatePlayerBounds({
+        player.get(),
+        m_gameCamera.get(),
+        m_sweetsManager.get(),
+        ctx.dt
+    });
 
     switch (m_stageState)
     {
@@ -1100,73 +650,22 @@ void SceneGame::Update(Core::UpdateContext& ctx)
         break;
     case StageState::Playing:
     {
-        Core::Input& input = ctx.input;
-        if (player)
+        PlayerController::SpeedInput speedInput{
+            ctx.input,
+            player.get(),
+            m_playerBaseHorizontalSpeed,
+            m_playerBaseVerticalSpeed,
+            m_playerSpeedMultiplier
+        };
+        m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+
+        const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
+            - m_gameplayRules.GetRemainingCountdownSeconds();
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        if (m_playerController.HandleManualRetryInput(ctx.input, elapsedSeconds, peakHeight))
         {
-            const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
-            {
-                if (!(m_playerBaseHorizontalSpeed > 0.0f) && !(m_playerBaseVerticalSpeed > 0.0f))
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[SpeedBoost] " << reason
-                        << " ignored; base speeds invalid (" << m_playerBaseHorizontalSpeed
-                        << ',' << m_playerBaseVerticalSpeed << ").\n";
-                    ::DebugTrace(oss.str());
-                    return;
-                }
-
-                const float currentMultiplier = m_playerSpeedMultiplier;
-                const float clampedMultiplier =
-                    std::clamp(requestedMultiplier, 0.0f, kMaxPlayerSpeedMultiplier);
-                const bool clamped =
-                    std::fabs(clampedMultiplier - requestedMultiplier)
-                    > std::numeric_limits<float>::epsilon();
-
-                if (std::fabs(currentMultiplier - clampedMultiplier)
-                    <= std::numeric_limits<float>::epsilon())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[SpeedBoost] " << reason
-                        << " requestedMultiplier=" << requestedMultiplier
-                        << " has no effect (current=" << currentMultiplier << ").\n";
-                    ::DebugTrace(oss.str());
-                    return;
-                }
-
-                const float previousHorizontal = m_playerBaseHorizontalSpeed * currentMultiplier;
-                const float previousVertical   = m_playerBaseVerticalSpeed * currentMultiplier;
-
-                const float newMultiplier = clampedMultiplier;
-                m_playerSpeedMultiplier = newMultiplier;
-                player->SetSpeedMultiplier(newMultiplier);
-
-                const float newHorizontalSpeed = m_playerBaseHorizontalSpeed * newMultiplier;
-                const float newVerticalSpeed   = m_playerBaseVerticalSpeed * newMultiplier;
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "[SpeedBoost] " << reason
-                    << " baseXY=(" << m_playerBaseHorizontalSpeed << ',' << m_playerBaseVerticalSpeed << ')'
-                    << " prevMultiplier=" << currentMultiplier
-                    << " newMultiplier=" << newMultiplier
-                    << " prevSpeedXY=(" << previousHorizontal << ',' << previousVertical << ')'
-                    << " newSpeedXY=(" << newHorizontalSpeed << ',' << newVerticalSpeed << ')'
-                    << " clamped=" << std::boolalpha << clamped << "\n";
-                ::DebugTrace(oss.str());
-            };
-
-            if (input.IsTrigger(Core::ActionId::SpeedBoost))
-            {
-                adjustMoveSpeed(m_playerSpeedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
-            }
-
-            if (input.IsTrigger(Core::ActionId::SpeedReset))
-            {
-                adjustMoveSpeed(1.0f, "Reset key '2'");
-            }
+            SetStageState(StageState::Playing);
         }
-
-
-        HandleManualRetryInput(ctx);
         fRads.z += 0.001f;
 
         const GuidelineSystem::UpdateInput guidelineInput{
@@ -1191,7 +690,14 @@ void SceneGame::Update(Core::UpdateContext& ctx)
 
     if (m_stageState == StageState::ShowingResult)
     {
-        ProcessPostGameInput(ctx);
+        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
+        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const auto action = m_playerController.HandlePostGameInput(ctx.input, peakHeight, score);
+        if (action == PlayerController::PostGameAction::ConfirmRestart)
+        {
+            SetStageState(StageState::Playing);
+            return;
+        }
     }
 
     if (m_uiOverlay)
@@ -1667,58 +1173,6 @@ void SceneGame::ResetPlaySession()
 }
 
 
-void SceneGame::ProcessPostGameInput(Core::UpdateContext& ctx)
-{
-    if (m_stageState != StageState::ShowingResult)
-    {
-        return;
-    }
-
-    Core::Input& input = ctx.input;
-    if (input.IsTrigger(Core::ActionId::Confirm))
-    {
-        std::ostringstream oss;
-        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-        oss << kLogPrefix << "[Result] Confirm accepted peakTop=" << std::fixed << std::setprecision(2)
-            << peakHeight << "m score=" << score << "\n";
-        ::DebugTrace(oss.str());
-        SetStageState(StageState::Playing);
-        return;
-    }
-
-    if (input.IsTrigger(Core::ActionId::Retry))
-    {
-        std::ostringstream oss;
-        const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        oss << kLogPrefix << "[Result] Retry input ignored until confirm. peakTop="
-            << std::fixed << std::setprecision(2) << peakHeight << "m\n";
-        ::DebugTrace(oss.str());
-    }
-}
-
-void SceneGame::HandleManualRetryInput(Core::UpdateContext& ctx)
-{
-    if (m_stageState != StageState::Playing)
-    {
-        return;
-    }
-
-    if (!ctx.input.IsTrigger(Core::ActionId::Retry))
-    {
-        return;
-    }
-
-    std::ostringstream oss;
-    const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
-        - m_gameplayRules.GetRemainingCountdownSeconds();
-    const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-    oss << kLogPrefix << "[Countdown] Retry requested elapsed="
-        << std::fixed << std::setprecision(2) << elapsedSeconds
-        << "s peak=" << std::fixed << std::setprecision(2) << peakHeight << "m\n";
-    ::DebugTrace(oss.str());
-    SetStageState(StageState::Playing);
-}
 
 void SceneGame::ToggleGameplaySystems(bool enabled)
 {
