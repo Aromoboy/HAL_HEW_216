@@ -15,8 +15,8 @@ Windows SDK: 10.0
 
 構成: Debug/Release × Win32/x64
 
-NOTE: 現状、Box2D のリンクは HEWGame/ThirdParty/Box2D/lib/<Platform>/<Configuration> を参照する構成です。
-ビルド済みの Box2D アーティファクトは BUILDING.md の手順に従い ThirdParty/Box2D 配下へ配置してください。
+NOTE: 現状、Box2D のリンクは HEWGame/box2d/build/... をライブラリ探索パスとして参照している構成があります。
+box2d/build を削除する場合は、先に依存の “正規パッケージ化（repack）” を行ってからにしてください。
 
 必須アセット / 必須バイナリ（削除禁止）
 DirectXTex（プリビルド成果物）
