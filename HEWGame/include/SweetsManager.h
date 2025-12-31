@@ -52,8 +52,6 @@ namespace Entities
 
 namespace SweetsSpace
 {
-    class BaseSweets;
-    using ActiveSweets = BaseSweets;
     class LateUpdateNode;
     using WeightedSweetsType = SweetsSpace::WeightedSweetsType;
     using PhaseSpawnConfig = SweetsSpace::PhaseSpawnConfig;

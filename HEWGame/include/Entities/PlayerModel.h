@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "ModelRender.h"
 #include "Transform.h"
 #include "VisualTransform.h"
 
@@ -13,7 +14,6 @@ namespace CameraSpace
 namespace Render
 {
     class Model;
-    class ModelRenderer;
 }
 
 class Animation;
