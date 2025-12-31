@@ -201,12 +201,14 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         {
             DebugTrace(logPrefix + "モデルのロードに失敗: " + obj.modelPath + "\n");
             ++result.modelsFailed;
-            continue;
         }
-        ++result.modelsLoaded;
-        if (kEnableStageModelVerboseLogging)
+        else
         {
-            DebugTrace(logPrefix + "Stage model loaded: " + obj.modelPath + "\n");
+            ++result.modelsLoaded;
+            if (kEnableStageModelVerboseLogging)
+            {
+                DebugTrace(logPrefix + "Stage model loaded: " + obj.modelPath + "\n");
+            }
         }
 
         if (request.enablePhysics)

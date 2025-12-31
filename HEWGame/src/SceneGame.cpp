@@ -1129,6 +1129,7 @@ void SceneGame::ResetPlaySession()
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
+        m_sweetsManager->ForceSpawnRefresh();
     }
     else
     {
