@@ -54,7 +54,22 @@ namespace Config
 
     inline void StripInlineComment(std::string& line)
     {
-        const auto commentPos = line.find_first_of("#;");
+        const auto firstNonSpace = std::find_if(line.begin(), line.end(), [](unsigned char c)
+        {
+            return !std::isspace(c);
+        });
+        if (firstNonSpace == line.end())
+        {
+            return;
+        }
+
+        if (*firstNonSpace == ';')
+        {
+            line = line.substr(0, static_cast<std::size_t>(std::distance(line.begin(), firstNonSpace)));
+            return;
+        }
+
+        const auto commentPos = line.find('#');
         if (commentPos != std::string::npos)
         {
             line = line.substr(0, commentPos);
