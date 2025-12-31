@@ -1,0 +1,8 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.{h,cpp,hpp,c,cs,txt,md,cfg,csv,ini}]
+charset = utf-8
