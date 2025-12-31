@@ -5,6 +5,7 @@ The following call sites already emit debug traces or guardrails around asset/sy
 ## Stage layout loader (`SceneGame::LoadStageLayout`)
 - Location: `HEWGame/src/SceneGame.cpp`.
 - Behavior: traces when the CSV cannot be opened, when it is opened, before each model load, on per-model load failure, and after counting loaded stage objects.
+- Config path: `Assets/Config/StageLayout.csv`.
 - Suggested severity:
   - **Error** when the CSV cannot be opened (`file.is_open()` fails) because stage initialization aborts early.
   - **Warning** when an individual model fails to load; the loader continues after logging the failure.

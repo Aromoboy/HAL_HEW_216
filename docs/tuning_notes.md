@@ -9,7 +9,11 @@ These values capture the tuned parameters after normalizing transforms for Box2D
 - Maximum speed multiplier: **2.0x** cap.
 - Fallback/base move speed used when configs are missing or invalid: **10.0 units/s**.
 
-These values are defined in `Assets/Config/stage_default.cfg`, `StageData` defaults, and the `SceneGame` runtime constants that drive debug boost controls.
+These values are defined in the `stage.default` section of `Assets/Config/gameplay.cfg`, `StageData` defaults, and the `SceneGame` runtime constants that drive debug boost controls.
+
+## Player spawn transform
+- Initial spawn transform is configured in `Assets/Config/gameplay.cfg` under `[player.transform]`.
+- Keys: `position` (x, y, z), `rotationDegrees` (pitch, yaw, roll), `scale` (x, y, z).
 
 ## Sweets stacking
 - Scales tightened to keep cross-sections compact for predictable contacts:
@@ -21,4 +25,5 @@ These values are defined in `Assets/Config/stage_default.cfg`, `StageData` defau
   - Cream/Sherbet: 0.75 (Circle)
   - Defaults/others: 0.9
 
-Configuration lives in `Assets/Config/sweets_factory.csv` (scales) and `SweetsManager::BuildBaseShapeConfig` (densities/materials).
+Configuration lives in `Assets/Config/gameplay.cfg` (`colliders.sweets.factory` for scales/padding and
+`colliders.registry` for densities/materials) plus `SweetsManager::BuildBaseShapeConfig`.

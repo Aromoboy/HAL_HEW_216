@@ -1,574 +1,741 @@
-# HAL_HEW_216
+HAL_HEW_216
 
-## 必須アセット
-本リポジトリでは、以下のプリビルド済み DirectXTex ライブラリを常にバージョン管理下に置いています。
+本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。
+更新は UpdateScheduler を中心にフェーズ駆動で行い、描画は Scene::RootDraw から別経路で実行します。
 
-- `HEWGame/DirectXTex/Win32/Debug`
-- `HEWGame/DirectXTex/Win32/Release`
-- `HEWGame/DirectXTex/x64/Debug`
-- `HEWGame/DirectXTex/x64/Release`
+ビルド
 
-これらの `.lib` / `.dll` ファイルはリンカ設定で直接参照されており、リポジトリから削除するとビルドが失敗します。ツールチェーン（Visual Studio、Windows SDK、プラットフォーム ツールセットなど）を更新してライブラリを再生成する必要がある場合は、DirectXTex のソリューションを同じ構成でビルドし直し、上記ディレクトリに成果物を上書きしてください。その後、差分を確認したうえでコミットし、常に最新のバイナリを共有できるようにしてください。
+Visual Studio: VS2022 推奨
 
-また、`HEWGame/HEWGame.vcxproj.user` も意図的にバージョン管理されています。このファイルには Visual Studio 固有のユーザー設定が保存され、チーム全員のデバッガ設定やツールセット指定 (`ToolsVersion="Current"`) をそろえる役割を担っています。空の `<PropertyGroup>` を含めた最小構成ですが、Visual Studio が環境依存の値を勝手に書き込むのを防ぎ、設定差分を抑制する目的で維持しています。削除・無視すると開発環境ごとに挙動がばらつく原因になるため、リポジトリから除外しないでください。
+PlatformToolset: v143
 
-クラス図：
----
-config:
-  class:
-    hideEmptyMembersBox: false
-  look: neo
-  layout: elk
----
+Windows SDK: 10.0
+
+プロジェクト: HEWGame/DX22_Project.vcxproj
+
+構成: Debug/Release × Win32/x64
+
+現状、Box2D のリンクは HEWGame/box2d/build/... をライブラリ探索パスとして参照している構成があります。
+box2d/build を削除する場合は、先に依存の “正規パッケージ化（repack）” を行ってからにしてください。
+
+必須アセット / 必須バイナリ（削除禁止）
+DirectXTex（プリビルド成果物）
+
+本リポジトリでは、以下のプリビルド済み DirectXTex ライブラリを 常にバージョン管理下 に置きます。
+
+HEWGame/DirectXTex/Win32/Debug
+
+HEWGame/DirectXTex/Win32/Release
+
+HEWGame/DirectXTex/x64/Debug
+
+HEWGame/DirectXTex/x64/Release
+
+これらの成果物（主に .lib、構成によっては .dll）はリンカ設定で直接参照されており、リポジトリから削除するとビルドが失敗します。
+ツールチェーン更新などで再生成が必要になった場合は、DirectXTex のソリューションを 同じ構成 でビルドし直し、上記ディレクトリへ成果物を上書きしてください。差分確認のうえコミットし、常に最新のバイナリを共有できる状態を維持します。
+
+Visual Studio ユーザー設定（.vcxproj.user）
+
+HEWGame/DX22_Project.vcxproj.user は意図的にバージョン管理されています。
+このファイルは Visual Studio 固有のユーザー設定（主にデバッグ実行設定など）を保持し、チームでの環境差分を抑える目的があります。
+
+削除しない
+
+gitignore しない
+
+必要最小構成を維持する（環境依存の値が増えすぎないようにする）
+
+ステージ設定（唯一の参照元）
+
+ステージパラメータの 唯一の参照元（単一の基準） は以下です。
+
+HEWGame/Assets/Config/gameplay.cfg の [stage.checklist] セクション
+
+Stage::StageData はこのセクションを読み込み、デフォルト適用・サニタイズを行ってステージ設定として保持します。
+
+設定ローダー（概要）
+
+ConfigLoader
+
+ゲーム設定・コライダー設定の読み込み
+
+基本コライダーは gameplay.cfg の [colliders.registry] を ColliderRegistry が読み込み、ステージ配置やスイーツ生成などで共通利用する
+（ColliderConfigLoader はコライダー定義のパース用ユーティリティ）
+
+主に SceneGameConfigLoader / ColliderConfigLoader / ConfigSectionReader
+
+StageLayoutLoader
+
+Assets/Config/StageLayout.csv からステージ配置を読み込み、ステージオブジェクト（transform 等）を生成するローダー
+
+物理登録は Scene 側（または Binder 側）で行う方針
+
+クラス図（Mermaid）
+
+Mermaid 対応ビューアで表示してください。
+
 classDiagram
 direction TB
-namespace Core {
-  class UpdatePhase["Core::UpdatePhase"] { <<enumeration>>
-    Input
-    PrePhysics
-    Physics
-    PostPhysics
-    Gameplay
-    Camera
-    UI
-    Late
-  }
-  class UpdateContext["Core::UpdateContext"] { <<struct>>
-    dt : float
-    time : StepTimer&
-    input : Input&
-    scene : SceneSpace_Scene*
-  }
-  class IUpdatable["Core::IUpdatable"] { <<interface>>
-    +OnUpdate(ctx:UpdateContext)
-    +GetPhase() UpdatePhase
-    +GetPriority() int
-    +IsEnabled() bool
-  }
-  class UpdateNode["Core::UpdateNode"] { <<abstract>>
-    - phase : UpdatePhase
-    - priority : int
-    - enabled : bool
-    +UpdateNode(phase:UpdatePhase, priority:int=0)
-    +OnUpdate(ctx:UpdateContext)
-    +GetPhase() UpdatePhase
-    +GetPriority() int
-    +SetPriority(p:int)
-    +SetPhase(ph:UpdatePhase)
-    +Enable(v:bool)
-  }
-  class UpdateScheduler["Core::UpdateScheduler"] {
-    - nodes : list<IUpdatable*>
-    - deps  : list<pair<IUpdatable*,IUpdatable*>>
-    +Register(node:IUpdatable*)
-    +Unregister(node:IUpdatable*)
-    +SetOrder(node:IUpdatable*, phase:UpdatePhase, priority:int)
-    +AddDependency(before:IUpdatable*, after:IUpdatable*)
-    +Tick(ctx:UpdateContext)
-  }
-  class DXContext["Core::DXContext"] {
-    +Init(window)
-    +BeginDraw()
-    +EndDraw()
-    +Resize(width, height)
-    +Shutdown()
-  }
-  class StepTimer["Core::StepTimer"] {
-    +Tick()
-    +DeltaTime() float
-    +SetFixedStep(dt:float)
-  }
-  class ActionId["Core::ActionId"] { <<enumeration>>
-    MoveX
-    RotateYaw
-    Drop
-    Confirm
-    Cancel
-    Pause
-    Retry
-    DebugConsole
-    CameraToggle
-    CameraHeightToggle
-    SpeedBoost
-    SpeedReset
-    ColliderNudgeUp
-    ColliderNudgeDown
-  }
-  class Binding["Core::Binding"] { <<struct>>
-    key:int
-    btn:int
-    axis:int
-    sign:float
-  }
-  class Gamepad["Core::Gamepad"] {
-    +IsConnected() bool
-    +AxisLX() float
-    +AxisRX() float
-    +IsButtonDown(code:int) bool
-  }
-  class Input["Core::Input"] {
-    - pad : Gamepad
-    - map : InputMap
-    +OnUpdate(ctx:Core_UpdateContext)
-    +GetAxis(a:ActionId) float
-    +IsAction(a:ActionId) bool
-    +IsPress(vk:int) bool
-    +IsTrigger(vk:int) bool
-    +IsRelease(vk:int) bool
-  }
-  class InputMap["Core::InputMap"] {
-    - bindings : map<ActionId, Binding>
-    +GetAxis(a:ActionId) float
-    +Is(a:ActionId) bool
-    +Rebind(a:ActionId, b:Binding)
-  }
-  class ShaderProgram["Core::ShaderProgram"] { +Bind() }
-  class ShaderCache["Core::ShaderCache"] {
-    - programs : map<string, ShaderProgram>
-    +Get(name) ShaderProgram&
-    +Load(name, vsPath, psPath)
-  }
-  class Texture2D["Core::Texture2D"] { +LoadFromFile(path) +BindPS(slot) }
-  class TextureCache["Core::TextureCache"] {
-    - textures : map<string, shared_ptr<Texture2D>>
-    +Get(path) shared_ptr<Texture2D>
-  }
-  class VertexBuffer["Core::VertexBuffer"] { +Init(data,stride,count) +Bind(slot) +Shutdown() }
-  class IndexBuffer["Core::IndexBuffer"]  { +Init(indices,count) +Bind() +Shutdown() }
+
+%% =========================
+%% Core update contracts
+%% =========================
+class Core_UpdatePhase["Core::UpdatePhase"] {
+  <<enumeration>>
+  Input
+  PrePhysics
+  Physics
+  PostPhysics
+  Gameplay
+  Camera
+  UI
+  Late
 }
-UpdateNode ..|> IUpdatable
-UpdateNode <|-- Input
-UpdateScheduler o-- IUpdatable
-Input o-- Gamepad
-Input o-- InputMap
-InputMap *-- Binding
-InputMap *-- ActionId
-ShaderCache *-- ShaderProgram
-TextureCache *-- Texture2D
-namespace Components {
-  class Transform["Components::Transform"] { <<struct>>
-    position : float3
-    rotation : float3
-    scale    : float3
-  }
-  class Physical["Components::Physical"] { <<struct>>
-    velocity : float3
-    force    : float3
-    weight   : float
-    damping  : float
-  }
-  class ICollider["Components::ICollider"] { <<interface>>
-    +CheckCollision(other:ICollider) bool
-    +UpdateBounds(t:Transform)
-  }
+
+class Core_StepTimer["Core::StepTimer"] {
+  +Tick() float
+  +Tick(overrideDt: float) float
+  +DeltaTime() float
+  +FrameIndex() uint64
+  +SetFixedStep(dt: float, enable: bool)
 }
-namespace CameraSpace {
-  class ICamera["CameraSpace::ICamera"] { <<interface>> +GetView() +GetProjection() }
-  class BaseCamera["CameraSpace::BaseCamera"] {
-    - transform : Components_Transform
-    - priority  : int
-    +GetView()
-    +GetProjection()
-  }
-  class PerspectiveCamera["CameraSpace::PerspectiveCamera"] {
-    - fov   : float
-    - aspect: float
-    - nearZ : float
-    - farZ  : float
-  }
-  class CameraManager["CameraSpace::CameraManager"] {
-    - cameras : list<ICamera>
-    +GetActiveCamera() ICamera&
-    +Update()
-  }
-  class CameraRig["CameraSpace::CameraRig"] {
-    - target : SceneSpace_Entity*
-    - offset : float3
-    - yaw:float
-    - pitch:float
-    +Attach(target:SceneSpace_Entity*)
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
+
+class Core_UpdateContext["Core::UpdateContext"] {
+  +dt: float
+  +timer: Core_StepTimer&
 }
-BaseCamera ..|> ICamera
-BaseCamera <|-- PerspectiveCamera
-CameraManager *-- ICamera
-Core_UpdateNode <|-- CameraRig
-CameraRig ..> BaseCamera
-namespace Render {
-  class Mesh["Render::Mesh"] {
-    - vbo      : Core_VertexBuffer
-    - ibo      : Core_IndexBuffer
-  }
-  class Material["Render::Material"] {
-    - albedo : shared_ptr<Core_Texture2D>
-    - params : float4
-  }
-  class Model["Render::Model"] {
-    - meshes    : vector<Mesh>
-    - materials : vector<Material>
-    +GetMeshCount() int
-  }
-  class IModelLoader["Render::IModelLoader"] { <<interface>> +Load(path:string) shared_ptr<Model> }
-  class AssimpModelLoader["Render::AssimpModelLoader"] { +Load(path:string) shared_ptr<Model> }
-  class ModelCache["Render::ModelCache"] {
-    - loader : IModelLoader
-    - models : map<string, shared_ptr<Model>>
-    +Get(path:string) shared_ptr<Model>
-    +SetLoader(loader:IModelLoader)
-  }
-  class ModelRenderer["Render::ModelRenderer"] {
-    +Draw(model:Model, world:Components_Transform, cam:CameraSpace_ICamera)
-  }
+
+class Core_IUpdatable["Core::IUpdatable"] {
+  <<interface>>
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +GetPhase() Core_UpdatePhase
+  +GetPriority() int
+  +IsEnabled() bool
 }
-AssimpModelLoader ..|> IModelLoader
-ModelCache ..> IModelLoader
-ModelCache *-- Model
-Mesh *-- Core_VertexBuffer
-Mesh *-- Core_IndexBuffer
-Material *-- Core_Texture2D
-ModelRenderer ..> Core_DXContext
-ModelRenderer ..> Core_ShaderCache
-ModelRenderer ..> CameraSpace_ICamera
-ModelRenderer ..> Render_Model
-namespace Systems {
-  class IPhysicsSystem["Systems::IPhysicsSystem"] { <<interface>> +Apply(obj:SceneSpace_PhysicalEntity, dt:float) }
-  class PhysicsMachine["Systems::PhysicsMachine"] {
-    - system : IPhysicsSystem
-    +OnUpdate(ctx:Core_UpdateContext)
-    +SetSystem(sys:IPhysicsSystem)
-  }
+
+class Core_RegistrationHandle["Core::RegistrationHandle"] {
+  +IsValid() bool
+  +Reset()
+  +Release()
 }
-Core_UpdateNode <|-- PhysicsMachine
-PhysicsMachine ..> IPhysicsSystem
-namespace GameFlow {
-  class PhaseManager["GameFlow::PhaseManager"] {
-    - currentPhase : int
-    - thresholds   : vector<float>
-    +Reset(phases:int, thresholds:vector<float>)
-    +OnUpdate(ctx:Core_UpdateContext)
-    +GetCurrentPhase() int
-    +IsPhaseCleared() bool
-  }
-  class UpgradeId["GameFlow::UpgradeId"] { <<enumeration>>
-    Heavier
-    ControlPlus
-    DropAssist
-  }
-  class UpgradeMenu["GameFlow::UpgradeMenu"] {
-    +Open()
-    +SelectUpgrade(option:int)
-    +ApplyToPlayer(player:Entities_Player, up:UpgradeId)
-  }
+
+class Core_UpdateNode["Core::UpdateNode"] {
+  +UpdateNode(phase: Core_UpdatePhase = Gameplay, priority: int = 0)
+  +SetPhase(ph: Core_UpdatePhase)
+  +SetPriority(p: int)
+  +Enable(v: bool)
+  +SetRegistrationHandle(handle: Core_RegistrationHandle&&)
+  +ReleaseRegistrationHandle()
+  +GetPhase() Core_UpdatePhase
+  +GetPriority() int
+  +IsEnabled() bool
 }
-Core_UpdateNode <|-- PhaseManager
-namespace Stage {
-  class StageData["Stage::StageData"] {
-    - phaseHeights : vector<float>
-    - spawnPoints  : vector<float3>
-    - planeZ       : float
-    +LoadFromFile(path)
-  }
+
+class Core_UpdateScheduler["Core::UpdateScheduler"] {
+  +Register(node: Core_IUpdatable&) Core_RegistrationHandle
+  +Unregister(node: Core_IUpdatable&)
+  +SetOrder(node: Core_IUpdatable&, phase: Core_UpdatePhase, priority: int)
+  +AddDependency(before: Core_IUpdatable&, after: Core_IUpdatable&)
+  +ClearDependencies()
+  +Tick(ctx: const Core_UpdateContext&)
+  +SetExecutionLogListener(listener: Core_UpdateScheduler_ExecutionLogListener*)
 }
-namespace SceneSpace {
-  class IDrawable["SceneSpace::IDrawable"]  { <<interface>> +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera) }
-  class Entity["SceneSpace::Entity"] {
-    - transform : Components_Transform
-    - tag : string
-    +OnUpdate(ctx:Core_UpdateContext)
-    +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-    +GetTransform() Components_Transform&
-  }
-  class CollisionEntity["SceneSpace::CollisionEntity"] {
-    - collider : shared_ptr<Components_ICollider>
-    +GetCollider() Components_ICollider&
-  }
-  class PhysicalEntity["SceneSpace::PhysicalEntity"] {
-    - physical : Components_Physical
-    +GetPhysical() Components_Physical&
-  }
-  class IScene["SceneSpace::IScene"] { <<interface>> +Load() +Update() +Draw() }
-  class Scene["SceneSpace::Scene"] {
-    - cameras  : CameraSpace_CameraManager
-    - physics  : Systems_PhysicsMachine
-    - renderer : Render_ModelRenderer
-    - scheduler: Core_UpdateScheduler
-    +Load() +Update() +Draw()
-    +Register(node:Core_IUpdatable*)
-    +Unregister(node:Core_IUpdatable*)
-  }
-  class SceneManager["SceneSpace::SceneManager"] {
-    - current : shared_ptr<IScene>
-    +SetScene(scene:shared_ptr<IScene>)
-    +Update()
-    +Draw()
-  }
-  class TitleScene["SceneSpace::TitleScene"]
-  class SelectScene["SceneSpace::SelectScene"]
-  class PlayScene["SceneSpace::PlayScene"] {
-    - stage       : Stage_StageData
-    - phases      : GameFlow_PhaseManager
-    - upgrades    : GameFlow_UpgradeMenu
-    - player      : Entities_Player
-    - sweets      : SweetsSpace_SweetsManager
-    - rig         : CameraSpace_CameraRig
-    +Load()
-    +Update()
-    +Draw()
-  }
+
+class Core_UpdateScheduler_ExecutionLogListener["Core::UpdateScheduler::ExecutionLogListener"] {
+  <<interface>>
+  +OnFrameBegin(frameIndex: uint64)
+  +OnNodeExecuted(frameIndex: uint64, phase: Core_UpdatePhase, node: const Core_IUpdatable*, priority: int)
+  +OnFrameEnd(frameIndex: uint64)
 }
-Core_UpdateNode <|-- Entity
-Entity ..|> IDrawable
-Entity *-- Components_Transform
-Entity <|-- CollisionEntity
-CollisionEntity *-- Components_ICollider
-CollisionEntity <|-- PhysicalEntity
-PhysicalEntity *-- Components_Physical
-IScene <|-- Scene
-SceneManager *-- IScene
-IScene <|-- TitleScene
-IScene <|-- SelectScene
-IScene <|-- PlayScene
-Scene o-- CameraSpace_CameraManager
-Scene o-- Systems_PhysicsMachine
-Scene o-- Render_ModelRenderer
-Scene o-- Core_UpdateScheduler
-PlayScene o-- Stage_StageData
-PlayScene o-- GameFlow_PhaseManager
-PlayScene o-- GameFlow_UpgradeMenu
-PlayScene o-- CameraSpace_CameraRig
-namespace Entities {
-  class Player["Entities::Player"] {
-    - model : shared_ptr<Render_Model>
-    - planeZ : float
-    +HandleInput(input:Core_Input)
-    +OnUpdate(ctx:Core_UpdateContext)
-  }
+
+class Core_Input["Core::Input"] {
+  +Initialize()
+  +Shutdown()
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +GetAxis(actionId) float
+  +IsAction(actionId) bool
+  +IsPress(actionId) bool
+  +IsTrigger(actionId) bool
+  +IsRelease(actionId) bool
+  +IsPress(vk:int) bool
+  +IsTrigger(vk:int) bool
+  +IsRelease(vk:int) bool
+  +IsKeyPress(vk:int) bool
+  +IsKeyTrigger(vk:int) bool
+  +IsKeyRelease(vk:int) bool
+  +IsKeyRepeat(vk:int) bool
+  +Rebind(actionId, binding)
 }
-SceneSpace_PhysicalEntity <|-- Player
-namespace SweetsSpace {
-  class SweetsState["SweetsSpace::SweetsState"] { <<enumeration>> Active Stacked Ground Carried }
-  class BaseSweets["SweetsSpace::BaseSweets"] {
-    - model : shared_ptr<Render_Model>
-    +OnUpdate(ctx:Core_UpdateContext)
-    +Draw(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-  }
-  class SweetsManager["SweetsSpace::SweetsManager"] {
-    - byState : map<SweetsState, list<shared_ptr<BaseSweets>>>
-    +OnUpdate(ctx:Core_UpdateContext)
-    +DrawAll(renderer:Render_ModelRenderer, cam:CameraSpace_ICamera)
-    +GetByState(state:SweetsState) list<shared_ptr<BaseSweets>>&
-    +Spawn(kind:string, world:Components_Transform)
-  }
+
+note for Core_Input "Updated via UpdateScheduler (Input phase); registered in SceneGame::ConfigureUpdates."
+
+Core_UpdateNode ..|> Core_IUpdatable
+Core_Input --|> Core_UpdateNode
+Core_UpdateNode *-- Core_RegistrationHandle
+Core_UpdateScheduler o-- Core_IUpdatable
+Core_UpdateScheduler ..> Core_RegistrationHandle
+Core_UpdateScheduler o-- Core_UpdateScheduler_ExecutionLogListener
+
+%% =========================
+%% App / Entry
+%% =========================
+class App_Game["App::Game"] {
+  +Instance() App::Game&
+  +GetDXContext() Core::DXContext&
+  +GetShaderCache() ShaderCache&
+  +GetTextureCache() TextureCache&
+  +GetModelRenderer() Render::ModelRenderer&
 }
-SceneSpace_PhysicalEntity <|-- BaseSweets
-SweetsManager *-- BaseSweets
-SweetsManager *-- SweetsState
-Player o-- Render_Model
-BaseSweets o-- Render_Model
-Core_UpdateNode <|-- BaseSweets
-Core_UpdateNode <|-- SweetsManager
-namespace App {
-  class Game["App::Game"] {
-    - dx       : Core_DXContext
-    - input    : Core_Input
-    - timer    : Core_StepTimer
-    - shaders  : Core_ShaderCache
-    - textures : Core_TextureCache
-    - models   : Render_ModelCache
-    - renderer : Render_ModelRenderer
-    - scenes   : SceneSpace_SceneManager
-    +Initialize()
-    +Update()
-    +Draw()
-  }
+
+class App_Main["Main (Main.cpp)"] {
+  +Init(hWnd, width, height)
+  +Update()
+  +Draw()
+  +Uninit()
+  +GetComInitResult()
 }
-Game o-- Core_DXContext
-Game o-- Core_Input
-Game o-- Core_StepTimer
-Game o-- Core_ShaderCache
-Game o-- Core_TextureCache
-Game o-- Render_ModelCache
-Game o-- Render_ModelRenderer
-Game o-- SceneSpace_SceneManager
 
-クラス図ざっくりまとめ：
+App_Main o-- Core_Input
+App_Main o-- Core_StepTimer
+App_Main o-- Scene_SceneManager
 
-Core：
-DirectXまわり。GitHubリポジトリに入ってる初期化コードをそのままラップしてるだけ
-DXContext・Input・Shader/TextureCacheあたりはいじらなくてOK
+%% =========================
+%% Scene framework
+%% =========================
+class Scene_IScene["SceneSpace::IScene"] {
+  <<interface>>
+  +Load(input: Core_Input&) bool
+  +Update(timer: Core_StepTimer&, input: Core_Input&)
+  +Draw()
+  +OnEnter()
+  +OnExit()
+}
 
-Components：
-オブジェクトの基礎データ
-Transform（位置）、Physical（速度とか）、2D コライダー（当たり判定）だけで十分
+class Scene_ISceneServices["SceneSpace::ISceneServices"] {
+  <<interface>>
+  +GetPhysicsBinder() Systems::IPhysicsBinder*
+  +GetRenderer() Render::ModelRenderer*
+  +GetScheduler() Core_UpdateScheduler&
+  +GetInput() Core_Input*
+  +GetTimer() Core_StepTimer*
+}
 
-CameraSpace：
-カメラは1個だけ。priorityとかあるけど今は使わない
-3Dの奥行きはあるけど、プレイ自体は横方向（2.5D）固定
+class Scene_Scene["SceneSpace::Scene"] {
+  +RootUpdate(timer: Core_StepTimer&, input: Core_Input&)
+  +RootDraw()
+  +ConfigureUpdates()
+  +Register(node: Core_IUpdatable&) bool
+  +Unregister(node: Core_IUpdatable&)
+  +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +UnregisterSceneUpdateNode()
+  +GetSceneUpdateNode() Core_IUpdatable*
+  +RegisterCameraUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +UnregisterCameraUpdateNode()
+  +GetCameraUpdateNode() Core_IUpdatable*
+  +GetUpdateScheduler() Core_UpdateScheduler&
+  +GetInput() Core_Input*
+  +GetTimer() Core_StepTimer*
+  +GetCameraManager() Camera_CameraManager&
+  +AddCamera(camera)
+  +SetActiveCamera(camera)
+  +GetActiveCamera()
+}
 
-Render：
-モデル描画まわり。ModelRenderer.Draw()一発で描ける
-ローダーは仮でOK（立方体とかで代用）
+note for Scene_Scene "Register stores RegistrationHandle on UpdateNode; non-UpdateNode releases the handle."
 
-Systems：
-物理系。重力＋減衰だけ
-接地感は、余裕あったら別システムで
+class Scene_SceneUpdateNode["SceneSpace::Scene::SceneUpdateNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
 
-GameFlow：
-フェーズ管理と強化メニュー
-一定の高さを超えたらフェーズ進行 → 終わったら強化選択 (まだ決まってないので、例になっている)
-ここが今回の新要素
+class Scene_CameraUpdateNode["SceneSpace::Scene::CameraUpdateNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
 
-Scene / Entities / SweetsSpace：
-PlaySceneに全部入ってる
-プレイヤー（横移動＋回転＋落下　←例）とスイーツの管理
-フェーズごとに難易度（出現間隔とか）を調整
+class Scene_SceneManager["SceneSpace::SceneManager"] {
+  +SetInitialScene(scene: unique_ptr<Scene_IScene>)
+  +RequestSceneChange(scene: unique_ptr<Scene_IScene>)
+  +Update()
+  +Draw()
+  +GetActiveScene()
+}
 
-App：
-全部まとめて動かすメイン的なやつ
-Initialize → Update → Draw で完結
+Scene_SceneUpdateNode --|> Core_UpdateNode
+Scene_CameraUpdateNode --|> Core_UpdateNode
+Scene_Scene *-- Core_UpdateScheduler
+Scene_Scene o-- Core_Input
+Scene_Scene o-- Core_StepTimer
+Scene_Scene *-- Scene_SceneUpdateNode
+Scene_Scene *-- Scene_CameraUpdateNode
+Scene_Scene *-- Camera_CameraManager
 
-UpdateNode:
-毎フレーム、Scene がスケジューラを呼び出し、登録済みオブジェクトを フェーズ → priority の順に実行する。更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。以後は自動で OnUpdate(ctx) が呼ばれるので、順序を変えたい時はフェーズ/priorityを調整するか、Enable(false) で無効化するだけ。
+Scene_SceneManager *-- Scene_IScene
+Scene_SceneManager o-- Core_StepTimer
+Scene_SceneManager o-- Core_Input
 
-プロトタイプ用ゲームルール概要
+class Scene_TitleScene["TitleScene"]
+class Scene_SelectScene["SelectScene"]
+class Scene_SettingScene["SceneSpace::SettingScene"]
+class Scene_ScenePowerUp["SceneSpace::ScenePowerUp"]
+class Scene_SceneGame["SceneGame"]
+class Scene_EffectTestScene["EffectTestScene"]
 
-## コアアイデア
-落ちてくるスイーツを素早くつかんで積み上げ、制限時間内にできるだけ高いタワーを作る物理パズル
-タワーの高さに応じてスコア（スイーツ）を稼ぎ、ビルドを変えながら何度も遊ぶローグライト風ゲーム
+Scene_TitleScene --|> Scene_Scene
+Scene_TitleScene ..|> Scene_IScene
+Scene_SelectScene --|> Scene_Scene
+Scene_SelectScene ..|> Scene_IScene
+Scene_SettingScene --|> Scene_Scene
+Scene_SettingScene ..|> Scene_IScene
+Scene_ScenePowerUp --|> Scene_Scene
+Scene_ScenePowerUp ..|> Scene_IScene
+Scene_SceneGame --|> Scene_Scene
+Scene_SceneGame ..|> Scene_IScene
+Scene_SceneGame ..|> Scene_ISceneServices
+Scene_EffectTestScene --|> Scene_Scene
+Scene_EffectTestScene ..|> Scene_IScene
 
-## プレイヤーの目的
-- 30秒前後の制限時間内に、スイーツタワーの「最大到達高さ」を伸ばす
-- プレイを重ねるごとに、パラメータ（移動速度・制限時間など）を変えながら
-  「どう積むと一番気持ちいいか／強いか」を探る
+%% =========================
+%% Composition
+%% =========================
+class Scene_Composer["SceneComposer"] {
+  +ComposeBootstrap()
+  +Compose(result)
+}
 
-## 基本ルール
-- 画面下に土台、その上にスイーツタワーを積み上げる
-- 画面上からランダムにスイーツが落ちてくる（形・重さが少しずつ違う想定）
-- プレイヤーは妖精を操作してスイーツに近づき、ボタンで「つかむ」「離す」
-- 一度に持てるスイーツは 1 個（プロト段階）
-- 離したスイーツは物理挙動で落下し、土台や他のスイーツとぶつかってタワーになる
-- 早く雑に積むほどタワーがぐらつきやすく、崩壊のリスクが上がる
-- タイマーが0になるまで積み続け、到達した「最大の高さ」がスコアになる
+Scene_Composer ..> Scene_SceneGame : composes
 
-## フェーズ（高さによる変化）
-- タワーの高さが一定値（例：20m / 50m / 80m …）を超えるとフェーズが進行
-- フェーズごとに、出現スイーツの種類・落下速度・出現頻度などが変化する想定
-- 「素早く伸ばしたご褒美」と「難しくなるペナルティ」が同時に来るイメージ
+%% =========================
+%% Systems: physics + contacts + draw
+%% =========================
+class Sys_PhysicsMachine["Systems::PhysicsMachine"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +RegisterBody(entity: Entities::PhysicalEntity&)
+  +UnregisterBody(entity: Entities::PhysicalEntity&, preserveColliderData: bool = false)
+  +CreateWeldJoint(a: const Entities::PhysicalEntity&, b: const Entities::PhysicalEntity&)
+  +DestroyJoint(jointId)
+}
 
----
+class Sys_DrawSystem["Systems::DrawSystem"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +SetRenderer(renderer: ModelRender*)
+}
 
-## 将来のフル版でやりたいこと（方針）
+class Sys_IPhysicsSystem["Systems::IPhysicsSystem"] {
+  <<interface>>
+  +Apply(dt: float)
+}
 
-※ここはあくまで完成版の方向性。**プロトでは実装しない UI**
+class Sys_Box2DPhysicsSystem["Systems::Box2DPhysicsSystem"] {
+  +Apply(dt: float)
+  +PrepareFrame(frameIndex: uint64)
+  +SetGravity(gravity: float)
+}
 
-- ラン終了時に、タワーの高さに応じてスイーツ（通貨）を獲得
-- 専用のアップグレード画面でスイーツを消費し、次のランの強化を購入する
-  - 例：妖精の移動速度アップ、制限時間延長、スイーツサイズ変更 など
-- 「積み方 × 強化ビルド」の組み合わせを楽しむローグライト構造にする
+class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
+  +ProcessContacts()
+  +SetBeginContactCallback(cb)
+  +SetEndContactCallback(cb)
+}
 
----
+class Sys_IPhysicsBinder["Systems::IPhysicsBinder"] {
+  <<interface>>
+  +GetPhysicsMachine() Systems::PhysicsMachine*
+  +SetPlayer(player: Entities::PhysicalEntity*)
+  +Enable(enabled: bool)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
+  +AddContactHandler(onBegin, onEnd)
+}
 
-## プロト版の実装範囲
+class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
+  +GetPhysicsMachine() Systems::PhysicsMachine*
+  +SetPlayer(player: Entities::PhysicalEntity*)
+  +Enable(enabled: bool)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
+  +AddContactHandler(onBegin, onEnd)
+}
 
-### 目的
-- メインの遊びである「落ちてくるスイーツをつかんで積む」気持ちよさを確認する
-- 物理挙動・タワーの崩れ方・制限時間との緊張感を検証する
-- 将来の強化システム用のパラメータを、デバッグ入力で試せるようにしておく
+class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
+  +SetPlayer(player: Entities::PhysicalEntity*)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
+  +AddContactHandler(onBegin, onEnd)
+}
 
-### 必須要素
-1. **スイーツのスポーンと物理**
-   - 一定間隔／ランダムでスイーツを生成し、重力で落下させる
-   - 他のスイーツや土台と衝突して積み上がるシンプルな物理
+Sys_PhysicsMachine --|> Core_UpdateNode
+Sys_DrawSystem --|> Core_UpdateNode
+Sys_Box2DPhysicsSystem ..|> Sys_IPhysicsSystem
+Sys_PhysicsMachine o-- Sys_IPhysicsSystem
+Sys_PhysicsMachine o-- Sys_Box2DContactListener
+class Sys_PhysicsContactDispatchNode["Systems::PhysicsMachine::ContactDispatchNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
+Sys_PhysicsBinder ..|> Sys_IPhysicsBinder
 
-2. **妖精の操作**
-   - 水平方向の移動（必要なら少し縦方向も）。
-   - 「つかむ」ボタンで、接触中のスイーツを 1 個だけ保持
-   - 「離す」ボタンでスイーツを落とす
+Sys_PhysicsBinder *-- Sys_PhysicsMachine
+Sys_PhysicsBinder *-- Sys_PhysicsRegistration
+Sys_PhysicsRegistration o-- Sys_Box2DContactListener
+Sys_PhysicsMachine *-- Sys_PhysicsContactDispatchNode
 
-3. **高さとタイマー**
-   - ラン中にタワーの「最大到達高さ」を計測する
-   - 制限時間（例：30秒）のカウントダウン表示
-   - 時間切れでラウンド終了、結果として高さと簡単なスコアを表示
+Sys_PhysicsMachine ..> Sys_Box2DPhysicsSystem : steps world
+Sys_Box2DPhysicsSystem ..> Sys_Box2DContactListener : processes contacts
+Sys_Box2DContactListener ..> Sys_PhysicsRegistration : dispatch callbacks
+Sys_PhysicsContactDispatchNode ..> Sys_Box2DContactListener : ProcessContacts (PostPhysics)
 
-4. **フェーズライン**
-   - StageData に高さのしきい値を持たせ、一定高さを超えたらフェーズが切り替わる
-   - プロトでは挙動はシンプルで OK（例：フェーズ2以降は出現間隔だけ速くなる）
+%% =========================
+%% Camera
+%% =========================
+class Camera_ICamera["CameraSpace::ICamera"] {
+  <<interface>>
+  +GetView()
+  +GetProjection()
+}
 
-### デバッグ用の強化・調整
-- **アップグレード画面は実装しない。**
-- 代わりに、以下のようなパラメータをデバッグ入力で切り替えられるようにする：
-  - 妖精の移動速度（通常／高速）
-  - 制限時間（30秒／45秒／60秒 など）
-  - スイーツの出現間隔・落下速度
-  - フェーズラインの位置（20m／30m など）
-- これにより、完成版で想定している「強化ビルド」を UI なしで再現し、
-  どのパラメータが一番面白さに効いているかを検証する
+class Camera_Base["CameraSpace::BaseCamera"] {
+  +GetView()
+  +GetProjection()
+  +SetPosition()
+  +SetRotation()
+  +SetTransform()
+  +SetPriority()
+  +SetPerspective()
+}
 
----
+class Camera_Perspective["CameraSpace::PerspectiveCamera"] {
+  +OnViewportChanged()
+  +SetFieldOfViewDegrees()
+  +SetNearPlane()
+  +SetFarPlane()
+  +SetClipPlanes()
+}
 
-## このプロトで確認したいこと
+class Camera_CameraRig["CameraRig"] {
+  +Attach(target)
+  +SetOffset(offset)
+  +SetYaw(yaw)
+  +SetPitch(pitch)
+  +SetFollowSpeed(speed)
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
 
-- どのくらいの重さ・摩擦・バランスだと「ギリギリ積めるけど崩れそうでドキドキする」か
-- 制限時間は何秒くらいが一番気持ちいいか
-- 高さフェーズの切り替えタイミングが、プレイヤーにちゃんと「盛り上がり」として感じられるか
-- 将来のアップグレード候補（移動速度／時間／出現パターンなど）の中で、どれが一番ゲーム性に効いていそうか
+class Camera_CameraManager["CameraSpace::CameraManager"] {
+  +AddCamera(camera)
+  +SetActive(camera)
+  +GetActiveCamera()
+  +Update(ctx: const Core_UpdateContext&)
+}
 
+Camera_Base ..|> Camera_ICamera
+Camera_Perspective --|> Camera_Base
+Camera_CameraRig --|> Core_UpdateNode
+Camera_CameraRig o-- Camera_Base
+Camera_CameraRig o-- Ent_Entity
+Camera_CameraManager o-- Camera_ICamera
 
-## テストシナリオ（3 連続起動での安定確認）
+%% =========================
+%% Entities
+%% =========================
+class Ent_Entity["Entities::Entity"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +Draw(renderer, camera)
+  +GetTransform()
+}
 
-シンプルなスモークとして、以下を 1 セッションとして 3 回連続で実施し、ログが毎回ほぼ同じ順序／情報量で並ぶことを確認する。
+class Ent_PhysicalEntity["Entities::PhysicalEntity"] {
+  +GetPhysical()
+  +SetPosition()
+  +SetRotation()
+  +SetBox2DBodyId()
+  +GetBox2DBodyId()
+}
 
-1. ゲームを起動し、`SceneGame` をロードする。
-2. スポーンレンジ 5〜10 個の sweets を生成し、プラットフォーム上に配置されるのを確認する。
-3. 1 サイクル分のゲームプレイ（カメラ・プレイヤー操作を含む）を行う。
-4. 正常に終了リクエストを行い、ハングなく抜ける。
+class Ent_Player["Entities::Player"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +Draw(renderer, camera)
+  +SetSweetsManager(manager)
+}
 
-### 成功判定
+Ent_Entity --|> Core_UpdateNode
+Ent_PhysicalEntity --|> Ent_Entity
+Ent_Player --|> Ent_PhysicalEntity
 
-- 3 回連続の起動でハングや異常終了が発生しないこと。
-- プラットフォームが毎回描画され、視認できること。
-- プラットフォーム上に少なくとも 3 種類の sweets が視認できること。
-- プレイヤーの姿勢や挙動が安定していること。
-- ログにはキャッシュのヒット／ミス、スポーン時のレンダー変換（位置／回転／スケール）とピボットオフセットが記録され、起動ごとに比較しやすいこと。
+%% =========================
+%% Sweets
+%% =========================
+class Sweets_State["SweetsSpace::SweetsState"] {
+  <<enumeration>>
+  Active
+  Stacked
+  Ground
+  Carried
+}
 
+class Sweets_Base["SweetsSpace::BaseSweets"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +Draw(renderer, camera)
+}
 
+class Sweets_LateNode["SweetsSpace::SweetsManager::LateUpdateNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
 
-## Stage spawn anchors
-- `spawnPoints` defines the primary lane as comma/semicolon separated triples (`x,y,z`). Each lane expects at least two anchors. When the primary lane is omitted entirely, a default pair on the configured `planeZ` is injected and logged; parse errors keep the lane empty.
-- `spawnPointsSecondary` (alias `spawnPointsB`) is optional and is never auto-generated; if parsing fails or the key is absent, the secondary lane stays empty.
-- Only when **both** lanes end up empty is a single fallback anchor `(0,0,0)` inserted. Cross-lane `planeZ` mismatches are still logged.
-- SweetsManager alternates lanes only when both are present; otherwise it uses the sole configured lane. Spawn order, lane strategy, and anchor counts are logged when origins are configured.
+class Sweets_Lifecycle["SweetsSpace::SweetsLifecycle"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +OnLateUpdate(ctx: const Core_UpdateContext&)
+  +RegisterWithSystems(sweets)
+}
 
-Example:
+class Sweets_Manager["SweetsSpace::SweetsManager"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +OnLateUpdate(ctx: const Core_UpdateContext&)
+  +DrawAll(renderer, camera)
+  +Spawn(kind, transform)
+  +LoadPhaseSpawnConfig(path)
+  +OnContactBegin(a,b)
+  +OnContactEnd(a,b)
+  +GetLateUpdateNode() Core_IUpdatable*
+}
 
-```
-# Primary (lane A) – same planeZ as the stage
-spawnPoints = -2.5, 0.0, -5.0; 2.5, 0.0, -5.0
+Sweets_Base --|> Ent_PhysicalEntity
+Sweets_Manager --|> Core_UpdateNode
+Sweets_LateNode --|> Core_UpdateNode
 
-# Secondary (lane B)
-spawnPointsSecondary = -1.25, 0.0, -5.0; 1.25, 0.0, -5.0
-```
+Sweets_Manager *-- Sweets_LateNode
+Sweets_Manager *-- Sweets_Lifecycle
+Sweets_Manager ..> Core_UpdateScheduler : registers late node
+Sweets_Manager ..> Sys_DrawSystem
+Sweets_Manager ..> Sys_PhysicsMachine
 
-## SweetsPrototype プレースホルダーモデル
+%% =========================
+%% Stage + Config
+%% =========================
+class Cfg_ReadSectionLines["Config::ReadSectionLines"] {
+  <<utility>>
+  +ReadSectionLines(path, section, outLines) bool
+}
 
-`SweetsPrototypeManifest` はビルトイン定義と `Assets/Config/sweets_models.csv` のオーバーライドをまとめ、`SweetsType` ごとのモデルパスを提供する。
+class Cfg_SceneGameConfig["SceneGameConfig (free functions)"] {
+  <<utility>>
+  +LoadPhysicsTuningSettings()
+  +LoadPlayerTransformConfig()
+  +LoadPlayerColliderTuning(path)
+  +LoadModelTextureLoadingSetting()
+}
 
-| SweetsType | ファイル名 | 形状 | 用途 |
-| --- | --- | --- | --- |
-| `Cream` (`Sherbet` alias) | `cream.fbx` | ローポリ球（シェーディング対応） | ソフトクリーム状のシャーベット |
-| `Strawberry` | `strawberry.fbx` | --- | いちご |
-| `Blueberry` | `blueberry.fbx` | --- | ブルーベリー |
-| `Pineapple` | `pineapple.fbx` | --- | パイナップル |
-| `Banana` | `banana.fbx` | --- | バナナ |
+class Stage_StageData["Stage::StageData"] {
+  +LoadFromFile(path)
+  +LoadFromFile(path, section)
+  +GetGuidelineHeight() float
+  +GetBackgroundTexturePath() string
+}
 
-ステージ用の `Cake`/`Osara` ブロックとプレイヤー用の `Fairy` は `SweetsType` には含まれない補助プロトタイプとして `SweetsPrototypeManifest` に登録されます（`Player` エイリアスも `Fairy` にマップされます）。
+class Stage_LayoutLoader["StageLayoutLoader"] {
+  +LoadFromCsv(request) StageLayoutLoadResult
+}
 
-### プレースホルダーの使い方
+Stage_StageData ..> Cfg_ReadSectionLines
+Cfg_SceneGameConfig ..> Cfg_ReadSectionLines
 
-1. `#include "SweetsPrototypeManifest.h"` を追加する。
-2. `SweetsPrototypeManifest::Instance().Find(SweetsType::XXX)` で目的のプロトタイプを取得する。
-3. `descriptor->modelPath` を `ModelCache::Get` に渡すと OBJ がロードされる。
+%% =========================
+%% UI
+%% =========================
+class UI_UIManager["UIManager"] {
+  +Initialize(hudConfig, resultConfig) bool
+  +Shutdown()
+  +UpdateHUD(data)
+  +Draw()
+}
 
-`SweetsManager` や `Entities::Player` など、`BaseSweets` の派生クラスはすべてこのマニフェストを参照するよう統一されています。新しいスイーツを追加する場合はマニフェストに定義を 1 行追加し、上記の表と README を更新してください。
-ステージ／プレイヤー用の補助プロトタイプを参照するときは、`SweetsPrototypeManifest::Instance().Find("Fairy")` のように文字列版の `Find` を使ってください。
+class UI_HudRenderer["HudRenderer"] {
+  +Initialize()
+  +Shutdown()
+  +Draw()
+}
+
+class UI_ResultRenderer["ResultRenderer"] {
+  +Initialize()
+  +Shutdown()
+  +Draw()
+}
+
+class UI_Overlay["SceneGameUIOverlay"] {
+  +Initialize(uiManager: UI_UIManager*) bool
+  +Shutdown()
+  +Update(data)
+  +Draw()
+}
+
+UI_UIManager *-- UI_HudRenderer
+UI_UIManager *-- UI_ResultRenderer
+UI_Overlay o-- UI_UIManager
+
+%% =========================
+%% Game flow / rules
+%% =========================
+class GF_PhaseManager["GameFlow::PhaseManager"] {
+  +Initialize(thresholds, rewardMultipliers, minithresholds, rewardMiniMultipliers)
+  +Reset()
+  +UpdateHeight(currentMaxHeight) PhaseUpdateResult
+  +UpdateTime(deltaSeconds) PhaseUpdateResult
+  +AdvancePhase() bool
+  +GetCurrentPhase() int
+  +GetRewardMultiplier() float
+  +GetRewardMiniMultiplier() float
+}
+
+class Rules_GameplayRulesSystem["GameplayRulesSystem"] {
+  +Configure(config, log, logPrefix)
+  +ResetSession()
+  +Update(input) UpdateResult
+  +ComputeScore(phaseManager)
+}
+
+class Guide_GuidelineSystem["GuidelineSystem"] {
+  +Configure(config, actor)
+  +ResetHeight(height, step)
+  +ResetSession()
+  +TickCooldowns(deltaSeconds)
+  +Update(input, pendingBonuses) UpdateResult
+  +GetHeightMeters() float
+}
+
+class Guide_GuidelineActor["GuidelineActor"] {
+  +UpdateGuideline(centerX, height, planeZ, width, thickness)
+}
+
+Guide_GuidelineActor --|> Ent_Entity
+Rules_GameplayRulesSystem ..> GF_PhaseManager
+Rules_GameplayRulesSystem ..> Sweets_Manager
+Guide_GuidelineSystem *-- Guide_GuidelineActor
+Guide_GuidelineSystem ..> Sweets_Manager
+
+%% =========================
+%% PowerUp scene
+%% =========================
+class PU_Manager["PowerUpManager"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +AddNode(...)
+  +DrawAll(renderer, camera)
+}
+
+class PU_Cursor["PowerUpCursor"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +Draw(renderer, camera)
+}
+
+class PU_Node["PowerUpNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +Draw(renderer, camera)
+  +LevelUp()
+}
+
+PU_Manager --|> Core_UpdateNode
+PU_Cursor --|> Core_UpdateNode
+PU_Node --|> Core_UpdateNode
+
+Scene_ScenePowerUp *-- PU_Manager
+Scene_ScenePowerUp *-- PU_Cursor
+PU_Manager *-- PU_Node
+
+%% =========================
+%% SceneGame wiring (ownership + registration + contacts)
+%% =========================
+class Render_BackgroundRenderer["BackgroundRenderer"] {
+  +Initialize(config) bool
+  +Shutdown()
+  +Draw()
+}
+
+Scene_SceneGame *-- Sys_PhysicsBinder
+Scene_SceneGame *-- Sys_DrawSystem
+Scene_SceneGame *-- Sweets_Manager
+Scene_SceneGame *-- UI_UIManager
+Scene_SceneGame *-- Camera_CameraRig
+Scene_SceneGame *-- Ent_Player
+Scene_SceneGame *-- Stage_StageData
+Scene_SceneGame *-- GF_PhaseManager
+Scene_SceneGame *-- Rules_GameplayRulesSystem
+Scene_SceneGame *-- Guide_GuidelineSystem
+Scene_SceneGame *-- Render_BackgroundRenderer
+
+Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
+Scene_SceneGame ..> Sys_PhysicsBinder : contact handlers
+Scene_SceneGame ..> Sweets_Manager : forwards contacts
+
+クラス図ざっくりまとめ
+Core
+
+DirectX まわり。GitHub リポジトリに入ってる初期化コードをそのままラップしてるだけ。
+DXContext・Input・Shader/TextureCache あたりはいじらなくて OK（必要が出るまで触らない）。
+
+Components
+
+オブジェクトの基礎データ。
+Transform（位置/回転/スケール）、Physical（速度/力/減衰）、2D/Box2D 系のコライダー（当たり判定）だけで十分。
+
+CameraSpace
+
+カメラは基本 1 個。priority とかは今は使わない。
+3D の奥行きはあるけど、プレイ自体は横方向（2.5D）固定。
+
+Render
+
+モデル描画まわり。描画は “一発で描ける” 流儀（Renderer/DrawSystem 経由）。
+ローダーは仮で OK（立方体などの代用でも成立）。
+
+Systems
+
+物理系。基本は重力 + 減衰。
+接地感は余裕があったら別システムで追加する。
+PhysicsBinder は PhysicsMachine と登録処理・コンタクト配信を束ねて Scene から扱いやすくする薄い仲介。
+
+GameFlow
+
+フェーズ管理と強化メニュー。
+一定の高さを超えたらフェーズ進行 → 終わったら強化選択（まだ確定していないので例）。
+ここが今回の新要素。
+
+ConfigLoader
+
+ゲーム設定・コライダー設定の読み込み。
+SceneGameConfigLoader / ColliderConfigLoader / ConfigSectionReader で実装。
+
+StageLayoutLoader
+
+CSV からステージ配置を読み込み、ステージオブジェクト（Transform 等）を生成するローダー。
+
+UIManager
+
+HUD とリザルト UI のレイアウト初期化・更新・描画を一元管理。
+
+Scene / Entities / SweetsSpace
+
+SceneGame に統合されている領域。
+プレイヤー（横移動＋回転＋落下 など）とスイーツの管理。
+フェーズごとに難易度（出現間隔など）を調整。
+
+App
+
+全部まとめて動かすメイン。
+Initialize → Update → Draw で完結。
+
+UpdateNode
+
+更新は 単一路線で進む。
+
+SceneManager::Update → 各シーンの Update → Scene::RootUpdate → UpdateScheduler::Tick → 登録済み IUpdatable::OnUpdate
+
+更新が必要なクラスは Core::UpdateNode を継承し、フェーズと priority を設定して Scene に登録する。
+順序を変えたい時はフェーズ/priority を調整するか Enable(false) で無効化するだけ。
+
+標準フェーズ順:
+Input → PrePhysics → Physics → PostPhysics → Gameplay → Camera → UI → Late
+
+描画は Scene::RootDraw から別経路で行う。
+SceneGame::ConfigureUpdates の登録と実行順の説明は docs/scene-lifecycle.md にまとめてある。
