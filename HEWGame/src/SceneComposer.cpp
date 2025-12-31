@@ -159,17 +159,21 @@ SceneComposer::SceneComposer(Core::UpdateScheduler& scheduler)
 {
 }
 
-SceneComposer::Composition SceneComposer::Compose()
+SceneComposer::Composition SceneComposer::ComposeBootstrap()
 {
     Composition result{};
 
     ComposeConfig(result);
     ComposeRules(result);
     ComposePhysics(result);
-    ComposeLayout(result);
     ComposeUI(result);
 
     return result;
+}
+
+void SceneComposer::Compose(Composition& result)
+{
+    ComposeLayout(result);
 }
 
 void SceneComposer::ComposeConfig(Composition& result)

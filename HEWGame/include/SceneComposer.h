@@ -64,7 +64,8 @@ public:
     };
 
     explicit SceneComposer(Core::UpdateScheduler& scheduler);
-    Composition Compose();
+    Composition ComposeBootstrap();
+    void Compose(Composition& result);
 
 private:
     void ComposeConfig(Composition& result);

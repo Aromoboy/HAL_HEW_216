@@ -266,7 +266,7 @@ void SceneGame::Load(Core::Input& input)
     }
 
     SceneComposer composer(GetUpdateScheduler());
-    auto composition = std::make_unique<SceneComposer::Composition>(composer.Compose());
+    auto composition = std::make_unique<SceneComposer::Composition>(composer.ComposeBootstrap());
     m_playerColliderDefinitions = std::move(composition->playerColliderDefinitions);
     m_playerColliderConfigLoaded = composition->playerColliderConfigLoaded;
     m_forceConfigPlayerCollider = composition->forceConfigPlayerCollider;
@@ -289,8 +289,6 @@ void SceneGame::Load(Core::Input& input)
     m_sweetsManager = std::move(composition->sweetsManager);
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
-    m_stageObjects = std::move(composition->stageObjects);
-    m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
     GuidelineSystem::Config guidelineConfig{};
     guidelineConfig.heightMeters = composition->guidelineHeightMeters;
     guidelineConfig.stepMeters = composition->guidelineStepMeters;
@@ -355,6 +353,10 @@ void SceneGame::Load(Core::Input& input)
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
+
+    composer.Compose(*composition);
+    m_stageObjects = std::move(composition->stageObjects);
+    m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
