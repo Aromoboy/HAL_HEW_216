@@ -1,6 +1,7 @@
 #include "Entities/PlayerPhysicsBinder.h"
 
 #include "Entities/Player.h"
+#include "Systems/PhysicsMachine.h"
 
 #include <algorithm>
 #include <cmath>
@@ -31,6 +32,98 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
+    constexpr float kDefaultClampReturnSpeed = 6.0f;
+
+    bool AreSameBody(b2BodyId lhs, b2BodyId rhs)
+    {
+        return lhs.index1 == rhs.index1
+            && lhs.world0 == rhs.world0
+            && lhs.generation == rhs.generation;
+    }
+
+    struct StaticOverlapContext
+    {
+        b2BodyId selfBody{ b2_nullBodyId };
+        bool hitStatic = false;
+    };
+
+    bool OverlapStaticBodyCallback(b2ShapeId shapeId, void* context)
+    {
+        if (!context)
+        {
+            return true;
+        }
+
+        auto* overlapContext = static_cast<StaticOverlapContext*>(context);
+        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+        if (!b2Body_IsValid(bodyId))
+        {
+            return true;
+        }
+
+        if (AreSameBody(bodyId, overlapContext->selfBody))
+        {
+            return true;
+        }
+
+        if (b2Body_GetType(bodyId) == b2_staticBody)
+        {
+            overlapContext->hitStatic = true;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool HasStaticOverlapAtTarget(Entities::Player& player, b2BodyId bodyId, const float3& targetPosition)
+    {
+        Systems::PhysicsMachine* physicsMachine = player.GetPhysicsMachine();
+        if (!physicsMachine)
+        {
+            return false;
+        }
+
+        const b2WorldId worldId = physicsMachine->GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            return false;
+        }
+
+        b2AABB currentAabb{};
+        if (!player.GetBox2DBodyAABB(currentAabb))
+        {
+            return false;
+        }
+
+        const b2Vec2 currentPosition = b2Body_GetPosition(bodyId);
+        const float3 worldCurrentPosition = Entities::Player::ToWorldPosition(currentPosition);
+        const float3 delta = float3{ targetPosition.x - worldCurrentPosition.x, targetPosition.y - worldCurrentPosition.y, 0.0f };
+        const b2Vec2 deltaBox = Entities::Player::ToBox2DVector(delta);
+
+        b2AABB targetAabb{};
+        targetAabb.lowerBound = b2Vec2{ currentAabb.lowerBound.x + deltaBox.x, currentAabb.lowerBound.y + deltaBox.y };
+        targetAabb.upperBound = b2Vec2{ currentAabb.upperBound.x + deltaBox.x, currentAabb.upperBound.y + deltaBox.y };
+
+        b2QueryFilter filter = b2DefaultQueryFilter();
+        filter.categoryBits = std::numeric_limits<uint64_t>::max();
+        filter.maskBits = std::numeric_limits<uint64_t>::max();
+
+        StaticOverlapContext context{};
+        context.selfBody = bodyId;
+
+        b2World_OverlapAABB(worldId, targetAabb, filter, OverlapStaticBodyCallback, &context);
+        return context.hitStatic;
+    }
+
+    float SelectClampSpeed(float configuredSpeed, float fallbackSpeed)
+    {
+        if (std::isfinite(configuredSpeed) && configuredSpeed > 0.0f)
+        {
+            return configuredSpeed;
+        }
+
+        return fallbackSpeed;
+    }
 }
 
 namespace Entities
@@ -138,18 +231,29 @@ namespace Entities
         }
 
         const float previousY = bodyPosition.y;
+        const float3 targetPosition{ bodyPosition.x, m_minimumY, 0.0f };
         const float3 bodyVelocity = player.GetLinearVelocity();
-        b2Body_SetTransform(
-            bodyId,
-            Player::ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }),
-            b2Body_GetRotation(bodyId));
+        if (HasStaticOverlapAtTarget(player, bodyId, targetPosition))
+        {
+            float3 clampedVelocity = bodyVelocity;
+            clampedVelocity.y = std::max(0.0f, clampedVelocity.y);
+            player.SetLinearVelocity(clampedVelocity);
+
+            std::ostringstream blocked;
+            blocked << kPlayerLogPrefix << "Y クランプを回避しました（静的コライダーと重なるため） prevY="
+                << previousY << " targetY=" << m_minimumY << "\n";
+            PlayerDebugTrace(blocked.str());
+            return;
+        }
+
+        const float clampSpeed = SelectClampSpeed(player.GetVerticalMoveSpeed(), kDefaultClampReturnSpeed);
         float3 clampedVelocity = bodyVelocity;
-        clampedVelocity.y = 0.0f;
+        clampedVelocity.y = std::max(clampedVelocity.y, clampSpeed);
         player.SetLinearVelocity(clampedVelocity);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "Y を " << previousY << " から最小 "
-            << m_minimumY << " に制限しました（プラットフォーム境界） \n";
+            << m_minimumY << " に向けて制限しました（速度補正）\n";
         PlayerDebugTrace(oss.str());
     }
 
@@ -169,6 +273,7 @@ namespace Entities
         const float3 position = Player::ToWorldPosition(b2Body_GetPosition(bodyId));
         const float originalX = position.x;
         const float originalY = position.y;
+        const float3 bodyVelocity = player.GetLinearVelocity();
 
         const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
         float clampedY = position.y;
@@ -182,10 +287,33 @@ namespace Entities
             return;
         }
 
-        b2Body_SetTransform(
-            bodyId,
-            Player::ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
-            b2Body_GetRotation(bodyId));
+        const float3 targetPosition{ clampedX, clampedY, 0.0f };
+        float3 adjustedVelocity = bodyVelocity;
+        const bool blockedByStatic = HasStaticOverlapAtTarget(player, bodyId, targetPosition);
+        const float horizontalClampSpeed = SelectClampSpeed(player.GetHorizontalMoveSpeed(), kDefaultClampReturnSpeed);
+        const float verticalClampSpeed = SelectClampSpeed(player.GetVerticalMoveSpeed(), kDefaultClampReturnSpeed);
+
+        if (position.x < m_minScreenX)
+        {
+            adjustedVelocity.x = blockedByStatic
+                ? std::max(0.0f, adjustedVelocity.x)
+                : std::max(adjustedVelocity.x, horizontalClampSpeed);
+        }
+        else if (position.x > m_maxScreenX)
+        {
+            adjustedVelocity.x = blockedByStatic
+                ? std::min(0.0f, adjustedVelocity.x)
+                : std::min(adjustedVelocity.x, -horizontalClampSpeed);
+        }
+
+        if (m_hasMaximumY && position.y > m_maximumY)
+        {
+            adjustedVelocity.y = blockedByStatic
+                ? std::min(0.0f, adjustedVelocity.y)
+                : std::min(adjustedVelocity.y, -verticalClampSpeed);
+        }
+
+        player.SetLinearVelocity(adjustedVelocity);
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "スクリーンクランプを適用しました prevX=" << originalX
@@ -196,6 +324,10 @@ namespace Entities
         if (m_hasMaximumY)
         {
             oss << " maxY=" << m_maximumY;
+        }
+        if (blockedByStatic)
+        {
+            oss << " (static overlap: velocity-only)";
         }
         oss << "\n";
         PlayerDebugTrace(oss.str());
