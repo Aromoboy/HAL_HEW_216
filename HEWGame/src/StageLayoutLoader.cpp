@@ -52,7 +52,14 @@ namespace
         try
         {
             const std::filesystem::path path(modelPath);
-            key = path.filename().string();
+            if (path.has_stem())
+            {
+                key = path.stem().string();
+            }
+            else
+            {
+                key = path.filename().string();
+            }
         }
         catch (...)
         {
@@ -213,69 +220,63 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
         if (request.enablePhysics)
         {
+            const std::string modelKey = BuildModelKey(obj.modelPath);
             const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
+            SceneGameConfig::StageColliderPreset resolvedPreset{};
             if (preset)
             {
+                resolvedPreset = *preset;
                 obj.colliderPresetId = preset->presetId;
+            }
 
-                auto registryDefinition = Physics::ColliderRegistry::Instance().Find(preset->registryId);
-                if (!registryDefinition)
-                {
-                    std::ostringstream oss;
-                    oss << logPrefix << "[StageColliders] registryId='" << preset->registryId
-                        << "' missing for model '" << obj.modelPath << "' (preset='" << preset->presetId << "').\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    Physics::BoxColliderComponent colliderComponent{};
-                    colliderComponent.colliderId = preset->registryId;
-                    colliderComponent.shapeDef = registryDefinition->shapeDef;
-                    colliderComponent.shapes = registryDefinition->shapes;
-                    colliderComponent.colliderOffset = preset->offset;
-
-                    Physics::Box2DShapeConfig shapeConfig{};
-                    shapeConfig.type = InferShapeType(colliderComponent.shapes);
-                    shapeConfig.bodyType = preset->bodyType;
-                    shapeConfig.fixedRotation = preset->fixedRotation;
-                    shapeConfig.allowRotation = preset->allowRotation;
-                    shapeConfig.angularDamping = preset->allowRotation ? 0.2f : 0.0f;
-                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
-
-                    auto entity = std::make_shared<Entities::PhysicalEntity>(
-                        obj.transform,
-                        shapeConfig,
-                        preset->layer,
-                        obj.model,
-                        nullptr,
-                        Core::UpdatePhase::PrePhysics,
-                        0,
-                        preset->presetId,
-                        false);
-
-                    entity->SetBoxColliderComponent(colliderComponent);
-                    entity->SetAllowMeshPhysics(false);
-                    result.physicsEntities.push_back(entity);
-
-                    std::ostringstream oss;
-                    oss << logPrefix << "[StageColliders] Registered preset='" << preset->presetId
-                        << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(preset->layer)
-                        << ")\n";
-                    DebugTrace(oss.str());
-                }
+            const std::string registryId = !resolvedPreset.registryId.empty() ? resolvedPreset.registryId : modelKey;
+            auto registryDefinition = Physics::ColliderRegistry::Instance().Find(registryId);
+            if (!registryDefinition)
+            {
+                std::ostringstream oss;
+                oss << logPrefix << "[StageColliders] registryId='" << registryId
+                    << "' missing for model '" << obj.modelPath
+                    << "' (preset='" << resolvedPreset.presetId << "').\n";
+                DebugTrace(oss.str());
             }
             else
             {
-                const std::string modelKey = BuildModelKey(obj.modelPath);
+                Physics::BoxColliderComponent colliderComponent{};
+                colliderComponent.colliderId = registryId;
+                colliderComponent.shapeDef = registryDefinition->shapeDef;
+                colliderComponent.shapes = registryDefinition->shapes;
+                colliderComponent.colliderOffset = resolvedPreset.offset;
+
+                Physics::Box2DShapeConfig shapeConfig{};
+                shapeConfig.type = InferShapeType(colliderComponent.shapes);
+                shapeConfig.bodyType = resolvedPreset.bodyType;
+                shapeConfig.fixedRotation = resolvedPreset.fixedRotation;
+                shapeConfig.allowRotation = resolvedPreset.allowRotation;
+                shapeConfig.angularDamping = resolvedPreset.allowRotation ? 0.2f : 0.0f;
+                shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
+                shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
+                shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
+
+                const std::string presetId = !resolvedPreset.presetId.empty() ? resolvedPreset.presetId : registryId;
+                auto entity = std::make_shared<Entities::PhysicalEntity>(
+                    obj.transform,
+                    shapeConfig,
+                    resolvedPreset.layer,
+                    obj.model,
+                    nullptr,
+                    Core::UpdatePhase::PrePhysics,
+                    0,
+                    presetId,
+                    false);
+
+                entity->SetBoxColliderComponent(colliderComponent);
+                entity->SetAllowMeshPhysics(false);
+                result.physicsEntities.push_back(entity);
+
                 std::ostringstream oss;
-                oss << logPrefix << "[StageColliders] No preset mapped for model '" << obj.modelPath
-                    << "' (modelKey='" << modelKey
-                    << "', explicitPreset='" << obj.colliderPresetId
-                    << "', presetIds=" << stageColliderConfig.presetsById.size()
-                    << ", presetModelKeys=" << stageColliderConfig.presetsByModelKey.size()
-                    << "); collider skipped.\n";
+                oss << logPrefix << "[StageColliders] Registered registryId='" << registryId
+                    << "' for model '" << obj.modelPath << "' (layer=" << static_cast<int>(resolvedPreset.layer)
+                    << ")\n";
                 DebugTrace(oss.str());
             }
         }
