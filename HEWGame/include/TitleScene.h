@@ -1,4 +1,4 @@
-#ifndef __TITLE_SCENE_H__
+﻿#ifndef __TITLE_SCENE_H__
 #define __TITLE_SCENE_H__
 
 #include "Scene.h"
@@ -44,9 +44,7 @@ private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
 private:
-    std::unique_ptr<BackgroundRenderer> m_background;
-    bool m_inputRegistered = false;
-    
+    std::unique_ptr<BackgroundRenderer> m_background;    
 };
 
 #endif // __TITLE_SCENE_H__

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 
@@ -44,8 +44,5 @@ namespace SceneSpace
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
                 bool m_inputRegistered = false;
-
-                int m_cost = 9999;
-                bool m_inputRegistered = false;
-        };
+                int m_cost = 9999;        };
 }
