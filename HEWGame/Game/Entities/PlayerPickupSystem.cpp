@@ -331,8 +331,7 @@ namespace Entities
                 updated.rotation = rotationIt->second;
             }
 
-            // 物理ボディがある場合は SetTransform を直に使わず、必ず Physics 経由で同期する。
-            it->SetTransformViaPhysics(updated.position, updated.rotation);
+            it->SetTransform(updated);
             it->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
         }
     }

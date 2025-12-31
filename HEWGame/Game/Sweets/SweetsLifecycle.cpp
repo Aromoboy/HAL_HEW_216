@@ -526,8 +526,6 @@ namespace SweetsSpace
             return;
         }
 
-        m_carriedPhysicsStates.clear();
-
         if (m_spawner)
         {
             m_spawner->ForceSpawnRefresh();
@@ -595,41 +593,7 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            const b2BodyId bodyId = sweets->GetBox2DBodyId();
-            if (b2Body_IsValid(bodyId))
-            {
-                if (m_carriedPhysicsStates.find(sweets.get()) == m_carriedPhysicsStates.end())
-                {
-                    CarriedPhysicsState state{};
-                    state.bodyType = b2Body_GetType(bodyId);
-
-                    const int shapeCount = b2Body_GetShapeCount(bodyId);
-                    if (shapeCount > 0)
-                    {
-                        std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
-                        const int written = b2Body_GetShapes(bodyId, shapes.data(), shapeCount);
-                        shapes.resize(static_cast<size_t>(std::max(0, written)));
-                        state.filters.reserve(shapes.size());
-
-                        for (const b2ShapeId shapeId : shapes)
-                        {
-                            const b2Filter originalFilter = b2Shape_GetFilter(shapeId);
-                            state.filters.emplace_back(shapeId, originalFilter);
-
-                            b2Filter disabledFilter = originalFilter;
-                            disabledFilter.maskBits = 0;
-                            b2Shape_SetFilter(shapeId, disabledFilter);
-                        }
-                    }
-
-                    if (state.bodyType != b2_kinematicBody)
-                    {
-                        b2Body_SetType(bodyId, b2_kinematicBody);
-                    }
-
-                    m_carriedPhysicsStates.emplace(sweets.get(), std::move(state));
-                }
-            }
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
@@ -683,34 +647,13 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            const auto stateIt = m_carriedPhysicsStates.find(sweets.get());
-            if (stateIt != m_carriedPhysicsStates.end())
-            {
-                const b2BodyId bodyId = sweets->GetBox2DBodyId();
-                if (b2Body_IsValid(bodyId))
-                {
-                    if (stateIt->second.bodyType != b2Body_GetType(bodyId))
-                    {
-                        b2Body_SetType(bodyId, stateIt->second.bodyType);
-                    }
-
-                    for (const auto& entry : stateIt->second.filters)
-                    {
-                        if (b2Shape_IsValid(entry.first))
-                        {
-                            b2Shape_SetFilter(entry.first, entry.second);
-                        }
-                    }
-                }
-            }
+            m_physicsMachine->RegisterBody(*sweets);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
             DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ \n");
             *m_warnedMissingPhysicsMachine = true;
         }
-
-        m_carriedPhysicsStates.erase(sweets.get());
 
         std::ostringstream oss;
         oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
@@ -857,7 +800,6 @@ namespace SweetsSpace
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), context);
         }
         sweets->SetWasEverCarried(false);
-        m_carriedPhysicsStates.erase(sweets.get());
         sweets->MarkPendingDestroy();
         sweets->Enable(false);
 
