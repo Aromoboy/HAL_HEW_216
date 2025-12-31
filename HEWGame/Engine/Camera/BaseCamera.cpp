@@ -23,7 +23,7 @@ namespace
                         && AreFloat3Equal(lhs.scale, rhs.scale);
         }
 
-        bool ValidateFloat(const char* /*label*/, float value, float maxMagnitude)
+        bool ValidateFloat(const char*, float value, float maxMagnitude)
         {
                 if (std::isfinite(value) && std::fabs(value) <= maxMagnitude)
                 {
@@ -32,7 +32,7 @@ namespace
                 return false;
         }
 
-        bool ValidatePerspectiveValue(const char* /*label*/, float value)
+        bool ValidatePerspectiveValue(const char*, float value)
         {
                 if (std::isfinite(value) && value > 0.0f)
                 {

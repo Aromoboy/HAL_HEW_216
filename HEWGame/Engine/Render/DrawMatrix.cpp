@@ -33,7 +33,7 @@ void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_
 	// 行列をかけ合わせる
 	DirectX::XMMATRIX mat = S * Rx * Ry * Rz * T;
 
-	// Boneの動きを掛け合わせる
+	// ボーンの動きを掛け合わせる
 	mat *= a_fBone;
 	// GPU用に配列を変換
 	if (a_bTranspose) mat = DirectX::XMMatrixTranspose(mat);

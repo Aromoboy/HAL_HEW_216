@@ -457,7 +457,7 @@ void SceneGame::OnEnter()
     // BGMを再生（ループあり、音量40%）
     if (m_pManager)
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // true = ループ
+        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // ループ有効
     }
 }
 

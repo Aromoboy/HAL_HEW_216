@@ -5,7 +5,6 @@
 #include "DirectX.h"
 #include "DrawMatrix.h"
 #include "Defines.h"
-//#include "DirectXMath.h"
 
 SpriteRenderer::SpriteRenderer()
 	: m_uvPos(0.0f, 0.0f)

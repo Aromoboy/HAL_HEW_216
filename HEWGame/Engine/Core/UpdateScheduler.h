@@ -13,8 +13,8 @@ namespace Core
 {
         //
         // UpdateSchedulerはScene内の更新オブジェクトを一括管理するクラスである
-        // RegisterまたはUnregisterで対象を登録し、Tick(ctx)を呼び出すとフェーズと
-        // 優先度、さらに指定された依存関係を考慮してOnUpdateを実行する
+        // 登録/解除で対象を管理し、更新(ctx)を呼び出すとフェーズと
+        // 優先度、さらに指定された依存関係を考慮して更新処理を実行する
         //
         class UpdateScheduler
         {
@@ -39,7 +39,7 @@ namespace Core
                 // 実行順を動的に変更する
                 void SetOrder(IUpdatable& node, UpdatePhase phase, int priority);
 
-                // before → afterの順で実行させたい場合に依存関係を追加する
+                // 前後関係の順で実行させたい場合に依存関係を追加する
                 void AddDependency(IUpdatable& before, IUpdatable& after);
 
                 // 依存関係だけを一括でリセット ノードの登録状況は維持される
@@ -68,7 +68,7 @@ namespace Core
                         std::size_t registrationOrder = 0;
                 };
 
-                // sortや準備キューの比較で利用する共通関数
+                // ソートや準備キューの比較で利用する共通関数
                 bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const;
                 std::size_t GetRegistrationOrder(const IUpdatable* node) const;
 
@@ -91,7 +91,7 @@ namespace Core
                 void UnregisterById(NodeId nodeId);
 
                 std::vector<IUpdatable*> m_nodes;          // 登録済みノード
-                std::vector<Dependency> m_dependencies;    // before -> afterの矢印リスト
+                std::vector<Dependency> m_dependencies;    // 前後関係の矢印リスト
                 std::unordered_map<const IUpdatable*, std::size_t> m_registrationOrder;
                 std::unordered_map<const IUpdatable*, NodeId> m_nodeIds;
                 std::unordered_map<NodeId, IUpdatable*> m_nodesById;
@@ -101,12 +101,12 @@ namespace Core
                 std::vector<IUpdatable*> m_executionPlan;
                 bool m_executionPlanDirty = true;
 
-                std::vector<PendingRegistration> m_pendingRegistrations;     // Tick中に要求された登録
-                std::vector<IUpdatable*> m_pendingUnregistrations;   // Tick中に要求された登録解除
-                std::vector<PendingOrderChange> m_pendingOrderChanges; // Tick中に要求された順序変更
+                std::vector<PendingRegistration> m_pendingRegistrations;     // 更新中に要求された登録
+                std::vector<IUpdatable*> m_pendingUnregistrations;   // 更新中に要求された登録解除
+                std::vector<PendingOrderChange> m_pendingOrderChanges; // 更新中に要求された順序変更
                 std::vector<Dependency> m_pendingDependencies;
                 bool m_pendingClearDependencies = false;
-                bool m_isTicking = false; // Tick再入を検知するフラグ
+                bool m_isTicking = false; // 更新再入を検知するフラグ
 
                 friend class RegistrationHandle;
         };

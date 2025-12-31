@@ -14,7 +14,7 @@ namespace Render
         float halfHeight{ 0.0f };
     };
 
-    // Pivot policy: align origins to the bottom of local bounds so objects rest on y=0 when spawned there.
+    // ピボット方針：ローカル境界の底面に原点を合わせ、生成時に y=0 に接地させる。
     constexpr const char* kPivotPolicyName = "OriginBottom";
     constexpr const char* kPivotPolicyDescription = "Origin=bottom; raise objects by -minY of local bounds scaled by applied scale.";
 

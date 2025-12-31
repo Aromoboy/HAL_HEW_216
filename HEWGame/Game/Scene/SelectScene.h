@@ -29,4 +29,4 @@ private:
     bool m_inputRegistered = false;
 };
 
-#endif // __SELECT_SCENE_H__
+#endif

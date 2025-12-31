@@ -21,15 +21,13 @@ namespace Collision
         std::vector<std::vector<float2>> polygons;
     };
 
-    // Extracts a 2D outline and convex polygon set by projecting vertices along the
-    // provided normal (defaults to +Z) and rebuilding the boundary from mesh edges.
-    // The returned polygons are convex (ear-clipped triangles) that approximate any
-    // concave silhouette.
+    // 頂点を法線方向（既定は +Z）へ投影し、メッシュエッジから境界を再構築して
+    // 2D 輪郭と凸ポリゴン群を抽出する。
+    // 返却ポリゴンは凸（耳切り三角形化）で、凹シルエットを近似する。
     Mesh2DExtraction ExtractProjectedPolygons(const MeshBuffer::Description& desc, const float3& projectionNormal = float3{ 0.0f, 0.0f, 1.0f });
 
-    // Extracts XY positions from a mesh description and computes a
-    // normalized convex hull centered around its centroid for collider use.
+    // メッシュ記述から XY 座標を抽出し、重心基準で正規化した凸包を算出して
+    // コライダー用途に返す。
     HullBuildResult BuildConvexHullFromMesh(const MeshBuffer::Description& desc,
         std::string_view tag = {}, std::string_view modelPath = {});
 }
-

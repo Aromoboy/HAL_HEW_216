@@ -1,18 +1,4 @@
-/**
- * @file	conioex.h
- * @brief	Win32 コンソール I/O 拡張ヘッダ for Visual C++/Borland C++
- *
- * @author	HAL名古屋 教務部　浜谷浩彦
- * @date	2009/10/08 (木)
- * @date	2009/10/15 (木) msleep 関数を追加 
- * @date	2010/01/13 (水) playsound 関数で、常に先頭へシーク 
- * @date	2012/12/17 (月) reinport 関数を追加 (by 志水)
- * @date	2018/02/06 (火) inport 関数で、ゲームパッド対応強化 
- * @date	2018/06/07 (木) setcaption 関数の引数型にconstを追加 
- * @date	2021/03/08 (月) x64対応 width 関数、fontsize 関数、setpalette 関数、getpalette 関数追加 
- * @date	2025/02/14 (金) inport 関数のバグ修正 (by 山内陽)
- * @version	1.06.1
- */
+
 #ifndef __CONIOEX_H
 #define __CONIOEX_H
 
@@ -34,9 +20,9 @@ extern "C" {
 
 #ifdef CONIOEX
 #define CONIOEX_INST extern
-#else /* !CONIOEX */
+#else 
 #define CONIOEX_INST
-#endif /* CONIOEX */
+#endif 
 
 #ifdef __BORLANDC__
 #define NOCURSOR		_NOCURSOR
@@ -44,7 +30,7 @@ extern "C" {
 #define NORMALCURSOR	_NORMALCURSOR
 __inline void setcursortype(int cur_t) {_setcursortype(cur_t);}
 __inline int _kbhit(void) {return kbhit();}
-#else /* !__BORLANDC__ */
+#else 
 
 #pragma warning(disable:4996)
 
@@ -59,77 +45,64 @@ __inline int _kbhit(void) {return kbhit();}
 #ifndef __COLORS
 #define __COLORS
 enum COLORS {
-	BLACK,			/* 黒		*/
-	BLUE,			/* 濃い青	*/
-	GREEN,			/* 緑		*/
-	CYAN,			/* 青緑		*/
-	RED,			/* 濃い赤	*/
-	MAGENTA,		/* 紫		*/
-	BROWN,			/* 濃い黄	*/
-	LIGHTGRAY,		/* 25%灰色	*/
-	DARKGRAY,		/* 50%灰色	*/
-	LIGHTBLUE,		/* 青		*/
-	LIGHTGREEN,		/* 明るい緑	*/
-	LIGHTCYAN,		/* 水色		*/
-	LIGHTRED,		/* 赤		*/
-	LIGHTMAGENTA,	/* ピンク	*/
-	YELLOW,			/* 黄		*/
-	WHITE			/* 白		*/
+	BLACK,			
+	BLUE,			
+	GREEN,			
+	CYAN,			
+	RED,			
+	MAGENTA,		
+	BROWN,			
+	LIGHTGRAY,		
+	DARKGRAY,		
+	LIGHTBLUE,		
+	LIGHTGREEN,		
+	LIGHTCYAN,		
+	LIGHTRED,		
+	LIGHTMAGENTA,	
+	YELLOW,			
+	WHITE			
 };
-#endif /* _COLORS */
+#endif 
 
-CONIOEX_INST WORD	__conioex_h_wAttribute		/* 境界色 */
+CONIOEX_INST WORD	__conioex_h_wAttribute		
 #ifndef CONIOEX
 = LIGHTGRAY
-#endif /* CONIOEX */
+#endif 
 ;
 
 
 
-/**
- * @brief	水平方向のカーソル位置を取得
- *
- * @return	現在のカーソル位置のX座標(1～)
- */
+
 int wherex(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
 	return csbi.dwCursorPosition.X - csbi.srWindow.Left + 1;
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	垂直方向のカーソル位置を取得
- *
- * @return	現在のカーソル位置のY座標(1～)
- */
+
 int wherey(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
 	return csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	カーソル位置の移動
- *
- * @param	x [入力] X座標(1～)
- * @param	y [入力] Y座標(1～)
- */
+
 void gotoxy(int x, int y)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	COORD c;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -141,15 +114,13 @@ void gotoxy(int x, int y)
 		c.Y += csbi.srWindow.Top;
 	SetConsoleCursorPosition(h, c);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	行末まで消去
- */
+
 void clreol(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 	COORD	c;
@@ -165,15 +136,13 @@ void clreol(void)
 			csbi.srWindow.Right - csbi.dwCursorPosition.X + 1, c, &num);
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	画面消去
- */
+
 void clrscr(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	DWORD num;
@@ -187,15 +156,13 @@ void clrscr(void)
 		gotoxy(csbi.srWindow.Left + 1, csbi.srWindow.Top + 1);
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	文字色高輝度化
- */
+
 void highvideo(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -203,15 +170,13 @@ void highvideo(void)
 	if (GetConsoleScreenBufferInfo(h, &csbi))
 		SetConsoleTextAttribute(h, csbi.wAttributes | FOREGROUND_INTENSITY);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	文字色低輝度化
- */
+
 void lowvideo(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -219,57 +184,55 @@ void lowvideo(void)
 	if (GetConsoleScreenBufferInfo(h, &csbi))
 		SetConsoleTextAttribute(h, csbi.wAttributes & ~FOREGROUND_INTENSITY);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	既定文字色設定
- */
+
 void normvideo(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), LIGHTGRAY);
 }
-#endif /* CONIOEX */
+#endif 
 
 void textbackground(int newcolor)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (GetConsoleScreenBufferInfo(h, &csbi))
 		SetConsoleTextAttribute(h, (csbi.wAttributes & ~0x00f0) | ((newcolor & 0x07) << 4));
 }
-#endif /* CONIOEX */
+#endif 
 
 void textcolor(int newcolor)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (GetConsoleScreenBufferInfo(h, &csbi))
 		SetConsoleTextAttribute(h, (csbi.wAttributes & ~0x0f) | (newcolor & 0x0f));
 }
-#endif /* CONIOEX */
+#endif 
 
 void textattr(int newattr)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), newattr);
 }
-#endif /* CONIOEX */
+#endif 
 
 void setcursortype(int cur_t)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_CURSOR_INFO	cci;
 	static	int nSize = -1;
@@ -284,16 +247,14 @@ void setcursortype(int cur_t)
 	cci.bVisible	= (cur_t != NOCURSOR);
 	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cci);
 }
-#endif /* CONIOEX */
+#endif 
 __inline void _setcursortype(int cur_t) {setcursortype(cur_t);}
 
-/**
- * @brief	現在行に挿入
- */
+
 void insline(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -321,15 +282,13 @@ void insline(void)
 		FillConsoleOutputCharacter(h, TEXT(' '), len, c, &num);
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	現在行の削除
- */
+
 void delline(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -357,15 +316,13 @@ void delline(void)
 		FillConsoleOutputCharacter(h, TEXT(' '), len, c, &num);
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	文字数、行数の指定
- */
+
 void width(int w, int h)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -380,17 +337,17 @@ void width(int w, int h)
 	SMALL_RECT rect = { 0, 0, (short)(cols - 1), (short)(rows - 1) };
 
 	if (oldr <= rows) {
-		if (oldc <= cols) {			// increasing both dimensions
-			// Do nothing
-		} else {					// cols--, rows+
+		if (oldc <= cols) {			
+			
+		} else {					
 			SMALL_RECT tmp = { 0, 0, (short)(cols - 1), (short)(oldr - 1) };
 			SetConsoleWindowInfo(hStdOut, TRUE, &tmp);
 		}
 	} else {
-		if (oldc <= cols) {			// cols+, rows--
+		if (oldc <= cols) {			
 			SMALL_RECT tmp = { 0, 0, (short)(oldc - 1), (short)(rows - 1) };
 			SetConsoleWindowInfo(hStdOut, TRUE, &tmp);
-		} else {					// cols--, rows--
+		} else {					
 			SetConsoleWindowInfo(hStdOut, TRUE, &rect);
 			SetConsoleScreenBufferSize(hStdOut, newSize);
 			GetConsoleScreenBufferInfo(hStdOut, &csbi);
@@ -401,15 +358,13 @@ void width(int w, int h)
 	SetConsoleWindowInfo(hStdOut, TRUE, &rect);
 	GetConsoleScreenBufferInfo(hStdOut, &csbi);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	フォントサイズの指定
- */
+
 int fontsize(int h)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_FONT_INFOEX cfiEx;
 	COORD size;
@@ -425,15 +380,13 @@ int fontsize(int h)
 	}
 	return (int)size.Y;
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	カラーパレットの取得
- */
+
 void getpalette(unsigned* palette)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	CONSOLE_SCREEN_BUFFER_INFOEX csbiEx;
 	int i;
@@ -445,16 +398,14 @@ void getpalette(unsigned* palette)
 	for (i = 0; i < 16; ++i)
 		palette[i] = (unsigned)csbiEx.ColorTable[i];
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	カラーパレットの設定
- */
+
 #define PALETTE95 ((const unsigned*)MAKEINTRESOURCE(0x9500))
 void setpalette(const unsigned* palette)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	static const unsigned rgb[16] = {
 		0x00000000, 0x00000080, 0x00008000, 0x00008080, 0x00800000, 0x00800080, 0x00808000, 0x00C0C0C0,
@@ -484,9 +435,9 @@ void setpalette(const unsigned* palette)
 		csbiEx.ColorTable[i] = (COLORREF)palette[i];
 	SetConsoleScreenBufferInfoEx(hStdOut, &csbiEx);
 }
-#endif /* CONIOEX */
+#endif 
 
-#endif /* __BORLANDC__ */
+#endif 
 
 __inline void setcaption(const char *title) {SetConsoleTitleA(title);}
 __inline int getcaption(char *title, int len) {return GetConsoleTitleA(title, len);}
@@ -519,8 +470,8 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_INS					VK_INSERT
 #define PK_DEL					VK_DELETE
 #define PK_TAB					VK_TAB
-#define PK_NFER					VK_KANA		/* [無変換]	*/
-#define PK_XFER					VK_CONVERT	/* [変換]	*/
+#define PK_NFER					VK_KANA		
+#define PK_XFER					VK_CONVERT	
 #define PK_0					0x30
 #define PK_1					0x31
 #define PK_2					0x32
@@ -531,16 +482,16 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_7					0x37
 #define PK_8					0x38
 #define PK_9					0x39
-#define PK_NUMPAD0				VK_NUMPAD0	/* テンキーの[0]	*/
-#define PK_NUMPAD1				VK_NUMPAD1	/* テンキーの[1]	*/
-#define PK_NUMPAD2				VK_NUMPAD2	/* テンキーの[2]	*/
-#define PK_NUMPAD3				VK_NUMPAD3	/* テンキーの[3]	*/
-#define PK_NUMPAD4				VK_NUMPAD4	/* テンキーの[4]	*/
-#define PK_NUMPAD5				VK_NUMPAD5	/* テンキーの[5]	*/
-#define PK_NUMPAD6				VK_NUMPAD6	/* テンキーの[6]	*/
-#define PK_NUMPAD7				VK_NUMPAD7	/* テンキーの[7]	*/
-#define PK_NUMPAD8				VK_NUMPAD8	/* テンキーの[8]	*/
-#define PK_NUMPAD9				VK_NUMPAD9	/* テンキーの[9]	*/
+#define PK_NUMPAD0				VK_NUMPAD0	
+#define PK_NUMPAD1				VK_NUMPAD1	
+#define PK_NUMPAD2				VK_NUMPAD2	
+#define PK_NUMPAD3				VK_NUMPAD3	
+#define PK_NUMPAD4				VK_NUMPAD4	
+#define PK_NUMPAD5				VK_NUMPAD5	
+#define PK_NUMPAD6				VK_NUMPAD6	
+#define PK_NUMPAD7				VK_NUMPAD7	
+#define PK_NUMPAD8				VK_NUMPAD8	
+#define PK_NUMPAD9				VK_NUMPAD9	
 #define PK_A					0x41
 #define PK_B					0x42
 #define PK_C					0x43
@@ -568,29 +519,29 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_Y					0x59
 #define PK_Z					0x5A
 
-#define PK_LT					0x0BC		/* [,]	*/
-#define PK_GT					0x0BE		/* [.]	*/
-#define PK_SLUSH				0x0BF		/* [?]	*/
-#define PK_DOT					VK_DECIMAL	/* テンキーの[.]	*/
-#define PK_DIV					VK_DIVIDE	/* テンキーの[/]	*/
-#define PK_BSLUSH				0x0E2		/* [_]	*/
+#define PK_LT					0x0BC		
+#define PK_GT					0x0BE		
+#define PK_SLUSH				0x0BF		
+#define PK_DOT					VK_DECIMAL	
+#define PK_DIV					VK_DIVIDE	
+#define PK_BSLUSH				0x0E2		
 
-#define PK_SEMICOLON			0x0BB		/* [;]	*/
-#define PK_ADD					VK_ADD		/* テンキーの[+]	*/
-#define PK_COLON				0x0BA		/* [:]	*/
-#define PK_MUL					VK_MULTIPLY	/* テンキーの[*]	*/
-#define PK_RBRACE				0x0DD		/* []]	*/
+#define PK_SEMICOLON			0x0BB		
+#define PK_ADD					VK_ADD		
+#define PK_COLON				0x0BA		
+#define PK_MUL					VK_MULTIPLY	
+#define PK_RBRACE				0x0DD		
 
-#define PK_ATMARK				0x0C0		/* [@]	*/
-#define PK_LBRACE				0x0DB		/* [[]	*/
+#define PK_ATMARK				0x0C0		
+#define PK_LBRACE				0x0DB		
 
-#define PK_MINUS				0x0BD		/* [-]	*/
-#define PK_SUB					VK_SUBTRACT	/* テンキーの[-]	*/
-#define PK_XOR					0x0DE		/* [^]	*/
-#define PK_YEN					0x0DC		/* [\]	*/
+#define PK_MINUS				0x0BD		
+#define PK_SUB					VK_SUBTRACT	
+#define PK_XOR					0x0DE		
+#define PK_YEN					0x0DC		
 
-#define PK_KANJI				0x0F3		/* [半角/全角]	*/
-#define PK_CAPS					0x0F0		/* [英数][ひらがな]	*/
+#define PK_KANJI				0x0F3		
+#define PK_CAPS					0x0F0		
 
 #define PM_LEFT					VK_LBUTTON
 #define PM_MID					VK_MBUTTON
@@ -647,23 +598,19 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 CONIOEX_INST DWORD	__conioex_h_dwKeyMap[8]
 #ifndef CONIOEX
 = {0, 0, 0, 0, 0, 0, 0, 0}
-#endif /* CONIOEX */
+#endif 
 ;
 CONIOEX_INST COORD	__conioex_h_crdMouse
 #ifndef CONIOEX
 = {0, 0}
-#endif /* CONIOEX */
+#endif 
 ;
 
-/**
- * @brief	キー情報リセット
- *
- * @return	なし
- */
+
 void reinport(void)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	int i;
 	for(i = 0; i < 8; i++)
@@ -671,24 +618,19 @@ void reinport(void)
 		__conioex_h_dwKeyMap[i] = 0;
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
 
-/**
- * @brief	各種リアルタイム入力
- *
- * @param	port [入力] ポート番号(P*_*)
- * @return	入力値
- */
+
 int inport(int port)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	DWORD	dwEvent;
 	HANDLE	h;
 
-	/* ゲームパッド入力 */
+	
 	if ((port & 0xfe00) == 0x0200) {
 		int			id = (port & 0x01f0) >> 4;
 		int			func = port & 0x0f;
@@ -726,15 +668,15 @@ int inport(int port)
 		}
 		return 0;
 	}
-	// キー/マウス イベント チェック
+	
 	dwEvent = 0;
 	h = GetStdHandle(STD_INPUT_HANDLE);
 
-	//追加部分
+	
 	GetConsoleMode(h, &dwEvent);
 	SetConsoleMode(h, dwEvent | ENABLE_MOUSE_INPUT);
 	dwEvent = 0;
-	//ここまで
+	
 
 	if (GetNumberOfConsoleInputEvents(h, &dwEvent) && dwEvent) {
 		DWORD			dwRead = 0;
@@ -791,7 +733,7 @@ int inport(int port)
 		}
 	}
 
-	// マウス座標を返す
+	
 	switch (port) {
 	case PM_CURX:
 		return __conioex_h_crdMouse.X + 1;
@@ -800,10 +742,10 @@ int inport(int port)
 	default:
 		break;
 	}
-	// キー状態を返す
+	
 	return (__conioex_h_dwKeyMap[(port & 0x0FF) >> 5] & (0x01 << (port & 31))) != 0;
 }
-#endif /* CONIOEX */
+#endif 
 
 typedef struct {
 	int				nDevType;
@@ -812,17 +754,11 @@ typedef struct {
 	int				nRepeat;
 } __conioex_h_SoundInfo;
 
-/**
- * @brief	サウンド ファイルを開く
- *
- * @param	path [入力] ファイル名
- * @retval	非0	サウンド ハンドル
- * @retval	0	エラー
- */
+
 INT_PTR opensound(char *path)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	const char	szMidiExt[] = ".mid|.midi|.rmi";
 	const char	szWaveExt[] = ".wav|.wave";
@@ -856,8 +792,8 @@ INT_PTR opensound(char *path)
 		m.wop.lpstrDeviceType  = (LPCSTR)MCI_DEVTYPE_WAVEFORM_AUDIO;
 		m.wop.lpstrElementName = psi->szPath;
 		dwCmd |= MCI_OPEN_TYPE_ID;
-//		m.wop.dwBufferSeconds  = 60;
-//		dwCmd |= MCI_WAVE_OPEN_BUFFER;
+
+
 	} else if (strstr(szMP3Ext, szExt)) {
 		psi->nDevType = MCI_DEVTYPE_DIGITAL_VIDEO;
 		lstrcpynA(psi->szPath, path, MAX_PATH);
@@ -874,17 +810,13 @@ INT_PTR opensound(char *path)
 	psi->wDeviceID = m.op.wDeviceID;
 	return (INT_PTR)psi;
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	サウンド ファイルを閉じる
- *
- * @param	hsound [入力] サウンド ハンドル
- */
+
 void closesound(INT_PTR hsound)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 
@@ -897,18 +829,13 @@ void closesound(INT_PTR hsound)
 	}
 	free(psi);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	サウンドを再生する
- *
- * @param	hsound [入力] サウンド ハンドル
- * @param	repeat [入力] ループ有無
- */
+
 void playsound(INT_PTR hsound, int repeat)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 	DWORD_PTR				dwCmd;
@@ -938,17 +865,13 @@ void playsound(INT_PTR hsound, int repeat)
 	mciSendCommand(psi->wDeviceID, MCI_SEEK, MCI_SEEK_TO_START, 0);
 	mciSendCommand(psi->wDeviceID, MCI_PLAY, dwCmd, (DWORD_PTR)&mpp);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	サウンド再生を停止する
- *
- * @param	hsound [入力] サウンド ハンドル
- */
+
 void stopsound(INT_PTR hsound)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 
@@ -961,18 +884,13 @@ void stopsound(INT_PTR hsound)
 	mciSendCommand(psi->wDeviceID, MCI_STOP, MCI_WAIT, 0);
 	mciSendCommand(psi->wDeviceID, MCI_SEEK, MCI_SEEK_TO_START, 0);
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	サウンド再生状態の取得
- *
- * @param	hsound [入力] サウンド ハンドル
- * @return	再生中ならば 0 以外を返す 
- */
+
 int checksound(INT_PTR hsound)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 	MCI_STATUS_PARMS		msp;
@@ -988,17 +906,13 @@ int checksound(INT_PTR hsound)
 		return 0;
 	return msp.dwReturn == MCI_MODE_PLAY;
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	ループ再生の強制更新
- *
- * @param	hsound [入力] サウンド ハンドル
- */
+
 void updatesound(INT_PTR hsound)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 	MCI_STATUS_PARMS		msp;
@@ -1030,18 +944,13 @@ void updatesound(INT_PTR hsound)
 		break;
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
-/**
- * @brief	再生音量を設定する
- *
- * @param	hsound [入力] サウンド ハンドル
- * @param	percent [入力] 音量 (0 ～ 100)
- */
+
 void setvolume(INT_PTR hsound, int percent)
 #ifdef CONIOEX
 ;
-#else /* !CONIOEX */
+#else 
 {
 	__conioex_h_SoundInfo	*psi;
 
@@ -1079,10 +988,10 @@ void setvolume(INT_PTR hsound, int percent)
 		break;
 	}
 }
-#endif /* CONIOEX */
+#endif 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CONIOEX_H */
+#endif 

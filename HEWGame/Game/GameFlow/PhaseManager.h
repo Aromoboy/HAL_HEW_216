@@ -35,19 +35,19 @@ namespace GameFlow
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
 
-        // mini-phase support
+        // ミニフェーズ対応
         float GetRewardMiniMultiplier() const noexcept;
 
     private:
 
-        // time tracking
+        // 時間計測
         std::chrono::steady_clock::time_point m_startTime;
 
-        // thresholds
+        // 閾値
         std::vector<float> m_thresholds;
         std::vector<float> m_rewardMultipliers;
 
-        // mini thresholds
+        // ミニ閾値
         std::vector<float> m_minithresholds;
         std::vector<float> m_minirewardMultipliers;
 

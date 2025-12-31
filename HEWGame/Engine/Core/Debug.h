@@ -23,4 +23,4 @@ namespace DebugLog
 
 
 
-#endif // !___DEBUG_H___
+#endif

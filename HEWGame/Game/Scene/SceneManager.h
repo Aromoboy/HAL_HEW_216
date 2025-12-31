@@ -50,4 +50,4 @@ namespace SceneSpace
     };
 }
 
-#endif // __SCENE_MANAGER_H__
+#endif

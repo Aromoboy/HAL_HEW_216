@@ -13,16 +13,16 @@ class ShaderList
 public:
 	enum VSKind
 	{
-		VS_WORLD, // SetWVP
-		VS_ANIME, // SetWVP,SetBones
+		VS_WORLD, // WVP 設定
+		VS_ANIME, // WVP/ボーン設定
 		VS_KIND_MAX
 	};
 	enum PSKind
 	{
-		PS_LAMBERT, //SetMaterial, SetLight
-		PS_SPECULAR, //SetMaterial, SetLight, SetCameraPos
-		PS_TOON, // SetMaterial, SetLight
-		PS_FOG, // SetMaterial, SetLight,SetFog
+		PS_LAMBERT, // マテリアル/ライト設定
+		PS_SPECULAR, // マテリアル/ライト/カメラ位置設定
+		PS_TOON, // マテリアル/ライト設定
+		PS_FOG, // マテリアル/ライト/フォグ設定
 		PS_KIND_MAX
 	};
 
@@ -62,4 +62,4 @@ private:
 	
 };
 
-#endif // __SHADER_LIST_H__
+#endif

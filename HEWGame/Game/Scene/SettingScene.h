@@ -1,5 +1,4 @@
 #pragma once
-//Setting.h
 #ifndef __SETTING_SCENE_H__
 #define __SETTING_SCENE_H__
 
@@ -47,4 +46,4 @@ namespace SceneSpace
    
     };
 }
-#endif // __SETTING_SCENE_H__
+#endif

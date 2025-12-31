@@ -190,7 +190,7 @@ namespace CameraSpace
                 m_projectionDirty = false;
         }
 
-        float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char* /*contextLabel*/) const
+        float PerspectiveCamera::NormalizeFovDegrees(float degrees, const char*) const
         {
                 if (!std::isfinite(degrees))
                 {
@@ -201,7 +201,7 @@ namespace CameraSpace
                 return DirectX::XMConvertToRadians(clamped);
         }
 
-        float PerspectiveCamera::NormalizeAspect(float aspect, const char* /*contextLabel*/) const
+        float PerspectiveCamera::NormalizeAspect(float aspect, const char*) const
         {
                 if (!std::isfinite(aspect) || aspect <= kMinAspectRatio)
                 {
@@ -212,7 +212,7 @@ namespace CameraSpace
                 return aspect;
         }
 
-        float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char* /*contextLabel*/) const
+        float PerspectiveCamera::NormalizeNearPlane(float nearPlane, const char*) const
         {
                 if (!std::isfinite(nearPlane) || nearPlane <= 0.0f)
                 {
@@ -222,7 +222,7 @@ namespace CameraSpace
                 return std::max(nearPlane, kDefaultNearPlane);
         }
 
-        float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char* /*contextLabel*/) const
+        float PerspectiveCamera::NormalizeFarPlane(float farPlane, float nearPlane, const char*) const
         {
                 if (!std::isfinite(farPlane))
                 {

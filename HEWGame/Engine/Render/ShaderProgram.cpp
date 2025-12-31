@@ -1,4 +1,3 @@
-// ShaderProgram.cpp
 #include "ShaderProgram.h"
 #include "Debug.h"
 #include <d3dcompiler.h>

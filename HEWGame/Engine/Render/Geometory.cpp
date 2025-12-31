@@ -185,7 +185,7 @@ void Geometory::MakeCylinder()
         std::vector<uint16_t> indices;
         indices.reserve(slices * 6 * 2);
 
-        // Side vertices
+        // 側面頂点
         for (int i = 0; i <= slices; ++i)
         {
                 float angle = step * static_cast<float>(i);
@@ -197,7 +197,7 @@ void Geometory::MakeCylinder()
                 vertices.push_back({ { x, -halfHeight, z }, { u, 1.0f } });
         }
 
-        // Side indices
+        // 側面インデックス
         for (int i = 0; i < slices; ++i)
         {
                 uint16_t top0 = static_cast<uint16_t>(i * 2);
@@ -214,11 +214,11 @@ void Geometory::MakeCylinder()
                 indices.push_back(bottom1);
         }
 
-        // Top cap center
+        // 上面中心
         uint16_t topCenter = static_cast<uint16_t>(vertices.size());
         vertices.push_back({ { 0.0f, halfHeight, 0.0f }, { 0.5f, 0.5f } });
 
-        // Top ring
+        // 上面リング
         for (int i = 0; i <= slices; ++i)
         {
                 float angle = step * static_cast<float>(i);
@@ -238,11 +238,11 @@ void Geometory::MakeCylinder()
                 indices.push_back(ring1);
         }
 
-        // Bottom cap center
+        // 下面中心
         uint16_t bottomCenter = static_cast<uint16_t>(vertices.size());
         vertices.push_back({ { 0.0f, -halfHeight, 0.0f }, { 0.5f, 0.5f } });
 
-        // Bottom ring
+        // 下面リング
         for (int i = 0; i <= slices; ++i)
         {
                 float angle = step * static_cast<float>(i);

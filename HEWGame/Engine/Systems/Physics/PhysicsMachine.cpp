@@ -226,7 +226,7 @@ namespace Systems
         m_contactListener = std::move(listener);
         if (m_box2dSystem)
         {
-            // Box2D のイベントバッファは World 管理 解放不要 
+            // Box2D のイベントバッファはワールド管理で解放不要
             m_box2dSystem->SetContactListener(m_contactListener);
         }
 
@@ -368,7 +368,7 @@ namespace Systems
         const b2BodyId existing = body.GetBox2DBodyId();
         if (b2Body_IsValid(existing))
         {
-            // world の比較はやめる 単一 world 前提で素直に使う
+            // ワールド比較はやめる 単一ワールド前提で素直に使う
             m_bodies.push_back(bodyPtr);
             m_bodyMap.emplace(bodyPtr, existing);
 #if defined(_DEBUG)
@@ -942,7 +942,7 @@ namespace Systems
         shapeDef.filter.categoryBits = ToCategoryBits(layer);
         shapeDef.filter.maskBits = ToMaskBits(layer);
 
-// Debug info for any body (all shapes/types)
+// すべてのボディ（全形状/型）向けデバッグ情報。
 #if defined(_DEBUG)
 {
         std::ostringstream oss;

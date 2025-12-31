@@ -6,7 +6,6 @@
 #include <EffekseerSoundXAudio2.h>
 #include <memory>
 #include <unordered_map>
-//$(ProjectDir)ThirdParty\Effekseer
 #include "ICamera.h"
 #include "Scene.h"
 #include "SceneManager.h"

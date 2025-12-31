@@ -47,4 +47,4 @@ private:
     std::unique_ptr<BackgroundRenderer> m_background;    
 };
 
-#endif // __TITLE_SCENE_H__
+#endif

@@ -43,4 +43,4 @@ private:
 	static std::shared_ptr<PixelShader> m_defPS;
 };
 
-#endif // __SPRITE_H__
+#endif

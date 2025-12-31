@@ -5,9 +5,7 @@
 #include <sstream>
 #include <string>
 
-/// <summary>
-/// クスチャ
-/// </summary>
+// テクスチャ
 Texture::Texture()
 	: m_width(0), m_height(0)
 	, m_pTex(nullptr)
@@ -156,9 +154,7 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 	return hr;
 }
 
-/// <summary>
-/// レンダーターゲ
-/// </summary>
+// レンダーターゲット
 RenderTarget::RenderTarget()
 	: m_pRTV(nullptr)
 {
@@ -225,9 +221,7 @@ HRESULT RenderTarget::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pDa
 	return GetDevice()->CreateRenderTargetView(m_pTex, &rtvDesc, &m_pRTV);
 }
 
-/// <summary>
-/// 深度クスチャ
-/// </summary>
+// 深度クスチャ
 DepthStencil::DepthStencil()
 	: m_pDSV(nullptr)
 {
@@ -242,7 +236,6 @@ void DepthStencil::Clear()
 }
 HRESULT DepthStencil::Create(UINT width, UINT height, bool useStencil)
 {
-	// https://docs.microsoft.com/ja-jp/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil#compositing
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(useStencil ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_R32_TYPELESS, width, height);
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
 	return CreateResource(desc);

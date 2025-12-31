@@ -53,8 +53,8 @@ namespace Systems
 
                 const b2ContactEvents events = b2World_GetContactEvents(m_worldId);
 
-                // The event buffers (beginEvents/endEvents/hitEvents) are owned by Box2D and stay
-                // valid until the next world step. They must not be freed by the listener.
+                // イベントバッファ（beginEvents/endEvents/hitEvents）は Box2D 所有で、
+                // 次のワールドステップまで有効。リスナー側で解放しない。
 
                 constexpr int kMaxLogsPerFrame = 4;
                 constexpr int kMaxDroppedEventLogsPerFrame = 8;
@@ -336,7 +336,7 @@ namespace Systems
                         EndContact(entityA, entityB);
                 }
 
-                // Contact hit events are intentionally ignored for now; Box2D owns the buffer.
+                // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
                 (void)events.hitEvents;
                 (void)events.hitCount;
 

@@ -162,4 +162,4 @@ private:
     SceneSpace::SceneManager* m_manager = nullptr;
 };
 
-#endif // __SCENE_GAME_H__
+#endif
