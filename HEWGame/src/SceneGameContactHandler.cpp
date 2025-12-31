@@ -1,9 +1,9 @@
-#include "SceneGameContactForwarder.h"
+#include "SceneGameContactHandler.h"
 
 #include "Systems/IPhysicsBinder.h"
 #include "SweetsManager.h"
 
-void SceneGameContactForwarder::Bind(Systems::IPhysicsBinder& binder, SweetsSpace::SweetsManager* sweetsManager)
+void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, SweetsSpace::SweetsManager* sweetsManager)
 {
     m_sweetsManager = sweetsManager;
     binder.AddContactHandler(

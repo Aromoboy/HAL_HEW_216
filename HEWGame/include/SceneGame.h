@@ -10,8 +10,8 @@
 #include "Entities/Player.h"
 #include "GameplayRulesSystem.h"
 #include "GuidelineSystem.h"
-#include "SceneGameContactForwarder.h"
-#include "IModelLoader.h"
+#include "PlayerController.h"
+#include "SceneGameContactHandler.h"
 #include "ModelRender.h"
 #include "PerspectiveCamera.h"
 #include "Core/StepTimer.h"
@@ -94,12 +94,8 @@ private:
     void OnStageFail();
     void ResetPlaySession();
     void ResetGuidelineHeight();
-    void ProcessPostGameInput(Core::UpdateContext& ctx);
-    void HandleManualRetryInput(Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
-    void NormalizePlayerColliderDefinitions();
-    std::string ResolvePlayerColliderKey(const std::string& key) const;  
     void Initialize(const Stage::StageData& stageData);
     
     std::vector<StageObject> m_stageObjects;
@@ -108,13 +104,13 @@ private:
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
-    std::shared_ptr<IModelLoader> m_loader;
     std::unique_ptr<ModelRender> m_render;
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
-    SceneGameContactForwarder m_contactForwarder;
+    SceneGameContactHandler m_contactHandler;
+    PlayerController m_playerController;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
     bool m_cameraRigRegistered = false;
@@ -142,10 +138,6 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    float m_cachedPlayerMinX = std::numeric_limits<float>::quiet_NaN();
-    float m_cachedPlayerMaxX = std::numeric_limits<float>::quiet_NaN();
-    float m_cachedPlayerMaxY = std::numeric_limits<float>::quiet_NaN();
-    bool m_cachedPlayerBoundsValid = false;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;

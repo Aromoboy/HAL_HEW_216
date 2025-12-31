@@ -15,7 +15,7 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
-class SceneGameContactForwarder
+class SceneGameContactHandler
 {
 public:
     void Bind(Systems::IPhysicsBinder& binder, SweetsSpace::SweetsManager* sweetsManager);
