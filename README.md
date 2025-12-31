@@ -141,15 +141,30 @@ class Core_UpdateScheduler["Core::UpdateScheduler"] {
   +SetExecutionLogListener(listener)
 }
 
+class Core_UpdateScheduler_ExecutionLogListener["Core::UpdateScheduler::ExecutionLogListener"] {
+  <<interface>>
+  +OnFrameBegin(frameIndex: uint64)
+  +OnNodeExecuted(frameIndex: uint64, phase: Core_UpdatePhase, node: Core_IUpdatable, priority: int)
+  +OnFrameEnd(frameIndex: uint64)
+}
+
 class Core_Input["Core::Input"] {
   +Initialize()
   +Shutdown()
   +OnUpdate(ctx: Core_UpdateContext)
   +GetAxis(actionId) float
   +IsAction(actionId) bool
+  +IsPress(actionId) bool
+  +IsTrigger(actionId) bool
+  +IsRelease(actionId) bool
   +IsPress(vk:int) bool
   +IsTrigger(vk:int) bool
   +IsRelease(vk:int) bool
+  +IsKeyPress(vk:int) bool
+  +IsKeyTrigger(vk:int) bool
+  +IsKeyRelease(vk:int) bool
+  +IsKeyRepeat(vk:int) bool
+  +Rebind(actionId, binding)
 }
 
 Core_UpdateNode ..|> Core_IUpdatable
@@ -157,6 +172,7 @@ Core_Input --|> Core_UpdateNode
 Core_UpdateNode *-- Core_RegistrationHandle
 Core_UpdateScheduler o-- Core_IUpdatable
 Core_UpdateScheduler ..> Core_RegistrationHandle
+Core_UpdateScheduler o-- Core_UpdateScheduler_ExecutionLogListener
 
 %% =========================
 %% App / Entry
@@ -174,6 +190,7 @@ class App_Main["Main (Main.cpp)"] {
   +Update()
   +Draw()
   +Uninit()
+  +GetComInitResult()
 }
 
 App_Main o-- Core_Input
@@ -205,10 +222,14 @@ class Scene_Scene["SceneSpace::Scene"] {
   +RootUpdate(timer: Core_StepTimer, input: Core_Input)
   +RootDraw()
   +ConfigureUpdates()
-  +Register(node: Core_IUpdatable)
+  +Register(node: Core_IUpdatable) bool
   +Unregister(node: Core_IUpdatable)
   +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +UnregisterSceneUpdateNode()
+  +GetSceneUpdateNode() Core_IUpdatable*
   +RegisterCameraUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +UnregisterCameraUpdateNode()
+  +GetCameraUpdateNode() Core_IUpdatable*
   +GetUpdateScheduler() Core_UpdateScheduler&
   +GetInput() Core_Input*
   +GetTimer() Core_StepTimer*
@@ -252,6 +273,7 @@ class Scene_SelectScene["SelectScene"]
 class Scene_SettingScene["SceneSpace::SettingScene"]
 class Scene_ScenePowerUp["SceneSpace::ScenePowerUp"]
 class Scene_SceneGame["SceneGame"]
+class Scene_EffectTestScene["EffectTestScene"]
 
 Scene_TitleScene --|> Scene_Scene
 Scene_TitleScene ..|> Scene_IScene
@@ -264,6 +286,8 @@ Scene_ScenePowerUp ..|> Scene_IScene
 Scene_SceneGame --|> Scene_Scene
 Scene_SceneGame ..|> Scene_IScene
 Scene_SceneGame ..|> Scene_ISceneServices
+Scene_EffectTestScene --|> Scene_Scene
+Scene_EffectTestScene ..|> Scene_IScene
 
 %% =========================
 %% Composition
@@ -298,7 +322,8 @@ class Sys_IPhysicsSystem["Systems::IPhysicsSystem"] {
 
 class Sys_Box2DPhysicsSystem["Systems::Box2DPhysicsSystem"] {
   +Apply(dt: float)
-  +OnUpdate(ctx: Core_UpdateContext)
+  +PrepareFrame(frameIndex: uint64)
+  +SetGravity(gravity: float)
 }
 
 class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
@@ -310,27 +335,37 @@ class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
 class Sys_IPhysicsBinder["Systems::IPhysicsBinder"] {
   <<interface>>
   +GetPhysicsMachine() Systems::PhysicsMachine*
+  +SetPlayer(player: Entities::PhysicalEntity*)
+  +Enable(enabled: bool)
   +RegisterPhysicsBody(entity)
   +UnregisterPhysicsBody(entity)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
 }
 
 class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
   +GetPhysicsMachine() Systems::PhysicsMachine*
+  +SetPlayer(player: Entities::PhysicalEntity*)
+  +Enable(enabled: bool)
   +RegisterPhysicsBody(entity)
   +UnregisterPhysicsBody(entity)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
 }
 
 class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
+  +SetPlayer(player: Entities::PhysicalEntity*)
   +RegisterPhysicsBody(entity)
   +UnregisterPhysicsBody(entity)
+  +UnregisterAllPhysicsBodies()
+  +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
 }
 
 Sys_PhysicsMachine --|> Core_UpdateNode
 Sys_DrawSystem --|> Core_UpdateNode
-Sys_Box2DPhysicsSystem --|> Core_UpdateNode
 Sys_Box2DPhysicsSystem ..|> Sys_IPhysicsSystem
 Sys_PhysicsMachine o-- Sys_IPhysicsSystem
 Sys_PhysicsMachine o-- Sys_Box2DContactListener
@@ -358,17 +393,25 @@ class Camera_Base["CameraSpace::BaseCamera"] {
   +GetProjection()
   +SetPosition()
   +SetRotation()
+  +SetTransform()
+  +SetPriority()
   +SetPerspective()
 }
 
 class Camera_Perspective["CameraSpace::PerspectiveCamera"] {
   +OnViewportChanged()
   +SetFieldOfViewDegrees()
+  +SetNearPlane()
+  +SetFarPlane()
   +SetClipPlanes()
 }
 
 class Camera_CameraRig["CameraRig"] {
   +Attach(target)
+  +SetOffset(offset)
+  +SetYaw(yaw)
+  +SetPitch(pitch)
+  +SetFollowSpeed(speed)
   +OnUpdate(ctx: Core_UpdateContext)
 }
 
@@ -494,7 +537,7 @@ Cfg_SceneGameConfig ..> Cfg_ReadSectionLines
 %% UI
 %% =========================
 class UI_UIManager["UIManager"] {
-  +Initialize()
+  +Initialize(hudConfig, resultConfig) bool
   +Shutdown()
   +UpdateHUD(data)
   +Draw()
@@ -513,7 +556,7 @@ class UI_ResultRenderer["ResultRenderer"] {
 }
 
 class UI_Overlay["SceneGameUIOverlay"] {
-  +Initialize()
+  +Initialize(uiManager) bool
   +Shutdown()
   +Update(data)
   +Draw()
@@ -522,6 +565,46 @@ class UI_Overlay["SceneGameUIOverlay"] {
 UI_UIManager *-- UI_HudRenderer
 UI_UIManager *-- UI_ResultRenderer
 UI_Overlay *-- UI_UIManager
+
+%% =========================
+%% Game flow / rules
+%% =========================
+class GF_PhaseManager["GameFlow::PhaseManager"] {
+  +Initialize(thresholds, rewardMultipliers, minithresholds, rewardMiniMultipliers)
+  +Reset()
+  +UpdateHeight(currentMaxHeight) PhaseUpdateResult
+  +UpdateTime(deltaSeconds) PhaseUpdateResult
+  +AdvancePhase() bool
+  +GetCurrentPhase() int
+  +GetRewardMultiplier() float
+  +GetRewardMiniMultiplier() float
+}
+
+class Rules_GameplayRulesSystem["GameplayRulesSystem"] {
+  +Configure(config, log, logPrefix)
+  +ResetSession()
+  +Update(input) UpdateResult
+  +ComputeScore(phaseManager)
+}
+
+class Guide_GuidelineSystem["GuidelineSystem"] {
+  +Configure(config, actor)
+  +ResetHeight(height, step)
+  +ResetSession()
+  +TickCooldowns(deltaSeconds)
+  +Update(input, pendingBonuses) UpdateResult
+  +GetHeightMeters() float
+}
+
+class Guide_GuidelineActor["GuidelineActor"] {
+  +UpdateGuideline(centerX, height, planeZ, width, thickness)
+}
+
+Guide_GuidelineActor --|> Ent_Entity
+Rules_GameplayRulesSystem ..> GF_PhaseManager
+Rules_GameplayRulesSystem ..> Sweets_Manager
+Guide_GuidelineSystem *-- Guide_GuidelineActor
+Guide_GuidelineSystem ..> Sweets_Manager
 
 %% =========================
 %% PowerUp scene
@@ -554,6 +637,12 @@ PU_Manager *-- PU_Node
 %% =========================
 %% SceneGame wiring (ownership + registration + contacts)
 %% =========================
+class Render_BackgroundRenderer["BackgroundRenderer"] {
+  +Initialize(config) bool
+  +Shutdown()
+  +Draw()
+}
+
 Scene_SceneGame *-- Sys_PhysicsBinder
 Scene_SceneGame *-- Sys_DrawSystem
 Scene_SceneGame *-- Sweets_Manager
@@ -561,6 +650,10 @@ Scene_SceneGame *-- UI_UIManager
 Scene_SceneGame *-- Camera_CameraRig
 Scene_SceneGame *-- Ent_Player
 Scene_SceneGame *-- Stage_StageData
+Scene_SceneGame *-- GF_PhaseManager
+Scene_SceneGame *-- Rules_GameplayRulesSystem
+Scene_SceneGame *-- Guide_GuidelineSystem
+Scene_SceneGame *-- Render_BackgroundRenderer
 
 Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
 Scene_SceneGame ..> Sys_PhysicsBinder : contact handlers
