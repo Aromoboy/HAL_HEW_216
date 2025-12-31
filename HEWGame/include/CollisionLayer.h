@@ -7,7 +7,7 @@ namespace Collision
         Default,
         Player,
         Floor,
+        Stage,
         Sweets,
     };
 }
-
