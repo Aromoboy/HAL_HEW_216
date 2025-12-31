@@ -1,7 +1,6 @@
 #include "SceneComposer.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
@@ -12,7 +11,6 @@
 #include "BackgroundRenderer.h"
 #include "ConfigSectionReader.h"
 #include "Core/UpdateScheduler.h"
-#include "ColliderConfigLoader.h"
 #include "GameplayConfig.h"
 #include "ModelCache.h"
 #include "SceneGameConfigLoader.h"
@@ -45,78 +43,6 @@ namespace
         (void)message;
     }
 #endif
-
-    bool ParseBool(const std::string& value, bool& outValue)
-    {
-        std::string lowered = value;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on")
-        {
-            outValue = true;
-            return true;
-        }
-
-        if (lowered == "false" || lowered == "0" || lowered == "no" || lowered == "off")
-        {
-            outValue = false;
-            return true;
-        }
-
-        return false;
-    }
-
-    bool LoadPlayerColliderPreference(const std::string& path, bool defaultForceConfig)
-    {
-        bool forceConfig = defaultForceConfig;
-        bool parsed = false;
-
-        std::vector<Config::SectionLine> lines;
-        if (!Config::ReadSectionLines(path, GameplayConfig::kSectionPlayerColliders, lines))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] Preference section missing; using default forceConfig=" << std::boolalpha << defaultForceConfig
-                << " path='" << path << "'\n";
-            DebugTrace(oss.str());
-            return forceConfig;
-        }
-
-        for (const auto& entry : lines)
-        {
-            const std::string key = entry.key;
-            if (key != "forceConfigCollider")
-            {
-                continue;
-            }
-
-            const std::string value = entry.value;
-            if (ParseBool(value, forceConfig))
-            {
-                parsed = true;
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Parsed forceConfigCollider=" << std::boolalpha << forceConfig
-                    << " from line=" << entry.lineNumber << " path='" << path << "'\n";
-                DebugTrace(oss.str());
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "[PlayerCollider] Failed to parse forceConfigCollider value='" << value
-                    << "' on line=" << entry.lineNumber << "; using default " << std::boolalpha << defaultForceConfig << "\n";
-                DebugTrace(oss.str());
-            }
-            break;
-        }
-
-        if (!parsed)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[PlayerCollider] forceConfigCollider not specified; defaulting to "
-                << std::boolalpha << defaultForceConfig << " (path='" << path << "')\n";
-            DebugTrace(oss.str());
-        }
-
-        return forceConfig;
-    }
 
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kFallbackPlayerMoveSpeed = 10.0f;
@@ -182,26 +108,7 @@ void SceneComposer::Compose(Composition& result)
 
 void SceneComposer::ComposeConfig(Composition& result)
 {
-    result.playerColliderConfigLoaded = Collision::LoadColliderDefinitions(
-        kGameplayConfigPath,
-        GameplayConfig::kSectionPlayerColliders,
-        result.playerColliderDefinitions);
-    result.forceConfigPlayerCollider = LoadPlayerColliderPreference(kGameplayConfigPath, false);
-    result.playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(kGameplayConfigPath);
     result.playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
-
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[PlayerCollider] ConfigLoaded=" << std::boolalpha << result.playerColliderConfigLoaded
-            << " definitions=" << result.playerColliderDefinitions.size()
-            << " tuningPadding=" << result.playerColliderTuning.thicknessPadding
-            << " padXYZ=(" << result.playerColliderTuning.padding.x << ',' << result.playerColliderTuning.padding.y << ',' << result.playerColliderTuning.padding.z << ')'
-            << " offsetXYZ=(" << result.playerColliderTuning.offset.x << ',' << result.playerColliderTuning.offset.y << ',' << result.playerColliderTuning.offset.z << ')'
-            << " fallbackPadXYZ=(" << result.playerColliderTuning.fallbackPadding.x << ',' << result.playerColliderTuning.fallbackPadding.y << ',' << result.playerColliderTuning.fallbackPadding.z << ')'
-            << " fallbackOffsetXYZ=(" << result.playerColliderTuning.fallbackOffset.x << ',' << result.playerColliderTuning.fallbackOffset.y << ',' << result.playerColliderTuning.fallbackOffset.z << ')'
-            << " fallbackSizeXYZ=(" << result.playerColliderTuning.fallbackSize.x << ',' << result.playerColliderTuning.fallbackSize.y << ',' << result.playerColliderTuning.fallbackSize.z << ")\n";
-        DebugTrace(oss.str());
-    }
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);

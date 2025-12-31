@@ -276,10 +276,6 @@ bool SceneGame::Load(Core::Input& input)
         return false;
     }
     m_loadFailed = false;
-    m_playerColliderDefinitions = std::move(composition->playerColliderDefinitions);
-    m_playerColliderConfigLoaded = composition->playerColliderConfigLoaded;
-    m_forceConfigPlayerCollider = composition->forceConfigPlayerCollider;
-    m_playerColliderTuning = composition->playerColliderTuning;
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
     m_phaseManager = std::move(composition->phaseManager);
@@ -330,9 +326,6 @@ bool SceneGame::Load(Core::Input& input)
         });
     }
 
-    m_playerColliderDefinitions = SceneGameLoader::NormalizePlayerColliderDefinitions(
-        std::move(m_playerColliderDefinitions));
-
     m_playerColliderMismatchLogged = false;
     SceneGameLoader loader(DebugTrace, kLogPrefix);
     m_renderer = &App::Game::Instance().GetModelRenderer();
@@ -342,10 +335,6 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.physicsBinder = m_physicsBinder.get();
     loaderConfig.drawSystem = m_drawSystem.get();
     loaderConfig.sweetsManager = m_sweetsManager.get();
-    loaderConfig.playerColliderTuning = &m_playerColliderTuning;
-    loaderConfig.playerColliderDefinitions = &m_playerColliderDefinitions;
-    loaderConfig.playerColliderConfigLoaded = m_playerColliderConfigLoaded;
-    loaderConfig.forceConfigPlayerCollider = m_forceConfigPlayerCollider;
     loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
     loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
     loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
