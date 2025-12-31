@@ -1,4 +1,4 @@
-
+﻿
 #ifndef	__EFFEKSEERSOUND_BASE_PRE_H__
 #define	__EFFEKSEERSOUND_BASE_PRE_H__
 
