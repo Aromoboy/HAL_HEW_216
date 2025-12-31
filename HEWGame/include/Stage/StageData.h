@@ -30,7 +30,7 @@ namespace Stage
         StageData();
 
         // Attempts to load the stage data from a config file.
-        // Returns true when data was parsed successfully, false when defaults were used.
+        // Returns true when data was parsed successfully, false when loading failed (state preserved).
         bool LoadFromFile(const std::string& path);
         bool LoadFromFile(const std::string& path, const std::string& section);
 
