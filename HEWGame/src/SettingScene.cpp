@@ -53,6 +53,14 @@ void SceneSpace::SettingScene::OnExit()
 {
     if (m_background) m_background->Shutdown();
     m_background.reset();
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
     UnregisterSceneUpdateNode();
 }
 
@@ -60,7 +68,7 @@ void SceneSpace::SettingScene::ConfigureUpdates()
 {
     if (auto* input = GetInput())
     {
-        Register(*input);
+        m_inputRegistered = Register(*input);
     }
 
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);

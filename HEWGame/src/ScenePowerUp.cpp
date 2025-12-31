@@ -90,6 +90,14 @@ namespace SceneSpace
         void ScenePowerUp::OnExit()
         {
                 ShutdownPowerUpSystems();
+                if (m_inputRegistered)
+                {
+                        if (auto* input = GetInput())
+                        {
+                                Unregister(*input);
+                        }
+                        m_inputRegistered = false;
+                }
                 UnregisterSceneUpdateNode();
                 UnregisterCameraUpdateNode();
         }
@@ -98,7 +106,7 @@ namespace SceneSpace
         {
                 if (auto* input = GetInput())
                 {
-                        Register(*input);
+                        m_inputRegistered = Register(*input);
                 }
 
                 RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);

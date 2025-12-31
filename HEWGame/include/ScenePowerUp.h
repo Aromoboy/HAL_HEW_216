@@ -43,6 +43,7 @@ namespace SceneSpace
                 std::unique_ptr<PowerUpCursor> m_cursor;
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
+                bool m_inputRegistered = false;
 
                 int m_cost = 9999;
         };
