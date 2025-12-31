@@ -47,7 +47,7 @@ gitignore しない
 
 ステージ設定（唯一の参照元）
 
-ステージパラメータの 唯一の参照元（source of truth） は以下です。
+ステージパラメータの 唯一の参照元（単一の基準） は以下です。
 
 HEWGame/Assets/Config/gameplay.cfg の [stage.checklist] セクション
 
@@ -58,6 +58,9 @@ Stage::StageData はこのセクションを読み込み、デフォルト適用
 ConfigLoader
 
 ゲーム設定・コライダー設定の読み込み
+
+基本コライダーは gameplay.cfg の [colliders.registry] を ColliderRegistry が読み込み、ステージ配置やスイーツ生成などで共通利用する
+（ColliderConfigLoader はコライダー定義のパース用ユーティリティ）
 
 主に SceneGameConfigLoader / ColliderConfigLoader / ConfigSectionReader
 
