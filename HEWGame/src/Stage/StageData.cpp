@@ -247,7 +247,6 @@ namespace Stage
         m_pickupMaxDistance = normalized.pickupMaxDistance;
         m_pickupDepthThreshold = normalized.pickupDepthThreshold;
         m_pickupOffset = normalized.pickupOffset;
-        // Keep the configured guideline height; do not override valid config with a magic value.
         m_guidelineHeight = normalized.guidelineHeight;
         m_guidelineStep = normalized.guidelineStep;
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
