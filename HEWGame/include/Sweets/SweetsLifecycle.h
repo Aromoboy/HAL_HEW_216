@@ -2,7 +2,11 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
+
+#include <box2d/box2d.h>
 
 #include "Core/IUpdatable.h"
 #include "Sweets/SweetsTypes.h"
@@ -57,6 +61,12 @@ namespace SweetsSpace
             DeleteBatchContext* batchContext);
 
     private:
+        struct CarriedPhysicsState
+        {
+            b2BodyType bodyType = b2_staticBody;
+            std::vector<std::pair<b2ShapeId, b2Filter>> filters;
+        };
+
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings);
 
         SweetsRegistry* m_registry;
@@ -76,5 +86,6 @@ namespace SweetsSpace
         float m_horizontalBoundsMargin{ 0.0f };
         bool m_warnedMissingHorizontalBounds{ false };
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
+        std::unordered_map<ActiveSweets*, CarriedPhysicsState> m_carriedPhysicsStates;
     };
 }
