@@ -1,4 +1,4 @@
-#include "TitleRenderer.h"
+﻿#include "TitleRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"
 #include "ShaderList.h"
@@ -71,6 +71,22 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 
 	ps->SetTexture(0, texture->Get());
 	ps->Bind();
+
+	MeshDraw();
+}
+
+void TitleRenderer::MeshDraw()
+{
+	// �R���e�L�X�g���擾
+	ID3D11DeviceContext* pContext = GetContext();
+	UINT offset = 0;
+
+	// ���_���o�C���h
+	const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
+	vertexBuffer.Bind(0, offset);
+
+	// ���_�o�b�t�@�݂̂ŕ`��
+	GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	pContext->Draw(vertexBuffer.GetCount(), 0);
 
