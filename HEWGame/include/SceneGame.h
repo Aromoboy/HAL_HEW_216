@@ -78,7 +78,7 @@ public:
     void OnEnter() override;
     void OnExit() override;
     void ConfigureUpdates() override;
-    void Update(Core::UpdateContext& ctx) final;
+    void Update(const Core::UpdateContext& ctx) final;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
@@ -89,7 +89,7 @@ public:
 private:
     void ConfigureCamera(const CameraPrototypeSettings& settings);
 #if defined(_DEBUG)
-    void HandleColliderDebugCommands(Core::UpdateContext& ctx);
+    void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay();
 #endif
     void SetStageState(StageState newState);
@@ -117,6 +117,7 @@ private:
     PlayerController m_playerController;
     bool m_inputRegistered = false;
     bool m_physicsRegistered = false;
+    bool m_contactDispatchRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;

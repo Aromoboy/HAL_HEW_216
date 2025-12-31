@@ -143,7 +143,7 @@ void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
         m_target = target;
 }
 
-void CameraRig::OnUpdate(Core::UpdateContext& ctx)
+void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
 {
         if (!m_camera)
         {

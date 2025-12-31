@@ -46,7 +46,7 @@ namespace Entities
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
-        void HandleCarryInput(Player& player, PlayerModel& model, Core::UpdateContext& ctx, Core::Input& input);
+        void HandleCarryInput(Player& player, PlayerModel& model, const Core::UpdateContext& ctx, Core::Input& input);
         void UpdateCarriedSweets(Player& player);
 
     private:

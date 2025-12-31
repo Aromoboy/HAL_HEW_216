@@ -30,7 +30,7 @@ void EffectTestScene::Update(Core::StepTimer& timer, Core::Input& input)
         RootUpdate(timer, input);
 }
 
-void EffectTestScene::Update(Core::UpdateContext& ctx)
+void EffectTestScene::Update(const Core::UpdateContext& ctx)
 {
         (void)ctx;
         Core::Input* input = GetInput();

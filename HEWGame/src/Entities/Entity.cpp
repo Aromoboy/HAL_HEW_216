@@ -16,7 +16,7 @@ namespace Entities
     {
     }
 
-    void Entity::OnUpdate(Core::UpdateContext& ctx)
+    void Entity::OnUpdate(const Core::UpdateContext& ctx)
     {
         (void)ctx;
     }

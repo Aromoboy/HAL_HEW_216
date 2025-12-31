@@ -37,8 +37,8 @@ namespace SweetsSpace
             bool* warnedMissingPhysicsMachine,
             bool* warnedMissingScheduler);
 
-        void OnUpdate(Core::UpdateContext& ctx);
-        void OnLateUpdate(Core::UpdateContext& ctx);
+        void OnUpdate(const Core::UpdateContext& ctx);
+        void OnLateUpdate(const Core::UpdateContext& ctx);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;

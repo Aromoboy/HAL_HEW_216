@@ -21,7 +21,7 @@ public:
 
 
         void Update(Core::StepTimer& timer, Core::Input& input) override;
-        void Update(Core::UpdateContext& ctx) override;
+        void Update(const Core::UpdateContext& ctx) override;
         void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
         void Draw() override;
         bool Load(Core::Input& input) override;

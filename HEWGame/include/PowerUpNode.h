@@ -23,7 +23,7 @@ public:
 
 
 	
-	void OnUpdate(Core::UpdateContext& ctx) final;
+	void OnUpdate(const Core::UpdateContext& ctx) final;
 	void Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera);
 	bool LevelUp();
 	int GetCost();
@@ -34,23 +34,23 @@ public:
 
 private:
 
-	// ƒeƒNƒXƒ`ƒƒ
+	// ãƒ†ã‚¯ã‚¹ãƒãƒ£
 	std::shared_ptr<Texture2D> m_texture;
 	std::shared_ptr<PowerUpStringTexture> m_stringTexture;
 	bool m_dirty = true;
 
-	// ƒeƒLƒXƒg
+	// ãƒ†ã‚­ã‚¹ãƒˆ
 	std::string m_nameText;
 	std::string m_infomationText;
 
-	// ƒŒƒxƒ‹
+	// ãƒ¬ãƒ™ãƒ«
 	int m_level;
 	int m_maxLevel;
 
-	// ‹­‰»ƒRƒXƒg
+	// å¼·åŒ–ã‚³ã‚¹ãƒˆ
 	int m_levelUpCost;
 
-	// ‹­‰»ƒRƒXƒg”{—¦
+	// å¼·åŒ–ã‚³ã‚¹ãƒˆå€ç‡
 	int m_defaultLevelUpCost;
 	int m_costAdditional;
 	float m_costMagnification;
@@ -60,7 +60,7 @@ private:
 
 	
 
-	// ƒRƒXƒg‚ÌXV
+	// ã‚³ã‚¹ãƒˆã®æ›´æ–°
 	void UpdateCost();
 
 

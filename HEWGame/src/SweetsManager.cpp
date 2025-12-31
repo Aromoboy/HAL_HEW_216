@@ -43,7 +43,7 @@ namespace SweetsSpace
         {
         }
 
-        void OnUpdate(Core::UpdateContext& ctx) override
+        void OnUpdate(const Core::UpdateContext& ctx) override
         {
             m_owner.OnLateUpdate(ctx);
         }
@@ -83,23 +83,22 @@ namespace SweetsSpace
         m_contacts.ClearCreamWeldJoints("~SweetsManager");
         if (m_scheduler && m_lateUpdateNode)
         {
-            m_scheduler->Unregister(*m_lateUpdateNode);
             m_lateUpdateNode->ReleaseRegistrationHandle();
         }
     }
 
-    void SweetsManager::OnUpdate(Core::UpdateContext& ctx)
+    void SweetsManager::OnUpdate(const Core::UpdateContext& ctx)
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
     }
 
-    void SweetsManager::OnLateUpdate(Core::UpdateContext& ctx)
+    void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
     {
         m_lifecycle.OnLateUpdate(ctx);
     }
 
-    void SweetsManager::Update(Core::UpdateContext& ctx)
+    void SweetsManager::Update(const Core::UpdateContext& ctx)
     {
         OnUpdate(ctx);
     }

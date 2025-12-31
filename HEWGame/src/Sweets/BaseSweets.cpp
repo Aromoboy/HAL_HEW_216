@@ -55,7 +55,7 @@ namespace SweetsSpace
         RefreshRenderTransform();
     }
 
-    void BaseSweets::OnUpdate(Core::UpdateContext& ctx)
+    void BaseSweets::OnUpdate(const Core::UpdateContext& ctx)
     {
         SyncFromPhysics();
         Entities::PhysicalEntity::OnUpdate(ctx);

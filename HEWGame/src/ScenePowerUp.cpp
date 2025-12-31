@@ -118,7 +118,7 @@ namespace SceneSpace
 
         }
 
-        void ScenePowerUp::Update(Core::UpdateContext& ctx)
+        void ScenePowerUp::Update(const Core::UpdateContext& ctx)
         {
                 (void)ctx;
                 Core::Input* input = GetInput();

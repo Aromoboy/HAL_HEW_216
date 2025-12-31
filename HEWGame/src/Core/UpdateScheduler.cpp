@@ -1,6 +1,8 @@
 #include "Core/UpdateScheduler.h"
 
 #include <algorithm>
+#include <cassert>
+#include <functional>
 #include <limits>
 #include <queue>
 #include <sstream>
@@ -24,6 +26,7 @@
 #endif
 
 #include "Core/UpdateNode.h"
+#include "Debug.h"
 
 namespace Core
 {
@@ -36,6 +39,11 @@ namespace Core
 #else
                         (void)message;
 #endif
+                }
+
+                void LogInvariantViolation(const std::string& message)
+                {
+                        DebugLog::DebugMessage(message);
                 }
 
                 std::string DescribeNode(const Core::IUpdatable* node, Core::UpdatePhase phase, int priority)
@@ -97,7 +105,7 @@ namespace Core
 
                 if (lhs->GetPriority() != rhs->GetPriority())
                 {
-                        return lhs->GetPriority() < rhs->GetPriority();
+                        return lhs->GetPriority() > rhs->GetPriority();
                 }
 
                 const std::size_t lhsRegistrationOrder = GetRegistrationOrder(lhs);
@@ -131,26 +139,9 @@ namespace Core
                 return std::numeric_limits<std::size_t>::max();
         }
 
-        UpdateScheduler::ExecutionRecord UpdateScheduler::BuildExecutionRecord(const IUpdatable* node, std::size_t sortedIndex, std::size_t executionIndex) const
+        void UpdateScheduler::SetExecutionLogListener(ExecutionLogListener* listener)
         {
-                ExecutionRecord record;
-                record.node = node;
-                if (node)
-                {
-                        record.phase = node->GetPhase();
-                        record.priority = node->GetPriority();
-                        record.registrationOrder = GetRegistrationOrder(node);
-                }
-                record.sortedIndex = sortedIndex;
-                record.executionIndex = executionIndex;
-                record.invoked = false;
-                return record;
-        }
-
-        void UpdateScheduler::SetExecutionLogListener(ExecutionLogListener listener)
-        {
-                m_executionLogListener = std::move(listener);
-                m_executionPlanDirty = true;
+                m_executionLogListener = listener;
         }
 
         bool UpdateScheduler::IsRegistered(const IUpdatable* node) const
@@ -170,7 +161,11 @@ namespace Core
                         return false;
                 }
 
-                return std::find(m_pendingRegistrations.begin(), m_pendingRegistrations.end(), node) != m_pendingRegistrations.end();
+                return std::any_of(m_pendingRegistrations.begin(), m_pendingRegistrations.end(),
+                        [node](const PendingRegistration& registration)
+                        {
+                                return registration.node == node;
+                        });
         }
 
         bool UpdateScheduler::IsPendingUnregistration(const IUpdatable* node) const
@@ -204,6 +199,50 @@ namespace Core
                 return &(*it);
         }
 
+        UpdateScheduler::PendingRegistration* UpdateScheduler::FindPendingRegistration(const IUpdatable* node)
+        {
+                if (!node)
+                {
+                        return nullptr;
+                }
+
+                auto it = std::find_if(m_pendingRegistrations.begin(), m_pendingRegistrations.end(),
+                        [node](const PendingRegistration& registration)
+                        {
+                                return registration.node == node;
+                        });
+
+                if (it == m_pendingRegistrations.end())
+                {
+                        return nullptr;
+                }
+
+                return &(*it);
+        }
+
+        void UpdateScheduler::UnregisterById(NodeId nodeId)
+        {
+                if (nodeId == 0)
+                {
+                        return;
+                }
+
+                auto idIt = m_nodesById.find(nodeId);
+                if (idIt == m_nodesById.end())
+                {
+                        return;
+                }
+
+                IUpdatable* node = idIt->second;
+                if (!node)
+                {
+                        m_nodesById.erase(idIt);
+                        return;
+                }
+
+                Unregister(*node);
+        }
+
         void UpdateScheduler::RegisterInternal(IUpdatable& node)
         {
                 if (IsRegistered(&node))
@@ -215,7 +254,10 @@ namespace Core
                 }
 
                 m_nodes.push_back(&node);
-                m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
+                if (m_registrationOrder.find(&node) == m_registrationOrder.end())
+                {
+                        m_registrationOrder.emplace(&node, m_nextRegistrationOrder++);
+                }
                 m_executionPlanDirty = true;
 
 #if UPDATE_SCHEDULER_ENABLE_DIAGNOSTICS
@@ -243,6 +285,12 @@ namespace Core
                 }
 
                 m_registrationOrder.erase(&node);
+                auto idIt = m_nodeIds.find(&node);
+                if (idIt != m_nodeIds.end())
+                {
+                        m_nodesById.erase(idIt->second);
+                        m_nodeIds.erase(idIt);
+                }
 
                 auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
                         [&node](const Dependency& dep)
@@ -274,7 +322,8 @@ namespace Core
                         oss << "[UpdateScheduler] SetOrder ignored because node is not UpdateNode node=" << &node
                             << " phase=" << static_cast<int>(phase)
                             << " priority=" << priority << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "SetOrder requires UpdateNode.");
                         return;
                 }
 
@@ -288,8 +337,46 @@ namespace Core
                 }
         }
 
-        void UpdateScheduler::ApplyPendingRegistration(IUpdatable* node)
+        void UpdateScheduler::AddDependencyInternal(IUpdatable& before, IUpdatable& after)
         {
+                if (&before == &after)
+                {
+                        return;
+                }
+
+                if (!IsRegistered(&before) || !IsRegistered(&after))
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] AddDependency ignored because one or both nodes are not registered before="
+                            << &before << " after=" << &after << '\n';
+                        LogInvariantViolation(oss.str());
+                        assert(false && "AddDependency requires registered nodes.");
+                        return;
+                }
+
+                if (before.GetPhase() != after.GetPhase())
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] AddDependency ignored due to phase mismatch before="
+                            << DescribeNode(&before, before.GetPhase(), before.GetPriority())
+                            << " after=" << DescribeNode(&after, after.GetPhase(), after.GetPriority()) << '\n';
+                        LogInvariantViolation(oss.str());
+                        assert(false && "AddDependency requires nodes in same phase.");
+                        return;
+                }
+
+                Dependency candidate(&before, &after);
+                auto it = std::find(m_dependencies.begin(), m_dependencies.end(), candidate);
+                if (it == m_dependencies.end())
+                {
+                        m_dependencies.emplace_back(candidate);
+                        m_executionPlanDirty = true;
+                }
+        }
+
+        void UpdateScheduler::ApplyPendingRegistration(const PendingRegistration& registration)
+        {
+                IUpdatable* node = registration.node;
                 if (!node)
                 {
                         DebugLog("[UpdateScheduler] Null node encountered in pending registration\n");
@@ -300,7 +387,8 @@ namespace Core
                 {
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Pending registration ignored because node already registered node=" << node << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "Duplicate pending registration detected.");
                         return;
                 }
 
@@ -319,7 +407,8 @@ namespace Core
                 {
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Pending unregistration ignored because node is not registered node=" << node << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "Unregister requires registered node.");
                         return;
                 }
 
@@ -341,11 +430,23 @@ namespace Core
                         oss << "[UpdateScheduler] Pending order change ignored because node is not registered node=" << node
                             << " phase=" << static_cast<int>(change.phase)
                             << " priority=" << change.priority << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "SetOrder requires registered node.");
                         return;
                 }
 
                 SetOrderInternal(*node, change.phase, change.priority);
+        }
+
+        void UpdateScheduler::ApplyPendingDependency(const Dependency& dep)
+        {
+                if (!dep.first || !dep.second)
+                {
+                        DebugLog("[UpdateScheduler] Null node encountered in pending dependency\n");
+                        return;
+                }
+
+                AddDependencyInternal(*dep.first, *dep.second);
         }
 
         void UpdateScheduler::ApplyPendingOperations()
@@ -361,9 +462,9 @@ namespace Core
 
                 if (!m_pendingRegistrations.empty())
                 {
-                        for (IUpdatable* node : m_pendingRegistrations)
+                        for (const auto& registration : m_pendingRegistrations)
                         {
-                                ApplyPendingRegistration(node);
+                                ApplyPendingRegistration(registration);
                         }
                         m_pendingRegistrations.clear();
                 }
@@ -375,6 +476,25 @@ namespace Core
                                 ApplyPendingOrderChange(change);
                         }
                         m_pendingOrderChanges.clear();
+                }
+
+                if (m_pendingClearDependencies)
+                {
+                        if (!m_dependencies.empty())
+                        {
+                                m_dependencies.clear();
+                                m_executionPlanDirty = true;
+                        }
+                        m_pendingClearDependencies = false;
+                }
+
+                if (!m_pendingDependencies.empty())
+                {
+                        for (const auto& dep : m_pendingDependencies)
+                        {
+                                ApplyPendingDependency(dep);
+                        }
+                        m_pendingDependencies.clear();
                 }
         }
 
@@ -394,51 +514,49 @@ namespace Core
                 }
 #endif
 
-                if (m_isTicking)
+                if (IsPendingUnregistration(&node))
                 {
-                        if (IsPendingUnregistration(&node))
+                        auto it = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), &node);
+                        if (it != m_pendingUnregistrations.end())
                         {
-                                auto it = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), &node);
-                                if (it != m_pendingUnregistrations.end())
-                                {
-                                        m_pendingUnregistrations.erase(it, m_pendingUnregistrations.end());
-                                        std::ostringstream oss;
-                                        oss << "[UpdateScheduler] Pending unregistration cancelled due to re-registration node=" << &node << '\n';
-                                        DebugLog(oss.str());
-                                        return RegistrationHandle(this, &node);
-                                }
-                        }
-
-                        if (IsRegistered(&node))
-                        {
+                                m_pendingUnregistrations.erase(it, m_pendingUnregistrations.end());
                                 std::ostringstream oss;
-                                oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
+                                oss << "[UpdateScheduler] Pending unregistration cancelled; node already registered node=" << &node << '\n';
                                 DebugLog(oss.str());
-                                return {};
                         }
-
-                        if (IsPendingRegistration(&node))
-                        {
-                                std::ostringstream oss;
-                                oss << "[UpdateScheduler] Duplicate pending registration detected for node=" << &node << '\n';
-                                DebugLog(oss.str());
-                                return {};
-                        }
-
-                        m_pendingRegistrations.emplace_back(&node);
-                        return RegistrationHandle(this, &node);
                 }
 
                 if (IsRegistered(&node))
                 {
                         std::ostringstream oss;
                         oss << "[UpdateScheduler] Register ignored for already registered node=" << &node << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "Duplicate registration detected.");
                         return {};
                 }
 
+                if (IsPendingRegistration(&node))
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Duplicate pending registration detected for node=" << &node << '\n';
+                        LogInvariantViolation(oss.str());
+                        assert(false && "Duplicate pending registration detected.");
+                        return {};
+                }
+
+                const NodeId nodeId = m_nextNodeId++;
+                m_nodeIds[&node] = nodeId;
+                m_nodesById[nodeId] = &node;
+                m_registrationOrder[&node] = m_nextRegistrationOrder++;
+
+                if (m_isTicking)
+                {
+                        m_pendingRegistrations.push_back({ &node, nodeId, m_registrationOrder[&node] });
+                        return RegistrationHandle(this, nodeId);
+                }
+
                 RegisterInternal(node);
-                return RegistrationHandle(this, &node);
+                return RegistrationHandle(this, nodeId);
         }
 
         void UpdateScheduler::Unregister(IUpdatable& node)
@@ -461,10 +579,21 @@ namespace Core
                 {
                         if (IsPendingRegistration(&node))
                         {
-                                auto it = std::remove(m_pendingRegistrations.begin(), m_pendingRegistrations.end(), &node);
+                                auto it = std::remove_if(m_pendingRegistrations.begin(), m_pendingRegistrations.end(),
+                                        [&node](const PendingRegistration& registration)
+                                        {
+                                                return registration.node == &node;
+                                        });
                                 if (it != m_pendingRegistrations.end())
                                 {
                                         m_pendingRegistrations.erase(it, m_pendingRegistrations.end());
+                                        m_registrationOrder.erase(&node);
+                                        auto idIt = m_nodeIds.find(&node);
+                                        if (idIt != m_nodeIds.end())
+                                        {
+                                                m_nodesById.erase(idIt->second);
+                                                m_nodeIds.erase(idIt);
+                                        }
                                         std::ostringstream oss;
                                         oss << "[UpdateScheduler] Pending registration removed because node requested self-unregister node=" << &node << '\n';
                                         DebugLog(oss.str());
@@ -476,7 +605,8 @@ namespace Core
                         {
                                 std::ostringstream oss;
                                 oss << "[UpdateScheduler] Unregister ignored for unknown node=" << &node << '\n';
-                                DebugLog(oss.str());
+                                LogInvariantViolation(oss.str());
+                                assert(false && "Unregister requires registered node.");
                                 return;
                         }
 
@@ -484,11 +614,21 @@ namespace Core
                         {
                                 std::ostringstream oss;
                                 oss << "[UpdateScheduler] Duplicate pending unregistration detected for node=" << &node << '\n';
-                                DebugLog(oss.str());
+                                LogInvariantViolation(oss.str());
+                                assert(false && "Duplicate pending unregistration detected.");
                                 return;
                         }
 
                         m_pendingUnregistrations.emplace_back(&node);
+                        return;
+                }
+
+                if (!IsRegistered(&node))
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] Unregister ignored for unknown node=" << &node << '\n';
+                        LogInvariantViolation(oss.str());
+                        assert(false && "Unregister requires registered node.");
                         return;
                 }
 
@@ -505,7 +645,8 @@ namespace Core
                                 oss << "[UpdateScheduler] SetOrder ignored because node is not registered node=" << &node
                                     << " phase=" << static_cast<int>(phase)
                                     << " priority=" << priority << '\n';
-                                DebugLog(oss.str());
+                                LogInvariantViolation(oss.str());
+                                assert(false && "SetOrder requires registered node.");
                                 return;
                         }
 
@@ -532,7 +673,9 @@ namespace Core
                         oss << "[UpdateScheduler] SetOrder called for node that is not registered node=" << &node
                             << " phase=" << static_cast<int>(phase)
                             << " priority=" << priority << '\n';
-                        DebugLog(oss.str());
+                        LogInvariantViolation(oss.str());
+                        assert(false && "SetOrder requires registered node.");
+                        return;
                 }
 
                 SetOrderInternal(node, phase, priority);
@@ -540,32 +683,23 @@ namespace Core
 
         void UpdateScheduler::AddDependency(IUpdatable& before, IUpdatable& after)
         {
-                if (&before == &after)
+                if (m_isTicking)
                 {
+                        m_pendingDependencies.emplace_back(&before, &after);
                         return;
                 }
 
-                if (before.GetPhase() != after.GetPhase())
-                {
-                        std::ostringstream oss;
-                        oss << "[UpdateScheduler] AddDependency ignored due to phase mismatch before="
-                            << DescribeNode(&before, before.GetPhase(), before.GetPriority())
-                            << " after=" << DescribeNode(&after, after.GetPhase(), after.GetPriority()) << '\n';
-                        DebugLog(oss.str());
-                        return;
-                }
-
-                Dependency candidate(&before, &after);
-                auto it = std::find(m_dependencies.begin(), m_dependencies.end(), candidate);
-                if (it == m_dependencies.end())
-                {
-                        m_dependencies.emplace_back(candidate);
-                        m_executionPlanDirty = true;
-                }
+                AddDependencyInternal(before, after);
         }
 
         void UpdateScheduler::ClearDependencies()
         {
+                if (m_isTicking)
+                {
+                        m_pendingClearDependencies = true;
+                        return;
+                }
+
                 if (!m_dependencies.empty())
                 {
                         m_dependencies.clear();
@@ -600,9 +734,6 @@ namespace Core
                         m_dependencies = std::move(filteredDependencies);
                 }
 
-                ExecutionLog executionLog;
-                std::size_t executionIndex = 0;
-
                 auto phaseLess = [this](const IUpdatable* lhs, const IUpdatable* rhs)
                 {
                         if (!lhs)
@@ -615,7 +746,7 @@ namespace Core
                         }
                         if (lhs->GetPriority() != rhs->GetPriority())
                         {
-                                return lhs->GetPriority() < rhs->GetPriority();
+                                return lhs->GetPriority() > rhs->GetPriority();
                         }
                         return GetRegistrationOrder(lhs) < GetRegistrationOrder(rhs);
                 };
@@ -652,6 +783,7 @@ namespace Core
 
                         std::vector<std::vector<std::size_t>> edges(nodeCount);
                         std::vector<std::size_t> indegree(nodeCount, 0);
+                        std::size_t dependencyCount = 0;
                         for (const auto& dep : m_dependencies)
                         {
                                 if (dep.first->GetPhase() != phase)
@@ -667,6 +799,13 @@ namespace Core
 
                                 edges[beforeIt->second].push_back(afterIt->second);
                                 ++indegree[afterIt->second];
+                                ++dependencyCount;
+                        }
+
+                        if (dependencyCount == 0)
+                        {
+                                m_executionPlan.insert(m_executionPlan.end(), phaseNodes.begin(), phaseNodes.end());
+                                continue;
                         }
 
                         using ReadyQueue = std::priority_queue<std::size_t, std::vector<std::size_t>, std::greater<std::size_t>>;
@@ -681,18 +820,15 @@ namespace Core
 
                         std::vector<std::size_t> processed;
                         processed.reserve(nodeCount);
-                        std::vector<bool> processedFlags(nodeCount, false);
 
                         while (!ready.empty())
                         {
                                 std::size_t current = ready.top();
                                 ready.pop();
                                 processed.push_back(current);
-                                processedFlags[current] = true;
 
                                 IUpdatable* node = phaseNodes[current];
                                 m_executionPlan.push_back(node);
-                                executionLog.emplace_back(BuildExecutionRecord(node, current, executionIndex++));
 
                                 for (std::size_t next : edges[current])
                                 {
@@ -708,30 +844,26 @@ namespace Core
                                 std::ostringstream oss;
                                 oss << "[UpdateScheduler] cycle detected in phase=" << ToString(phase)
                                     << " processed=" << processed.size() << " total=" << nodeCount << '\n';
-                                DebugLog(oss.str());
+                                LogInvariantViolation(oss.str());
+                                assert(false && "UpdateScheduler dependency cycle detected.");
 
-                                for (std::size_t i = 0; i < nodeCount; ++i)
-                                {
-                                        if (processedFlags[i])
+                                auto planIt = std::remove_if(m_executionPlan.begin(), m_executionPlan.end(),
+                                        [phase](const IUpdatable* node)
                                         {
-                                                continue;
-                                        }
-                                        IUpdatable* node = phaseNodes[i];
-                                        m_executionPlan.push_back(node);
-                                        executionLog.emplace_back(BuildExecutionRecord(node, i, executionIndex++));
+                                                return node && node->GetPhase() == phase;
+                                        });
+                                if (planIt != m_executionPlan.end())
+                                {
+                                        m_executionPlan.erase(planIt, m_executionPlan.end());
                                 }
+                                m_executionPlan.insert(m_executionPlan.end(), phaseNodes.begin(), phaseNodes.end());
                         }
-                }
-
-                if (m_executionLogListener)
-                {
-                        m_executionLogListener(executionLog);
                 }
 
                 m_executionPlanDirty = false;
         }
 
-        void UpdateScheduler::Tick(UpdateContext& ctx)
+        void UpdateScheduler::Tick(const UpdateContext& ctx)
         {
                 ApplyPendingOperations();
                 m_isTicking = true;
@@ -739,6 +871,12 @@ namespace Core
                 if (m_executionPlanDirty)
                 {
                         RebuildExecutionPlan();
+                }
+
+                const std::uint64_t frameIndex = ctx.timer.FrameIndex();
+                if (m_executionLogListener)
+                {
+                        m_executionLogListener->OnFrameBegin(frameIndex);
                 }
 
                 for (IUpdatable* node : m_executionPlan)
@@ -751,10 +889,19 @@ namespace Core
                         if (node->IsEnabled())
                         {
                                 node->OnUpdate(ctx);
+                                if (m_executionLogListener)
+                                {
+                                        m_executionLogListener->OnNodeExecuted(frameIndex, node->GetPhase(), node, node->GetPriority());
+                                }
                         }
                 }
 
                 m_isTicking = false;
                 ApplyPendingOperations();
+
+                if (m_executionLogListener)
+                {
+                        m_executionLogListener->OnFrameEnd(frameIndex);
+                }
         }
 }

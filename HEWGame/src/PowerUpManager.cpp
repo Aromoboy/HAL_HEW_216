@@ -7,6 +7,8 @@
 #include "Defines.h"
 #include "Debug.h"
 
+#include <cassert>
+
 
 constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
 
@@ -22,12 +24,11 @@ PowerUpManager::~PowerUpManager()
 	// 全て開放
 	for (auto& it : m_nodes)
 	{
-		m_scheduler.Unregister(*it.second);
 		it.second->ReleaseRegistrationHandle();
 	}
 }
 
-void PowerUpManager::OnUpdate(Core::UpdateContext& ctx)
+void PowerUpManager::OnUpdate(const Core::UpdateContext& ctx)
 {
 	(void)ctx;
 }
@@ -50,6 +51,12 @@ void PowerUpManager::AddNode(std::string name, std::string infomation, std::stri
 	std::pair<std::string, std::unique_ptr<PowerUpNode>> node(key, std::make_unique<PowerUpNode>(texture, name, infomation, drawPos, drawScale, a_level, a_maxLevel, a_defaultLevelUpCost, a_costAdditional, a_costMagnification));
 	m_nodes.push_back(std::move(node));
 	auto handle = m_scheduler.Register(*m_nodes.back().second);
+	if (!handle.IsValid())
+	{
+		DebugLog::DebugMessage("[PowerUpManager] Scheduler registration failed for PowerUpNode.\n");
+		assert(false && "PowerUpNode registration failed.");
+		return;
+	}
 	m_nodes.back().second->SetRegistrationHandle(std::move(handle));
 	
 }

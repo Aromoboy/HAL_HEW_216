@@ -35,7 +35,7 @@ namespace SceneSpace
 
     protected:
         void ConfigureUpdates() override;
-        void Update(Core::UpdateContext& ctx) override;
+        void Update(const Core::UpdateContext& ctx) override;
         void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
 
     private:

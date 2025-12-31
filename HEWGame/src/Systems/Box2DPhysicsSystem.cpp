@@ -1,7 +1,5 @@
 #include "Systems/Box2DPhysicsSystem.h"
 
-#include "Core/StepTimer.h"
-
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -39,8 +37,7 @@ namespace Systems
 {
         Box2DPhysicsSystem::Box2DPhysicsSystem(PhysicsMachine& physicsMachine,
                 const PhysicsTuningParameters& tuning)
-                : Core::UpdateNode(Core::UpdatePhase::Physics, 0)
-                , m_worldDef(b2DefaultWorldDef())
+                : m_worldDef(b2DefaultWorldDef())
                 , m_physicsMachine(&physicsMachine)
         {
                 m_worldDef.gravity = b2Vec2{ 0.0f, -(std::isfinite(tuning.gravity) ? tuning.gravity : 9.8f) };
@@ -111,10 +108,6 @@ namespace Systems
                 const bool clampedThisFrame = stepsSimulated > 1 || clampedInput > maxStep || accumulatedBeforeClamp > maxAccumulatedTime;
                 HandleClampState(clampedThisFrame, clampedInput, maxStep, stepsSimulated, accumulatedBeforeClamp, maxAccumulatedTime);
 
-                if (m_contactListener)
-                {
-                        m_contactListener->ProcessContacts();
-                }
         }
 
         void Box2DPhysicsSystem::HandleClampState(bool clamped, float clampedInput, float maxStep, int stepsSimulated, float accumulatedBeforeClamp, float maxAccumulatedTime)
@@ -212,16 +205,9 @@ namespace Systems
                 m_summaryElapsed = 0.0f;
         }
 
-        void Box2DPhysicsSystem::OnUpdate(Core::UpdateContext& ctx)
+        void Box2DPhysicsSystem::PrepareFrame(std::uint64_t frameIndex)
         {
-                HandleTimerReset(ctx.timer.FrameIndex());
-                Apply(ctx.dt);
-                AdvanceClampSummary(ctx.dt);
-
-                if (m_physicsMachine)
-                {
-                        m_physicsMachine->SyncBodies(ctx.dt);
-                }
+                HandleTimerReset(frameIndex);
         }
 
         void Box2DPhysicsSystem::SetGravity(float gravity)

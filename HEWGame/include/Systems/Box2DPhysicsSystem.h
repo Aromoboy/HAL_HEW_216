@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Core/UpdateNode.h"
 #include "Systems/PhysicsMachine.h"
 
 #include <memory>
@@ -13,7 +12,7 @@ namespace Systems
         class Box2DContactListener;
         class PhysicsMachine;
 
-        class Box2DPhysicsSystem : public Core::UpdateNode, public IPhysicsSystem
+        class Box2DPhysicsSystem : public IPhysicsSystem
         {
         public:
                 explicit Box2DPhysicsSystem(PhysicsMachine& physicsMachine,
@@ -21,7 +20,8 @@ namespace Systems
                 ~Box2DPhysicsSystem() override;
 
                 void Apply(float dt) override;
-                void OnUpdate(Core::UpdateContext& ctx) override;
+                void PrepareFrame(std::uint64_t frameIndex);
+                void AdvanceClampSummary(float dt);
 
                 void SetGravity(float gravity);
                 void SetSubStepCount(int subStepCount);
@@ -33,7 +33,6 @@ namespace Systems
                 void DestroyWorld();
                 void ResetSimulationState();
                 void HandleClampState(bool clamped, float clampedInput, float maxStep, int stepsSimulated, float accumulatedBeforeClamp, float maxAccumulatedTime);
-                void AdvanceClampSummary(float dt);
                 void HandleTimerReset(std::uint64_t frameIndex);
 
                 b2WorldDef m_worldDef{};

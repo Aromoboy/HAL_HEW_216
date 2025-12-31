@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -13,6 +14,7 @@
 #include "AABB.h"
 #include "CollisionLayer.h"
 #include "Core/UpdateScheduler.h"
+#include "Debug.h"
 #include "Entities/PhysicalEntity.h"
 #include "Sweets/BaseSweets.h"
 #include "Sweets/SweetsContacts.h"
@@ -253,7 +255,7 @@ namespace SweetsSpace
     {
     }
 
-    void SweetsLifecycle::OnUpdate(Core::UpdateContext& ctx)
+    void SweetsLifecycle::OnUpdate(const Core::UpdateContext& ctx)
     {
         struct PendingStateChange
         {
@@ -380,7 +382,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsLifecycle::OnLateUpdate(Core::UpdateContext& ctx)
+    void SweetsLifecycle::OnLateUpdate(const Core::UpdateContext& ctx)
     {
         (void)ctx;
 
@@ -694,6 +696,12 @@ namespace SweetsSpace
         if (m_scheduler)
         {
             auto handle = m_scheduler->Register(*sweets);
+            if (!handle.IsValid())
+            {
+                DebugLog::DebugMessage("[SweetsLifecycle] Scheduler registration failed for sweets.\n");
+                assert(false && "Sweets scheduler registration failed.");
+                return cleanupFailedRegistration("スケジューラ登録に失敗したよ");
+            }
             sweets->SetRegistrationHandle(std::move(handle));
         }
         else if (m_warnedMissingScheduler && !*m_warnedMissingScheduler)
@@ -829,7 +837,6 @@ namespace SweetsSpace
 
         if (m_scheduler)
         {
-            m_scheduler->Unregister(*sweets);
             sweets->ReleaseRegistrationHandle();
         }
         else if (logWarnings && m_warnedMissingScheduler && !*m_warnedMissingScheduler)

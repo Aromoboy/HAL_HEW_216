@@ -15,7 +15,7 @@ namespace Entities
 
     Player::~Player() = default;
 
-    void Player::OnUpdate(Core::UpdateContext& ctx)
+    void Player::OnUpdate(const Core::UpdateContext& ctx)
     {
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
         if (m_input)

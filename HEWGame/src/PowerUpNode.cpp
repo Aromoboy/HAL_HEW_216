@@ -17,10 +17,10 @@ constexpr float2 kIconOffset  = {-0.18f, -0.008f };
 
 bool PowerUpNode::LevelUp()
 {
-	// �ő僌�x���Ȃ�ΕԂ�
+	// 最大レベルならば返す
 	if (m_level == m_maxLevel) return false;
 
-	// ���x���A�b�v
+	// レベルアップ
 	m_level++;
 	UpdateCost();
 
@@ -51,10 +51,10 @@ float2 PowerUpNode::GetDrawScale()
 void PowerUpNode::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera)
 {
 
-	// �`��p�f�[�^���쐬
+	// 描画用データを作成
 	PowerUpRenderer::NodeRenderData data(m_texture, m_stringTexture,m_drawPos, m_drawScale, m_dirty, m_nameText, m_infomationText, m_level, m_levelUpCost);
 
-	// �`��
+	// 描画
 	render.DrawNode(data, camera);
 	m_dirty = false;
 	
@@ -87,7 +87,7 @@ PowerUpNode::PowerUpNode(std::shared_ptr<Texture2D> a_texture, std::string a_nam
 }
 
 
-void PowerUpNode::OnUpdate(Core::UpdateContext& ctx)
+void PowerUpNode::OnUpdate(const Core::UpdateContext& ctx)
 {
 	(void)ctx;
 }

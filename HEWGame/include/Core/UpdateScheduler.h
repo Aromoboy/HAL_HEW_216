@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <functional>
+#include <cstdint>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -19,6 +19,17 @@ namespace Core
         class UpdateScheduler
         {
         public:
+                using NodeId = std::uint64_t;
+
+                class ExecutionLogListener
+                {
+                public:
+                        virtual ~ExecutionLogListener() = default;
+                        virtual void OnFrameBegin(std::uint64_t frameIndex) = 0;
+                        virtual void OnNodeExecuted(std::uint64_t frameIndex, UpdatePhase phase, const IUpdatable* node, int priority) = 0;
+                        virtual void OnFrameEnd(std::uint64_t frameIndex) = 0;
+                };
+
                 // ノードを登録 重複登録は弾くので同じインスタンスを渡しても安全だ
                 RegistrationHandle Register(IUpdatable& node);
 
@@ -36,23 +47,9 @@ namespace Core
 
                 // 毎フレーム呼び出されるメイン処理 内部でトポロジカルソートを行い、
                 // 循環依存があってもできるだけ安全側で実行順を確定させる
-                void Tick(UpdateContext& ctx);
+                void Tick(const UpdateContext& ctx);
 
-                struct ExecutionRecord
-                {
-                        const IUpdatable* node = nullptr;
-                        UpdatePhase phase = UpdatePhase::Input;
-                        int priority = 0;
-                        std::size_t registrationOrder = 0;
-                        // インデックス系はUpdateScheduler.cppで計算される値に合わせて既定値を持つ
-                        std::size_t sortedIndex = 0;
-                        std::size_t executionIndex = 0;
-                        bool invoked = false;
-                };
-                using ExecutionLog = std::vector<ExecutionRecord>;
-                using ExecutionLogListener = std::function<void(const ExecutionLog&)>;
-
-                void SetExecutionLogListener(ExecutionLogListener listener);
+                void SetExecutionLogListener(ExecutionLogListener* listener);
 
         private:
                 using Dependency = std::pair<IUpdatable*, IUpdatable*>;
@@ -64,35 +61,53 @@ namespace Core
                         int priority = 0;
                 };
 
+                struct PendingRegistration
+                {
+                        IUpdatable* node = nullptr;
+                        NodeId nodeId = 0;
+                        std::size_t registrationOrder = 0;
+                };
+
                 // sortや準備キューの比較で利用する共通関数
                 bool NodeLess(const IUpdatable* lhs, const IUpdatable* rhs) const;
                 std::size_t GetRegistrationOrder(const IUpdatable* node) const;
-                ExecutionRecord BuildExecutionRecord(const IUpdatable* node, std::size_t sortedIndex, std::size_t executionIndex) const;
 
                 void RegisterInternal(IUpdatable& node);
                 void UnregisterInternal(IUpdatable& node);
                 void SetOrderInternal(IUpdatable& node, UpdatePhase phase, int priority);
+                void AddDependencyInternal(IUpdatable& before, IUpdatable& after);
                 void RebuildExecutionPlan();
                 void ApplyPendingOperations();
-                void ApplyPendingRegistration(IUpdatable* node);
+                void ApplyPendingRegistration(const PendingRegistration& registration);
                 void ApplyPendingUnregistration(IUpdatable* node);
                 void ApplyPendingOrderChange(const PendingOrderChange& change);
+                void ApplyPendingDependency(const Dependency& dep);
                 bool IsRegistered(const IUpdatable* node) const;
                 bool IsPendingRegistration(const IUpdatable* node) const;
                 bool IsPendingUnregistration(const IUpdatable* node) const;
                 PendingOrderChange* FindPendingOrderChange(const IUpdatable* node);
+                PendingRegistration* FindPendingRegistration(const IUpdatable* node);
+
+                void UnregisterById(NodeId nodeId);
 
                 std::vector<IUpdatable*> m_nodes;          // 登録済みノード
                 std::vector<Dependency> m_dependencies;    // before -> afterの矢印リスト
                 std::unordered_map<const IUpdatable*, std::size_t> m_registrationOrder;
+                std::unordered_map<const IUpdatable*, NodeId> m_nodeIds;
+                std::unordered_map<NodeId, IUpdatable*> m_nodesById;
                 std::size_t m_nextRegistrationOrder = 0;
-                ExecutionLogListener m_executionLogListener;
+                NodeId m_nextNodeId = 1;
+                ExecutionLogListener* m_executionLogListener = nullptr;
                 std::vector<IUpdatable*> m_executionPlan;
                 bool m_executionPlanDirty = true;
 
-                std::vector<IUpdatable*> m_pendingRegistrations;     // Tick中に要求された登録
+                std::vector<PendingRegistration> m_pendingRegistrations;     // Tick中に要求された登録
                 std::vector<IUpdatable*> m_pendingUnregistrations;   // Tick中に要求された登録解除
                 std::vector<PendingOrderChange> m_pendingOrderChanges; // Tick中に要求された順序変更
+                std::vector<Dependency> m_pendingDependencies;
+                bool m_pendingClearDependencies = false;
                 bool m_isTicking = false; // Tick再入を検知するフラグ
+
+                friend class RegistrationHandle;
         };
 }

@@ -4,10 +4,9 @@
 
 namespace Core
 {
-    RegistrationHandle::RegistrationHandle(UpdateScheduler* scheduler, IUpdatable* node)
+    RegistrationHandle::RegistrationHandle(UpdateScheduler* scheduler, NodeId nodeId)
         : m_scheduler(scheduler)
-        , m_node(node)
-        , m_active(scheduler != nullptr && node != nullptr)
+        , m_nodeId(nodeId)
     {
     }
 
@@ -18,8 +17,7 @@ namespace Core
 
     RegistrationHandle::RegistrationHandle(RegistrationHandle&& other) noexcept
         : m_scheduler(other.m_scheduler)
-        , m_node(other.m_node)
-        , m_active(other.m_active)
+        , m_nodeId(other.m_nodeId)
     {
         other.Release();
     }
@@ -34,22 +32,21 @@ namespace Core
         Reset();
 
         m_scheduler = other.m_scheduler;
-        m_node = other.m_node;
-        m_active = other.m_active;
+        m_nodeId = other.m_nodeId;
         other.Release();
         return *this;
     }
 
     bool RegistrationHandle::IsValid() const
     {
-        return m_active && m_scheduler && m_node;
+        return m_scheduler && m_nodeId != 0;
     }
 
     void RegistrationHandle::Reset()
     {
         if (IsValid())
         {
-            m_scheduler->Unregister(*m_node);
+            m_scheduler->UnregisterById(m_nodeId);
         }
         Release();
     }
@@ -57,7 +54,6 @@ namespace Core
     void RegistrationHandle::Release()
     {
         m_scheduler = nullptr;
-        m_node = nullptr;
-        m_active = false;
+        m_nodeId = 0;
     }
 }

@@ -322,7 +322,7 @@ namespace Entities
         SyncColliderBounds();
     }
 
-    void PhysicalEntity::OnUpdate(Core::UpdateContext& ctx)
+    void PhysicalEntity::OnUpdate(const Core::UpdateContext& ctx)
     {
         Entity::OnUpdate(ctx);
 

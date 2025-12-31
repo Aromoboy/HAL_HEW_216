@@ -19,7 +19,7 @@ class PowerUpCursor : public Core::UpdateNode
 public:
 	PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input);
 
-	void OnUpdate(Core::UpdateContext& ctx) final;
+	void OnUpdate(const Core::UpdateContext& ctx) final;
 
 	void Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera);
 

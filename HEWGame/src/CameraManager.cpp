@@ -87,7 +87,7 @@ namespace CameraSpace
                 return m_active.lock();
         }
 
-        void CameraManager::Update(Core::UpdateContext& ctx)
+        void CameraManager::Update(const Core::UpdateContext& ctx)
         {
                 ++m_stats.updateCalls;
                 (void)ctx;

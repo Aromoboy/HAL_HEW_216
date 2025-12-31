@@ -31,7 +31,7 @@ namespace CameraSpace
                 void SetActive(const std::shared_ptr<ICamera>& camera);
                 std::shared_ptr<ICamera> GetActiveCamera() const;
 
-                void Update(Core::UpdateContext& ctx);
+                void Update(const Core::UpdateContext& ctx);
 
                 const ExecutionStats& GetExecutionStats() const;
                 const std::vector<std::shared_ptr<ICamera>>& GetCameras() const;
