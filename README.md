@@ -90,14 +90,16 @@ class Core_UpdatePhase["Core::UpdatePhase"] {
 }
 
 class Core_StepTimer["Core::StepTimer"] {
-  +Tick()
+  +Tick() float
+  +Tick(overrideDt: float) float
   +DeltaTime() float
   +FrameIndex() uint64
+  +SetFixedStep(dt: float, enable: bool)
 }
 
 class Core_UpdateContext["Core::UpdateContext"] {
   +dt: float
-  +time: Core_StepTimer&
+  +timer: Core_StepTimer&
 }
 
 class Core_IUpdatable["Core::IUpdatable"] {
@@ -108,27 +110,37 @@ class Core_IUpdatable["Core::IUpdatable"] {
   +IsEnabled() bool
 }
 
+class Core_RegistrationHandle["Core::RegistrationHandle"] {
+  +IsValid() bool
+  +Reset()
+  +Release()
+}
+
 class Core_UpdateNode["Core::UpdateNode"] {
-  -phase: Core_UpdatePhase
-  -priority: int
-  -enabled: bool
   +UpdateNode(phase: Core_UpdatePhase = Gameplay, priority: int = 0)
-  +OnUpdate(ctx: Core_UpdateContext)
-  +GetPhase() Core_UpdatePhase
-  +GetPriority() int
-  +Enable(v: bool)
   +SetPhase(ph: Core_UpdatePhase)
   +SetPriority(p: int)
+  +Enable(v: bool)
+  +SetRegistrationHandle(handle: Core_RegistrationHandle)
+  +ReleaseRegistrationHandle()
+  +GetPhase() Core_UpdatePhase
+  +GetPriority() int
+  +IsEnabled() bool
 }
 
 class Core_UpdateScheduler["Core::UpdateScheduler"] {
-  -nodes: Core_IUpdatable[*]
-  +Register(node: Core_IUpdatable)
+  +Register(node: Core_IUpdatable) Core_RegistrationHandle
   +Unregister(node: Core_IUpdatable)
+  +SetOrder(node: Core_IUpdatable, phase: Core_UpdatePhase, priority: int)
+  +AddDependency(before: Core_IUpdatable, after: Core_IUpdatable)
+  +ClearDependencies()
   +Tick(ctx: Core_UpdateContext)
+  +SetExecutionLogListener(listener)
 }
 
 class Core_Input["Core::Input"] {
+  +Initialize()
+  +Shutdown()
   +OnUpdate(ctx: Core_UpdateContext)
   +GetAxis(actionId) float
   +IsAction(actionId) bool
@@ -139,94 +151,126 @@ class Core_Input["Core::Input"] {
 
 Core_UpdateNode ..|> Core_IUpdatable
 Core_Input --|> Core_UpdateNode
+Core_UpdateNode *-- Core_RegistrationHandle
 Core_UpdateScheduler o-- Core_IUpdatable
+Core_UpdateScheduler ..> Core_RegistrationHandle
 
 %% =========================
-%% App / Main loop
+%% App / Entry
 %% =========================
-class App_Main["App::Main"] {
-  +Init()
+class App_Game["App::Game"] {
+  +Instance() App::Game&
+  +GetDXContext() Core::DXContext&
+  +GetShaderCache() ShaderCache&
+  +GetTextureCache() TextureCache&
+  +GetModelRenderer() Render::ModelRenderer&
+}
+
+class App_Main["Main (Main.cpp)"] {
+  +Init(hWnd, width, height)
   +Update()
   +Draw()
   +Uninit()
 }
+
+App_Main o-- Core_Input
+App_Main o-- Core_StepTimer
+App_Main o-- Scene_SceneManager
 
 %% =========================
 %% Scene framework
 %% =========================
 class Scene_IScene["SceneSpace::IScene"] {
   <<interface>>
-  +Load()
+  +Load(input: Core_Input) bool
+  +Update(timer: Core_StepTimer, input: Core_Input)
+  +Draw()
   +OnEnter()
   +OnExit()
-  +Update()
-  +Draw()
+}
+
+class Scene_ISceneServices["SceneSpace::ISceneServices"] {
+  <<interface>>
+  +GetPhysicsBinder() Systems::IPhysicsBinder*
+  +GetRenderer() Render::ModelRenderer*
+  +GetScheduler() Core_UpdateScheduler&
+  +GetInput() Core_Input*
+  +GetTimer() Core_StepTimer*
 }
 
 class Scene_Scene["SceneSpace::Scene"] {
-  -scheduler: Core_UpdateScheduler
-  -input: Core_Input&
-  +RootUpdate()
+  +RootUpdate(timer: Core_StepTimer, input: Core_Input)
   +RootDraw()
   +ConfigureUpdates()
   +Register(node: Core_IUpdatable)
   +Unregister(node: Core_IUpdatable)
-  +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority:int)
-  +RegisterCameraUpdateNode(phase: Core_UpdatePhase, priority:int)
+  +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +RegisterCameraUpdateNode(phase: Core_UpdatePhase, priority: int)
+  +GetUpdateScheduler() Core_UpdateScheduler&
+  +GetInput() Core_Input*
+  +GetTimer() Core_StepTimer*
+  +GetCameraManager() Camera_CameraManager&
+  +AddCamera(camera)
+  +SetActiveCamera(camera)
+  +GetActiveCamera()
 }
 
-class Scene_SceneUpdateNode["SceneSpace::SceneUpdateNode"] {
+class Scene_SceneUpdateNode["SceneSpace::Scene::SceneUpdateNode"] {
   +OnUpdate(ctx: Core_UpdateContext)
 }
 
-class Scene_CameraUpdateNode["SceneSpace::CameraUpdateNode"] {
+class Scene_CameraUpdateNode["SceneSpace::Scene::CameraUpdateNode"] {
   +OnUpdate(ctx: Core_UpdateContext)
 }
 
 class Scene_SceneManager["SceneSpace::SceneManager"] {
-  -timer: Core_StepTimer
-  -active: Scene_IScene
-  -pending: Scene_IScene
   +SetInitialScene(scene: Scene_IScene)
   +RequestSceneChange(scene: Scene_IScene)
   +Update()
   +Draw()
+  +GetActiveScene()
 }
 
-Scene_Scene --|> Scene_IScene
-Scene_Scene *-- Core_UpdateScheduler
-Scene_Scene o-- Core_Input
 Scene_SceneUpdateNode --|> Core_UpdateNode
 Scene_CameraUpdateNode --|> Core_UpdateNode
+Scene_Scene *-- Core_UpdateScheduler
+Scene_Scene o-- Core_Input
+Scene_Scene o-- Core_StepTimer
 Scene_Scene *-- Scene_SceneUpdateNode
 Scene_Scene *-- Scene_CameraUpdateNode
+Scene_Scene *-- Camera_CameraManager
 
 Scene_SceneManager *-- Scene_IScene
 Scene_SceneManager o-- Core_StepTimer
+Scene_SceneManager o-- Core_Input
 
-App_Main o-- Scene_SceneManager
-App_Main o-- Core_Input
-
-class Scene_TitleScene["SceneSpace::TitleScene"]
-class Scene_SelectScene["SceneSpace::SelectScene"]
+class Scene_TitleScene["TitleScene"]
+class Scene_SelectScene["SelectScene"]
 class Scene_SettingScene["SceneSpace::SettingScene"]
 class Scene_ScenePowerUp["SceneSpace::ScenePowerUp"]
-class Scene_SceneGame["SceneSpace::SceneGame"]
+class Scene_SceneGame["SceneGame"]
 
 Scene_TitleScene --|> Scene_Scene
+Scene_TitleScene ..|> Scene_IScene
 Scene_SelectScene --|> Scene_Scene
+Scene_SelectScene ..|> Scene_IScene
 Scene_SettingScene --|> Scene_Scene
+Scene_SettingScene ..|> Scene_IScene
 Scene_ScenePowerUp --|> Scene_Scene
+Scene_ScenePowerUp ..|> Scene_IScene
 Scene_SceneGame --|> Scene_Scene
+Scene_SceneGame ..|> Scene_IScene
+Scene_SceneGame ..|> Scene_ISceneServices
 
 %% =========================
 %% Composition
 %% =========================
-class Build_SceneComposer["SceneBuild::SceneComposer"] {
-  +ComposeSceneGame()
+class Scene_Composer["SceneComposer"] {
+  +ComposeBootstrap()
+  +Compose(result)
 }
 
-Build_SceneComposer ..> Scene_SceneGame : composes
+Scene_Composer ..> Scene_SceneGame : composes
 
 %% =========================
 %% Systems: physics + contacts + draw
@@ -236,16 +280,22 @@ class Sys_PhysicsMachine["Systems::PhysicsMachine"] {
   +RegisterBody(entity)
   +UnregisterBody(entity)
   +CreateWeldJoint(a,b)
-  +DestroyWeldJoint(jointId)
+  +DestroyJoint(jointId)
 }
 
 class Sys_DrawSystem["Systems::DrawSystem"] {
   +OnUpdate(ctx: Core_UpdateContext)
-  +SetRenderer(renderer)
+  +SetRenderer(renderer: ModelRender)
+}
+
+class Sys_IPhysicsSystem["Systems::IPhysicsSystem"] {
+  <<interface>>
+  +Apply(dt: float)
 }
 
 class Sys_Box2DPhysicsSystem["Systems::Box2DPhysicsSystem"] {
   +Apply(dt: float)
+  +OnUpdate(ctx: Core_UpdateContext)
 }
 
 class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
@@ -254,82 +304,106 @@ class Sys_Box2DContactListener["Systems::Box2DContactListener"] {
   +SetEndContactCallback(cb)
 }
 
-class Sys_ContactHandler["Systems::ContactHandler"] {
-  <<interface>>
-  +OnBegin(a,b)
-  +OnEnd(a,b)
-}
-
-class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
-  +DispatchBeginContact(a,b)
-  +DispatchEndContact(a,b)
-  +AddHandler(h: Sys_ContactHandler)
-}
-
 class Sys_IPhysicsBinder["Systems::IPhysicsBinder"] {
   <<interface>>
-  +GetPhysicsMachine() Sys_PhysicsMachine
+  +GetPhysicsMachine() Systems::PhysicsMachine*
   +RegisterPhysicsBody(entity)
   +UnregisterPhysicsBody(entity)
-  +AddContactHandler(h: Sys_ContactHandler)
+  +AddContactHandler(onBegin, onEnd)
 }
 
 class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
-  +GetPhysicsMachine() Sys_PhysicsMachine
+  +GetPhysicsMachine() Systems::PhysicsMachine*
   +RegisterPhysicsBody(entity)
   +UnregisterPhysicsBody(entity)
-  +AddContactHandler(h: Sys_ContactHandler)
+  +AddContactHandler(onBegin, onEnd)
+}
+
+class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
+  +RegisterPhysicsBody(entity)
+  +UnregisterPhysicsBody(entity)
+  +AddContactHandler(onBegin, onEnd)
 }
 
 Sys_PhysicsMachine --|> Core_UpdateNode
 Sys_DrawSystem --|> Core_UpdateNode
+Sys_Box2DPhysicsSystem --|> Core_UpdateNode
+Sys_Box2DPhysicsSystem ..|> Sys_IPhysicsSystem
+Sys_PhysicsMachine o-- Sys_IPhysicsSystem
+Sys_PhysicsMachine o-- Sys_Box2DContactListener
 Sys_PhysicsBinder ..|> Sys_IPhysicsBinder
 
 Sys_PhysicsBinder *-- Sys_PhysicsMachine
 Sys_PhysicsBinder *-- Sys_PhysicsRegistration
-Sys_PhysicsRegistration o-- Sys_ContactHandler
+Sys_PhysicsRegistration o-- Sys_Box2DContactListener
 
 Sys_PhysicsMachine ..> Sys_Box2DPhysicsSystem : steps world
-Sys_Box2DPhysicsSystem ..> Sys_Box2DContactListener : calls ProcessContacts
+Sys_Box2DPhysicsSystem ..> Sys_Box2DContactListener : processes contacts
 Sys_Box2DContactListener ..> Sys_PhysicsRegistration : dispatch callbacks
 
 %% =========================
 %% Camera
 %% =========================
-class Cam_ICamera["CameraSpace::ICamera"] {
+class Camera_ICamera["CameraSpace::ICamera"] {
   <<interface>>
   +GetView()
   +GetProjection()
 }
 
-class Cam_Camera["CameraSpace::Camera"] {
+class Camera_Base["CameraSpace::BaseCamera"] {
   +GetView()
   +GetProjection()
+  +SetPosition()
+  +SetRotation()
+  +SetPerspective()
 }
 
-class Cam_CameraRig["CameraSpace::CameraRig"] {
+class Camera_Perspective["CameraSpace::PerspectiveCamera"] {
+  +OnViewportChanged()
+  +SetFieldOfViewDegrees()
+  +SetClipPlanes()
+}
+
+class Camera_CameraRig["CameraRig"] {
   +Attach(target)
   +OnUpdate(ctx: Core_UpdateContext)
 }
 
-Cam_Camera ..|> Cam_ICamera
-Cam_CameraRig --|> Core_UpdateNode
+class Camera_CameraManager["CameraSpace::CameraManager"] {
+  +AddCamera(camera)
+  +SetActive(camera)
+  +GetActiveCamera()
+  +Update(ctx: Core_UpdateContext)
+}
+
+Camera_Base ..|> Camera_ICamera
+Camera_Perspective --|> Camera_Base
+Camera_CameraRig --|> Core_UpdateNode
+Camera_CameraRig o-- Camera_Base
+Camera_CameraRig o-- Ent_Entity
+Camera_CameraManager o-- Camera_ICamera
 
 %% =========================
 %% Entities
 %% =========================
 class Ent_Entity["Entities::Entity"] {
   +OnUpdate(ctx: Core_UpdateContext)
+  +Draw(renderer, camera)
+  +GetTransform()
 }
 
 class Ent_PhysicalEntity["Entities::PhysicalEntity"] {
-  +GetTransform()
   +GetPhysical()
+  +SetPosition()
+  +SetRotation()
+  +SetBox2DBodyId()
+  +GetBox2DBodyId()
 }
 
 class Ent_Player["Entities::Player"] {
-  +HandleInput(input: Core_Input)
   +OnUpdate(ctx: Core_UpdateContext)
+  +Draw(renderer, camera)
+  +SetSweetsManager(manager)
 }
 
 Ent_Entity --|> Core_UpdateNode
@@ -337,7 +411,7 @@ Ent_PhysicalEntity --|> Ent_Entity
 Ent_Player --|> Ent_PhysicalEntity
 
 %% =========================
-%% Sweets (post-fix: no manual bypass)
+%% Sweets
 %% =========================
 class Sweets_State["SweetsSpace::SweetsState"] {
   <<enumeration>>
@@ -349,91 +423,96 @@ class Sweets_State["SweetsSpace::SweetsState"] {
 
 class Sweets_Base["SweetsSpace::BaseSweets"] {
   +OnUpdate(ctx: Core_UpdateContext)
-  +DrawAll()
+  +Draw(renderer, camera)
 }
 
-class Sweets_LateNode["SweetsSpace::LateUpdateNode"] {
+class Sweets_LateNode["SweetsSpace::SweetsManager::LateUpdateNode"] {
   +OnUpdate(ctx: Core_UpdateContext)
+}
+
+class Sweets_Lifecycle["SweetsSpace::SweetsLifecycle"] {
+  +OnUpdate(ctx: Core_UpdateContext)
+  +OnLateUpdate(ctx: Core_UpdateContext)
+  +RegisterWithSystems(sweets)
 }
 
 class Sweets_Manager["SweetsSpace::SweetsManager"] {
   +OnUpdate(ctx: Core_UpdateContext)
   +OnLateUpdate(ctx: Core_UpdateContext)
-  +DrawAll()
+  +DrawAll(renderer, camera)
   +Spawn(kind, transform)
   +LoadPhaseSpawnConfig(path)
   +OnContactBegin(a,b)
   +OnContactEnd(a,b)
-  +GetLateUpdateNode() Sweets_LateNode
+  +GetLateUpdateNode() Core_IUpdatable*
 }
 
-Sweets_Base --|> Core_UpdateNode
-Sweets_LateNode --|> Core_UpdateNode
+Sweets_Base --|> Ent_PhysicalEntity
 Sweets_Manager --|> Core_UpdateNode
+Sweets_LateNode --|> Core_UpdateNode
 
 Sweets_Manager *-- Sweets_LateNode
-Sweets_Manager o-- Sweets_Base : owns instances
-Sweets_Manager ..> Core_UpdateScheduler : registers BaseSweets
-Sweets_Manager ..> Sys_PhysicsMachine : joints and physics ops
+Sweets_Manager *-- Sweets_Lifecycle
+Sweets_Manager ..> Core_UpdateScheduler : registers late node
+Sweets_Manager ..> Sys_DrawSystem
+Sweets_Manager ..> Sys_PhysicsMachine
 
 %% =========================
 %% Stage + Config
 %% =========================
-class Cfg_SectionReader["Config::ConfigSectionReader"] {
-  +ReadSectionLines(path, section)
+class Cfg_ReadSectionLines["Config::ReadSectionLines"] {
+  <<utility>>
+  +ReadSectionLines(path, section, outLines) bool
 }
 
-class Cfg_SceneGameConfigLoader["Config::SceneGameConfigLoader"] {
-  +LoadPhysicsTuningSettings(path)
-  +LoadPlayerTransformConfig(path)
+class Cfg_SceneGameConfig["SceneGameConfig (free functions)"] {
+  <<utility>>
+  +LoadPhysicsTuningSettings()
+  +LoadPlayerTransformConfig()
   +LoadPlayerColliderTuning(path)
-  +LoadStageColliderConfig(path)
-  +LoadModelTextureLoadingSetting(path)
+  +LoadModelTextureLoadingSetting()
 }
 
 class Stage_StageData["Stage::StageData"] {
+  +LoadFromFile(path)
   +LoadFromFile(path, section)
   +GetGuidelineHeight() float
-  +GetBackgroundTexture() string
+  +GetBackgroundTexturePath() string
 }
 
-class Stage_LayoutLoader["Stage::StageLayoutLoader"] {
-  +LoadFromCsv(path)
+class Stage_LayoutLoader["StageLayoutLoader"] {
+  +LoadFromCsv(request) StageLayoutLoadResult
 }
 
-Stage_StageData ..> Cfg_SectionReader : reads stage checklist
-Cfg_SceneGameConfigLoader ..> Cfg_SectionReader
-Stage_LayoutLoader ..> Cfg_SectionReader
-
-Sweets_Manager ..> Cfg_SectionReader : reads spawn phases
-Sweets_Manager ..> Stage_StageData : uses stage params
+Stage_StageData ..> Cfg_ReadSectionLines
+Cfg_SceneGameConfig ..> Cfg_ReadSectionLines
 
 %% =========================
 %% UI
 %% =========================
-class UI_UIManager["UI::UIManager"] {
+class UI_UIManager["UIManager"] {
   +Initialize()
   +Shutdown()
-  +UpdateHUD()
+  +UpdateHUD(data)
   +Draw()
 }
 
-class UI_HudRenderer["UI::HudRenderer"] {
-  +Initialize()
-  +Shutdown()
-  +Draw()
-}
-
-class UI_ResultRenderer["UI::ResultRenderer"] {
+class UI_HudRenderer["HudRenderer"] {
   +Initialize()
   +Shutdown()
   +Draw()
 }
 
-class UI_Overlay["UI::SceneGameUIOverlay"] {
+class UI_ResultRenderer["ResultRenderer"] {
   +Initialize()
   +Shutdown()
-  +Update()
+  +Draw()
+}
+
+class UI_Overlay["SceneGameUIOverlay"] {
+  +Initialize()
+  +Shutdown()
+  +Update(data)
   +Draw()
 }
 
@@ -444,16 +523,21 @@ UI_Overlay *-- UI_UIManager
 %% =========================
 %% PowerUp scene
 %% =========================
-class PU_Manager["PowerUp::PowerUpManager"] {
+class PU_Manager["PowerUpManager"] {
   +OnUpdate(ctx: Core_UpdateContext)
+  +AddNode(...)
+  +DrawAll(renderer, camera)
 }
 
-class PU_Cursor["PowerUp::PowerUpCursor"] {
+class PU_Cursor["PowerUpCursor"] {
   +OnUpdate(ctx: Core_UpdateContext)
+  +Draw(renderer, camera)
 }
 
-class PU_Node["PowerUp::PowerUpNode"] {
+class PU_Node["PowerUpNode"] {
   +OnUpdate(ctx: Core_UpdateContext)
+  +Draw(renderer, camera)
+  +LevelUp()
 }
 
 PU_Manager --|> Core_UpdateNode
@@ -471,12 +555,12 @@ Scene_SceneGame *-- Sys_PhysicsBinder
 Scene_SceneGame *-- Sys_DrawSystem
 Scene_SceneGame *-- Sweets_Manager
 Scene_SceneGame *-- UI_UIManager
-Scene_SceneGame *-- Cam_CameraRig
+Scene_SceneGame *-- Camera_CameraRig
 Scene_SceneGame *-- Ent_Player
 Scene_SceneGame *-- Stage_StageData
 
 Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
-Scene_SceneGame ..> Sys_PhysicsBinder : registers contact handler
+Scene_SceneGame ..> Sys_PhysicsBinder : contact handlers
 Scene_SceneGame ..> Sweets_Manager : forwards contacts
 
 クラス図ざっくりまとめ
