@@ -928,6 +928,14 @@ void SceneGame::DrawPhysicsDebugOverlay()
         drawState(SweetsSpace::SweetsState::Carried);
     }
 
+    if (g_RegisterOsaraColliders)
+    {
+        for (const auto& entity : m_stagePhysicsEntities)
+        {
+            drawEntity(entity.get());
+        }
+    }
+
     Geometory::DrawLines();
 }
 #endif
