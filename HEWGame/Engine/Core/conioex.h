@@ -1,16 +1,16 @@
 /**
  * @file	conioex.h
- * @brief	Win32 ã‚³ãƒ³ã‚½ãƒ¼ãƒ« I/O æ‹¡å¼µãƒ˜ãƒƒãƒ€ for Visual C++/Borland C++
+ * @brief	Win32 ƒRƒ“ƒ\[ƒ‹ I/O Šg’£ƒwƒbƒ_ for Visual C++/Borland C++
  *
- * @author	HALåå¤å±‹ æ•™å‹™éƒ¨ã€€æµœè°·æµ©å½¦
- * @date	2009/10/08 (æœ¨)
- * @date	2009/10/15 (æœ¨) msleep é–¢æ•°ã‚’è¿½åŠ  
- * @date	2010/01/13 (æ°´) playsound é–¢æ•°ã§ã€å¸¸ã«å…ˆé ­ã¸ã‚·ãƒ¼ã‚¯ 
- * @date	2012/12/17 (æœˆ) reinport é–¢æ•°ã‚’è¿½åŠ  (by å¿—æ°´)
- * @date	2018/02/06 (ç«) inport é–¢æ•°ã§ã€ã‚²ãƒ¼ãƒ ãƒ‘ãƒƒãƒ‰å¯¾å¿œå¼·åŒ– 
- * @date	2018/06/07 (æœ¨) setcaption é–¢æ•°ã®å¼•æ•°åž‹ã«constã‚’è¿½åŠ  
- * @date	2021/03/08 (æœˆ) x64å¯¾å¿œ width é–¢æ•°ã€fontsize é–¢æ•°ã€setpalette é–¢æ•°ã€getpalette é–¢æ•°è¿½åŠ  
- * @date	2025/02/14 (é‡‘) inport é–¢æ•°ã®ãƒã‚°ä¿®æ­£ (by å±±å†…é™½)
+ * @author	HAL–¼ŒÃ‰® ‹³–±•”@•l’J_•F
+ * @date	2009/10/08 (–Ø)
+ * @date	2009/10/15 (–Ø) msleep ŠÖ”‚ð’Ç‰Á 
+ * @date	2010/01/13 (…) playsound ŠÖ”‚ÅAí‚Éæ“ª‚ÖƒV[ƒN 
+ * @date	2012/12/17 (ŒŽ) reinport ŠÖ”‚ð’Ç‰Á (by Žu…)
+ * @date	2018/02/06 (‰Î) inport ŠÖ”‚ÅAƒQ[ƒ€ƒpƒbƒh‘Î‰ž‹­‰» 
+ * @date	2018/06/07 (–Ø) setcaption ŠÖ”‚Ìˆø”Œ^‚Éconst‚ð’Ç‰Á 
+ * @date	2021/03/08 (ŒŽ) x64‘Î‰ž width ŠÖ”Afontsize ŠÖ”Asetpalette ŠÖ”Agetpalette ŠÖ”’Ç‰Á 
+ * @date	2025/02/14 (‹à) inport ŠÖ”‚ÌƒoƒOC³ (by ŽR“à—z)
  * @version	1.06.1
  */
 #ifndef __CONIOEX_H
@@ -59,26 +59,26 @@ __inline int _kbhit(void) {return kbhit();}
 #ifndef __COLORS
 #define __COLORS
 enum COLORS {
-	BLACK,			/* é»’		*/
-	BLUE,			/* æ¿ƒã„é’	*/
-	GREEN,			/* ç·‘		*/
-	CYAN,			/* é’ç·‘		*/
-	RED,			/* æ¿ƒã„èµ¤	*/
-	MAGENTA,		/* ç´«		*/
-	BROWN,			/* æ¿ƒã„é»„	*/
-	LIGHTGRAY,		/* 25%ç°è‰²	*/
-	DARKGRAY,		/* 50%ç°è‰²	*/
-	LIGHTBLUE,		/* é’		*/
-	LIGHTGREEN,		/* æ˜Žã‚‹ã„ç·‘	*/
-	LIGHTCYAN,		/* æ°´è‰²		*/
-	LIGHTRED,		/* èµ¤		*/
-	LIGHTMAGENTA,	/* ãƒ”ãƒ³ã‚¯	*/
-	YELLOW,			/* é»„		*/
-	WHITE			/* ç™½		*/
+	BLACK,			/* •		*/
+	BLUE,			/* ”Z‚¢Â	*/
+	GREEN,			/* —Î		*/
+	CYAN,			/* Â—Î		*/
+	RED,			/* ”Z‚¢Ô	*/
+	MAGENTA,		/* Ž‡		*/
+	BROWN,			/* ”Z‚¢‰©	*/
+	LIGHTGRAY,		/* 25%ŠDF	*/
+	DARKGRAY,		/* 50%ŠDF	*/
+	LIGHTBLUE,		/* Â		*/
+	LIGHTGREEN,		/* –¾‚é‚¢—Î	*/
+	LIGHTCYAN,		/* …F		*/
+	LIGHTRED,		/* Ô		*/
+	LIGHTMAGENTA,	/* ƒsƒ“ƒN	*/
+	YELLOW,			/* ‰©		*/
+	WHITE			/* ”’		*/
 };
 #endif /* _COLORS */
 
-CONIOEX_INST WORD	__conioex_h_wAttribute		/* å¢ƒç•Œè‰² */
+CONIOEX_INST WORD	__conioex_h_wAttribute		/* ‹«ŠEF */
 #ifndef CONIOEX
 = LIGHTGRAY
 #endif /* CONIOEX */
@@ -87,9 +87,9 @@ CONIOEX_INST WORD	__conioex_h_wAttribute		/* å¢ƒç•Œè‰² */
 
 
 /**
- * @brief	æ°´å¹³æ–¹å‘ã®ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‚’å–å¾—
+ * @brief	…•½•ûŒü‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚ðŽæ“¾
  *
- * @return	ç¾åœ¨ã®ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã®Xåº§æ¨™(1ï½ž)
+ * @return	Œ»Ý‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚ÌXÀ•W(1`)
  */
 int wherex(void)
 #ifdef CONIOEX
@@ -104,9 +104,9 @@ int wherex(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	åž‚ç›´æ–¹å‘ã®ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‚’å–å¾—
+ * @brief	‚’¼•ûŒü‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚ðŽæ“¾
  *
- * @return	ç¾åœ¨ã®ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã®Yåº§æ¨™(1ï½ž)
+ * @return	Œ»Ý‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚ÌYÀ•W(1`)
  */
 int wherey(void)
 #ifdef CONIOEX
@@ -121,10 +121,10 @@ int wherey(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã®ç§»å‹•
+ * @brief	ƒJ[ƒ\ƒ‹ˆÊ’u‚ÌˆÚ“®
  *
- * @param	x [å…¥åŠ›] Xåº§æ¨™(1ï½ž)
- * @param	y [å…¥åŠ›] Yåº§æ¨™(1ï½ž)
+ * @param	x [“ü—Í] XÀ•W(1`)
+ * @param	y [“ü—Í] YÀ•W(1`)
  */
 void gotoxy(int x, int y)
 #ifdef CONIOEX
@@ -144,7 +144,7 @@ void gotoxy(int x, int y)
 #endif /* CONIOEX */
 
 /**
- * @brief	è¡Œæœ«ã¾ã§æ¶ˆåŽ»
+ * @brief	s––‚Ü‚ÅÁ‹Ž
  */
 void clreol(void)
 #ifdef CONIOEX
@@ -168,7 +168,7 @@ void clreol(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	ç”»é¢æ¶ˆåŽ»
+ * @brief	‰æ–ÊÁ‹Ž
  */
 void clrscr(void)
 #ifdef CONIOEX
@@ -190,7 +190,7 @@ void clrscr(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	æ–‡å­—è‰²é«˜è¼åº¦åŒ–
+ * @brief	•¶ŽšF‚‹P“x‰»
  */
 void highvideo(void)
 #ifdef CONIOEX
@@ -206,7 +206,7 @@ void highvideo(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	æ–‡å­—è‰²ä½Žè¼åº¦åŒ–
+ * @brief	•¶ŽšF’á‹P“x‰»
  */
 void lowvideo(void)
 #ifdef CONIOEX
@@ -222,7 +222,7 @@ void lowvideo(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	æ—¢å®šæ–‡å­—è‰²è¨­å®š
+ * @brief	Šù’è•¶ŽšFÝ’è
  */
 void normvideo(void)
 #ifdef CONIOEX
@@ -288,7 +288,7 @@ void setcursortype(int cur_t)
 __inline void _setcursortype(int cur_t) {setcursortype(cur_t);}
 
 /**
- * @brief	ç¾åœ¨è¡Œã«æŒ¿å…¥
+ * @brief	Œ»Ýs‚É‘}“ü
  */
 void insline(void)
 #ifdef CONIOEX
@@ -324,7 +324,7 @@ void insline(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	ç¾åœ¨è¡Œã®å‰Šé™¤
+ * @brief	Œ»Ýs‚Ìíœ
  */
 void delline(void)
 #ifdef CONIOEX
@@ -360,7 +360,7 @@ void delline(void)
 #endif /* CONIOEX */
 
 /**
- * @brief	æ–‡å­—æ•°ã€è¡Œæ•°ã®æŒ‡å®š
+ * @brief	•¶Žš”As”‚ÌŽw’è
  */
 void width(int w, int h)
 #ifdef CONIOEX
@@ -404,7 +404,7 @@ void width(int w, int h)
 #endif /* CONIOEX */
 
 /**
- * @brief	ãƒ•ã‚©ãƒ³ãƒˆã‚µã‚¤ã‚ºã®æŒ‡å®š
+ * @brief	ƒtƒHƒ“ƒgƒTƒCƒY‚ÌŽw’è
  */
 int fontsize(int h)
 #ifdef CONIOEX
@@ -428,7 +428,7 @@ int fontsize(int h)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚«ãƒ©ãƒ¼ãƒ‘ãƒ¬ãƒƒãƒˆã®å–å¾—
+ * @brief	ƒJƒ‰[ƒpƒŒƒbƒg‚ÌŽæ“¾
  */
 void getpalette(unsigned* palette)
 #ifdef CONIOEX
@@ -448,7 +448,7 @@ void getpalette(unsigned* palette)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚«ãƒ©ãƒ¼ãƒ‘ãƒ¬ãƒƒãƒˆã®è¨­å®š
+ * @brief	ƒJƒ‰[ƒpƒŒƒbƒg‚ÌÝ’è
  */
 #define PALETTE95 ((const unsigned*)MAKEINTRESOURCE(0x9500))
 void setpalette(const unsigned* palette)
@@ -519,8 +519,8 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_INS					VK_INSERT
 #define PK_DEL					VK_DELETE
 #define PK_TAB					VK_TAB
-#define PK_NFER					VK_KANA		/* [ç„¡å¤‰æ›]	*/
-#define PK_XFER					VK_CONVERT	/* [å¤‰æ›]	*/
+#define PK_NFER					VK_KANA		/* [–³•ÏŠ·]	*/
+#define PK_XFER					VK_CONVERT	/* [•ÏŠ·]	*/
 #define PK_0					0x30
 #define PK_1					0x31
 #define PK_2					0x32
@@ -531,16 +531,16 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_7					0x37
 #define PK_8					0x38
 #define PK_9					0x39
-#define PK_NUMPAD0				VK_NUMPAD0	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[0]	*/
-#define PK_NUMPAD1				VK_NUMPAD1	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[1]	*/
-#define PK_NUMPAD2				VK_NUMPAD2	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[2]	*/
-#define PK_NUMPAD3				VK_NUMPAD3	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[3]	*/
-#define PK_NUMPAD4				VK_NUMPAD4	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[4]	*/
-#define PK_NUMPAD5				VK_NUMPAD5	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[5]	*/
-#define PK_NUMPAD6				VK_NUMPAD6	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[6]	*/
-#define PK_NUMPAD7				VK_NUMPAD7	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[7]	*/
-#define PK_NUMPAD8				VK_NUMPAD8	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[8]	*/
-#define PK_NUMPAD9				VK_NUMPAD9	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[9]	*/
+#define PK_NUMPAD0				VK_NUMPAD0	/* ƒeƒ“ƒL[‚Ì[0]	*/
+#define PK_NUMPAD1				VK_NUMPAD1	/* ƒeƒ“ƒL[‚Ì[1]	*/
+#define PK_NUMPAD2				VK_NUMPAD2	/* ƒeƒ“ƒL[‚Ì[2]	*/
+#define PK_NUMPAD3				VK_NUMPAD3	/* ƒeƒ“ƒL[‚Ì[3]	*/
+#define PK_NUMPAD4				VK_NUMPAD4	/* ƒeƒ“ƒL[‚Ì[4]	*/
+#define PK_NUMPAD5				VK_NUMPAD5	/* ƒeƒ“ƒL[‚Ì[5]	*/
+#define PK_NUMPAD6				VK_NUMPAD6	/* ƒeƒ“ƒL[‚Ì[6]	*/
+#define PK_NUMPAD7				VK_NUMPAD7	/* ƒeƒ“ƒL[‚Ì[7]	*/
+#define PK_NUMPAD8				VK_NUMPAD8	/* ƒeƒ“ƒL[‚Ì[8]	*/
+#define PK_NUMPAD9				VK_NUMPAD9	/* ƒeƒ“ƒL[‚Ì[9]	*/
 #define PK_A					0x41
 #define PK_B					0x42
 #define PK_C					0x43
@@ -571,26 +571,26 @@ __inline void msleep(unsigned long msecs) {Sleep(msecs);}
 #define PK_LT					0x0BC		/* [,]	*/
 #define PK_GT					0x0BE		/* [.]	*/
 #define PK_SLUSH				0x0BF		/* [?]	*/
-#define PK_DOT					VK_DECIMAL	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[.]	*/
-#define PK_DIV					VK_DIVIDE	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[/]	*/
+#define PK_DOT					VK_DECIMAL	/* ƒeƒ“ƒL[‚Ì[.]	*/
+#define PK_DIV					VK_DIVIDE	/* ƒeƒ“ƒL[‚Ì[/]	*/
 #define PK_BSLUSH				0x0E2		/* [_]	*/
 
 #define PK_SEMICOLON			0x0BB		/* [;]	*/
-#define PK_ADD					VK_ADD		/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[+]	*/
+#define PK_ADD					VK_ADD		/* ƒeƒ“ƒL[‚Ì[+]	*/
 #define PK_COLON				0x0BA		/* [:]	*/
-#define PK_MUL					VK_MULTIPLY	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[*]	*/
+#define PK_MUL					VK_MULTIPLY	/* ƒeƒ“ƒL[‚Ì[*]	*/
 #define PK_RBRACE				0x0DD		/* []]	*/
 
 #define PK_ATMARK				0x0C0		/* [@]	*/
 #define PK_LBRACE				0x0DB		/* [[]	*/
 
 #define PK_MINUS				0x0BD		/* [-]	*/
-#define PK_SUB					VK_SUBTRACT	/* ãƒ†ãƒ³ã‚­ãƒ¼ã®[-]	*/
+#define PK_SUB					VK_SUBTRACT	/* ƒeƒ“ƒL[‚Ì[-]	*/
 #define PK_XOR					0x0DE		/* [^]	*/
 #define PK_YEN					0x0DC		/* [\]	*/
 
-#define PK_KANJI				0x0F3		/* [åŠè§’/å…¨è§’]	*/
-#define PK_CAPS					0x0F0		/* [è‹±æ•°][ã²ã‚‰ãŒãª]	*/
+#define PK_KANJI				0x0F3		/* [”¼Šp/‘SŠp]	*/
+#define PK_CAPS					0x0F0		/* [‰p”][‚Ð‚ç‚ª‚È]	*/
 
 #define PM_LEFT					VK_LBUTTON
 #define PM_MID					VK_MBUTTON
@@ -656,9 +656,9 @@ CONIOEX_INST COORD	__conioex_h_crdMouse
 ;
 
 /**
- * @brief	ã‚­ãƒ¼æƒ…å ±ãƒªã‚»ãƒƒãƒˆ
+ * @brief	ƒL[î•ñƒŠƒZƒbƒg
  *
- * @return	ãªã—
+ * @return	‚È‚µ
  */
 void reinport(void)
 #ifdef CONIOEX
@@ -675,10 +675,10 @@ void reinport(void)
 
 
 /**
- * @brief	å„ç¨®ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ å…¥åŠ›
+ * @brief	ŠeŽíƒŠƒAƒ‹ƒ^ƒCƒ€“ü—Í
  *
- * @param	port [å…¥åŠ›] ãƒãƒ¼ãƒˆç•ªå·(P*_*)
- * @return	å…¥åŠ›å€¤
+ * @param	port [“ü—Í] ƒ|[ƒg”Ô†(P*_*)
+ * @return	“ü—Í’l
  */
 int inport(int port)
 #ifdef CONIOEX
@@ -688,7 +688,7 @@ int inport(int port)
 	DWORD	dwEvent;
 	HANDLE	h;
 
-	/* ã‚²ãƒ¼ãƒ ãƒ‘ãƒƒãƒ‰å…¥åŠ› */
+	/* ƒQ[ƒ€ƒpƒbƒh“ü—Í */
 	if ((port & 0xfe00) == 0x0200) {
 		int			id = (port & 0x01f0) >> 4;
 		int			func = port & 0x0f;
@@ -726,15 +726,15 @@ int inport(int port)
 		}
 		return 0;
 	}
-	// ã‚­ãƒ¼/ãƒžã‚¦ã‚¹ ã‚¤ãƒ™ãƒ³ãƒˆ ãƒã‚§ãƒƒã‚¯
+	// ƒL[/ƒ}ƒEƒX ƒCƒxƒ“ƒg ƒ`ƒFƒbƒN
 	dwEvent = 0;
 	h = GetStdHandle(STD_INPUT_HANDLE);
 
-	//è¿½åŠ éƒ¨åˆ†
+	//’Ç‰Á•”•ª
 	GetConsoleMode(h, &dwEvent);
 	SetConsoleMode(h, dwEvent | ENABLE_MOUSE_INPUT);
 	dwEvent = 0;
-	//ã“ã“ã¾ã§
+	//‚±‚±‚Ü‚Å
 
 	if (GetNumberOfConsoleInputEvents(h, &dwEvent) && dwEvent) {
 		DWORD			dwRead = 0;
@@ -791,7 +791,7 @@ int inport(int port)
 		}
 	}
 
-	// ãƒžã‚¦ã‚¹åº§æ¨™ã‚’è¿”ã™
+	// ƒ}ƒEƒXÀ•W‚ð•Ô‚·
 	switch (port) {
 	case PM_CURX:
 		return __conioex_h_crdMouse.X + 1;
@@ -800,7 +800,7 @@ int inport(int port)
 	default:
 		break;
 	}
-	// ã‚­ãƒ¼çŠ¶æ…‹ã‚’è¿”ã™
+	// ƒL[ó‘Ô‚ð•Ô‚·
 	return (__conioex_h_dwKeyMap[(port & 0x0FF) >> 5] & (0x01 << (port & 31))) != 0;
 }
 #endif /* CONIOEX */
@@ -813,11 +813,11 @@ typedef struct {
 } __conioex_h_SoundInfo;
 
 /**
- * @brief	ã‚µã‚¦ãƒ³ãƒ‰ ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã
+ * @brief	ƒTƒEƒ“ƒh ƒtƒ@ƒCƒ‹‚ðŠJ‚­
  *
- * @param	path [å…¥åŠ›] ãƒ•ã‚¡ã‚¤ãƒ«å
- * @retval	éž0	ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
- * @retval	0	ã‚¨ãƒ©ãƒ¼
+ * @param	path [“ü—Í] ƒtƒ@ƒCƒ‹–¼
+ * @retval	”ñ0	ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
+ * @retval	0	ƒGƒ‰[
  */
 INT_PTR opensound(char *path)
 #ifdef CONIOEX
@@ -877,9 +877,9 @@ INT_PTR opensound(char *path)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚µã‚¦ãƒ³ãƒ‰ ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã‚‹
+ * @brief	ƒTƒEƒ“ƒh ƒtƒ@ƒCƒ‹‚ð•Â‚¶‚é
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
  */
 void closesound(INT_PTR hsound)
 #ifdef CONIOEX
@@ -900,10 +900,10 @@ void closesound(INT_PTR hsound)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚µã‚¦ãƒ³ãƒ‰ã‚’å†ç”Ÿã™ã‚‹
+ * @brief	ƒTƒEƒ“ƒh‚ðÄ¶‚·‚é
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
- * @param	repeat [å…¥åŠ›] ãƒ«ãƒ¼ãƒ—æœ‰ç„¡
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
+ * @param	repeat [“ü—Í] ƒ‹[ƒv—L–³
  */
 void playsound(INT_PTR hsound, int repeat)
 #ifdef CONIOEX
@@ -941,9 +941,9 @@ void playsound(INT_PTR hsound, int repeat)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚µã‚¦ãƒ³ãƒ‰å†ç”Ÿã‚’åœæ­¢ã™ã‚‹
+ * @brief	ƒTƒEƒ“ƒhÄ¶‚ð’âŽ~‚·‚é
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
  */
 void stopsound(INT_PTR hsound)
 #ifdef CONIOEX
@@ -964,10 +964,10 @@ void stopsound(INT_PTR hsound)
 #endif /* CONIOEX */
 
 /**
- * @brief	ã‚µã‚¦ãƒ³ãƒ‰å†ç”ŸçŠ¶æ…‹ã®å–å¾—
+ * @brief	ƒTƒEƒ“ƒhÄ¶ó‘Ô‚ÌŽæ“¾
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
- * @return	å†ç”Ÿä¸­ãªã‚‰ã° 0 ä»¥å¤–ã‚’è¿”ã™ 
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
+ * @return	Ä¶’†‚È‚ç‚Î 0 ˆÈŠO‚ð•Ô‚· 
  */
 int checksound(INT_PTR hsound)
 #ifdef CONIOEX
@@ -991,9 +991,9 @@ int checksound(INT_PTR hsound)
 #endif /* CONIOEX */
 
 /**
- * @brief	ãƒ«ãƒ¼ãƒ—å†ç”Ÿã®å¼·åˆ¶æ›´æ–°
+ * @brief	ƒ‹[ƒvÄ¶‚Ì‹­§XV
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
  */
 void updatesound(INT_PTR hsound)
 #ifdef CONIOEX
@@ -1033,10 +1033,10 @@ void updatesound(INT_PTR hsound)
 #endif /* CONIOEX */
 
 /**
- * @brief	å†ç”ŸéŸ³é‡ã‚’è¨­å®šã™ã‚‹
+ * @brief	Ä¶‰¹—Ê‚ðÝ’è‚·‚é
  *
- * @param	hsound [å…¥åŠ›] ã‚µã‚¦ãƒ³ãƒ‰ ãƒãƒ³ãƒ‰ãƒ«
- * @param	percent [å…¥åŠ›] éŸ³é‡ (0 ï½ž 100)
+ * @param	hsound [“ü—Í] ƒTƒEƒ“ƒh ƒnƒ“ƒhƒ‹
+ * @param	percent [“ü—Í] ‰¹—Ê (0 ` 100)
  */
 void setvolume(INT_PTR hsound, int percent)
 #ifdef CONIOEX
