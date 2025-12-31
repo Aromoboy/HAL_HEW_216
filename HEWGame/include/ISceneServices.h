@@ -1,15 +1,12 @@
 #pragma once
 
+#include "ModelRender.h"
+
 namespace Core
 {
     class Input;
     class StepTimer;
     class UpdateScheduler;
-}
-
-namespace Render
-{
-    class ModelRenderer;
 }
 
 namespace Systems
