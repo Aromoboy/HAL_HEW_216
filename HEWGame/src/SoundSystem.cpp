@@ -1,6 +1,6 @@
 #include "SoundSystem.h"
 #include "Debug.h"
-#include <mutex>
+#include "Main.h"
 
 #ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
@@ -20,12 +20,6 @@
 #define fourccDPDS 'sdpd'
 #endif
 
-namespace
-{
-    std::once_flag g_comInitFlag;
-    HRESULT g_comInitResult = E_FAIL;
-}
-
 SoundSystem::SoundSystem()
     : m_pAudio2(nullptr)
     , m_pMasterVoice(nullptr)
@@ -35,13 +29,7 @@ SoundSystem::SoundSystem()
     DebugLog::DebugMessage("SoundSystem initializing.");
 #endif
 
-    std::call_once(g_comInitFlag, []()
-        {
-            g_comInitResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        });
-
-    if (FAILED(g_comInitResult))
-
+    if (FAILED(GetComInitResult()))
     {
 #ifdef _DEBUG
         DebugLog::DebugMessage("Failed to initialize COM.");
@@ -300,4 +288,3 @@ void SoundSystem::StopAllSounds()
     }
     m_sourceVoices.clear();
 }
-
