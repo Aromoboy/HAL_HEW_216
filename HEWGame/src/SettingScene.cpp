@@ -15,9 +15,10 @@ SceneSpace::SettingScene::SettingScene(SceneSpace::SceneManager& manager)
 {
 }
 
-void SceneSpace::SettingScene::Load(Core::Input& input)
+bool SceneSpace::SettingScene::Load(Core::Input& input)
 {
 	(void)input;
+    return true;
 }
 
 

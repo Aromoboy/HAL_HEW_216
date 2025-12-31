@@ -21,9 +21,10 @@ TitleScene::TitleScene(SceneSpace::SceneManager& manager)
 
 }
 
-void TitleScene::Load(Core::Input& input)
+bool TitleScene::Load(Core::Input& input)
 {
     (void)input;
+    return true;
 }
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)

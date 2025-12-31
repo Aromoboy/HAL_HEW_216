@@ -24,7 +24,7 @@ namespace SceneSpace
         {
         }
 
-        void ScenePowerUp::Load(Core::Input& input)
+        bool ScenePowerUp::Load(Core::Input& input)
         {
                 (void)input;
 
@@ -58,6 +58,7 @@ namespace SceneSpace
                         2.0f,
                         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
                         DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f) });
+                return true;
         }
 
         void ScenePowerUp::Update(Core::StepTimer& timer, Core::Input& input)

@@ -29,6 +29,7 @@ public:
         std::map<std::string, Collision::ColliderDefinition> playerColliderDefinitions;
         bool playerColliderConfigLoaded = false;
         bool forceConfigPlayerCollider = false;
+        bool stageConfigLoaded = false;
         SceneGame::PlayerColliderTuning playerColliderTuning{};
         SceneGame::PlayerSpawnTransform playerSpawnTransform{};
         Stage::StageData stageData{};

@@ -57,7 +57,7 @@ void EffectTestScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& active
         Draw();
 }
 
-void EffectTestScene::Load(Core::Input& input)
+bool EffectTestScene::Load(Core::Input& input)
 {
         (void)input;
 
@@ -68,6 +68,7 @@ void EffectTestScene::Load(Core::Input& input)
         {
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>();
         }
+        return true;
 }
 
 void EffectTestScene::OnEnter()

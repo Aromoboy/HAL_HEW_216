@@ -164,6 +164,10 @@ SceneComposer::Composition SceneComposer::ComposeBootstrap()
     Composition result{};
 
     ComposeConfig(result);
+    if (!result.stageConfigLoaded)
+    {
+        return result;
+    }
     ComposeRules(result);
     ComposePhysics(result);
     ComposeUI(result);
@@ -201,6 +205,15 @@ void SceneComposer::ComposeConfig(Composition& result)
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
+    result.stageConfigLoaded = stageLoaded;
+    if (!stageLoaded)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[StageData] Failed to load stage config section '" << stageConfigSectionUsed
+            << "' from '" << kGameplayConfigPath << "'. Aborting scene configuration.\n";
+        DebugTrace(oss.str());
+        return;
+    }
     result.phaseManager.Initialize(
         result.stageData.GetPhaseThresholds(),
         result.stageData.GetPhaseRewardMultipliers(),

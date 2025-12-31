@@ -2,6 +2,13 @@
 
 #include <sstream>
 
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
 #include "ConfigSectionReader.h"
 #include "Stage/StageConfigNormalize.h"
 #include "Stage/StageConfigParser.h"
@@ -9,6 +16,18 @@
 namespace
 {
     constexpr const char* kLogPrefix = "[StageData] ";
+
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
 }
 
 namespace Stage
@@ -31,16 +50,14 @@ namespace Stage
             std::ostringstream oss;
             if (section.empty())
             {
-                oss << kLogPrefix << "Config not found at '" << path << "'. Using defaults.\n";
+                oss << kLogPrefix << "Config not found at '" << path << "'. Stage data unchanged.\n";
             }
             else
             {
                 oss << kLogPrefix << "Config section '" << section << "' not found at '" << path
-                    << "'. Using defaults.\n";
+                    << "'. Stage data unchanged.\n";
             }
-            ApplyDefaults();
-            m_sourcePath.clear();
-            m_loadedFromFile = false;
+            DebugTrace(oss.str());
             return false;
         }
 
@@ -230,7 +247,6 @@ namespace Stage
         m_pickupMaxDistance = normalized.pickupMaxDistance;
         m_pickupDepthThreshold = normalized.pickupDepthThreshold;
         m_pickupOffset = normalized.pickupOffset;
-        // Keep the configured guideline height; do not override valid config with a magic value.
         m_guidelineHeight = normalized.guidelineHeight;
         m_guidelineStep = normalized.guidelineStep;
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
