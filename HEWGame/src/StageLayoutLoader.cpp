@@ -52,14 +52,7 @@ namespace
         try
         {
             const std::filesystem::path path(modelPath);
-            if (path.has_stem())
-            {
-                key = path.stem().string();
-            }
-            else
-            {
-                key = path.filename().string();
-            }
+            key = path.stem().string();
         }
         catch (...)
         {
@@ -223,11 +216,15 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             const std::string modelKey = BuildModelKey(obj.modelPath);
             const auto preset = ResolveStageColliderPreset(stageColliderConfig, obj.colliderPresetId, obj.modelPath);
             SceneGameConfig::StageColliderPreset resolvedPreset{};
-            const std::string registryId = preset && !preset->registryId.empty() ? preset->registryId : modelKey;
+            std::string registryId = modelKey;
             if (preset)
             {
                 resolvedPreset = *preset;
                 obj.colliderPresetId = preset->presetId;
+                if (!preset->registryId.empty())
+                {
+                    registryId = preset->registryId;
+                }
             }
 
             std::optional<Physics::ColliderRegistryDefinition> registryDefinition;
