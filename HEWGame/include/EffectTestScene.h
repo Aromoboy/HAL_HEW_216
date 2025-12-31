@@ -41,4 +41,5 @@ private:
         ::EffekseerRendererDX11::RendererRef m_renderer;
         ::Effekseer::ManagerRef m_effectManager;
         std::unordered_map<std::string, EffectCreateData> m_effectMap;
+        bool m_inputRegistered = false;
 };

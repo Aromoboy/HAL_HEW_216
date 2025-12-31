@@ -45,5 +45,6 @@ namespace SceneSpace
                 std::shared_ptr<PowerUpTarget> m_target;
 
                 int m_cost = 9999;
+                bool m_inputRegistered = false;
         };
 }
