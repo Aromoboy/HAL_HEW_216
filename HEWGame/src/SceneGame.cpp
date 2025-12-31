@@ -1010,7 +1010,6 @@ void SceneGame::DrawOverlay()
     }
 
 #if defined(_DEBUG)
-    //RenderRunTelemetryOverlay();　なぜコメントアウトされたかドロスに聞くといい
 #endif
 }
 
@@ -1229,7 +1228,6 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
-    //m_heightBonusArmed = (m_heightBonusThresholdMeters > 0.0f && m_heightBonusSeconds > 0.0f);
     m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);

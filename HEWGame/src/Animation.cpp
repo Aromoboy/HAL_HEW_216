@@ -20,25 +20,9 @@ Animation::Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, 
 void Animation::Step(float a_tick)
 {
 	
-	////--- アニメーション行列の更新
-	//// パラメトリック
-	//if (m_playNo == kParametricAnime || m_blendNo == kParametricAnime)
-	//{
-	//	CalcAnime(PARAMETRIC0, m_parametric[0]);
-	//	CalcAnime(PARAMETRIC1, m_parametric[1]);
-	//}
-	// 
-	
 	// メインアニメ
 	//if (m_playNo != kAnimeNone && m_playNo != kParametricAnime)
 	CalcAnime(MAIN);
-
-
-	//// ブレンドアニメ
-	//if (m_blendNo != kAnimeNone && m_blendNo != kParametricAnime)
-	//{
-	//	CalcAnime(BLEND, m_blendNo);
-	//}
 
 	// アニメーション行列に基づいて骨行列を更新
 	CalcBones(0, DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f));
@@ -46,26 +30,6 @@ void Animation::Step(float a_tick)
 	//--- アニメーションの時間更新
 	// メインアニメ
 	UpdateAnime(a_tick);
-	//// ブレンドアニメ
-	//if (m_blendNo != kAnimeNone)
-	//{
-	//	UpdateAnime(m_blendNo, a_tick);
-	//	m_blendTime += a_tick;
-	//	if (m_blendTime <= m_blendTime)
-	//	{
-	//		// ブレンドアニメの自動終了
-	//		m_blendTime = 0.0f;
-	//		m_blendTotalTime = 0.0f;
-	//		m_playNo = m_blendNo;
-	//		m_blendNo = kAnimeNone;
-	//	}
-	//}
-	//// パラメトリック
-	//if (m_playNo == kParametricAnime || m_blendNo == kParametricAnime)
-	//{
-	//	UpdateAnime(m_parametric[0], a_tick);
-	//	UpdateAnime(m_parametric[1], a_tick);
-	//}
 }
 
 void Animation::Play()
@@ -142,29 +106,6 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 {
 	AnimeTransformDX transform; // 合成結果の格納先
 
-	//// パラメトリックの合成
-	//if (m_playNo == PARAMETRIC_ANIME || m_blendNo == PARAMETRIC_ANIME)
-	//{
-	//	LerpTransform(&transform,
-	//		m_animeTransform[PARAMETRIC0][index],
-	//		m_animeTransform[PARAMETRIC1][index],
-	//		m_parametricBlend);
-
-	//	// のちのブレンドとの合成のために、パラメトリックの結果を再生・ブレンドのいずれかに格納
-	//	if (m_playNo == PARAMETRIC_ANIME) { m_animeTransform[MAIN][index] = transform; }
-	//	if (m_blendNo == PARAMETRIC_ANIME) { m_animeTransform[BLEND][index] = transform; }
-	//}
-
-	//// ブレンドアニメの合成
-	//if (m_blendNo != ANIME_NONE)
-	//{
-	//	LerpTransform(&transform,
-	//		m_animeTransform[MAIN][index],
-	//		m_animeTransform[BLEND][index],
-	//		m_blendTime / m_blendTotalTime);
-	//}
-	//else
-	
 	// 合成の必要がなかったので、メインの情報をそのまま格納
 	transform = m_animeTransform[MAIN][index];
 	
@@ -193,9 +134,6 @@ void Animation::CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent)
 
 void Animation::UpdateAnime(float tick)
 {
-	//// アニメーションチェック
-	//if (no == PARAMETRIC_ANIME) { return; }
-
 	// アニメーション時間の更新
 	
 	m_info.nowTime = m_info.nowTime + m_info.speed * tick;
@@ -204,7 +142,6 @@ void Animation::UpdateAnime(float tick)
 		m_info.nowTime = 0.0f;
 	}
 
-	//CheckAnimePlayLoop(anime.info);
 }
 
 void Animation::LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a, const AnimeTransformDX& b, float rate)
@@ -222,4 +159,3 @@ void Animation::LerpTransform(AnimeTransformDX* pOut, const AnimeTransformDX& a,
 	DirectX::XMStoreFloat4(&pOut->quaternion, vec[1][0]);
 	DirectX::XMStoreFloat3(&pOut->scale, vec[2][0]);
 }
-

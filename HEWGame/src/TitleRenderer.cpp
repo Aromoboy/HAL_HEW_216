@@ -13,23 +13,23 @@
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
-	// Šeƒ}ƒgƒŠƒNƒX‚Æ•`‰æ—p‚Ìƒpƒ‰ƒ[ƒ^[
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã¨æç”»ç”¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	// Šeƒ}ƒgƒŠƒNƒX‚ğİ’è
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã‚’è¨­å®š
 	wvp[0] = worldMatrix;
 	wvp[1] = viewMatrix;
 	wvp[2] = projMatrix;
 
 
-	// ƒXƒe[ƒ^ƒX‚ğİ’è
+	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
 	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
 	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
 
 
-	// ƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
@@ -39,30 +39,30 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 	ps->SetTexture(0, texture->Get());
 	ps->Bind();
 
-	// •`‰æ
+	// æç”»
 	MeshDraw();
 
 }
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
-	// Šeƒ}ƒgƒŠƒNƒX‚Æ•`‰æ—p‚Ìƒpƒ‰ƒ[ƒ^[
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã¨æç”»ç”¨ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ¼
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
 
-	// Šeƒ}ƒgƒŠƒNƒX‚ğİ’è
+	// å„ãƒãƒˆãƒªã‚¯ã‚¹ã‚’è¨­å®š
 	wvp[0] = worldMatrix;
 	wvp[1] = viewMatrix;
 	wvp[2] = projMatrix;
 
 
-	// ƒXƒe[ƒ^ƒX‚ğİ’è
+	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¨­å®š
 	param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 	param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 	param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 
-	// ƒVƒF[ƒ_[‚ğƒoƒCƒ“ƒh
+	// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚’ãƒã‚¤ãƒ³ãƒ‰
 	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
@@ -72,22 +72,6 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 	ps->SetTexture(0, texture->Get());
 	ps->Bind();
 
-	// •`‰æ
-	MeshDraw();
-}
-
-void TitleRenderer::MeshDraw()
-{
-// ƒRƒ“ƒeƒLƒXƒg‚ğæ“¾
-	ID3D11DeviceContext* pContext = GetContext();
-	UINT offset = 0;
-
-	// ’¸“_‚ğƒoƒCƒ“ƒh
-	const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
-	vertexBuffer.Bind(0, offset);
-
-	// ’¸“_ƒoƒbƒtƒ@‚Ì‚İ‚Å•`‰æ
-	GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	pContext->Draw(vertexBuffer.GetCount(), 0);
 
 }
@@ -103,7 +87,7 @@ void TitleRenderer::MeshDraw()
 //	float2 offset;
 //
 //
-//	// ƒoƒbƒNƒtƒŒ[ƒ€•`‰æ
+//	// ãƒãƒƒã‚¯ãƒ•ãƒ¬ãƒ¼ãƒ æç”»
 //	offset.x = kHudCostIconPositionOffset.x;
 //	offset.y = kHudCostIconPositionOffset.y;
 //	position.x = offset.x;

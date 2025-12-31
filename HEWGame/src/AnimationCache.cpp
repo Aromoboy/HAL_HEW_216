@@ -60,7 +60,6 @@ namespace Render
         if (reconfiguringWithCachedModels)
         {
             //MODELCACHE_LOG(
-                //"ローダー/デバイスの切り替え前にキャッシュをクリアする (Clear が呼ばれていない)");
             Clear();
         }
 
@@ -69,12 +68,10 @@ namespace Render
 
         if (!m_loader)
         {
-            //MODELCACHE_LOG("ローダーが未設定 SetLoader に有効なローダーを渡すこと");
         }
 
         if (!m_device)
         {
-            //MODELCACHE_LOG("デバイスが未設定のためモデルをロードできない ID3D11Device* を正しく渡すこと");
         }
     }
 
@@ -94,14 +91,12 @@ namespace Render
         if (it != m_animations.end())
         {
             Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ヒット\n");
-            //MODELCACHE_VERBOSE(std::string("キャッシュを利用します [パス] ") + path + "\n");
             return it->second;  // キャッシュ済みのモデルを返す
         }
 
         if (m_inFlightKeys.find(cacheKey) != m_inFlightKeys.end())
         {
             Diagnostics::LogInfo(std::string("[ModelCache] key='") + cacheKey + "' ブロック: ロードが進行中\n");
-            //MODELCACHE_LOG(std::string("ロードをスキップする（現在ロード中のキーへの再入禁止） [パス] ") + path + "\n");
             return nullptr;
         }
 
@@ -110,19 +105,16 @@ namespace Render
         // ローダーが有効かどうか確認
         if (!m_loader)
         {
-            //MODELCACHE_LOG(std::string("ローダーが未設定のためロードを中止 [パス] ") + path + "\n");
             return nullptr;  // ローダーが無ければロードできない
         }
 
         if (!m_device)
         {
-            //MODELCACHE_LOG(std::string("デバイスが未設定のためロードを中止 [パス] ") + path + "\n");
             return nullptr;
         }
 
 
         // キャッシュに無かったのでロードを実行
-        //MODELCACHE_VERBOSE(std::string("モデルのロードを開始します [パス] ") + path + "\n");
 
         m_inFlightKeys.insert(cacheKey);
         struct ScopedInFlightRemoval
@@ -153,7 +145,6 @@ namespace Render
         else
         {
             // 失敗した場合はエラーログ
-            //MODELCACHE_LOG(std::string("モデルのロードに失敗 [パス] ") + path + "\n");
         }
 
         return animation;  // ロード結果（失敗時は nullptr）

@@ -180,7 +180,6 @@ void ResultRenderer::Draw(const ResultDisplayData& data)
     UpdateBitmap(data);
     UploadTexture();
     RenderFream(data);
-    //RenderSprite(data);
 }
 
 void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
@@ -349,8 +348,6 @@ std::string ResultRenderer::BuildHudString(const ResultDisplayData& data) const
     stream << "  [" << (data.timeUp ? "Result" : "Play") << "]\n";
 
     stream << std::fixed << std::setprecision(2);
-    //    stream << "Top height live " << data.currentHeight << "m";
-    //    stream << " | peak " << data.peakHeight << "m\n";
 
     stream << "Speed x" << data.moveSpeedMultiplier
         << " (" << data.moveSpeedUnitsPerSecond << " u/s)  [1=Boost 2=Reset]\n";

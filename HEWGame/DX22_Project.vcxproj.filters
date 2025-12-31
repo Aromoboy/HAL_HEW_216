@@ -340,9 +340,6 @@
     <ClCompile Include="src\TitleScene.cpp">
       <Filter>App</Filter>
     </ClCompile>
-    <ClCompile Include="src\UpdatableTimer.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="TimerDisplay.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
@@ -696,9 +693,6 @@
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="include\Transform.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\UpdatableTimer.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="include\FullscreenManager.h">
