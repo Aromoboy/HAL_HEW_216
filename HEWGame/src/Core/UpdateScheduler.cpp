@@ -1,5 +1,7 @@
 #include "Core/UpdateScheduler.h"
 
+#include "Core/StepTimer.h"
+
 #include <algorithm>
 #include <cassert>
 #include <functional>

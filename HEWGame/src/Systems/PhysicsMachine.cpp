@@ -33,6 +33,7 @@
 #endif
 
 #include "Core/IUpdatable.h"
+#include "Core/StepTimer.h"
 
 namespace
 {
