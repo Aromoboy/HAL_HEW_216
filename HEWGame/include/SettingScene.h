@@ -42,6 +42,7 @@ namespace SceneSpace
         SceneManager* m_manager = nullptr;
         std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
         std::unique_ptr<BackgroundRenderer> m_background;
+        bool m_inputRegistered = false;
 
    
     };

@@ -27,13 +27,21 @@ void SelectScene::OnEnter()
 
 void SelectScene::OnExit()
 {
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
 }
 
 void SelectScene::ConfigureUpdates()
 {
     if (auto* input = GetInput())
     {
-        Register(*input);
+        m_inputRegistered = Register(*input);
     }
 
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
