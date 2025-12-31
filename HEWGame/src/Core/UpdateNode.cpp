@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "Debug.h"
+
 namespace Core
 {
         UpdateNode::UpdateNode(UpdatePhase phase, int priority)
@@ -33,6 +35,11 @@ namespace Core
         {
                 if (handle.IsValid())
                 {
+                        if (m_registrationHandle.IsValid())
+                        {
+                                DebugLog::DebugMessage("[UpdateNode] Registration handle already valid. Releasing before reassign.\n");
+                                m_registrationHandle.Release();
+                        }
                         m_registrationHandle = std::move(handle);
                 }
         }
