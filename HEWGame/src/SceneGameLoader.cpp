@@ -4,7 +4,7 @@
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
 #include "AppGame.h"
-#include "SceneGamePlayerColliderBuilder.h"
+#include "Physics/ColliderBuilder.h"
 #include "SceneGameUIOverlay.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
@@ -117,89 +117,30 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     const bool playerConfigAvailable = config.playerColliderConfigLoaded && hasConfigDefinition;
 
     const bool forceConfigCollider = config.forceConfigPlayerCollider && playerConfigAvailable;
-    SceneGamePlayerColliderBuilder colliderBuilder(m_log, m_logPrefix);
-    SceneGamePlayerColliderBuilder::BuildResult colliderBuild = forceConfigCollider
-        ? colliderBuilder.BuildFromConfig(
-            resolvedColliderKey,
-            trans,
-            *config.playerColliderTuning,
-            *config.playerColliderDefinitions,
-            playerBodyType)
-        : colliderBuilder.BuildFromRegistry(
-            resolvedColliderKey,
-            trans,
-            *config.playerColliderTuning,
-            playerBodyType);
-    const auto colliderHasShapes = [](const SceneGamePlayerColliderBuilder::BuildResult& build)
+    Physics::ColliderBuilder colliderBuilder(m_log, m_logPrefix);
+    Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
+    colliderRequest.key = resolvedColliderKey;
+    colliderRequest.transform = trans;
+    colliderRequest.bodyType = playerBodyType;
+    colliderRequest.fixedRotation = true;
+    colliderRequest.allowRotation = false;
+    colliderRequest.angularDamping = 5.0f;
+    colliderRequest.linearDamping = 0.0f;
+    colliderRequest.scaleOffset = true;
+    colliderRequest.tuning = config.playerColliderTuning;
+    colliderRequest.configDefinitions = playerConfigAvailable ? config.playerColliderDefinitions : nullptr;
+    colliderRequest.forceConfig = forceConfigCollider;
+    colliderRequest.allowFallback = true;
+
+    Physics::ColliderBuilder::BuildResult colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+    const auto colliderHasShapes = [](const Physics::ColliderBuilder::BuildResult& build)
     {
         return build.collider && !build.collider->Empty();
     };
-    const auto shapeConfigIsValid = [](const SceneGamePlayerColliderBuilder::BuildResult& build)
+    const auto shapeConfigIsValid = [](const Physics::ColliderBuilder::BuildResult& build)
     {
         return build.shapeConfig && build.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     };
-
-    bool attemptedConfigFallback = false;
-    bool attemptedRegistryFallback = false;
-    bool attemptedFallback = false;
-    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
-    {
-        if (forceConfigCollider)
-        {
-            attemptedRegistryFallback = true;
-            std::ostringstream oss;
-            oss << m_logPrefix << "[PlayerCollider] Config build unavailable; attempting registry fallback for key='"
-                << resolvedColliderKey << "'.\n";
-            LogMessage(m_log, oss.str());
-
-            SceneGamePlayerColliderBuilder::BuildResult registryBuild = colliderBuilder.BuildFromRegistry(
-                resolvedColliderKey,
-                trans,
-                *config.playerColliderTuning,
-                playerBodyType);
-
-            if (colliderHasShapes(registryBuild) && shapeConfigIsValid(registryBuild))
-            {
-                colliderBuild = registryBuild;
-            }
-        }
-        else if (playerConfigAvailable)
-        {
-            attemptedConfigFallback = true;
-            std::ostringstream oss;
-            oss << m_logPrefix << "[PlayerCollider] Registry build unavailable; attempting config fallback for key='"
-                << resolvedColliderKey << "'.\n";
-            LogMessage(m_log, oss.str());
-
-            SceneGamePlayerColliderBuilder::BuildResult configBuild = colliderBuilder.BuildFromConfig(
-                resolvedColliderKey,
-                trans,
-                *config.playerColliderTuning,
-                *config.playerColliderDefinitions,
-                playerBodyType);
-
-            if (colliderHasShapes(configBuild) && shapeConfigIsValid(configBuild))
-            {
-                colliderBuild = configBuild;
-            }
-        }
-    }
-
-    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
-    {
-        attemptedFallback = true;
-        std::ostringstream oss;
-        oss << m_logPrefix << "[PlayerCollider] Registry/config build failed; using fallback collider for key='"
-            << resolvedColliderKey << "'.\n";
-        LogMessage(m_log, oss.str());
-
-        SceneGamePlayerColliderBuilder::BuildResult fallbackBuild = colliderBuilder.BuildFallback(
-            resolvedColliderKey,
-            trans,
-            *config.playerColliderTuning,
-            playerBodyType);
-        colliderBuild = fallbackBuild;
-    }
 
     if ((!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild)) && playerConfigAvailable)
     {
@@ -233,6 +174,9 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
     const std::string appliedSource = colliderBuild.shapeSource;
     const std::string appliedPath = colliderBuild.shapeSource;
+    const bool attemptedConfigFallback = colliderBuild.attemptedConfigFallback;
+    const bool attemptedRegistryFallback = colliderBuild.attemptedRegistryFallback;
+    const bool attemptedFallback = colliderBuild.attemptedFallback;
 
     {
         std::ostringstream oss;

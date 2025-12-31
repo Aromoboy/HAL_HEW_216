@@ -34,6 +34,7 @@
 #include "MeshBuffer.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
+#include "Physics/ColliderBuilder.h"
 #include "Render/ModelBounds.h"
 #include "Physics/ShapeConstants.h"
 #include "Sweets/BaseSweets.h"
@@ -114,40 +115,6 @@ namespace
         default:
             return Physics::Box2DShapeConfig::Type::None;
         }
-    }
-
-    Physics::Box2DShapeConfig BuildBaseShapeConfig(SweetsSpace::SweetsType type)
-    {
-        Physics::Box2DShapeConfig config{};
-        config.allowRotation = true;
-        config.angularDamping = 0.2f;
-
-        const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
-        if (registryDefinition)
-        {
-            config.type = InferShapeType(registryDefinition->shapes);
-            config.density = std::max(0.0f, registryDefinition->shapeDef.density);
-            config.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-            config.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
-            config.linearDamping = std::max(0.0f, registryDefinition->linearDamping);
-        }
-        else
-        {
-            ReportInvalidBox2DConfig(type, "is missing a collider registry definition");
-        }
-
-        if (config.type == Physics::Box2DShapeConfig::Type::None)
-        {
-            ReportInvalidBox2DConfig(type, "is missing an explicit collider shape definition");
-        }
-
-        if (!config.allowRotation)
-        {
-            config.fixedRotation = true;
-            config.angularDamping = std::max(config.angularDamping, 6.0f);
-        }
-
-        return config;
     }
 
     bool ValidateBaseShapeDefinition(SweetsSpace::SweetsType type)
@@ -690,9 +657,6 @@ namespace SweetsSpace
 
                 const bool allowMeshPhysics = descriptor->allowMeshPhysics;
 
-                auto shapeConfig = BuildBaseShapeConfig(type);
-
-                Physics::BoxColliderComponent colliderComponent{};
                 std::string colliderLookupId = resolvedKind;
                 auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
                 if (!registryDefinition && resolvedKind != ToString(type))
@@ -706,23 +670,30 @@ namespace SweetsSpace
                     colliderOffset = modelColliderOffset;
                 }
 
-                shapeConfig.offset = b2Vec2{ colliderOffset.x, colliderOffset.y };
-                colliderComponent.colliderOffset = b2Vec2{ colliderOffset.x, colliderOffset.y };
+                Physics::ColliderBuilder colliderBuilder(
+                    [&](const std::string& message)
+                    {
+                        DebugTrace(message);
+                    },
+                    kLogPrefix);
+                Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
+                colliderRequest.key = colliderLookupId;
+                colliderRequest.transform = physicsTransform;
+                colliderRequest.bodyType = b2_dynamicBody;
+                colliderRequest.fixedRotation = false;
+                colliderRequest.allowRotation = true;
+                colliderRequest.angularDamping = 0.2f;
+                colliderRequest.linearDamping = 0.0f;
+                colliderRequest.useRegistryLinearDamping = true;
+                colliderRequest.offset = float3{ colliderOffset.x, colliderOffset.y, 0.0f };
+                colliderRequest.scaleOffset = false;
+                colliderRequest.allowFallback = false;
 
-                if (registryDefinition)
+                auto colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+                if (!colliderBuild.collider || colliderBuild.collider->Empty()
+                    || !colliderBuild.shapeConfig
+                    || colliderBuild.shapeConfig->type == Physics::Box2DShapeConfig::Type::None)
                 {
-                    colliderComponent.colliderId = colliderLookupId;
-                    colliderComponent.shapes = registryDefinition->shapes;
-                    colliderComponent.shapeDef = registryDefinition->shapeDef;
-
-                    shapeConfig.type = InferShapeType(registryDefinition->shapes);
-                    shapeConfig.density = std::max(0.0f, registryDefinition->shapeDef.density);
-                    shapeConfig.friction = std::max(0.0f, registryDefinition->shapeDef.material.friction);
-                    shapeConfig.restitution = std::clamp(registryDefinition->shapeDef.material.restitution, 0.0f, 1.0f);
-                }
-                else
-                {
-                    colliderComponent.colliderId = resolvedKind;
                     if (m_warnedMissingColliderDefinitionKinds.insert(resolvedKind).second)
                     {
                         std::ostringstream warn;
@@ -732,13 +703,17 @@ namespace SweetsSpace
                     }
                 }
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, shapeConfig, Collision::CollisionLayer::Sweets,
+                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig,
+                    Collision::CollisionLayer::Sweets,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
                 if (sweets)
                 {
-                    const std::string colliderIdForLog = colliderComponent.colliderId;
-                    sweets->SetBoxColliderComponent(std::move(colliderComponent));
+                    const std::string colliderIdForLog = colliderBuild.collider ? colliderBuild.collider->colliderId : colliderLookupId;
+                    if (colliderBuild.collider)
+                    {
+                        sweets->SetBoxColliderComponent(std::move(colliderBuild.collider));
+                    }
                     sweets->SetVisualTransform(visualTransform);
 
 #if defined(_DEBUG)
@@ -1118,15 +1093,37 @@ namespace SweetsSpace
         const float2& colliderCenter,
         bool allowMeshPhysics)
     {
-        (void)kind;
         (void)modelPath;
         (void)model;
         (void)allowMeshPhysics;
 
         ColliderBuildResult result{};
-        result.shapeConfig = BuildBaseShapeConfig(type);
+        const std::string resolvedKey = ResolveKindKey(kind);
+        std::string colliderLookupId = resolvedKey;
+        auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+        if (!registryDefinition && resolvedKey != ToString(type))
+        {
+            colliderLookupId = ToString(type);
+            registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderLookupId);
+        }
+
         const float2 scaledCenter = ScaleColliderOffset(colliderCenter, transform.scale);
-        result.shapeConfig.offset = b2Vec2{ scaledCenter.x, scaledCenter.y };
+        Physics::ColliderBuilder colliderBuilder(nullptr, kLogPrefix);
+        Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
+        colliderRequest.key = colliderLookupId;
+        colliderRequest.transform = transform;
+        colliderRequest.bodyType = b2_dynamicBody;
+        colliderRequest.fixedRotation = false;
+        colliderRequest.allowRotation = true;
+        colliderRequest.angularDamping = 0.2f;
+        colliderRequest.linearDamping = 0.0f;
+        colliderRequest.useRegistryLinearDamping = true;
+        colliderRequest.offset = float3{ scaledCenter.x, scaledCenter.y, 0.0f };
+        colliderRequest.scaleOffset = false;
+        colliderRequest.allowFallback = false;
+
+        auto colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+        result.shapeConfig = colliderBuild.shapeConfig.value_or(Physics::Box2DShapeConfig{});
         result.source = ColliderSource::Config;
         result.centroidOffset = scaledCenter;
         return result;
