@@ -227,6 +227,10 @@
     <ClCompile Include="src\Entities\Entity.cpp" />
     <ClCompile Include="src\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="src\Entities\Player.cpp" />
+    <ClCompile Include="src\Entities\PlayerModel.cpp" />
+    <ClCompile Include="src\Entities\PlayerMovement.cpp" />
+    <ClCompile Include="src\Entities\PlayerPickupSystem.cpp" />
+    <ClCompile Include="src\Entities\PlayerPhysicsBinder.cpp" />
     <ClCompile Include="src\GuidelineActor.cpp" />
     <ClCompile Include="src\GuidelineSystem.cpp" />
     <ClCompile Include="src\GameplayRulesSystem.cpp" />
@@ -341,6 +345,10 @@
     <ClInclude Include="include\Physical.h" />
     <ClInclude Include="include\PhysicalEntity.h" />
     <ClInclude Include="include\Entities\Player.h" />
+    <ClInclude Include="include\Entities\PlayerModel.h" />
+    <ClInclude Include="include\Entities\PlayerMovement.h" />
+    <ClInclude Include="include\Entities\PlayerPickupSystem.h" />
+    <ClInclude Include="include\Entities\PlayerPhysicsBinder.h" />
     <ClInclude Include="include\GuidelineActor.h" />
     <ClInclude Include="include\GameplayRules.h" />
     <ClInclude Include="include\GameplayProgression.h" />
