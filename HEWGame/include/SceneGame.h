@@ -150,6 +150,7 @@ private:
     int m_clearPhaseCount = 10;
     PlayerColliderTuning m_playerColliderTuning;
     PlayerSpawnTransform m_playerSpawnTransform;
+    bool m_isComposed = false;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;
