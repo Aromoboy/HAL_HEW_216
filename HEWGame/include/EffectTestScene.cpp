@@ -121,9 +121,15 @@ void EffectTestScene::OnExit()
 
 void EffectTestScene::ConfigureUpdates()
 {
-        if (auto* input = GetInput())
+        if (!m_inputRegistered)
         {
-                m_inputRegistered = Register(*input);
+                if (auto* input = GetInput())
+                {
+                        if (Register(*input))
+                        {
+                                m_inputRegistered = true;
+                        }
+                }
         }
 
         RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);

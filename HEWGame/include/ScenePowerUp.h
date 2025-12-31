@@ -46,5 +46,6 @@ namespace SceneSpace
                 bool m_inputRegistered = false;
 
                 int m_cost = 9999;
+                bool m_inputRegistered = false;
         };
 }

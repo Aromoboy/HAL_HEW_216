@@ -45,6 +45,7 @@ private:
     int m_cursor = 0;
 private:
     std::unique_ptr<BackgroundRenderer> m_background;
+    bool m_inputRegistered = false;
     
 };
 
