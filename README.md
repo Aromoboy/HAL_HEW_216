@@ -98,7 +98,6 @@ class Core_StepTimer["Core::StepTimer"] {
 class Core_UpdateContext["Core::UpdateContext"] {
   +dt: float
   +time: Core_StepTimer&
-  +input: Core_Input&
 }
 
 class Core_IUpdatable["Core::IUpdatable"] {
