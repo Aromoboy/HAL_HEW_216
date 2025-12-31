@@ -1,6 +1,6 @@
 HAL_HEW_216
 
-本リポジトリは、DirectX 11 ベースの 2.5D ゲーム用プロトタイプです。
+本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。
 更新は UpdateScheduler を中心にフェーズ駆動で行い、描画は Scene::RootDraw から別経路で実行します。
 
 ビルド
@@ -15,7 +15,7 @@ Windows SDK: 10.0
 
 構成: Debug/Release × Win32/x64
 
-NOTE: 現状、Box2D のリンクは HEWGame/box2d/build/... をライブラリ探索パスとして参照している構成があります。
+現状、Box2D のリンクは HEWGame/box2d/build/... をライブラリ探索パスとして参照している構成があります。
 box2d/build を削除する場合は、先に依存の “正規パッケージ化（repack）” を行ってからにしてください。
 
 必須アセット / 必須バイナリ（削除禁止）
