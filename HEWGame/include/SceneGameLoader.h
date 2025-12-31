@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PickupConfig.h"
+#include "Render/Model.h"
 #include "SceneGameConfigTypes.h"
 #include "Vector.h"
 
@@ -20,11 +21,6 @@ namespace Collision
 namespace Entities
 {
     class Player;
-}
-
-namespace Render
-{
-    class Model;
 }
 
 namespace Systems
