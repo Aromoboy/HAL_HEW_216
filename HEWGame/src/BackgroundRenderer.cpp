@@ -1,4 +1,4 @@
-#include "BackgroundRenderer.h"
+﻿#include "BackgroundRenderer.h"
 
 #include "Diagnostics/Logger.h"
 #include "DirectX.h"
