@@ -1,3 +1,6 @@
+// 画面表示のまとめ役として各表示を更新する
+// シーンゲームの更新と描画から呼ばれる
+
 #include "UIManager.h"
 #include "Texture.h"
 

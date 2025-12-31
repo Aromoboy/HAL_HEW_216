@@ -1,3 +1,6 @@
+// コライダー設定の一覧を保持する
+// ステージ配置や生成処理から参照される
+
 #include "ColliderRegistry.h"
 
 #include "ConfigSectionReader.h"

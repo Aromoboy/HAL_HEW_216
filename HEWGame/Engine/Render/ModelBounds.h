@@ -1,3 +1,6 @@
+// モデルの外形範囲を扱う
+// 当たり判定や描画範囲の判断で使われる
+
 #pragma once
 
 #include <limits>

@@ -1,3 +1,6 @@
+// シーンの切り替えと更新をまとめている
+// アプリの更新と描画がこれを通して動く
+
 #include "SceneManager.h"
 
 #include "Core/StepTimer.h"

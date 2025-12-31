@@ -1,3 +1,6 @@
+// シーンゲームで使うゲーム設定の値をまとめている
+// シーンゲームの初期化から参照される
+
 #pragma once
 
 namespace GameplayConfig

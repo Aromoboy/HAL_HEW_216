@@ -1,3 +1,6 @@
+// ゲーム進行の進み具合を計算する
+// フェーズ更新やスコア計算で参照される
+
 #include "GameplayProgression.h"
 
 #include "Core/StepTimer.h"

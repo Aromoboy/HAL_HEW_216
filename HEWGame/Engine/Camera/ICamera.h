@@ -1,3 +1,6 @@
+// エンジンのカメラが満たすべき共通口を定義する
+// カメラ管理や描画がこの口を参照する
+
 #pragma once
 
 #include <DirectXMath.h>

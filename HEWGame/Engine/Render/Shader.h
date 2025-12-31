@@ -1,3 +1,6 @@
+// ã‚·ã‚§ãƒ¼ãƒ€è³‡æºã®èª­ã¿è¾¼ã¿ã¨ä¿æŒã‚’è¡Œã†
+// æç”»åˆæœŸåŒ–ã‚„æç”»å‡¦ç†ã‹ã‚‰å‚ç…§ã•ã‚Œã‚‹
+
 #ifndef __SHADER_H__
 #define __SHADER_H__
 
@@ -7,7 +10,7 @@
 #include <map>
 #include <vector>
 
-// ƒVƒF[ƒ_[‚ÌŠî–{ƒNƒ‰ƒX
+// VF[_[ÌŠ{NX
 class Shader
 {
 protected:
@@ -21,26 +24,26 @@ protected:
 public:
 	virtual ~Shader();
 public:
-	// ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹(*.cso)‚ğ“Ç‚İ‚Şˆ—
+	// VF[_[t@C(*.cso)Ç‚İŞ
 	HRESULT Load(const char* pFileName);
-	// •¶š—ñ‚©‚çƒVƒF[ƒ_‚ğƒRƒ“ƒpƒCƒ‹
+	// ñ‚©‚VF[_RpC
 	HRESULT Compile(const char* pCode);
 
 
-	// ’è”‚Ì‘‚«‚İ
+	// è”Ì
 	void WriteBuffer(UINT slot, void* pData);
-	// ƒeƒNƒXƒ`ƒƒ‚Ìİ’è
+	// eNX`Ìİ’
 	void SetTexture(UINT slot, Texture* tex);
-	// ƒeƒNƒXƒ`ƒƒ‚Ìİ’è
+	// eNX`Ìİ’
 	void SetTexture(UINT slot, ID3D11ShaderResourceView* tex);
 
-	// ƒVƒF[ƒ_[‚ğ•`‰æ‚Ég—p
+	// VF[_[`Égp
 	virtual void Bind(void) = 0;
 
 private:
 	HRESULT Make(void* pData, UINT size);
 protected:
-	// ƒVƒF[ƒ_[ƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚ñ‚¾ŒãAƒVƒF[ƒ_[‚Ìí—Ş•Ê‚Éˆ—‚ğs‚¤
+	// VF[_[t@CÇ‚İñ‚¾ŒAVF[_[ÌŞ•Ê‚És
 	virtual HRESULT MakeShader(void* pData, UINT size) = 0;
 
 private:
@@ -51,7 +54,7 @@ protected:
 };
 
 //----------
-// ’¸“_ƒVƒF[ƒ_
+// _VF[_
 class VertexShader : public Shader
 {
 public:
@@ -66,7 +69,7 @@ private:
 	ID3D11InputLayout* m_pInputLayout;
 };
 //----------
-// ƒsƒNƒZƒ‹ƒVƒF[ƒ_
+// sNZVF[_
 class PixelShader : public Shader
 {
 public:

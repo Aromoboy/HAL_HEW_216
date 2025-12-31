@@ -1,3 +1,6 @@
+// 描画で使う索引バッファを扱う
+// モデル描画がこのバッファを参照する
+
 #pragma once
 
 #include <wrl/client.h>

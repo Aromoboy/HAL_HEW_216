@@ -1,3 +1,6 @@
+// 強化選択の流れと登録をまとめている
+// 強化シーンの更新から呼ばれる
+
 #include "PowerUpManager.h"
 
 #include "Core/UpdateScheduler.h"

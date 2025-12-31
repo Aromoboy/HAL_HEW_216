@@ -1,3 +1,6 @@
+// 物理登録を扱う共通口を定義する
+// シーン側が物理機能を扱うために使う
+
 #pragma once
 
 #include <functional>

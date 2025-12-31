@@ -1,3 +1,6 @@
+// ゲームのルール計算に必要なデータをまとめている
+// ルール判定やスコア計算から参照される
+
 #include "GameplayRules.h"
 
 #include "GameFlow/PhaseManager.h"

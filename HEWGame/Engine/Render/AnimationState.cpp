@@ -1,3 +1,6 @@
+// エンジンのアニメーション再生状態を保持する
+// モデル更新と描画がこの状態を参照する
+
 #include "AnimationState.h"
 #include "Animation.h"
 

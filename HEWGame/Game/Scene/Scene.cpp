@@ -1,3 +1,6 @@
+// シーンの更新と描画の基本的な流れをまとめている
+// シーン管理がこの基礎を使う
+
 #include "Scene.h"
 
 #include "Core/IUpdatable.h"

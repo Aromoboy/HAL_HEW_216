@@ -1,3 +1,6 @@
+// 描画基盤向けのテクスチャ資源を保持する
+// テクスチャ読み込みと描画から参照される
+
 #ifndef __TEXTUREDX_H__
 #define __TEXTUREDX_H__
 

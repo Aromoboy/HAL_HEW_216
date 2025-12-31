@@ -1,3 +1,6 @@
+// 遠近投影のカメラ設定を扱う
+// シーン描画が投影行列として参照する
+
 #pragma once
 
 #include "BaseCamera.h"

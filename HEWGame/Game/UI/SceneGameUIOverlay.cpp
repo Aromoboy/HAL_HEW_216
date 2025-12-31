@@ -1,3 +1,6 @@
+// シーンゲームの画面表示を重ねて描く
+// シーンゲームの描画から呼ばれる
+
 #include "SceneGameUIOverlay.h"
 
 SceneGameUIOverlay::SceneGameUIOverlay() = default;

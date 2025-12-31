@@ -1,3 +1,6 @@
+// 位置や回転や拡大の情報を扱う
+// エンティティ更新や描画がこの情報を参照する
+
 #ifndef ___TRANSFORM_H___
 #define ___TRANSFORM_H___
 

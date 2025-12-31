@@ -1,3 +1,6 @@
+// 更新フェーズに登録するノードの基礎をまとめている
+// 更新スケジューラがこのノードを実行する
+
 #include "Core/UpdateNode.h"
 
 #include <utility>

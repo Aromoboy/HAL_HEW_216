@@ -1,3 +1,6 @@
+// ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢ã®è¡¨ç¤ºã‚’æãå½¹ç›®ã‚’æŒã¤
+// ã‚¿ã‚¤ãƒˆãƒ«ã‚·ãƒ¼ãƒ³ã®æç”»ã‹ã‚‰å‘¼ã°ã‚Œã‚‹
+
 #pragma once
 #include <string>
 #include "Vector.h"
@@ -19,7 +22,7 @@ public:
 	}
 	void DrawHud(const CameraSpace::ICamera& camera);
 private:
-	// Še•¶š—ñ‚ÌƒeƒNƒXƒ`ƒƒƒTƒCƒY
+	// eÌƒeNX`TCY
 	float2 m_stringTextureScale;
 
 	
@@ -57,18 +60,18 @@ private:
 	};
 
 
-		// ƒXƒvƒ‰ƒCƒg•`‰æ—pŠÖ”
+		// XvCg`pÖ
 		void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
 		void DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
 		void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix);
 		void MeshDraw();
 
-		// ”Â‚Æ‚µ‚Ä•`‰æ‚·‚é‚½‚ß‚ÌƒƒbƒVƒ…‹y‚ÑƒVƒF[ƒ_[AƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Å©ì‚·‚éB
+		// Â‚Æ‚Ä•`æ‚·é‚½ß‚ÌƒbVyÑƒVF[_[ARXgN^Åì‚·B
 		std::shared_ptr<MeshDX> m_spriteMesh;
 		std::shared_ptr<Shader> vs;
 		std::shared_ptr<Shader> ps;
 
-		// •`‰æ—pƒeƒNƒXƒ`ƒƒ
+		// `peNX`
 		std::shared_ptr<Texture2D> m_cost;
 		std::shared_ptr<Texture2D> m_iconFrame;
 		std::shared_ptr<Texture2D> m_backFrame;

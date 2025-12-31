@@ -1,3 +1,6 @@
+// ゲームの背景表示を描く役目を持つ
+// シーンゲームの描画から呼ばれる
+
 ﻿#include "BackgroundRenderer.h"
 
 #include "Diagnostics/Logger.h"

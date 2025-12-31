@@ -1,3 +1,6 @@
+// ゲーム中の情報表示を描画する役目を持つ
+// 画面表示の管理から呼ばれる
+
 #include "HudRenderer.h"
 
 #include "DirectX.h"

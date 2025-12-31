@@ -1,3 +1,6 @@
+// プレイヤーの物理登録をまとめて行う
+// シーンゲームの物理登録から呼ばれる
+
 #pragma once
 
 #include <optional>

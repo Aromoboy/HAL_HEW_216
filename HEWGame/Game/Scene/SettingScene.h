@@ -1,3 +1,6 @@
+// 設定画面のシーンをまとめている
+// シーン管理から読み込まれて更新と描画を行う
+
 #pragma once
 //Setting.h
 #ifndef __SETTING_SCENE_H__

@@ -1,3 +1,6 @@
+// ウィンドウの状態やサイズを扱う
+// 描画初期化や全画面切り替えから参照される
+
 #ifndef __WINDOWMANAGER_H__
 #define __WINDOWMANAGER_H__
 

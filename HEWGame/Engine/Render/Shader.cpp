@@ -1,3 +1,6 @@
+// シェーダ資源の読み込みと保持を行う
+// 描画初期化や描画処理から参照される
+
 #include "Shader.h"
 #include <d3dcompiler.h>
 #include <stdio.h>

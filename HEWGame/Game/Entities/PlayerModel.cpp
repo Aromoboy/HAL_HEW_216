@@ -1,3 +1,6 @@
+// プレイヤーの見た目モデルを扱う
+// プレイヤー描画から参照される
+
 #include "Entities/PlayerModel.h"
 
 #include "AABB.h"

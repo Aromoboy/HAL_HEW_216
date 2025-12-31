@@ -1,3 +1,6 @@
+// 描画で使うモデルデータを扱う
+// モデル描画やローダーから参照される
+
 #include "Model.h"
 #include "TextureLoad.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// シーンゲームの接触イベントを受け取る
+// 物理システムから通知されて処理される
+
 #include "SceneGameContactHandler.h"
 
 #include "Systems/Physics/IPhysicsBinder.h"

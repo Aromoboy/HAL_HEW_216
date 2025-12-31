@@ -1,3 +1,6 @@
+// ゲームのルール判定を進める役目を持つ
+// シーンゲームの更新から呼ばれる
+
 #include "GameplayRulesSystem.h"
 
 #include "SweetsManager.h"

@@ -1,3 +1,6 @@
+// 描画エフェクトの適用や切り替えを行う
+// 描画更新やモデル描画から呼ばれる
+
 #ifndef __EFFECTSYSTEM__H__
 #define __EFFECTSYSTEM__H__
 

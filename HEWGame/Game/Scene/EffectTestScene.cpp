@@ -1,3 +1,6 @@
+// エフェクトの動作確認用のシーンを扱う
+// シーン管理から読み込まれて描画される
+
 #include "EffectTestScene.h"
 
 #include "DirectX.h"
