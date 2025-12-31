@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_set>
 
+#include "Sweets/SweetsTypes.h"
+
 namespace Core
 {
     class StepTimer;
@@ -21,8 +23,6 @@ class GuidelineActor;
 namespace SweetsSpace
 {
     class SweetsManager;
-    class BaseSweets;
-    using ActiveSweets = BaseSweets;
 }
 
 namespace GameplayProgression

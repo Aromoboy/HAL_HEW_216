@@ -17,7 +17,6 @@ namespace Core
 namespace SweetsSpace
 {
     class BaseSweets;
-    class ActiveSweets;
     class SweetsManager;
 }
 
