@@ -121,6 +121,15 @@ void SceneComposer::ComposeConfig(Composition& result)
         DebugTrace(oss.str());
         return;
     }
+    result.playerSpawnTransform.transform.position.z += result.stageData.GetPlaneZ();
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerTransform] Applied planeZ offset=" << result.stageData.GetPlaneZ()
+            << " finalPosition=(" << result.playerSpawnTransform.transform.position.x << ','
+            << result.playerSpawnTransform.transform.position.y << ','
+            << result.playerSpawnTransform.transform.position.z << ")\n";
+        DebugTrace(oss.str());
+    }
     result.phaseManager.Initialize(
         result.stageData.GetPhaseThresholds(),
         result.stageData.GetPhaseRewardMultipliers(),
