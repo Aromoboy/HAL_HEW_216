@@ -1,33 +1,12 @@
 #ifndef SCENE_GAME_CONFIG_LOADER_H_
 #define SCENE_GAME_CONFIG_LOADER_H_
 
-#include "CollisionLayer.h"
 #include "SceneGameConfigTypes.h"
 
-#include <box2d/box2d.h>
-
 #include <string>
-#include <unordered_map>
 
 namespace SceneGameConfig
 {
-    struct StageColliderPreset
-    {
-        std::string presetId;
-        std::string registryId;
-        Collision::CollisionLayer layer{ Collision::CollisionLayer::Floor };
-        b2BodyType bodyType{ b2_staticBody };
-        bool fixedRotation{ true };
-        bool allowRotation{ false };
-        b2Vec2 offset{ 0.0f, 0.0f };
-    };
-
-    struct StageColliderConfig
-    {
-        std::unordered_map<std::string, StageColliderPreset> presetsByModelKey;
-        std::unordered_map<std::string, StageColliderPreset> presetsById;
-    };
-
     struct PhysicsTuningSettings
     {
         float gravity = 11.5f;
@@ -46,7 +25,6 @@ namespace SceneGameConfig
         bool continuousCollisionForPlayerProjectiles = true;
     };
 
-    StageColliderConfig LoadStageColliderConfig(const std::string& path);
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
     PlayerSpawnTransform LoadPlayerTransformConfig();
     PhysicsTuningSettings LoadPhysicsTuningSettings();

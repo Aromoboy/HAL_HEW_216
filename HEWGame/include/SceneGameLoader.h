@@ -8,16 +8,10 @@
 
 #include <functional>
 #include <limits>
-#include <map>
 #include <memory>
 #include <string>
 
 struct ID3D11Device;
-
-namespace Collision
-{
-    struct ColliderDefinition;
-}
 
 namespace Entities
 {
@@ -49,10 +43,6 @@ public:
         Systems::IPhysicsBinder* physicsBinder = nullptr;
         Systems::DrawSystem* drawSystem = nullptr;
         SweetsSpace::SweetsManager* sweetsManager = nullptr;
-        const SceneGameConfig::PlayerColliderTuning* playerColliderTuning = nullptr;
-        const std::map<std::string, Collision::ColliderDefinition>* playerColliderDefinitions = nullptr;
-        bool playerColliderConfigLoaded = false;
-        bool forceConfigPlayerCollider = false;
         SceneGameConfig::PlayerSpawnTransform playerSpawnTransform{};
         float playerBaseHorizontalSpeed = 0.0f;
         float playerBaseVerticalSpeed = 0.0f;
@@ -77,9 +67,6 @@ public:
     SceneGameLoader(LogFn log, const char* logPrefix);
 
     Result Load(const Config& config) const;
-
-    static std::map<std::string, Collision::ColliderDefinition> NormalizePlayerColliderDefinitions(
-        std::map<std::string, Collision::ColliderDefinition> definitions);
 
 private:
     static std::string NormalizeColliderKey(const std::string& key);
