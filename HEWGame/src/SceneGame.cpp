@@ -276,6 +276,7 @@ bool SceneGame::Load(Core::Input& input)
         return false;
     }
     m_loadFailed = false;
+    composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
     m_phaseManager = std::move(composition->phaseManager);
@@ -352,8 +353,6 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
-
-    composer.Compose(*composition);
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
 
