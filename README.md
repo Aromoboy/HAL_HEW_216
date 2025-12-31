@@ -107,7 +107,7 @@ class Core_UpdateContext["Core::UpdateContext"] {
 
 class Core_IUpdatable["Core::IUpdatable"] {
   <<interface>>
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +GetPhase() Core_UpdatePhase
   +GetPriority() int
   +IsEnabled() bool
@@ -124,7 +124,7 @@ class Core_UpdateNode["Core::UpdateNode"] {
   +SetPhase(ph: Core_UpdatePhase)
   +SetPriority(p: int)
   +Enable(v: bool)
-  +SetRegistrationHandle(handle: Core_RegistrationHandle)
+  +SetRegistrationHandle(handle: Core_RegistrationHandle&&)
   +ReleaseRegistrationHandle()
   +GetPhase() Core_UpdatePhase
   +GetPriority() int
@@ -132,26 +132,26 @@ class Core_UpdateNode["Core::UpdateNode"] {
 }
 
 class Core_UpdateScheduler["Core::UpdateScheduler"] {
-  +Register(node: Core_IUpdatable) Core_RegistrationHandle
-  +Unregister(node: Core_IUpdatable)
-  +SetOrder(node: Core_IUpdatable, phase: Core_UpdatePhase, priority: int)
-  +AddDependency(before: Core_IUpdatable, after: Core_IUpdatable)
+  +Register(node: Core_IUpdatable&) Core_RegistrationHandle
+  +Unregister(node: Core_IUpdatable&)
+  +SetOrder(node: Core_IUpdatable&, phase: Core_UpdatePhase, priority: int)
+  +AddDependency(before: Core_IUpdatable&, after: Core_IUpdatable&)
   +ClearDependencies()
-  +Tick(ctx: Core_UpdateContext)
-  +SetExecutionLogListener(listener)
+  +Tick(ctx: const Core_UpdateContext&)
+  +SetExecutionLogListener(listener: Core_UpdateScheduler_ExecutionLogListener*)
 }
 
 class Core_UpdateScheduler_ExecutionLogListener["Core::UpdateScheduler::ExecutionLogListener"] {
   <<interface>>
   +OnFrameBegin(frameIndex: uint64)
-  +OnNodeExecuted(frameIndex: uint64, phase: Core_UpdatePhase, node: Core_IUpdatable, priority: int)
+  +OnNodeExecuted(frameIndex: uint64, phase: Core_UpdatePhase, node: const Core_IUpdatable*, priority: int)
   +OnFrameEnd(frameIndex: uint64)
 }
 
 class Core_Input["Core::Input"] {
   +Initialize()
   +Shutdown()
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +GetAxis(actionId) float
   +IsAction(actionId) bool
   +IsPress(actionId) bool
@@ -166,6 +166,8 @@ class Core_Input["Core::Input"] {
   +IsKeyRepeat(vk:int) bool
   +Rebind(actionId, binding)
 }
+
+note for Core_Input "Updated via UpdateScheduler (Input phase); registered in SceneGame::ConfigureUpdates."
 
 Core_UpdateNode ..|> Core_IUpdatable
 Core_Input --|> Core_UpdateNode
@@ -202,8 +204,8 @@ App_Main o-- Scene_SceneManager
 %% =========================
 class Scene_IScene["SceneSpace::IScene"] {
   <<interface>>
-  +Load(input: Core_Input) bool
-  +Update(timer: Core_StepTimer, input: Core_Input)
+  +Load(input: Core_Input&) bool
+  +Update(timer: Core_StepTimer&, input: Core_Input&)
   +Draw()
   +OnEnter()
   +OnExit()
@@ -219,11 +221,11 @@ class Scene_ISceneServices["SceneSpace::ISceneServices"] {
 }
 
 class Scene_Scene["SceneSpace::Scene"] {
-  +RootUpdate(timer: Core_StepTimer, input: Core_Input)
+  +RootUpdate(timer: Core_StepTimer&, input: Core_Input&)
   +RootDraw()
   +ConfigureUpdates()
-  +Register(node: Core_IUpdatable) bool
-  +Unregister(node: Core_IUpdatable)
+  +Register(node: Core_IUpdatable&) bool
+  +Unregister(node: Core_IUpdatable&)
   +RegisterSceneUpdateNode(phase: Core_UpdatePhase, priority: int)
   +UnregisterSceneUpdateNode()
   +GetSceneUpdateNode() Core_IUpdatable*
@@ -239,17 +241,19 @@ class Scene_Scene["SceneSpace::Scene"] {
   +GetActiveCamera()
 }
 
+note for Scene_Scene "Register stores RegistrationHandle on UpdateNode; non-UpdateNode releases the handle."
+
 class Scene_SceneUpdateNode["SceneSpace::Scene::SceneUpdateNode"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
 }
 
 class Scene_CameraUpdateNode["SceneSpace::Scene::CameraUpdateNode"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
 }
 
 class Scene_SceneManager["SceneSpace::SceneManager"] {
-  +SetInitialScene(scene: Scene_IScene)
-  +RequestSceneChange(scene: Scene_IScene)
+  +SetInitialScene(scene: unique_ptr<Scene_IScene>)
+  +RequestSceneChange(scene: unique_ptr<Scene_IScene>)
   +Update()
   +Draw()
   +GetActiveScene()
@@ -303,16 +307,16 @@ Scene_Composer ..> Scene_SceneGame : composes
 %% Systems: physics + contacts + draw
 %% =========================
 class Sys_PhysicsMachine["Systems::PhysicsMachine"] {
-  +OnUpdate(ctx: Core_UpdateContext)
-  +RegisterBody(entity)
-  +UnregisterBody(entity)
-  +CreateWeldJoint(a,b)
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +RegisterBody(entity: Entities::PhysicalEntity&)
+  +UnregisterBody(entity: Entities::PhysicalEntity&, preserveColliderData: bool = false)
+  +CreateWeldJoint(a: const Entities::PhysicalEntity&, b: const Entities::PhysicalEntity&)
   +DestroyJoint(jointId)
 }
 
 class Sys_DrawSystem["Systems::DrawSystem"] {
-  +OnUpdate(ctx: Core_UpdateContext)
-  +SetRenderer(renderer: ModelRender)
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +SetRenderer(renderer: ModelRender*)
 }
 
 class Sys_IPhysicsSystem["Systems::IPhysicsSystem"] {
@@ -337,8 +341,8 @@ class Sys_IPhysicsBinder["Systems::IPhysicsBinder"] {
   +GetPhysicsMachine() Systems::PhysicsMachine*
   +SetPlayer(player: Entities::PhysicalEntity*)
   +Enable(enabled: bool)
-  +RegisterPhysicsBody(entity)
-  +UnregisterPhysicsBody(entity)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
   +UnregisterAllPhysicsBodies()
   +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
@@ -348,8 +352,8 @@ class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
   +GetPhysicsMachine() Systems::PhysicsMachine*
   +SetPlayer(player: Entities::PhysicalEntity*)
   +Enable(enabled: bool)
-  +RegisterPhysicsBody(entity)
-  +UnregisterPhysicsBody(entity)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
   +UnregisterAllPhysicsBodies()
   +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
@@ -357,8 +361,8 @@ class Sys_PhysicsBinder["Systems::PhysicsBinder"] {
 
 class Sys_PhysicsRegistration["Systems::PhysicsRegistration"] {
   +SetPlayer(player: Entities::PhysicalEntity*)
-  +RegisterPhysicsBody(entity)
-  +UnregisterPhysicsBody(entity)
+  +RegisterPhysicsBody(entity: Entities::PhysicalEntity&)
+  +UnregisterPhysicsBody(entity: Entities::PhysicalEntity*)
   +UnregisterAllPhysicsBodies()
   +ValidatePlayerPhysicsRegistration()
   +AddContactHandler(onBegin, onEnd)
@@ -369,15 +373,20 @@ Sys_DrawSystem --|> Core_UpdateNode
 Sys_Box2DPhysicsSystem ..|> Sys_IPhysicsSystem
 Sys_PhysicsMachine o-- Sys_IPhysicsSystem
 Sys_PhysicsMachine o-- Sys_Box2DContactListener
+class Sys_PhysicsContactDispatchNode["Systems::PhysicsMachine::ContactDispatchNode"] {
+  +OnUpdate(ctx: const Core_UpdateContext&)
+}
 Sys_PhysicsBinder ..|> Sys_IPhysicsBinder
 
 Sys_PhysicsBinder *-- Sys_PhysicsMachine
 Sys_PhysicsBinder *-- Sys_PhysicsRegistration
 Sys_PhysicsRegistration o-- Sys_Box2DContactListener
+Sys_PhysicsMachine *-- Sys_PhysicsContactDispatchNode
 
 Sys_PhysicsMachine ..> Sys_Box2DPhysicsSystem : steps world
 Sys_Box2DPhysicsSystem ..> Sys_Box2DContactListener : processes contacts
 Sys_Box2DContactListener ..> Sys_PhysicsRegistration : dispatch callbacks
+Sys_PhysicsContactDispatchNode ..> Sys_Box2DContactListener : ProcessContacts (PostPhysics)
 
 %% =========================
 %% Camera
@@ -412,14 +421,14 @@ class Camera_CameraRig["CameraRig"] {
   +SetYaw(yaw)
   +SetPitch(pitch)
   +SetFollowSpeed(speed)
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
 }
 
 class Camera_CameraManager["CameraSpace::CameraManager"] {
   +AddCamera(camera)
   +SetActive(camera)
   +GetActiveCamera()
-  +Update(ctx: Core_UpdateContext)
+  +Update(ctx: const Core_UpdateContext&)
 }
 
 Camera_Base ..|> Camera_ICamera
@@ -433,7 +442,7 @@ Camera_CameraManager o-- Camera_ICamera
 %% Entities
 %% =========================
 class Ent_Entity["Entities::Entity"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +Draw(renderer, camera)
   +GetTransform()
 }
@@ -447,7 +456,7 @@ class Ent_PhysicalEntity["Entities::PhysicalEntity"] {
 }
 
 class Ent_Player["Entities::Player"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +Draw(renderer, camera)
   +SetSweetsManager(manager)
 }
@@ -468,23 +477,23 @@ class Sweets_State["SweetsSpace::SweetsState"] {
 }
 
 class Sweets_Base["SweetsSpace::BaseSweets"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +Draw(renderer, camera)
 }
 
 class Sweets_LateNode["SweetsSpace::SweetsManager::LateUpdateNode"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
 }
 
 class Sweets_Lifecycle["SweetsSpace::SweetsLifecycle"] {
-  +OnUpdate(ctx: Core_UpdateContext)
-  +OnLateUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +OnLateUpdate(ctx: const Core_UpdateContext&)
   +RegisterWithSystems(sweets)
 }
 
 class Sweets_Manager["SweetsSpace::SweetsManager"] {
-  +OnUpdate(ctx: Core_UpdateContext)
-  +OnLateUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
+  +OnLateUpdate(ctx: const Core_UpdateContext&)
   +DrawAll(renderer, camera)
   +Spawn(kind, transform)
   +LoadPhaseSpawnConfig(path)
@@ -556,7 +565,7 @@ class UI_ResultRenderer["ResultRenderer"] {
 }
 
 class UI_Overlay["SceneGameUIOverlay"] {
-  +Initialize(uiManager) bool
+  +Initialize(uiManager: UI_UIManager*) bool
   +Shutdown()
   +Update(data)
   +Draw()
@@ -564,7 +573,7 @@ class UI_Overlay["SceneGameUIOverlay"] {
 
 UI_UIManager *-- UI_HudRenderer
 UI_UIManager *-- UI_ResultRenderer
-UI_Overlay *-- UI_UIManager
+UI_Overlay o-- UI_UIManager
 
 %% =========================
 %% Game flow / rules
@@ -610,18 +619,18 @@ Guide_GuidelineSystem ..> Sweets_Manager
 %% PowerUp scene
 %% =========================
 class PU_Manager["PowerUpManager"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +AddNode(...)
   +DrawAll(renderer, camera)
 }
 
 class PU_Cursor["PowerUpCursor"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +Draw(renderer, camera)
 }
 
 class PU_Node["PowerUpNode"] {
-  +OnUpdate(ctx: Core_UpdateContext)
+  +OnUpdate(ctx: const Core_UpdateContext&)
   +Draw(renderer, camera)
   +LevelUp()
 }
