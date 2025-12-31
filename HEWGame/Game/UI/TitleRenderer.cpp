@@ -80,15 +80,15 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 
 void TitleRenderer::MeshDraw()
 {
-	// �R���e�L�X�g���擾
+	// コンテキストを取得
 	ID3D11DeviceContext* pContext = GetContext();
 	UINT offset = 0;
 
-	// ���_���o�C���h
+	// 頂点バッファをバインド
 	const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
 	vertexBuffer.Bind(0, offset);
 
-	// ���_�o�b�t�@�݂̂ŕ`��
+	// 頂点バッファのみで描画
 	GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	pContext->Draw(vertexBuffer.GetCount(), 0);
