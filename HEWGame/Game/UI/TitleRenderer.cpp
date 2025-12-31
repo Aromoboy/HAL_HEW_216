@@ -91,29 +91,3 @@ void TitleRenderer::MeshDraw()
 	pContext->Draw(vertexBuffer.GetCount(), 0);
 
 }
-
-//void TitleRendererTexture::DrawHud(const CameraSpace::ICamera& camera)
-//{
-//	const DirectX::XMFLOAT4X4& view = camera.GetView();
-//	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
-//
-//	DirectX::XMFLOAT4X4 world;
-//	float3 position;
-//	float3 scale;
-//	float2 offset;
-//
-//
-//	// バックフレーム描画
-//	offset.x = kHudCostIconPositionOffset.x;
-//	offset.y = kHudCostIconPositionOffset.y;
-//	position.x = offset.x;
-//	position.y = offset.y;
-//	position.z = 1.0f;
-//	scale.x = kHudCostIconScaleOffset;
-//	scale.y = kHudCostIconScaleOffset;
-//	scale.z = 1.0f;
-//
-//	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
-//
-//	DrawSprite(m_cost, world, view, proj);
-//}

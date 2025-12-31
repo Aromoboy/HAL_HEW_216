@@ -35,7 +35,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
     ShaderList::SetWVP(wvp);
 
-    // 一旦すべてAnimeで描画
+    // 一旦すべてアニメで描画
     VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 

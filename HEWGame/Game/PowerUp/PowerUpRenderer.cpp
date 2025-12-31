@@ -11,7 +11,7 @@
 #include <array>
 #include <algorithm>
 
-// 各Offset
+// 各オフセット
 constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
 constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
 constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
@@ -692,7 +692,7 @@ void PowerUpRenderer::DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, 
 
 		for (int x = 0; x < width; ++x)
 		{
-			uint8_t alpha = row[x * 4 + 3]; // ← intensity が alpha に入っている前提
+			uint8_t alpha = row[x * 4 + 3]; // ← 強度が alpha に入っている前提
 
 			if (alpha > 30)
 			{

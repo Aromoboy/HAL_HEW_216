@@ -106,7 +106,7 @@ namespace SweetsSpace
             const float offsetAngle = updatedTransform.rotation.z;
             const float cosAngle = std::cos(offsetAngle);
             const float sinAngle = std::sin(offsetAngle);
-            // colliderOffset はローカル座標なので回転を反映させる
+            // コライダーオフセットはローカル座標なので回転を反映させる
             const float rotatedX = renderOffset.x * cosAngle - renderOffset.y * sinAngle;
             const float rotatedY = renderOffset.x * sinAngle + renderOffset.y * cosAngle;
 
@@ -123,7 +123,7 @@ namespace SweetsSpace
         const float offsetAngle = updatedTransform.rotation.z;
         const float cosAngle = std::cos(offsetAngle);
         const float sinAngle = std::sin(offsetAngle);
-        // colliderOffset はローカル座標なので回転を反映させる
+        // コライダーオフセットはローカル座標なので回転を反映させる
         const float rotatedX = renderOffset.x * cosAngle - renderOffset.y * sinAngle;
         const float rotatedY = renderOffset.x * sinAngle + renderOffset.y * cosAngle;
 

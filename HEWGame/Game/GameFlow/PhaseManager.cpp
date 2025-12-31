@@ -51,7 +51,7 @@ namespace GameFlow
             m_rewardMultipliers.resize(requiredMultiplierCount);
         }
 
-        //Mini Phase
+        // ミニフェーズ
         std::sort(m_minithresholds.begin(), m_minithresholds.end());
         m_minithresholds.erase(
             std::remove_if(m_minithresholds.begin(), m_minithresholds.end(), [](float value)
@@ -78,9 +78,9 @@ namespace GameFlow
         }
         
         m_nextThresholdIndex = 0;
-        m_nextMiniThresholdIndex = 0; //Mini Phase
+        m_nextMiniThresholdIndex = 0; // ミニフェーズ
         m_currentPhase = 0;
-        m_currentMiniPhase = 0; //Mini Phase
+        m_currentMiniPhase = 0; // ミニフェーズ
         m_initialized = true;
         m_lastReportedHeight = 0.0f;
         m_elapsedSeconds = 0.0f;
@@ -97,7 +97,7 @@ namespace GameFlow
 
         m_nextThresholdIndex = 0;
         m_currentPhase = 0;
-        //Mini Phase
+        // ミニフェーズ
         m_nextMiniThresholdIndex = 0;
         m_currentMiniPhase = 0;
         m_lastReportedHeight = 0.0f;
@@ -199,7 +199,7 @@ namespace GameFlow
             phaseupdate.timeElapsed += GetRewardMultiplierForPhase(m_currentPhase);
         }
 
-        //Mini Phase
+        // ミニフェーズ
         while (m_nextMiniThresholdIndex < m_minithresholds.size()
             && m_lastReportedHeight >= m_minithresholds[m_nextMiniThresholdIndex])
         {
@@ -234,7 +234,7 @@ namespace GameFlow
         return GetRewardMultiplierForPhase(m_currentPhase);
     }
 
-    //Mini Phase
+    // ミニフェーズ
     float PhaseManager::GetRewardMiniMultiplier() const noexcept
     {
         return GetRewardMiniMultiplierForPhase(m_currentMiniPhase);
@@ -266,7 +266,7 @@ namespace GameFlow
         return value;
     }
 
-    //Mini Phase
+    // ミニフェーズ
     float PhaseManager::GetRewardMiniMultiplierForPhase(int phaseupdateminiIndex) const noexcept
     {
         if (m_minirewardMultipliers.empty())

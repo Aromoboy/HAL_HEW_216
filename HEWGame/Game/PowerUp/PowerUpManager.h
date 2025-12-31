@@ -73,7 +73,7 @@ public:
 	void DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& Camera);
 
 	// ゲッタ
-	int GetLevel(int num); // Level
+	int GetLevel(int num); // レベル
 	int GetNodeCount(); // 保持しているノード数
 	std::optional<float2> GetDrawPosition(int num);
 	std::optional<int> GetCost(int);

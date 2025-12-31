@@ -115,7 +115,7 @@ public:
 		float2 drawScale;
 
 		
-		// Nodeに描画する文字列及び数値
+		// ノードに描画する文字列及び数値
 		bool dirty;
 		std::string powerUpName;
 		std::string powerUpInfomation;
@@ -227,7 +227,7 @@ private:
 	// 各リソース
 	PowerUpHudLayoutConfig m_config{};
 	std::shared_ptr<PowerUpStringTexture> m_texture;
-	// フォーマットから作成するのでCacheを使わない
+	// フォーマットから作成するのでキャッシュを使わない
 	std::shared_ptr<Texture> m_guidelineTexture;
 	std::vector<uint8_t> m_rgbaBuffer;
 	bool m_ready = false;

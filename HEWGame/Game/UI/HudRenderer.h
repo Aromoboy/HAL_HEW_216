@@ -81,4 +81,4 @@ private:
     DirectX::XMFLOAT4X4 m_identityMatrix;
 };
 
-#endif // HEWGAME_HUD_RENDERER_H
+#endif

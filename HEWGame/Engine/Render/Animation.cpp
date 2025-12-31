@@ -21,7 +21,6 @@ void Animation::Step(float a_tick)
 {
 	
 	// メインアニメ
-	//if (m_playNo != kAnimeNone && m_playNo != kParametricAnime)
 	CalcAnime(MAIN);
 
 	// アニメーション行列に基づいて骨行列を更新
@@ -61,7 +60,7 @@ void Animation::CalcAnime(AnimePatternDX kind)
 	{
 		// アニメーションで変更するボーンがなければスキップ
 
-		// TODO ここ数値と-1の比較で本当にあってる？
+		// 要確認：ここで -1 と比較する意図が正しいか
 		if (channelIt->node == kNodeNone) { continue; }
 
 		// タイムラインの設定がなければスキップ

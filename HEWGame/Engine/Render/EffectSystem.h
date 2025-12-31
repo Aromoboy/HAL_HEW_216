@@ -96,4 +96,4 @@ private:
 	std::unordered_map<std::string, ::Effekseer::EffectRef> m_effectCache;
 	
 };
-#endif //__EFFECTSYSTEM__H__
+#endif

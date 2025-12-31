@@ -162,7 +162,7 @@ namespace Systems
                     continue;
                 }
 
-                // aiProcess_Triangulate guarantees triangles
+                // aiProcess_Triangulate により三角形化済み。
                 indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[0]));
                 indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[1]));
                 indices.push_back(static_cast<uint16_t>(baseIndex + face.mIndices[2]));
@@ -199,4 +199,3 @@ namespace Systems
         return fixtures;
     }
 }
-

@@ -44,4 +44,4 @@ namespace Render
     };
 }
 
-#endif //__MODELCACHE_H__
+#endif

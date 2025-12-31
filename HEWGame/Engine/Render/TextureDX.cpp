@@ -102,7 +102,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
         return false;
     }
 
-    // Raw RGBA data
+    // 生の RGBA データ
     if (height != 0 && width != 0)
     {
         return CreateTexture(device, width, height, data, textureView);
@@ -116,7 +116,7 @@ bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t
         return false;
     }
 
-    // Copy compressed payload into an IStream for WIC decoding
+    // WIC デコード用に圧縮データを IStream にコピー
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, size);
     if (hMem == nullptr)
     {

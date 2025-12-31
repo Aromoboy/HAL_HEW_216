@@ -1,4 +1,3 @@
-// Physical.h
 #ifndef __PHYSICAL_H__
 #define __PHYSICAL_H__
 

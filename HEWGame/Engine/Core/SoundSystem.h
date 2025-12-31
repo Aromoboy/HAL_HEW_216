@@ -24,14 +24,14 @@ struct WaveData
         memset(&m_wavFormat, 0, sizeof(m_wavFormat));
     }
 
-    // ƒfƒXƒgƒ‰ƒNƒ^‚Åƒoƒbƒtƒ@‚ğíœ‚µ‚È‚¢iXAudio2‚ªg—p’†‚Ì‰Â”\«‚ª‚ ‚é‚½‚ßj
+    // ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§ãƒãƒƒãƒ•ã‚¡ã‚’å‰Šé™¤ã—ãªã„ï¼ˆXAudio2ãŒä½¿ç”¨ä¸­ã®å¯èƒ½æ€§ãŒã‚ã‚‹ãŸã‚ï¼‰
     ~WaveData()
     {
-        // ‰½‚à‚µ‚È‚¢ - ƒƒ‚ƒŠƒŠ[ƒN‚·‚é‚ªAƒNƒ‰ƒbƒVƒ…‚æ‚èƒ}ƒV
-        // Œã‚ÅSoundManagerEX‚ÌƒfƒXƒgƒ‰ƒNƒ^‚Å‘S‚Äíœ‚·‚é
+        // ä½•ã‚‚ã—ãªã„ - ãƒ¡ãƒ¢ãƒªãƒªãƒ¼ã‚¯ã™ã‚‹ãŒã€ã‚¯ãƒ©ãƒƒã‚·ãƒ¥ã‚ˆã‚Šãƒã‚·
+        // å¾Œã§SoundManagerEXã®ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§å…¨ã¦å‰Šé™¤ã™ã‚‹
     }
 
-    // è“®‚ÅƒNƒŠ[ƒ“ƒAƒbƒv‚·‚éŠÖ”
+    // æ‰‹å‹•ã§ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ—ã™ã‚‹é–¢æ•°
     void Cleanup()
     {
         if (m_soundBuffer)
@@ -50,16 +50,16 @@ public:
     ~SoundSystem();
 
     bool LoadWaveFile(const std::string& a_wFilePath, WaveData* outData);
-    int PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume = 1.0f);  // int‚É•ÏXiƒnƒ“ƒhƒ‹•Ô‚·j
-    void StopSound(int handle);  // ‰¹‚ğ~‚ß‚é
-    void StopAllSounds();  // ‘S‚Ä‚Ì‰¹‚ğ~‚ß‚é
+#endif
+    void StopSound(int handle);  // éŸ³ã‚’æ­¢ã‚ã‚‹
+    void StopAllSounds();  // å…¨ã¦ã®éŸ³ã‚’æ­¢ã‚ã‚‹
     void SetVolume(int handle, float volume);
 
 private:
     IXAudio2* m_pAudio2;
     IXAudio2MasteringVoice* m_pMasterVoice;
-    std::map<int, IXAudio2SourceVoice*> m_sourceVoices;  // ƒnƒ“ƒhƒ‹‚ÅŠÇ—
-    int m_nextHandle;  // Ÿ‚Ìƒnƒ“ƒhƒ‹ID
+    std::map<int, IXAudio2SourceVoice*> m_sourceVoices;  // ãƒãƒ³ãƒ‰ãƒ«ã§ç®¡ç†
+    int m_nextHandle;  // æ¬¡ã®ãƒãƒ³ãƒ‰ãƒ«ID
 
     void CleanupFinishedVoices();
 };

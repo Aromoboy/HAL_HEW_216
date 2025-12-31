@@ -84,7 +84,7 @@ void SceneSpace::SettingScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();
-    if (input && input->IsTrigger(Core::ActionId::Cancel))//CancelESCkeyŐݒʂ^Cgʂɖ߂
+    if (input && input->IsTrigger(Core::ActionId::Cancel))
     {
         if (m_manager)
         {

@@ -78,17 +78,14 @@ void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 
 void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
 {
-	// Specify a camera matrix
 	// カメラ行列を設定
 	::Effekseer::Matrix44 cameraMatrix;
 	DirectX::XMFLOAT4X4 view = a_camera->GetView();
 	DirectX::XMMATRIX restored = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&view));
 	std::memcpy(&cameraMatrix, &restored, sizeof(cameraMatrix));
 
-	// Specify a projection matrix
 	// 投影行列を設定
 	::Effekseer::Matrix44 projectionMatrix;
-	//projectionMatrix.PerspectiveFovRH(90.0f / 180.0f * 3.14f, (float)SCREEN_WIDTH /  (float)SCREEN_HEIGHT, 1.0f, 500.0f);
 	DirectX::XMFLOAT4X4 proj = a_camera->GetProjection();
 	DirectX::XMMATRIX restoredProj = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&proj));
 	std::memcpy(&projectionMatrix, &restoredProj, sizeof(projectionMatrix));

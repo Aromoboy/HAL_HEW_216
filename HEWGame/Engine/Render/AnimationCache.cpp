@@ -59,7 +59,6 @@ namespace Render
 
         if (reconfiguringWithCachedModels)
         {
-            //MODELCACHE_LOG(
             Clear();
         }
 

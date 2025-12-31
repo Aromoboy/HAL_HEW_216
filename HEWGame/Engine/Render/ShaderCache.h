@@ -7,19 +7,16 @@
 #include <string>
 #include "ShaderProgram.h"
 
-//============================================================
-// ShaderCache - シェーダー管理
-//============================================================
 class ShaderCache {
 public:
-    // シングルトンインスタンスを取得
+#endif
     static ShaderCache& Instance()
     {
         static ShaderCache instance;
         return instance;
     }
 
-    // コピー・ムーブを禁止
+    // 繧ｳ繝斐�ｼ繝ｻ繝繝ｼ繝悶ｒ遖∵ｭ｢
     ShaderCache(const ShaderCache&) = delete;
     ShaderCache& operator=(const ShaderCache&) = delete;
     ShaderCache(ShaderCache&&) = delete;
@@ -29,7 +26,7 @@ public:
     std::shared_ptr<ShaderProgram> Get(const std::string& name);
 
 private:
-    // コンストラクタをprivateに
+    // 繧ｳ繝ｳ繧ｹ繝医Λ繧ｯ繧ｿ繧恥rivate縺ｫ
     ShaderCache() = default;
     ~ShaderCache() = default;
 

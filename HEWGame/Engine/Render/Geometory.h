@@ -60,4 +60,4 @@ private:
 	static int m_lineCnt;
 };
 
-#endif // __GEOMETORY_H__
+#endif

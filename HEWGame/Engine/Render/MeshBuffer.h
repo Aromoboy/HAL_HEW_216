@@ -40,4 +40,4 @@ private:
 
 };
 
-#endif // __MESH_BUFFER_H__
+#endif

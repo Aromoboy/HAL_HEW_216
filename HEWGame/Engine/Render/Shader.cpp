@@ -178,7 +178,6 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 	シェーダ作成時にシェーダリフレクションを通してインプットレイアウトを取得
 	セマンティクスの配置などから識別子を作成
 	識別子が登録済→再利用、なければ新規作成
-	https://blog.techlab-xe.net/dxc-shader-reflection/
 	*/
 
 	ID3D11ShaderReflection *pReflection;
@@ -217,7 +216,6 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 		pInputDesc[i].SemanticName = sigDesc.SemanticName;
 		pInputDesc[i].SemanticIndex = sigDesc.SemanticIndex;
 
-		// http://marupeke296.com/TIPS_No17_Bit.html
 		BYTE elementCount = sigDesc.Mask;
 		elementCount = (elementCount & 0x05) + ((elementCount >> 1) & 0x05);
 		elementCount = (elementCount & 0x03) + ((elementCount >> 2) & 0x03);

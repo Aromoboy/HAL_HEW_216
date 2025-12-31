@@ -9,7 +9,7 @@
 #include "WindowManager.h"
 #include "FullscreenManager.h"
 
-// timeGetTime周りの使用
+// タイマー関連の使用
 #pragma comment(lib, "winmm.lib")
 
 //--- プロトタイプ宣言
@@ -89,7 +89,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
-	//--- FPS制御
+	//--- フレームレート制御
 	timeBeginPeriod(1);
 	DWORD countStartTime = timeGetTime();
 	DWORD preExecTime = countStartTime;

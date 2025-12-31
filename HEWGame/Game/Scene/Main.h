@@ -9,4 +9,4 @@ void Update();
 void Draw();
 HRESULT GetComInitResult();
 
-#endif // __MAIN_H__
+#endif

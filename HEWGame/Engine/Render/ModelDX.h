@@ -46,4 +46,4 @@ private:
         std::string m_sourcePath{};
 };
 
-#endif // MODELDX_H
+#endif

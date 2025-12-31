@@ -68,4 +68,4 @@ bool m_cameraUpdateRegistered;
 };
 }
 
-#endif // __SCENE_H__
+#endif

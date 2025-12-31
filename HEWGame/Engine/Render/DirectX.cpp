@@ -74,32 +74,29 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	SetCullingMode(D3D11_CULL_BACK);
 
 	//--- 深度テスト
-	// https://learn.microsoft.com/ja-jp/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil
-	// https://qiita.com/wyt5818956/items/a2a36a1e6c7910512e7a
 	D3D11_DEPTH_STENCIL_DESC dsDesc = {};
-	// depth test parameter
+	// 深度テストの設定
 	dsDesc.DepthEnable = true;
 	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-	// stencil test parameter
+	// ステンシルテストの設定
 	dsDesc.StencilEnable = true;
 	dsDesc.StencilReadMask = 0xFF;
 	dsDesc.StencilWriteMask = 0xFF;
-	// stencil operations
+	// ステンシル操作
 	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
 	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 	dsDesc.BackFace = dsDesc.FrontFace;
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_DECR;
-	// create state
+	// ステート作成
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[0]);
 	dsDesc.DepthEnable = false;
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[1]);
 	SetDepthTest(false);
 
 	//--- アルファブレンディング
-	// https://pgming-ctrl.com/directx11/blend/
 	D3D11_BLEND_DESC blendDesc = {};
 	blendDesc.AlphaToCoverageEnable = FALSE;
 	blendDesc.IndependentBlendEnable = FALSE;

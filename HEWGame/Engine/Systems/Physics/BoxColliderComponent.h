@@ -21,12 +21,12 @@ namespace Physics
         float radius{ 0.0f };
     };
 
-    // Simple collider component that describes shapes and materials for an entity.
+    // エンティティの形状と材質を表すシンプルなコライダー。
     struct BoxColliderComponent
     {
-        // Identifier used to resolve shared collider definitions from the registry.
+        // レジストリにある共有コライダー定義を解決する識別子。
         std::string colliderId{};
-        // Optional local offset applied to all shapes after lookup.
+        // 参照後に各形状へ適用するローカルオフセット（任意）。
         b2Vec2 colliderOffset{ 0.0f, 0.0f };
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
         std::vector<ColliderShapeDescriptor> shapes;
@@ -93,4 +93,3 @@ namespace Physics
         }
     };
 }
-

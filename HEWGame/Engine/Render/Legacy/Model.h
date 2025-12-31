@@ -233,4 +233,4 @@ private:
 };
 
 
-#endif // __MODEL_H__
+#endif

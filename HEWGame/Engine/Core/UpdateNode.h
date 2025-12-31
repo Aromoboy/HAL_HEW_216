@@ -13,7 +13,7 @@ namespace Core
         class UpdateNode : public IUpdatable
         {
         public:
-                // phaseとpriorityはデフォルト値を用意しておくことで、
+                // フェーズと優先度はデフォルト値を用意しておくことで、
                 //「とりあえず動かしたい」段階でも簡単に派生クラスを作れる
                 explicit UpdateNode(UpdatePhase phase = UpdatePhase::Gameplay, int priority = 0);
                 ~UpdateNode() override;
@@ -33,7 +33,7 @@ namespace Core
         private:
                 UpdatePhase m_phase; // 現在の更新フェーズ
                 int m_priority;      // 同フェーズ内での優先度（数値が大きいほど先に実行）
-                bool m_enabled;      // Updateを呼ぶかどうかのフラグ
+                bool m_enabled;      // 更新を呼ぶかどうかのフラグ
                 RegistrationHandle m_registrationHandle;
         };
 }

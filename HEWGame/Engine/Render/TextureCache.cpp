@@ -1,5 +1,5 @@
-// DirectXTK (DirectX Tool Kit) を使うため
-// Windows Imaging Component (WIC) を経由して読み込む
+// DirectXTK を使うため
+// WIC を経由して読み込む
 // テクスチャ読み込み関数を使用
 // そのため wincodec.h をインクルード
 // windowscodecs.lib をリンカ設定に追加する必要がある

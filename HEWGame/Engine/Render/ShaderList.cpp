@@ -14,8 +14,8 @@ ShaderList::~ShaderList()
 
 void ShaderList::Init()
 {
-	// Runtime shader set: world/anime VS + lambert PS.
-	// Specular/toon/fog variants are kept for future use, but not registered.
+	// 実行時に使うシェーダー構成：ワールド/アニメ用 VS とランバート PS。
+	// スペキュラー/トゥーン/フォグ系は将来用で、ここでは未登録。
 	MakeWorldVS();
 	MakeAnimeVS();
 	MakeLambertPS();
@@ -278,7 +278,7 @@ float4 main(PS_IN pin) : SV_TARGET
     {
         texColor = tex.Sample(samp, pin.uv);
     }
-    // Fallback to material color when texture is missing.
+    // テクスチャが無い場合はマテリアル色へフォールバック。
     texColor.a = 1.0f;
 
     float3 N = normalize(pin.normal);
@@ -337,7 +337,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
-	// Lambertの計算を参考
+	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, dotNL));
@@ -381,7 +381,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
 	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
 	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // 陰の境目を柔らかく
-	// Lambertの計算を参考
+	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
 		diffuse, toonNL));

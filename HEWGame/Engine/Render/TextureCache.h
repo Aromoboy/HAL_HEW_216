@@ -28,7 +28,7 @@ public:
     std::shared_ptr<Texture2D> Get(const std::string& name);
 
 private:
-    // コンストラクターは private
+    // コンストラクターは非公開
     TextureCache() = default;
     ~TextureCache() = default;
 

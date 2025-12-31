@@ -1,4 +1,3 @@
-//ShaderCache.cpp
 #include "ShaderCache.h"
 #include <iostream>
 #include "Debug.h"

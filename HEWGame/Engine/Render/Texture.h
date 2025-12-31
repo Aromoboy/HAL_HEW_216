@@ -63,4 +63,4 @@ private:
     ID3D11DepthStencilView* m_pDSV;
 };
 
-#endif // __TEXTURE_H__
+#endif

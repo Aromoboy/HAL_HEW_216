@@ -29,8 +29,8 @@ namespace Stage
     public:
         StageData();
 
-        // Attempts to load the stage data from a config file.
-        // Returns true when data was parsed successfully, false when loading failed (state preserved).
+        // 設定ファイルからステージデータを読み込む。
+        // 成功時は真、失敗時は偽（状態は保持）。
         bool LoadFromFile(const std::string& path);
         bool LoadFromFile(const std::string& path, const std::string& section);
 
@@ -41,7 +41,7 @@ namespace Stage
         const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPointsPrimary() const noexcept;
         const std::vector<float3>& GetSpawnPointsSecondary() const noexcept;
-        // Legacy alias for primary spawn points
+        // 旧来のプライマリ出現ポイント用エイリアス
         float GetPlaneZ() const noexcept;
         const PlatformDescriptor& GetPlatform(std::size_t index) const;
         std::size_t GetPlatformCount() const noexcept;
