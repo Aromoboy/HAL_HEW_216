@@ -39,6 +39,7 @@ protected:
 private:
     SceneSpace::SceneManager* m_manager;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
+    bool m_inputRegistered = false;
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;

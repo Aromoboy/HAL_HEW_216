@@ -104,6 +104,15 @@ void EffectTestScene::OnExit()
                 Unregister(*m_effectSystem);
         }
 
+        if (m_inputRegistered)
+        {
+                if (auto* input = GetInput())
+                {
+                        Unregister(*input);
+                }
+                m_inputRegistered = false;
+        }
+
         UnregisterSceneUpdateNode();
         UnregisterCameraUpdateNode();
 
