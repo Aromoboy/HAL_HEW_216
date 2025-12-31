@@ -118,8 +118,6 @@ namespace SweetsSpace
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx", "High-detail pineapple with leafy crown");
         Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx", "Low-poly curved banana fruit");
 
-        RegisterExtra("Cake", "Assets/Model/cake.fbx", "Stage foundation cake block");
-        RegisterExtra("Osara", "Assets/Model/osara.fbx", "Stage plate");
         RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
         RegisterExtraAlias("Fairy", "Player");
     }
