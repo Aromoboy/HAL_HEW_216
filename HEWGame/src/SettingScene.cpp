@@ -15,9 +15,10 @@ SceneSpace::SettingScene::SettingScene(SceneSpace::SceneManager& manager)
 {
 }
 
-void SceneSpace::SettingScene::Load(Core::Input& input)
+bool SceneSpace::SettingScene::Load(Core::Input& input)
 {
 	(void)input;
+    return true;
 }
 
 
@@ -67,7 +68,7 @@ void SceneSpace::SettingScene::ConfigureUpdates()
 
 void SceneSpace::SettingScene::Update(Core::UpdateContext& ctx)
 {
-    if (ctx.input.IsTrigger(Core::ActionId::Cancel))//Cancel¨ESCkey‚Åİ’è‰æ–Ê‚©‚çƒ^ƒCƒgƒ‹‰æ–Ê‚É–ß‚ê‚é
+    if (ctx.input.IsTrigger(Core::ActionId::Cancel))//Cancelâ†’ESCkeyã§è¨­å®šç”»é¢ã‹ã‚‰ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢ã«æˆ»ã‚Œã‚‹
     {
         if (m_manager)
         {

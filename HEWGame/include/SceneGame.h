@@ -73,7 +73,7 @@ public:
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
-    void Load(Core::Input& input) override;
+    bool Load(Core::Input& input) override;
     void Update(Core::StepTimer& timer, Core::Input& input) override;
     void Draw() override;
     void OnEnter() override;
@@ -117,6 +117,7 @@ private:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
+    bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     GameplayRulesSystem m_gameplayRules;

@@ -25,7 +25,7 @@ class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
 public:
     explicit TitleScene(SceneSpace::SceneManager& manager);
 
-    void Load(Core::Input& input) override;
+    bool Load(Core::Input& input) override;
     void Update(Core::StepTimer& timer, Core::Input& input) override;
     void Draw() override;
     void OnEnter() override;

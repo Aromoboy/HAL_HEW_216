@@ -253,7 +253,7 @@ namespace
 
 float3 fRads = { 0.0f, 0.0f, 0.0f };
 
-void SceneGame::Load(Core::Input& input)
+bool SceneGame::Load(Core::Input& input)
 {
     (void)input;
     std::ostringstream oss;
@@ -262,7 +262,7 @@ void SceneGame::Load(Core::Input& input)
 
     if (m_isComposed)
     {
-        return;
+        return !m_loadFailed;
     }
 
     SceneComposer composer(GetUpdateScheduler());
@@ -270,8 +270,10 @@ void SceneGame::Load(Core::Input& input)
     if (!composition->stageConfigLoaded)
     {
         DebugTrace(std::string(kLogPrefix) + "Stage configuration failed; scene load aborted.\n");
-        return;
+        m_loadFailed = true;
+        return false;
     }
+    m_loadFailed = false;
     m_playerColliderDefinitions = std::move(composition->playerColliderDefinitions);
     m_playerColliderConfigLoaded = composition->playerColliderConfigLoaded;
     m_forceConfigPlayerCollider = composition->forceConfigPlayerCollider;
@@ -394,15 +396,24 @@ void SceneGame::Load(Core::Input& input)
 
     m_gameplayRules.ResetSession();
     m_isComposed = true;
+    return true;
 }
 
 void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    if (m_loadFailed)
+    {
+        return;
+    }
     RootUpdate(timer, input);
 }
 
 void SceneGame::Draw()
 {
+    if (m_loadFailed)
+    {
+        return;
+    }
     RootDraw();
 }
 
@@ -633,12 +644,15 @@ void SceneGame::Update(Core::UpdateContext& ctx)
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
-    const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
-    for (const auto& sweets : stacked)
+    if (m_sweetsManager)
     {
-        if (!sweets) continue;
-        const AABB bounds = sweets->GetAABB();
-        ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
+        const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
+        for (const auto& sweets : stacked)
+        {
+            if (!sweets) continue;
+            const AABB bounds = sweets->GetAABB();
+            ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
+        }
     }
 #endif
 
