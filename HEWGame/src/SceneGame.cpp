@@ -257,7 +257,7 @@ float3 fRads = { 0.0f, 0.0f, 0.0f };
 
 bool SceneGame::Load(Core::Input& input)
 {
-    (void)input;
+    m_inputService = &input;
     std::ostringstream oss;
     oss << kLogPrefix << "Load scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
@@ -1034,7 +1034,8 @@ Core::UpdateScheduler& SceneGame::GetScheduler()
 
 Core::Input* SceneGame::GetInput()
 {
-    return SceneSpace::Scene::GetInput();
+    Core::Input* sceneInput = SceneSpace::Scene::GetInput();
+    return sceneInput ? sceneInput : m_inputService;
 }
 
 Core::StepTimer* SceneGame::GetTimer()

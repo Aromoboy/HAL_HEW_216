@@ -145,6 +145,7 @@ private:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
+    Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     std::map<std::string, Collision::ColliderDefinition> m_playerColliderDefinitions;
