@@ -20,6 +20,8 @@ namespace Render
 
         std::shared_ptr<Render::Model> Get(const std::string& path);
         void SetLoader(std::unique_ptr<IModelLoader> loader, ID3D11Device* device, TextureCache& textureCache);
+        bool HasLoader() const noexcept { return static_cast<bool>(m_loader); }
+        bool IsConfiguredFor(ID3D11Device* device, const TextureCache& textureCache) const noexcept;
         void ClearModels();
         void Clear();
         void Reset();

@@ -106,6 +106,11 @@ namespace Render
         }
     }
 
+    bool ModelCache::IsConfiguredFor(ID3D11Device* device, const TextureCache& textureCache) const noexcept
+    {
+        return m_loader && m_device == device && m_textureCache == &textureCache;
+    }
+
     //============================================================
     // モデルの取得（キャッシュ対応）
     // 既にロード済みであればキャッシュから取り出し、無ければロードする
