@@ -1,3 +1,6 @@
+// 描画に使う行列計算をまとめている
+// モデルやカメラの変換で参照される
+
 #include "DrawMatrix.h"
 #include "Defines.h"
 

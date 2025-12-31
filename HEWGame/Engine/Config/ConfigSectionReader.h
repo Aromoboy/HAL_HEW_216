@@ -1,3 +1,6 @@
+// 設定ファイルの指定区画を読み取る
+// 各種設定ローダーがこの読み取りを使う
+
 #pragma once
 
 #include <algorithm>

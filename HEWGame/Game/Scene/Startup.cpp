@@ -1,3 +1,6 @@
+// ゲームの起動処理とメインループをまとめている
+// ウィンドウ作成と更新呼び出しがここから動く
+
 #include <windows.h>
 #include "Defines.h"
 #include "Main.h"

@@ -1,3 +1,6 @@
+// 描画で使う頂点と索引のバッファをまとめている
+// モデル描画がこのバッファを参照する
+
 #ifndef __MESH_BUFFER_H__
 #define __MESH_BUFFER_H__
 

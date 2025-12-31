@@ -1,3 +1,6 @@
+// シーンゲーム用の設定読み込みを行う
+// シーンゲームの初期化から呼ばれる
+
 #ifndef SCENE_GAME_CONFIG_LOADER_H_
 #define SCENE_GAME_CONFIG_LOADER_H_
 

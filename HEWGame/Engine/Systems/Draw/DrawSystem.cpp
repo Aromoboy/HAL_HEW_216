@@ -1,3 +1,6 @@
+// エンジンの描画更新を行うシステムをまとめている
+// 更新スケジューラから呼ばれる
+
 #include "Systems/Draw/DrawSystem.h"
 
 #include <algorithm>

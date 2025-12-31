@@ -1,3 +1,6 @@
+// 描画で使う頂点バッファを扱う
+// モデル描画がこのバッファを参照する
+
 #pragma once
 
 #include <wrl/client.h>

@@ -1,3 +1,6 @@
+// 結果画面の表示を描く役目を持つ
+// シーンゲームの描画から呼ばれる
+
 #pragma once
 
 #include <cstdint>

@@ -1,3 +1,6 @@
+// デバッグ用のコンソール表示を扱う
+// 開発中の入力確認や表示から使われる
+
 #pragma once
 #include "windows.h"
 

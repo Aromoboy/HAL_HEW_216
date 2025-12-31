@@ -1,3 +1,6 @@
+// ゲーム内のスイーツの基礎となるふるまいをまとめている
+// スイーツ管理や描画がこの基礎を使う
+
 #include "Sweets/BaseSweets.h"
 
 #include "ModelPivot.h"

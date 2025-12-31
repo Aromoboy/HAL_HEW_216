@@ -1,3 +1,6 @@
+// 描画基盤向けのモデルデータを保持する
+// モデル描画やローダーから参照される
+
 #include <utility>
 
 #include "ModelDX.h"

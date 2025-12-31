@@ -1,3 +1,6 @@
+// タイトル画面のシーンをまとめている
+// シーン管理から読み込まれて更新と描画を行う
+
 ﻿#ifndef __TITLE_SCENE_H__
 #define __TITLE_SCENE_H__
 

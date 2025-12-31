@@ -1,3 +1,6 @@
+// モデル読み込みの共通口を定義する
+// モデルローダーやキャッシュがこれを実装する
+
 #pragma once
 #include <memory>
 #include <string>

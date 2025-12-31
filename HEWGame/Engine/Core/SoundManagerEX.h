@@ -1,3 +1,6 @@
+// 音声再生の資源と制御をまとめている
+// ゲーム内の効果音再生から呼ばれる
+
 #ifndef ___SOUND_MANAGER_EX___
 #define ___SOUND_MANAGER_EX___
 
@@ -13,9 +16,9 @@ public:
     ~SoundManagerEX();
 
     void UpdateSound();
-    int PlaySoundEX(std::string a_szSoundKey, bool a_isLoop, float volume = 1.0f);  // int�ɕύX
-    void StopSound(int handle);  // �����~�߂�
-    void StopAllSounds();  // �S�Ẳ����~�߂�
+    int PlaySoundEX(std::string a_szSoundKey, bool a_isLoop, float volume = 1.0f);  // intɕύX
+    void StopSound(int handle);  // ~߂
+    void StopAllSounds();  // SẲ~߂
     void SetVolume(int handle, float volume);
 
     static SoundManagerEX* GetInstance() { return s_instance; }

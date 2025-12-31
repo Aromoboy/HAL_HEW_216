@@ -1,3 +1,6 @@
+// 強化選択画面の表示を描く役目を持つ
+// 強化シーンの描画から呼ばれる
+
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"

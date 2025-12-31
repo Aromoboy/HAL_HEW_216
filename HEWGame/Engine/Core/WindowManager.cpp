@@ -1,3 +1,6 @@
+// ウィンドウの状態やサイズを扱う
+// 描画初期化や全画面切り替えから参照される
+
 #include "WindowManager.h"
 
 #include "DirectX.h"

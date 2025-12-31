@@ -1,3 +1,6 @@
+// 物理情報を持つエンティティの基礎をまとめている
+// 物理更新や描画がこの基礎を使う
+
 #include "Entities/PhysicalEntity.h"
 
 #include <algorithm>

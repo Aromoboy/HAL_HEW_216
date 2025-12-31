@@ -1,3 +1,6 @@
+// 箱形コライダーの設定と形状を扱う
+// 物理登録や当たり判定の生成で使われる
+
 #include "BoxColliderComponent.h"
 
 #include <algorithm>

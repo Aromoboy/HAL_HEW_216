@@ -1,3 +1,6 @@
+// スイーツ生成のための組み立て処理をまとめている
+// スイーツ出現処理から呼ばれる
+
 #include "Sweets/SweetsFactory.h"
 
 #include <algorithm>

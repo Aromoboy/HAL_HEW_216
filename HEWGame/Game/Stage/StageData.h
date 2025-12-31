@@ -1,3 +1,6 @@
+// ステージの基礎データを保持する
+// シーンゲームの初期化や描画が参照する
+
 #pragma once
 
 #include <DirectXMath.h>

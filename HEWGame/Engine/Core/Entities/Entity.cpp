@@ -1,3 +1,6 @@
+// エンジンのエンティティ基礎をまとめている
+// シーン更新や描画がこの基礎を使う
+
 #include "Entities/Entity.h"
 
 namespace Entities

@@ -1,3 +1,6 @@
+// ガイドラインの高さ計算と表示更新を行う
+// シーンゲームの更新から呼ばれる
+
 #pragma once
 
 #include "GameplayProgression.h"

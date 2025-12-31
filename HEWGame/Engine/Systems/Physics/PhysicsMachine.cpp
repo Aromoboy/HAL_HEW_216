@@ -1,3 +1,6 @@
+// 物理更新の中心で剛体の計算を進める
+// 更新スケジューラや物理登録から呼ばれる
+
 #include "Systems/Physics/PhysicsMachine.h"
 #include "Systems/Physics/Box2DPhysicsSystem.h"
 #include "Systems/Physics/Box2DContactListener.h"

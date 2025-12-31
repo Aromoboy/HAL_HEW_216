@@ -1,3 +1,6 @@
+// ステージ設定ファイルを読み取る
+// ステージデータ生成がこの結果を参照する
+
 #include "Stage/StageConfigParser.h"
 
 #include <algorithm>

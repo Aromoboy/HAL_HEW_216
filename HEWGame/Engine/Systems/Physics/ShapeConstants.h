@@ -1,3 +1,6 @@
+// コライダー形状で使う定数をまとめている
+// コライダー生成や判定が参照する
+
 #pragma once
 
 namespace Physics

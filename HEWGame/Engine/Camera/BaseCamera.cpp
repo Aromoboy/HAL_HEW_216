@@ -1,3 +1,6 @@
+// エンジンのカメラの基礎機能をまとめている
+// シーン描画がビューと投影を参照する
+
 #include "BaseCamera.h"
 
 #include "Defines.h"

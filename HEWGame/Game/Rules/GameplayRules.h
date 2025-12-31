@@ -1,3 +1,6 @@
+// ゲームのルール計算に必要なデータをまとめている
+// ルール判定やスコア計算から参照される
+
 #ifndef __GAMEPLAY_RULES_H__
 #define __GAMEPLAY_RULES_H__
 

@@ -1,3 +1,6 @@
+// ã‚¨ãƒ³ã‚¸ãƒ³ã®ãƒ¢ãƒ‡ãƒ«ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®ãƒ‡ãƒ¼ã‚¿ã‚’æ‰±ã†
+// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³å†ç”Ÿã¨æç”»ã‹ã‚‰å‚ç…§ã•ã‚Œã‚‹
+
 #pragma once
 
 #include "DirectX.h"
@@ -7,20 +10,20 @@
 #include <map>
 
 using AnimeNoDX = int;
-using MorphNoDX = int;	// ƒ‚[ƒtƒf[ƒ^”Ô†
+using MorphNoDX = int;	// [tf[^Ô
 
 using AnimeTime = float;
-constexpr AnimeNoDX	 kAnimeNone = -1;	// ŠY“–ƒAƒjƒ[ƒVƒ‡ƒ“‚È‚µ
-static const MorphNoDX  kMorphNone = -1;	// ŠY“–ƒ‚[ƒt‚È‚µ
-static const AnimeNoDX  kParametricAnime = -2;	// ‡¬ƒAƒjƒ[ƒVƒ‡ƒ“
+constexpr AnimeNoDX	 kAnimeNone = -1;	// YAj[VÈ‚
+static const MorphNoDX  kMorphNone = -1;	// Y[tÈ‚
+static const AnimeNoDX  kParametricAnime = -2;	// Aj[V
 
 
 class Animation
 {
 public:
-	//===== ƒAƒjƒ[ƒVƒ‡ƒ“ =====
+	//===== Aj[V =====
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“ŒvZ—Ìˆæ
+	// Aj[VvZÌˆ
 	struct AnimeTransformDX
 	{
 		DirectX::XMFLOAT3	translate;
@@ -30,10 +33,10 @@ public:
 
 	enum AnimePatternDX
 	{
-		MAIN,			// ’ÊíÄ¶
-		BLEND,			// ƒuƒŒƒ“ƒhÄ¶
-		PARAMETRIC0,	// ‡¬A
-		PARAMETRIC1,	// ‡¬B
+		MAIN,			// ÊÄ
+		BLEND,			// uhÄ
+		PARAMETRIC0,	// A
+		PARAMETRIC1,	// B
 		MAX_ANIMEPATTERN
 	};
 
@@ -42,33 +45,33 @@ public:
 	using AnimeTransforms = std::vector<AnimeTransformDX>;
 	using AnimationArray = std::array<std::vector<AnimeTransformDX>, MAX_ANIMEPATTERN>;
 
-	// ˆê“I‚É‚±‚ê‚Åİ’èA‚Ü‚¸‚Íƒ¿‚ğI‚í‚ç‚¹‚È‚«‚á
+	// êIÉ‚Åİ’AÜ‚ÍƒIç‚¹È‚
 	void SetLoop(bool isLoop);
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“Ä¶î•ñ
+	// Aj[VÄ
 	struct AnimePlayInfo
 	{
-		AnimeTime		nowTime;	// Œ»İ‚ÌÄ¶ŠÔ
-		AnimeTime		totalTime;	// Å‘åÄ¶ŠÔ
-		float			speed;		// Ä¶‘¬“x
-		bool			isLoop;		// ƒ‹[ƒvw’è
+		AnimeTime		nowTime;	// İ‚ÌÄ
+		AnimeTime		totalTime;	// Å‘Ä
+		float			speed;		// Äx
+		bool			isLoop;		// [vw
 	};
 
 
-	// ƒAƒjƒ[ƒVƒ‡ƒ“‚Æƒm[ƒh‚ÌŠÖ˜A•t‚¯î•ñ
+	// Aj[VÆƒm[hÌŠÖ˜At
 	struct AnimeChannel
 	{
-		NodeIndexDX		node;		// ‘Î‰‚·‚éƒm[ƒh
-		AnimeTimeline	timeline;	// ƒm[ƒh‚É•t‚·‚éƒAƒjƒ[ƒVƒ‡ƒ“î•ñ
+		NodeIndexDX		node;		// Î‰m[h
+		AnimeTimeline	timeline;	// m[hÉ•tAj[V
 	};
 
 
 
-	// ƒRƒ“ƒXƒgƒ‰ƒNƒ^AƒfƒXƒgƒ‰ƒNƒ^
+	// RXgN^AfXgN^
 	Animation(AnimePlayInfo a_info, std::vector<AnimeChannel> a_channel, Animation::AnimationArray a_array, std::vector<NodeDX> a_nodes);
 	~Animation() = default;
 
-	// OnUpdate‚Å•Û‚µ‚Ä‚¢‚éƒAƒjƒ[ƒVƒ‡ƒ“‚ğXV‚·‚é
+	// OnUpdateÅ•ÛÄ‚Aj[VXV
 	
 	void Step(float a_tick);
 
@@ -80,14 +83,14 @@ public:
 
 private:
 
-	AnimePlayInfo	m_info;		// Ä¶î•ñ
-	std::vector<AnimeChannel>	m_channels;	// •ÏŠ·î•ñ
+	AnimePlayInfo	m_info;		// Ä
+	std::vector<AnimeChannel>	m_channels;	// ÏŠ
 
-	std::vector<NodeDX> m_nodes; // Œ»İ‚ÌBone‚Ì•ÏŠ·s—ñ
+	std::vector<NodeDX> m_nodes; // İ‚BoneÌ•ÏŠs
 
 	void CalcAnime(AnimePatternDX kind);
 
-	// Ä¶•û–@•Ê‚Ìs—ñŒ‹‰Ê‚Ì‡¬
+	// Ä@Ê‚ÌsñŒ‹‰Ê‚Ì
 	void CalcBones(NodeIndexDX index, const DirectX::XMMATRIX parent);
 
 	void UpdateAnime(float tick);

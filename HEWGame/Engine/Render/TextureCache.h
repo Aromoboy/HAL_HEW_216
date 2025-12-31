@@ -1,3 +1,6 @@
+// テクスチャ資源を共有する保管庫をまとめている
+// 描画初期化や描画処理から参照される
+
 #ifndef __TEXTURECACHE_H__
 #define __TEXTURECACHE_H__
 

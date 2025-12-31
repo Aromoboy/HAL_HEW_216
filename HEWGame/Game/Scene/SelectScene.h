@@ -1,3 +1,6 @@
+// 選択画面のシーンをまとめている
+// シーン管理から読み込まれて更新と描画を行う
+
 #ifndef __SELECT_SCENE_H__
 #define __SELECT_SCENE_H__
 

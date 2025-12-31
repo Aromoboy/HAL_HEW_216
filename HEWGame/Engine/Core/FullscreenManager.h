@@ -1,3 +1,6 @@
+// 画面の全画面切り替えを扱う
+// ウィンドウ制御や設定画面から呼ばれる
+
 #pragma once
 
 #include <Windows.h>

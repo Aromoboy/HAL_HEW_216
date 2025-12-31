@@ -1,3 +1,6 @@
+// スイーツ生成のための組み立て処理をまとめている
+// スイーツ出現処理から呼ばれる
+
 ﻿#pragma once
 
 #include <functional>

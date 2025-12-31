@@ -1,3 +1,6 @@
+// エンジン全体の共有資源への入り口をまとめている
+// シーンや描画がここから必要な機能を取得する
+
 #pragma once
 
 #include "Core/DXContext.h"
