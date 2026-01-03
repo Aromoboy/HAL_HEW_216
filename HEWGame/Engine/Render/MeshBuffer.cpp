@@ -68,7 +68,15 @@ void MeshBuffer::Draw(int count)
         {
                 // 頂点バッファのみで描画
                 GetContext()->IASetPrimitiveTopology(m_desc.topology);
-                GetContext()->Draw(count ? count : m_desc.vtxCount, 0);
+                const int drawCount = count ? count : m_desc.vtxCount;
+                GetContext()->Draw(drawCount, 0);
+                if (drawCount == 3)
+                {
+                        ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+                        ID3D11DeviceContext* context = GetContext();
+                        context->PSSetShaderResources(0, 1, nullSRV);
+                        context->PSSetShaderResources(1, 1, nullSRV);
+                }
         }
 
 }
