@@ -156,35 +156,18 @@ void ShaderList::SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir)
 	SetLighting(settings);
 }
 
-namespace
-{
-	DirectX::XMFLOAT3 NormalizeDirection(const DirectX::XMFLOAT3& dir)
-	{
-		const float lengthSq = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
-		if (lengthSq <= 0.0f)
-		{
-			return dir;
-		}
-		DirectX::XMFLOAT3 normalized;
-		DirectX::XMStoreFloat3(&normalized, DirectX::XMVector3Normalize(
-			DirectX::XMVectorSet(dir.x, dir.y, dir.z, 0.0f)));
-		return normalized;
-	}
-}
-
 void ShaderList::SetLighting(const LightingSettings& settings)
 {
 	LightingSettings normalized = settings;
-	normalized.key.dir = NormalizeDirection(settings.key.dir);
-	normalized.fill.dir = NormalizeDirection(settings.fill.dir);
+	normalized.NormalizeDirections();
 
-	DirectX::XMFLOAT4 param[8] = {};
-	normalized.BuildParams(param);
+	DirectX::XMFLOAT4 p[8] = {};
+	normalized.BuildParams(p);
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
 		{
-			m_pPS[i]->WriteBuffer(1, param);
+			m_pPS[i]->WriteBuffer(1, p);
 		}
 	}
 }
