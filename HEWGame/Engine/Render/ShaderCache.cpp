@@ -4,8 +4,8 @@
 
 std::shared_ptr<ShaderProgram> ShaderCache::Load(const std::string& name,
     ID3D11Device* device,
-    const std::string& vsPath,
-    const std::string& psPath)
+    const std::filesystem::path& vsPath,
+    const std::filesystem::path& psPath)
 {
     DebugLog::DebugMessage("[ShaderCache] Shader cache load: ");
 
@@ -47,8 +47,12 @@ std::shared_ptr<ShaderProgram> ShaderCache::Get(const std::string& name)
 // シングルトンなのでどこからでもアクセス可能
 
 // 初期化時：シェーダーをロードしてキャッシュに登録
-auto& basicShader = ShaderCache::Instance().Load("basic", device, "shaders/basic_vs.cso", "shaders/basic_ps.cso");
-auto& lightShader = ShaderCache::Instance().Load("light", device, "shaders/light_vs.cso", "shaders/light_ps.cso");
+auto& basicShader = ShaderCache::Instance().Load("basic", device,
+    std::filesystem::path("shaders/basic_vs.cso"),
+    std::filesystem::path("shaders/basic_ps.cso"));
+auto& lightShader = ShaderCache::Instance().Load("light", device,
+    std::filesystem::path("shaders/light_vs.cso"),
+    std::filesystem::path("shaders/light_ps.cso"));
 
 // 描画時：キャッシュからシェーダーを取得して使用
 auto& shader = ShaderCache::Instance().Get("basic");  // 高速（キャッシュから取得）

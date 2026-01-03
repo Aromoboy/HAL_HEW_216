@@ -2,6 +2,7 @@
 #define __SHADERCACHE_H__
 
 #include <d3d11.h>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
@@ -21,7 +22,10 @@ public:
     ShaderCache(ShaderCache&&) = delete;
     ShaderCache& operator=(ShaderCache&&) = delete;
 
-    std::shared_ptr<ShaderProgram> Load(const std::string& name, ID3D11Device* device, const std::string& vsPath, const std::string& psPath);
+    std::shared_ptr<ShaderProgram> Load(const std::string& name,
+        ID3D11Device* device,
+        const std::filesystem::path& vsPath,
+        const std::filesystem::path& psPath);
     std::shared_ptr<ShaderProgram> Get(const std::string& name);
 
 private:
