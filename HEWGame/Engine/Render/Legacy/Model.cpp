@@ -141,7 +141,7 @@ Model::Model()
 	{
 		m_pWhiteTex = new Texture();
 		uint32_t white = 0xFFFFFFFF;
-		HRESULT hr = m_pWhiteTex->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, &white);
+		HRESULT hr = m_pWhiteTex->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, &white, true);
 		if (FAILED(hr))
 		{
 			delete m_pWhiteTex;
@@ -383,12 +383,12 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                                 if (pTexture->mHeight == 0)
                                 {
                                         const uint8_t* data = reinterpret_cast<const uint8_t*>(pTexture->pcData);
-                                        hr = texture->CreateFromMemory(data, pTexture->mWidth, pTexture->achFormatHint);
+                                        hr = texture->CreateFromMemory(data, pTexture->mWidth, pTexture->achFormatHint, true);
                                 }
                                 else
                                 {
                                         const uint8_t* data = reinterpret_cast<const uint8_t*>(pTexture->pcData);
-                                        hr = texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, pTexture->mWidth, pTexture->mHeight, data);
+                                        hr = texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, pTexture->mWidth, pTexture->mHeight, data, true);
                                 }
 
                                 if (SUCCEEDED(hr))
@@ -416,11 +416,11 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                 Texture* texture = new Texture;
 
                 // 直接読込
-                hr = texture->Create(path.C_Str());
+                hr = texture->Create(path.C_Str(), true);
                 if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // ルートと結合して再試行
-                hr = texture->Create((directory + path.C_Str()).c_str());
+                hr = texture->Create((directory + path.C_Str()).c_str(), true);
                 if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // ファイル名のみで再試行
@@ -435,7 +435,7 @@ void Model::MakeMaterial(const void* ptr, std::string directory)
                 std::string fileName = fullPath;
                 if (find != std::string::npos)
                         fileName = fileName.substr(find + 1);
-                hr = texture->Create((directory + fileName).c_str());
+                hr = texture->Create((directory + fileName).c_str(), true);
                 if (SUCCEEDED(hr)) { m_materials[i].pTexture = texture; continue; }
 
                 // テクスチャなし

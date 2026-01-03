@@ -17,7 +17,7 @@ Texture::~Texture()
 	SAFE_RELEASE(m_pSRV);
 	SAFE_RELEASE(m_pTex);
 }
-HRESULT Texture::Create(const char* fileName)
+HRESULT Texture::Create(const char* fileName, bool useSRGB)
 {
 	HRESULT hr = S_OK;
 
@@ -39,7 +39,10 @@ HRESULT Texture::Create(const char* fileName)
 	if (isTga)
 		hr = DirectX::LoadFromTGAFile(wPath, &mdata, image);
 	else
-		hr = DirectX::LoadFromWICFile(wPath, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
+	{
+		const auto flags = useSRGB ? DirectX::WIC_FLAGS_NONE : DirectX::WIC_FLAGS_IGNORE_SRGB;
+		hr = DirectX::LoadFromWICFile(wPath, flags, &mdata, image);
+	}
 	if (FAILED(hr))
 	{
 		if (!isTga)
@@ -61,7 +64,7 @@ HRESULT Texture::Create(const char* fileName)
 	return hr;
 }
 
-HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* formatHint)
+HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* formatHint, bool useSRGB)
 {
         if (!data || size == 0) {
                 return E_INVALIDARG;
@@ -75,7 +78,8 @@ HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* for
                 hr = DirectX::LoadFromDDSMemory(data, size, DirectX::DDS_FLAGS_NONE, &mdata, image);
         }
         if (FAILED(hr)) {
-                hr = DirectX::LoadFromWICMemory(data, size, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
+                const auto flags = useSRGB ? DirectX::WIC_FLAGS_NONE : DirectX::WIC_FLAGS_IGNORE_SRGB;
+                hr = DirectX::LoadFromWICMemory(data, size, flags, &mdata, image);
         }
         if (FAILED(hr)) {
                 hr = DirectX::LoadFromDDSMemory(data, size, DirectX::DDS_FLAGS_NONE, &mdata, image);
@@ -92,10 +96,10 @@ HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* for
         }
         return hr;
 }
-HRESULT Texture::Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData)
+HRESULT Texture::Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData, bool useSRGB)
 {
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(format, width, height);
-	return CreateResource(desc, pData);
+	return CreateResource(desc, pData, useSRGB);
 }
 
 UINT Texture::GetWidth() const
@@ -124,7 +128,7 @@ D3D11_TEXTURE2D_DESC Texture::MakeTexDesc(DXGI_FORMAT format, UINT width, UINT h
 	desc.SampleDesc.Count = 1;
 	return desc;
 }
-HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
+HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, bool useSRGB)
 {
 	HRESULT hr = E_FAIL;
 
@@ -137,11 +141,17 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
 
 	// 設
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	DXGI_FORMAT srvFormat = desc.Format;
 	switch (desc.Format)
 	{
-	default:						srvDesc.Format = desc.Format;			break;
-	case DXGI_FORMAT_R32_TYPELESS: 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;	break;
+	default:						break;
+	case DXGI_FORMAT_R32_TYPELESS: 	srvFormat = DXGI_FORMAT_R32_FLOAT;	break;
 	}
+	if (useSRGB && srvFormat == DXGI_FORMAT_R8G8B8A8_UNORM)
+	{
+		srvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	}
+	srvDesc.Format = srvFormat;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	// 生
@@ -176,7 +186,7 @@ HRESULT RenderTarget::Create(DXGI_FORMAT format, UINT width, UINT height)
 {
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(format, width, height);
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-	return CreateResource(desc);
+	return CreateResource(desc, nullptr, false);
 }
 HRESULT RenderTarget::CreateFromScreen()
 {
@@ -206,10 +216,10 @@ ID3D11RenderTargetView* RenderTarget::GetView() const
 {
 	return m_pRTV;
 }
-HRESULT RenderTarget::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
+HRESULT RenderTarget::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, bool useSRGB)
 {
 	// クスチャリソース作
-	HRESULT hr = Texture::CreateResource(desc, nullptr);
+	HRESULT hr = Texture::CreateResource(desc, nullptr, useSRGB);
 	if (FAILED(hr)) { return hr; }
 
 	// 設
@@ -238,13 +248,13 @@ HRESULT DepthStencil::Create(UINT width, UINT height, bool useStencil)
 {
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(useStencil ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_R32_TYPELESS, width, height);
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
-	return CreateResource(desc);
+	return CreateResource(desc, nullptr, false);
 }
 ID3D11DepthStencilView* DepthStencil::GetView() const
 {
 	return m_pDSV;
 }
-HRESULT DepthStencil::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData)
+HRESULT DepthStencil::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, bool useSRGB)
 {
 	// スンシル使用判
 	bool useStencil = (desc.Format == DXGI_FORMAT_R24G8_TYPELESS);
@@ -255,7 +265,7 @@ HRESULT DepthStencil::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pDa
 
 	// リソース生
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
-	HRESULT hr = Texture::CreateResource(desc, nullptr);
+	HRESULT hr = Texture::CreateResource(desc, nullptr, useSRGB);
 	if (FAILED(hr)) { return hr; }
 
 	// 設
