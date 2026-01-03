@@ -1,4 +1,4 @@
-#ifndef __SCENE_H__
+﻿#ifndef __SCENE_H__
 #define __SCENE_H__
 
 #include "CameraManager.h"
@@ -21,6 +21,7 @@ class Scene
 public:
 void RootUpdate(Core::StepTimer& timer, Core::Input& input);
 void RootDraw();
+std::shared_ptr<::CameraSpace::ICamera> GetActiveCamera() const;
 
 Scene();
 virtual ~Scene();
@@ -52,7 +53,7 @@ CameraSpace::CameraManager& GetCameraManager();
 const CameraSpace::CameraManager& GetCameraManager() const;
 std::shared_ptr<::CameraSpace::ICamera> AddCamera(std::shared_ptr<::CameraSpace::ICamera> camera);
 void SetActiveCamera(const std::shared_ptr<::CameraSpace::ICamera>& camera);
-std::shared_ptr<::CameraSpace::ICamera> GetActiveCamera() const;
+
 
 private:
 Core::UpdateScheduler m_scheduler;
