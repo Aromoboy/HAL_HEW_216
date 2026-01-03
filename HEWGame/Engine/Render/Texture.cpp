@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include "TextureLoad.h"
 #include "Diagnostics/Logger.h"
+#include "Debug.h"
 #include <cstring>
 #include <sstream>
 #include <string>
@@ -99,6 +100,10 @@ HRESULT Texture::CreateFromMemory(const void* data, size_t size, const char* for
 HRESULT Texture::Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData, bool useSRGB)
 {
 	D3D11_TEXTURE2D_DESC desc = MakeTexDesc(format, width, height);
+	if (useSRGB && format == DXGI_FORMAT_R8G8B8A8_UNORM)
+	{
+		desc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
+	}
 	return CreateResource(desc, pData, useSRGB);
 }
 
@@ -146,6 +151,9 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, b
 	{
 	default:						break;
 	case DXGI_FORMAT_R32_TYPELESS: 	srvFormat = DXGI_FORMAT_R32_FLOAT;	break;
+	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		srvFormat = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+		break;
 	}
 	if (useSRGB && srvFormat == DXGI_FORMAT_R8G8B8A8_UNORM)
 	{
@@ -156,11 +164,16 @@ HRESULT Texture::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, b
 	srvDesc.Texture2D.MipLevels = 1;
 	// 生
 	hr = GetDevice()->CreateShaderResourceView(m_pTex, &srvDesc, &m_pSRV);
-	if (SUCCEEDED(hr))
+	if (FAILED(hr))
 	{
-		m_width = desc.Width;
-		m_height = desc.Height;
+		std::ostringstream oss;
+		oss << "[Texture] CreateShaderResourceView failed. desc.Format=" << static_cast<int>(desc.Format)
+			<< " srvFormat=" << static_cast<int>(srvFormat) << "\n";
+		DebugMessage(oss.str());
+		return hr;
 	}
+	m_width = desc.Width;
+	m_height = desc.Height;
 	return hr;
 }
 
