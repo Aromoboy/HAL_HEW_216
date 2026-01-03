@@ -1,8 +1,11 @@
 #include "Main.h"
 
+#include <array>
+#include <filesystem>
 #include <memory>
 #include <objbase.h>
 #include <sstream>
+#include <Windows.h>
 
 #include "DirectX.h"
 #include "Geometory.h"
@@ -30,6 +33,18 @@ namespace
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
         HRESULT g_comInitResult = E_FAIL;
         SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
+
+        std::filesystem::path GetExecutableDirectory()
+        {
+                std::array<char, MAX_PATH> buffer{};
+                const DWORD length = GetModuleFileNameA(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+                if (length == 0 || length == buffer.size())
+                {
+                        return std::filesystem::current_path();
+                }
+
+                return std::filesystem::path(buffer.data()).parent_path();
+        }
 
         void LogBootScenario()
         {
@@ -70,7 +85,12 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         Geometory::Init();
         Sprite::Init();
         ShaderList::Init();
-        ShaderCache::Instance().Load("postprocess", GetDevice(), "shaders/postprocess_vs.cso", "shaders/postprocess_ps.cso");
+        const auto shaderDir = GetExecutableDirectory() / "shaders";
+        ShaderCache::Instance().Load(
+                "postprocess",
+                GetDevice(),
+                (shaderDir / "postprocess_vs.cso").string(),
+                (shaderDir / "postprocess_ps.cso").string());
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
 
         // シーン
