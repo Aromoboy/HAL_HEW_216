@@ -73,7 +73,7 @@ public:
     using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
     using PlayerSpawnTransform = SceneGameConfig::PlayerSpawnTransform;
     using RenderPostProcessSettings = SceneGameConfig::RenderPostProcessSettings;
-    using RenderLightingSettings = SceneGameConfig::RenderLightingSettings;
+    using SceneLightingSettings = SceneGameConfig::LightingSettings;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -142,7 +142,7 @@ private:
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
-    RenderLightingSettings m_renderLightingSettings{};
+    SceneLightingSettings m_lightingSettings{};
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;

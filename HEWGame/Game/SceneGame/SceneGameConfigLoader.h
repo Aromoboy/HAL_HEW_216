@@ -31,7 +31,7 @@ namespace SceneGameConfig
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
     RenderPostProcessSettings LoadRenderPostProcessSettings();
-    RenderLightingSettings LoadRenderLightingSettings();
+    LightingSettings LoadLightingSettings();
 }
 
 #endif
