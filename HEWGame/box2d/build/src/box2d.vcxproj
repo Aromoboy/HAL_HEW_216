@@ -87,12 +87,15 @@
       </ExceptionHandling>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <MinimalRebuild></MinimalRebuild>
+      <MinimalRebuild>
+      </MinimalRebuild>
       <Optimization>Disabled</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <SupportJustMyCode></SupportJustMyCode>
-      <SuppressStartupBanner></SuppressStartupBanner>
+      <SupportJustMyCode>
+      </SupportJustMyCode>
+      <SuppressStartupBanner>
+      </SuppressStartupBanner>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;BOX2D_VALIDATE;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
@@ -125,12 +128,15 @@
       </ExceptionHandling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <MinimalRebuild></MinimalRebuild>
+      <MinimalRebuild>
+      </MinimalRebuild>
       <Optimization>MaxSpeed</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <SupportJustMyCode></SupportJustMyCode>
-      <SuppressStartupBanner></SuppressStartupBanner>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SupportJustMyCode>
+      </SupportJustMyCode>
+      <SuppressStartupBanner>
+      </SuppressStartupBanner>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BOX2D_VALIDATE;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
@@ -165,12 +171,15 @@
       </ExceptionHandling>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <MinimalRebuild></MinimalRebuild>
+      <MinimalRebuild>
+      </MinimalRebuild>
       <Optimization>MinSpace</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <SupportJustMyCode></SupportJustMyCode>
-      <SuppressStartupBanner></SuppressStartupBanner>
+      <SupportJustMyCode>
+      </SupportJustMyCode>
+      <SuppressStartupBanner>
+      </SuppressStartupBanner>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BOX2D_VALIDATE;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
@@ -206,12 +215,15 @@
       </ExceptionHandling>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <MinimalRebuild></MinimalRebuild>
+      <MinimalRebuild>
+      </MinimalRebuild>
       <Optimization>MaxSpeed</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <SupportJustMyCode></SupportJustMyCode>
-      <SuppressStartupBanner></SuppressStartupBanner>
+      <SupportJustMyCode>
+      </SupportJustMyCode>
+      <SuppressStartupBanner>
+      </SuppressStartupBanner>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BOX2D_VALIDATE;B2_ENABLE_ASSERT;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>

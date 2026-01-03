@@ -1,0 +1,16 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "out\\build\\x64-Release",
+      "out\\install\\x64-Release"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\build",
+    "\\build\\_deps",
+    "\\build\\_deps\\glfw-subbuild"
+  ],
+  "SelectedNode": "\\build\\box2d.sln",
+  "PreviewInSolutionExplorer": false
+}

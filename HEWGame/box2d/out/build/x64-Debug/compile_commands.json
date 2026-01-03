@@ -1,0 +1,608 @@
+[
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\aabb.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\aabb.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\aabb.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\aabb.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\arena_allocator.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\arena_allocator.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\arena_allocator.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\arena_allocator.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\array.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\array.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\array.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\array.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\bitset.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\bitset.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\bitset.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\bitset.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\body.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\body.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\body.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\body.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\broad_phase.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\broad_phase.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\broad_phase.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\broad_phase.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\constraint_graph.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\constraint_graph.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\constraint_graph.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\constraint_graph.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\contact.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\contact.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\contact.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\contact.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\contact_solver.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\contact_solver.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\contact_solver.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\contact_solver.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\core.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\core.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\core.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\core.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\distance.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\distance.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\distance.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\distance.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\distance_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\distance_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\distance_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\distance_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\dynamic_tree.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\dynamic_tree.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\dynamic_tree.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\dynamic_tree.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\geometry.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\geometry.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\geometry.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\geometry.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\hull.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\hull.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\hull.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\hull.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\id_pool.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\id_pool.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\id_pool.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\id_pool.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\island.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\island.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\island.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\island.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\manifold.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\manifold.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\manifold.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\manifold.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\math_functions.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\math_functions.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\math_functions.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\math_functions.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\motor_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\motor_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\motor_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\motor_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\mover.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\mover.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\mover.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\mover.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\physics_world.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\physics_world.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\physics_world.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\physics_world.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\prismatic_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\prismatic_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\prismatic_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\prismatic_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\revolute_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\revolute_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\revolute_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\revolute_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\sensor.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\sensor.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\sensor.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\sensor.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\shape.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\shape.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\shape.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\shape.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\solver.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\solver.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\solver.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\solver.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\solver_set.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\solver_set.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\solver_set.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\solver_set.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\table.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\table.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\table.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\table.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\timer.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\timer.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\timer.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\timer.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\types.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\types.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\types.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\types.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\weld_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\weld_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\weld_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\weld_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DBOX2D_VALIDATE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710 /Fosrc\\CMakeFiles\\box2d.dir\\wheel_joint.c.obj /Fdsrc\\CMakeFiles\\box2d.dir\\box2d.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\wheel_joint.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\wheel_joint.c",
+  "output": "src\\CMakeFiles\\box2d.dir\\wheel_joint.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fo_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\src\\TaskScheduler.cpp.obj /Fd_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\enkiTS.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src\\TaskScheduler.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src\\TaskScheduler.cpp",
+  "output": "_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\src\\TaskScheduler.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fo_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\src\\TaskScheduler_c.cpp.obj /Fd_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\enkiTS.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src\\TaskScheduler_c.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src\\TaskScheduler_c.cpp",
+  "output": "_deps\\enkits-build\\CMakeFiles\\enkiTS.dir\\src\\TaskScheduler_c.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Foshared\\CMakeFiles\\shared.dir\\benchmarks.c.obj /Fdshared\\CMakeFiles\\shared.dir\\shared.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\benchmarks.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\benchmarks.c",
+  "output": "shared\\CMakeFiles\\shared.dir\\benchmarks.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Foshared\\CMakeFiles\\shared.dir\\determinism.c.obj /Fdshared\\CMakeFiles\\shared.dir\\shared.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\determinism.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\determinism.c",
+  "output": "shared\\CMakeFiles\\shared.dir\\determinism.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Foshared\\CMakeFiles\\shared.dir\\human.c.obj /Fdshared\\CMakeFiles\\shared.dir\\shared.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\human.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\human.c",
+  "output": "shared\\CMakeFiles\\shared.dir\\human.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Foshared\\CMakeFiles\\shared.dir\\random.c.obj /Fdshared\\CMakeFiles\\shared.dir\\shared.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\random.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared\\random.c",
+  "output": "shared\\CMakeFiles\\shared.dir\\random.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\main.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\main.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\main.c",
+  "output": "test\\CMakeFiles\\test.dir\\main.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_bitset.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_bitset.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_bitset.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_bitset.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_collision.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_collision.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_collision.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_collision.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_determinism.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_determinism.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_determinism.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_determinism.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_distance.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_distance.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_distance.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_distance.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_id.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_id.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_id.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_id.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_math.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_math.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_math.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_math.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_shape.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_shape.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_shape.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_shape.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_table.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_table.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_table.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_table.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -std:c17 -MDd /ZI /Fotest\\CMakeFiles\\test.dir\\test_world.c.obj /Fdtest\\CMakeFiles\\test.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_world.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\test\\test_world.c",
+  "output": "test\\CMakeFiles\\test.dir\\test_world.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fosamples\\CMakeFiles\\glad.dir\\__\\extern\\glad\\src\\glad.c.obj /Fdsamples\\CMakeFiles\\glad.dir\\glad.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\src\\glad.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\src\\glad.c",
+  "output": "samples\\CMakeFiles\\glad.dir\\__\\extern\\glad\\src\\glad.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_draw.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_draw.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_draw.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_draw.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_demo.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_demo.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_demo.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_demo.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_tables.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_tables.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_tables.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_tables.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_widgets.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_widgets.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\imgui_widgets.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\imgui_widgets.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\backends\\imgui_impl_glfw.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends\\imgui_impl_glfw.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends\\imgui_impl_glfw.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\backends\\imgui_impl_glfw.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_STB_NAMESPACE=imgui_stb -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\backends\\imgui_impl_opengl3.cpp.obj /Fdsamples\\CMakeFiles\\imgui.dir\\imgui.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends\\imgui_impl_opengl3.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends\\imgui_impl_opengl3.cpp",
+  "output": "samples\\CMakeFiles\\imgui.dir\\__\\build\\imgui\\backends\\imgui_impl_opengl3.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\car.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\car.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\car.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\car.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\container.c.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\container.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\container.c",
+  "output": "samples\\CMakeFiles\\samples.dir\\container.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\donut.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\donut.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\donut.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\donut.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\doohickey.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\doohickey.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\doohickey.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\doohickey.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\draw.c.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\draw.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\draw.c",
+  "output": "samples\\CMakeFiles\\samples.dir\\draw.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\main.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\main.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\main.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\main.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_benchmark.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_benchmark.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_benchmark.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_benchmark.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_bodies.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_bodies.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_bodies.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_bodies.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_character.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_character.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_character.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_character.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_collision.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_collision.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_collision.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_collision.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_continuous.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_continuous.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_continuous.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_continuous.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_determinism.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_determinism.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_determinism.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_determinism.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_events.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_events.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_events.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_events.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_geometry.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_geometry.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_geometry.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_geometry.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_issues.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_issues.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_issues.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_issues.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_joints.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_joints.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_joints.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_joints.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_robustness.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_robustness.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_robustness.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_robustness.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_shapes.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_shapes.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_shapes.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_shapes.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_stacking.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_stacking.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_stacking.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_stacking.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\sample_world.cpp.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_world.cpp",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\sample_world.cpp",
+  "output": "samples\\CMakeFiles\\samples.dir\\sample_world.cpp.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DENKITS_TASK_PRIORITIES_NUM=3 -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\jsmn -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\src\\..\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\shared -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\build\\imgui\\backends -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\extern\\glad\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\enkits-src\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /Fosamples\\CMakeFiles\\samples.dir\\shader.c.obj /Fdsamples\\CMakeFiles\\samples.dir\\ /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\shader.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\samples\\shader.c",
+  "output": "samples\\CMakeFiles\\samples.dir\\shader.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\context.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\context.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\context.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\context.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\init.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\init.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\init.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\init.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\input.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\input.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\input.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\input.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\monitor.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\monitor.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\monitor.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\monitor.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\platform.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\platform.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\platform.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\platform.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\vulkan.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\vulkan.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\vulkan.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\vulkan.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\window.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\window.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\window.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\window.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\egl_context.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\egl_context.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\egl_context.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\egl_context.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\osmesa_context.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\osmesa_context.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\osmesa_context.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\osmesa_context.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_init.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_init.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_init.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_init.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_monitor.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_monitor.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_monitor.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_monitor.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_window.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_window.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_window.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_window.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_joystick.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_joystick.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\null_joystick.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\null_joystick.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_module.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_module.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_module.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_module.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_time.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_time.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_time.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_time.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_thread.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_thread.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_thread.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_thread.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_init.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_init.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_init.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_init.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_joystick.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_joystick.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_joystick.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_joystick.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_monitor.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_monitor.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_monitor.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_monitor.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_window.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_window.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\win32_window.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\win32_window.c.obj"
+},
+{
+  "directory": "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug",
+  "command": "C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo -DUNICODE -D_CRT_SECURE_NO_WARNINGS -D_GLFW_WIN32 -D_UNICODE -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\include -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src -IC:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-build\\src /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd /ZI /W3 /Fo_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\wgl_context.c.obj /Fd_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\glfw.pdb /FS -c C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\wgl_context.c",
+  "file": "C:\\HEW\\HAL_HEW_216\\HEWGame\\box2d\\out\\build\\x64-Debug\\_deps\\glfw-src\\src\\wgl_context.c",
+  "output": "_deps\\glfw-build\\src\\CMakeFiles\\glfw.dir\\wgl_context.c.obj"
+}
+]
