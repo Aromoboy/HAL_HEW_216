@@ -8,6 +8,7 @@ namespace
 	ID3D11DepthStencilState*	g_pDepthStencilState[2];
 	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
 	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
+	ID3D11Buffer*			g_pPostProcessParamBuffer = nullptr;
 }
 
 namespace
@@ -153,13 +154,14 @@ void UninitDirectX()
                 SAFE_RELEASE(g_pDepthStencilState[i]);
         for(int i = 0; i < 3; ++ i)
                 SAFE_RELEASE(g_pRasterizerState[i]);
+        SAFE_RELEASE(g_pPostProcessParamBuffer);
         GetDXContext().Shutdown();
 }
 
 void BeginDrawDirectX()
 {
-        float color[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
-        GetDXContext().BeginDraw(color);
+        const float srgbClearColor[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
+        GetDXContext().BeginDraw(srgbClearColor);
 }
 void EndDrawDirectX()
 {
@@ -217,4 +219,51 @@ void SetSamplerState(SamplerState state)
 {
 	if (state < 0 || state >= SAMPLER_MAX) return;
 	GetContext()->PSSetSamplers(0, 1, &g_pSamplerState[state]);
+}
+
+void BindPostProcessParams(float gamma, float saturation, float contrast, const DirectX::XMFLOAT4& fogColor, float fogStart, float fogRange, float cameraNear, float cameraFar, float vignetteIntensity, float microBloomIntensity, float bloomThreshold, const DirectX::XMFLOAT2& invScreenSize, float fxaaEdgeThreshold, float fxaaEdgeThresholdMin, float fxaaSubpixelQuality, int fxaaEnable)
+{
+	ID3D11Device* device = GetDevice();
+	ID3D11DeviceContext* context = GetContext();
+	if (!device || !context)
+	{
+		return;
+	}
+
+	if (!g_pPostProcessParamBuffer)
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = sizeof(PostProcessParams);
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		HRESULT hr = device->CreateBuffer(&desc, nullptr, &g_pPostProcessParamBuffer);
+		if (FAILED(hr))
+		{
+			return;
+		}
+	}
+
+	const PostProcessParams params = {
+		gamma,
+		saturation,
+		contrast,
+		0.0f,
+		fogColor,
+		fogStart,
+		fogRange,
+		cameraNear,
+		cameraFar,
+		vignetteIntensity,
+		microBloomIntensity,
+		bloomThreshold,
+		0.0f,
+		invScreenSize,
+		fxaaEdgeThreshold,
+		fxaaEdgeThresholdMin,
+		fxaaSubpixelQuality,
+		fxaaEnable,
+		{ 0.0f, 0.0f }
+	};
+	context->UpdateSubresource(g_pPostProcessParamBuffer, 0, nullptr, &params, 0, 0);
+	context->PSSetConstantBuffers(0, 1, &g_pPostProcessParamBuffer);
 }

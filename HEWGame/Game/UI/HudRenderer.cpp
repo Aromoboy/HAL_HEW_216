@@ -47,7 +47,7 @@ bool HudRenderer::Initialize(const HudLayoutConfig& config)
 {
     m_config = config;
     m_texture = std::make_unique<DynamicTexture>();
-    HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight);
+    HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight, nullptr, true);
     if (FAILED(hr))
     {
         return false;

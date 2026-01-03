@@ -146,6 +146,11 @@ namespace Core
                 m_executionLogListener = listener;
         }
 
+        bool UpdateScheduler::IsTicking() const
+        {
+                return m_isTicking;
+        }
+
         bool UpdateScheduler::IsRegistered(const IUpdatable* node) const
         {
                 if (!node)
@@ -243,6 +248,89 @@ namespace Core
                 }
 
                 Unregister(*node);
+        }
+
+        void UpdateScheduler::UnregisterByIdNoDeref(NodeId nodeId)
+        {
+                if (nodeId == 0)
+                {
+                        return;
+                }
+
+                auto idIt = m_nodesById.find(nodeId);
+                if (idIt == m_nodesById.end())
+                {
+                        return;
+                }
+
+                IUpdatable* node = idIt->second;
+                {
+                        std::ostringstream oss;
+                        oss << "[UpdateScheduler] UnregisterByIdNoDeref called during tick. nodeId=" << nodeId
+                            << " node=" << node << '\n';
+                        DebugLog::DebugMessage(oss.str());
+                }
+
+                m_nodesById.erase(idIt);
+                if (node)
+                {
+                        m_registrationOrder.erase(node);
+                        m_nodeIds.erase(node);
+
+                        auto nodeIt = std::remove(m_nodes.begin(), m_nodes.end(), node);
+                        if (nodeIt != m_nodes.end())
+                        {
+                                m_nodes.erase(nodeIt, m_nodes.end());
+                        }
+
+                        auto depIt = std::remove_if(m_dependencies.begin(), m_dependencies.end(),
+                                [node](const Dependency& dep)
+                                {
+                                        return dep.first == node || dep.second == node;
+                                });
+                        if (depIt != m_dependencies.end())
+                        {
+                                m_dependencies.erase(depIt, m_dependencies.end());
+                        }
+
+                        auto pendingDepIt = std::remove_if(m_pendingDependencies.begin(), m_pendingDependencies.end(),
+                                [node](const Dependency& dep)
+                                {
+                                        return dep.first == node || dep.second == node;
+                                });
+                        if (pendingDepIt != m_pendingDependencies.end())
+                        {
+                                m_pendingDependencies.erase(pendingDepIt, m_pendingDependencies.end());
+                        }
+
+                        auto pendingRegIt = std::remove_if(m_pendingRegistrations.begin(), m_pendingRegistrations.end(),
+                                [node](const PendingRegistration& registration)
+                                {
+                                        return registration.node == node;
+                                });
+                        if (pendingRegIt != m_pendingRegistrations.end())
+                        {
+                                m_pendingRegistrations.erase(pendingRegIt, m_pendingRegistrations.end());
+                        }
+
+                        auto pendingUnregIt = std::remove(m_pendingUnregistrations.begin(), m_pendingUnregistrations.end(), node);
+                        if (pendingUnregIt != m_pendingUnregistrations.end())
+                        {
+                                m_pendingUnregistrations.erase(pendingUnregIt, m_pendingUnregistrations.end());
+                        }
+
+                        auto pendingOrderIt = std::remove_if(m_pendingOrderChanges.begin(), m_pendingOrderChanges.end(),
+                                [node](const PendingOrderChange& change)
+                                {
+                                        return change.node == node;
+                                });
+                        if (pendingOrderIt != m_pendingOrderChanges.end())
+                        {
+                                m_pendingOrderChanges.erase(pendingOrderIt, m_pendingOrderChanges.end());
+                        }
+                }
+
+                m_executionPlanDirty = true;
         }
 
         void UpdateScheduler::RegisterInternal(IUpdatable& node)

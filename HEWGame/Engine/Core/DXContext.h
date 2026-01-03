@@ -9,6 +9,12 @@ class DepthStencil;
 
 namespace Core
 {
+        struct SceneRenderTargets
+        {
+                std::unique_ptr<RenderTarget> color;
+                std::unique_ptr<DepthStencil> depth;
+        };
+
         class DXContext
         {
         public:
@@ -28,11 +34,21 @@ namespace Core
                 IDXGISwapChain* GetSwapChain() const;
                 RenderTarget* GetDefaultRTV() const;
                 DepthStencil* GetDefaultDSV() const;
+                RenderTarget* GetSceneColorTarget() const;
+                DepthStencil* GetSceneDepthTarget() const;
+                UINT GetWidth() const;
+                UINT GetHeight() const;
+                ID3D11RenderTargetView* GetSceneColorRTV() const;
+                ID3D11ShaderResourceView* GetSceneColorSRV() const;
+                ID3D11DepthStencilView* GetSceneDepthDSV() const;
+                ID3D11ShaderResourceView* GetSceneDepthSRV() const;
 
         private:
                 HRESULT CreateDeviceAndSwapChain(HWND hWnd, UINT width, UINT height, bool fullscreen);
                 HRESULT CreateDefaultTargets();
+                HRESULT CreateSceneTargets(UINT width, UINT height);
                 void ReleaseTargets();
+                void ReleaseSceneTargets();
 
         private:
                 Microsoft::WRL::ComPtr<ID3D11Device> m_device;
@@ -40,10 +56,10 @@ namespace Core
                 Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
                 std::unique_ptr<RenderTarget> m_defaultRTV;
                 std::unique_ptr<DepthStencil> m_defaultDSV;
+                SceneRenderTargets m_sceneTargets;
                 HWND m_windowHandle;
                 UINT m_width;
                 UINT m_height;
                 bool m_ready;
         };
 }
-

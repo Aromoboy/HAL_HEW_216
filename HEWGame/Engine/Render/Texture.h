@@ -10,9 +10,9 @@ class Texture
 public:
     Texture();
     virtual ~Texture();
-    HRESULT Create(const char* fileName);
-    HRESULT Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData = nullptr);
-    HRESULT CreateFromMemory(const void* data, size_t size, const char* formatHint = nullptr);
+    HRESULT Create(const char* fileName, bool useSRGB = false);
+    HRESULT Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData = nullptr, bool useSRGB = false);
+    HRESULT CreateFromMemory(const void* data, size_t size, const char* formatHint = nullptr, bool useSRGB = false);
 
     UINT GetWidth() const;
     UINT GetHeight() const;
@@ -20,7 +20,7 @@ public:
 
 protected:
     D3D11_TEXTURE2D_DESC MakeTexDesc(DXGI_FORMAT format, UINT width, UINT height);
-    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData);
+    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData, bool useSRGB = false);
 
 protected:
     UINT m_width;
@@ -41,7 +41,7 @@ public:
     ID3D11RenderTargetView* GetView() const;
 
 protected:
-    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData = nullptr);
+    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData = nullptr, bool useSRGB = false);
 
 private:
     ID3D11RenderTargetView* m_pRTV;
@@ -57,7 +57,7 @@ public:
     ID3D11DepthStencilView* GetView() const;
 
 protected:
-    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData = nullptr);
+    virtual HRESULT CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pData = nullptr, bool useSRGB = false);
 
 private:
     ID3D11DepthStencilView* m_pDSV;

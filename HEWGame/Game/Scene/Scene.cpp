@@ -5,6 +5,7 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 #include "Debug.h"
+#include "Render/DirectX.h"
 
 #include <cassert>
 #include <memory>
@@ -89,7 +90,9 @@ void Scene::RootDraw()
 {
         auto activeCamera = m_cameraManager.GetActiveCamera();
 
-        Draw(activeCamera);
+        DrawWorld(activeCamera);
+        RenderTarget* defaultRTV = GetDefaultRTV();
+        SetRenderTargets(1, &defaultRTV, nullptr);
         DrawOverlay();
 }
 
@@ -99,6 +102,11 @@ void Scene::RootDraw()
 
         void Scene::DrawOverlay()
         {
+        }
+
+        void Scene::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+        {
+                Draw(activeCamera);
         }
 
         void Scene::RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority)

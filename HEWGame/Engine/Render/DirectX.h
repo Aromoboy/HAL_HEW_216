@@ -2,6 +2,7 @@
 #define __DIRECTX_H__
 
 #include <d3d11.h>
+#include <DirectXMath.h>
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -48,5 +49,46 @@ void SetCullingMode(D3D11_CULL_MODE cull);
 void SetDepthTest(bool enable);
 void SetBlendMode(BlendMode blend);
 void SetSamplerState(SamplerState state);
+
+struct PostProcessParams
+{
+        float gamma;
+        float saturation;
+        float contrast;
+        float padding;
+        DirectX::XMFLOAT4 fogColor;
+        float fogStart;
+        float fogRange;
+        float cameraNear;
+        float cameraFar;
+        float vignetteIntensity;
+        float microBloomIntensity;
+        float bloomThreshold;
+        float padding2;
+        DirectX::XMFLOAT2 invScreenSize;
+        float fxaaEdgeThreshold;
+        float fxaaEdgeThresholdMin;
+        float fxaaSubpixelQuality;
+        int fxaaEnable;
+        float padding3[2];
+};
+
+void BindPostProcessParams(
+        float gamma = 2.2f,
+        float saturation = 0.85f,
+        float contrast = 1.1f,
+        const DirectX::XMFLOAT4& fogColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        float fogStart = 50.0f,
+        float fogRange = 50.0f,
+        float cameraNear = 0.1f,
+        float cameraFar = 1000.0f,
+        float vignetteIntensity = 1.2f,
+        float microBloomIntensity = 0.15f,
+        float bloomThreshold = 0.8f,
+        const DirectX::XMFLOAT2& invScreenSize = DirectX::XMFLOAT2(1.0f, 1.0f),
+        float fxaaEdgeThreshold = 0.166f,
+        float fxaaEdgeThresholdMin = 0.0833f,
+        float fxaaSubpixelQuality = 0.75f,
+        int fxaaEnable = 0);
 
 #endif

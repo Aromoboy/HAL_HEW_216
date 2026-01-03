@@ -7,7 +7,7 @@ std::shared_ptr<ShaderProgram> ShaderCache::Load(const std::string& name,
     const std::string& vsPath,
     const std::string& psPath)
 {
-    DebugLog::DebugMessage("[ShaderCache] VF[_[̃[hɎs: ");
+    DebugLog::DebugMessage("[ShaderCache] Shader cache load: ");
 
     // キャッシュにすでに存在するか確認
     auto it = programs.find(name);

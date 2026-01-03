@@ -28,6 +28,7 @@
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
+#include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -310,6 +311,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
     m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
     m_heightBonusSeconds = composition->heightBonusSeconds;
+    m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -445,7 +447,105 @@ void SceneGame::Draw()
     {
         return;
     }
-    RootDraw();
+
+    auto& dxContext = App::Game::Instance().GetDXContext();
+    ID3D11DeviceContext* context = dxContext.GetContext();
+    RenderTarget* sceneColorRTV = dxContext.GetSceneColorTarget();
+    DepthStencil* sceneDepthDSV = dxContext.GetSceneDepthTarget();
+
+    if (context && sceneColorRTV)
+    {
+        SetRenderTargets(1, &sceneColorRTV, sceneDepthDSV);
+    }
+
+    auto activeCamera = GetActiveCamera();
+    DrawWorld(activeCamera);
+
+    if (context)
+    {
+        RenderTarget* defaultRTV = GetDefaultRTV();
+        if (defaultRTV)
+        {
+            SetRenderTargets(1, &defaultRTV, nullptr);
+        }
+
+        auto postprocess = ShaderCache::Instance().Get("postprocess");
+        if (postprocess)
+        {
+            ID3D11ShaderResourceView* sceneColorSRV = dxContext.GetSceneColorSRV();
+            ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
+            float cameraNear = 0.1f;
+            float cameraFar = 1000.0f;
+            if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
+            {
+                cameraNear = perspectiveCamera->GetNearPlane();
+                cameraFar = perspectiveCamera->GetFarPlane();
+            }
+            context->PSSetShaderResources(0, 1, &sceneColorSRV);
+            context->PSSetShaderResources(1, 1, &sceneDepthSRV);
+            SetSamplerState(SAMPLER_LINEAR);
+            const auto& postSettings = m_renderPostProcessSettings;
+            DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
+                postSettings.fogColor.x,
+                postSettings.fogColor.y,
+                postSettings.fogColor.z,
+                1.0f);
+            float fogStart = postSettings.fogStart;
+            float fogRange = postSettings.fogRange;
+            float vignetteStrength = postSettings.vignetteStrength;
+            float bloomIntensity = postSettings.bloomIntensity;
+            const UINT screenWidth = dxContext.GetWidth();
+            const UINT screenHeight = dxContext.GetHeight();
+            const float invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
+            const float invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
+            const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
+
+            if (!postSettings.enableFog)
+            {
+                fogStart = cameraFar + 1.0f;
+                fogRange = 1.0f;
+            }
+            if (!postSettings.enableVignette)
+            {
+                vignetteStrength = 0.0f;
+            }
+            if (!postSettings.enableBloom)
+            {
+                bloomIntensity = 0.0f;
+            }
+
+            BindPostProcessParams(
+                postSettings.gamma,
+                postSettings.saturation,
+                postSettings.contrast,
+                fogColor,
+                fogStart,
+                fogRange,
+                cameraNear,
+                cameraFar,
+                vignetteStrength,
+                bloomIntensity,
+                postSettings.bloomThreshold,
+                invScreenSize,
+                postSettings.fxaaEdgeThreshold,
+                postSettings.fxaaEdgeThresholdMin,
+                postSettings.fxaaSubpixelQuality,
+                postSettings.enableFxaa ? 1 : 0);
+
+            postprocess->Bind(context);
+
+            context->IASetInputLayout(nullptr);
+            context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            context->Draw(3, 0);
+
+            ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+            context->PSSetShaderResources(0, 2, nullSRVs);
+        }
+    }
+
+    DrawOverlay();
 }
 
 void SceneGame::OnEnter()
@@ -978,6 +1078,11 @@ void SceneGame::DrawPhysicsDebugOverlay()
 #endif
 
 void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
+        DrawWorld(activeCamera);
+}
+
+void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
         if (m_backgroundRenderer)
         {

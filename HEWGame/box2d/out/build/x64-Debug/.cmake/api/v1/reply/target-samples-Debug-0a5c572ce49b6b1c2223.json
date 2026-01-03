@@ -1,0 +1,562 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "bin/samples.exe"
+		},
+		{
+			"path" : "bin/samples.pdb"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_executable",
+			"add_link_options",
+			"target_link_libraries",
+			"add_compile_options",
+			"target_include_directories",
+			"set_target_properties"
+		],
+		"files" : 
+		[
+			"samples/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 104,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 41,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 117,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 40,
+				"parent" : 2
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 116,
+				"parent" : 0
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 106,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MDd"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "/ZI"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "ENKITS_TASK_PRIORITIES_NUM=3"
+				},
+				{
+					"backtrace" : 4,
+					"define" : "IMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 6,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/samples"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/extern/jsmn"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/src/../include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/shared"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/imgui"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/imgui/backends"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/_deps/glfw-src/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/extern/glad/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/_deps/enkits-src/src"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					7
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				4,
+				6,
+				10,
+				11,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "/ZI"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "ENKITS_TASK_PRIORITIES_NUM=3"
+				},
+				{
+					"backtrace" : 4,
+					"define" : "IMGUI_DISABLE_OBSOLETE_FUNCTIONS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 6,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/samples"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/extern/jsmn"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/src/../include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/shared"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/imgui"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/build/imgui/backends"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/_deps/glfw-src/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/extern/glad/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/_deps/enkits-src/src"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				2,
+				8,
+				27
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "box2d::@145eef247bfb46b6828c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "enkiTS::@0efbae140f1720a455be"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "glad::@fd003194bc69d7fb51e8"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "shared::@b1f7512934231ee3f25d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "imgui::@fd003194bc69d7fb51e8"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "glfw::@fa9f4482d3a2b070f206"
+		}
+	],
+	"id" : "samples::@fd003194bc69d7fb51e8",
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "/DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd",
+				"role" : "flags"
+			},
+			{
+				"fragment" : "/machine:x64 /debug /INCREMENTAL /subsystem:console",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "/INCREMENTAL",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "src\\box2dd.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "shared\\shared.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "samples\\imgui.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "_deps\\glfw-build\\src\\glfw3.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "samples\\glad.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "_deps\\enkits-build\\enkiTS.lib",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "src\\box2dd.lib",
+				"role" : "libraries"
+			},
+			{
+				"fragment" : "kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "samples",
+	"nameOnDisk" : "samples.exe",
+	"paths" : 
+	{
+		"build" : "samples",
+		"source" : "samples"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/car.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/car.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/container.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/container.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/donut.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/donut.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/doohickey.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/doohickey.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/draw.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/draw.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/main.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_benchmark.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_bodies.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_character.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_collision.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_continuous.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_determinism.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_events.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_geometry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_issues.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_joints.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_robustness.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_shapes.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_stacking.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_world.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/shader.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/shader.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/stb_image_write.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/stb_truetype.h",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "EXECUTABLE"
+}

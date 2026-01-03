@@ -98,6 +98,7 @@ namespace Core
                         m_context->CSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullSrvs);
                 }
 
+                ReleaseSceneTargets();
                 ReleaseTargets();
 
                 HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
@@ -165,12 +166,60 @@ namespace Core
                 return m_defaultDSV.get();
         }
 
+        RenderTarget* DXContext::GetSceneColorTarget() const
+        {
+                return m_sceneTargets.color.get();
+        }
+
+        DepthStencil* DXContext::GetSceneDepthTarget() const
+        {
+                return m_sceneTargets.depth.get();
+        }
+
+        UINT DXContext::GetWidth() const
+        {
+                if (m_defaultRTV)
+                {
+                        return m_defaultRTV->GetWidth();
+                }
+                return m_width;
+        }
+
+        UINT DXContext::GetHeight() const
+        {
+                if (m_defaultRTV)
+                {
+                        return m_defaultRTV->GetHeight();
+                }
+                return m_height;
+        }
+
+        ID3D11RenderTargetView* DXContext::GetSceneColorRTV() const
+        {
+                return m_sceneTargets.color ? m_sceneTargets.color->GetView() : nullptr;
+        }
+
+        ID3D11ShaderResourceView* DXContext::GetSceneColorSRV() const
+        {
+                return m_sceneTargets.color ? m_sceneTargets.color->GetResource() : nullptr;
+        }
+
+        ID3D11DepthStencilView* DXContext::GetSceneDepthDSV() const
+        {
+                return m_sceneTargets.depth ? m_sceneTargets.depth->GetView() : nullptr;
+        }
+
+        ID3D11ShaderResourceView* DXContext::GetSceneDepthSRV() const
+        {
+                return m_sceneTargets.depth ? m_sceneTargets.depth->GetResource() : nullptr;
+        }
+
         HRESULT DXContext::CreateDeviceAndSwapChain(HWND hWnd, UINT width, UINT height, bool fullscreen)
         {
                 DXGI_SWAP_CHAIN_DESC sd = {};
                 sd.BufferDesc.Width = width;
                 sd.BufferDesc.Height = height;
-                sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
                 sd.SampleDesc.Count = 1;
                 sd.BufferDesc.RefreshRate.Numerator = 1000;
                 sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -252,12 +301,52 @@ namespace Core
                         return hr;
                 }
 
+                hr = CreateSceneTargets(m_defaultRTV->GetWidth(), m_defaultRTV->GetHeight());
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene render targets.\n");
+                        return hr;
+                }
+
+                return S_OK;
+        }
+
+        HRESULT DXContext::CreateSceneTargets(UINT width, UINT height)
+        {
+                ReleaseSceneTargets();
+
+                m_sceneTargets.color = std::make_unique<RenderTarget>();
+                HRESULT hr = m_sceneTargets.color->Create(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene color render target.\n");
+                        m_sceneTargets.color.reset();
+                        return hr;
+                }
+
+                m_sceneTargets.depth = std::make_unique<DepthStencil>();
+                hr = m_sceneTargets.depth->Create(width, height, false);
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene depth stencil.\n");
+                        m_sceneTargets.depth.reset();
+                        m_sceneTargets.color.reset();
+                        return hr;
+                }
+
                 return S_OK;
         }
 
         void DXContext::ReleaseTargets()
         {
+                ReleaseSceneTargets();
                 m_defaultDSV.reset();
                 m_defaultRTV.reset();
+        }
+
+        void DXContext::ReleaseSceneTargets()
+        {
+                m_sceneTargets.depth.reset();
+                m_sceneTargets.color.reset();
         }
 }

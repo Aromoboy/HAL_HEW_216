@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/CMakeFiles/imgui-populate"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/CMakeFiles/imgui-populate.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/CMakeFiles/imgui-populate-complete.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-build.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-configure.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-download.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-install.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-patch.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-test.rule"
+		},
+		{
+			"file" : "C:/HEW/HAL_HEW_216/HEWGame/box2d/out/build/x64-Debug/samples/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"imgui-populate"
+		],
+		"name" : "imgui-populate"
+	}
+}

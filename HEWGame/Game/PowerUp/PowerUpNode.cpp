@@ -82,7 +82,7 @@ PowerUpNode::PowerUpNode(std::shared_ptr<Texture2D> a_texture, std::string a_nam
 	, m_costMagnification(a_costMagnification)
 {
 	m_stringTexture = std::make_shared<PowerUpStringTexture>();
-	m_stringTexture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 512u, 240u);
+	m_stringTexture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 512u, 240u, nullptr, true);
 	UpdateCost();
 }
 
