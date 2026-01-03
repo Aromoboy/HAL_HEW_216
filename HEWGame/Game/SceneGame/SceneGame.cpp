@@ -476,6 +476,7 @@ void SceneGame::Draw()
             context->PSSetShaderResources(0, 1, &sceneColorSRV);
             context->PSSetShaderResources(1, 1, &sceneDepthSRV);
             SetSamplerState(SAMPLER_LINEAR);
+            BindPostProcessParams();
 
             postprocess->Bind(context);
 
