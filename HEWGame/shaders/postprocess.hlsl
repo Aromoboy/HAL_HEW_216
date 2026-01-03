@@ -39,9 +39,9 @@ cbuffer PostProcessParams : register(b0)
 float4 PSMain(VSOut input) : SV_TARGET
 {
     float3 col = sceneTex.Sample(samp, input.uv).rgb;
-    col = pow(col, 1.0 / gamma);
     float gray = dot(col, float3(0.299, 0.587, 0.114));
     col = lerp(float3(gray, gray, gray), col, saturation);
     col = (col - 0.5) * contrast + 0.5;
+    col = saturate(col);
     return float4(col, 1.0f);
 }

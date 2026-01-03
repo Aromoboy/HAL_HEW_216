@@ -219,7 +219,7 @@ namespace Core
                 DXGI_SWAP_CHAIN_DESC sd = {};
                 sd.BufferDesc.Width = width;
                 sd.BufferDesc.Height = height;
-                sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
                 sd.SampleDesc.Count = 1;
                 sd.BufferDesc.RefreshRate.Numerator = 1000;
                 sd.BufferDesc.RefreshRate.Denominator = 1;

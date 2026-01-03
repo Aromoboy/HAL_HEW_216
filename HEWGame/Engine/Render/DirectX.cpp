@@ -160,8 +160,8 @@ void UninitDirectX()
 
 void BeginDrawDirectX()
 {
-        float color[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
-        GetDXContext().BeginDraw(color);
+        const float srgbClearColor[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
+        GetDXContext().BeginDraw(srgbClearColor);
 }
 void EndDrawDirectX()
 {
