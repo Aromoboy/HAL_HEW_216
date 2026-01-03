@@ -1,6 +1,7 @@
 #ifndef __SHADERPROGRAM_H__
 #define __SHADERPROGRAM_H__
 
+#include <filesystem>
 #include <string>
 #include <d3d11.h>
 #include <wrl/client.h>
@@ -8,6 +9,10 @@
 class ShaderProgram
 {
 public:
+    bool LoadFromFiles(ID3D11Device* device,
+        const std::filesystem::path& vsPath,
+        const std::filesystem::path& psPath);
+
     bool LoadFromFiles(ID3D11Device* device,
         const std::string& vsPath,
         const std::string& psPath);
