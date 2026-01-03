@@ -535,6 +535,7 @@ void SceneGame::Draw()
         }
     }
 
+    DebugTrace(std::string(kLogPrefix) + "DrawOverlay after postprocess.\n");
     DrawOverlay();
 }
 
