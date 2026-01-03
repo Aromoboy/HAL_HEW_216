@@ -197,25 +197,22 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	DirectX::XMFLOAT4 param[] = {
 		{pos.x, pos.y, pos.z, 0.0f}
 	};
-	if (m_pPS[PS_LAMBERT])
+	const PSKind minimumTargets[] = {
+		PS_LAMBERT,
+		PS_SPECULAR,
+		PS_TOON,
+		PS_FOG
+	};
+	for (PSKind kind : minimumTargets)
 	{
-		m_pPS[PS_LAMBERT]->WriteBuffer(2, param);
+		if (m_pPS[kind])
+		{
+			m_pPS[kind]->WriteBuffer(2, param);
+		}
 	}
 	if (m_pPS[PS_LAMBERT_LEGACY])
 	{
 		m_pPS[PS_LAMBERT_LEGACY]->WriteBuffer(2, param);
-	}
-	if (m_pPS[PS_SPECULAR])
-	{
-		m_pPS[PS_SPECULAR]->WriteBuffer(2, param);
-	}
-	if (m_pPS[PS_TOON])
-	{
-		m_pPS[PS_TOON]->WriteBuffer(2, param);
-	}
-	if (m_pPS[PS_FOG])
-	{
-		m_pPS[PS_FOG]->WriteBuffer(2, param);
 	}
 }
 void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
