@@ -186,6 +186,10 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	DirectX::XMFLOAT4 param[] = {
 		{pos.x, pos.y, pos.z, 0.0f}
 	};
+	if (m_pPS[PS_LAMBERT])
+	{
+		m_pPS[PS_LAMBERT]->WriteBuffer(2, param);
+	}
 	if (m_pPS[PS_SPECULAR])
 	{
 		m_pPS[PS_SPECULAR]->WriteBuffer(2, param);
@@ -193,6 +197,10 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	if (m_pPS[PS_TOON])
 	{
 		m_pPS[PS_TOON]->WriteBuffer(2, param);
+	}
+	if (m_pPS[PS_FOG])
+	{
+		m_pPS[PS_FOG]->WriteBuffer(2, param);
 	}
 }
 void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
@@ -300,6 +308,7 @@ struct PS_IN {
 	float3 normal : NORMAL0;
 	float2 uv : TEXCOORD0;
 	float4 color : COLOR0;
+	float4 wPos : POSITION0;
 };
 cbuffer Material : register(b0)
 {
@@ -319,23 +328,39 @@ cbuffer Light : register(b1)
 	float4 rimColor;
 	float4 rimParams;
 };
+cbuffer Camera : register(b2)
+{
+	float4 cameraPos;
+};
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
+float WrapLambert(float3 normalDir, float3 lightDir, float wrap)
+{
+	return saturate((dot(normalDir, lightDir) + wrap) / (1.0f + wrap));
+}
 float4 main(PS_IN pin) : SV_TARGET
 {
-float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
-float3 albedo = texRgb * objDiffuse.rgb;
+	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
+	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
 
-    float3 N = normalize(pin.normal);
-    float3 L = normalize(-lightDir.xyz);
+	float3 N = normalize(pin.normal);
+	float3 L = normalize(-lightDir.xyz);
+	float3 F = normalize(-fillDir.xyz);
+	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 
-    float lambert = saturate(dot(N, L));
-    lambert = lambert * 0.7f + 0.3f;
+	const float wrap = 0.5f;
+	float key = WrapLambert(N, L, wrap);
+	float fill = WrapLambert(N, F, wrap);
+	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
+	float3 hemi = lerp(hemiGround.rgb, hemiSky.rgb, hemiFactor) * objAmbient.rgb;
+	float3 rim = rimColor.rgb
+		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, rimParams.x))
+		* rimParams.y;
 
-    float3 ambient = albedo * objAmbient.rgb;
-    float3 diffuse = albedo * lambert;
+	float3 lighting = hemi + lightDiffuse.rgb * key + fillDiffuse.rgb * fill;
+	float3 color = albedo * lighting + rim;
 
-    return float4((ambient + diffuse) * lightDiffuse.rgb, 1.0f);
+	return float4(color, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
