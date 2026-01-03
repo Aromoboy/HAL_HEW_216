@@ -219,109 +219,42 @@ namespace
         return std::nullopt;
     }
 
-    std::filesystem::path GetExecutableDirectory()
-    {
-#if defined(_WIN32)
-        std::wstring buffer(MAX_PATH, L'\0');
-        const DWORD size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-        if (size > 0)
-        {
-            buffer.resize(size);
-            return std::filesystem::path(buffer).parent_path();
-        }
-#endif
-        std::error_code ec;
-        const auto cwd = std::filesystem::current_path(ec);
-        if (!ec)
-        {
-            return cwd;
-        }
-        return {};
-    }
-
-    std::filesystem::path ResolveAssetRoot()
-    {
-        static std::optional<std::filesystem::path> cached;
-        if (cached)
-        {
-            return *cached;
-        }
-
-        std::filesystem::path probe = GetExecutableDirectory();
-        std::error_code ec;
-        for (int depth = 0; depth < 4; ++depth)
-        {
-            if (std::filesystem::exists(probe / "Assets", ec))
-            {
-                cached = probe;
-                return *cached;
-            }
-
-            if (!probe.has_parent_path())
-            {
-                break;
-            }
-            probe = probe.parent_path();
-        }
-
-        cached = GetExecutableDirectory();
-        return *cached;
-    }
-
-    std::string ResolveAssetPath(const std::string& path)
-    {
-        const std::filesystem::path input{ path };
-        if (input.is_absolute())
-        {
-            return NormalizeSeparators(input.string());
-        }
-
-        const std::filesystem::path root = ResolveAssetRoot();
-        return NormalizeSeparators((root / input).string());
-    }
-
-    std::optional<std::string> ResolveFallbackTextureWithoutOverride(const std::string& modelPath)
-    {
-        const std::string normalizedModelPath = NormalizePath(modelPath);
-
-        if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
-        {
-            const std::string resolved = ResolveAssetPath(*fromManifest);
-            if (std::filesystem::exists(resolved))
-            {
-                return resolved;
-            }
-        }
-
-        if (auto guessed = GuessTextureFromFilename(normalizedModelPath))
-        {
-            const std::string resolved = ResolveAssetPath(*guessed);
-            if (std::filesystem::exists(resolved))
-            {
-                return resolved;
-            }
-        }
-
-        return std::nullopt;
-    }
-
     std::optional<std::string> ResolveFallbackTexture(const std::string& modelPath)
     {
         const std::string normalizedModelPath = NormalizePath(modelPath);
 
         if (auto override = ResolveTextureOverrideForModel(normalizedModelPath))
         {
-            return ResolveAssetPath(*override);
+            if (std::filesystem::exists(*override))
+            {
+                return override;
+            }
         }
 
-        return ResolveFallbackTextureWithoutOverride(modelPath);
+        if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*fromManifest))
+            {
+                return fromManifest;
+            }
+        }
+
+        if (auto guessed = GuessTextureFromFilename(normalizedModelPath))
+        {
+            if (std::filesystem::exists(*guessed))
+            {
+                return guessed;
+            }
+        }
+
+        return std::nullopt;
     }
 
     std::optional<std::string> ResolveFallbackTextureByName(const std::string& sanitizedFile, const std::string& modelPath)
     {
         if (auto alias = ResolveTextureAlias(sanitizedFile))
         {
-            const std::string remapped = ResolveAssetPath("Assets/Texture/" + *alias);
+            const std::string remapped = "Assets/Texture/" + *alias;
             if (std::filesystem::exists(remapped))
             {
                 return remapped;
@@ -331,38 +264,13 @@ namespace
         const std::string normalizedFile = NormalizePath(sanitizedFile);
         if (auto guess = GuessTextureFromFilename(normalizedFile))
         {
-            const std::string resolved = ResolveAssetPath(*guess);
-            if (std::filesystem::exists(resolved))
+            if (std::filesystem::exists(*guess))
             {
-                return resolved;
+                return guess;
             }
         }
 
         return ResolveFallbackTexture(modelPath);
-    }
-
-    std::optional<std::string> ResolveFallbackTextureByNameWithoutOverride(const std::string& sanitizedFile, const std::string& modelPath)
-    {
-        if (auto alias = ResolveTextureAlias(sanitizedFile))
-        {
-            const std::string remapped = ResolveAssetPath("Assets/Texture/" + *alias);
-            if (std::filesystem::exists(remapped))
-            {
-                return remapped;
-            }
-        }
-
-        const std::string normalizedFile = NormalizePath(sanitizedFile);
-        if (auto guess = GuessTextureFromFilename(normalizedFile))
-        {
-            const std::string resolved = ResolveAssetPath(*guess);
-            if (std::filesystem::exists(resolved))
-            {
-                return resolved;
-            }
-        }
-
-        return ResolveFallbackTextureWithoutOverride(modelPath);
     }
 
 
@@ -939,20 +847,10 @@ AssimpModelLorder::MakeMaterial(
                     std::error_code existEc;
                     const bool textureExists = std::filesystem::exists(full, existEc);
                     bool skipTextureLoad = skipTextureLoading;
-                    bool usedOverrideFallback = false;
-                    const auto overrideTexture = ResolveTextureOverrideForModel(modelPathForFallback);
 
                     if (skipTextureLoad || hasNonAscii || !textureExists)
                     {
-                        if (overrideTexture)
-                        {
-                            full = ResolveAssetPath(*overrideTexture);
-                            usedOverrideFallback = true;
-                            skipTextureLoad = false;
-                            DebugLog::DebugMessage(
-                                std::string("[Material] override テクスチャ '") + *overrideTexture + "' を使用");
-                        }
-                        else if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
+                        if (auto fallback = ResolveFallbackTextureByName(sanitizedFile, modelPathForFallback))
                         {
                             DebugLog::DebugMessage(
                                 std::string("[Material] 無効なパス '") + texFile + "' へフォールバックテクスチャ '" + *fallback + "' を使用");
@@ -971,17 +869,6 @@ AssimpModelLorder::MakeMaterial(
                     if (!skipTextureLoad)
                     {
                         texture = loadTexture(full);
-                        if (!texture && usedOverrideFallback)
-                        {
-                            DebugLog::DebugMessage(
-                                std::string("[Material][WARNING] override テクスチャ '") + full + "' のロードに失敗");
-                            if (auto fallback = ResolveFallbackTextureByNameWithoutOverride(sanitizedFile, modelPathForFallback))
-                            {
-                                DebugLog::DebugMessage(
-                                    std::string("[Material] override 失敗のためフォールバックテクスチャ '") + *fallback + "' を使用");
-                                texture = loadTexture(*fallback);
-                            }
-                        }
                     }
 
                     if (!texture && texFile == "パイナップル.png")
@@ -993,28 +880,12 @@ AssimpModelLorder::MakeMaterial(
             }
             if (!texture)
             {
-                if (auto overrideTexture = ResolveTextureOverrideForModel(modelPathForFallback))
+                if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
                 {
                     DebugLog::DebugMessage(
-                        std::string("[Material] override テクスチャ '") + *overrideTexture + "' を適用 material " + std::to_string(i));
-                    const std::string resolvedOverride = ResolveAssetPath(*overrideTexture);
-                    std::wstring wfull(resolvedOverride.begin(), resolvedOverride.end());
-                    texture = textureCache.Load(NormalizeForKey(resolvedOverride), device, wfull);
-                    if (!texture)
-                    {
-                        DebugLog::DebugMessage(
-                            std::string("[Material][WARNING] override テクスチャ '") + resolvedOverride + "' のロードに失敗 material " + std::to_string(i));
-                    }
-                }
-                if (!texture)
-                {
-                    if (auto fallback = ResolveFallbackTextureWithoutOverride(modelPathForFallback))
-                    {
-                        DebugLog::DebugMessage(
-                            std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
-                        std::wstring wfull(fallback->begin(), fallback->end());
-                        texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
-                    }
+                        std::string("[Material] マニフェスト/名前フォールバックテクスチャ '") + *fallback + "' を適用 material " + std::to_string(i));
+                    std::wstring wfull(fallback->begin(), fallback->end());
+                    texture = textureCache.Load(NormalizeForKey(*fallback), device, wfull);
                 }
             }
         }
