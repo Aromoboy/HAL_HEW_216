@@ -13,10 +13,6 @@ public:
         const std::filesystem::path& vsPath,
         const std::filesystem::path& psPath);
 
-    bool LoadFromFiles(ID3D11Device* device,
-        const std::string& vsPath,
-        const std::string& psPath);
-
     void Bind(ID3D11DeviceContext* context);
 
 private:
