@@ -284,6 +284,7 @@ float4 main(PS_IN pin) : SV_TARGET
     float3 L = normalize(-lightDir.xyz);
 
     float lambert = saturate(dot(N, L));
+    lambert = lambert * 0.7f + 0.3f;
 
     float3 ambient = albedo * objAmbient.rgb;
     float3 diffuse = albedo * lambert;
