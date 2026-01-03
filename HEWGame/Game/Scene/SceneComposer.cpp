@@ -109,6 +109,7 @@ void SceneComposer::Compose(Composition& result)
 void SceneComposer::ComposeConfig(Composition& result)
 {
     result.playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
+    result.renderPostProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);

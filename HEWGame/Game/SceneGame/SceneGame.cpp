@@ -311,6 +311,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
     m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
     m_heightBonusSeconds = composition->heightBonusSeconds;
+    m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -483,7 +484,43 @@ void SceneGame::Draw()
             context->PSSetShaderResources(0, 1, &sceneColorSRV);
             context->PSSetShaderResources(1, 1, &sceneDepthSRV);
             SetSamplerState(SAMPLER_LINEAR);
-            BindPostProcessParams(2.2f, 0.85f, 1.1f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f, cameraNear, cameraFar);
+            const auto& postSettings = m_renderPostProcessSettings;
+            DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
+                postSettings.fogColor.x,
+                postSettings.fogColor.y,
+                postSettings.fogColor.z,
+                1.0f);
+            float fogStart = postSettings.fogStart;
+            float fogRange = postSettings.fogRange;
+            float vignetteStrength = postSettings.vignetteStrength;
+            float bloomIntensity = postSettings.bloomIntensity;
+
+            if (!postSettings.enableFog)
+            {
+                fogStart = cameraFar + 1.0f;
+                fogRange = 1.0f;
+            }
+            if (!postSettings.enableVignette)
+            {
+                vignetteStrength = 0.0f;
+            }
+            if (!postSettings.enableBloom)
+            {
+                bloomIntensity = 0.0f;
+            }
+
+            BindPostProcessParams(
+                postSettings.gamma,
+                postSettings.saturation,
+                postSettings.contrast,
+                fogColor,
+                fogStart,
+                fogRange,
+                cameraNear,
+                cameraFar,
+                vignetteStrength,
+                bloomIntensity,
+                postSettings.bloomThreshold);
 
             postprocess->Bind(context);
 
