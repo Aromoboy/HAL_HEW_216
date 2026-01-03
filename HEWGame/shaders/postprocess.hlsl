@@ -40,6 +40,9 @@ cbuffer PostProcessParams : register(b0)
     float fogRange;
     float cameraNear;
     float cameraFar;
+    float vignetteIntensity;
+    float microBloomIntensity;
+    float2 padding2;
 };
 
 float LinearizeDepth(float z)
@@ -58,5 +61,10 @@ float4 PSMain(VSOut input) : SV_TARGET
     float linearDepth = LinearizeDepth(depth);
     float fog = saturate((linearDepth - fogStart) / fogRange);
     col = lerp(col, fogColor.rgb, fog);
+    float2 d = input.uv - float2(0.5, 0.5);
+    float vignette = 1.0 - dot(d, d) * vignetteIntensity;
+    col *= saturate(vignette);
+    float luminance = dot(col, float3(0.2126, 0.7152, 0.0722));
+    col += max(luminance - 0.8, 0.0) * microBloomIntensity;
     return float4(col, 1.0f);
 }
