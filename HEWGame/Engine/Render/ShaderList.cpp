@@ -358,7 +358,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	}
 
 
-	return float4(color, 1.0f);
+	return float4(saturate(color), 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
