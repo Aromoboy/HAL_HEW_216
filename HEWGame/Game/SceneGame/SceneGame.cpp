@@ -312,6 +312,7 @@ bool SceneGame::Load(Core::Input& input)
     m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
+    m_renderLightingSettings = composition->renderLightingSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -1094,6 +1095,25 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         {
                 DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
                 return;
+        }
+
+        {
+                LightingSettings lighting{};
+                lighting.key.diffuse = m_renderLightingSettings.keyDiffuse;
+                lighting.key.dir = m_renderLightingSettings.keyDir;
+                lighting.fill.diffuse = m_renderLightingSettings.fillDiffuse;
+                lighting.fill.dir = m_renderLightingSettings.fillDir;
+                lighting.hemi.sky = m_renderLightingSettings.hemiSky;
+                lighting.hemi.ground = m_renderLightingSettings.hemiGround;
+                lighting.rim.color = m_renderLightingSettings.rimColor;
+                lighting.rim.params = m_renderLightingSettings.rimParams;
+                ShaderList::SetLighting(lighting);
+
+                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                {
+                        const float3& cameraPos = baseCamera->GetPosition();
+                        ShaderList::SetCameraPos(DirectX::XMFLOAT3(cameraPos.x, cameraPos.y, cameraPos.z));
+                }
         }
 
         if (m_renderer)
