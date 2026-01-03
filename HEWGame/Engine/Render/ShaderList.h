@@ -30,6 +30,12 @@ struct LightingSettings
 	HemisphereLight hemi;
 	RimLight rim;
 
+	void NormalizeDirections()
+	{
+		key.dir = NormalizeDirection(key.dir);
+		fill.dir = NormalizeDirection(fill.dir);
+	}
+
 	void BuildParams(DirectX::XMFLOAT4(&p)[8]) const
 	{
 		p[0] = key.diffuse;
@@ -40,6 +46,20 @@ struct LightingSettings
 		p[5] = hemi.ground;
 		p[6] = rim.color;
 		p[7] = rim.params;
+	}
+
+private:
+	static DirectX::XMFLOAT3 NormalizeDirection(const DirectX::XMFLOAT3& dir)
+	{
+		const float lengthSq = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
+		if (lengthSq <= 0.0f)
+		{
+			return dir;
+		}
+		DirectX::XMFLOAT3 normalized;
+		DirectX::XMStoreFloat3(&normalized, DirectX::XMVector3Normalize(
+			DirectX::XMVectorSet(dir.x, dir.y, dir.z, 0.0f)));
+		return normalized;
 	}
 };
 
