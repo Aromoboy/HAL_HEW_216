@@ -1101,12 +1101,15 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 ::LightingSettings lighting{};
                 lighting.key.diffuse = m_lightingSettings.keyDiffuse;
                 lighting.key.dir = m_lightingSettings.keyDir;
+                lighting.key.wrap = m_lightingSettings.keyWrap;
                 lighting.fill.diffuse = m_lightingSettings.fillDiffuse;
                 lighting.fill.dir = m_lightingSettings.fillDir;
+                lighting.fill.wrap = m_lightingSettings.fillWrap;
                 lighting.hemi.sky = m_lightingSettings.hemiSky;
                 lighting.hemi.ground = m_lightingSettings.hemiGround;
                 lighting.rim.color = m_lightingSettings.rimColor;
                 lighting.rim.params = m_lightingSettings.rimParams;
+                lighting.rim.enable = m_lightingSettings.rimEnable ? 1.0f : 0.0f;
                 ShaderList::SetLightingMode(m_lightingSettings.mode);
                 ShaderList::SetLighting(lighting);
 

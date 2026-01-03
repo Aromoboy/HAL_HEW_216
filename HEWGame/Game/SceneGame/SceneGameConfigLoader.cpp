@@ -856,12 +856,15 @@ namespace SceneGameConfig
         bool parsedMode = false;
         bool parsedKeyDiffuse = false;
         bool parsedKeyDir = false;
+        bool parsedKeyWrap = false;
         bool parsedFillDiffuse = false;
         bool parsedFillDir = false;
+        bool parsedFillWrap = false;
         bool parsedHemiSky = false;
         bool parsedHemiGround = false;
         bool parsedRimColor = false;
         bool parsedRimParams = false;
+        bool parsedRimEnable = false;
 
         for (const auto& entry : lines)
         {
@@ -965,6 +968,27 @@ namespace SceneGameConfig
                 continue;
             }
 
+            if (key == "lighting.key.wrap")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.keyWrap = *parsed;
+                    parsedKeyWrap = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << settings.keyWrap
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.keyWrap << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
             if (key == "lighting.fill.diffuse" || key == "light.fill.diffuse")
             {
                 if (auto parsed = ParseFloat4Token(value, settings.fillDiffuse.w))
@@ -1008,6 +1032,27 @@ namespace SceneGameConfig
                     oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
                         << "' on line=" << lineNumber << "; keeping default=("
                         << settings.fillDir.x << ',' << settings.fillDir.y << ',' << settings.fillDir.z << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.fill.wrap")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fillWrap = *parsed;
+                    parsedFillWrap = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << settings.fillWrap
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fillWrap << "\n";
                     DebugTrace(oss.str());
                 }
                 continue;
@@ -1112,6 +1157,32 @@ namespace SceneGameConfig
                 }
                 continue;
             }
+
+            if (key == "lighting.rim.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, settings.rimEnable))
+                {
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedRimEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << std::boolalpha << settings.rimEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.rimEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
         }
 
         if (!parsedMode)
@@ -1155,6 +1226,20 @@ namespace SceneGameConfig
                 << ") (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
+        if (!parsedKeyWrap)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.key.wrap not found; using default=" << settings.keyWrap
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFillWrap)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.fill.wrap not found; using default=" << settings.fillWrap
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
         if (!parsedHemiSky)
         {
             std::ostringstream oss;
@@ -1189,6 +1274,13 @@ namespace SceneGameConfig
                 << settings.rimParams.x << ',' << settings.rimParams.y << ','
                 << settings.rimParams.z << ',' << settings.rimParams.w
                 << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedRimEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.rim.enable not found; using default="
+                << std::boolalpha << settings.rimEnable << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 
