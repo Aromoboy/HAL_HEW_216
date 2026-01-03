@@ -364,16 +364,16 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 
 	const float wrap = 0.5f;
-	float key = WrapLambert(N, L, wrap);
-	float fill = WrapLambert(N, F, wrap);
+	float3 key = lightDiffuse.rgb * WrapLambert(N, L, wrap);
+	float3 fill = fillDiffuse.rgb * WrapLambert(N, F, wrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
 	float3 hemi = lerp(hemiGround.rgb, hemiSky.rgb, hemiFactor) * objAmbient.rgb;
 	float3 rim = rimColor.rgb
 		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, rimParams.x))
 		* rimParams.y;
 
-	float3 lighting = hemi + lightDiffuse.rgb * key + fillDiffuse.rgb * fill;
-	float3 color = albedo * lighting + rim;
+	float3 lighting = hemi + key + fill + rim;
+	float3 color = albedo * lighting;
 
 	return float4(color, 1.0f);
 })EOT";
