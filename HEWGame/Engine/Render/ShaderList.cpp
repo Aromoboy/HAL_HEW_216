@@ -278,20 +278,14 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-float3 albedo = (objFlags.x >= 1.0f)
-    ? tex.Sample(samp, pin.uv).rgb
-    : objDiffuse.rgb;
+	float3 albedo = (objFlags.x >= 1.0f)
+		? tex.Sample(samp, pin.uv).rgb
+		: objDiffuse.rgb;
 
-    float3 N = normalize(pin.normal);
-    float3 L = normalize(-lightDir.xyz);
+	float shade = 0.85f + 0.15f * saturate(pin.normal.y);
+	float3 finalColor = albedo * objAmbient.rgb * shade;
 
-    float lambert = saturate(dot(N, L));
-    lambert = lambert * 0.7f + 0.3f;
-
-    float3 ambient = albedo * objAmbient.rgb;
-    float3 diffuse = albedo * lambert;
-
-    return float4((ambient + diffuse) * lightDiffuse.rgb, 1.0f);
+	return float4(finalColor * lightDiffuse.rgb, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
