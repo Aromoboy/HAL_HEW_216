@@ -291,7 +291,8 @@ float4 main(PS_IN pin) : SV_TARGET
 
     float3 finalColor = ambient + diffuse;
     float shade = 0.85f; //絶対に触らないほうがいい　ドロスより
-    return float4(texColor.rgb * shade, 1.0f);
+    finalColor *= shade;
+    return float4(finalColor, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
