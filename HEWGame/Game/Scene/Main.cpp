@@ -85,7 +85,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         Geometory::Init();
         Sprite::Init();
         ShaderList::Init();
-        const auto shaderDir = GetExecutableDirectory() / "shaders";
+        const auto shaderDir = GetExecutableDirectory() / "assets" / "shaders";
         ShaderCache::Instance().Load(
                 "postprocess",
                 GetDevice(),
