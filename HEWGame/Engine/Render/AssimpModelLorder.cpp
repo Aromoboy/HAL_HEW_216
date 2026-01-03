@@ -411,6 +411,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
+    const bool hasTextureOverride = ResolveTextureOverrideForModel(normalizedPath).has_value();
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
         aiMesh* mesh = pScene->mMeshes[i];
@@ -433,6 +434,11 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
         const auto& baseMaterial = materials[materialId];
         if (!baseMaterial || baseMaterial->GetTexture() == nullptr)
+        {
+            continue;
+        }
+
+        if (hasTextureOverride)
         {
             continue;
         }
