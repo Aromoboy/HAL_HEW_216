@@ -273,6 +273,12 @@ cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
+	float4 fillDiffuse;
+	float4 fillDir;
+	float4 hemiSky;
+	float4 hemiGround;
+	float4 rimColor;
+	float4 rimParams;
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
@@ -317,6 +323,12 @@ cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
+	float4 fillDiffuse;
+	float4 fillDir;
+	float4 hemiSky;
+	float4 hemiGround;
+	float4 rimColor;
+	float4 rimParams;
 };
 cbuffer Camera : register(b2)
 {
@@ -368,6 +380,12 @@ cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
+	float4 fillDiffuse;
+	float4 fillDir;
+	float4 hemiSky;
+	float4 hemiGround;
+	float4 rimColor;
+	float4 rimParams;
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
@@ -415,6 +433,12 @@ cbuffer Light : register(b1)
 {
 	float4 lightDiffuse;
 	float4 lightDir;
+	float4 fillDiffuse;
+	float4 fillDir;
+	float4 hemiSky;
+	float4 hemiGround;
+	float4 rimColor;
+	float4 rimParams;
 };
 cbuffer Camera : register(b2)
 {
