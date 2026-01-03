@@ -61,6 +61,9 @@ struct PostProcessParams
         float fogRange;
         float cameraNear;
         float cameraFar;
+        float vignetteIntensity;
+        float microBloomIntensity;
+        float padding2[2];
 };
 
 void BindPostProcessParams(
@@ -71,6 +74,8 @@ void BindPostProcessParams(
         float fogStart = 50.0f,
         float fogRange = 50.0f,
         float cameraNear = 0.1f,
-        float cameraFar = 1000.0f);
+        float cameraFar = 1000.0f,
+        float vignetteIntensity = 1.2f,
+        float microBloomIntensity = 0.15f);
 
 #endif
