@@ -308,7 +308,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     ID3D11Device* device,
     TextureCache& textureCache)
 {
-    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
+    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenUVCoords;
     const std::string normalizedPath = NormalizePath(path);
     std::error_code absEc;
     std::string resolvedFullPath = std::filesystem::absolute(path, absEc).string();
