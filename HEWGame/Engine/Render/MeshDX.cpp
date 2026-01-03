@@ -51,6 +51,11 @@ unsigned int MeshDX::GetMaterialID()
         return m_materialID;
 }
 
+void MeshDX::SetMaterialID(unsigned int materialID)
+{
+        m_materialID = materialID;
+}
+
 const Core::VertexBuffer& MeshDX::GetVertexBuffer() const
 {
         return m_vertexBuffer;

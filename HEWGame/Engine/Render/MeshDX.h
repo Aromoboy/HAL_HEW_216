@@ -65,6 +65,7 @@ public:
 	
 	// メッシュに対応するモデルのマテリアルIDを取得
 	unsigned int GetMaterialID();
+	void SetMaterialID(unsigned int materialID);
 
 	// 各バッファの取得
         const Core::VertexBuffer& GetVertexBuffer() const;
@@ -100,4 +101,3 @@ private:
         HRESULT CreateVertexBuffer(const void* pVtx, UINT size, UINT count);
         HRESULT CreateIndexBuffer(const void* pIdx, UINT size, UINT count);
 };
-

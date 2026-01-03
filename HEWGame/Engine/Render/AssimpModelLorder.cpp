@@ -411,6 +411,40 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
+    for (unsigned int i = 0; i < meshes.size(); ++i)
+    {
+        aiMesh* mesh = pScene->mMeshes[i];
+        if (!mesh || mesh->HasTextureCoords(0))
+        {
+            continue;
+        }
+
+        const auto meshPtr = meshes[i];
+        if (!meshPtr)
+        {
+            continue;
+        }
+
+        const unsigned int materialId = meshPtr->GetMaterialID();
+        if (materialId >= materials.size())
+        {
+            continue;
+        }
+
+        const auto& baseMaterial = materials[materialId];
+        if (!baseMaterial || baseMaterial->GetTexture() == nullptr)
+        {
+            continue;
+        }
+
+        auto untexturedMaterial = std::make_shared<MaterialDX>(
+            baseMaterial->GetDiffuse(),
+            baseMaterial->GetAmbient(),
+            baseMaterial->GetSpecular(),
+            nullptr);
+        materials.push_back(std::move(untexturedMaterial));
+        meshPtr->SetMaterialID(static_cast<unsigned int>(materials.size() - 1));
+    }
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
@@ -434,6 +468,13 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         aiMesh* mesh = pScene->mMeshes[i];
         std::vector<MeshDX::Vertex> vertices;
         std::vector<unsigned long> indices;
+        const bool hasTextureCoords = mesh->HasTextureCoords(0);
+
+        if (!hasTextureCoords)
+        {
+            DebugLog::DebugMessage(
+                std::string("[AssimpModelLoader][WARNING] UVなしメッシュ: ") + mesh->mName.C_Str());
+        }
 
         float3 meshMin{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
         float3 meshMax{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
@@ -502,7 +543,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             aiVector3D normal = mesh->HasNormals()
                 ? mesh->mNormals[j]
                 : aiVector3D(0, 0, 0);
-            aiVector3D uv = mesh->HasTextureCoords(0)
+            aiVector3D uv = hasTextureCoords
                 ? mesh->mTextureCoords[0][j]
                 : aiVector3D(0, 0, 0);
             aiColor4D col = mesh->HasVertexColors(0)
