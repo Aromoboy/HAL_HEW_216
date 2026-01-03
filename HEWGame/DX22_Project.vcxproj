@@ -101,9 +101,8 @@
       <AdditionalDependencies>box2dd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)assets\shaders" mkdir "$(OutDir)assets\shaders"
-xcopy /y "$(ProjectDir)Assets\shaders\*.cso" "$(OutDir)assets\shaders\" &gt;NUL
-if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
+xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -128,9 +127,8 @@ if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.d
       <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)assets\shaders" mkdir "$(OutDir)assets\shaders"
-xcopy /y "$(ProjectDir)Assets\shaders\*.cso" "$(OutDir)assets\shaders\" &gt;NUL
-if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
+xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -152,9 +150,8 @@ if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.d
       <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)assets\shaders" mkdir "$(OutDir)assets\shaders"
-xcopy /y "$(ProjectDir)Assets\shaders\*.cso" "$(OutDir)assets\shaders\" &gt;NUL
-if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
+xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -180,9 +177,8 @@ if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.d
       <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>if not exist "$(OutDir)assets\shaders" mkdir "$(OutDir)assets\shaders"
-xcopy /y "$(ProjectDir)Assets\shaders\*.cso" "$(OutDir)assets\shaders\" &gt;NUL
-if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.dll" "$(OutDir)" &gt;NUL</Command>
+      <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
+xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -458,13 +454,13 @@ if exist "$(ProjectDir)ThirdParty\lib" xcopy /y "$(ProjectDir)ThirdParty\lib\*.d
       <EntryPointName>VSMain</EntryPointName>
       <ShaderType>Vertex</ShaderType>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(ProjectDir)Assets\shaders\postprocess_vs.cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)Assets\\shaders\\postprocess_vs.cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="shaders\postprocess.hlsl">
       <EntryPointName>PSMain</EntryPointName>
       <ShaderType>Pixel</ShaderType>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(ProjectDir)Assets\shaders\postprocess_ps.cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)Assets\\shaders\\postprocess_ps.cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
 </Project>
