@@ -35,7 +35,16 @@ void ShaderList::Init()
 		nullptr
 	};
 	SetMaterial(material);
-	SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f));
+	LightingSettings lighting = {};
+	lighting.key.diffuse = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	lighting.key.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	lighting.fill.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.fill.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	lighting.hemi.sky = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.hemi.ground = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.rim.color = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.rim.params = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	SetLighting(lighting);
 	SetCameraPos(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f));
 	SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
 }
@@ -128,12 +137,42 @@ void ShaderList::SetMaterial(const MaterialDX& material)
 
 void ShaderList::SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir)
 {
-	DirectX::XMFLOAT4 param[2] = {
-		color
-	};
-	DirectX::XMStoreFloat4(&param[1], DirectX::XMVector3Normalize(
-		DirectX::XMVectorSet(dir.x, dir.y, dir.z, 0.0f)
-	));
+	LightingSettings settings = {};
+	settings.key.diffuse = color;
+	settings.key.dir = dir;
+	settings.fill.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.fill.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	settings.hemi.sky = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.hemi.ground = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.rim.color = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.rim.params = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	SetLighting(settings);
+}
+
+namespace
+{
+	DirectX::XMFLOAT3 NormalizeDirection(const DirectX::XMFLOAT3& dir)
+	{
+		const float lengthSq = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
+		if (lengthSq <= 0.0f)
+		{
+			return dir;
+		}
+		DirectX::XMFLOAT3 normalized;
+		DirectX::XMStoreFloat3(&normalized, DirectX::XMVector3Normalize(
+			DirectX::XMVectorSet(dir.x, dir.y, dir.z, 0.0f)));
+		return normalized;
+	}
+}
+
+void ShaderList::SetLighting(const LightingSettings& settings)
+{
+	LightingSettings normalized = settings;
+	normalized.key.dir = NormalizeDirection(settings.key.dir);
+	normalized.fill.dir = NormalizeDirection(settings.fill.dir);
+
+	DirectX::XMFLOAT4 param[8] = {};
+	normalized.BuildParams(param);
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
