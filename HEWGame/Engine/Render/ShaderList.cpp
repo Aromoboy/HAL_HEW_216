@@ -338,21 +338,22 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 F = normalize(-lightParams[3].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 
-	const float wrap = 0.5f;
-	float3 key = lightDiffuse.rgb * WrapLambert(N, L, wrap);
-	float3 fill = fillDiffuse.rgb * WrapLambert(N, F, wrap);
+	float keyWrap = lightParams[1].w;
+	float fillWrap = lightParams[3].w;
+	float3 key = lightParams[0].rgb * WrapLambert(N, L, keyWrap);
+	float3 fill = lightParams[2].rgb * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
-	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * objAmbient.rgb;
+	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * lightParams[4].a;
+	float rimEnable = lightParams[7].w;
+	float rimIntensity = lightParams[6].a;
 	float3 rim = lightParams[6].rgb
 		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x))
-		* lightParams[7].y;
+		* rimIntensity
+		* rimEnable;
 
-float3 lighting = hemi
-                + lightParams[0].rgb * key
-                + lightParams[2].rgb * fill;
+	float3 lighting = hemi + key + fill;
 
-float3 color = albedo * lighting
-             + lightParams[6].rgb * rim;
+	float3 color = albedo * lighting + rim;
 
 
 	return float4(color, 1.0f);
