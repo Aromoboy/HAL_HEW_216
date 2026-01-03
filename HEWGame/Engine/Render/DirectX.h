@@ -49,4 +49,14 @@ void SetDepthTest(bool enable);
 void SetBlendMode(BlendMode blend);
 void SetSamplerState(SamplerState state);
 
+struct PostProcessParams
+{
+        float gamma;
+        float saturation;
+        float contrast;
+        float padding;
+};
+
+void BindPostProcessParams(float gamma = 2.2f, float saturation = 0.85f, float contrast = 1.1f);
+
 #endif

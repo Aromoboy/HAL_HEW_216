@@ -179,6 +179,7 @@ void Draw()
                 ID3D11ShaderResourceView* sceneSRV = dxContext.GetSceneColorSRV();
                 context->PSSetShaderResources(0, 1, &sceneSRV);
                 SetSamplerState(SAMPLER_LINEAR);
+                BindPostProcessParams();
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
