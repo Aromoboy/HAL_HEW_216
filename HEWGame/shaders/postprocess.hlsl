@@ -42,7 +42,8 @@ cbuffer PostProcessParams : register(b0)
     float cameraFar;
     float vignetteIntensity;
     float microBloomIntensity;
-    float2 padding2;
+    float bloomThreshold;
+    float padding2;
 };
 
 float LinearizeDepth(float z)
@@ -65,7 +66,7 @@ float4 PSMain(VSOut input) : SV_TARGET
     float vignette = 1.0 - dot(d, d) * vignetteIntensity;
     col *= saturate(vignette);
     float luminance = dot(col, float3(0.2126, 0.7152, 0.0722));
-    col += max(luminance - 0.8, 0.0) * microBloomIntensity;
+    col += max(luminance - bloomThreshold, 0.0) * microBloomIntensity;
     col = saturate(col);
     return float4(col, 1.0f);
 }

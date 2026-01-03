@@ -30,6 +30,7 @@ namespace SceneGameConfig
     PlayerSpawnTransform LoadPlayerTransformConfig();
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
+    RenderPostProcessSettings LoadRenderPostProcessSettings();
 }
 
 #endif

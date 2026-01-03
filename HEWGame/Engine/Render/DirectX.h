@@ -63,7 +63,8 @@ struct PostProcessParams
         float cameraFar;
         float vignetteIntensity;
         float microBloomIntensity;
-        float padding2[2];
+        float bloomThreshold;
+        float padding2;
 };
 
 void BindPostProcessParams(
@@ -76,6 +77,7 @@ void BindPostProcessParams(
         float cameraNear = 0.1f,
         float cameraFar = 1000.0f,
         float vignetteIntensity = 1.2f,
-        float microBloomIntensity = 0.15f);
+        float microBloomIntensity = 0.15f,
+        float bloomThreshold = 0.8f);
 
 #endif
