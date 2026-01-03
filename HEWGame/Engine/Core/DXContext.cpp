@@ -166,6 +166,16 @@ namespace Core
                 return m_defaultDSV.get();
         }
 
+        RenderTarget* DXContext::GetSceneColorTarget() const
+        {
+                return m_sceneTargets.color.get();
+        }
+
+        DepthStencil* DXContext::GetSceneDepthTarget() const
+        {
+                return m_sceneTargets.depth.get();
+        }
+
         UINT DXContext::GetWidth() const
         {
                 if (m_defaultRTV)
