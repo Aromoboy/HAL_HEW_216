@@ -708,8 +708,30 @@ AssimpModelLorder::MakeMaterial(
         std::shared_ptr<Texture2D> texture = nullptr;
         if (textureLoadingEnabled)
         {
+            const auto loadTexture = [&](const std::string& fullPath)
+            {
+                const std::string normalizedKey = NormalizeForKey(fullPath);
+                std::wstring wfull(fullPath.begin(), fullPath.end());
+                return textureCache.Load(normalizedKey, device, wfull);
+            };
+
+            if (auto overridePath = ResolveTextureOverrideForModel(modelPathForFallback))
+            {
+                if (std::filesystem::exists(*overridePath))
+                {
+                    DebugLog::DebugMessage(
+                        std::string("[Material] モデル別オーバーライドテクスチャを優先適用: '") + *overridePath + "'");
+                    texture = loadTexture(*overridePath);
+                }
+                else
+                {
+                    DebugLog::DebugMessage(
+                        std::string("[Material][WARNING] モデル別オーバーライドテクスチャが存在しない: '") + *overridePath + "'");
+                }
+            }
+
             aiString texPath;
-            if (pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+            if (!texture && pScene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
             {
                 std::string texFile = NormalizeSeparators(texPath.C_Str());
                 const std::string originalTexPath = texFile;
@@ -801,13 +823,6 @@ AssimpModelLorder::MakeMaterial(
                 }
                 else
                 {
-                    const auto loadTexture = [&](const std::string& fullPath)
-                    {
-                        const std::string normalizedKey = NormalizeForKey(fullPath);
-                        std::wstring wfull(fullPath.begin(), fullPath.end());
-                        return textureCache.Load(normalizedKey, device, wfull);
-                    };
-
                     const std::filesystem::path combinedPath = std::filesystem::path(textureDirectory) / texFile;
                     std::string full = NormalizeSeparators(combinedPath.string());
 
