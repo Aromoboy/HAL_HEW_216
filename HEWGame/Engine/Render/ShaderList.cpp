@@ -288,8 +288,9 @@ float4 main(PS_IN pin) : SV_TARGET
 
     float lambert = saturate(dot(N, L));
 
-    float3 ambient = objAmbient.rgb * texColor.rgb;
-    float3 diffuse = lambert * texColor.rgb;
+    float3 baseColor = texColor.rgb * objDiffuse.rgb;
+    float3 ambient = baseColor * objAmbient.rgb * lightDiffuse.rgb;
+    float3 diffuse = baseColor * lambert * lightDiffuse.rgb;
 
     float3 finalColor = ambient + diffuse;
     float shade = 0.85f; //絶対に触らないほうがいい　ドロスより
