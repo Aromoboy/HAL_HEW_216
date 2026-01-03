@@ -334,14 +334,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
-	float4 fillDiffuse;
-	float4 fillDir;
-	float4 hemiSky;
-	float4 hemiGround;
-	float4 rimColor;
-	float4 rimParams;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -356,24 +351,29 @@ float WrapLambert(float3 normalDir, float3 lightDir, float wrap)
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
-	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
+	float3 albedo = texRgb * objDiffuse.rgb;
 
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir.xyz);
-	float3 F = normalize(-fillDir.xyz);
+	float3 L = normalize(-lightParams[1].xyz);
+	float3 F = normalize(-lightParams[3].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 
 	const float wrap = 0.5f;
 	float3 key = lightDiffuse.rgb * WrapLambert(N, L, wrap);
 	float3 fill = fillDiffuse.rgb * WrapLambert(N, F, wrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
-	float3 hemi = lerp(hemiGround.rgb, hemiSky.rgb, hemiFactor) * objAmbient.rgb;
-	float3 rim = rimColor.rgb
-		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, rimParams.x))
-		* rimParams.y;
+	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * objAmbient.rgb;
+	float3 rim = lightParams[6].rgb
+		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x))
+		* lightParams[7].y;
 
-	float3 lighting = hemi + key + fill + rim;
-	float3 color = albedo * lighting;
+float3 lighting = hemi
+                + lightParams[0].rgb * key
+                + lightParams[2].rgb * fill;
+
+float3 color = albedo * lighting
+             + lightParams[6].rgb * rim;
+
 
 	return float4(color, 1.0f);
 })EOT";
@@ -399,14 +399,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
-	float4 fillDiffuse;
-	float4 fillDir;
-	float4 hemiSky;
-	float4 hemiGround;
-	float4 rimColor;
-	float4 rimParams;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -419,9 +414,9 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
 	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir.xyz);
+	float3 L = normalize(-lightParams[1].xyz);
 	float lambert = saturate(dot(N, L));
-	float3 lighting = objAmbient.rgb + lightDiffuse.rgb * lambert;
+	float3 lighting = objAmbient.rgb + lightParams[0].rgb * lambert;
 	return float4(albedo * lighting, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT_LEGACY] = new PixelShader();
@@ -446,14 +441,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
-	float4 fillDiffuse;
-	float4 fillDir;
-	float4 hemiSky;
-	float4 hemiGround;
-	float4 rimColor;
-	float4 rimParams;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -467,14 +457,14 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir.xyz);
+	float3 L = normalize(-lightParams[1].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 	float3 R = reflect(-V, N);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
 	float dotRL = saturate(dot(R, L));
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
+	float3 specular = objSpecular.rgb * lightParams[0].rgb;
 	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
@@ -503,14 +493,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
-	float4 fillDiffuse;
-	float4 fillDir;
-	float4 hemiSky;
-	float4 hemiGround;
-	float4 rimColor;
-	float4 rimParams;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
@@ -520,11 +505,11 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
+	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = dot(N, L); // マイナス込で計算
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
+	float3 specular = objSpecular.rgb * lightParams[0].rgb;
 	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // 陰の境目を柔らかく
 	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
@@ -556,14 +541,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
-	float4 fillDiffuse;
-	float4 fillDir;
-	float4 hemiSky;
-	float4 hemiGround;
-	float4 rimColor;
-	float4 rimParams;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -584,10 +564,10 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
+	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
 	color.rgb *= saturate(diffuse * dotNL + ambient);
 	float vLen = length(pin.wPos.xyz - cameraPos.xyz);
 	color.rgb = lerp(color.rgb, fogColor.rgb, saturate((vLen - fogStart) / fogRange));
