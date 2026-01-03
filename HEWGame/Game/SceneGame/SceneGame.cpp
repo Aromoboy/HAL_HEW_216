@@ -979,6 +979,11 @@ void SceneGame::DrawPhysicsDebugOverlay()
 
 void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+        DrawWorld(activeCamera);
+}
+
+void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
         if (m_backgroundRenderer)
         {
                 m_backgroundRenderer->Draw();

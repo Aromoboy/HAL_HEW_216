@@ -89,7 +89,7 @@ void Scene::RootDraw()
 {
         auto activeCamera = m_cameraManager.GetActiveCamera();
 
-        Draw(activeCamera);
+        DrawWorld(activeCamera);
         DrawOverlay();
 }
 
@@ -99,6 +99,11 @@ void Scene::RootDraw()
 
         void Scene::DrawOverlay()
         {
+        }
+
+        void Scene::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+        {
+                Draw(activeCamera);
         }
 
         void Scene::RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority)
