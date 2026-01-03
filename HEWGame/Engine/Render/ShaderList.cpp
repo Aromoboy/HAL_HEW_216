@@ -30,12 +30,12 @@ void ShaderList::Init()
 
 	Model::Material material = {
 		DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-		DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f),
+		DirectX::XMFLOAT4(0.6f, 0.6f, 0.6f, 1.0f),
 		DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
 		nullptr
 	};
 	SetMaterial(material);
-	SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
+	SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f));
 	SetCameraPos(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f));
 	SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
 }
@@ -278,7 +278,9 @@ Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-    float3 albedo = (objAmbient.a >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : objDiffuse.rgb;
+float3 albedo = (objFlags.x >= 1.0f)
+    ? tex.Sample(samp, pin.uv).rgb
+    : objDiffuse.rgb;
 
     float3 N = normalize(pin.normal);
     float3 L = normalize(-lightDir.xyz);
