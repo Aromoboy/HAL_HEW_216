@@ -165,6 +165,26 @@ namespace Core
                 return m_defaultDSV.get();
         }
 
+        ID3D11RenderTargetView* DXContext::GetSceneColorRTV() const
+        {
+                return m_sceneTargets.color ? m_sceneTargets.color->GetView() : nullptr;
+        }
+
+        ID3D11ShaderResourceView* DXContext::GetSceneColorSRV() const
+        {
+                return m_sceneTargets.color ? m_sceneTargets.color->GetResource() : nullptr;
+        }
+
+        ID3D11DepthStencilView* DXContext::GetSceneDepthDSV() const
+        {
+                return m_sceneTargets.depth ? m_sceneTargets.depth->GetView() : nullptr;
+        }
+
+        ID3D11ShaderResourceView* DXContext::GetSceneDepthSRV() const
+        {
+                return m_sceneTargets.depth ? m_sceneTargets.depth->GetResource() : nullptr;
+        }
+
         HRESULT DXContext::CreateDeviceAndSwapChain(HWND hWnd, UINT width, UINT height, bool fullscreen)
         {
                 DXGI_SWAP_CHAIN_DESC sd = {};
@@ -252,12 +272,52 @@ namespace Core
                         return hr;
                 }
 
+                hr = CreateSceneTargets(m_defaultRTV->GetWidth(), m_defaultRTV->GetHeight());
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene render targets.\n");
+                        return hr;
+                }
+
+                return S_OK;
+        }
+
+        HRESULT DXContext::CreateSceneTargets(UINT width, UINT height)
+        {
+                ReleaseSceneTargets();
+
+                m_sceneTargets.color = std::make_unique<RenderTarget>();
+                HRESULT hr = m_sceneTargets.color->Create(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene color render target.\n");
+                        m_sceneTargets.color.reset();
+                        return hr;
+                }
+
+                m_sceneTargets.depth = std::make_unique<DepthStencil>();
+                hr = m_sceneTargets.depth->Create(width, height, false);
+                if (FAILED(hr))
+                {
+                        DebugLog::DebugMessage("[DXContext] Failed to create scene depth stencil.\n");
+                        m_sceneTargets.depth.reset();
+                        m_sceneTargets.color.reset();
+                        return hr;
+                }
+
                 return S_OK;
         }
 
         void DXContext::ReleaseTargets()
         {
+                ReleaseSceneTargets();
                 m_defaultDSV.reset();
                 m_defaultRTV.reset();
+        }
+
+        void DXContext::ReleaseSceneTargets()
+        {
+                m_sceneTargets.depth.reset();
+                m_sceneTargets.color.reset();
         }
 }
