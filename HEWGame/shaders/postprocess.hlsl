@@ -26,6 +26,7 @@ VSOut VSMain(uint vertexId : SV_VertexID)
 }
 
 Texture2D sceneTex : register(t0);
+Texture2D depthTex : register(t1);
 SamplerState samp : register(s0);
 
 cbuffer PostProcessParams : register(b0)
@@ -34,14 +35,28 @@ cbuffer PostProcessParams : register(b0)
     float saturation;
     float contrast;
     float padding;
+    float4 fogColor;
+    float fogStart;
+    float fogRange;
+    float cameraNear;
+    float cameraFar;
 };
+
+float LinearizeDepth(float z)
+{
+    return (cameraNear * cameraFar) / (cameraFar - z * (cameraFar - cameraNear));
+}
 
 float4 PSMain(VSOut input) : SV_TARGET
 {
     float3 col = sceneTex.Sample(samp, input.uv).rgb;
+    float depth = depthTex.Sample(samp, input.uv).r;
     float gray = dot(col, float3(0.299, 0.587, 0.114));
     col = lerp(float3(gray, gray, gray), col, saturation);
     col = (col - 0.5) * contrast + 0.5;
     col = saturate(col);
+    float linearDepth = LinearizeDepth(depth);
+    float fog = saturate((linearDepth - fogStart) / fogRange);
+    col = lerp(col, fogColor.rgb, fog);
     return float4(col, 1.0f);
 }

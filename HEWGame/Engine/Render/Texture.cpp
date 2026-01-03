@@ -248,6 +248,10 @@ HRESULT DepthStencil::CreateResource(D3D11_TEXTURE2D_DESC& desc, const void* pDa
 {
 	// スンシル使用判
 	bool useStencil = (desc.Format == DXGI_FORMAT_R24G8_TYPELESS);
+	if (!useStencil && desc.Format != DXGI_FORMAT_R32_TYPELESS)
+	{
+		desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	}
 
 	// リソース生
 	desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;

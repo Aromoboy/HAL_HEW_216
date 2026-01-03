@@ -8,11 +8,13 @@
 #include "Geometory.h"
 #include "Sprite.h"
 #include "SceneManager.h"
+#include "Scene.h"
 #include "TitleScene.h"
 #include "Defines.h"
 #include "ShaderList.h"
 #include "AppGame.h"
 #include "SceneGame.h"
+#include "PerspectiveCamera.h"
 #include "DebugConsole.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
@@ -170,6 +172,21 @@ void Draw()
 
         if (context && !sceneHandlesPostprocess)
         {
+                float cameraNear = 0.1f;
+                float cameraFar = 1000.0f;
+                if (g_sceneManager)
+                {
+                        if (auto* activeScene = dynamic_cast<SceneSpace::Scene*>(g_sceneManager->GetActiveScene()))
+                        {
+                                auto activeCamera = activeScene->GetActiveCamera();
+                                if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
+                                {
+                                        cameraNear = perspectiveCamera->GetNearPlane();
+                                        cameraFar = perspectiveCamera->GetFarPlane();
+                                }
+                        }
+                }
+
                 RenderTarget* defaultRTV = GetDefaultRTV();
                 SetRenderTargets(1, &defaultRTV, nullptr);
 
@@ -177,9 +194,11 @@ void Draw()
                 postprocess->Bind(context);
 
                 ID3D11ShaderResourceView* sceneSRV = dxContext.GetSceneColorSRV();
+                ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
                 context->PSSetShaderResources(0, 1, &sceneSRV);
+                context->PSSetShaderResources(1, 1, &sceneDepthSRV);
                 SetSamplerState(SAMPLER_LINEAR);
-                BindPostProcessParams();
+                BindPostProcessParams(2.2f, 0.85f, 1.1f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f, cameraNear, cameraFar);
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
@@ -187,8 +206,8 @@ void Draw()
 
                 context->Draw(3, 0);
 
-                ID3D11ShaderResourceView* nullSRV = nullptr;
-                context->PSSetShaderResources(0, 1, &nullSRV);
+                ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+                context->PSSetShaderResources(0, 2, nullSRVs);
         }
 
         EndDrawDirectX();

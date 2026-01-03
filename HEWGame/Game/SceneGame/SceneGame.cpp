@@ -473,10 +473,17 @@ void SceneGame::Draw()
         {
             ID3D11ShaderResourceView* sceneColorSRV = dxContext.GetSceneColorSRV();
             ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
+            float cameraNear = 0.1f;
+            float cameraFar = 1000.0f;
+            if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
+            {
+                cameraNear = perspectiveCamera->GetNearPlane();
+                cameraFar = perspectiveCamera->GetFarPlane();
+            }
             context->PSSetShaderResources(0, 1, &sceneColorSRV);
             context->PSSetShaderResources(1, 1, &sceneDepthSRV);
             SetSamplerState(SAMPLER_LINEAR);
-            BindPostProcessParams();
+            BindPostProcessParams(2.2f, 0.85f, 1.1f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f, cameraNear, cameraFar);
 
             postprocess->Bind(context);
 

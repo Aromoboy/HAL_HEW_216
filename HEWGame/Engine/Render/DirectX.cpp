@@ -221,7 +221,7 @@ void SetSamplerState(SamplerState state)
 	GetContext()->PSSetSamplers(0, 1, &g_pSamplerState[state]);
 }
 
-void BindPostProcessParams(float gamma, float saturation, float contrast)
+void BindPostProcessParams(float gamma, float saturation, float contrast, const DirectX::XMFLOAT4& fogColor, float fogStart, float fogRange, float cameraNear, float cameraFar)
 {
 	ID3D11Device* device = GetDevice();
 	ID3D11DeviceContext* context = GetContext();
@@ -247,7 +247,12 @@ void BindPostProcessParams(float gamma, float saturation, float contrast)
 		gamma,
 		saturation,
 		contrast,
-		0.0f
+		0.0f,
+		fogColor,
+		fogStart,
+		fogRange,
+		cameraNear,
+		cameraFar
 	};
 	context->UpdateSubresource(g_pPostProcessParamBuffer, 0, nullptr, &params, 0, 0);
 	context->PSSetConstantBuffers(0, 1, &g_pPostProcessParamBuffer);
