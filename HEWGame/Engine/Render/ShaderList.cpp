@@ -88,13 +88,14 @@ void ShaderList::SetBones(DirectX::XMFLOAT4X4* bones200)
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
-	DirectX::XMFLOAT4 param[3] = {
+	DirectX::XMFLOAT4 param[4] = {
 		material.diffuse,
 		material.ambient,
-		material.specular
+		material.specular,
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
 	};
-	// objAmbient.a は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
-	param[1].w = material.pTexture ? 1.0f : 0.0f;
+	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
+	param[3].x = material.pTexture ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
@@ -107,13 +108,14 @@ void ShaderList::SetMaterial(const Model::Material& material)
 
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	DirectX::XMFLOAT4 param[3] = {
+	DirectX::XMFLOAT4 param[4] = {
 		material.GetDiffuse(),
 		material.GetAmbient(),
-		material.GetSpecular()
+		material.GetSpecular(),
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
 	};
-	// objAmbient.a は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
-	param[1].w = material.GetTexture() ? 1.0f : 0.0f;
+	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
+	param[3].x = material.GetTexture() ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
@@ -263,8 +265,9 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objAmbient;
 	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
 };
 cbuffer Light : register(b1)
 {
@@ -276,7 +279,7 @@ SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
     float4 texColor = objDiffuse;
-    if (objAmbient.a >= 1.0f)
+    if (objFlags.x >= 1.0f)
     {
         texColor = tex.Sample(samp, pin.uv);
     }
@@ -312,8 +315,9 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objAmbient;
 	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
 };
 cbuffer Light : register(b1)
 {
@@ -329,7 +333,7 @@ SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	if(objAmbient.a >= 1.0f)
+	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir.xyz);
@@ -362,8 +366,9 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objAmbient;
 	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
 };
 cbuffer Light : register(b1)
 {
@@ -375,7 +380,7 @@ SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	if(objAmbient.a >= 1.0f)
+	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
@@ -408,8 +413,9 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objAmbient;
 	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
 };
 cbuffer Light : register(b1)
 {
@@ -432,7 +438,7 @@ SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	if(objAmbient.a >= 1.0f)
+	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir);
