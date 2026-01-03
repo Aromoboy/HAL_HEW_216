@@ -60,6 +60,7 @@ public:
 		PS_SPECULAR, // マテリアル/ライト/カメラ位置設定
 		PS_TOON, // マテリアル/ライト設定
 		PS_FOG, // マテリアル/ライト/フォグ設定
+		PS_LAMBERT_LEGACY, // 旧ランバート
 		PS_KIND_MAX
 	};
 
@@ -83,6 +84,7 @@ public:
 
 	static void SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir);
 	static void SetLighting(const LightingSettings& settings);
+	static void SetLightingMode(int mode);
 	static void SetCameraPos(const DirectX::XMFLOAT3 pos);
 	static void SetFog(DirectX::XMFLOAT4 color, float start, float range);
 	
@@ -90,6 +92,7 @@ private:
 	static void MakeWorldVS();
 	static void MakeAnimeVS();
 	static void MakeLambertPS();
+	static void MakeLambertLegacyPS();
 	static void MakeSpecularPS();
 	static void MakeToonPS();
 	static void MakeFogPS();
@@ -97,6 +100,7 @@ private:
 private:
 	static VertexShader* m_pVS[VS_KIND_MAX];
 	static PixelShader* m_pPS[PS_KIND_MAX];
+	static int m_lightingMode;
 	
 };
 

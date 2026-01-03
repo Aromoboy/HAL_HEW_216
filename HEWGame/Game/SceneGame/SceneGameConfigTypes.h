@@ -44,8 +44,9 @@ namespace SceneGameConfig
         bool enableFxaa = false;
     };
 
-    struct RenderLightingSettings
+    struct LightingSettings
     {
+        int mode = 1;
         DirectX::XMFLOAT4 keyDiffuse{ 1.0f, 1.0f, 1.0f, 1.0f };
         DirectX::XMFLOAT3 keyDir{ 0.0f, 0.0f, 1.0f };
         DirectX::XMFLOAT4 fillDiffuse{ 0.0f, 0.0f, 0.0f, 0.0f };

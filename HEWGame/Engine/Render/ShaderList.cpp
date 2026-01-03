@@ -3,6 +3,7 @@
 
 VertexShader* ShaderList::m_pVS[VS_KIND_MAX];
 PixelShader* ShaderList::m_pPS[PS_KIND_MAX];
+int ShaderList::m_lightingMode = 1;
 
 
 ShaderList::ShaderList()
@@ -19,6 +20,7 @@ void ShaderList::Init()
 	MakeWorldVS();
 	MakeAnimeVS();
 	MakeLambertPS();
+	MakeLambertLegacyPS();
 
 	DirectX::XMFLOAT4X4 mat[250];
 	for (int i = 0; i < 250; ++i)
@@ -45,6 +47,7 @@ void ShaderList::Init()
 	lighting.rim.color = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	lighting.rim.params = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	SetLighting(lighting);
+	SetLightingMode(1);
 	SetCameraPos(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f));
 	SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
 }
@@ -75,6 +78,10 @@ VertexShader* ShaderList::GetVS(VSKind vs)
 }
 PixelShader* ShaderList::GetPS(PSKind ps)
 {
+	if (ps == PS_LAMBERT && m_lightingMode == 0 && m_pPS[PS_LAMBERT_LEGACY])
+	{
+		return m_pPS[PS_LAMBERT_LEGACY];
+	}
 	return m_pPS[ps];
 }
 
@@ -181,6 +188,10 @@ void ShaderList::SetLighting(const LightingSettings& settings)
 		}
 	}
 }
+void ShaderList::SetLightingMode(int mode)
+{
+	m_lightingMode = (mode == 0) ? 0 : 1;
+}
 void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 {
 	DirectX::XMFLOAT4 param[] = {
@@ -189,6 +200,10 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	if (m_pPS[PS_LAMBERT])
 	{
 		m_pPS[PS_LAMBERT]->WriteBuffer(2, param);
+	}
+	if (m_pPS[PS_LAMBERT_LEGACY])
+	{
+		m_pPS[PS_LAMBERT_LEGACY]->WriteBuffer(2, param);
 	}
 	if (m_pPS[PS_SPECULAR])
 	{
@@ -364,6 +379,53 @@ float4 main(PS_IN pin) : SV_TARGET
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
 	m_pPS[PS_LAMBERT]->Compile(code);
+}
+void ShaderList::MakeLambertLegacyPS()
+{
+	const char* code = R"EOT(
+struct PS_IN {
+	float4 pos : SV_POSITION;
+	float3 normal : NORMAL0;
+	float2 uv : TEXCOORD0;
+	float4 color : COLOR0;
+	float4 wPos : POSITION0;
+};
+cbuffer Material : register(b0)
+{
+	float4 objDiffuse;
+	float4 objAmbient;
+	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+};
+cbuffer Light : register(b1)
+{
+	float4 lightDiffuse;
+	float4 lightDir;
+	float4 fillDiffuse;
+	float4 fillDir;
+	float4 hemiSky;
+	float4 hemiGround;
+	float4 rimColor;
+	float4 rimParams;
+};
+cbuffer Camera : register(b2)
+{
+	float4 cameraPos;
+};
+Texture2D tex : register(t0);
+SamplerState samp : register(s0);
+float4 main(PS_IN pin) : SV_TARGET
+{
+	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
+	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
+	float3 N = normalize(pin.normal);
+	float3 L = normalize(-lightDir.xyz);
+	float lambert = saturate(dot(N, L));
+	float3 lighting = objAmbient.rgb + lightDiffuse.rgb * lambert;
+	return float4(albedo * lighting, 1.0f);
+})EOT";
+	m_pPS[PS_LAMBERT_LEGACY] = new PixelShader();
+	m_pPS[PS_LAMBERT_LEGACY]->Compile(code);
 }
 void ShaderList::MakeSpecularPS()
 {
