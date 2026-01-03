@@ -34,6 +34,8 @@ namespace Core
                 IDXGISwapChain* GetSwapChain() const;
                 RenderTarget* GetDefaultRTV() const;
                 DepthStencil* GetDefaultDSV() const;
+                UINT GetWidth() const;
+                UINT GetHeight() const;
                 ID3D11RenderTargetView* GetSceneColorRTV() const;
                 ID3D11ShaderResourceView* GetSceneColorSRV() const;
                 ID3D11DepthStencilView* GetSceneDepthDSV() const;
