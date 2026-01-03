@@ -98,6 +98,7 @@ namespace Core
                         m_context->CSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullSrvs);
                 }
 
+                ReleaseSceneTargets();
                 ReleaseTargets();
 
                 HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
@@ -163,6 +164,24 @@ namespace Core
         DepthStencil* DXContext::GetDefaultDSV() const
         {
                 return m_defaultDSV.get();
+        }
+
+        UINT DXContext::GetWidth() const
+        {
+                if (m_defaultRTV)
+                {
+                        return m_defaultRTV->GetWidth();
+                }
+                return m_width;
+        }
+
+        UINT DXContext::GetHeight() const
+        {
+                if (m_defaultRTV)
+                {
+                        return m_defaultRTV->GetHeight();
+                }
+                return m_height;
         }
 
         ID3D11RenderTargetView* DXContext::GetSceneColorRTV() const
