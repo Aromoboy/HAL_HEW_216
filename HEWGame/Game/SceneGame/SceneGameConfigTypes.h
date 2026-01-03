@@ -3,6 +3,8 @@
 
 #include "Transform.h"
 
+#include <DirectXMath.h>
+
 namespace SceneGameConfig
 {
     struct PlayerColliderTuning
@@ -40,6 +42,18 @@ namespace SceneGameConfig
         bool enableVignette = true;
         bool enableBloom = true;
         bool enableFxaa = false;
+    };
+
+    struct RenderLightingSettings
+    {
+        DirectX::XMFLOAT4 keyDiffuse{ 1.0f, 1.0f, 1.0f, 1.0f };
+        DirectX::XMFLOAT3 keyDir{ 0.0f, 0.0f, 1.0f };
+        DirectX::XMFLOAT4 fillDiffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 fillDir{ 0.0f, 0.0f, 1.0f };
+        DirectX::XMFLOAT4 hemiSky{ 0.0f, 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT4 hemiGround{ 0.0f, 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT4 rimColor{ 0.0f, 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT4 rimParams{ 0.0f, 0.0f, 0.0f, 0.0f };
     };
 }
 

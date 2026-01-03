@@ -50,6 +50,7 @@ public:
         float heightBonusThresholdMeters = 0.0f;
         float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
+        SceneGameConfig::RenderLightingSettings renderLightingSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;
