@@ -198,6 +198,10 @@ void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 	{
 		m_pPS[PS_TOON]->WriteBuffer(2, param);
 	}
+	if (m_pPS[PS_FOG])
+	{
+		m_pPS[PS_FOG]->WriteBuffer(2, param);
+	}
 }
 void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
 {
