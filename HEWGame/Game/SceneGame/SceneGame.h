@@ -82,6 +82,7 @@ public:
     void OnExit() override;
     void ConfigureUpdates() override;
     void Update(const Core::UpdateContext& ctx) final;
+    void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
