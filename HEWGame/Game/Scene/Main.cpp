@@ -12,6 +12,7 @@
 #include "Defines.h"
 #include "ShaderList.h"
 #include "AppGame.h"
+#include "SceneGame.h"
 #include "DebugConsole.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
@@ -158,7 +159,16 @@ void Draw()
                 g_sceneManager->Draw();
         }
 
-        if (context)
+        bool sceneHandlesPostprocess = false;
+        if (g_sceneManager)
+        {
+                if (auto* activeScene = g_sceneManager->GetActiveScene())
+                {
+                        sceneHandlesPostprocess = dynamic_cast<SceneGame*>(activeScene) != nullptr;
+                }
+        }
+
+        if (context && !sceneHandlesPostprocess)
         {
                 RenderTarget* defaultRTV = GetDefaultRTV();
                 SetRenderTargets(1, &defaultRTV, nullptr);
