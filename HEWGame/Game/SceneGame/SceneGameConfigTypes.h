@@ -50,9 +50,11 @@ namespace SceneGameConfig
         DirectX::XMFLOAT4 keyDiffuse{ 1.0f, 1.0f, 1.0f, 1.0f };
         DirectX::XMFLOAT3 keyDir{ 0.0f, 0.0f, 1.0f };
         float keyWrap = 0.0f;
+        bool keyEnable = true;
         DirectX::XMFLOAT4 fillDiffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 fillDir{ 0.0f, 0.0f, 1.0f };
         float fillWrap = 0.0f;
+        bool fillEnable = true;
         DirectX::XMFLOAT4 hemiSky{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT4 hemiGround{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT4 rimColor{ 0.0f, 0.0f, 0.0f, 0.0f };
