@@ -46,7 +46,14 @@ namespace Core
     {
         if (IsValid())
         {
-            m_scheduler->UnregisterById(m_nodeId);
+            if (m_scheduler->IsTicking())
+            {
+                m_scheduler->UnregisterByIdNoDeref(m_nodeId);
+            }
+            else
+            {
+                m_scheduler->UnregisterById(m_nodeId);
+            }
         }
         Release();
     }

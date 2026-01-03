@@ -50,6 +50,7 @@ namespace Core
                 void Tick(const UpdateContext& ctx);
 
                 void SetExecutionLogListener(ExecutionLogListener* listener);
+                bool IsTicking() const;
 
         private:
                 using Dependency = std::pair<IUpdatable*, IUpdatable*>;
@@ -89,6 +90,7 @@ namespace Core
                 PendingRegistration* FindPendingRegistration(const IUpdatable* node);
 
                 void UnregisterById(NodeId nodeId);
+                void UnregisterByIdNoDeref(NodeId nodeId);
 
                 std::vector<IUpdatable*> m_nodes;          // 登録済みノード
                 std::vector<Dependency> m_dependencies;    // 前後関係の矢印リスト
