@@ -292,10 +292,10 @@ float4 main(PS_IN pin) : SV_TARGET
     float lambert = saturate(dot(N, L));
 
     float3 baseColor = texColor.rgb * objDiffuse.rgb;
-    float3 ambient = baseColor * objAmbient.rgb * lightDiffuse.rgb;
-    float3 diffuse = baseColor * lambert * lightDiffuse.rgb;
+    float3 ambient = baseColor * objAmbient.rgb;
+    float3 diffuse = baseColor * lambert;
 
-    float3 finalColor = ambient + diffuse;
+    float3 finalColor = (ambient + diffuse) * lightDiffuse.rgb;
     return float4(finalColor, 1.0f);
 })EOT";
 	m_pPS[PS_LAMBERT] = new PixelShader();
