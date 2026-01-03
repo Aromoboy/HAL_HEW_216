@@ -968,7 +968,7 @@ namespace SceneGameConfig
                 continue;
             }
 
-            if (key == "lighting.key.wrap")
+            if (key == "lighting.key.wrap" || key == "light.key.wrap")
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
@@ -1037,7 +1037,7 @@ namespace SceneGameConfig
                 continue;
             }
 
-            if (key == "lighting.fill.wrap")
+            if (key == "lighting.fill.wrap" || key == "light.fill.wrap")
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
@@ -1158,7 +1158,7 @@ namespace SceneGameConfig
                 continue;
             }
 
-            if (key == "lighting.rim.enable")
+            if (key == "lighting.rim.enable" || key == "light.rim.enable")
             {
                 bool parsedValue = false;
                 if (ParseBool(value, settings.rimEnable))
