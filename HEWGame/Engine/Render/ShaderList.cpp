@@ -343,7 +343,8 @@ float4 main(PS_IN pin) : SV_TARGET
 	float3 key = lightParams[0].rgb * lightParams[0].a * WrapLambert(N, L, keyWrap);
 	float3 fill = lightParams[2].rgb * lightParams[2].a * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
-	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * lightParams[4].a;
+	float hemiSkyAlpha = lightParams[4].a;
+	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * hemiSkyAlpha;
 	float rim = pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x));
 
 	float3 lighting = hemi + key + fill;
