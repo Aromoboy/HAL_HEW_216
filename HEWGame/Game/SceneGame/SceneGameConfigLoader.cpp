@@ -281,6 +281,387 @@ namespace SceneGameConfig
         return enabled;
     }
 
+    RenderPostProcessSettings LoadRenderPostProcessSettings()
+    {
+        RenderPostProcessSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] Missing config; defaulting post-process settings section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedGamma = false;
+        bool parsedSaturation = false;
+        bool parsedContrast = false;
+        bool parsedFogColor = false;
+        bool parsedFogStart = false;
+        bool parsedFogRange = false;
+        bool parsedVignetteStrength = false;
+        bool parsedBloomThreshold = false;
+        bool parsedBloomIntensity = false;
+        bool parsedEnableFog = false;
+        bool parsedEnableVignette = false;
+        bool parsedEnableBloom = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "post.gamma")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.gamma = *parsed;
+                    parsedGamma = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.gamma=" << settings.gamma
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.gamma value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.gamma << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.saturation")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.saturation = *parsed;
+                    parsedSaturation = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.saturation=" << settings.saturation
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.saturation value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.saturation << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.contrast")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.contrast = *parsed;
+                    parsedContrast = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.contrast=" << settings.contrast
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.contrast value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.contrast << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fogcolor")
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.fogColor = *parsed;
+                    parsedFogColor = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fogColor=("
+                        << settings.fogColor.x << ',' << settings.fogColor.y << ',' << settings.fogColor.z
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fogColor value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.fogColor.x << ',' << settings.fogColor.y << ',' << settings.fogColor.z << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fogstart")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fogStart = *parsed;
+                    parsedFogStart = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fogStart=" << settings.fogStart
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fogStart value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fogStart << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fogrange")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fogRange = *parsed;
+                    parsedFogRange = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fogRange=" << settings.fogRange
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fogRange value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fogRange << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.vignettestrength")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.vignetteStrength = *parsed;
+                    parsedVignetteStrength = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.vignetteStrength=" << settings.vignetteStrength
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.vignetteStrength value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.vignetteStrength << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.bloomthreshold")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.bloomThreshold = *parsed;
+                    parsedBloomThreshold = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.bloomThreshold=" << settings.bloomThreshold
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.bloomThreshold value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.bloomThreshold << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.bloomintensity")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.bloomIntensity = *parsed;
+                    parsedBloomIntensity = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.bloomIntensity=" << settings.bloomIntensity
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.bloomIntensity value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.bloomIntensity << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.enablefog")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enableFog = parsedValue;
+                    parsedEnableFog = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.enableFog=" << std::boolalpha << settings.enableFog
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.enableFog value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enableFog << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.enablevignette")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enableVignette = parsedValue;
+                    parsedEnableVignette = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.enableVignette=" << std::boolalpha << settings.enableVignette
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.enableVignette value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enableVignette << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.enablebloom")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enableBloom = parsedValue;
+                    parsedEnableBloom = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.enableBloom=" << std::boolalpha << settings.enableBloom
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.enableBloom value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enableBloom << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedGamma)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.gamma not found; using default=" << settings.gamma
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedSaturation)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.saturation not found; using default=" << settings.saturation
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedContrast)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.contrast not found; using default=" << settings.contrast
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFogColor)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fogColor not found; using default=("
+                << settings.fogColor.x << ',' << settings.fogColor.y << ',' << settings.fogColor.z
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFogStart)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fogStart not found; using default=" << settings.fogStart
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFogRange)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fogRange not found; using default=" << settings.fogRange
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedVignetteStrength)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.vignetteStrength not found; using default=" << settings.vignetteStrength
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedBloomThreshold)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.bloomThreshold not found; using default=" << settings.bloomThreshold
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedBloomIntensity)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.bloomIntensity not found; using default=" << settings.bloomIntensity
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedEnableFog)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.enableFog not found; using default=" << std::boolalpha << settings.enableFog
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedEnableVignette)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.enableVignette not found; using default="
+                << std::boolalpha << settings.enableVignette << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedEnableBloom)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.enableBloom not found; using default=" << std::boolalpha << settings.enableBloom
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
     PlayerSpawnTransform LoadPlayerTransformConfig()
     {
         PlayerSpawnTransform result{};

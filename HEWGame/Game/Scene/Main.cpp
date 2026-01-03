@@ -21,6 +21,7 @@
 #include "Diagnostics/Logger.h"
 #include "FullscreenManager.h"
 #include "ShaderCache.h"
+#include "SceneGameConfigLoader.h"
 
 namespace
 {
@@ -28,6 +29,7 @@ namespace
         Core::Input g_input;
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
         HRESULT g_comInitResult = E_FAIL;
+        SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
 
         void LogBootScenario()
         {
@@ -69,6 +71,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         Sprite::Init();
         ShaderList::Init();
         ShaderCache::Instance().Load("postprocess", GetDevice(), "shaders/postprocess_vs.cso", "shaders/postprocess_ps.cso");
+        g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
 
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
@@ -198,7 +201,43 @@ void Draw()
                 context->PSSetShaderResources(0, 1, &sceneSRV);
                 context->PSSetShaderResources(1, 1, &sceneDepthSRV);
                 SetSamplerState(SAMPLER_LINEAR);
-                BindPostProcessParams(2.2f, 0.85f, 1.1f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f, cameraNear, cameraFar);
+                const auto& postSettings = g_postProcessSettings;
+                DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
+                        postSettings.fogColor.x,
+                        postSettings.fogColor.y,
+                        postSettings.fogColor.z,
+                        1.0f);
+                float fogStart = postSettings.fogStart;
+                float fogRange = postSettings.fogRange;
+                float vignetteStrength = postSettings.vignetteStrength;
+                float bloomIntensity = postSettings.bloomIntensity;
+
+                if (!postSettings.enableFog)
+                {
+                        fogStart = cameraFar + 1.0f;
+                        fogRange = 1.0f;
+                }
+                if (!postSettings.enableVignette)
+                {
+                        vignetteStrength = 0.0f;
+                }
+                if (!postSettings.enableBloom)
+                {
+                        bloomIntensity = 0.0f;
+                }
+
+                BindPostProcessParams(
+                        postSettings.gamma,
+                        postSettings.saturation,
+                        postSettings.contrast,
+                        fogColor,
+                        fogStart,
+                        fogRange,
+                        cameraNear,
+                        cameraFar,
+                        vignetteStrength,
+                        bloomIntensity,
+                        postSettings.bloomThreshold);
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);

@@ -21,6 +21,22 @@ namespace SceneGameConfig
         bool loadedFromFile = false;
         bool rotationFromDegrees = false;
     };
+
+    struct RenderPostProcessSettings
+    {
+        float gamma = 2.2f;
+        float saturation = 0.85f;
+        float contrast = 1.1f;
+        float3 fogColor{ 1.0f, 1.0f, 1.0f };
+        float fogStart = 50.0f;
+        float fogRange = 50.0f;
+        float vignetteStrength = 1.2f;
+        float bloomThreshold = 0.8f;
+        float bloomIntensity = 0.15f;
+        bool enableFog = true;
+        bool enableVignette = true;
+        bool enableBloom = true;
+    };
 }
 
 #endif
