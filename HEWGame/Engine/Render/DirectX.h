@@ -2,6 +2,7 @@
 #define __DIRECTX_H__
 
 #include <d3d11.h>
+#include <DirectXMath.h>
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -55,8 +56,21 @@ struct PostProcessParams
         float saturation;
         float contrast;
         float padding;
+        DirectX::XMFLOAT4 fogColor;
+        float fogStart;
+        float fogRange;
+        float cameraNear;
+        float cameraFar;
 };
 
-void BindPostProcessParams(float gamma = 2.2f, float saturation = 0.85f, float contrast = 1.1f);
+void BindPostProcessParams(
+        float gamma = 2.2f,
+        float saturation = 0.85f,
+        float contrast = 1.1f,
+        const DirectX::XMFLOAT4& fogColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        float fogStart = 50.0f,
+        float fogRange = 50.0f,
+        float cameraNear = 0.1f,
+        float cameraFar = 1000.0f);
 
 #endif
