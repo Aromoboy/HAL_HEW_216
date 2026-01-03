@@ -48,7 +48,7 @@ bool ResultRenderer::Initialize(const ResultLayoutConfig& config)
 {
     m_config = config;
     m_texture = std::make_unique<DynamicTexture>();
-    HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight);
+    HRESULT hr = m_texture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, m_config.textureWidth, m_config.textureHeight, nullptr, true);
     if (FAILED(hr))
     {
         return false;
@@ -388,7 +388,7 @@ bool ResultRenderer::CreateGuidelineTexture()
 
     for (int i = 0; i < MAX_RESULT_SPRITE; i++)
     {
-       const HRESULT hr = m_resultTexture[i]->Create("Assets/Texture/background_UI_sample.png");
+       const HRESULT hr = m_resultTexture[i]->Create("Assets/Texture/background_UI_sample.png", true);
         if (FAILED(hr))
         {
             bIsFailed = true;

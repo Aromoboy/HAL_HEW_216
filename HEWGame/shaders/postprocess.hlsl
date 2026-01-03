@@ -66,5 +66,6 @@ float4 PSMain(VSOut input) : SV_TARGET
     col *= saturate(vignette);
     float luminance = dot(col, float3(0.2126, 0.7152, 0.0722));
     col += max(luminance - 0.8, 0.0) * microBloomIntensity;
+    col = saturate(col);
     return float4(col, 1.0f);
 }

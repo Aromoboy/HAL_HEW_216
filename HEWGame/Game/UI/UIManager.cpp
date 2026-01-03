@@ -69,7 +69,7 @@ bool UIManager::Initialize(const HudLayoutConfig& hudConfig, const ResultLayoutC
     }
 
     m_numberTexture = std::make_unique<Texture>();
-    if (FAILED(m_numberTexture->Create("Assets/Texture/number.png")))
+    if (FAILED(m_numberTexture->Create("Assets/Texture/number.png", true)))
     {
         DebugTrace(std::string(kLogPrefix) + "Timer number texture failed to initialize; timer display disabled.\n");
         m_numberTexture.reset();
