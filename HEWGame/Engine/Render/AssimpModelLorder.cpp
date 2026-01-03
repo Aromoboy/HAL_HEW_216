@@ -225,10 +225,7 @@ namespace
 
         if (auto override = ResolveTextureOverrideForModel(normalizedModelPath))
         {
-            if (std::filesystem::exists(*override))
-            {
-                return override;
-            }
+            return override;
         }
 
         if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
@@ -438,7 +435,8 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             continue;
         }
 
-        if (hasTextureOverride)
+        const bool hasOverrideTexture = hasTextureOverride && baseMaterial->GetTexture() != nullptr;
+        if (hasOverrideTexture)
         {
             continue;
         }
@@ -717,17 +715,9 @@ AssimpModelLorder::MakeMaterial(
 
             if (auto overridePath = ResolveTextureOverrideForModel(modelPathForFallback))
             {
-                if (std::filesystem::exists(*overridePath))
-                {
-                    DebugLog::DebugMessage(
-                        std::string("[Material] モデル別オーバーライドテクスチャを優先適用: '") + *overridePath + "'");
-                    texture = loadTexture(*overridePath);
-                }
-                else
-                {
-                    DebugLog::DebugMessage(
-                        std::string("[Material][WARNING] モデル別オーバーライドテクスチャが存在しない: '") + *overridePath + "'");
-                }
+                DebugLog::DebugMessage(
+                    std::string("[Material] モデル別オーバーライドテクスチャを優先適用: '") + *overridePath + "'");
+                texture = loadTexture(*overridePath);
             }
 
             aiString texPath;
