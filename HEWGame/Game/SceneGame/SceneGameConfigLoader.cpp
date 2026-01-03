@@ -303,9 +303,13 @@ namespace SceneGameConfig
         bool parsedVignetteStrength = false;
         bool parsedBloomThreshold = false;
         bool parsedBloomIntensity = false;
+        bool parsedFxaaEdgeThreshold = false;
+        bool parsedFxaaEdgeThresholdMin = false;
+        bool parsedFxaaSubpixelQuality = false;
         bool parsedEnableFog = false;
         bool parsedEnableVignette = false;
         bool parsedEnableBloom = false;
+        bool parsedEnableFxaa = false;
 
         for (const auto& entry : lines)
         {
@@ -506,6 +510,69 @@ namespace SceneGameConfig
                 continue;
             }
 
+            if (key == "post.fxaa.edgethreshold")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fxaaEdgeThreshold = *parsed;
+                    parsedFxaaEdgeThreshold = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fxaa.edgeThreshold=" << settings.fxaaEdgeThreshold
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fxaa.edgeThreshold value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fxaaEdgeThreshold << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fxaa.edgethresholdmin")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fxaaEdgeThresholdMin = *parsed;
+                    parsedFxaaEdgeThresholdMin = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fxaa.edgeThresholdMin=" << settings.fxaaEdgeThresholdMin
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fxaa.edgeThresholdMin value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fxaaEdgeThresholdMin << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fxaa.subpixelquality")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fxaaSubpixelQuality = *parsed;
+                    parsedFxaaSubpixelQuality = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fxaa.subpixelQuality=" << settings.fxaaSubpixelQuality
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fxaa.subpixelQuality value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fxaaSubpixelQuality << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
             if (key == "post.enablefog")
             {
                 bool parsedValue = false;
@@ -523,6 +590,28 @@ namespace SceneGameConfig
                     std::ostringstream oss;
                     oss << kLogPrefix << "[RenderSettings] Invalid post.enableFog value='" << value
                         << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enableFog << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.fxaa.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enableFxaa = parsedValue;
+                    parsedEnableFxaa = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.fxaa.enable=" << std::boolalpha << settings.enableFxaa
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.fxaa.enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enableFxaa << "\n";
                     DebugTrace(oss.str());
                 }
                 continue;
@@ -637,6 +726,27 @@ namespace SceneGameConfig
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
+        if (!parsedFxaaEdgeThreshold)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fxaa.edgeThreshold not found; using default=" << settings.fxaaEdgeThreshold
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFxaaEdgeThresholdMin)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fxaa.edgeThresholdMin not found; using default=" << settings.fxaaEdgeThresholdMin
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFxaaSubpixelQuality)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fxaa.subpixelQuality not found; using default=" << settings.fxaaSubpixelQuality
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
         if (!parsedEnableFog)
         {
             std::ostringstream oss;
@@ -655,6 +765,13 @@ namespace SceneGameConfig
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.enableBloom not found; using default=" << std::boolalpha << settings.enableBloom
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedEnableFxaa)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.fxaa.enable not found; using default=" << std::boolalpha << settings.enableFxaa
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
