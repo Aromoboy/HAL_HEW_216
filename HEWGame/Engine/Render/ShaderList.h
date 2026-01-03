@@ -12,7 +12,7 @@ struct LightingSettings
 	{
 		DirectX::XMFLOAT4 diffuse;
 		DirectX::XMFLOAT3 dir;
-		float padding = 0.0f;
+		float wrap = 0.0f;
 	};
 	struct HemisphereLight
 	{
@@ -23,6 +23,7 @@ struct LightingSettings
 	{
 		DirectX::XMFLOAT4 color;
 		DirectX::XMFLOAT4 params;
+		float enable = 0.0f;
 	};
 
 	DirectionalLight key;
@@ -39,13 +40,14 @@ struct LightingSettings
 	void BuildParams(DirectX::XMFLOAT4(&p)[8]) const
 	{
 		p[0] = key.diffuse;
-		p[1] = DirectX::XMFLOAT4(key.dir.x, key.dir.y, key.dir.z, 0.0f);
+		p[1] = DirectX::XMFLOAT4(key.dir.x, key.dir.y, key.dir.z, key.wrap);
 		p[2] = fill.diffuse;
-		p[3] = DirectX::XMFLOAT4(fill.dir.x, fill.dir.y, fill.dir.z, 0.0f);
+		p[3] = DirectX::XMFLOAT4(fill.dir.x, fill.dir.y, fill.dir.z, fill.wrap);
 		p[4] = hemi.sky;
 		p[5] = hemi.ground;
 		p[6] = rim.color;
 		p[7] = rim.params;
+		p[7].w = rim.enable;
 	}
 
 private:

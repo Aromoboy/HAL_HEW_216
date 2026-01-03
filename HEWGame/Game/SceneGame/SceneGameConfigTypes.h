@@ -49,12 +49,15 @@ namespace SceneGameConfig
         int mode = 1;
         DirectX::XMFLOAT4 keyDiffuse{ 1.0f, 1.0f, 1.0f, 1.0f };
         DirectX::XMFLOAT3 keyDir{ 0.0f, 0.0f, 1.0f };
+        float keyWrap = 0.0f;
         DirectX::XMFLOAT4 fillDiffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 fillDir{ 0.0f, 0.0f, 1.0f };
+        float fillWrap = 0.0f;
         DirectX::XMFLOAT4 hemiSky{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT4 hemiGround{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT4 rimColor{ 0.0f, 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT4 rimParams{ 0.0f, 0.0f, 0.0f, 0.0f };
+        bool rimEnable = false;
     };
 }
 
