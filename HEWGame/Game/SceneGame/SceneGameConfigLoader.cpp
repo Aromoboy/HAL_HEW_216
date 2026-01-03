@@ -874,7 +874,21 @@ namespace SceneGameConfig
             if (key == "lighting.mode")
             {
                 bool parsedValue = false;
-                if (auto parsed = TryParseIntToken(value))
+                std::string modeToken = value;
+                std::transform(modeToken.begin(), modeToken.end(), modeToken.begin(), [](unsigned char c)
+                { return static_cast<char>(std::tolower(c)); });
+
+                if (modeToken == "lambert")
+                {
+                    settings.mode = 0;
+                    parsedValue = true;
+                }
+                else if (modeToken == "stylized")
+                {
+                    settings.mode = 1;
+                    parsedValue = true;
+                }
+                else if (auto parsed = TryParseIntToken(value))
                 {
                     settings.mode = (*parsed == 0) ? 0 : 1;
                     parsedValue = true;
