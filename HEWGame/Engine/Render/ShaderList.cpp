@@ -340,20 +340,19 @@ float4 main(PS_IN pin) : SV_TARGET
 
 	float keyWrap = lightParams[1].w;
 	float fillWrap = lightParams[3].w;
-	float3 key = lightParams[0].rgb * WrapLambert(N, L, keyWrap);
-	float3 fill = lightParams[2].rgb * WrapLambert(N, F, fillWrap);
+	float3 key = lightParams[0].rgb * lightParams[0].a * WrapLambert(N, L, keyWrap);
+	float3 fill = lightParams[2].rgb * lightParams[2].a * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
 	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * lightParams[4].a;
-	float rimEnable = lightParams[7].w;
-	float rimIntensity = lightParams[6].a;
-	float3 rim = lightParams[6].rgb
-		* pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x))
-		* rimIntensity
-		* rimEnable;
+	float rim = pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x));
 
 	float3 lighting = hemi + key + fill;
 
-	float3 color = albedo * lighting + rim;
+	float3 color = albedo * lighting;
+	if (lightParams[7].w >= 0.5f)
+	{
+		color += lightParams[6].rgb * lightParams[6].a * rim;
+	}
 
 
 	return float4(color, 1.0f);
