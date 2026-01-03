@@ -494,6 +494,11 @@ void SceneGame::Draw()
             float fogRange = postSettings.fogRange;
             float vignetteStrength = postSettings.vignetteStrength;
             float bloomIntensity = postSettings.bloomIntensity;
+            const UINT screenWidth = dxContext.GetWidth();
+            const UINT screenHeight = dxContext.GetHeight();
+            const float invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
+            const float invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
+            const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
 
             if (!postSettings.enableFog)
             {
@@ -520,7 +525,12 @@ void SceneGame::Draw()
                 cameraFar,
                 vignetteStrength,
                 bloomIntensity,
-                postSettings.bloomThreshold);
+                postSettings.bloomThreshold,
+                invScreenSize,
+                postSettings.fxaaEdgeThreshold,
+                postSettings.fxaaEdgeThresholdMin,
+                postSettings.fxaaSubpixelQuality,
+                postSettings.enableFxaa ? 1 : 0);
 
             postprocess->Bind(context);
 

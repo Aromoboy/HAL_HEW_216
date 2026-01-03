@@ -211,6 +211,16 @@ void Draw()
                 float fogRange = postSettings.fogRange;
                 float vignetteStrength = postSettings.vignetteStrength;
                 float bloomIntensity = postSettings.bloomIntensity;
+                float invWidth = 0.0f;
+                float invHeight = 0.0f;
+                if (auto defaultRTV = GetDefaultRTV())
+                {
+                        const UINT screenWidth = defaultRTV->GetWidth();
+                        const UINT screenHeight = defaultRTV->GetHeight();
+                        invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
+                        invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
+                }
+                const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
 
                 if (!postSettings.enableFog)
                 {
@@ -237,7 +247,12 @@ void Draw()
                         cameraFar,
                         vignetteStrength,
                         bloomIntensity,
-                        postSettings.bloomThreshold);
+                        postSettings.bloomThreshold,
+                        invScreenSize,
+                        postSettings.fxaaEdgeThreshold,
+                        postSettings.fxaaEdgeThresholdMin,
+                        postSettings.fxaaSubpixelQuality,
+                        postSettings.enableFxaa ? 1 : 0);
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
