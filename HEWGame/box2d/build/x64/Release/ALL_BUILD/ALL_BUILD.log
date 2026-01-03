@@ -1,0 +1,39 @@
+﻿  Building Custom Rule C:/HEW/HAL_HEW_216/HEWGame/box2d/CMakeLists.txt
+  CMake is re-running because C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/generate.stamp is out-of-date.
+    the file 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/3.31.6-msvc6/CMakeCCompiler.cmake'
+    is newer than 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+  -- CMake C compiler: MSVC
+  -- CMake C++ compiler: MSVC
+  -- CMake system name: Windows
+  -- CMake host system processor: AMD64
+  -- Box2D validation ON
+  -- Box2D on MSVC
+  ・先ｼｬ・ｵ・堕・代・・ｸ・代・MSBuild 17.14.23+b0019275e ・撰ｽｴ・撰ｽｻ・代・.NET Framework
+  
+    1>Creating directories for 'enkits-populate'
+    Performing download step (git clone) for 'enkits-populate'
+    -- Avoiding repeated git clone, stamp file is up to date: 'C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/enkits-populate-prefix/src/enkits-populate-stamp/enkits-populate-gitclone-lastrun.txt'
+    Performing update step for 'enkits-populate'
+    CMake Error at C:/HEW/HAL_HEW_216/HEWGame/box2d/build/_deps/enkits-subbuild/enkits-populate-prefix/tmp/enkits-populate-gitupdate.cmake:44 (message):
+      Failed to get the hash for HEAD:
+    
+      fatal: not a git repository: '.git'
+    
+    
+    
+C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppCommon.targets(254,5): error MSB8066: ・撰ｽｿ・撰ｽｾ・撰ｽｻ・醍ｳ奇ｽｷ・撰ｽｾ・撰ｽｲ・撰ｽｰ・代・・ｵ・撰ｽｻ・題｢ｴ繝ｻ・ｺ・撰ｽｰ・代・・代・・ｱ・撰ｽｾ・堕・撰ｽｺ・撰ｽｰ ・撰ｽｴ・撰ｽｻ・代・"C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-download.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-update.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-patch.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-configure.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-build.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-install.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\ba87979f105b4bfdca072e7dfc100743\enkits-populate-test.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\6077ad59a4f1ef7bf8c60396b7757b02\enkits-populate-complete.rule;C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\CMakeFiles\079224b8805b0f1c5cc404d21901cbe9\enkits-populate.rule" ・撰ｽｷ・撰ｽｰ・撰ｽｲ・撰ｽｵ・堕・大ｨ・ｽｸ・撰ｽｻ・撰ｽｰ ・堕・撰ｽｰ・撰ｽｱ・撰ｽｾ・代・繝ｻ・代・・撰ｽｺ・撰ｽｾ・撰ｽｴ・撰ｽｾ・撰ｽｼ 1. [C:\HEW\HAL_HEW_216\HEWGame\box2d\build\_deps\enkits-subbuild\enkits-populate.vcxproj]
+  
+  CMake Error at C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FetchContent.cmake:1918 (message):
+    Build step for enkits failed: 1
+  Call Stack (most recent call first):
+    C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FetchContent.cmake:1609 (__FetchContent_populateSubbuild)
+    C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FetchContent.cmake:2145:EVAL:2 (__FetchContent_doPopulation)
+  -- Configuring incomplete, errors occurred!
+    C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FetchContent.cmake:2145 (cmake_language)
+    C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31/Modules/FetchContent.cmake:2384 (__FetchContent_Populate)
+    CMakeLists.txt:97 (FetchContent_MakeAvailable)
+  
+  
+C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppCommon.targets(254,5): error MSB8066: пользовательская сборка для "C:\HEW\HAL_HEW_216\HEWGame\box2d\CMakeLists.txt" завершила работу с кодом 1.

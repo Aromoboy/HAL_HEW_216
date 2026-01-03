@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Engine">
@@ -85,10 +85,10 @@
     <Filter Include="_Unsorted">
       <UniqueIdentifier>{2957C801-0D24-4892-B892-62EA7A8C14F3}</UniqueIdentifier>
     </Filter>
-      <Filter Include="Shaders">
+    <Filter Include="Shaders">
       <UniqueIdentifier>{F4C2B431-69F2-4B8F-98A9-043DBFF61120}</UniqueIdentifier>
     </Filter>
-</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp">
       <Filter>Engine\Camera</Filter>
@@ -868,9 +868,10 @@
       <Filter>_Unsorted</Filter>
     </None>
   </ItemGroup>
-<ItemGroup>
+  <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\postprocess.hlsl" />
   </ItemGroup>
 </Project>
