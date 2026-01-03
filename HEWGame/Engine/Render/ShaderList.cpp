@@ -356,7 +356,7 @@ float WrapLambert(float3 normalDir, float3 lightDir, float wrap)
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
-	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
+	float3 albedo = texRgb * objDiffuse.rgb;
 
 	float3 N = normalize(pin.normal);
 	float3 L = normalize(-lightDir.xyz);
