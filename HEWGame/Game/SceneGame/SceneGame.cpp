@@ -28,6 +28,7 @@
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
+#include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
 #include <cctype>
@@ -445,7 +446,51 @@ void SceneGame::Draw()
     {
         return;
     }
-    RootDraw();
+
+    auto& dxContext = App::Game::Instance().GetDXContext();
+    ID3D11DeviceContext* context = dxContext.GetContext();
+    RenderTarget* sceneColorRTV = dxContext.GetSceneColorTarget();
+    DepthStencil* sceneDepthDSV = dxContext.GetSceneDepthTarget();
+
+    if (context && sceneColorRTV)
+    {
+        SetRenderTargets(1, &sceneColorRTV, sceneDepthDSV);
+    }
+
+    auto activeCamera = GetActiveCamera();
+    DrawWorld(activeCamera);
+
+    if (context)
+    {
+        RenderTarget* defaultRTV = GetDefaultRTV();
+        if (defaultRTV)
+        {
+            SetRenderTargets(1, &defaultRTV, nullptr);
+        }
+
+        auto postprocess = ShaderCache::Instance().Get("postprocess");
+        if (postprocess)
+        {
+            ID3D11ShaderResourceView* sceneColorSRV = dxContext.GetSceneColorSRV();
+            ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
+            context->PSSetShaderResources(0, 1, &sceneColorSRV);
+            context->PSSetShaderResources(1, 1, &sceneDepthSRV);
+            SetSamplerState(SAMPLER_LINEAR);
+
+            postprocess->Bind(context);
+
+            context->IASetInputLayout(nullptr);
+            context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            context->Draw(3, 0);
+
+            ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+            context->PSSetShaderResources(0, 2, nullSRVs);
+        }
+    }
+
+    DrawOverlay();
 }
 
 void SceneGame::OnEnter()
