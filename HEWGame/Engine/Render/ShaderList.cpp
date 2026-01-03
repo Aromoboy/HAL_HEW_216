@@ -93,6 +93,7 @@ void ShaderList::SetMaterial(const Model::Material& material)
 		material.ambient,
 		material.specular
 	};
+	// objAmbient.a は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[1].w = material.pTexture ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
@@ -111,6 +112,7 @@ void ShaderList::SetMaterial(const MaterialDX& material)
 		material.GetAmbient(),
 		material.GetSpecular()
 	};
+	// objAmbient.a は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[1].w = material.GetTexture() ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
@@ -261,7 +263,7 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient;
+	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
 	float4 objSpecular;
 };
 cbuffer Light : register(b1)
@@ -309,7 +311,7 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient;
+	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
 	float4 objSpecular;
 };
 cbuffer Light : register(b1)
@@ -359,7 +361,7 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient;
+	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
 	float4 objSpecular;
 };
 cbuffer Light : register(b1)
@@ -405,7 +407,7 @@ struct PS_IN {
 cbuffer Material : register(b0)
 {
 	float4 objDiffuse;
-	float4 objAmbient;
+	float4 objAmbient; // .a = テクスチャ有無フラグ (1.0f = テクスチャあり)
 	float4 objSpecular;
 };
 cbuffer Light : register(b1)
