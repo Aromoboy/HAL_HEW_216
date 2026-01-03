@@ -85,7 +85,10 @@
     <Filter Include="_Unsorted">
       <UniqueIdentifier>{2957C801-0D24-4892-B892-62EA7A8C14F3}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
+      <Filter Include="Shaders">
+      <UniqueIdentifier>{F4C2B431-69F2-4B8F-98A9-043DBFF61120}</UniqueIdentifier>
+    </Filter>
+</ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp">
       <Filter>Engine\Camera</Filter>
@@ -864,5 +867,10 @@
     <None Include="cpp.hint">
       <Filter>_Unsorted</Filter>
     </None>
+  </ItemGroup>
+<ItemGroup>
+    <FxCompile Include="shaders\postprocess.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

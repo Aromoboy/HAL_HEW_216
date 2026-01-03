@@ -11,11 +11,13 @@
 #include "TitleScene.h"
 #include "Defines.h"
 #include "ShaderList.h"
+#include "AppGame.h"
 #include "DebugConsole.h"
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 #include "Diagnostics/Logger.h"
 #include "FullscreenManager.h"
+#include "ShaderCache.h"
 
 namespace
 {
@@ -63,6 +65,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         Geometory::Init();
         Sprite::Init();
         ShaderList::Init();
+        ShaderCache::Instance().Load("postprocess", GetDevice(), "shaders/postprocess_vs.cso", "shaders/postprocess_ps.cso");
 
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
@@ -124,9 +127,58 @@ void Draw()
 {
         BeginDrawDirectX();
 
+        auto& dxContext = App::Game::Instance().GetDXContext();
+        ID3D11DeviceContext* context = dxContext.GetContext();
+        ID3D11RenderTargetView* sceneRTV = dxContext.GetSceneColorRTV();
+        ID3D11DepthStencilView* sceneDSV = dxContext.GetSceneDepthDSV();
+
+        if (context && sceneRTV)
+        {
+                context->OMSetRenderTargets(1, &sceneRTV, sceneDSV);
+
+                D3D11_VIEWPORT viewport = {};
+                viewport.TopLeftX = 0.0f;
+                viewport.TopLeftY = 0.0f;
+                viewport.Width = static_cast<float>(dxContext.GetWidth());
+                viewport.Height = static_cast<float>(dxContext.GetHeight());
+                viewport.MinDepth = 0.0f;
+                viewport.MaxDepth = 1.0f;
+                context->RSSetViewports(1, &viewport);
+
+                const float clearColor[4] = { 0.8f, 0.9f, 1.0f, 1.0f };
+                context->ClearRenderTargetView(sceneRTV, clearColor);
+                if (sceneDSV)
+                {
+                        context->ClearDepthStencilView(sceneDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+                }
+        }
+
         if (g_sceneManager)
         {
                 g_sceneManager->Draw();
         }
+
+        if (context)
+        {
+                RenderTarget* defaultRTV = GetDefaultRTV();
+                SetRenderTargets(1, &defaultRTV, nullptr);
+
+                auto postprocess = ShaderCache::Instance().Get("postprocess");
+                postprocess->Bind(context);
+
+                ID3D11ShaderResourceView* sceneSRV = dxContext.GetSceneColorSRV();
+                context->PSSetShaderResources(0, 1, &sceneSRV);
+                SetSamplerState(SAMPLER_LINEAR);
+
+                context->IASetInputLayout(nullptr);
+                context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+                context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                context->Draw(3, 0);
+
+                ID3D11ShaderResourceView* nullSRV = nullptr;
+                context->PSSetShaderResources(0, 1, &nullSRV);
+        }
+
         EndDrawDirectX();
 }
