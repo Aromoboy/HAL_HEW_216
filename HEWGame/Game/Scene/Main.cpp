@@ -89,8 +89,8 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         ShaderCache::Instance().Load(
                 "postprocess",
                 GetDevice(),
-                (shaderDir / "postprocess_vs.cso").string(),
-                (shaderDir / "postprocess_ps.cso").string());
+                shaderDir / "postprocess_vs.cso",
+                shaderDir / "postprocess_ps.cso");
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
 
         // シーン

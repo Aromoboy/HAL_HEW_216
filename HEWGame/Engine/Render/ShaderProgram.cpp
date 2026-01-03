@@ -59,19 +59,6 @@ namespace
 }
 
 bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
-    const std::string& vsPath,
-    const std::string& psPath)
-{
-    return LoadFromFilesInternal(device,
-        std::filesystem::u8path(vsPath),
-        std::filesystem::u8path(psPath),
-        vsPath,
-        psPath,
-        vertexShader,
-        pixelShader);
-}
-
-bool ShaderProgram::LoadFromFiles(ID3D11Device* device,
     const std::filesystem::path& vsPath,
     const std::filesystem::path& psPath)
 {
@@ -101,7 +88,9 @@ void ShaderProgram::Bind(ID3D11DeviceContext* context)
 // シェーダープログラムを作成
 ShaderProgram shader;
 // シェーダーファイルをロード（.cso = コンパイル済みシェーダーオブジェクト）
-if (shader.LoadFromFiles(device, "shaders/basic_vs.cso", "shaders/basic_ps.cso"))
+if (shader.LoadFromFiles(device,
+    std::filesystem::path("shaders/basic_vs.cso"),
+    std::filesystem::path("shaders/basic_ps.cso")))
 {
     // 描画時にシェーダーをバインド
     shader.Bind(context);
