@@ -16,9 +16,11 @@
 #include "DirectX.h"
 #include "ModelDX.h"
 #include "ModelRender.h"
+#include "Render/ShaderList.h"
 #include "Geometory.h"
 #include "DebugColliderRenderer.h"
 #include "Systems/Physics/PhysicsMachine.h"
+#include "Camera/BaseCamera.h"
 
 namespace
 {
@@ -218,6 +220,12 @@ namespace Systems
                 if (!m_renderer || !camera)
                 {
                         return;
+                }
+
+                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(camera))
+                {
+                        const float3& position = baseCamera->GetPosition();
+                        ShaderList::SetCameraPos(DirectX::XMFLOAT3(position.x, position.y, position.z));
                 }
 
                 RenderEntity(camera);

@@ -8,6 +8,7 @@
 #include <optional>
 #include <sstream>
 #include <vector>
+#include <DirectXMath.h>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -73,6 +74,24 @@ namespace
         }
     }
 
+    std::optional<int> TryParseIntToken(const std::string& token)
+    {
+        try
+        {
+            size_t pos = 0;
+            int value = std::stoi(token, &pos);
+            if (pos != token.size())
+            {
+                return std::nullopt;
+            }
+            return value;
+        }
+        catch (...)
+        {
+            return std::nullopt;
+        }
+    }
+
     std::optional<float3> ParseFloat3Token(const std::string& value)
     {
         std::vector<float> components;
@@ -108,6 +127,48 @@ namespace
         }
 
         return float3{ components[0], components[1], components[2] };
+    }
+
+    std::optional<DirectX::XMFLOAT4> ParseFloat4Token(const std::string& value, float defaultW)
+    {
+        std::vector<float> components;
+        std::stringstream stream(value);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            token = TrimWhitespace(token);
+            if (token.empty())
+            {
+                continue;
+            }
+
+            if (auto parsed = TryParseFloatToken(token))
+            {
+                components.push_back(*parsed);
+            }
+        }
+
+        if (components.empty())
+        {
+            return std::nullopt;
+        }
+
+        if (components.size() == 1)
+        {
+            return DirectX::XMFLOAT4{ components[0], components[0], components[0], defaultW };
+        }
+
+        if (components.size() == 2)
+        {
+            return DirectX::XMFLOAT4{ components[0], components[1], components[1], defaultW };
+        }
+
+        if (components.size() == 3)
+        {
+            return DirectX::XMFLOAT4{ components[0], components[1], components[2], defaultW };
+        }
+
+        return DirectX::XMFLOAT4{ components[0], components[1], components[2], components[3] };
     }
 
     bool ParseBool(const std::string& value, bool& outValue)
@@ -773,6 +834,552 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.fxaa.enable not found; using default=" << std::boolalpha << settings.enableFxaa
                 << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    LightingSettings LoadLightingSettings()
+    {
+        LightingSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] Missing config; defaulting lighting settings section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedMode = false;
+        bool parsedKeyDiffuse = false;
+        bool parsedKeyDir = false;
+        bool parsedKeyWrap = false;
+        bool parsedKeyEnable = false;
+        bool parsedFillDiffuse = false;
+        bool parsedFillDir = false;
+        bool parsedFillWrap = false;
+        bool parsedFillEnable = false;
+        bool parsedHemiSky = false;
+        bool parsedHemiGround = false;
+        bool parsedRimColor = false;
+        bool parsedRimParams = false;
+        bool parsedRimEnable = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "lighting.mode")
+            {
+                bool parsedValue = false;
+                std::string modeToken = value;
+                std::transform(modeToken.begin(), modeToken.end(), modeToken.begin(), [](unsigned char c)
+                { return static_cast<char>(std::tolower(c)); });
+
+                if (modeToken == "lambert")
+                {
+                    settings.mode = 0;
+                    parsedValue = true;
+                }
+                else if (modeToken == "stylized")
+                {
+                    settings.mode = 1;
+                    parsedValue = true;
+                }
+                else if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.mode = (*parsed == 0) ? 0 : 1;
+                    parsedValue = true;
+                }
+                else if (auto parsedFloat = TryParseFloatToken(value))
+                {
+                    settings.mode = (*parsedFloat <= 0.0f) ? 0 : 1;
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedMode = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed lighting.mode=" << settings.mode
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid lighting.mode value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.mode << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.key.diffuse" || key == "light.key.diffuse")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.keyDiffuse.w))
+                {
+                    settings.keyDiffuse = *parsed;
+                    parsedKeyDiffuse = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.keyDiffuse.x << ',' << settings.keyDiffuse.y << ','
+                        << settings.keyDiffuse.z << ',' << settings.keyDiffuse.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.keyDiffuse.x << ',' << settings.keyDiffuse.y << ','
+                        << settings.keyDiffuse.z << ',' << settings.keyDiffuse.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.key.dir" || key == "light.key.dir")
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.keyDir = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
+                    parsedKeyDir = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.keyDir.x << ',' << settings.keyDir.y << ',' << settings.keyDir.z
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.keyDir.x << ',' << settings.keyDir.y << ',' << settings.keyDir.z << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.key.wrap" || key == "light.key.wrap")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.keyWrap = *parsed;
+                    parsedKeyWrap = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << settings.keyWrap
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.keyWrap << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.key.enable" || key == "light.key.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, settings.keyEnable))
+                {
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedKeyEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << std::boolalpha << settings.keyEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.keyEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.fill.diffuse" || key == "light.fill.diffuse")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.fillDiffuse.w))
+                {
+                    settings.fillDiffuse = *parsed;
+                    parsedFillDiffuse = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.fillDiffuse.x << ',' << settings.fillDiffuse.y << ','
+                        << settings.fillDiffuse.z << ',' << settings.fillDiffuse.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.fillDiffuse.x << ',' << settings.fillDiffuse.y << ','
+                        << settings.fillDiffuse.z << ',' << settings.fillDiffuse.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.fill.dir" || key == "light.fill.dir")
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.fillDir = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
+                    parsedFillDir = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.fillDir.x << ',' << settings.fillDir.y << ',' << settings.fillDir.z
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.fillDir.x << ',' << settings.fillDir.y << ',' << settings.fillDir.z << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.fill.wrap" || key == "light.fill.wrap")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fillWrap = *parsed;
+                    parsedFillWrap = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << settings.fillWrap
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fillWrap << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.fill.enable" || key == "light.fill.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, settings.fillEnable))
+                {
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedFillEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << std::boolalpha << settings.fillEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.fillEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.directional.enable" || key == "light.directional.enable")
+            {
+                bool parsedValue = false;
+                bool directionalEnable = true;
+                if (ParseBool(value, directionalEnable))
+                {
+                    settings.keyEnable = directionalEnable;
+                    settings.fillEnable = directionalEnable;
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedKeyEnable = true;
+                    parsedFillEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << std::boolalpha << directionalEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping defaults keyEnable=" << std::boolalpha << settings.keyEnable
+                        << " fillEnable=" << settings.fillEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.hemi.sky" || key == "light.hemi.sky")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.hemiSky.w))
+                {
+                    settings.hemiSky = *parsed;
+                    parsedHemiSky = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.hemiSky.x << ',' << settings.hemiSky.y << ','
+                        << settings.hemiSky.z << ',' << settings.hemiSky.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.hemiSky.x << ',' << settings.hemiSky.y << ','
+                        << settings.hemiSky.z << ',' << settings.hemiSky.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.hemi.ground" || key == "light.hemi.ground")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.hemiGround.w))
+                {
+                    settings.hemiGround = *parsed;
+                    parsedHemiGround = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.hemiGround.x << ',' << settings.hemiGround.y << ','
+                        << settings.hemiGround.z << ',' << settings.hemiGround.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.hemiGround.x << ',' << settings.hemiGround.y << ','
+                        << settings.hemiGround.z << ',' << settings.hemiGround.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.rim.color" || key == "light.rim.color")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.rimColor.w))
+                {
+                    settings.rimColor = *parsed;
+                    parsedRimColor = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.rimColor.x << ',' << settings.rimColor.y << ','
+                        << settings.rimColor.z << ',' << settings.rimColor.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.rimColor.x << ',' << settings.rimColor.y << ','
+                        << settings.rimColor.z << ',' << settings.rimColor.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.rim.params" || key == "light.rim.params")
+            {
+                if (auto parsed = ParseFloat4Token(value, settings.rimParams.w))
+                {
+                    settings.rimParams = *parsed;
+                    parsedRimParams = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=("
+                        << settings.rimParams.x << ',' << settings.rimParams.y << ','
+                        << settings.rimParams.z << ',' << settings.rimParams.w
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.rimParams.x << ',' << settings.rimParams.y << ','
+                        << settings.rimParams.z << ',' << settings.rimParams.w << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "lighting.rim.enable" || key == "light.rim.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, settings.rimEnable))
+                {
+                    parsedValue = true;
+                }
+
+                if (parsedValue)
+                {
+                    parsedRimEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Parsed " << key << "=" << std::boolalpha << settings.rimEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[LightingSettings] Invalid " << key << " value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.rimEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedMode)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.mode not found; using default=" << settings.mode
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedKeyDiffuse)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.key.diffuse not found; using default=("
+                << settings.keyDiffuse.x << ',' << settings.keyDiffuse.y << ','
+                << settings.keyDiffuse.z << ',' << settings.keyDiffuse.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedKeyDir)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.key.dir not found; using default=("
+                << settings.keyDir.x << ',' << settings.keyDir.y << ',' << settings.keyDir.z
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFillDiffuse)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.fill.diffuse not found; using default=("
+                << settings.fillDiffuse.x << ',' << settings.fillDiffuse.y << ','
+                << settings.fillDiffuse.z << ',' << settings.fillDiffuse.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFillDir)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.fill.dir not found; using default=("
+                << settings.fillDir.x << ',' << settings.fillDir.y << ',' << settings.fillDir.z
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedKeyWrap)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.key.wrap not found; using default=" << settings.keyWrap
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFillWrap)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.fill.wrap not found; using default=" << settings.fillWrap
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedKeyEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.key.enable not found; using default="
+                << std::boolalpha << settings.keyEnable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFillEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.fill.enable not found; using default="
+                << std::boolalpha << settings.fillEnable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedHemiSky)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.hemi.sky not found; using default=("
+                << settings.hemiSky.x << ',' << settings.hemiSky.y << ','
+                << settings.hemiSky.z << ',' << settings.hemiSky.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedHemiGround)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.hemi.ground not found; using default=("
+                << settings.hemiGround.x << ',' << settings.hemiGround.y << ','
+                << settings.hemiGround.z << ',' << settings.hemiGround.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedRimColor)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.rim.color not found; using default=("
+                << settings.rimColor.x << ',' << settings.rimColor.y << ','
+                << settings.rimColor.z << ',' << settings.rimColor.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedRimParams)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.rim.params not found; using default=("
+                << settings.rimParams.x << ',' << settings.rimParams.y << ','
+                << settings.rimParams.z << ',' << settings.rimParams.w
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedRimEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[LightingSettings] lighting.rim.enable not found; using default="
+                << std::boolalpha << settings.rimEnable << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 

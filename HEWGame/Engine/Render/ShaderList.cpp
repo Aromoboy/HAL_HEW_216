@@ -3,6 +3,7 @@
 
 VertexShader* ShaderList::m_pVS[VS_KIND_MAX];
 PixelShader* ShaderList::m_pPS[PS_KIND_MAX];
+int ShaderList::m_lightingMode = 1;
 
 
 ShaderList::ShaderList()
@@ -19,6 +20,7 @@ void ShaderList::Init()
 	MakeWorldVS();
 	MakeAnimeVS();
 	MakeLambertPS();
+	MakeLambertLegacyPS();
 
 	DirectX::XMFLOAT4X4 mat[250];
 	for (int i = 0; i < 250; ++i)
@@ -35,7 +37,17 @@ void ShaderList::Init()
 		nullptr
 	};
 	SetMaterial(material);
-	SetLight(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f));
+	LightingSettings lighting = {};
+	lighting.key.diffuse = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	lighting.key.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	lighting.fill.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.fill.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	lighting.hemi.sky = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.hemi.ground = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.rim.color = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	lighting.rim.params = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	SetLighting(lighting);
+	SetLightingMode(1);
 	SetCameraPos(DirectX::XMFLOAT3(0.0f, 1.0f, -2.0f));
 	SetFog(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 50.0f, 50.0f);
 }
@@ -66,6 +78,10 @@ VertexShader* ShaderList::GetVS(VSKind vs)
 }
 PixelShader* ShaderList::GetPS(PSKind ps)
 {
+	if (ps == PS_LAMBERT && m_lightingMode == 0 && m_pPS[PS_LAMBERT_LEGACY])
+	{
+		return m_pPS[PS_LAMBERT_LEGACY];
+	}
 	return m_pPS[ps];
 }
 
@@ -128,32 +144,58 @@ void ShaderList::SetMaterial(const MaterialDX& material)
 
 void ShaderList::SetLight(DirectX::XMFLOAT4 color, DirectX::XMFLOAT3 dir)
 {
-	DirectX::XMFLOAT4 param[2] = {
-		color
-	};
-	DirectX::XMStoreFloat4(&param[1], DirectX::XMVector3Normalize(
-		DirectX::XMVectorSet(dir.x, dir.y, dir.z, 0.0f)
-	));
+	LightingSettings settings = {};
+	settings.key.diffuse = color;
+	settings.key.dir = dir;
+	settings.fill.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.fill.dir = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
+	settings.hemi.sky = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.hemi.ground = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.rim.color = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	settings.rim.params = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	SetLighting(settings);
+}
+
+void ShaderList::SetLighting(const LightingSettings& settings)
+{
+	LightingSettings normalized = settings;
+	normalized.NormalizeDirections();
+
+	DirectX::XMFLOAT4 p[8] = {};
+	normalized.BuildParams(p);
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
 		{
-			m_pPS[i]->WriteBuffer(1, param);
+			m_pPS[i]->WriteBuffer(1, p);
 		}
 	}
+}
+void ShaderList::SetLightingMode(int mode)
+{
+	m_lightingMode = (mode == 0) ? 0 : 1;
 }
 void ShaderList::SetCameraPos(const DirectX::XMFLOAT3 pos)
 {
 	DirectX::XMFLOAT4 param[] = {
 		{pos.x, pos.y, pos.z, 0.0f}
 	};
-	if (m_pPS[PS_SPECULAR])
+	const PSKind minimumTargets[] = {
+		PS_LAMBERT,
+		PS_SPECULAR,
+		PS_TOON,
+		PS_FOG
+	};
+	for (PSKind kind : minimumTargets)
 	{
-		m_pPS[PS_SPECULAR]->WriteBuffer(2, param);
+		if (m_pPS[kind])
+		{
+			m_pPS[kind]->WriteBuffer(2, param);
+		}
 	}
-	if (m_pPS[PS_TOON])
+	if (m_pPS[PS_LAMBERT_LEGACY])
 	{
-		m_pPS[PS_TOON]->WriteBuffer(2, param);
+		m_pPS[PS_LAMBERT_LEGACY]->WriteBuffer(2, param);
 	}
 }
 void ShaderList::SetFog(DirectX::XMFLOAT4 color, float start, float range)
@@ -261,6 +303,7 @@ struct PS_IN {
 	float3 normal : NORMAL0;
 	float2 uv : TEXCOORD0;
 	float4 color : COLOR0;
+	float4 wPos : POSITION0;
 };
 cbuffer Material : register(b0)
 {
@@ -271,30 +314,96 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
+};
+cbuffer Camera : register(b2)
+{
+	float4 cameraPos;
+};
+Texture2D tex : register(t0);
+SamplerState samp : register(s0);
+float WrapLambert(float3 normalDir, float3 lightDir, float wrap)
+{
+	return saturate((dot(normalDir, lightDir) + wrap) / (1.0f + wrap));
+}
+float4 main(PS_IN pin) : SV_TARGET
+{
+	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
+	float3 albedo = texRgb * objDiffuse.rgb;
+
+	float3 N = normalize(pin.normal);
+	float3 L = normalize(-lightParams[1].xyz);
+	float3 F = normalize(-lightParams[3].xyz);
+	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
+
+	float keyWrap = lightParams[1].w;
+	float fillWrap = lightParams[3].w;
+	float3 keyColor = lightParams[0].rgb * lightParams[0].a;
+	float3 fillColor = lightParams[2].rgb * lightParams[2].a;
+	float3 key = keyColor * WrapLambert(N, L, keyWrap);
+	float3 fill = fillColor * WrapLambert(N, F, fillWrap);
+	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
+	float hemiSkyAlpha = lightParams[4].a;
+	float3 hemi = lerp(lightParams[5].rgb, lightParams[4].rgb, hemiFactor) * hemiSkyAlpha;
+	float rim = pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x));
+
+	float3 lighting = hemi + key + fill;
+
+	float3 color = albedo * lighting;
+	if (lightParams[7].w >= 0.5f)
+	{
+		color += lightParams[6].rgb * lightParams[6].a * rim;
+	}
+
+
+	return float4(saturate(color), 1.0f);
+})EOT";
+	m_pPS[PS_LAMBERT] = new PixelShader();
+	m_pPS[PS_LAMBERT]->Compile(code);
+}
+void ShaderList::MakeLambertLegacyPS()
+{
+	const char* code = R"EOT(
+struct PS_IN {
+	float4 pos : SV_POSITION;
+	float3 normal : NORMAL0;
+	float2 uv : TEXCOORD0;
+	float4 color : COLOR0;
+	float4 wPos : POSITION0;
+};
+cbuffer Material : register(b0)
+{
+	float4 objDiffuse;
+	float4 objAmbient;
+	float4 objSpecular;
+	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+};
+cbuffer Light : register(b1)
+{
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
+};
+cbuffer Camera : register(b2)
+{
+	float4 cameraPos;
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 float4 main(PS_IN pin) : SV_TARGET
 {
-float3 albedo = (objFlags.x >= 1.0f)
-    ? tex.Sample(samp, pin.uv).rgb
-    : objDiffuse.rgb;
-
-    float3 N = normalize(pin.normal);
-    float3 L = normalize(-lightDir.xyz);
-
-    float lambert = saturate(dot(N, L));
-    lambert = lambert * 0.7f + 0.3f;
-
-    float3 ambient = albedo * objAmbient.rgb;
-    float3 diffuse = albedo * lambert;
-
-    return float4((ambient + diffuse) * lightDiffuse.rgb, 1.0f);
+	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
+	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
+	float3 N = normalize(pin.normal);
+	float3 L = normalize(-lightParams[1].xyz);
+	float lambert = saturate(dot(N, L));
+	float3 lighting = objAmbient.rgb + lightParams[0].rgb * lambert;
+	return float4(albedo * lighting, 1.0f);
 })EOT";
-	m_pPS[PS_LAMBERT] = new PixelShader();
-	m_pPS[PS_LAMBERT]->Compile(code);
+	m_pPS[PS_LAMBERT_LEGACY] = new PixelShader();
+	m_pPS[PS_LAMBERT_LEGACY]->Compile(code);
 }
 void ShaderList::MakeSpecularPS()
 {
@@ -315,8 +424,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -330,14 +440,14 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir.xyz);
+	float3 L = normalize(-lightParams[1].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 	float3 R = reflect(-V, N);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
 	float dotRL = saturate(dot(R, L));
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
+	float3 specular = objSpecular.rgb * lightParams[0].rgb;
 	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
 		lerp(diffuse * ambient, diffuse + ambient, pow(ambient, 4.0f)),
@@ -366,8 +476,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
@@ -377,11 +488,11 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
+	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = dot(N, L); // マイナス込で計算
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
-	float3 specular = objSpecular.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
+	float3 specular = objSpecular.rgb * lightParams[0].rgb;
 	float toonNL = saturate((dot(N, L) + 0.5f) / 1.5f * 100.0f); // 陰の境目を柔らかく
 	// ランバート計算を参考
 	color.rgb *= saturate(lerp(
@@ -413,8 +524,9 @@ cbuffer Material : register(b0)
 };
 cbuffer Light : register(b1)
 {
-	float4 lightDiffuse;
-	float4 lightDir;
+	float4 lightParams[8];
+	// [0]=key.diffuse, [1]=key.dir, [2]=fill.diffuse, [3]=fill.dir,
+	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 cbuffer Camera : register(b2)
 {
@@ -435,10 +547,10 @@ float4 main(PS_IN pin) : SV_TARGET
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
 	float3 N = normalize(pin.normal);
-	float3 L = normalize(-lightDir);
+	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
-	float3 diffuse = objDiffuse.rgb * lightDiffuse.rgb;
-	float3 ambient = objAmbient.rgb * lightDiffuse.rgb;
+	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
+	float3 ambient = objAmbient.rgb * lightParams[0].rgb;
 	color.rgb *= saturate(diffuse * dotNL + ambient);
 	float vLen = length(pin.wPos.xyz - cameraPos.xyz);
 	color.rgb = lerp(color.rgb, fogColor.rgb, saturate((vLen - fogStart) / fogRange));

@@ -312,6 +312,7 @@ bool SceneGame::Load(Core::Input& input)
     m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
+    m_lightingSettings = composition->lightingSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -1094,6 +1095,37 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         {
                 DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
                 return;
+        }
+
+        {
+                ::LightingSettings lighting{};
+                lighting.key.diffuse = m_lightingSettings.keyDiffuse;
+                lighting.key.dir = m_lightingSettings.keyDir;
+                lighting.key.wrap = m_lightingSettings.keyWrap;
+                lighting.fill.diffuse = m_lightingSettings.fillDiffuse;
+                lighting.fill.dir = m_lightingSettings.fillDir;
+                lighting.fill.wrap = m_lightingSettings.fillWrap;
+                if (!m_lightingSettings.keyEnable)
+                {
+                        lighting.key.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+                }
+                if (!m_lightingSettings.fillEnable)
+                {
+                        lighting.fill.diffuse = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+                }
+                lighting.hemi.sky = m_lightingSettings.hemiSky;
+                lighting.hemi.ground = m_lightingSettings.hemiGround;
+                lighting.rim.color = m_lightingSettings.rimColor;
+                lighting.rim.params = m_lightingSettings.rimParams;
+                lighting.rim.enable = m_lightingSettings.rimEnable ? 1.0f : 0.0f;
+                ShaderList::SetLightingMode(m_lightingSettings.mode);
+                ShaderList::SetLighting(lighting);
+
+                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                {
+                        const float3& cameraPos = baseCamera->GetPosition();
+                        ShaderList::SetCameraPos(DirectX::XMFLOAT3(cameraPos.x, cameraPos.y, cameraPos.z));
+                }
         }
 
         if (m_renderer)
