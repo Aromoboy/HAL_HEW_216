@@ -578,7 +578,7 @@ void SceneGame::Draw()
             }
             context->PSSetShaderResources(0, 1, &sceneColorSRV);
             context->PSSetShaderResources(1, 1, &sceneDepthSRV);
-            SetSamplerState(SAMPLER_LINEAR);
+            SetSamplerState(SAMPLER_POSTPROCESS);
             const auto& postSettings = m_renderPostProcessSettings;
             DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
                 postSettings.fogColor.x,

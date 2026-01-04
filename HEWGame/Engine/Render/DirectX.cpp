@@ -135,12 +135,19 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	for (int i = 0; i < SAMPLER_MAX; ++i)
+	for (int i = 0; i < 2; ++i)
 	{
 		samplerDesc.Filter = filter[i];
 		hr = GetDevice()->CreateSamplerState(&samplerDesc, &g_pSamplerState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
+	D3D11_SAMPLER_DESC postProcessSamplerDesc = samplerDesc;
+	postProcessSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	postProcessSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	postProcessSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	postProcessSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	hr = GetDevice()->CreateSamplerState(&postProcessSamplerDesc, &g_pSamplerState[SAMPLER_POSTPROCESS]);
+	if (FAILED(hr)) { return hr; }
 	SetSamplerState(SAMPLER_LINEAR);
 
 	return S_OK;
