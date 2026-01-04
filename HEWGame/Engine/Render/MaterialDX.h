@@ -1,26 +1,11 @@
 #pragma once
+#include "MaterialTuningSettings.h"
 #include "TextureDX.h"
 #include <DirectXMath.h>
 #include <memory>
 #include <string>
-#include <unordered_map>
-
-struct MaterialTuningProfile
-{
-	float lightResponse = 1.0f;
-	float sssIntensity = 0.0f;
-	DirectX::XMFLOAT3 sssColor{ 1.0f, 1.0f, 1.0f };
-};
-
-struct MaterialTuningSettings
-{
-	MaterialTuningProfile defaultProfile{};
-	std::unordered_map<std::string, MaterialTuningProfile> overrides;
-};
 
 class MaterialDX;
-
-const MaterialTuningSettings& GetDefaultMaterialTuningSettings();
 void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, const MaterialTuningSettings& settings);
 
 class MaterialDX

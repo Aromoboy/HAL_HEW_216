@@ -5,11 +5,16 @@
 
 // �^��`
 
-ModelDX::ModelDX(std::vector<std::shared_ptr<MeshDX>> a_meshes, std::vector<std::shared_ptr<MaterialDX>> a_materials, std::optional<AABB> localBounds)
+ModelDX::ModelDX(
+        std::vector<std::shared_ptr<MeshDX>> a_meshes,
+        std::vector<std::shared_ptr<MaterialDX>> a_materials,
+        const MaterialTuningSettings* materialTuningSettings,
+        std::optional<AABB> localBounds)
 {
         m_meshes = std::move(a_meshes);
         m_materials = std::move(a_materials);
         m_meshCount = static_cast<unsigned int>(m_meshes.size());
+        m_materialTuningSettings = materialTuningSettings;
        
         if (localBounds)
         {
@@ -40,7 +45,10 @@ std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex) const
 
 void ModelDX::SetMaterialKey(const std::string& key)
 {
-        const MaterialTuningSettings& tuningSettings = GetDefaultMaterialTuningSettings();
+        static const MaterialTuningSettings kFallbackSettings{};
+        const MaterialTuningSettings& tuningSettings = m_materialTuningSettings
+                ? *m_materialTuningSettings
+                : kFallbackSettings;
         for (const auto& material : m_materials)
         {
                 if (material)

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include "MaterialTuningSettings.h"
 #include "Render/Model.h"
 #include "IModelLoader.h"
 
@@ -27,6 +28,8 @@ namespace Render
         void Reset();
         void SetTextureLoadingEnabled(bool enabled) noexcept { m_textureLoadingEnabled = enabled; }
         bool IsTextureLoadingEnabled() const noexcept { return m_textureLoadingEnabled; }
+        void SetMaterialTuningSettings(const MaterialTuningSettings& settings);
+        const MaterialTuningSettings& GetMaterialTuningSettings() const noexcept { return m_materialTuningSettings; }
 
     private:
         ModelCache() = default;
@@ -41,6 +44,7 @@ namespace Render
         std::map<std::string, std::shared_ptr<Render::Model>> m_models;
         std::unordered_set<std::string> m_inFlightKeys;
         bool m_textureLoadingEnabled = true;
+        MaterialTuningSettings m_materialTuningSettings{};
     };
 }
 

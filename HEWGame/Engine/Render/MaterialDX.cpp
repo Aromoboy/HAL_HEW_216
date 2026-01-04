@@ -15,21 +15,48 @@ namespace
         }
         return value;
     }
-}
 
-const MaterialTuningSettings& GetDefaultMaterialTuningSettings()
-{
-    static const MaterialTuningSettings settings{};
-    return settings;
+    const MaterialTuningProfile& ResolveMaterialProfile(
+        const MaterialTuningSettings& settings,
+        const std::string& profileName)
+    {
+        const auto profileIt = settings.profiles.find(profileName);
+        if (profileIt != settings.profiles.end())
+        {
+            return profileIt->second;
+        }
+
+        static const MaterialTuningProfile fallbackProfile{};
+        return fallbackProfile;
+    }
 }
 
 void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, const MaterialTuningSettings& settings)
 {
+    static const std::string kDefaultProfileKey = "default";
     const std::string normalizedKey = NormalizeMaterialKey(materialKey);
     const auto it = settings.overrides.find(normalizedKey);
-    const MaterialTuningProfile& profile = (it != settings.overrides.end())
+    const std::string& profileName = (it != settings.overrides.end())
         ? it->second
-        : settings.defaultProfile;
+        : kDefaultProfileKey;
+    const auto profileIt = settings.profiles.find(profileName);
+    const MaterialTuningProfile* selectedProfile = nullptr;
+    if (profileIt != settings.profiles.end())
+    {
+        selectedProfile = &profileIt->second;
+    }
+    else if (profileName != kDefaultProfileKey)
+    {
+        const auto defaultIt = settings.profiles.find(kDefaultProfileKey);
+        if (defaultIt != settings.profiles.end())
+        {
+            selectedProfile = &defaultIt->second;
+        }
+    }
+
+    const MaterialTuningProfile& profile = selectedProfile
+        ? *selectedProfile
+        : ResolveMaterialProfile(settings, profileName);
     material.SetLightResponse(profile.lightResponse);
     material.SetSssIntensity(profile.sssIntensity);
     material.SetSssColor(profile.sssColor);
