@@ -112,11 +112,16 @@ namespace SweetsSpace
 
     void SweetsPrototypeManifest::ApplyDefaults()
     {
-        Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx", "Soft-serve inspired cream scoop used for sherbet prototype");
-        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx", "Textured strawberry fruit with visible seeds");
-        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx", "Stylized blueberry fruit with smooth shading");
-        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx", "High-detail pineapple with leafy crown");
-        Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx", "Low-poly curved banana fruit");
+        Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx",
+            "Soft-serve inspired cream scoop used for sherbet prototype", "cream");
+        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx",
+            "Textured strawberry fruit with visible seeds", "strawberry");
+        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx",
+            "Stylized blueberry fruit with smooth shading", "blueberry");
+        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx",
+            "High-detail pineapple with leafy crown", "pineapple");
+        Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx",
+            "Low-poly curved banana fruit", "banana");
 
         RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
         RegisterExtraAlias("Fairy", "Player");
