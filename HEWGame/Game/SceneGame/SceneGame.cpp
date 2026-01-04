@@ -367,6 +367,12 @@ bool SceneGame::Load(Core::Input& input)
     composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
+    m_stagePlaneZ = std::nullopt;
+    const float stagePlaneZ = m_stageData.GetPlaneZ();
+    if (IsFiniteFloat(stagePlaneZ))
+    {
+        m_stagePlaneZ = stagePlaneZ;
+    }
     m_phaseManager = std::move(composition->phaseManager);
     m_playerBaseHorizontalSpeed = composition->playerBaseHorizontalSpeed;
     m_playerBaseVerticalSpeed = composition->playerBaseVerticalSpeed;
@@ -1294,11 +1300,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 stageBounds.push_back(stageEntity->GetAABB());
             }
 
-            std::optional<float> receiverZ = std::nullopt;
-            if (m_isComposed)
-            {
-                receiverZ = m_stageData.GetPlaneZ();
-            }
+            std::optional<float> receiverZ = m_stagePlaneZ;
             if (m_blobShadowSettings.groundZ)
             {
                 receiverZ = m_blobShadowSettings.groundZ;
