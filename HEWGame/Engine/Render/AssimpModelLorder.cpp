@@ -446,6 +446,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             baseMaterial->GetAmbient(),
             baseMaterial->GetSpecular(),
             nullptr);
+        ApplyMaterialTuning(*untexturedMaterial, "default", GetDefaultMaterialTuningSettings());
         materials.push_back(std::move(untexturedMaterial));
         meshPtr->SetMaterialID(static_cast<unsigned int>(materials.size() - 1));
     }
@@ -667,6 +668,8 @@ AssimpModelLorder::MakeMaterial(
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
+    const MaterialTuningSettings& tuningSettings = GetDefaultMaterialTuningSettings();
+    const std::string defaultMaterialKey = "default";
 
     if (!textureLoadingEnabled)
     {
@@ -880,7 +883,9 @@ AssimpModelLorder::MakeMaterial(
             }
         }
 
-        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        ApplyMaterialTuning(*material, defaultMaterialKey, tuningSettings);
+        materials[i] = std::move(material);
     }
 
     return materials;

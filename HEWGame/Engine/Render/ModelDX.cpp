@@ -40,11 +40,13 @@ std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex) const
 
 void ModelDX::SetMaterialKey(const std::string& key)
 {
+        const MaterialTuningSettings& tuningSettings = GetDefaultMaterialTuningSettings();
         for (const auto& material : m_materials)
         {
                 if (material)
                 {
                         material->SetMaterialKey(key);
+                        ApplyMaterialTuning(*material, key, tuningSettings);
                 }
         }
 }
