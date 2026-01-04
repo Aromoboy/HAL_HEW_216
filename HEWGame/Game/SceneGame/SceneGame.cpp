@@ -1294,6 +1294,16 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 stageBounds.push_back(stageEntity->GetAABB());
             }
 
+            std::optional<float> receiverZ = std::nullopt;
+            if (m_isComposed)
+            {
+                receiverZ = m_stageData.GetPlaneZ();
+            }
+            if (m_blobShadowSettings.groundZ)
+            {
+                receiverZ = m_blobShadowSettings.groundZ;
+            }
+
             const auto resolveShadowReceiver = [&](Entities::PhysicalEntity& entity)
             {
                 entity.SyncColliderBounds();
@@ -1306,7 +1316,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             if (player)
             {
                 const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
-                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, m_blobShadowSettings.groundZ, receiverHeight);
+                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverZ, receiverHeight);
             }
             if (m_sweetsManager)
             {
@@ -1317,7 +1327,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                         if (sweets)
                         {
                             const auto [receiverY, receiverHeight] = resolveShadowReceiver(*sweets);
-                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, m_blobShadowSettings.groundZ, receiverHeight);
+                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, receiverZ, receiverHeight);
                         }
                     }
                 };
