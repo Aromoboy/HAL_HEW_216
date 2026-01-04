@@ -352,10 +352,12 @@ float4 main(PS_IN pin) : SV_TARGET
 
 	float keyWrap = lightParams[1].w;
 	float fillWrap = lightParams[3].w;
-	float3 keyColor = lightParams[0].rgb * lightParams[0].a;
+	float3 keyLightColor = lightParams[0].rgb * lightParams[0].a;
 	float3 fillColor = lightParams[2].rgb * lightParams[2].a;
 	float lightResponse = max(0.0001f, objLighting.x);
-	float3 key = keyColor * WrapLambert(N, L, keyWrap);
+	float sssIntensity = objLighting.y;
+	float3 sssColor = objSSSColor.rgb;
+	float3 key = keyLightColor * WrapLambert(N, L, keyWrap);
 	float3 fill = fillColor * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
 	float hemiSkyAlpha = lightParams[4].a;
@@ -370,6 +372,9 @@ float4 main(PS_IN pin) : SV_TARGET
 	{
 		color += lightParams[6].rgb * lightParams[6].a * rim;
 	}
+	float back = saturate(dot(-N, L));
+	float sss = back * back * sssIntensity;
+	color += sssColor * sss * keyLightColor;
 
 
 	return float4(saturate(color), 1.0f);
