@@ -364,6 +364,8 @@ bool SceneGame::Load(Core::Input& input)
         return false;
     }
     m_loadFailed = false;
+    m_materialTuningSettings = composition->materialTuningSettings;
+    Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
@@ -387,8 +389,6 @@ bool SceneGame::Load(Core::Input& input)
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
-    m_materialTuningSettings = composition->materialTuningSettings;
-    Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
