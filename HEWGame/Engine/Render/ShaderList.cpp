@@ -104,11 +104,16 @@ void ShaderList::SetBones(DirectX::XMFLOAT4X4* bones200)
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	constexpr float lightResponse = 1.0f;
+	constexpr float sssIntensity = 0.0f;
+	constexpr DirectX::XMFLOAT3 sssColor = {1.0f, 1.0f, 1.0f};
+	DirectX::XMFLOAT4 param[6] = {
 		material.diffuse,
 		material.ambient,
 		material.specular,
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(lightResponse, sssIntensity, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(sssColor.x, sssColor.y, sssColor.z, 0.0f)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.pTexture ? 1.0f : 0.0f;
@@ -124,11 +129,16 @@ void ShaderList::SetMaterial(const Model::Material& material)
 
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	constexpr float lightResponse = 1.0f;
+	constexpr float sssIntensity = 0.0f;
+	constexpr DirectX::XMFLOAT3 sssColor = {1.0f, 1.0f, 1.0f};
+	DirectX::XMFLOAT4 param[6] = {
 		material.GetDiffuse(),
 		material.GetAmbient(),
 		material.GetSpecular(),
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(lightResponse, sssIntensity, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(sssColor.x, sssColor.y, sssColor.z, 0.0f)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.GetTexture() ? 1.0f : 0.0f;
@@ -311,6 +321,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -379,6 +391,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -421,6 +435,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -473,6 +489,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -521,6 +539,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
