@@ -385,12 +385,15 @@ namespace SceneGameConfig
         bool parsedVignetteStrength = false;
         bool parsedBloomThreshold = false;
         bool parsedBloomIntensity = false;
+        bool parsedGrainAmount = false;
         bool parsedFxaaEdgeThreshold = false;
         bool parsedFxaaEdgeThresholdMin = false;
         bool parsedFxaaSubpixelQuality = false;
         bool parsedEnableFog = false;
         bool parsedEnableVignette = false;
         bool parsedEnableBloom = false;
+        bool parsedGrainEnable = false;
+        bool parsedGrainAnimate = false;
         bool parsedEnableFxaa = false;
 
         for (const auto& entry : lines)
@@ -592,6 +595,27 @@ namespace SceneGameConfig
                 continue;
             }
 
+            if (key == "post.grain.amount")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.grainAmount = *parsed;
+                    parsedGrainAmount = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.amount=" << settings.grainAmount
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.amount value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.grainAmount << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
             if (key == "post.fxaa.edgethreshold")
             {
                 if (auto parsed = TryParseFloatToken(value))
@@ -742,6 +766,50 @@ namespace SceneGameConfig
                 }
                 continue;
             }
+
+            if (key == "post.grain.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.grainEnable = parsedValue;
+                    parsedGrainEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.enable=" << std::boolalpha << settings.grainEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.grainEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.grain.animate")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.grainAnimate = parsedValue;
+                    parsedGrainAnimate = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.animate=" << std::boolalpha << settings.grainAnimate
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.animate value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.grainAnimate << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
         }
 
         if (!parsedGamma)
@@ -808,6 +876,13 @@ namespace SceneGameConfig
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
+        if (!parsedGrainAmount)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.amount not found; using default=" << settings.grainAmount
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
         if (!parsedFxaaEdgeThreshold)
         {
             std::ostringstream oss;
@@ -848,6 +923,20 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.enableBloom not found; using default=" << std::boolalpha << settings.enableBloom
                 << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGrainEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.enable not found; using default=" << std::boolalpha << settings.grainEnable
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGrainAnimate)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.animate not found; using default="
+                << std::boolalpha << settings.grainAnimate << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
         if (!parsedEnableFxaa)

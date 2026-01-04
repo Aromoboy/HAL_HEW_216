@@ -593,6 +593,11 @@ void SceneGame::Draw()
             const float invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
             const float invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
             const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
+            float postTime = 0.0f;
+            if (const auto* timer = GetTimer())
+            {
+                postTime = static_cast<float>(timer->FrameIndex()) * timer->DeltaTime();
+            }
 
             if (!postSettings.enableFog)
             {
@@ -624,7 +629,11 @@ void SceneGame::Draw()
                 postSettings.fxaaEdgeThreshold,
                 postSettings.fxaaEdgeThresholdMin,
                 postSettings.fxaaSubpixelQuality,
-                postSettings.enableFxaa ? 1 : 0);
+                postSettings.enableFxaa ? 1 : 0,
+                postTime,
+                postSettings.grainAmount,
+                postSettings.grainEnable ? 1 : 0,
+                postSettings.grainAnimate ? 1 : 0);
 
             postprocess->Bind(context);
 
