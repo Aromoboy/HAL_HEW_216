@@ -169,11 +169,9 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
         return;
     }
 
-    float resolvedReceiverZ = renderTransform.position.z;
-    if (receiverZ && IsFiniteFloat(*receiverZ))
-    {
-        resolvedReceiverZ = *receiverZ;
-    }
+    const float resolvedReceiverZ = (receiverZ && IsFiniteFloat(*receiverZ))
+        ? *receiverZ
+        : renderTransform.position.z;
 
     Transform shadowTransform{};
     shadowTransform.position = float3{
