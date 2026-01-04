@@ -30,6 +30,7 @@
 #include "ISceneServices.h"
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <string>
 #include"SettingScene.h"
@@ -149,6 +150,7 @@ private:
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
+    std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;
