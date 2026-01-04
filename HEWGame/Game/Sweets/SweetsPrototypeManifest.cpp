@@ -122,12 +122,14 @@ namespace SweetsSpace
         RegisterExtraAlias("Fairy", "Player");
     }
 
-    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics)
+    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description,
+        std::string materialKey, bool allowMeshPhysics)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
+        descriptor.materialKey = std::move(materialKey);
         descriptor.allowMeshPhysics = allowMeshPhysics;
 
         const std::string normalized = NormalizeKey(descriptor.key);
@@ -140,12 +142,14 @@ namespace SweetsSpace
         m_lookup[NormalizeKey(aliasKey)] = type;
     }
 
-    void SweetsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description, bool allowMeshPhysics)
+    void SweetsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description,
+        std::string materialKey, bool allowMeshPhysics)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
+        descriptor.materialKey = std::move(materialKey);
         descriptor.allowMeshPhysics = allowMeshPhysics;
 
         const std::string normalized = NormalizeKey(descriptor.key);
@@ -239,7 +243,8 @@ namespace SweetsSpace
             if (tokens.size() < 2)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Line " << entry.lineNumber << " malformed (needs key,modelPath[,description]).\n";
+                warn << kLogPrefix << "Line " << entry.lineNumber
+                    << " malformed (needs key,modelPath[,description[,materialKey=...][,allowMeshPhysics]]).\n";
                 ManifestDebugTrace(warn.str());
                 continue;
             }
@@ -248,6 +253,7 @@ namespace SweetsSpace
             const std::string& modelPath = tokens[1];
             bool allowMeshPhysics = false;
             std::size_t descriptionEnd = tokens.size();
+            std::optional<std::string> materialKey;
             if (tokens.size() >= 3)
             {
                 const std::string& maybeFlag = tokens.back();
@@ -261,6 +267,33 @@ namespace SweetsSpace
                 {
                     allowMeshPhysics = false;
                     descriptionEnd = tokens.size() - 1;
+                }
+            }
+
+            if (descriptionEnd > 2)
+            {
+                const std::string& maybeMaterialToken = tokens[descriptionEnd - 1];
+                const std::string normalizedToken = NormalizeKey(maybeMaterialToken);
+                const std::string prefix = "materialkey=";
+                const std::string shortPrefix = "material=";
+                std::string value;
+                if (normalizedToken.rfind(prefix, 0) == 0)
+                {
+                    value = maybeMaterialToken.substr(prefix.size());
+                }
+                else if (normalizedToken.rfind(shortPrefix, 0) == 0)
+                {
+                    value = maybeMaterialToken.substr(shortPrefix.size());
+                }
+
+                if (!value.empty())
+                {
+                    std::string trimmedValue = Trim(value);
+                    if (!trimmedValue.empty())
+                    {
+                        materialKey = std::move(trimmedValue);
+                        descriptionEnd -= 1;
+                    }
                 }
             }
 
@@ -335,7 +368,7 @@ namespace SweetsSpace
                 const bool isAliasForCream = (*mappedType == SweetsType::Cream) && normalizedKey == "sherbet";
                 const std::string registerKey = isAliasForCream ? canonicalKey : key;
 
-                Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
+                Register(*mappedType, registerKey, resolvedPath, description, materialKey.value_or(std::string{}), allowMeshPhysics);
                 if (isAliasForCream || NormalizeKey(registerKey) != normalizedKey)
                 {
                     RegisterAlias(*mappedType, key);
@@ -359,7 +392,7 @@ namespace SweetsSpace
                 {
                     canonicalExtraKey = descriptorIt->second.key;
                 }
-                RegisterExtra(canonicalExtraKey, resolvedPath, description, allowMeshPhysics);
+                RegisterExtra(canonicalExtraKey, resolvedPath, description, materialKey.value_or(std::string{}), allowMeshPhysics);
                 if (isExtraAlias)
                 {
                     RegisterExtraAlias(canonicalExtraKey, key);

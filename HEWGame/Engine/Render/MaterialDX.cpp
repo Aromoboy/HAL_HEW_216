@@ -64,3 +64,13 @@ void MaterialDX::SetSpecular(const DirectX::XMFLOAT4& specular)
 {
         m_specular = specular;
 }
+
+const std::string& MaterialDX::GetMaterialKey() const
+{
+        return m_materialKey;
+}
+
+void MaterialDX::SetMaterialKey(std::string key)
+{
+        m_materialKey = std::move(key);
+}

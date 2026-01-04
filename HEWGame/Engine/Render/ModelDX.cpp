@@ -38,6 +38,17 @@ std::weak_ptr<MaterialDX> ModelDX::GetMaterial(int a_materialIndex) const
         return m_materials[a_materialIndex];
 }
 
+void ModelDX::SetMaterialKey(const std::string& key)
+{
+        for (const auto& material : m_materials)
+        {
+                if (material)
+                {
+                        material->SetMaterialKey(key);
+                }
+        }
+}
+
 bool ModelDX::HasLocalBounds() const
 {
         return m_hasLocalBounds;

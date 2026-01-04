@@ -2,6 +2,7 @@
 #include "TextureDX.h"
 #include <DirectXMath.h>
 #include <memory>
+#include <string>
 
 class MaterialDX
 {
@@ -21,6 +22,8 @@ public:
         void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
         void SetAmbient(const DirectX::XMFLOAT4& ambient);
         void SetSpecular(const DirectX::XMFLOAT4& specular);
+        const std::string& GetMaterialKey() const;
+        void SetMaterialKey(std::string key);
 
 private:
 
@@ -29,10 +32,5 @@ private:
 	DirectX::XMFLOAT4 m_specular;
 
 	std::shared_ptr<Texture2D> m_texture;
-
-
-
-
-	
+        std::string m_materialKey;
 };
-

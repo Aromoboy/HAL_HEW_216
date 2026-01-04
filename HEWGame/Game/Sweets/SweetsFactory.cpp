@@ -58,6 +58,7 @@ namespace
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
+    constexpr const char* kDefaultSweetsMaterialKey = "sweets";
 
     const char* ToString(SweetsSpace::ColliderShape shape)
     {
@@ -644,6 +645,8 @@ namespace SweetsSpace
                         << "' path='" << primaryPath << "' loaded=" << std::boolalpha << static_cast<bool>(model) << "\n";
                     Diagnostics::LogInfo(modelLog.str());
                 }
+                const std::string materialKey = (!descriptor->materialKey.empty()) ? descriptor->materialKey : kDefaultSweetsMaterialKey;
+                model->SetMaterialKey(materialKey);
 
                 Transform physicsTransform = transform;
                 physicsTransform.scale = preset.scale;
