@@ -2,6 +2,7 @@
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
+#include "MaterialTuningSettings.h"
 
 #include <algorithm>
 #include <cctype>
