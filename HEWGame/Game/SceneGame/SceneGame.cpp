@@ -431,7 +431,23 @@ bool SceneGame::Load(Core::Input& input)
         }
         for (const auto& entry : m_materialTuningSettings.overrides)
         {
-            materialLog << kLogPrefix << "  Override '" << entry.first << "' -> profile='" << entry.second << "'\n";
+            const auto& overrideEntry = entry.second;
+            materialLog << kLogPrefix << "  Override '" << entry.first << "' -> profile='"
+                << overrideEntry.profileName << "'";
+            if (overrideEntry.lightResponse)
+            {
+                materialLog << " lightResponse=" << *overrideEntry.lightResponse;
+            }
+            if (overrideEntry.sssIntensity)
+            {
+                materialLog << " sssIntensity=" << *overrideEntry.sssIntensity;
+            }
+            if (overrideEntry.sssColor)
+            {
+                materialLog << " sssColor=(" << overrideEntry.sssColor->x << ','
+                    << overrideEntry.sssColor->y << ',' << overrideEntry.sssColor->z << ')';
+            }
+            materialLog << "\n";
         }
         DebugTrace(materialLog.str());
     }
