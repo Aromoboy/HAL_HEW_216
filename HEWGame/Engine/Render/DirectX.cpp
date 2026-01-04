@@ -284,7 +284,8 @@ void BindPostProcessParams(float gamma, float saturation, float contrast, const 
 		postTime,
 		grainAmount,
 		grainEnable,
-		grainAnimate
+		grainAnimate,
+		DirectX::XMFLOAT2(0.0f, 0.0f)
 	};
 	context->UpdateSubresource(g_pPostProcessParamBuffer, 0, nullptr, &params, 0, 0);
 	context->PSSetConstantBuffers(0, 1, &g_pPostProcessParamBuffer);

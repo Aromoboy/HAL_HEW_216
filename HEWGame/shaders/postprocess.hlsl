@@ -53,6 +53,7 @@ cbuffer PostProcessParams : register(b0)
     float grainAmount;
     int grainEnable;
     int grainAnimate;
+    float2 padding3;
 };
 
 float LinearizeDepth(float z)
