@@ -93,6 +93,24 @@ namespace
 
         return std::string(kPrototypeRoot) + trimmed;
     }
+
+    std::string DefaultMaterialKeyForType(SweetsSpace::SweetsType type)
+    {
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Cream:
+            return "cream";
+        case SweetsSpace::SweetsType::Strawberry:
+            return "strawberry";
+        case SweetsSpace::SweetsType::Blueberry:
+            return "blueberry";
+        case SweetsSpace::SweetsType::Pineapple:
+            return "pineapple";
+        case SweetsSpace::SweetsType::Banana:
+            return "banana";
+        }
+        return std::string{};
+    }
 }
 
 namespace SweetsSpace
@@ -369,11 +387,25 @@ namespace SweetsSpace
                     description = existing ? existing->description : std::string{};
                 }
 
+                std::string resolvedMaterialKey = materialKey.value_or(std::string{});
+                if (resolvedMaterialKey.empty())
+                {
+                    const auto* existing = Find(*mappedType);
+                    if (existing && !existing->materialKey.empty())
+                    {
+                        resolvedMaterialKey = existing->materialKey;
+                    }
+                    else
+                    {
+                        resolvedMaterialKey = DefaultMaterialKeyForType(*mappedType);
+                    }
+                }
+
                 const std::string canonicalKey = ToString(*mappedType);
                 const bool isAliasForCream = (*mappedType == SweetsType::Cream) && normalizedKey == "sherbet";
                 const std::string registerKey = isAliasForCream ? canonicalKey : key;
 
-                Register(*mappedType, registerKey, resolvedPath, description, materialKey.value_or(std::string{}), allowMeshPhysics);
+                Register(*mappedType, registerKey, resolvedPath, description, resolvedMaterialKey, allowMeshPhysics);
                 if (isAliasForCream || NormalizeKey(registerKey) != normalizedKey)
                 {
                     RegisterAlias(*mappedType, key);
