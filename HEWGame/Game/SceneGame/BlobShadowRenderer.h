@@ -23,6 +23,7 @@ public:
     void DrawShadow(Entities::PhysicalEntity& entity,
                     const CameraSpace::ICamera& camera,
                     float receiverY,
+                    std::optional<float> receiverZ = std::nullopt,
                     std::optional<float> receiverHeight = std::nullopt);
 
 private:

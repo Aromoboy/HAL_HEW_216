@@ -1298,7 +1298,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             if (player)
             {
                 const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
-                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverHeight);
+                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, m_blobShadowSettings.groundZ, receiverHeight);
             }
             if (m_sweetsManager)
             {
@@ -1309,7 +1309,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                         if (sweets)
                         {
                             const auto [receiverY, receiverHeight] = resolveShadowReceiver(*sweets);
-                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, receiverHeight);
+                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, m_blobShadowSettings.groundZ, receiverHeight);
                         }
                     }
                 };

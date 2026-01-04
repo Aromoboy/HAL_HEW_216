@@ -5,6 +5,7 @@
 #include "MaterialTuningSettings.h"
 
 #include <DirectXMath.h>
+#include <optional>
 #include <string>
 
 namespace SceneGameConfig
@@ -76,6 +77,7 @@ namespace SceneGameConfig
         float minScale = 0.35f;
         float receiverBias = 0.01f;
         float groundY = 0.0f;
+        std::optional<float> groundZ = std::nullopt;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;
