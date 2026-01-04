@@ -599,6 +599,14 @@ void SceneGame::Draw()
             {
                 postTime = static_cast<float>(timer->FrameIndex()) * timer->DeltaTime();
             }
+            {
+                std::ostringstream grainLog;
+                grainLog << kLogPrefix
+                         << "PostProcess grainEnable=" << (postSettings.grainEnable ? 1 : 0)
+                         << " grainAmount=" << postSettings.grainAmount
+                         << "\n";
+                ::DebugTrace(grainLog.str());
+            }
 
             if (!postSettings.enableFog)
             {
