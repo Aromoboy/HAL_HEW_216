@@ -1899,8 +1899,23 @@ namespace SceneGameConfig
 
             if (StartsWith(loweredKey, std::string(kOverridePrefix)))
             {
-                std::string target = loweredKey.substr(kOverridePrefix.size());
-                if (EndsWith(target, std::string(kProfileSuffix)))
+                std::string remainder = loweredKey.substr(kOverridePrefix.size());
+                std::string target = remainder;
+                std::string property = "profile";
+                const std::size_t dotPos = remainder.rfind('.');
+                if (dotPos != std::string::npos && dotPos + 1 < remainder.size())
+                {
+                    const std::string candidateProperty = remainder.substr(dotPos + 1);
+                    if (candidateProperty == "profile"
+                        || candidateProperty == "lightresponse"
+                        || candidateProperty == "sssintensity"
+                        || candidateProperty == "ssscolor")
+                    {
+                        property = candidateProperty;
+                        target = remainder.substr(0, dotPos);
+                    }
+                }
+                else if (EndsWith(target, std::string(kProfileSuffix)))
                 {
                     target = target.substr(0, target.size() - kProfileSuffix.size());
                 }
@@ -1914,21 +1929,89 @@ namespace SceneGameConfig
                     continue;
                 }
 
-                const std::string profileName = ToLowerCopy(value);
-                if (profileName.empty())
+                MaterialTuningOverride& overrideEntry = settings.overrides[target];
+                if (property == "profile")
+                {
+                    const std::string profileName = ToLowerCopy(value);
+                    if (profileName.empty())
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Empty override profile for key '" << key
+                            << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                        continue;
+                    }
+
+                    overrideEntry.profileName = profileName;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                        << ".profile='" << profileName << "' from line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+                else if (property == "lightresponse")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        overrideEntry.lightResponse = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".lightResponse=" << *overrideEntry.lightResponse
+                            << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".lightResponse value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "sssintensity")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        overrideEntry.sssIntensity = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".sssIntensity=" << *overrideEntry.sssIntensity
+                            << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".sssIntensity value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "ssscolor")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        overrideEntry.sssColor = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".sssColor=(" << overrideEntry.sssColor->x << ',' << overrideEntry.sssColor->y
+                            << ',' << overrideEntry.sssColor->z << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".sssColor value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "[MaterialTuning] Empty override profile for key '" << key
-                        << "' on line=" << lineNumber << "\n";
+                    oss << kLogPrefix << "[MaterialTuning] Unknown override property '" << property
+                        << "' in key='" << key << "' on line=" << lineNumber << "\n";
                     DebugTrace(oss.str());
-                    continue;
                 }
-
-                settings.overrides[target] = profileName;
-                std::ostringstream oss;
-                oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
-                    << " -> profile='" << profileName << "' from line=" << lineNumber << "\n";
-                DebugTrace(oss.str());
                 continue;
             }
         }
