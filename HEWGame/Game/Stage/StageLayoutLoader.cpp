@@ -37,18 +37,16 @@ namespace
 #endif
 
     constexpr bool kEnableStageModelVerboseLogging = false;
-    constexpr const char* kPrimaryStageMaterialKey = "cake";
+    constexpr const char* kStageMaterialKeyCake = "cake";
     constexpr const char* kFallbackStageMaterialKey = "default";
     constexpr const char* kStageMaterialKeyOsara = "osara";
-    constexpr const char* kStageMaterialKeyPlate = "plate";
 
     bool IsKnownStageMaterialKey(const std::string& key)
     {
         static const std::unordered_set<std::string> kKnownStageMaterialKeys{
-            kPrimaryStageMaterialKey,
+            kStageMaterialKeyCake,
             kFallbackStageMaterialKey,
-            kStageMaterialKeyOsara,
-            kStageMaterialKeyPlate
+            kStageMaterialKeyOsara
         };
         return kKnownStageMaterialKeys.contains(key);
     }
@@ -236,7 +234,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         }
         if (obj.materialKey.empty())
         {
-            obj.materialKey = kPrimaryStageMaterialKey;
+            obj.materialKey = kStageMaterialKeyCake;
         }
         if (obj.materialKey.empty())
         {
