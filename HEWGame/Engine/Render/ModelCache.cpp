@@ -179,7 +179,7 @@ namespace Render
             std::string trackedKey;
         } inFlightGuard(m_inFlightKeys, cacheKey);
 
-        std::shared_ptr<Render::Model> model = m_loader->Load(path, m_device, *m_textureCache);
+        std::shared_ptr<Render::Model> model = m_loader->Load(path, m_device, *m_textureCache, m_materialTuningSettings);
 
         // ロード結果の判定
         if (model)
@@ -195,6 +195,11 @@ namespace Render
         }
 
         return model;  // ロード結果（失敗時は nullptr）
+    }
+
+    void ModelCache::SetMaterialTuningSettings(const MaterialTuningSettings& settings)
+    {
+        m_materialTuningSettings = settings;
     }
 
     //============================================================

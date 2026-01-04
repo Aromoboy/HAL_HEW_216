@@ -1768,62 +1768,60 @@ namespace SceneGameConfig
 
                 const std::string profileName = remainder.substr(0, dotPos);
                 const std::string property = remainder.substr(dotPos + 1);
-                MaterialProfile& profile = settings.profiles[profileName];
+                MaterialTuningProfile& profile = settings.profiles[profileName];
 
-                if (property == "diffuse")
+                if (property == "lightresponse")
                 {
-                    if (auto parsed = ParseFloat4Token(value, profile.diffuse.w))
+                    if (auto parsed = TryParseFloatToken(value))
                     {
-                        profile.diffuse = *parsed;
+                        profile.lightResponse = *parsed;
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
-                            << ".diffuse=(" << profile.diffuse.x << ',' << profile.diffuse.y << ','
-                            << profile.diffuse.z << ',' << profile.diffuse.w << ") from line=" << lineNumber << "\n";
+                            << ".lightResponse=" << profile.lightResponse << " from line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                     else
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
-                            << ".diffuse value='" << value << "' on line=" << lineNumber << "\n";
+                            << ".lightResponse value='" << value << "' on line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                 }
-                else if (property == "ambient")
+                else if (property == "sssintensity")
                 {
-                    if (auto parsed = ParseFloat4Token(value, profile.ambient.w))
+                    if (auto parsed = TryParseFloatToken(value))
                     {
-                        profile.ambient = *parsed;
+                        profile.sssIntensity = *parsed;
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
-                            << ".ambient=(" << profile.ambient.x << ',' << profile.ambient.y << ','
-                            << profile.ambient.z << ',' << profile.ambient.w << ") from line=" << lineNumber << "\n";
+                            << ".sssIntensity=" << profile.sssIntensity << " from line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                     else
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
-                            << ".ambient value='" << value << "' on line=" << lineNumber << "\n";
+                            << ".sssIntensity value='" << value << "' on line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                 }
-                else if (property == "specular")
+                else if (property == "ssscolor")
                 {
-                    if (auto parsed = ParseFloat4Token(value, profile.specular.w))
+                    if (auto parsed = ParseFloat3Token(value))
                     {
-                        profile.specular = *parsed;
+                        profile.sssColor = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
-                            << ".specular=(" << profile.specular.x << ',' << profile.specular.y << ','
-                            << profile.specular.z << ',' << profile.specular.w << ") from line=" << lineNumber << "\n";
+                            << ".sssColor=(" << profile.sssColor.x << ',' << profile.sssColor.y << ','
+                            << profile.sssColor.z << ") from line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                     else
                     {
                         std::ostringstream oss;
                         oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
-                            << ".specular value='" << value << "' on line=" << lineNumber << "\n";
+                            << ".sssColor value='" << value << "' on line=" << lineNumber << "\n";
                         DebugTrace(oss.str());
                     }
                 }

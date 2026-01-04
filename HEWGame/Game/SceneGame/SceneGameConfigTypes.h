@@ -2,9 +2,9 @@
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
+#include "MaterialTuningSettings.h"
 
 #include <DirectXMath.h>
-#include <map>
 #include <string>
 
 namespace SceneGameConfig
@@ -78,18 +78,8 @@ namespace SceneGameConfig
         float groundY = 0.0f;
     };
 
-    struct MaterialProfile
-    {
-        DirectX::XMFLOAT4 diffuse{ 1.0f, 1.0f, 1.0f, 1.0f };
-        DirectX::XMFLOAT4 ambient{ 0.6f, 0.6f, 0.6f, 1.0f };
-        DirectX::XMFLOAT4 specular{ 1.0f, 1.0f, 1.0f, 1.0f };
-    };
-
-    struct MaterialTuningSettings
-    {
-        std::map<std::string, MaterialProfile> profiles;
-        std::map<std::string, std::string> overrides;
-    };
+    using MaterialTuningProfile = ::MaterialTuningProfile;
+    using MaterialTuningSettings = ::MaterialTuningSettings;
 }
 
 #endif

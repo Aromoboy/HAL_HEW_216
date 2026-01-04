@@ -382,6 +382,7 @@ bool SceneGame::Load(Core::Input& input)
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
     m_materialTuningSettings = composition->materialTuningSettings;
+    Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -418,10 +419,10 @@ bool SceneGame::Load(Core::Input& input)
         for (const auto& entry : m_materialTuningSettings.profiles)
         {
             const auto& profile = entry.second;
-            materialLog << kLogPrefix << "  Profile '" << entry.first << "' diffuse=("
-                << profile.diffuse.x << ',' << profile.diffuse.y << ',' << profile.diffuse.z << ',' << profile.diffuse.w << ")"
-                << " ambient=(" << profile.ambient.x << ',' << profile.ambient.y << ',' << profile.ambient.z << ',' << profile.ambient.w << ")"
-                << " specular=(" << profile.specular.x << ',' << profile.specular.y << ',' << profile.specular.z << ',' << profile.specular.w << ")\n";
+            materialLog << kLogPrefix << "  Profile '" << entry.first
+                << "' lightResponse=" << profile.lightResponse
+                << " sssIntensity=" << profile.sssIntensity
+                << " sssColor=(" << profile.sssColor.x << ',' << profile.sssColor.y << ',' << profile.sssColor.z << ")\n";
         }
         for (const auto& entry : m_materialTuningSettings.overrides)
         {
