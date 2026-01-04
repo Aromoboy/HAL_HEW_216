@@ -51,6 +51,7 @@ public:
         float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
+        SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;

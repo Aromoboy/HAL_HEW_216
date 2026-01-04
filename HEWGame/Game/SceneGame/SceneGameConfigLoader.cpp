@@ -7,6 +7,7 @@
 #include <cctype>
 #include <optional>
 #include <sstream>
+#include <string_view>
 #include <vector>
 #include <DirectXMath.h>
 
@@ -60,6 +61,26 @@ namespace
             --end;
         } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
         return std::string(begin, end + 1);
+    }
+
+    std::string ToLowerCopy(const std::string& input)
+    {
+        std::string lowered = input;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
+        {
+            return static_cast<char>(std::tolower(c));
+        });
+        return lowered;
+    }
+
+    bool StartsWith(const std::string& value, const std::string& prefix)
+    {
+        return value.size() >= prefix.size() && value.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    bool EndsWith(const std::string& value, const std::string& suffix)
+    {
+        return value.size() >= suffix.size() && value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
     std::optional<float> TryParseFloatToken(const std::string& token)
@@ -1380,6 +1401,165 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[LightingSettings] lighting.rim.enable not found; using default="
                 << std::boolalpha << settings.rimEnable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    MaterialTuningSettings LoadMaterialTuningSettings()
+    {
+        MaterialTuningSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MaterialTuning] Missing config; defaulting material tuning section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        constexpr std::string_view kProfilePrefix = "material.profile.";
+        constexpr std::string_view kOverridePrefix = "material.override.";
+        constexpr std::string_view kProfileSuffix = ".profile";
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            if (key.empty())
+            {
+                continue;
+            }
+
+            std::string loweredKey = ToLowerCopy(key);
+            if (StartsWith(loweredKey, std::string(kProfilePrefix)))
+            {
+                const std::string remainder = loweredKey.substr(kProfilePrefix.size());
+                const std::size_t dotPos = remainder.find('.');
+                if (dotPos == std::string::npos || dotPos == 0 || dotPos + 1 >= remainder.size())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Invalid profile key '" << key
+                        << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                const std::string profileName = remainder.substr(0, dotPos);
+                const std::string property = remainder.substr(dotPos + 1);
+                MaterialProfile& profile = settings.profiles[profileName];
+
+                if (property == "diffuse")
+                {
+                    if (auto parsed = ParseFloat4Token(value, profile.diffuse.w))
+                    {
+                        profile.diffuse = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".diffuse=(" << profile.diffuse.x << ',' << profile.diffuse.y << ','
+                            << profile.diffuse.z << ',' << profile.diffuse.w << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".diffuse value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "ambient")
+                {
+                    if (auto parsed = ParseFloat4Token(value, profile.ambient.w))
+                    {
+                        profile.ambient = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".ambient=(" << profile.ambient.x << ',' << profile.ambient.y << ','
+                            << profile.ambient.z << ',' << profile.ambient.w << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".ambient value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "specular")
+                {
+                    if (auto parsed = ParseFloat4Token(value, profile.specular.w))
+                    {
+                        profile.specular = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".specular=(" << profile.specular.x << ',' << profile.specular.y << ','
+                            << profile.specular.z << ',' << profile.specular.w << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".specular value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Unknown profile property '" << property
+                        << "' in key='" << key << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (StartsWith(loweredKey, std::string(kOverridePrefix)))
+            {
+                std::string target = loweredKey.substr(kOverridePrefix.size());
+                if (EndsWith(target, std::string(kProfileSuffix)))
+                {
+                    target = target.substr(0, target.size() - kProfileSuffix.size());
+                }
+
+                if (target.empty())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Invalid override key '" << key
+                        << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                const std::string profileName = ToLowerCopy(value);
+                if (profileName.empty())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Empty override profile for key '" << key
+                        << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                settings.overrides[target] = profileName;
+                std::ostringstream oss;
+                oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                    << " -> profile='" << profileName << "' from line=" << lineNumber << "\n";
+                DebugTrace(oss.str());
+                continue;
+            }
+        }
+
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MaterialTuning] Profiles=" << settings.profiles.size()
+                << " overrides=" << settings.overrides.size()
+                << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 

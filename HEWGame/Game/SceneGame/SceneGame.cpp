@@ -313,6 +313,7 @@ bool SceneGame::Load(Core::Input& input)
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
+    m_materialTuningSettings = composition->materialTuningSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
@@ -336,6 +337,25 @@ bool SceneGame::Load(Core::Input& input)
     gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
+
+    {
+        std::ostringstream materialLog;
+        materialLog << kLogPrefix << "[MaterialTuning] Applied profiles=" << m_materialTuningSettings.profiles.size()
+            << " overrides=" << m_materialTuningSettings.overrides.size() << "\n";
+        for (const auto& entry : m_materialTuningSettings.profiles)
+        {
+            const auto& profile = entry.second;
+            materialLog << kLogPrefix << "  Profile '" << entry.first << "' diffuse=("
+                << profile.diffuse.x << ',' << profile.diffuse.y << ',' << profile.diffuse.z << ',' << profile.diffuse.w << ")"
+                << " ambient=(" << profile.ambient.x << ',' << profile.ambient.y << ',' << profile.ambient.z << ',' << profile.ambient.w << ")"
+                << " specular=(" << profile.specular.x << ',' << profile.specular.y << ',' << profile.specular.z << ',' << profile.specular.w << ")\n";
+        }
+        for (const auto& entry : m_materialTuningSettings.overrides)
+        {
+            materialLog << kLogPrefix << "  Override '" << entry.first << "' -> profile='" << entry.second << "'\n";
+        }
+        DebugTrace(materialLog.str());
+    }
 
     if (m_physicsBinder)
     {
