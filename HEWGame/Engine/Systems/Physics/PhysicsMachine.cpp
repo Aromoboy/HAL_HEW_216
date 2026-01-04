@@ -286,6 +286,25 @@ namespace Systems
         return m_box2dSystem ? m_box2dSystem->GetWorldId() : b2_nullWorldId;
     }
 
+    std::optional<b2RayResult> PhysicsMachine::RayCastClosest(const b2Vec2& origin,
+        const b2Vec2& translation,
+        b2QueryFilter filter) const
+    {
+        const b2WorldId worldId = GetWorldId();
+        if (!b2World_IsValid(worldId))
+        {
+            return std::nullopt;
+        }
+
+        b2RayResult result = b2World_CastRayClosest(worldId, origin, translation, filter);
+        if (!result.hit)
+        {
+            return std::nullopt;
+        }
+
+        return result;
+    }
+
     b2JointId PhysicsMachine::CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
         const Entities::PhysicalEntity& bodyB,
         const b2Vec2& worldAnchor,
