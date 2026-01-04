@@ -22,6 +22,7 @@ namespace SweetsSpace
         std::string key;
         std::string modelPath;
         std::string description;
+        std::string materialKey;
         bool allowMeshPhysics{ false };
     };
 
@@ -58,9 +59,11 @@ namespace SweetsSpace
 
         void ApplyDefaults();
         bool LoadOverridesFromConfig(const std::string& configPath);
-        void Register(SweetsType type, std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
+        void Register(SweetsType type, std::string key, std::string relativePath, std::string description,
+            std::string materialKey = {}, bool allowMeshPhysics = false);
         void RegisterAlias(SweetsType type, const std::string& aliasKey);
-        void RegisterExtra(std::string key, std::string relativePath, std::string description, bool allowMeshPhysics = false);
+        void RegisterExtra(std::string key, std::string relativePath, std::string description,
+            std::string materialKey = {}, bool allowMeshPhysics = false);
         void RegisterExtraAlias(const std::string& key, const std::string& aliasKey);
 
         std::unordered_map<SweetsType, SweetsPrototypeDescriptor, SweetsTypeHash> m_byType;

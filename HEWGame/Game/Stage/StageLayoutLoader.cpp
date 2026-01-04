@@ -36,6 +36,8 @@ namespace
 #endif
 
     constexpr bool kEnableStageModelVerboseLogging = false;
+    constexpr const char* kPrimaryStageMaterialKey = "cake";
+    constexpr const char* kFallbackStageMaterialKey = "default";
 
     std::string NormalizeColliderKey(const std::string& key)
     {
@@ -46,6 +48,21 @@ namespace
             normalized.push_back(static_cast<char>(std::tolower(ch)));
         }
         return normalized;
+    }
+
+    std::string Trim(const std::string& value)
+    {
+        auto begin = value.begin();
+        auto end = value.end();
+        while (begin != end && std::isspace(static_cast<unsigned char>(*begin)))
+        {
+            ++begin;
+        }
+        while (end != begin && std::isspace(static_cast<unsigned char>(*(end - 1))))
+        {
+            --end;
+        }
+        return std::string(begin, end);
     }
 
     std::string BuildModelKey(const std::string& modelPath)
@@ -187,6 +204,30 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         {
             obj.colliderPresetId = NormalizeColliderKey(values[15]);
         }
+        if (values.size() > 16)
+        {
+            obj.materialKey = Trim(values[16]);
+        }
+        if (!obj.materialKey.empty())
+        {
+            const std::string normalizedMaterialKey = NormalizeColliderKey(obj.materialKey);
+            if (normalizedMaterialKey == kPrimaryStageMaterialKey || normalizedMaterialKey == kFallbackStageMaterialKey)
+            {
+                obj.materialKey = normalizedMaterialKey;
+            }
+            else
+            {
+                obj.materialKey.clear();
+            }
+        }
+        if (obj.materialKey.empty())
+        {
+            obj.materialKey = kPrimaryStageMaterialKey;
+        }
+        if (obj.materialKey.empty())
+        {
+            obj.materialKey = kFallbackStageMaterialKey;
+        }
 
         if (kEnableStageModelVerboseLogging)
         {
@@ -201,6 +242,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         }
         else
         {
+            obj.model->SetMaterialKey(obj.materialKey);
             ++result.modelsLoaded;
             if (kEnableStageModelVerboseLogging)
             {

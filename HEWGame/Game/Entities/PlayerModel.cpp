@@ -42,6 +42,8 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
+    constexpr const char* kPlayerMaterialKey = "player";
+    constexpr const char* kFairyMaterialKey = "fairy";
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -177,6 +179,7 @@ namespace
             DirectX::XMFLOAT4(0.2f, 0.35f, 0.55f, 1),
             DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
             nullptr);
+        mat->SetMaterialKey(kFairyMaterialKey);
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
 
@@ -267,10 +270,16 @@ namespace Entities
             m_missingModelWarned = true;
         }
 
-        player.m_model = model ? std::move(model) : player.m_model;
-        if (!player.m_model)
+        std::shared_ptr<Render::Model> selectedModel = model ? std::move(model) : player.m_model;
+        if (!selectedModel)
         {
-            player.m_model = m_fairyModel;
+            selectedModel = m_fairyModel;
+        }
+        const bool usesFairyModel = (selectedModel == m_fairyModel);
+        player.m_model = std::move(selectedModel);
+        if (player.m_model)
+        {
+            player.m_model->SetMaterialKey(usesFairyModel ? kFairyMaterialKey : kPlayerMaterialKey);
         }
 
         const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(player.m_model, player.m_transform.scale);
