@@ -100,8 +100,7 @@ namespace
 
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
-            return a.min.x <= b.max.x && a.max.x >= b.min.x
-                && a.min.z <= b.max.z && a.max.z >= b.min.z;
+            return a.min.x <= b.max.x && a.max.x >= b.min.x;
         }
 
         std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
