@@ -79,6 +79,7 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
+        constexpr float kShadowReceiverTolerance = 0.05f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -91,6 +92,72 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
+
+        bool IsFiniteFloat(float value)
+        {
+            return std::isfinite(value) != 0;
+        }
+
+        bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
+        {
+            return a.min.x <= b.max.x && a.max.x >= b.min.x
+                && a.min.z <= b.max.z && a.max.z >= b.min.z;
+        }
+
+        std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
+        {
+            if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(receiverY))
+            {
+                return std::nullopt;
+            }
+
+            float height = bounds.min.y - receiverY;
+            if (!IsFiniteFloat(height))
+            {
+                return std::nullopt;
+            }
+
+            return std::max(0.0f, height);
+        }
+
+        bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
+            const std::vector<AABB>& stageBounds,
+            float* outReceiverY)
+        {
+            if (!outReceiverY || stageBounds.empty())
+            {
+                return false;
+            }
+
+            float bestReceiver = -std::numeric_limits<float>::infinity();
+            bool found = false;
+            for (const auto& bounds : stageBounds)
+            {
+                if (!OverlapsShadowReceiverXZ(entityBounds, bounds))
+                {
+                    continue;
+                }
+
+                const float topY = bounds.max.y;
+                if (!IsFiniteFloat(topY))
+                {
+                    continue;
+                }
+
+                if (topY <= entityBounds.min.y + kShadowReceiverTolerance && topY > bestReceiver)
+                {
+                    bestReceiver = topY;
+                    found = true;
+                }
+            }
+
+            if (found)
+            {
+                *outReceiverY = bestReceiver;
+            }
+
+            return found;
+        }
 #if defined(_DEBUG)
         Color MakeColor(float r, float g, float b, float a)
         {
@@ -1196,10 +1263,32 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
         if (m_blobShadowRenderer && m_blobShadowSettings.enable)
         {
-            const float receiverY = m_blobShadowSettings.groundY;
+            std::vector<AABB> stageBounds;
+            stageBounds.reserve(m_stagePhysicsEntities.size());
+            for (const auto& stageEntity : m_stagePhysicsEntities)
+            {
+                if (!stageEntity)
+                {
+                    continue;
+                }
+
+                stageEntity->SyncColliderBounds();
+                stageBounds.push_back(stageEntity->GetAABB());
+            }
+
+            const auto resolveShadowReceiver = [&](Entities::PhysicalEntity& entity)
+            {
+                entity.SyncColliderBounds();
+                const AABB& bounds = entity.GetAABB();
+                float receiverY = m_blobShadowSettings.groundY;
+                TryFindShadowReceiverYFromStage(bounds, stageBounds, &receiverY);
+                return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
+            };
+
             if (player)
             {
-                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY);
+                const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
+                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverHeight);
             }
             if (m_sweetsManager)
             {
@@ -1209,7 +1298,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                     {
                         if (sweets)
                         {
-                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY);
+                            const auto [receiverY, receiverHeight] = resolveShadowReceiver(*sweets);
+                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, receiverHeight);
                         }
                     }
                 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "ICamera.h"
 #include "SceneGameConfigTypes.h"
@@ -19,7 +20,10 @@ public:
     ~BlobShadowRenderer();
 
     void SetSettings(const SceneGameConfig::BlobShadowSettings& settings);
-    void DrawShadow(Entities::PhysicalEntity& entity, const CameraSpace::ICamera& camera, float receiverY);
+    void DrawShadow(Entities::PhysicalEntity& entity,
+                    const CameraSpace::ICamera& camera,
+                    float receiverY,
+                    std::optional<float> receiverHeight = std::nullopt);
 
 private:
     struct ShadowParams

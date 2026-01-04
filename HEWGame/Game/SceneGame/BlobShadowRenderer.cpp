@@ -119,7 +119,10 @@ float4 main(PS_IN pin) : SV_TARGET {
     return m_ready;
 }
 
-void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity, const CameraSpace::ICamera& camera, float receiverY)
+void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
+    const CameraSpace::ICamera& camera,
+    float receiverY,
+    std::optional<float> receiverHeight)
 {
     if (!m_settings.enable || !EnsureReady())
     {
@@ -138,8 +141,16 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity, const Came
     float depth = SafeSize(bounds.max.z - bounds.min.z, width);
     depth = SafeSize(depth, width);
 
-    const float rawHeight = renderTransform.position.y - receiverY;
-    const float height = std::max(0.0f, rawHeight);
+    float height = renderTransform.position.y - receiverY;
+    if (receiverHeight && IsFiniteFloat(*receiverHeight))
+    {
+        height = *receiverHeight;
+    }
+    if (!IsFiniteFloat(height))
+    {
+        return;
+    }
+    height = std::max(0.0f, height);
     float heightRatio = 0.0f;
     if (m_settings.maxHeight > 0.0f)
     {
