@@ -11,6 +11,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 
 #include <box2d/box2d.h>
 
@@ -38,6 +39,19 @@ namespace
     constexpr bool kEnableStageModelVerboseLogging = false;
     constexpr const char* kPrimaryStageMaterialKey = "cake";
     constexpr const char* kFallbackStageMaterialKey = "default";
+    constexpr const char* kStageMaterialKeyOsara = "osara";
+    constexpr const char* kStageMaterialKeyPlate = "plate";
+
+    bool IsKnownStageMaterialKey(const std::string& key)
+    {
+        static const std::unordered_set<std::string> kKnownStageMaterialKeys{
+            kPrimaryStageMaterialKey,
+            kFallbackStageMaterialKey,
+            kStageMaterialKeyOsara,
+            kStageMaterialKeyPlate
+        };
+        return kKnownStageMaterialKeys.contains(key);
+    }
 
     std::string NormalizeColliderKey(const std::string& key)
     {
@@ -202,16 +216,16 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         obj.currentRotation = 0.0f;
         if (values.size() > 15)
         {
-            obj.colliderPresetId = NormalizeColliderKey(values[15]);
+            obj.materialKey = Trim(values[15]);
         }
         if (values.size() > 16)
         {
-            obj.materialKey = Trim(values[16]);
+            obj.colliderPresetId = NormalizeColliderKey(values[16]);
         }
         if (!obj.materialKey.empty())
         {
             const std::string normalizedMaterialKey = NormalizeColliderKey(obj.materialKey);
-            if (normalizedMaterialKey == kPrimaryStageMaterialKey || normalizedMaterialKey == kFallbackStageMaterialKey)
+            if (IsKnownStageMaterialKey(normalizedMaterialKey))
             {
                 obj.materialKey = normalizedMaterialKey;
             }
