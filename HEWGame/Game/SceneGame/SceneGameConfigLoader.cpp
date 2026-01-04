@@ -1516,6 +1516,7 @@ namespace SceneGameConfig
         bool parsedMinScale = false;
         bool parsedReceiverBias = false;
         bool parsedGroundY = false;
+        bool parsedGroundZ = false;
 
         for (const auto& entry : lines)
         {
@@ -1670,6 +1671,28 @@ namespace SceneGameConfig
                 }
                 continue;
             }
+
+            if (key == "shadow.blob.groundz")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.groundZ = *parsed;
+                    parsedGroundZ = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.groundZ=" << *settings.groundZ
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.groundZ value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << (settings.groundZ ? std::to_string(*settings.groundZ) : std::string("unset")) << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
         }
 
         if (!parsedEnable)
@@ -1718,6 +1741,14 @@ namespace SceneGameConfig
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[BlobShadow] shadow.blob.groundY not found; using default=" << settings.groundY
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGroundZ)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.groundZ not found; using default="
+                << (settings.groundZ ? std::to_string(*settings.groundZ) : std::string("unset"))
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }

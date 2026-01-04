@@ -122,6 +122,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
     const CameraSpace::ICamera& camera,
     float receiverY,
+    std::optional<float> receiverZ,
     std::optional<float> receiverHeight)
 {
     if (!m_settings.enable || !EnsureReady())
@@ -168,11 +169,17 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
         return;
     }
 
+    float resolvedReceiverZ = renderTransform.position.z;
+    if (receiverZ && IsFiniteFloat(*receiverZ))
+    {
+        resolvedReceiverZ = *receiverZ;
+    }
+
     Transform shadowTransform{};
     shadowTransform.position = float3{
         renderTransform.position.x,
         receiverY + m_settings.receiverBias,
-        renderTransform.position.z
+        resolvedReceiverZ
     };
     shadowTransform.rotation = float3{ DirectX::XM_PIDIV2, 0.0f, 0.0f };
     shadowTransform.scale = float3{
