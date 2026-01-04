@@ -72,7 +72,7 @@ namespace SceneGameConfig
     {
         bool enable = true;
         bool debugNoDepthTest = false;
-        bool forceReceiverZ = true;
+        bool forceReceiverZ = false;
         float opacity = 0.35f;
         float softness = 0.4f;
         float maxHeight = 6.0f;
