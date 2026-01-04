@@ -5,7 +5,7 @@
 namespace
 {
 	ID3D11RasterizerState*		g_pRasterizerState[3];
-	ID3D11DepthStencilState*	g_pDepthStencilState[2];
+	ID3D11DepthStencilState*	g_pDepthStencilState[3];
 	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
 	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
 	ID3D11Buffer*			g_pPostProcessParamBuffer = nullptr;
@@ -93,6 +93,8 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_DECR;
 	// ステート作成
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[0]);
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[2]);
 	dsDesc.DepthEnable = false;
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[1]);
 	SetDepthTest(false);
@@ -150,7 +152,7 @@ void UninitDirectX()
                 SAFE_RELEASE(g_pSamplerState[i]);
         for (int i = 0; i < BLEND_MAX; ++i)
                 SAFE_RELEASE(g_pBlendState[i]);
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < 3; ++i)
                 SAFE_RELEASE(g_pDepthStencilState[i]);
         for(int i = 0; i < 3; ++ i)
                 SAFE_RELEASE(g_pRasterizerState[i]);
@@ -208,6 +210,16 @@ void SetDepthTest(bool enable)
 {
 	GetContext()->OMSetDepthStencilState(
 		g_pDepthStencilState[enable ? 0 : 1], 1);
+}
+void SetDepthTestWrite(bool enable, bool write)
+{
+	if (!enable)
+	{
+		GetContext()->OMSetDepthStencilState(g_pDepthStencilState[1], 1);
+		return;
+	}
+
+	GetContext()->OMSetDepthStencilState(g_pDepthStencilState[write ? 0 : 2], 1);
 }
 void SetBlendMode(BlendMode blend)
 {
