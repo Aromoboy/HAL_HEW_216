@@ -129,9 +129,9 @@ void ShaderList::SetMaterial(const Model::Material& material)
 
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	constexpr float lightResponse = 1.0f;
-	constexpr float sssIntensity = 0.0f;
-	constexpr DirectX::XMFLOAT3 sssColor = {1.0f, 1.0f, 1.0f};
+	const float lightResponse = material.GetLightResponse();
+	const float sssIntensity = material.GetSssIntensity();
+	const DirectX::XMFLOAT3 sssColor = material.GetSssColor();
 	DirectX::XMFLOAT4 param[6] = {
 		material.GetDiffuse(),
 		material.GetAmbient(),
