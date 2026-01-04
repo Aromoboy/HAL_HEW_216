@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Core/UpdateNode.h"
+#include "Systems/Physics/CollisionLayer.h"
 
 #include <box2d/box2d.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -18,6 +20,9 @@ namespace Systems
 // PhysicsMachine は Entities 階層に属する物理ボディをまとめて管理する
 // UpdateNode 旧 SceneSpace 由来の型は使用せず、Entity 派生のみを受け付ける 
 {
+    uint16_t ToCategoryBits(Collision::CollisionLayer layer);
+    uint16_t ToMaskBits(Collision::CollisionLayer layer);
+
     struct PhysicsTuningParameters
     {
         float gravity = 9.8f;
