@@ -36,7 +36,6 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <optional>
@@ -79,7 +78,7 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
-        constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr uint64_t kStageQueryBits = 0x0008;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -98,11 +97,6 @@ namespace
             return std::isfinite(value) != 0;
         }
 
-        bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
-        {
-            return a.min.x <= b.max.x && a.max.x >= b.min.x;
-        }
-
         std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
         {
             if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(receiverY))
@@ -117,45 +111,6 @@ namespace
             }
 
             return std::max(0.0f, height);
-        }
-
-        bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
-            const std::vector<AABB>& stageBounds,
-            float* outReceiverY)
-        {
-            if (!outReceiverY || stageBounds.empty())
-            {
-                return false;
-            }
-
-            float bestReceiver = -std::numeric_limits<float>::infinity();
-            bool found = false;
-            for (const auto& bounds : stageBounds)
-            {
-                if (!OverlapsShadowReceiverXZ(entityBounds, bounds))
-                {
-                    continue;
-                }
-
-                const float topY = bounds.max.y;
-                if (!IsFiniteFloat(topY))
-                {
-                    continue;
-                }
-
-                if (topY <= entityBounds.min.y + kShadowReceiverTolerance && topY > bestReceiver)
-                {
-                    bestReceiver = topY;
-                    found = true;
-                }
-            }
-
-            if (found)
-            {
-                *outReceiverY = bestReceiver;
-            }
-
-            return found;
         }
 #if defined(_DEBUG)
         Color MakeColor(float r, float g, float b, float a)
@@ -1302,19 +1257,6 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
         if (m_blobShadowRenderer && m_blobShadowSettings.enable)
         {
-            std::vector<AABB> stageBounds;
-            stageBounds.reserve(m_stagePhysicsEntities.size());
-            for (const auto& stageEntity : m_stagePhysicsEntities)
-            {
-                if (!stageEntity)
-                {
-                    continue;
-                }
-
-                stageEntity->SyncColliderBounds();
-                stageBounds.push_back(stageEntity->GetAABB());
-            }
-
             std::optional<float> receiverZ = m_stagePlaneZ;
             if (m_blobShadowSettings.groundZ)
             {
@@ -1326,7 +1268,35 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 entity.SyncColliderBounds();
                 const AABB& bounds = entity.GetAABB();
                 float receiverY = m_blobShadowSettings.groundY;
-                TryFindShadowReceiverYFromStage(bounds, stageBounds, &receiverY);
+                if (m_physicsBinder)
+                {
+                    if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                    {
+                        const Transform renderTransform = entity.GetRenderTransform();
+                        if (IsFiniteFloat(renderTransform.position.x)
+                            && IsFiniteFloat(renderTransform.position.y))
+                        {
+                            const float rayStartOffsetWorld = std::max(0.001f, m_blobShadowSettings.receiverBias);
+                            const float rayLengthWorld = std::max(0.5f, m_blobShadowSettings.maxHeight) + rayStartOffsetWorld;
+                            const b2Vec2 origin = Entities::PhysicalEntity::ToBox2DPosition(float3{
+                                renderTransform.position.x,
+                                renderTransform.position.y + rayStartOffsetWorld,
+                                0.0f
+                            });
+                            const b2Vec2 translation = b2Vec2{
+                                0.0f,
+                                -Entities::PhysicalEntity::ToBox2DLength(rayLengthWorld)
+                            };
+                            b2QueryFilter filter = b2DefaultQueryFilter();
+                            filter.categoryBits = kStageQueryBits;
+                            filter.maskBits = kStageQueryBits;
+                            if (const auto hit = physicsMachine->RayCastClosest(origin, translation, filter))
+                            {
+                                receiverY = Entities::PhysicalEntity::ToWorldPosition(hit->point).y;
+                            }
+                        }
+                    }
+                }
                 return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
             };
 
