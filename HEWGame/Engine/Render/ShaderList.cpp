@@ -354,6 +354,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float fillWrap = lightParams[3].w;
 	float3 keyColor = lightParams[0].rgb * lightParams[0].a;
 	float3 fillColor = lightParams[2].rgb * lightParams[2].a;
+	float lightResponse = max(0.0001f, objLighting.x);
 	float3 key = keyColor * WrapLambert(N, L, keyWrap);
 	float3 fill = fillColor * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
@@ -362,6 +363,7 @@ float4 main(PS_IN pin) : SV_TARGET
 	float rim = pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x));
 
 	float3 lighting = hemi + key + fill;
+	lighting = pow(saturate(lighting), lightResponse);
 
 	float3 color = albedo * lighting;
 	if (lightParams[7].w >= 0.5f)
