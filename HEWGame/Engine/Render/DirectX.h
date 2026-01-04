@@ -28,6 +28,7 @@ enum SamplerState
 {
         SAMPLER_LINEAR,
         SAMPLER_POINT,
+        SAMPLER_POSTPROCESS,
         SAMPLER_MAX
 };
 

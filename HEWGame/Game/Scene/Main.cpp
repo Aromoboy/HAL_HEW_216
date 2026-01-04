@@ -220,7 +220,7 @@ void Draw()
                 ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
                 context->PSSetShaderResources(0, 1, &sceneSRV);
                 context->PSSetShaderResources(1, 1, &sceneDepthSRV);
-                SetSamplerState(SAMPLER_LINEAR);
+                SetSamplerState(SAMPLER_POSTPROCESS);
                 const auto& postSettings = g_postProcessSettings;
                 DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
                         postSettings.fogColor.x,
