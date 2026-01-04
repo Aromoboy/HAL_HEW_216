@@ -71,6 +71,7 @@ namespace SceneGameConfig
     struct BlobShadowSettings
     {
         bool enable = true;
+        bool debugNoDepthTest = false;
         float opacity = 0.35f;
         float softness = 0.4f;
         float maxHeight = 6.0f;

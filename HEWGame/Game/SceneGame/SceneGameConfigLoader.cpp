@@ -1510,6 +1510,7 @@ namespace SceneGameConfig
         }
 
         bool parsedEnable = false;
+        bool parsedDebugNoDepthTest = false;
         bool parsedOpacity = false;
         bool parsedSoftness = false;
         bool parsedMaxHeight = false;
@@ -1541,6 +1542,28 @@ namespace SceneGameConfig
                     std::ostringstream oss;
                     oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.enable value='" << value
                         << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.debugnodepthtest")
+            {
+                if (ParseBool(value, settings.debugNoDepthTest))
+                {
+                    parsedDebugNoDepthTest = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.debugNoDepthTest="
+                        << std::boolalpha << settings.debugNoDepthTest
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.debugNoDepthTest value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << std::boolalpha << settings.debugNoDepthTest << "\n";
                     DebugTrace(oss.str());
                 }
                 continue;
@@ -1706,6 +1729,14 @@ namespace SceneGameConfig
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[BlobShadow] shadow.blob.opacity not found; using default=" << settings.opacity
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedDebugNoDepthTest)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.debugNoDepthTest not found; using default="
+                << std::boolalpha << settings.debugNoDepthTest
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
