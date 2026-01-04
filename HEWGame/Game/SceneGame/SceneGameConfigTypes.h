@@ -37,12 +37,15 @@ namespace SceneGameConfig
         float vignetteStrength = 1.2f;
         float bloomThreshold = 0.8f;
         float bloomIntensity = 0.15f;
+        float grainAmount = 0.0f;
         float fxaaEdgeThreshold = 0.166f;
         float fxaaEdgeThresholdMin = 0.0833f;
         float fxaaSubpixelQuality = 0.75f;
         bool enableFog = true;
         bool enableVignette = true;
         bool enableBloom = true;
+        bool grainEnable = false;
+        bool grainAnimate = false;
         bool enableFxaa = false;
     };
 
