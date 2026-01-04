@@ -2,6 +2,7 @@
 
 #include <DirectXMath.h>
 #include <map>
+#include <optional>
 #include <string>
 
 struct MaterialTuningProfile
@@ -11,8 +12,16 @@ struct MaterialTuningProfile
     DirectX::XMFLOAT3 sssColor{ 1.0f, 1.0f, 1.0f };
 };
 
+struct MaterialTuningOverride
+{
+    std::string profileName;
+    std::optional<float> lightResponse;
+    std::optional<float> sssIntensity;
+    std::optional<DirectX::XMFLOAT3> sssColor;
+};
+
 struct MaterialTuningSettings
 {
     std::map<std::string, MaterialTuningProfile> profiles;
-    std::map<std::string, std::string> overrides;
+    std::map<std::string, MaterialTuningOverride> overrides;
 };

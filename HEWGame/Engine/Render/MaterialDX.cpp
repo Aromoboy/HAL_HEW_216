@@ -35,9 +35,12 @@ void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, c
 {
     static const std::string kDefaultProfileKey = "default";
     const std::string normalizedKey = NormalizeMaterialKey(materialKey);
-    const auto it = settings.overrides.find(normalizedKey);
-    const std::string& profileName = (it != settings.overrides.end())
-        ? it->second
+    const auto overrideIt = settings.overrides.find(normalizedKey);
+    const MaterialTuningOverride* overrideSettings = (overrideIt != settings.overrides.end())
+        ? &overrideIt->second
+        : nullptr;
+    const std::string& profileName = (overrideSettings && !overrideSettings->profileName.empty())
+        ? overrideSettings->profileName
         : kDefaultProfileKey;
     const auto profileIt = settings.profiles.find(profileName);
     const MaterialTuningProfile* selectedProfile = nullptr;
@@ -60,6 +63,22 @@ void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, c
     material.SetLightResponse(profile.lightResponse);
     material.SetSssIntensity(profile.sssIntensity);
     material.SetSssColor(profile.sssColor);
+
+    if (overrideSettings)
+    {
+        if (overrideSettings->lightResponse)
+        {
+            material.SetLightResponse(*overrideSettings->lightResponse);
+        }
+        if (overrideSettings->sssIntensity)
+        {
+            material.SetSssIntensity(*overrideSettings->sssIntensity);
+        }
+        if (overrideSettings->sssColor)
+        {
+            material.SetSssColor(*overrideSettings->sssColor);
+        }
+    }
 }
 
 MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
