@@ -2,15 +2,39 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
+#include <string>
 
 #include "DirectX.h"
 #include "DrawMatrix.h"
 #include "MeshDX.h"
+#include "PerspectiveCamera.h"
 #include "Shader.h"
 #include "Vector.h"
 
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    constexpr float kReceiverZFallbackMultiplier = 2.0f;
+
     bool IsFiniteFloat(float value)
     {
         return std::isfinite(value) != 0;
@@ -169,9 +193,33 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
         return;
     }
 
-    const float resolvedReceiverZ = (receiverZ && IsFiniteFloat(*receiverZ))
-        ? *receiverZ
-        : renderTransform.position.z;
+    const float casterZ = renderTransform.position.z;
+    const float receiverThreshold = std::max(width, depth) * kReceiverZFallbackMultiplier;
+    const bool receiverZValid = receiverZ && IsFiniteFloat(*receiverZ);
+    const bool receiverZAligned = receiverZValid
+        && std::abs(*receiverZ - casterZ) <= receiverThreshold;
+    const float resolvedReceiverZ = receiverZAligned ? *receiverZ : casterZ;
+
+    if (m_debugLogRemaining > 0)
+    {
+        std::optional<float> cameraNear;
+        std::optional<float> cameraFar;
+        if (const auto* perspectiveCamera = dynamic_cast<const CameraSpace::PerspectiveCamera*>(&camera))
+        {
+            cameraNear = perspectiveCamera->GetNearPlane();
+            cameraFar = perspectiveCamera->GetFarPlane();
+        }
+
+        std::ostringstream oss;
+        oss << "[BlobShadow] receiverZ=" << (receiverZValid ? std::to_string(*receiverZ) : std::string("unset"))
+            << " casterZ=" << casterZ
+            << " resolvedZ=" << resolvedReceiverZ
+            << " cameraNear=" << (cameraNear ? std::to_string(*cameraNear) : std::string("unset"))
+            << " cameraFar=" << (cameraFar ? std::to_string(*cameraFar) : std::string("unset"))
+            << "\n";
+        DebugTrace(oss.str());
+        --m_debugLogRemaining;
+    }
 
     Transform shadowTransform{};
     shadowTransform.position = float3{
@@ -207,7 +255,14 @@ void BlobShadowRenderer::DrawQuad(DirectX::XMFLOAT4X4 wvp[3], const ShadowParams
 
     SetBlendMode(BLEND_ALPHA);
     SetCullingMode(D3D11_CULL_NONE);
-    SetDepthTestWrite(true, false);
+    if (m_settings.debugNoDepthTest)
+    {
+        SetDepthTest(false);
+    }
+    else
+    {
+        SetDepthTestWrite(true, false);
+    }
 
     m_vs->WriteBuffer(0, wvp);
     m_vs->Bind();

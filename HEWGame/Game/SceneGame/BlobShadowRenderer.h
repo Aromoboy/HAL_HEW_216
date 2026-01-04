@@ -42,4 +42,5 @@ private:
     std::shared_ptr<VertexShader> m_vs;
     std::shared_ptr<PixelShader> m_ps;
     bool m_ready = false;
+    int m_debugLogRemaining = 2;
 };
