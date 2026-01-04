@@ -198,8 +198,9 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
     const bool receiverZValid = receiverZ && IsFiniteFloat(*receiverZ);
     const bool receiverZAligned = receiverZValid
         && std::abs(*receiverZ - casterZ) <= receiverThreshold;
-    const bool forceReceiverZ = receiverZValid && m_settings.forceReceiverZ;
-    const float resolvedReceiverZ = (forceReceiverZ || receiverZAligned) ? *receiverZ : casterZ;
+    const float resolvedReceiverZ = (receiverZValid && m_settings.forceReceiverZ)
+        ? *receiverZ
+        : (receiverZAligned ? *receiverZ : casterZ);
 
     if (m_debugLogRemaining > 0)
     {
