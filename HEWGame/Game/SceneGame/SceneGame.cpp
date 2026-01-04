@@ -313,12 +313,18 @@ bool SceneGame::Load(Core::Input& input)
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
+    m_blobShadowSettings = composition->blobShadowSettings;
     m_materialTuningSettings = composition->materialTuningSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
+    m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();
+    if (m_blobShadowRenderer)
+    {
+        m_blobShadowRenderer->SetSettings(m_blobShadowSettings);
+    }
     GuidelineSystem::Config guidelineConfig{};
     guidelineConfig.heightMeters = composition->guidelineHeightMeters;
     guidelineConfig.stepMeters = composition->guidelineStepMeters;
@@ -1186,6 +1192,32 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         else
         {
             DebugTrace(std::string(kLogPrefix) + "m_rendererがnull\n");
+        }
+
+        if (m_blobShadowRenderer && m_blobShadowSettings.enable)
+        {
+            const float receiverY = m_blobShadowSettings.groundY;
+            if (player)
+            {
+                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY);
+            }
+            if (m_sweetsManager)
+            {
+                const auto drawList = [&](const SweetsSpace::SweetsManager::SweetsList& list)
+                {
+                    for (const auto& sweets : list)
+                    {
+                        if (sweets)
+                        {
+                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY);
+                        }
+                    }
+                };
+
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
+            }
         }
 
         Geometory::SetView(activeCamera->GetView());

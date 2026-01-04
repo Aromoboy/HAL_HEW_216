@@ -111,6 +111,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
     result.renderPostProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
     result.lightingSettings = SceneGameConfig::LoadLightingSettings();
+    result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
     result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;

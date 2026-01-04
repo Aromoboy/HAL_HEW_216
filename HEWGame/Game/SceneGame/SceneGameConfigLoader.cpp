@@ -1407,6 +1407,235 @@ namespace SceneGameConfig
         return settings;
     }
 
+    BlobShadowSettings LoadBlobShadowSettings()
+    {
+        BlobShadowSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] Missing config; defaulting blob shadow settings section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedEnable = false;
+        bool parsedOpacity = false;
+        bool parsedSoftness = false;
+        bool parsedMaxHeight = false;
+        bool parsedMinScale = false;
+        bool parsedReceiverBias = false;
+        bool parsedGroundY = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "shadow.blob.enable")
+            {
+                if (ParseBool(value, settings.enable))
+                {
+                    parsedEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.enable=" << std::boolalpha << settings.enable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.opacity")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.opacity = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedOpacity = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.opacity=" << settings.opacity
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.opacity value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.opacity << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.softness")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.softness = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedSoftness = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.softness=" << settings.softness
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.softness value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.softness << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.maxheight")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.maxHeight = std::max(0.0f, *parsed);
+                    parsedMaxHeight = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.maxHeight=" << settings.maxHeight
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.maxHeight value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.maxHeight << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.minscale")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.minScale = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedMinScale = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.minScale=" << settings.minScale
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.minScale value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.minScale << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.receiverbias")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.receiverBias = *parsed;
+                    parsedReceiverBias = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.receiverBias=" << settings.receiverBias
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.receiverBias value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.receiverBias << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.groundy")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.groundY = *parsed;
+                    parsedGroundY = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.groundY=" << settings.groundY
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.groundY value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.groundY << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.enable not found; using default="
+                << std::boolalpha << settings.enable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedOpacity)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.opacity not found; using default=" << settings.opacity
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedSoftness)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.softness not found; using default=" << settings.softness
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedMaxHeight)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.maxHeight not found; using default=" << settings.maxHeight
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedMinScale)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.minScale not found; using default=" << settings.minScale
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedReceiverBias)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.receiverBias not found; using default=" << settings.receiverBias
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGroundY)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.groundY not found; using default=" << settings.groundY
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
     MaterialTuningSettings LoadMaterialTuningSettings()
     {
         MaterialTuningSettings settings{};

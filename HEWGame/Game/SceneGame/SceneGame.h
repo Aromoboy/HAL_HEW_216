@@ -26,6 +26,7 @@
 #include "BackgroundRenderer.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
+#include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
 #include <cstddef>
 #include <memory>
@@ -74,6 +75,7 @@ public:
     using PlayerSpawnTransform = SceneGameConfig::PlayerSpawnTransform;
     using RenderPostProcessSettings = SceneGameConfig::RenderPostProcessSettings;
     using SceneLightingSettings = SceneGameConfig::LightingSettings;
+    using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
     using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
@@ -140,10 +142,12 @@ private:
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
+    std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
+    BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;

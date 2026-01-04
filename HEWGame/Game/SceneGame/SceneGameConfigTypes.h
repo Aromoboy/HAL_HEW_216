@@ -64,6 +64,17 @@ namespace SceneGameConfig
         bool rimEnable = false;
     };
 
+    struct BlobShadowSettings
+    {
+        bool enable = true;
+        float opacity = 0.35f;
+        float softness = 0.4f;
+        float maxHeight = 6.0f;
+        float minScale = 0.35f;
+        float receiverBias = 0.01f;
+        float groundY = 0.0f;
+    };
+
     struct MaterialProfile
     {
         DirectX::XMFLOAT4 diffuse{ 1.0f, 1.0f, 1.0f, 1.0f };

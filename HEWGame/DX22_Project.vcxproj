@@ -278,6 +278,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Scene\Startup.cpp" />
     <ClCompile Include="Game\Scene\TitleScene.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGame.cpp" />
+    <ClCompile Include="Game\SceneGame\BlobShadowRenderer.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGameConfigLoader.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGameContactHandler.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGameLoader.cpp" />
@@ -411,6 +412,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Scene\SettingScene.h" />
     <ClInclude Include="Game\Scene\TitleScene.h" />
     <ClInclude Include="Game\SceneGame\GameplayConfig.h" />
+    <ClInclude Include="Game\SceneGame\BlobShadowRenderer.h" />
     <ClInclude Include="Game\SceneGame\SceneGame.h" />
     <ClInclude Include="Game\SceneGame\SceneGameConfigLoader.h" />
     <ClInclude Include="Game\SceneGame\SceneGameConfigTypes.h" />
