@@ -1511,6 +1511,7 @@ namespace SceneGameConfig
 
         bool parsedEnable = false;
         bool parsedDebugNoDepthTest = false;
+        bool parsedForceReceiverZ = false;
         bool parsedOpacity = false;
         bool parsedSoftness = false;
         bool parsedMaxHeight = false;
@@ -1564,6 +1565,28 @@ namespace SceneGameConfig
                     oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.debugNoDepthTest value='" << value
                         << "' on line=" << lineNumber << "; keeping default="
                         << std::boolalpha << settings.debugNoDepthTest << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.forcereceiverz")
+            {
+                if (ParseBool(value, settings.forceReceiverZ))
+                {
+                    parsedForceReceiverZ = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.forceReceiverZ="
+                        << std::boolalpha << settings.forceReceiverZ
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.forceReceiverZ value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << std::boolalpha << settings.forceReceiverZ << "\n";
                     DebugTrace(oss.str());
                 }
                 continue;
@@ -1737,6 +1760,14 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[BlobShadow] shadow.blob.debugNoDepthTest not found; using default="
                 << std::boolalpha << settings.debugNoDepthTest
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedForceReceiverZ)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.forceReceiverZ not found; using default="
+                << std::boolalpha << settings.forceReceiverZ
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
