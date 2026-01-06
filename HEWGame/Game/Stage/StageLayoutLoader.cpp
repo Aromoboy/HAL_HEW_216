@@ -3,6 +3,7 @@
 #include "ColliderRegistry.h"
 #include "CollisionLayer.h"
 #include "ModelCache.h"
+#include "SceneGameConfigLoader.h"
 #include "Systems/Physics/ColliderBuilder.h"
 
 #include <algorithm>
@@ -11,7 +12,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <unordered_set>
 
 #include <box2d/box2d.h>
 
@@ -37,21 +37,14 @@ namespace
 #endif
 
     constexpr bool kEnableStageModelVerboseLogging = false;
-    constexpr const char* kStageMaterialKeyCake = "cake";
     constexpr const char* kFallbackStageMaterialKey = "default";
-    constexpr const char* kStageMaterialKeyOsara = "osara";
 
-    bool IsKnownStageMaterialKey(const std::string& key)
+    bool IsKnownStageMaterialKey(const std::string& key, const MaterialTuningSettings& settings)
     {
-        static const std::unordered_set<std::string> kKnownStageMaterialKeys{
-            kStageMaterialKeyCake,
-            kFallbackStageMaterialKey,
-            kStageMaterialKeyOsara
-        };
-        return kKnownStageMaterialKeys.contains(key);
+        return settings.overrides.contains(key) || settings.profiles.contains(key);
     }
 
-    std::string NormalizeColliderKey(const std::string& key)
+    std::string NormalizeKey(const std::string& key)
     {
         std::string normalized;
         normalized.reserve(key.size());
@@ -90,7 +83,7 @@ namespace
             // そのまま modelPath を使う
         }
 
-        return NormalizeColliderKey(key);
+        return NormalizeKey(key);
     }
 
     bool TryParseFloat(const std::string& token, float& value, const std::string& logPrefix, const char* fieldName)
@@ -127,6 +120,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 {
     StageLayoutLoadResult result;
     const std::string logPrefix = request.logPrefix.empty() ? std::string("[StageLayoutLoader] ") : request.logPrefix;
+    const SceneGameConfig::MaterialTuningSettings materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
 
     constexpr Collision::CollisionLayer kStageColliderLayer = Collision::CollisionLayer::Stage;
     constexpr b2BodyType kStageBodyType = b2_staticBody;
@@ -218,12 +212,12 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         }
         if (values.size() > 16)
         {
-            obj.colliderPresetId = NormalizeColliderKey(values[16]);
+            obj.colliderPresetId = NormalizeKey(values[16]);
         }
         if (!obj.materialKey.empty())
         {
-            const std::string normalizedMaterialKey = NormalizeColliderKey(obj.materialKey);
-            if (IsKnownStageMaterialKey(normalizedMaterialKey))
+            const std::string normalizedMaterialKey = NormalizeKey(obj.materialKey);
+            if (IsKnownStageMaterialKey(normalizedMaterialKey, materialTuningSettings))
             {
                 obj.materialKey = normalizedMaterialKey;
             }
@@ -231,10 +225,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             {
                 obj.materialKey.clear();
             }
-        }
-        if (obj.materialKey.empty())
-        {
-            obj.materialKey = kStageMaterialKeyCake;
         }
         if (obj.materialKey.empty())
         {
