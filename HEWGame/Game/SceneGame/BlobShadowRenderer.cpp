@@ -224,10 +224,9 @@ void BlobShadowRenderer::DrawShadow(Entities::PhysicalEntity& entity,
     }
 
     Transform shadowTransform{};
-    const float receiverBias = std::abs(m_settings.receiverBias);
     shadowTransform.position = float3{
         renderTransform.position.x,
-        receiverY + receiverBias,
+        receiverY + m_settings.receiverBias,
         resolvedReceiverZ
     };
     shadowTransform.rotation = float3{ DirectX::XM_PIDIV2, 0.0f, 0.0f };

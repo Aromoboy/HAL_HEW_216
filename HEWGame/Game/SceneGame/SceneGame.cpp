@@ -1276,9 +1276,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                         if (IsFiniteFloat(renderTransform.position.x)
                             && IsFiniteFloat(renderTransform.position.y))
                         {
-                            const float rayStartOffsetWorld = std::max(
-                                0.001f,
-                                std::abs(m_blobShadowSettings.receiverBias));
+                            const float rayStartOffsetWorld = std::max(0.001f, m_blobShadowSettings.receiverBias);
                             const float rayLengthWorld = std::max(0.5f, m_blobShadowSettings.maxHeight) + rayStartOffsetWorld;
                             const b2Vec2 origin = Entities::PhysicalEntity::ToBox2DPosition(float3{
                                 renderTransform.position.x,
