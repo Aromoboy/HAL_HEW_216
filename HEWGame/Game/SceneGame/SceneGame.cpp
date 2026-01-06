@@ -1302,8 +1302,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
         if (m_blobShadowRenderer && m_blobShadowSettings.enable)
         {
-            std::vector<AABB> receiverBounds;
-            receiverBounds.reserve(m_stagePhysicsEntities.size());
+            std::vector<AABB> stageBounds;
+            stageBounds.reserve(m_stagePhysicsEntities.size());
             for (const auto& stageEntity : m_stagePhysicsEntities)
             {
                 if (!stageEntity)
@@ -1312,29 +1312,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
 
                 stageEntity->SyncColliderBounds();
-                receiverBounds.push_back(stageEntity->GetAABB());
-            }
-
-            const auto appendSweetsBounds = [&](const SweetsSpace::SweetsManager::SweetsList& list)
-            {
-                receiverBounds.reserve(receiverBounds.size() + list.size());
-                for (const auto& sweets : list)
-                {
-                    if (!sweets)
-                    {
-                        continue;
-                    }
-
-                    sweets->SyncColliderBounds();
-                    receiverBounds.push_back(sweets->GetAABB());
-                }
-            };
-
-            if (m_sweetsManager)
-            {
-                appendSweetsBounds(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
-                appendSweetsBounds(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
-                appendSweetsBounds(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
+                stageBounds.push_back(stageEntity->GetAABB());
             }
 
             std::optional<float> receiverZ = m_stagePlaneZ;
@@ -1348,7 +1326,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 entity.SyncColliderBounds();
                 const AABB& bounds = entity.GetAABB();
                 float receiverY = m_blobShadowSettings.groundY;
-                TryFindShadowReceiverYFromStage(bounds, receiverBounds, &receiverY);
+                TryFindShadowReceiverYFromStage(bounds, stageBounds, &receiverY);
                 return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
             };
 
