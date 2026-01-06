@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -24,7 +25,7 @@ namespace SweetsSpace
     public:
         SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
 
-        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const std::optional<b2Vec2>& contactPoint);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;

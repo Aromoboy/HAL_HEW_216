@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 #include <span>
 #include <string>
@@ -281,7 +282,17 @@ namespace Systems
                                 continue;
                         }
 
-                        BeginContact(entityA, entityB);
+                        std::optional<b2Vec2> contactPoint = std::nullopt;
+                        if (b2Contact_IsValid(evt.contactId))
+                        {
+                                const b2ContactData contactData = b2Contact_GetData(evt.contactId);
+                                if (contactData.manifold.pointCount > 0)
+                                {
+                                        contactPoint = contactData.manifold.points[0].point;
+                                }
+                        }
+
+                        BeginContact(entityA, entityB, contactPoint);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
                         {
@@ -346,12 +357,12 @@ namespace Systems
 
         }
 
-        void Box2DContactListener::SetBeginContactCallback(ContactCallback callback)
+        void Box2DContactListener::SetBeginContactCallback(BeginContactCallback callback)
         {
                 m_onBeginContact = std::move(callback);
         }
 
-        void Box2DContactListener::SetEndContactCallback(ContactCallback callback)
+        void Box2DContactListener::SetEndContactCallback(EndContactCallback callback)
         {
                 m_onEndContact = std::move(callback);
         }
@@ -387,7 +398,9 @@ namespace Systems
                 }
         }
 
-        void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
+        void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA,
+            Entities::PhysicalEntity* entityB,
+            const std::optional<b2Vec2>& contactPoint)
         {
                 if (!entityA || !entityB)
                 {
@@ -396,7 +409,7 @@ namespace Systems
 
                 if (m_onBeginContact)
                 {
-                        m_onBeginContact(*entityA, *entityB);
+                        m_onBeginContact(*entityA, *entityB, contactPoint);
                 }
         }
 

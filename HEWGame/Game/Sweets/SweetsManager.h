@@ -128,7 +128,7 @@ namespace SweetsSpace
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
-        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const std::optional<b2Vec2>& contactPoint);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;

@@ -7,11 +7,11 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, SweetsSpace:
 {
     m_sweetsManager = sweetsManager;
     binder.AddContactHandler(
-        [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+        [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const std::optional<b2Vec2>& contactPoint)
         {
             if (m_sweetsManager)
             {
-                m_sweetsManager->OnContactBegin(&a, &b);
+                m_sweetsManager->OnContactBegin(&a, &b, contactPoint);
             }
         },
         [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
