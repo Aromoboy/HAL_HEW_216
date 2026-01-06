@@ -57,30 +57,6 @@ namespace
 #endif
     }
 
-    const char* ToString(b2BodyType bodyType)
-    {
-        switch (bodyType)
-        {
-        case b2_staticBody:
-            return "static";
-        case b2_kinematicBody:
-            return "kinematic";
-        case b2_dynamicBody:
-            return "dynamic";
-        default:
-            return "unknown";
-        }
-    }
-
-    bool HasPhysicsDefinition(const Entities::PhysicalEntity& body)
-    {
-        const auto& colliderComponent = body.GetBoxColliderComponent();
-        return static_cast<bool>(colliderComponent);
-    }
-}
-
-namespace Systems
-{
     uint16_t ToCategoryBits(Collision::CollisionLayer layer)
     {
         switch (layer)
@@ -119,6 +95,30 @@ namespace Systems
         }
     }
 
+    const char* ToString(b2BodyType bodyType)
+    {
+        switch (bodyType)
+        {
+        case b2_staticBody:
+            return "static";
+        case b2_kinematicBody:
+            return "kinematic";
+        case b2_dynamicBody:
+            return "dynamic";
+        default:
+            return "unknown";
+        }
+    }
+
+    bool HasPhysicsDefinition(const Entities::PhysicalEntity& body)
+    {
+        const auto& colliderComponent = body.GetBoxColliderComponent();
+        return static_cast<bool>(colliderComponent);
+    }
+}
+
+namespace Systems
+{
     class PhysicsMachine::ContactDispatchNode : public Core::UpdateNode
     {
     public:

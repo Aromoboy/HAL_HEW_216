@@ -78,6 +78,7 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
+        constexpr uint64_t kStageQueryBits = 0x0008;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -1288,9 +1289,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                                 -Entities::PhysicalEntity::ToBox2DLength(rayLengthWorld)
                             };
                             b2QueryFilter filter = b2DefaultQueryFilter();
-                            const uint16_t stageCategoryBits = Systems::ToCategoryBits(Collision::CollisionLayer::Stage);
-                            filter.categoryBits = stageCategoryBits;
-                            filter.maskBits = Systems::ToMaskBits(Collision::CollisionLayer::Stage) | stageCategoryBits;
+                            filter.categoryBits = kStageQueryBits;
+                            filter.maskBits = kStageQueryBits;
                             if (const auto hit = physicsMachine->RayCastClosest(origin, translation, filter))
                             {
                                 receiverY = Entities::PhysicalEntity::ToWorldPosition(hit->point).y;
