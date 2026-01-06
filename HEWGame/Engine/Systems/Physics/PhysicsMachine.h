@@ -5,7 +5,6 @@
 #include <box2d/box2d.h>
 
 #include <memory>
-#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -71,9 +70,6 @@ namespace Systems
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
         b2WorldId GetWorldId() const;
-        std::optional<b2RayResult> RayCastClosest(const b2Vec2& origin,
-            const b2Vec2& translation,
-            b2QueryFilter filter) const;
         b2JointId CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
             const Entities::PhysicalEntity& bodyB,
             const b2Vec2& worldAnchor,
