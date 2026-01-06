@@ -282,9 +282,11 @@ namespace SweetsSpace
         m_factory.SetGeneratedColliderMinThickness(thickness);
     }
 
-    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a,
+        Entities::PhysicalEntity* b,
+        const std::optional<b2Vec2>& contactPoint)
     {
-        m_contacts.OnContactBegin(a, b);
+        m_contacts.OnContactBegin(a, b, contactPoint);
     }
 
     void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)

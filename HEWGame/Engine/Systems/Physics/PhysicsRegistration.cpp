@@ -44,9 +44,10 @@ namespace Systems
         m_contactListener = std::make_shared<Box2DContactListener>(physicsMachine);
         if (m_contactListener)
         {
-            m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            m_contactListener->SetBeginContactCallback(
+                [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const std::optional<b2Vec2>& contactPoint)
                 {
-                    DispatchBeginContact(a, b);
+                    DispatchBeginContact(a, b, contactPoint);
                 });
             m_contactListener->SetEndContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
                 {
@@ -240,18 +241,20 @@ namespace Systems
         }
     }
 
-    void PhysicsRegistration::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd)
+    void PhysicsRegistration::AddContactHandler(BeginContactCallback onBegin, EndContactCallback onEnd)
     {
         m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd) });
     }
 
-    void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+    void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a,
+        Entities::PhysicalEntity& b,
+        const std::optional<b2Vec2>& contactPoint)
     {
         for (const auto& handler : m_contactHandlers)
         {
             if (handler.onBegin)
             {
-                handler.onBegin(a, b);
+                handler.onBegin(a, b, contactPoint);
             }
         }
     }
