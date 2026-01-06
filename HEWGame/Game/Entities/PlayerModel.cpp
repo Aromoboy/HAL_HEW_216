@@ -180,6 +180,10 @@ namespace
             DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
             nullptr);
         mat->SetMaterialKey(kFairyMaterialKey);
+        ApplyMaterialTuning(
+            *mat,
+            kFairyMaterialKey,
+            Render::ModelCache::Instance().GetMaterialTuningSettings());
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
 
