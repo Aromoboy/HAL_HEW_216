@@ -1268,7 +1268,6 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 entity.SyncColliderBounds();
                 const AABB& bounds = entity.GetAABB();
                 float receiverY = m_blobShadowSettings.groundY;
-                bool raycastHit = false;
                 if (m_physicsBinder)
                 {
                     if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
@@ -1294,15 +1293,11 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                             if (const auto hit = physicsMachine->RayCastClosest(origin, translation, filter))
                             {
                                 receiverY = Entities::PhysicalEntity::ToWorldPosition(hit->point).y;
-                                raycastHit = true;
                             }
                         }
                     }
                 }
-                const std::optional<float> receiverHeight = raycastHit
-                    ? std::nullopt
-                    : ComputeReceiverHeightFromBounds(bounds, receiverY);
-                return std::make_pair(receiverY, receiverHeight);
+                return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
             };
 
             if (player)
