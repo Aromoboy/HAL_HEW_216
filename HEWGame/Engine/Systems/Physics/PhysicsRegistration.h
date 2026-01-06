@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <unordered_set>
 #include <vector>
 
@@ -20,8 +19,7 @@ namespace Systems
     class PhysicsRegistration
     {
     public:
-        using BeginContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, const std::optional<b2Vec2>&)>;
-        using EndContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+        using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
 
         explicit PhysicsRegistration(PhysicsMachine& physicsMachine);
 
@@ -30,16 +28,16 @@ namespace Systems
         void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
         void UnregisterAllPhysicsBodies();
         void ValidatePlayerPhysicsRegistration();
-        void AddContactHandler(BeginContactCallback onBegin, EndContactCallback onEnd);
+        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd);
 
     private:
         struct ContactHandler
         {
-            BeginContactCallback onBegin;
-            EndContactCallback onEnd;
+            ContactCallback onBegin;
+            ContactCallback onEnd;
         };
 
-        void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const std::optional<b2Vec2>& contactPoint);
+        void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
         void DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
 
         PhysicsMachine* m_physicsMachine = nullptr;

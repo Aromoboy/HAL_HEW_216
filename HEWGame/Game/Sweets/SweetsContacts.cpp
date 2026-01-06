@@ -1,9 +1,5 @@
 #include "Sweets/SweetsContacts.h"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <optional>
 #include <sstream>
 
 #include "CollisionLayer.h"
@@ -44,52 +40,6 @@ namespace
         static const std::string kCreamKey = SweetsSpace::NormalizeKey(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
         return SweetsSpace::NormalizeKey(tag) == kCreamKey;
     }
-
-    std::optional<float> GetCircleRadius(const Entities::PhysicalEntity& entity)
-    {
-        const auto& colliderComponent = entity.GetBoxColliderComponent();
-        if (colliderComponent)
-        {
-            for (const auto& shape : colliderComponent->shapes)
-            {
-                if (shape.type == Physics::ColliderShapeType::Circle && shape.radius > 0.0f)
-                {
-                    return shape.radius;
-                }
-            }
-        }
-
-        const auto& shapeConfig = entity.GetBox2DShapeConfig();
-        if (shapeConfig && shapeConfig->type == Physics::Box2DShapeConfig::Type::Circle && shapeConfig->radius > 0.0f)
-        {
-            const float uniformScale = std::max(entity.GetTransform().scale.x, entity.GetTransform().scale.y);
-            return shapeConfig->radius * uniformScale;
-        }
-
-        return std::nullopt;
-    }
-
-    std::optional<b2Vec2> ComputeCircleAnchor(const Entities::PhysicalEntity& a, const Entities::PhysicalEntity& b)
-    {
-        const auto radius = GetCircleRadius(a);
-        if (!radius || *radius <= 0.0f)
-        {
-            return std::nullopt;
-        }
-
-        const auto& posA = a.GetTransform().position;
-        const auto& posB = b.GetTransform().position;
-        const float dx = posB.x - posA.x;
-        const float dy = posB.y - posA.y;
-        const float lenSq = dx * dx + dy * dy;
-        if (lenSq <= std::numeric_limits<float>::epsilon())
-        {
-            return std::nullopt;
-        }
-
-        const float invLen = 1.0f / std::sqrt(lenSq);
-        return b2Vec2{ posA.x + dx * invLen * (*radius), posA.y + dy * invLen * (*radius) };
-    }
 }
 
 namespace SweetsSpace
@@ -100,9 +50,7 @@ namespace SweetsSpace
     {
     }
 
-    void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a,
-        Entities::PhysicalEntity* b,
-        const std::optional<b2Vec2>& contactPoint)
+    void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
         if (!a || !b)
         {
@@ -167,20 +115,13 @@ namespace SweetsSpace
 
                 if (existing == m_creamWeldJoints.end())
                 {
-                    std::optional<b2Vec2> anchor = contactPoint;
-                    if (!anchor)
-                    {
-                        anchor = ComputeCircleAnchor(*cream, *other);
-                    }
-
                     const auto& posA = cream->GetTransform().position;
                     const auto& posB = other->GetTransform().position;
-                    const b2Vec2 resolvedAnchor = anchor.value_or(
-                        b2Vec2{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) });
+                    const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
                     const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
                         *cream,
                         *other,
-                        resolvedAnchor,
+                        anchor,
                         kCreamWeldLinearHertz,
                         kCreamWeldLinearDampingRatio,
                         kCreamWeldAngularHertz,

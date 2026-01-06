@@ -95,7 +95,7 @@ namespace Systems
         }
     }
 
-    void PhysicsBinder::AddContactHandler(BeginContactCallback onBegin, EndContactCallback onEnd)
+    void PhysicsBinder::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd)
     {
         if (m_registration)
         {
