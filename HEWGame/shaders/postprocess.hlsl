@@ -132,6 +132,7 @@ float4 PSMain(VSOut input) : SV_TARGET
     float gray = FxaaLuma(col);
     col = lerp(float3(gray, gray, gray), col, saturation);
     col = (col - 0.5) * contrast + 0.5;
+    col = pow(saturate(col), 1.0f / gamma);
     col = saturate(col);
     float linearDepth = LinearizeDepth(depth);
     float fog = saturate((linearDepth - fogStart) / fogRange);
