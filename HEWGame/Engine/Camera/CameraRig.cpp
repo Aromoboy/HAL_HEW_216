@@ -57,6 +57,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_followPositionY(true)
         , m_followPositionZ(true)
         , m_inheritRotation(true)
+        , m_minYClamp(std::nullopt)
+        , m_maxYClamp(std::nullopt)
 {
 }
 
@@ -174,6 +176,12 @@ bool CameraRig::IsInheritingRotation() const
         return m_inheritRotation;
 }
 
+void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
+{
+        m_minYClamp = minY;
+        m_maxYClamp = maxY;
+}
+
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
@@ -226,7 +234,16 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 }
                 const float alpha = Clamp01(m_followSpeed * ctx.dt);
                 DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
-                m_camera->SetPosition(StoreFloat3(newPos));
+                float3 newPosition = StoreFloat3(newPos);
+                if (m_minYClamp && newPosition.y < *m_minYClamp)
+                {
+                        newPosition.y = *m_minYClamp;
+                }
+                if (m_maxYClamp && newPosition.y > *m_maxYClamp)
+                {
+                        newPosition.y = *m_maxYClamp;
+                }
+                m_camera->SetPosition(newPosition);
         }
 
         float3 newRotation

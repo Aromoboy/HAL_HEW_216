@@ -9,6 +9,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <utility>
 #include <vector>
 #include <DirectXMath.h>
 
@@ -2383,6 +2384,52 @@ namespace SceneGameConfig
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
             << ").\n";
         ::DebugTrace(oss.str());
+        return settings;
+    }
+
+    CameraClampSettings LoadCameraClampSettings()
+    {
+        CameraClampSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCameraRig, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera rig config section '" << GameplayConfig::kSectionCameraRig
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = entry.key;
+            const std::string value = TrimWhitespace(entry.value);
+            if (key == "minY")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.minY = *parsed;
+                }
+            }
+            else if (key == "maxY")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.maxY = *parsed;
+                }
+            }
+        }
+
+        if (settings.minY && settings.maxY && *settings.minY > *settings.maxY)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera rig clamp range invalid (minY=" << *settings.minY
+                << ", maxY=" << *settings.maxY << "). Swapping values.\n";
+            ::DebugTrace(oss.str());
+            std::swap(settings.minY, settings.maxY);
+        }
+
         return settings;
     }
 }
