@@ -1,4 +1,4 @@
-// ゲーム本編のプレイ中シーンをまとめたファイルだ
+﻿// ゲーム本編のプレイ中シーンをまとめたファイルだ
 // ステージ設定を読み込んでプレイヤーやスイーツやカメラを動かす流れを組み立てる
 // 進行状態や結果は画面表示や強化選択に渡される
 #ifndef __SCENE_GAME_H__
@@ -97,6 +97,7 @@ public:
     void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
+    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
     Render::ModelRenderer* GetRenderer() override;
     Core::UpdateScheduler& GetScheduler() override;
@@ -119,8 +120,6 @@ private:
     void Initialize(const Stage::StageData& stageData);
 
 protected:
-    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
-    
     std::vector<StageObject> m_stageObjects;
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
