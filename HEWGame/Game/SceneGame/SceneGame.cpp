@@ -205,7 +205,7 @@ namespace
         {
         public:
                 explicit CameraAnchorUpdateNode(SceneGame& owner)
-                        : Core::UpdateNode(Core::UpdatePhase::PostPhysics, 0)
+                        : Core::UpdateNode(Core::UpdatePhase::Gameplay, 0)
                         , m_owner(owner)
                 {
                 }
@@ -218,6 +218,12 @@ namespace
         private:
                 SceneGame& m_owner;
         };
+
+        float GetVerticalScrollThresholdWorldY(const Stage::StageData& stageData)
+        {
+            const float thresholdWorldY = stageData.GetGuidelineHeight();
+            return IsFiniteFloat(thresholdWorldY) ? thresholdWorldY : 0.0f;
+        }
 
         bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
             const std::vector<AABB>& stageBounds,
@@ -611,7 +617,11 @@ bool SceneGame::Load(Core::Input& input)
     if (player && m_cameraAnchor)
     {
         auto& anchorTransform = m_cameraAnchor->GetTransform();
-        anchorTransform.position.y = player->GetTransform().position.y;
+        const float thresholdWorldY = GetVerticalScrollThresholdWorldY(m_stageData);
+        const float playerY = player->GetTransform().position.y;
+        const float targetY = playerY - thresholdWorldY;
+        m_scrollY = IsFiniteFloat(targetY) ? targetY : playerY;
+        anchorTransform.position.y = m_scrollY;
     }
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
@@ -1008,6 +1018,11 @@ void SceneGame::ConfigureUpdates()
                                 DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
                         }
                 }
+        }
+
+        if (player && m_cameraAnchorUpdateNode && m_cameraAnchorUpdateRegistered)
+        {
+                GetScheduler().AddDependency(*player, *m_cameraAnchorUpdateNode);
         }
 
         SetStageState(StageState::Playing);
@@ -1536,27 +1551,42 @@ Core::StepTimer* SceneGame::GetTimer()
 
 void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
 {
-    static bool logged = false;
-    if (!logged)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "UpdateCameraAnchor called frame=" << ctx.timer.FrameIndex() << "\n";
-        ::DebugTrace(oss.str());
-        logged = true;
-    }
+    UpdateVerticalScroll(ctx);
+}
+
+void SceneGame::UpdateVerticalScroll(const Core::UpdateContext& ctx)
+{
     if (!player || !m_cameraAnchor)
     {
         return;
     }
 
-    auto& anchorTransform = m_cameraAnchor->GetTransform();
     const auto& playerTransform = player->GetTransform();
-    const float targetY = playerTransform.position.y;
+    const float playerY = playerTransform.position.y;
+    if (!IsFiniteFloat(playerY))
+    {
+        return;
+    }
+
+    const float thresholdWorldY = GetVerticalScrollThresholdWorldY(m_stageData);
+    const float targetY = playerY - thresholdWorldY;
     if (!IsFiniteFloat(targetY))
     {
         return;
     }
-    anchorTransform.position.y = targetY;
+
+    m_scrollY = std::max(m_scrollY, targetY);
+    auto& anchorTransform = m_cameraAnchor->GetTransform();
+    anchorTransform.position.y = m_scrollY;
+
+    const float cameraPosY = m_gameCamera ? m_gameCamera->GetPosition().y : 0.0f;
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Scroll] playerY=" << std::fixed << std::setprecision(3) << playerY
+        << " scrollY=" << m_scrollY
+        << " anchorY=" << anchorTransform.position.y
+        << " cameraPosY=" << cameraPosY
+        << "\n";
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
@@ -1788,6 +1818,18 @@ void SceneGame::ResetPlaySession()
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+    }
+
+    if (player && m_cameraAnchor)
+    {
+        const float thresholdWorldY = GetVerticalScrollThresholdWorldY(m_stageData);
+        const float playerY = player->GetTransform().position.y;
+        const float targetY = playerY - thresholdWorldY;
+        if (IsFiniteFloat(targetY))
+        {
+            m_scrollY = targetY;
+            m_cameraAnchor->GetTransform().position.y = m_scrollY;
+        }
     }
 
     else if (!m_cameraAnchor)
