@@ -885,6 +885,10 @@ SceneGame::~SceneGame()
 
 void SceneGame::ConfigureUpdates()
 {
+        std::ostringstream configureLog;
+        configureLog << kLogPrefix << "ConfigureUpdates begin scenePtr=" << this << "\n";
+        ::DebugTrace(configureLog.str());
+
         if (m_physicsBinder && !m_physicsRegistered)
         {
                 if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
@@ -931,6 +935,12 @@ void SceneGame::ConfigureUpdates()
         if (m_cameraAnchorUpdateNode && !m_cameraAnchorUpdateRegistered)
         {
                 m_cameraAnchorUpdateRegistered = Register(*m_cameraAnchorUpdateNode);
+                if (m_cameraAnchorUpdateRegistered)
+                {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "ConfigureUpdates registered CameraAnchorUpdateNode.\n";
+                        ::DebugTrace(oss.str());
+                }
         }
 
         if (m_cameraRig && !m_cameraRigRegistered)
