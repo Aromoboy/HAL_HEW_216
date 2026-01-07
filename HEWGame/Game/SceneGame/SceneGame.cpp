@@ -393,8 +393,8 @@ namespace
 
         constexpr CameraPrototypeSettings kFixedSideViewCameraPreset
         {
-            true,
-            0.0f,
+            false,
+            5.0f,
             //カメラ設定
             float3{ 0.0f, 5.5f, -25.0f },
             45.0f,
