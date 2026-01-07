@@ -1350,14 +1350,13 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 {
         if (m_backgroundRenderer)
         {
-                float2 scrollOffset{ 0.0f, 0.0f };
+                float scrollOffset = 0.0f;
                 if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
                 {
                         const float3& cameraPos = baseCamera->GetPosition();
-                        scrollOffset.y = cameraPos.y * kBackgroundParallaxScale;
+                        scrollOffset = cameraPos.y;
                 }
-                m_backgroundRenderer->SetScrollOffset(scrollOffset);
-                m_backgroundRenderer->Draw();
+                m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
         }
 
         // 描画確認用の数値
