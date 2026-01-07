@@ -60,6 +60,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_followPositionY(true)
         , m_followPositionZ(true)
         , m_inheritRotation(true)
+        , m_minYClamp(std::nullopt)
+        , m_maxYClamp(std::nullopt)
 {
 }
 
@@ -203,6 +205,12 @@ bool CameraRig::IsInheritingRotation() const
         return m_inheritRotation;
 }
 
+void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
+{
+        m_minYClamp = minY;
+        m_maxYClamp = maxY;
+}
+
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
@@ -257,15 +265,43 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                                 desiredPosValue.y = currentPosValue.y;
                         }
                 }
-
                 const float alphaXZ = Clamp01(m_followSpeed * ctx.dt);
-                const float alphaY = Clamp01(m_followSpeedY * ctx.dt);
+                const float alphaY  = Clamp01(m_followSpeedY * ctx.dt);
 
-                const float newX = currentPosValue.x + (desiredPosValue.x - currentPosValue.x) * alphaXZ;
-                const float newY = currentPosValue.y + (desiredPosValue.y - currentPosValue.y) * alphaY;
-                const float newZ = currentPosValue.z + (desiredPosValue.z - currentPosValue.z) * alphaXZ;
+                float newX = currentPosValue.x;
+                float newY = currentPosValue.y;
+                float newZ = currentPosValue.z;
+
+                if (m_followPositionX)
+                {
+                        newX = currentPosValue.x +
+                               (desiredPosValue.x - currentPosValue.x) * alphaXZ;
+                }
+
+                if (m_followPositionY)
+                {
+                        newY = currentPosValue.y +
+                               (desiredPosValue.y - currentPosValue.y) * alphaY;
+                }
+
+                if (m_followPositionZ)
+                {
+                        newZ = currentPosValue.z +
+                               (desiredPosValue.z - currentPosValue.z) * alphaXZ;
+                }
+
+                // Y clamp（上下限）
+                if (m_minYClamp && newY < *m_minYClamp)
+                {
+                        newY = *m_minYClamp;
+                }
+                if (m_maxYClamp && newY > *m_maxYClamp)
+                {
+                        newY = *m_maxYClamp;
+                }
 
                 m_camera->SetPosition(float3{ newX, newY, newZ });
+
         }
 
         float3 newRotation

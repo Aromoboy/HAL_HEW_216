@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "BaseCamera.h"
 #include "Core/UpdateNode.h"
@@ -47,6 +48,8 @@ public:
         void SetInheritRotation(bool inheritRotation);
         bool IsInheritingRotation() const;
 
+        void SetClampY(std::optional<float> minY, std::optional<float> maxY);
+
         void Attach(const std::shared_ptr<Entities::Entity>& target);
 
         void OnUpdate(const Core::UpdateContext& ctx) override;
@@ -66,4 +69,6 @@ private:
         bool m_followPositionY;
         bool m_followPositionZ;
         bool m_inheritRotation;
+        std::optional<float> m_minYClamp;
+        std::optional<float> m_maxYClamp;
 };
