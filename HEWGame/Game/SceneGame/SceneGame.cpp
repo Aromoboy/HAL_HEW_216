@@ -80,8 +80,6 @@ namespace
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
-        constexpr float kCameraAnchorDeadZoneY = 0.02f;
-        constexpr float kCameraAnchorFollowSpeedY = 8.0f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -1445,6 +1443,7 @@ Core::StepTimer* SceneGame::GetTimer()
 
 void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
 {
+    (void)ctx;
     if (!player || !m_cameraAnchor)
     {
         return;
@@ -1457,22 +1456,7 @@ void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
     {
         return;
     }
-
-    float currentY = anchorTransform.position.y;
-    if (!IsFiniteFloat(currentY))
-    {
-        anchorTransform.position.y = targetY;
-        return;
-    }
-
-    const float deltaY = targetY - currentY;
-    if (std::abs(deltaY) <= kCameraAnchorDeadZoneY)
-    {
-        return;
-    }
-
-    const float alpha = std::clamp(kCameraAnchorFollowSpeedY * ctx.dt, 0.0f, 1.0f);
-    anchorTransform.position.y = currentY + deltaY * alpha;
+    anchorTransform.position.y = targetY;
 }
 
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
