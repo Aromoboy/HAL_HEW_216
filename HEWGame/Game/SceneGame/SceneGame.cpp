@@ -80,6 +80,8 @@ namespace
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kCameraAnchorDeadZoneY = 0.02f;
+        constexpr float kCameraAnchorFollowSpeedY = 8.0f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -118,6 +120,24 @@ namespace
 
             return std::max(0.0f, height);
         }
+
+        class CameraAnchorUpdateNode final : public Core::UpdateNode
+        {
+        public:
+                explicit CameraAnchorUpdateNode(SceneGame& owner)
+                        : Core::UpdateNode(Core::UpdatePhase::PostPhysics, 0)
+                        , m_owner(owner)
+                {
+                }
+
+                void OnUpdate(const Core::UpdateContext& ctx) override
+                {
+                        m_owner.UpdateCameraAnchor(ctx);
+                }
+
+        private:
+                SceneGame& m_owner;
+        };
 
         bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
             const std::vector<AABB>& stageBounds,
@@ -519,6 +539,11 @@ bool SceneGame::Load(Core::Input& input)
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
     m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
+    if (player && m_cameraAnchor)
+    {
+        auto& anchorTransform = m_cameraAnchor->GetTransform();
+        anchorTransform.position.y = player->GetTransform().position.y;
+    }
 
     const auto& cameraSettings = kFixedSideViewCameraPreset;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
@@ -700,6 +725,7 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_manager(&a_manager)
 {
     m_pManager = std::make_unique<SoundManagerEX>();
+    m_cameraAnchorUpdateNode = std::make_unique<CameraAnchorUpdateNode>(*this);
 }
 
 SceneGame::~SceneGame()
@@ -754,6 +780,12 @@ SceneGame::~SceneGame()
     {
         Unregister(*m_drawSystem);
         m_drawRegistered = false;
+    }
+
+    if (m_cameraAnchorUpdateRegistered && m_cameraAnchorUpdateNode)
+    {
+        Unregister(*m_cameraAnchorUpdateNode);
+        m_cameraAnchorUpdateRegistered = false;
     }
 
     if (m_sweetsLateRegistered && m_sweetsManager)
@@ -833,6 +865,11 @@ void SceneGame::ConfigureUpdates()
         if (m_drawSystem && !m_drawRegistered)
         {
                 m_drawRegistered = Register(*m_drawSystem);
+        }
+
+        if (m_cameraAnchorUpdateNode && !m_cameraAnchorUpdateRegistered)
+        {
+                m_cameraAnchorUpdateRegistered = Register(*m_cameraAnchorUpdateNode);
         }
 
         if (m_cameraRig && !m_cameraRigRegistered)
@@ -1404,6 +1441,38 @@ Core::Input* SceneGame::GetInput()
 Core::StepTimer* SceneGame::GetTimer()
 {
     return SceneSpace::Scene::GetTimer();
+}
+
+void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
+{
+    if (!player || !m_cameraAnchor)
+    {
+        return;
+    }
+
+    auto& anchorTransform = m_cameraAnchor->GetTransform();
+    const auto& playerTransform = player->GetTransform();
+    const float targetY = playerTransform.position.y;
+    if (!IsFiniteFloat(targetY))
+    {
+        return;
+    }
+
+    float currentY = anchorTransform.position.y;
+    if (!IsFiniteFloat(currentY))
+    {
+        anchorTransform.position.y = targetY;
+        return;
+    }
+
+    const float deltaY = targetY - currentY;
+    if (std::abs(deltaY) <= kCameraAnchorDeadZoneY)
+    {
+        return;
+    }
+
+    const float alpha = std::clamp(kCameraAnchorFollowSpeedY * ctx.dt, 0.0f, 1.0f);
+    anchorTransform.position.y = currentY + deltaY * alpha;
 }
 
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
