@@ -48,6 +48,7 @@ public:
         CameraSpace::PerspectiveCamera* camera = nullptr;
         SweetsSpace::SweetsManager* sweetsManager = nullptr;
         float deltaSeconds = 0.0f;
+        float stageFloorY = 0.0f;
     };
 
     enum class PostGameAction
