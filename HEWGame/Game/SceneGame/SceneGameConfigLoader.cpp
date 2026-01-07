@@ -2,11 +2,13 @@
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
+#include "MaterialTuningSettings.h"
 
 #include <algorithm>
 #include <cctype>
 #include <optional>
 #include <sstream>
+#include <string_view>
 #include <vector>
 #include <DirectXMath.h>
 
@@ -60,6 +62,26 @@ namespace
             --end;
         } while (end != begin && isSpace(static_cast<unsigned char>(*end)));
         return std::string(begin, end + 1);
+    }
+
+    std::string ToLowerCopy(const std::string& input)
+    {
+        std::string lowered = input;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c)
+        {
+            return static_cast<char>(std::tolower(c));
+        });
+        return lowered;
+    }
+
+    bool StartsWith(const std::string& value, const std::string& prefix)
+    {
+        return value.size() >= prefix.size() && value.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    bool EndsWith(const std::string& value, const std::string& suffix)
+    {
+        return value.size() >= suffix.size() && value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
     std::optional<float> TryParseFloatToken(const std::string& token)
@@ -364,12 +386,15 @@ namespace SceneGameConfig
         bool parsedVignetteStrength = false;
         bool parsedBloomThreshold = false;
         bool parsedBloomIntensity = false;
+        bool parsedGrainAmount = false;
         bool parsedFxaaEdgeThreshold = false;
         bool parsedFxaaEdgeThresholdMin = false;
         bool parsedFxaaSubpixelQuality = false;
         bool parsedEnableFog = false;
         bool parsedEnableVignette = false;
         bool parsedEnableBloom = false;
+        bool parsedGrainEnable = false;
+        bool parsedGrainAnimate = false;
         bool parsedEnableFxaa = false;
 
         for (const auto& entry : lines)
@@ -571,6 +596,27 @@ namespace SceneGameConfig
                 continue;
             }
 
+            if (key == "post.grain.amount")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.grainAmount = *parsed;
+                    parsedGrainAmount = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.amount=" << settings.grainAmount
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.amount value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.grainAmount << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
             if (key == "post.fxaa.edgethreshold")
             {
                 if (auto parsed = TryParseFloatToken(value))
@@ -721,6 +767,50 @@ namespace SceneGameConfig
                 }
                 continue;
             }
+
+            if (key == "post.grain.enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.grainEnable = parsedValue;
+                    parsedGrainEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.enable=" << std::boolalpha << settings.grainEnable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.grainEnable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "post.grain.animate")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.grainAnimate = parsedValue;
+                    parsedGrainAnimate = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.animate=" << std::boolalpha << settings.grainAnimate
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.animate value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.grainAnimate << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
         }
 
         if (!parsedGamma)
@@ -787,6 +877,13 @@ namespace SceneGameConfig
                 << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
+        if (!parsedGrainAmount)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.amount not found; using default=" << settings.grainAmount
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
         if (!parsedFxaaEdgeThreshold)
         {
             std::ostringstream oss;
@@ -827,6 +924,20 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.enableBloom not found; using default=" << std::boolalpha << settings.enableBloom
                 << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGrainEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.enable not found; using default=" << std::boolalpha << settings.grainEnable
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGrainAnimate)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderSettings] post.grain.animate not found; using default="
+                << std::boolalpha << settings.grainAnimate << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
         if (!parsedEnableFxaa)
@@ -1380,6 +1491,568 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[LightingSettings] lighting.rim.enable not found; using default="
                 << std::boolalpha << settings.rimEnable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    BlobShadowSettings LoadBlobShadowSettings()
+    {
+        BlobShadowSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] Missing config; defaulting blob shadow settings section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedEnable = false;
+        bool parsedDebugNoDepthTest = false;
+        bool parsedForceReceiverZ = false;
+        bool parsedOpacity = false;
+        bool parsedSoftness = false;
+        bool parsedMaxHeight = false;
+        bool parsedMinScale = false;
+        bool parsedReceiverBias = false;
+        bool parsedGroundY = false;
+        bool parsedGroundZ = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "shadow.blob.enable")
+            {
+                if (ParseBool(value, settings.enable))
+                {
+                    parsedEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.enable=" << std::boolalpha << settings.enable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.debugnodepthtest")
+            {
+                if (ParseBool(value, settings.debugNoDepthTest))
+                {
+                    parsedDebugNoDepthTest = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.debugNoDepthTest="
+                        << std::boolalpha << settings.debugNoDepthTest
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.debugNoDepthTest value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << std::boolalpha << settings.debugNoDepthTest << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.forcereceiverz")
+            {
+                if (ParseBool(value, settings.forceReceiverZ))
+                {
+                    parsedForceReceiverZ = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.forceReceiverZ="
+                        << std::boolalpha << settings.forceReceiverZ
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.forceReceiverZ value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << std::boolalpha << settings.forceReceiverZ << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.opacity")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.opacity = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedOpacity = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.opacity=" << settings.opacity
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.opacity value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.opacity << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.softness")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.softness = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedSoftness = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.softness=" << settings.softness
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.softness value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.softness << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.maxheight")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.maxHeight = std::max(0.0f, *parsed);
+                    parsedMaxHeight = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.maxHeight=" << settings.maxHeight
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.maxHeight value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.maxHeight << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.minscale")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.minScale = std::clamp(*parsed, 0.0f, 1.0f);
+                    parsedMinScale = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.minScale=" << settings.minScale
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.minScale value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.minScale << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.receiverbias")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.receiverBias = *parsed;
+                    parsedReceiverBias = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.receiverBias=" << settings.receiverBias
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.receiverBias value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.receiverBias << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.groundy")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.groundY = *parsed;
+                    parsedGroundY = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.groundY=" << settings.groundY
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.groundY value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.groundY << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "shadow.blob.groundz")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.groundZ = *parsed;
+                    parsedGroundZ = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Parsed shadow.blob.groundZ=" << *settings.groundZ
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[BlobShadow] Invalid shadow.blob.groundZ value='" << value
+                        << "' on line=" << lineNumber << "; keeping default="
+                        << (settings.groundZ ? std::to_string(*settings.groundZ) : std::string("unset")) << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.enable not found; using default="
+                << std::boolalpha << settings.enable << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedOpacity)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.opacity not found; using default=" << settings.opacity
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedDebugNoDepthTest)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.debugNoDepthTest not found; using default="
+                << std::boolalpha << settings.debugNoDepthTest
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedForceReceiverZ)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.forceReceiverZ not found; using default="
+                << std::boolalpha << settings.forceReceiverZ
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedSoftness)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.softness not found; using default=" << settings.softness
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedMaxHeight)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.maxHeight not found; using default=" << settings.maxHeight
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedMinScale)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.minScale not found; using default=" << settings.minScale
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedReceiverBias)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.receiverBias not found; using default=" << settings.receiverBias
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGroundY)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.groundY not found; using default=" << settings.groundY
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedGroundZ)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[BlobShadow] shadow.blob.groundZ not found; using default="
+                << (settings.groundZ ? std::to_string(*settings.groundZ) : std::string("unset"))
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    MaterialTuningSettings LoadMaterialTuningSettings()
+    {
+        MaterialTuningSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MaterialTuning] Missing config; defaulting material tuning section='"
+                << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        constexpr std::string_view kProfilePrefix = "material.profile.";
+        constexpr std::string_view kOverridePrefix = "material.override.";
+        constexpr std::string_view kProfileSuffix = ".profile";
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            if (key.empty())
+            {
+                continue;
+            }
+
+            std::string loweredKey = ToLowerCopy(key);
+            if (StartsWith(loweredKey, std::string(kProfilePrefix)))
+            {
+                const std::string remainder = loweredKey.substr(kProfilePrefix.size());
+                const std::size_t dotPos = remainder.find('.');
+                if (dotPos == std::string::npos || dotPos == 0 || dotPos + 1 >= remainder.size())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Invalid profile key '" << key
+                        << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                const std::string profileName = remainder.substr(0, dotPos);
+                const std::string property = remainder.substr(dotPos + 1);
+                MaterialTuningProfile& profile = settings.profiles[profileName];
+
+                if (property == "lightresponse")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        profile.lightResponse = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".lightResponse=" << profile.lightResponse << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".lightResponse value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "sssintensity")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        profile.sssIntensity = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".sssIntensity=" << profile.sssIntensity << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".sssIntensity value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "ssscolor")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        profile.sssColor = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.profile." << profileName
+                            << ".sssColor=(" << profile.sssColor.x << ',' << profile.sssColor.y << ','
+                            << profile.sssColor.z << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.profile." << profileName
+                            << ".sssColor value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Unknown profile property '" << property
+                        << "' in key='" << key << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (StartsWith(loweredKey, std::string(kOverridePrefix)))
+            {
+                std::string remainder = loweredKey.substr(kOverridePrefix.size());
+                std::string target = remainder;
+                std::string property = "profile";
+                const std::size_t dotPos = remainder.rfind('.');
+                if (dotPos != std::string::npos && dotPos + 1 < remainder.size())
+                {
+                    const std::string candidateProperty = remainder.substr(dotPos + 1);
+                    if (candidateProperty == "profile"
+                        || candidateProperty == "lightresponse"
+                        || candidateProperty == "sssintensity"
+                        || candidateProperty == "ssscolor")
+                    {
+                        property = candidateProperty;
+                        target = remainder.substr(0, dotPos);
+                    }
+                }
+                else if (EndsWith(target, std::string(kProfileSuffix)))
+                {
+                    target = target.substr(0, target.size() - kProfileSuffix.size());
+                }
+
+                if (target.empty())
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Invalid override key '" << key
+                        << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                    continue;
+                }
+
+                MaterialTuningOverride& overrideEntry = settings.overrides[target];
+                if (property == "profile")
+                {
+                    const std::string profileName = ToLowerCopy(value);
+                    if (profileName.empty())
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Empty override profile for key '" << key
+                            << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                        continue;
+                    }
+
+                    overrideEntry.profileName = profileName;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                        << ".profile='" << profileName << "' from line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+                else if (property == "lightresponse")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        overrideEntry.lightResponse = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".lightResponse=" << *overrideEntry.lightResponse
+                            << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".lightResponse value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "sssintensity")
+                {
+                    if (auto parsed = TryParseFloatToken(value))
+                    {
+                        overrideEntry.sssIntensity = *parsed;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".sssIntensity=" << *overrideEntry.sssIntensity
+                            << " from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".sssIntensity value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else if (property == "ssscolor")
+                {
+                    if (auto parsed = ParseFloat3Token(value))
+                    {
+                        overrideEntry.sssColor = DirectX::XMFLOAT3(parsed->x, parsed->y, parsed->z);
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Parsed material.override." << target
+                            << ".sssColor=(" << overrideEntry.sssColor->x << ',' << overrideEntry.sssColor->y
+                            << ',' << overrideEntry.sssColor->z << ") from line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "[MaterialTuning] Invalid material.override." << target
+                            << ".sssColor value='" << value << "' on line=" << lineNumber << "\n";
+                        DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MaterialTuning] Unknown override property '" << property
+                        << "' in key='" << key << "' on line=" << lineNumber << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MaterialTuning] Profiles=" << settings.profiles.size()
+                << " overrides=" << settings.overrides.size()
+                << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 

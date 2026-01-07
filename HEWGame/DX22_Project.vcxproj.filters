@@ -369,6 +369,9 @@
     <ClCompile Include="Game\SceneGame\SceneGame.cpp">
       <Filter>Game\SceneGame</Filter>
     </ClCompile>
+    <ClCompile Include="Game\SceneGame\BlobShadowRenderer.cpp">
+      <Filter>Game\SceneGame</Filter>
+    </ClCompile>
     <ClCompile Include="Game\SceneGame\SceneGameConfigLoader.cpp">
       <Filter>Game\SceneGame</Filter>
     </ClCompile>
@@ -766,6 +769,9 @@
       <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Game\SceneGame\GameplayConfig.h">
+      <Filter>Game\SceneGame</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\SceneGame\BlobShadowRenderer.h">
       <Filter>Game\SceneGame</Filter>
     </ClInclude>
     <ClInclude Include="Game\SceneGame\SceneGame.h">

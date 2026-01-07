@@ -79,6 +79,7 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
+        constexpr float kShadowReceiverTolerance = 0.05f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -91,6 +92,71 @@ namespace
         }
 
         bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
+
+        bool IsFiniteFloat(float value)
+        {
+            return std::isfinite(value) != 0;
+        }
+
+        bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
+        {
+            return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
+        {
+            if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(receiverY))
+            {
+                return std::nullopt;
+            }
+
+            float height = bounds.min.y - receiverY;
+            if (!IsFiniteFloat(height))
+            {
+                return std::nullopt;
+            }
+
+            return std::max(0.0f, height);
+        }
+
+        bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
+            const std::vector<AABB>& stageBounds,
+            float* outReceiverY)
+        {
+            if (!outReceiverY || stageBounds.empty())
+            {
+                return false;
+            }
+
+            float bestReceiver = -std::numeric_limits<float>::infinity();
+            bool found = false;
+            for (const auto& bounds : stageBounds)
+            {
+                if (!OverlapsShadowReceiverXZ(entityBounds, bounds))
+                {
+                    continue;
+                }
+
+                const float topY = bounds.max.y;
+                if (!IsFiniteFloat(topY))
+                {
+                    continue;
+                }
+
+                if (topY <= entityBounds.min.y + kShadowReceiverTolerance && topY > bestReceiver)
+                {
+                    bestReceiver = topY;
+                    found = true;
+                }
+            }
+
+            if (found)
+            {
+                *outReceiverY = bestReceiver;
+            }
+
+            return found;
+        }
 #if defined(_DEBUG)
         Color MakeColor(float r, float g, float b, float a)
         {
@@ -297,9 +363,17 @@ bool SceneGame::Load(Core::Input& input)
         return false;
     }
     m_loadFailed = false;
+    m_materialTuningSettings = composition->materialTuningSettings;
+    Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
+    m_stagePlaneZ = std::nullopt;
+    const float stagePlaneZ = m_stageData.GetPlaneZ();
+    if (IsFiniteFloat(stagePlaneZ))
+    {
+        m_stagePlaneZ = stagePlaneZ;
+    }
     m_phaseManager = std::move(composition->phaseManager);
     m_playerBaseHorizontalSpeed = composition->playerBaseHorizontalSpeed;
     m_playerBaseVerticalSpeed = composition->playerBaseVerticalSpeed;
@@ -313,11 +387,17 @@ bool SceneGame::Load(Core::Input& input)
     m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
+    m_blobShadowSettings = composition->blobShadowSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
+    m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();
+    if (m_blobShadowRenderer)
+    {
+        m_blobShadowRenderer->SetSettings(m_blobShadowSettings);
+    }
     GuidelineSystem::Config guidelineConfig{};
     guidelineConfig.heightMeters = composition->guidelineHeightMeters;
     guidelineConfig.stepMeters = composition->guidelineStepMeters;
@@ -336,6 +416,41 @@ bool SceneGame::Load(Core::Input& input)
     gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
+
+    {
+        std::ostringstream materialLog;
+        materialLog << kLogPrefix << "[MaterialTuning] Applied profiles=" << m_materialTuningSettings.profiles.size()
+            << " overrides=" << m_materialTuningSettings.overrides.size() << "\n";
+        for (const auto& entry : m_materialTuningSettings.profiles)
+        {
+            const auto& profile = entry.second;
+            materialLog << kLogPrefix << "  Profile '" << entry.first
+                << "' lightResponse=" << profile.lightResponse
+                << " sssIntensity=" << profile.sssIntensity
+                << " sssColor=(" << profile.sssColor.x << ',' << profile.sssColor.y << ',' << profile.sssColor.z << ")\n";
+        }
+        for (const auto& entry : m_materialTuningSettings.overrides)
+        {
+            const auto& overrideEntry = entry.second;
+            materialLog << kLogPrefix << "  Override '" << entry.first << "' -> profile='"
+                << overrideEntry.profileName << "'";
+            if (overrideEntry.lightResponse)
+            {
+                materialLog << " lightResponse=" << *overrideEntry.lightResponse;
+            }
+            if (overrideEntry.sssIntensity)
+            {
+                materialLog << " sssIntensity=" << *overrideEntry.sssIntensity;
+            }
+            if (overrideEntry.sssColor)
+            {
+                materialLog << " sssColor=(" << overrideEntry.sssColor->x << ','
+                    << overrideEntry.sssColor->y << ',' << overrideEntry.sssColor->z << ')';
+            }
+            materialLog << "\n";
+        }
+        DebugTrace(materialLog.str());
+    }
 
     if (m_physicsBinder)
     {
@@ -484,7 +599,7 @@ void SceneGame::Draw()
             }
             context->PSSetShaderResources(0, 1, &sceneColorSRV);
             context->PSSetShaderResources(1, 1, &sceneDepthSRV);
-            SetSamplerState(SAMPLER_LINEAR);
+            SetSamplerState(SAMPLER_POSTPROCESS);
             const auto& postSettings = m_renderPostProcessSettings;
             DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
                 postSettings.fogColor.x,
@@ -500,6 +615,11 @@ void SceneGame::Draw()
             const float invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
             const float invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
             const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
+            float postTime = 0.0f;
+            if (const auto* timer = GetTimer())
+            {
+                postTime = static_cast<float>(timer->FrameIndex()) * timer->DeltaTime();
+            }
 
             if (!postSettings.enableFog)
             {
@@ -531,7 +651,11 @@ void SceneGame::Draw()
                 postSettings.fxaaEdgeThreshold,
                 postSettings.fxaaEdgeThresholdMin,
                 postSettings.fxaaSubpixelQuality,
-                postSettings.enableFxaa ? 1 : 0);
+                postSettings.enableFxaa ? 1 : 0,
+                postTime,
+                postSettings.grainAmount,
+                postSettings.grainEnable ? 1 : 0,
+                postSettings.grainAnimate ? 1 : 0);
 
             postprocess->Bind(context);
 
@@ -1166,6 +1290,61 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         else
         {
             DebugTrace(std::string(kLogPrefix) + "m_rendererがnull\n");
+        }
+
+        if (m_blobShadowRenderer && m_blobShadowSettings.enable)
+        {
+            std::vector<AABB> stageBounds;
+            stageBounds.reserve(m_stagePhysicsEntities.size());
+            for (const auto& stageEntity : m_stagePhysicsEntities)
+            {
+                if (!stageEntity)
+                {
+                    continue;
+                }
+
+                stageEntity->SyncColliderBounds();
+                stageBounds.push_back(stageEntity->GetAABB());
+            }
+
+            std::optional<float> receiverZ = m_stagePlaneZ;
+            if (m_blobShadowSettings.groundZ)
+            {
+                receiverZ = m_blobShadowSettings.groundZ;
+            }
+
+            const auto resolveShadowReceiver = [&](Entities::PhysicalEntity& entity)
+            {
+                entity.SyncColliderBounds();
+                const AABB& bounds = entity.GetAABB();
+                float receiverY = m_blobShadowSettings.groundY;
+                TryFindShadowReceiverYFromStage(bounds, stageBounds, &receiverY);
+                return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
+            };
+
+            if (player)
+            {
+                const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
+                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverZ, receiverHeight);
+            }
+            if (m_sweetsManager)
+            {
+                const auto drawList = [&](const SweetsSpace::SweetsManager::SweetsList& list)
+                {
+                    for (const auto& sweets : list)
+                    {
+                        if (sweets)
+                        {
+                            const auto [receiverY, receiverHeight] = resolveShadowReceiver(*sweets);
+                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, receiverZ, receiverHeight);
+                        }
+                    }
+                };
+
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
+                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
+            }
         }
 
         Geometory::SetView(activeCamera->GetView());

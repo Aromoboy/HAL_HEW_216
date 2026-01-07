@@ -5,7 +5,7 @@
 namespace
 {
 	ID3D11RasterizerState*		g_pRasterizerState[3];
-	ID3D11DepthStencilState*	g_pDepthStencilState[2];
+	ID3D11DepthStencilState*	g_pDepthStencilState[3];
 	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
 	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
 	ID3D11Buffer*			g_pPostProcessParamBuffer = nullptr;
@@ -93,6 +93,8 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_DECR;
 	// ステート作成
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[0]);
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[2]);
 	dsDesc.DepthEnable = false;
 	GetDevice()->CreateDepthStencilState(&dsDesc, &g_pDepthStencilState[1]);
 	SetDepthTest(false);
@@ -133,12 +135,19 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	for (int i = 0; i < SAMPLER_MAX; ++i)
+	for (int i = 0; i < 2; ++i)
 	{
 		samplerDesc.Filter = filter[i];
 		hr = GetDevice()->CreateSamplerState(&samplerDesc, &g_pSamplerState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
+	D3D11_SAMPLER_DESC postProcessSamplerDesc = samplerDesc;
+	postProcessSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	postProcessSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	postProcessSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	postProcessSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	hr = GetDevice()->CreateSamplerState(&postProcessSamplerDesc, &g_pSamplerState[SAMPLER_POSTPROCESS]);
+	if (FAILED(hr)) { return hr; }
 	SetSamplerState(SAMPLER_LINEAR);
 
 	return S_OK;
@@ -150,7 +159,7 @@ void UninitDirectX()
                 SAFE_RELEASE(g_pSamplerState[i]);
         for (int i = 0; i < BLEND_MAX; ++i)
                 SAFE_RELEASE(g_pBlendState[i]);
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < 3; ++i)
                 SAFE_RELEASE(g_pDepthStencilState[i]);
         for(int i = 0; i < 3; ++ i)
                 SAFE_RELEASE(g_pRasterizerState[i]);
@@ -209,6 +218,16 @@ void SetDepthTest(bool enable)
 	GetContext()->OMSetDepthStencilState(
 		g_pDepthStencilState[enable ? 0 : 1], 1);
 }
+void SetDepthTestWrite(bool enable, bool write)
+{
+	if (!enable)
+	{
+		GetContext()->OMSetDepthStencilState(g_pDepthStencilState[1], 1);
+		return;
+	}
+
+	GetContext()->OMSetDepthStencilState(g_pDepthStencilState[write ? 0 : 2], 1);
+}
 void SetBlendMode(BlendMode blend)
 {
 	if (blend < 0 || blend >= BLEND_MAX) return;
@@ -221,7 +240,7 @@ void SetSamplerState(SamplerState state)
 	GetContext()->PSSetSamplers(0, 1, &g_pSamplerState[state]);
 }
 
-void BindPostProcessParams(float gamma, float saturation, float contrast, const DirectX::XMFLOAT4& fogColor, float fogStart, float fogRange, float cameraNear, float cameraFar, float vignetteIntensity, float microBloomIntensity, float bloomThreshold, const DirectX::XMFLOAT2& invScreenSize, float fxaaEdgeThreshold, float fxaaEdgeThresholdMin, float fxaaSubpixelQuality, int fxaaEnable)
+void BindPostProcessParams(float gamma, float saturation, float contrast, const DirectX::XMFLOAT4& fogColor, float fogStart, float fogRange, float cameraNear, float cameraFar, float vignetteIntensity, float microBloomIntensity, float bloomThreshold, const DirectX::XMFLOAT2& invScreenSize, float fxaaEdgeThreshold, float fxaaEdgeThresholdMin, float fxaaSubpixelQuality, int fxaaEnable, float postTime, float grainAmount, int grainEnable, int grainAnimate)
 {
 	ID3D11Device* device = GetDevice();
 	ID3D11DeviceContext* context = GetContext();
@@ -262,7 +281,11 @@ void BindPostProcessParams(float gamma, float saturation, float contrast, const 
 		fxaaEdgeThresholdMin,
 		fxaaSubpixelQuality,
 		fxaaEnable,
-		{ 0.0f, 0.0f }
+		postTime,
+		grainAmount,
+		grainEnable,
+		grainAnimate,
+		DirectX::XMFLOAT2(0.0f, 0.0f)
 	};
 	context->UpdateSubresource(g_pPostProcessParamBuffer, 0, nullptr, &params, 0, 0);
 	context->PSSetConstantBuffers(0, 1, &g_pPostProcessParamBuffer);

@@ -49,6 +49,10 @@ cbuffer PostProcessParams : register(b0)
     float fxaaEdgeThresholdMin;
     float fxaaSubpixelQuality;
     int fxaaEnable;
+    float postTime;
+    float grainAmount;
+    int grainEnable;
+    int grainAnimate;
     float2 padding3;
 };
 
@@ -128,6 +132,7 @@ float4 PSMain(VSOut input) : SV_TARGET
     float gray = FxaaLuma(col);
     col = lerp(float3(gray, gray, gray), col, saturation);
     col = (col - 0.5) * contrast + 0.5;
+    col = pow(saturate(col), 1.0f / gamma);
     col = saturate(col);
     float linearDepth = LinearizeDepth(depth);
     float fog = saturate((linearDepth - fogStart) / fogRange);
@@ -138,5 +143,12 @@ float4 PSMain(VSOut input) : SV_TARGET
     float luminance = dot(col, float3(0.2126, 0.7152, 0.0722));
     col += max(luminance - bloomThreshold, 0.0) * microBloomIntensity;
     col = saturate(col);
+    if (grainEnable != 0)
+    {
+        float timeOffset = (grainAnimate != 0) ? postTime : 0.0f;
+        float noise = frac(sin(dot(input.position.xy + timeOffset, float2(12.9898f, 78.233f))) * 43758.5453f);
+        float grain = (noise - 0.5f) * 2.0f * grainAmount;
+        col = saturate(col + grain);
+    }
     return float4(col, 1.0f);
 }

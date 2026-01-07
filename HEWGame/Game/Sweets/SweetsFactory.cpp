@@ -58,6 +58,36 @@ namespace
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
+    constexpr const char* kDefaultSweetsMaterialKey = "sweets";
+
+    std::string ResolveMaterialKeyForType(SweetsSpace::SweetsType type)
+    {
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Cream:
+            return "cream";
+        case SweetsSpace::SweetsType::Strawberry:
+            return "strawberry";
+        case SweetsSpace::SweetsType::Blueberry:
+            return "blueberry";
+        case SweetsSpace::SweetsType::Pineapple:
+            return "pineapple";
+        case SweetsSpace::SweetsType::Banana:
+            return "banana";
+        }
+        return kDefaultSweetsMaterialKey;
+    }
+
+    std::string ResolveMaterialKeyForDescriptor(const SweetsSpace::SweetsPrototypeDescriptor& descriptor,
+        SweetsSpace::SweetsType type)
+    {
+        if (!descriptor.materialKey.empty())
+        {
+            return descriptor.materialKey;
+        }
+
+        return ResolveMaterialKeyForType(type);
+    }
 
     const char* ToString(SweetsSpace::ColliderShape shape)
     {
@@ -644,6 +674,7 @@ namespace SweetsSpace
                         << "' path='" << primaryPath << "' loaded=" << std::boolalpha << static_cast<bool>(model) << "\n";
                     Diagnostics::LogInfo(modelLog.str());
                 }
+                model->SetMaterialKey(ResolveMaterialKeyForDescriptor(*descriptor, type));
 
                 Transform physicsTransform = transform;
                 physicsTransform.scale = preset.scale;

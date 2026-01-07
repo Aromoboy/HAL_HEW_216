@@ -1,7 +1,12 @@
 #pragma once
+#include "MaterialTuningSettings.h"
 #include "TextureDX.h"
 #include <DirectXMath.h>
 #include <memory>
+#include <string>
+
+class MaterialDX;
+void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, const MaterialTuningSettings& settings);
 
 class MaterialDX
 {
@@ -15,24 +20,30 @@ public:
         DirectX::XMFLOAT4 GetDiffuse() const;
         DirectX::XMFLOAT4 GetAmbient() const;
         DirectX::XMFLOAT4 GetSpecular() const;
+        float GetLightResponse() const;
+        float GetSssIntensity() const;
+        DirectX::XMFLOAT3 GetSssColor() const;
 
         std::shared_ptr<Texture2D> GetTextureResource() const;
 
         void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
         void SetAmbient(const DirectX::XMFLOAT4& ambient);
         void SetSpecular(const DirectX::XMFLOAT4& specular);
+        void SetLightResponse(float lightResponse);
+        void SetSssIntensity(float sssIntensity);
+        void SetSssColor(const DirectX::XMFLOAT3& sssColor);
+        const std::string& GetMaterialKey() const;
+        void SetMaterialKey(std::string key);
 
 private:
 
 	DirectX::XMFLOAT4 m_diffuse;
 	DirectX::XMFLOAT4 m_ambient;
 	DirectX::XMFLOAT4 m_specular;
+	float m_lightResponse = 1.0f;
+	float m_sssIntensity = 0.0f;
+	DirectX::XMFLOAT3 m_sssColor{ 1.0f, 1.0f, 1.0f };
 
 	std::shared_ptr<Texture2D> m_texture;
-
-
-
-
-	
+        std::string m_materialKey;
 };
-
