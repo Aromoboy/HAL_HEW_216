@@ -53,6 +53,10 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_followSpeed(5.0f)
         , m_lockTranslation(false)
         , m_lockYawPitch(false)
+        , m_followPositionX(true)
+        , m_followPositionY(true)
+        , m_followPositionZ(true)
+        , m_inheritRotation(true)
 {
 }
 
@@ -138,6 +142,38 @@ bool CameraRig::IsYawPitchLocked() const
         return m_lockYawPitch;
 }
 
+void CameraRig::SetFollowPositionAxes(bool followX, bool followY, bool followZ)
+{
+        m_followPositionX = followX;
+        m_followPositionY = followY;
+        m_followPositionZ = followZ;
+}
+
+bool CameraRig::IsFollowingPositionX() const
+{
+        return m_followPositionX;
+}
+
+bool CameraRig::IsFollowingPositionY() const
+{
+        return m_followPositionY;
+}
+
+bool CameraRig::IsFollowingPositionZ() const
+{
+        return m_followPositionZ;
+}
+
+void CameraRig::SetInheritRotation(bool inheritRotation)
+{
+        m_inheritRotation = inheritRotation;
+}
+
+bool CameraRig::IsInheritingRotation() const
+{
+        return m_inheritRotation;
+}
+
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
@@ -157,7 +193,7 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         }
 
         const auto& targetTransform = target->GetTransform();
-        const float3 targetRotation = targetTransform.rotation;
+        const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
 
         DirectX::XMVECTOR targetPos = LoadFloat3(targetTransform.position);
         DirectX::XMVECTOR offsetVec = RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
@@ -166,6 +202,28 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         if (!m_lockTranslation)
         {
                 DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
+                if (!m_followPositionX || !m_followPositionY || !m_followPositionZ)
+                {
+                        DirectX::XMFLOAT3 currentPosValue;
+                        DirectX::XMFLOAT3 desiredPosValue;
+                        DirectX::XMStoreFloat3(&currentPosValue, currentPos);
+                        DirectX::XMStoreFloat3(&desiredPosValue, desiredPos);
+
+                        if (!m_followPositionX)
+                        {
+                                desiredPosValue.x = currentPosValue.x;
+                        }
+                        if (!m_followPositionY)
+                        {
+                                desiredPosValue.y = currentPosValue.y;
+                        }
+                        if (!m_followPositionZ)
+                        {
+                                desiredPosValue.z = currentPosValue.z;
+                        }
+
+                        desiredPos = DirectX::XMVectorSet(desiredPosValue.x, desiredPosValue.y, desiredPosValue.z, 0.0f);
+                }
                 const float alpha = Clamp01(m_followSpeed * ctx.dt);
                 DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
                 m_camera->SetPosition(StoreFloat3(newPos));

@@ -1418,6 +1418,8 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
         m_cameraRig->SetTranslationLocked(settings.fixedPosition);
         m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+        m_cameraRig->SetFollowPositionAxes(false, true, false);
+        m_cameraRig->SetInheritRotation(false);
     }
 
     if (!m_gameCamera)
