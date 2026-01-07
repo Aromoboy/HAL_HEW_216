@@ -1513,7 +1513,14 @@ Core::StepTimer* SceneGame::GetTimer()
 
 void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
 {
-    (void)ctx;
+    static bool logged = false;
+    if (!logged)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "UpdateCameraAnchor called frame=" << ctx.timer.FrameIndex() << "\n";
+        ::DebugTrace(oss.str());
+        logged = true;
+    }
     if (!player || !m_cameraAnchor)
     {
         return;
