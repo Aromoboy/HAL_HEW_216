@@ -1593,30 +1593,36 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 {
     std::optional<float> clampMinY = settings.clamp.minY;
     std::optional<float> clampMaxY = settings.clamp.maxY;
+    const bool shouldClampY = clampMinY || clampMaxY;
     const std::optional<float> configMinY = clampMinY;
     const std::optional<float> configMaxY = clampMaxY;
 
-    if (const auto decorationBounds = ComputeDecorationYBounds(m_stagePhysicsEntities, m_stageObjects))
+    if (shouldClampY)
     {
-        const auto& [decorMinY, decorMaxY] = *decorationBounds;
-        if (IsFiniteFloat(decorMinY))
+        if (const auto decorationBounds = ComputeDecorationYBounds(m_stagePhysicsEntities, m_stageObjects))
         {
-            clampMinY = clampMinY ? std::optional<float>(std::max(*clampMinY, decorMinY)) : std::optional<float>(decorMinY);
+            const auto& [decorMinY, decorMaxY] = *decorationBounds;
+            if (IsFiniteFloat(decorMinY))
+            {
+                clampMinY = clampMinY ? std::optional<float>(std::max(*clampMinY, decorMinY))
+                    : std::optional<float>(decorMinY);
+            }
+            if (IsFiniteFloat(decorMaxY))
+            {
+                clampMaxY = clampMaxY ? std::optional<float>(std::min(*clampMaxY, decorMaxY))
+                    : std::optional<float>(decorMaxY);
+            }
         }
-        if (IsFiniteFloat(decorMaxY))
-        {
-            clampMaxY = clampMaxY ? std::optional<float>(std::min(*clampMaxY, decorMaxY)) : std::optional<float>(decorMaxY);
-        }
-    }
 
-    if (clampMinY && clampMaxY && *clampMinY > *clampMaxY)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Camera clamp range invalid after decoration bounds (minY=" << *clampMinY
-            << ", maxY=" << *clampMaxY << "). Using config range instead.\n";
-        ::DebugTrace(oss.str());
-        clampMinY = configMinY;
-        clampMaxY = configMaxY;
+        if (clampMinY && clampMaxY && *clampMinY > *clampMaxY)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera clamp range invalid after decoration bounds (minY=" << *clampMinY
+                << ", maxY=" << *clampMaxY << "). Using config range instead.\n";
+            ::DebugTrace(oss.str());
+            clampMinY = configMinY;
+            clampMaxY = configMaxY;
+        }
     }
 
     if (m_gameCamera)
@@ -1634,10 +1640,10 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
         m_cameraRig->SetTranslationLocked(settings.lockTranslation);
-        m_cameraRig->SetYawPitchLocked(settings.lockYawPitch);
+        m_cameraRig->SetYawPitchLocked(true);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
-        m_cameraRig->SetClampY(clampMinY, clampMaxY);
+        m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
     }
 
     if (!m_gameCamera)
@@ -1661,11 +1667,11 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         cameraPosition = StoreFloat3(desiredPos);
     }
 
-    if (clampMinY && cameraPosition.y < *clampMinY)
+    if (shouldClampY && clampMinY && cameraPosition.y < *clampMinY)
     {
         cameraPosition.y = *clampMinY;
     }
-    if (clampMaxY && cameraPosition.y > *clampMaxY)
+    if (shouldClampY && clampMaxY && cameraPosition.y > *clampMaxY)
     {
         cameraPosition.y = *clampMaxY;
     }
