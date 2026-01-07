@@ -82,6 +82,13 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
+        const SceneGameConfig::CameraRigSettings kFixedSideViewCameraPreset = []()
+        {
+            SceneGameConfig::CameraRigSettings settings{};
+            settings.fixedPosition = false;
+            settings.followSpeed = 4.0f;
+            return settings;
+        }();
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -596,7 +603,12 @@ bool SceneGame::Load(Core::Input& input)
         anchorTransform.position.y = player->GetTransform().position.y;
     }
 
-    const SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    if (cameraSettings.fixedPosition)
+    {
+        cameraSettings.fixedPosition = kFixedSideViewCameraPreset.fixedPosition;
+        cameraSettings.followSpeed = kFixedSideViewCameraPreset.followSpeed;
+    }
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
