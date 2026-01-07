@@ -1367,6 +1367,24 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 return;
         }
 
+#if defined(_DEBUG)
+        if (player)
+        {
+                const float playerY = player->GetTransform().position.y;
+                float cameraY = 0.0f;
+                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                {
+                        cameraY = baseCamera->GetPosition().y;
+                }
+                std::ostringstream oss;
+                oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
+                    << " scrollY=" << m_scrollY
+                    << " cameraY=" << cameraY
+                    << "\n";
+                ::DebugTrace(oss.str());
+        }
+#endif
+
         {
                 ::LightingSettings lighting{};
                 lighting.key.diffuse = m_lightingSettings.keyDiffuse;
