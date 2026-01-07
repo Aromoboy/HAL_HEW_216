@@ -114,10 +114,12 @@ private:
     void OnStageFail();
     void ResetPlaySession();
     void ResetGuidelineHeight();
-    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
     void Initialize(const Stage::StageData& stageData);
+
+protected:
+    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
     
     std::vector<StageObject> m_stageObjects;
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
