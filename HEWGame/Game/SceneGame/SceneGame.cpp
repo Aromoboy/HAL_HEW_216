@@ -85,7 +85,18 @@ namespace
         const SceneGameConfig::CameraRigSettings kFixedSideViewCameraPreset = []()
         {
             SceneGameConfig::CameraRigSettings settings{};
+            settings.fixedPosition = true;
+            settings.lockTranslation = true;
+            settings.lockYawPitch = true;
+            settings.followSpeed = 0.0f;
+            return settings;
+        }();
+        const SceneGameConfig::CameraRigSettings kScrollSideViewCameraPreset = []()
+        {
+            SceneGameConfig::CameraRigSettings settings{};
             settings.fixedPosition = false;
+            settings.lockTranslation = false;
+            settings.lockYawPitch = true;
             settings.followSpeed = 4.0f;
             return settings;
         }();
@@ -604,11 +615,11 @@ bool SceneGame::Load(Core::Input& input)
     }
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
-    if (cameraSettings.fixedPosition)
-    {
-        cameraSettings.fixedPosition = kFixedSideViewCameraPreset.fixedPosition;
-        cameraSettings.followSpeed = kFixedSideViewCameraPreset.followSpeed;
-    }
+    const auto& cameraPreset = cameraSettings.fixedPosition ? kFixedSideViewCameraPreset : kScrollSideViewCameraPreset;
+    cameraSettings.fixedPosition = cameraPreset.fixedPosition;
+    cameraSettings.followSpeed = cameraPreset.followSpeed;
+    cameraSettings.lockTranslation = cameraPreset.lockTranslation;
+    cameraSettings.lockYawPitch = cameraPreset.lockYawPitch;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1592,8 +1603,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
-        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
-        m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+        m_cameraRig->SetTranslationLocked(settings.lockTranslation);
+        m_cameraRig->SetYawPitchLocked(settings.lockYawPitch);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetClampY(clampMinY, clampMaxY);
@@ -1634,6 +1645,17 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
+
+    static bool loggedCameraSettings = false;
+    if (!loggedCameraSettings)
+    {
+        std::ostringstream settingsLog;
+        settingsLog << kLogPrefix << "Camera settings: fixed=" << std::boolalpha << settings.fixedPosition
+            << ", translationLocked=" << settings.lockTranslation
+            << ", followSpeed=" << settings.followSpeed << "\n";
+        ::DebugTrace(settingsLog.str());
+        loggedCameraSettings = true;
+    }
 
     std::ostringstream oss;
     oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition

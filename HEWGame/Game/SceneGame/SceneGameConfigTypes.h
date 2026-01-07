@@ -91,6 +91,8 @@ namespace SceneGameConfig
     struct CameraRigSettings
     {
         bool fixedPosition = false;
+        bool lockTranslation = false;
+        bool lockYawPitch = false;
         float followSpeed = 5.0f;
         float3 offset{ 0.0f, 5.5f, -25.0f };
         float fovDegrees = 45.0f;
