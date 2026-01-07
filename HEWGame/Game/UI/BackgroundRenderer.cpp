@@ -39,6 +39,11 @@ void BackgroundRenderer::Shutdown()
     m_ready = false;
 }
 
+void BackgroundRenderer::SetScrollOffset(float2 offset)
+{
+    m_scrollOffset = offset;
+}
+
 void BackgroundRenderer::Draw() const
 {
     if (!m_ready || !m_texture)
@@ -53,11 +58,12 @@ void BackgroundRenderer::Draw() const
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
     Sprite::SetTexture(m_texture.get());
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+    const DirectX::XMFLOAT2 parallaxOffset(m_scrollOffset.x, m_scrollOffset.y);
+    Sprite::SetUVPos(parallaxOffset);
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     Sprite::SetColor(m_config.tintColor);
     Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetOffset(parallaxOffset);
     Sprite::Draw();
 
     SetDepthTest(true);
