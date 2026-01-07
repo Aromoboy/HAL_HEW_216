@@ -36,17 +36,6 @@
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
 
-
-struct CameraPrototypeSettings
-{
-    bool fixedPosition = false;
-    float followSpeed = 5.0f;
-    float3 offset{ 0.0f, 0.0f, 0.0f };
-    float fovDegrees = 60.0f;
-    float yawRadians = 0.0f;
-    float pitchRadians = 0.0f;
-};
-
 namespace Systems
 {
     class DrawSystem;
@@ -84,6 +73,7 @@ public:
     using SceneLightingSettings = SceneGameConfig::LightingSettings;
     using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
     using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
+    using CameraRigSettings = SceneGameConfig::CameraRigSettings;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -104,7 +94,7 @@ public:
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
 private:
-    void ConfigureCamera(const CameraPrototypeSettings& settings);
+    void ConfigureCamera(const CameraRigSettings& settings);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay();

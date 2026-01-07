@@ -2387,9 +2387,9 @@ namespace SceneGameConfig
         return settings;
     }
 
-    CameraClampSettings LoadCameraClampSettings()
+    CameraRigSettings LoadCameraRigSettings()
     {
-        CameraClampSettings settings{};
+        CameraRigSettings settings{};
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCameraRig, lines))
@@ -2405,29 +2405,72 @@ namespace SceneGameConfig
         {
             const std::string key = entry.key;
             const std::string value = TrimWhitespace(entry.value);
-            if (key == "minY")
+            if (key == GameplayConfig::kCameraRigKeyMinY)
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
-                    settings.minY = *parsed;
+                    settings.clamp.minY = *parsed;
                 }
             }
-            else if (key == "maxY")
+            else if (key == GameplayConfig::kCameraRigKeyMaxY)
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
-                    settings.maxY = *parsed;
+                    settings.clamp.maxY = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFixedPosition)
+            {
+                bool parsedValue = settings.fixedPosition;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.fixedPosition = parsedValue;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFollowSpeed)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.followSpeed = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyOffset)
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.offset = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFovDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fovDegrees = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyYawDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.yawDegrees = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyPitchDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.pitchDegrees = *parsed;
                 }
             }
         }
 
-        if (settings.minY && settings.maxY && *settings.minY > *settings.maxY)
+        if (settings.clamp.minY && settings.clamp.maxY && *settings.clamp.minY > *settings.clamp.maxY)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Camera rig clamp range invalid (minY=" << *settings.minY
-                << ", maxY=" << *settings.maxY << "). Swapping values.\n";
+            oss << kLogPrefix << "Camera rig clamp range invalid (minY=" << *settings.clamp.minY
+                << ", maxY=" << *settings.clamp.maxY << "). Swapping values.\n";
             ::DebugTrace(oss.str());
-            std::swap(settings.minY, settings.maxY);
+            std::swap(settings.clamp.minY, settings.clamp.maxY);
         }
 
         return settings;

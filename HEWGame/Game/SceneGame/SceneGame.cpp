@@ -392,17 +392,6 @@ namespace
             return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
         }
 
-        constexpr CameraPrototypeSettings kFixedSideViewCameraPreset
-        {
-            false,
-            5.0f,
-            //カメラ設定
-            float3{ 0.0f, 5.5f, -25.0f },
-            45.0f,
-            DirectX::XMConvertToRadians(0.0f),
-            DirectX::XMConvertToRadians(-10.0f)
-        };
-
 }
 
 float3 fRads = { 0.0f, 0.0f, 0.0f };
@@ -607,7 +596,7 @@ bool SceneGame::Load(Core::Input& input)
         anchorTransform.position.y = player->GetTransform().position.y;
     }
 
-    const auto& cameraSettings = kFixedSideViewCameraPreset;
+    const SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1540,11 +1529,10 @@ void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
     anchorTransform.position.y = targetY;
 }
 
-void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
 {
-    const SceneGameConfig::CameraClampSettings clampSettings = SceneGameConfig::LoadCameraClampSettings();
-    std::optional<float> clampMinY = clampSettings.minY;
-    std::optional<float> clampMaxY = clampSettings.maxY;
+    std::optional<float> clampMinY = settings.clamp.minY;
+    std::optional<float> clampMaxY = settings.clamp.maxY;
     const std::optional<float> configMinY = clampMinY;
     const std::optional<float> configMaxY = clampMaxY;
 
@@ -1576,11 +1564,14 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
     }
 
+    const float yawRadians = DirectX::XMConvertToRadians(settings.yawDegrees);
+    const float pitchRadians = DirectX::XMConvertToRadians(settings.pitchDegrees);
+
     if (m_cameraRig)
     {
         m_cameraRig->SetOffset(settings.offset);
-        m_cameraRig->SetYaw(settings.yawRadians);
-        m_cameraRig->SetPitch(settings.pitchRadians);
+        m_cameraRig->SetYaw(yawRadians);
+        m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
         m_cameraRig->SetTranslationLocked(settings.fixedPosition);
         m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
@@ -1595,7 +1586,7 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         return;
     }
 
-    float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
+    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
     float3 cameraPosition = settings.offset;
     if (!settings.fixedPosition && m_cameraAnchor)
     {
@@ -1630,13 +1621,11 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         << ", fov=" << settings.fovDegrees
         << ", followSpeed=" << settings.followSpeed
         << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
-        << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
+        << ", yawDegrees=" << settings.yawDegrees << ", pitchDegrees=" << settings.pitchDegrees << "\n";
     if (settings.fixedPosition)
     {
-        const float yawDegrees = DirectX::XMConvertToDegrees(settings.yawRadians);
-        const float pitchDegrees = DirectX::XMConvertToDegrees(settings.pitchRadians);
         oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
-            << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
+            << cameraPosition.z << ") yaw=" << settings.yawDegrees << "deg pitch=" << settings.pitchDegrees << "deg\n";
     }
     ::DebugTrace(oss.str());
 
