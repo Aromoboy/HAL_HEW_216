@@ -39,12 +39,7 @@ void BackgroundRenderer::Shutdown()
     m_ready = false;
 }
 
-void BackgroundRenderer::SetScrollOffset(float2 offset)
-{
-    m_scrollOffset = offset;
-}
-
-void BackgroundRenderer::Draw() const
+void BackgroundRenderer::Draw(float scrollOffset, float parallaxFactor) const
 {
     if (!m_ready || !m_texture)
     {
@@ -58,7 +53,8 @@ void BackgroundRenderer::Draw() const
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
     Sprite::SetTexture(m_texture.get());
-    const DirectX::XMFLOAT2 parallaxOffset(m_scrollOffset.x, m_scrollOffset.y);
+    const float parallaxOffsetY = scrollOffset * parallaxFactor;
+    const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
     Sprite::SetUVPos(parallaxOffset);
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     Sprite::SetColor(m_config.tintColor);
