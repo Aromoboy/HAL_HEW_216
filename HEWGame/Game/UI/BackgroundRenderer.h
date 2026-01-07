@@ -4,6 +4,7 @@
 #include <string>
 
 #include <DirectXMath.h>
+#include "Vector.h"
 
 class Texture;
 
@@ -21,6 +22,7 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
+    void SetScrollOffset(float2 offset);
     void Draw() const;
 
 private:
@@ -30,4 +32,5 @@ private:
     std::unique_ptr<Texture> m_texture;
     bool m_ready = false;
     DirectX::XMFLOAT4X4 m_identityMatrix;
+    float2 m_scrollOffset{ 0.0f, 0.0f };
 };

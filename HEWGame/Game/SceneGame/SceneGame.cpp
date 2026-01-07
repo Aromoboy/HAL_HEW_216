@@ -81,6 +81,7 @@ namespace
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kBackgroundParallaxScale = 0.001f;
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -1322,6 +1323,13 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 {
         if (m_backgroundRenderer)
         {
+                float2 scrollOffset{ 0.0f, 0.0f };
+                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                {
+                        const float3& cameraPos = baseCamera->GetPosition();
+                        scrollOffset.y = cameraPos.y * kBackgroundParallaxScale;
+                }
+                m_backgroundRenderer->SetScrollOffset(scrollOffset);
                 m_backgroundRenderer->Draw();
         }
 
