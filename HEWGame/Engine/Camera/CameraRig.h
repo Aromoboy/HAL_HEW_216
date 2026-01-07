@@ -35,6 +35,14 @@ public:
         void SetYawPitchLocked(bool locked);
         bool IsYawPitchLocked() const;
 
+        void SetFollowPositionAxes(bool followX, bool followY, bool followZ);
+        bool IsFollowingPositionX() const;
+        bool IsFollowingPositionY() const;
+        bool IsFollowingPositionZ() const;
+
+        void SetInheritRotation(bool inheritRotation);
+        bool IsInheritingRotation() const;
+
         void Attach(const std::shared_ptr<Entities::Entity>& target);
 
         void OnUpdate(const Core::UpdateContext& ctx) override;
@@ -48,4 +56,8 @@ private:
         float m_followSpeed;
         bool m_lockTranslation;
         bool m_lockYawPitch;
+        bool m_followPositionX;
+        bool m_followPositionY;
+        bool m_followPositionZ;
+        bool m_inheritRotation;
 };
