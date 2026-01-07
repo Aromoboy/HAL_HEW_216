@@ -2,6 +2,7 @@
 #include "Entities/Entity.h"
 // カメラの追従や回転計算がしやすくなった
 
+#include <cmath>
 #include <utility>
 
 #include <DirectXMath.h>
@@ -51,6 +52,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_yaw(0.0f)
         , m_pitch(0.0f)
         , m_followSpeed(5.0f)
+        , m_followSpeedY(5.0f)
+        , m_deadZoneY(0.0f)
         , m_lockTranslation(false)
         , m_lockYawPitch(false)
         , m_followPositionX(true)
@@ -108,12 +111,38 @@ float CameraRig::GetPitch() const
 
 void CameraRig::SetFollowSpeed(float followSpeed)
 {
-        m_followSpeed = followSpeed < 0.0f ? 0.0f : followSpeed;
+        const float clampedSpeed = followSpeed < 0.0f ? 0.0f : followSpeed;
+        const float previousSpeed = m_followSpeed;
+        m_followSpeed = clampedSpeed;
+        if (m_followSpeedY == previousSpeed)
+        {
+                m_followSpeedY = clampedSpeed;
+        }
 }
 
 float CameraRig::GetFollowSpeed() const
 {
 	return m_followSpeed;
+}
+
+void CameraRig::SetFollowSpeedY(float followSpeed)
+{
+        m_followSpeedY = followSpeed < 0.0f ? 0.0f : followSpeed;
+}
+
+float CameraRig::GetFollowSpeedY() const
+{
+        return m_followSpeedY;
+}
+
+void CameraRig::SetDeadZoneY(float deadZoneY)
+{
+        m_deadZoneY = deadZoneY < 0.0f ? 0.0f : deadZoneY;
+}
+
+float CameraRig::GetDeadZoneY() const
+{
+        return m_deadZoneY;
 }
 
 void CameraRig::SetTranslationLocked(bool locked)
@@ -210,40 +239,69 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         if (!m_lockTranslation)
         {
                 DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
-                if (!m_followPositionX || !m_followPositionY || !m_followPositionZ)
-                {
-                        DirectX::XMFLOAT3 currentPosValue;
-                        DirectX::XMFLOAT3 desiredPosValue;
-                        DirectX::XMStoreFloat3(&currentPosValue, currentPos);
-                        DirectX::XMStoreFloat3(&desiredPosValue, desiredPos);
+                DirectX::XMFLOAT3 currentPosValue;
+                DirectX::XMFLOAT3 desiredPosValue;
+                DirectX::XMStoreFloat3(&currentPosValue, currentPos);
+                DirectX::XMStoreFloat3(&desiredPosValue, desiredPos);
 
-                        if (!m_followPositionX)
-                        {
-                                desiredPosValue.x = currentPosValue.x;
-                        }
-                        if (!m_followPositionY)
+                if (!m_followPositionX)
+                {
+                        desiredPosValue.x = currentPosValue.x;
+                }
+                if (!m_followPositionY)
+                {
+                        desiredPosValue.y = currentPosValue.y;
+                }
+                if (!m_followPositionZ)
+                {
+                        desiredPosValue.z = currentPosValue.z;
+                }
+
+                if (m_followPositionY && m_deadZoneY > 0.0f)
+                {
+                        const float deltaY = desiredPosValue.y - currentPosValue.y;
+                        if (std::abs(deltaY) <= m_deadZoneY)
                         {
                                 desiredPosValue.y = currentPosValue.y;
                         }
-                        if (!m_followPositionZ)
-                        {
-                                desiredPosValue.z = currentPosValue.z;
-                        }
+                }
+                const float alphaXZ = Clamp01(m_followSpeed * ctx.dt);
+                const float alphaY  = Clamp01(m_followSpeedY * ctx.dt);
 
-                        desiredPos = DirectX::XMVectorSet(desiredPosValue.x, desiredPosValue.y, desiredPosValue.z, 0.0f);
-                }
-                const float alpha = Clamp01(m_followSpeed * ctx.dt);
-                DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
-                float3 newPosition = StoreFloat3(newPos);
-                if (m_minYClamp && newPosition.y < *m_minYClamp)
+                float newX = currentPosValue.x;
+                float newY = currentPosValue.y;
+                float newZ = currentPosValue.z;
+
+                if (m_followPositionX)
                 {
-                        newPosition.y = *m_minYClamp;
+                        newX = currentPosValue.x +
+                               (desiredPosValue.x - currentPosValue.x) * alphaXZ;
                 }
-                if (m_maxYClamp && newPosition.y > *m_maxYClamp)
+
+                if (m_followPositionY)
                 {
-                        newPosition.y = *m_maxYClamp;
+                        newY = currentPosValue.y +
+                               (desiredPosValue.y - currentPosValue.y) * alphaY;
                 }
-                m_camera->SetPosition(newPosition);
+
+                if (m_followPositionZ)
+                {
+                        newZ = currentPosValue.z +
+                               (desiredPosValue.z - currentPosValue.z) * alphaXZ;
+                }
+
+                // Y clamp（上下限）
+                if (m_minYClamp && newY < *m_minYClamp)
+                {
+                        newY = *m_minYClamp;
+                }
+                if (m_maxYClamp && newY > *m_maxYClamp)
+                {
+                        newY = *m_maxYClamp;
+                }
+
+                m_camera->SetPosition(float3{ newX, newY, newZ });
+
         }
 
         float3 newRotation

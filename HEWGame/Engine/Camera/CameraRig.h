@@ -30,6 +30,10 @@ public:
 
         void SetFollowSpeed(float followSpeed);
         float GetFollowSpeed() const;
+        void SetFollowSpeedY(float followSpeed);
+        float GetFollowSpeedY() const;
+        void SetDeadZoneY(float deadZoneY);
+        float GetDeadZoneY() const;
         void SetTranslationLocked(bool locked);
         bool IsTranslationLocked() const;
 
@@ -57,6 +61,8 @@ private:
         float m_yaw;
         float m_pitch;
         float m_followSpeed;
+        float m_followSpeedY;
+        float m_deadZoneY;
         bool m_lockTranslation;
         bool m_lockYawPitch;
         bool m_followPositionX;
