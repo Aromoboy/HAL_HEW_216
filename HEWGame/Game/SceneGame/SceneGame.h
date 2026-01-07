@@ -52,6 +52,12 @@ namespace Systems
     class DrawSystem;
 }
 
+namespace Core
+{
+    class UpdateNode;
+    struct UpdateContext;
+}
+
 namespace SweetsSpace
 {
     class SweetsManager;
@@ -108,6 +114,7 @@ private:
     void OnStageFail();
     void ResetPlaySession();
     void ResetGuidelineHeight();
+    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
     void Initialize(const Stage::StageData& stageData);
@@ -117,6 +124,7 @@ private:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::shared_ptr<Entities::Entity> m_cameraAnchor;
+    std::unique_ptr<Core::UpdateNode> m_cameraAnchorUpdateNode;
     std::unique_ptr<SoundManagerEX> m_pManager;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
@@ -129,6 +137,7 @@ private:
     bool m_physicsRegistered = false;
     bool m_contactDispatchRegistered = false;
     bool m_cameraRigRegistered = false;
+    bool m_cameraAnchorUpdateRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
