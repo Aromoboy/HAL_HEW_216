@@ -82,6 +82,12 @@ namespace SceneGameConfig
         std::optional<float> groundZ = std::nullopt;
     };
 
+    struct CameraClampSettings
+    {
+        std::optional<float> minY = std::nullopt;
+        std::optional<float> maxY = std::nullopt;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }

@@ -22,6 +22,7 @@
 #include "SceneComposer.h"
 #include "SceneGameLoader.h"
 #include "SceneGameUIOverlay.h"
+#include "SceneGameConfigLoader.h"
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
@@ -117,6 +118,68 @@ namespace
             }
 
             return std::max(0.0f, height);
+        }
+
+        std::optional<std::pair<float, float>> ComputeDecorationYBounds(
+            const std::vector<std::shared_ptr<Entities::PhysicalEntity>>& physicsEntities,
+            const std::vector<StageObject>& stageObjects)
+        {
+            bool hasBounds = false;
+            float minY = std::numeric_limits<float>::infinity();
+            float maxY = -std::numeric_limits<float>::infinity();
+
+            for (const auto& entity : physicsEntities)
+            {
+                if (!entity)
+                {
+                    continue;
+                }
+
+                const AABB bounds = entity->GetAABB();
+                if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(bounds.max.y))
+                {
+                    continue;
+                }
+
+                minY = std::min(minY, std::min(bounds.min.y, bounds.max.y));
+                maxY = std::max(maxY, std::max(bounds.min.y, bounds.max.y));
+                hasBounds = true;
+            }
+
+            if (!hasBounds)
+            {
+                for (const auto& obj : stageObjects)
+                {
+                    if (!obj.model || !obj.model->HasLocalBounds())
+                    {
+                        continue;
+                    }
+
+                    const AABB bounds = obj.model->GetLocalBounds();
+                    const float scaledMinY = std::min(bounds.min.y * obj.transform.scale.y,
+                        bounds.max.y * obj.transform.scale.y);
+                    const float scaledMaxY = std::max(bounds.min.y * obj.transform.scale.y,
+                        bounds.max.y * obj.transform.scale.y);
+                    const float worldMinY = obj.transform.position.y + scaledMinY;
+                    const float worldMaxY = obj.transform.position.y + scaledMaxY;
+
+                    if (!IsFiniteFloat(worldMinY) || !IsFiniteFloat(worldMaxY))
+                    {
+                        continue;
+                    }
+
+                    minY = std::min(minY, std::min(worldMinY, worldMaxY));
+                    maxY = std::max(maxY, std::max(worldMinY, worldMaxY));
+                    hasBounds = true;
+                }
+            }
+
+            if (!hasBounds)
+            {
+                return std::nullopt;
+            }
+
+            return std::make_pair(minY, maxY);
         }
 
         class CameraAnchorUpdateNode final : public Core::UpdateNode
@@ -1461,6 +1524,35 @@ void SceneGame::UpdateCameraAnchor(const Core::UpdateContext& ctx)
 
 void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
 {
+    const SceneGameConfig::CameraClampSettings clampSettings = SceneGameConfig::LoadCameraClampSettings();
+    std::optional<float> clampMinY = clampSettings.minY;
+    std::optional<float> clampMaxY = clampSettings.maxY;
+    const std::optional<float> configMinY = clampMinY;
+    const std::optional<float> configMaxY = clampMaxY;
+
+    if (const auto decorationBounds = ComputeDecorationYBounds(m_stagePhysicsEntities, m_stageObjects))
+    {
+        const auto& [decorMinY, decorMaxY] = *decorationBounds;
+        if (IsFiniteFloat(decorMinY))
+        {
+            clampMinY = clampMinY ? std::optional<float>(std::max(*clampMinY, decorMinY)) : std::optional<float>(decorMinY);
+        }
+        if (IsFiniteFloat(decorMaxY))
+        {
+            clampMaxY = clampMaxY ? std::optional<float>(std::min(*clampMaxY, decorMaxY)) : std::optional<float>(decorMaxY);
+        }
+    }
+
+    if (clampMinY && clampMaxY && *clampMinY > *clampMaxY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera clamp range invalid after decoration bounds (minY=" << *clampMinY
+            << ", maxY=" << *clampMaxY << "). Using config range instead.\n";
+        ::DebugTrace(oss.str());
+        clampMinY = configMinY;
+        clampMaxY = configMaxY;
+    }
+
     if (m_gameCamera)
     {
         m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
@@ -1476,6 +1568,7 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
+        m_cameraRig->SetClampY(clampMinY, clampMaxY);
     }
 
     if (!m_gameCamera)
@@ -1497,6 +1590,15 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
         cameraPosition = StoreFloat3(desiredPos);
+    }
+
+    if (clampMinY && cameraPosition.y < *clampMinY)
+    {
+        cameraPosition.y = *clampMinY;
+    }
+    if (clampMaxY && cameraPosition.y > *clampMaxY)
+    {
+        cameraPosition.y = *clampMaxY;
     }
 
     m_gameCamera->SetPosition(cameraPosition);

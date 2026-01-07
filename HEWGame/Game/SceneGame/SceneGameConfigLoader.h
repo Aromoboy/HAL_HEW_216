@@ -34,6 +34,7 @@ namespace SceneGameConfig
     LightingSettings LoadLightingSettings();
     BlobShadowSettings LoadBlobShadowSettings();
     MaterialTuningSettings LoadMaterialTuningSettings();
+    CameraClampSettings LoadCameraClampSettings();
 }
 
 #endif
