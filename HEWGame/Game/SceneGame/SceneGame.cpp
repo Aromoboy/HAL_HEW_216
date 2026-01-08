@@ -1372,7 +1372,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     if (player)
     {
         const float playerY = player->GetTransform().position.y;
-        const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : playerY;
+        float scrollY = playerY;
         float cameraY = 0.0f;
         float deadZoneY = 0.0f;
         float followSpeedY = 0.0f;
@@ -1382,6 +1382,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         if (baseCamera)
         {
             cameraY = baseCamera->GetPosition().y;
+            scrollY = cameraY;
         }
         if (m_cameraRig)
         {
@@ -1744,12 +1745,15 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         return;
     }
 
-    if (!resolvedSettings.fixedPosition && hasTarget)
-    {
+        if (!resolvedSettings.fixedPosition && hasTarget)
+        {
         if (m_cameraRig)
         {
             m_cameraRig->ResetVerticalScroll(targetPosition);
-            targetPosition.y = m_cameraRig->GetScrollY();
+            if (std::isfinite(targetPosition.y))
+            {
+                targetPosition.y -= scrollDeadZoneY;
+            }
         }
 
         DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
