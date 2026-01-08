@@ -235,6 +235,7 @@ namespace Stage
         float heightBonusThreshold = parsed.heightBonusThreshold;
         float heightBonusSeconds = parsed.heightBonusSeconds;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
+        float backgroundScrollMaxWorldY = parsed.backgroundScrollMaxWorldY;
 
         if (!planeZSet)
         {
@@ -313,6 +314,14 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
                 << backgroundTexturePath << "'.\n";
+        }
+
+        if (!parsed.backgroundScrollMaxWorldYSet)
+        {
+            backgroundScrollMaxWorldY = StageConfigDefaults::kDefaultBackgroundScrollMaxWorldY;
+            std::ostringstream oss;
+            oss << kLogPrefix << "backgroundScrollMaxWorldY not specified; defaulting to "
+                << backgroundScrollMaxWorldY << "\n";
         }
 
         if (!platformWidthFractionSet)
@@ -854,6 +863,14 @@ namespace Stage
             heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         }
 
+        if (!std::isfinite(backgroundScrollMaxWorldY) || backgroundScrollMaxWorldY <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "backgroundScrollMaxWorldY value " << backgroundScrollMaxWorldY
+                << " invalid; using default " << StageConfigDefaults::kDefaultBackgroundScrollMaxWorldY << "\n";
+            backgroundScrollMaxWorldY = StageConfigDefaults::kDefaultBackgroundScrollMaxWorldY;
+        }
+
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
@@ -890,6 +907,7 @@ namespace Stage
         normalized.heightBonusThreshold = heightBonusThreshold;
         normalized.heightBonusSeconds = heightBonusSeconds;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
+        normalized.backgroundScrollMaxWorldY = backgroundScrollMaxWorldY;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -936,6 +954,7 @@ namespace Stage
         normalized.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
         normalized.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        normalized.backgroundScrollMaxWorldY = StageConfigDefaults::kDefaultBackgroundScrollMaxWorldY;
         normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         normalized.parseError = false;

@@ -59,6 +59,7 @@ namespace Stage
         float GetGuidelineWidthPaddingWorld() const noexcept;
         float GetGuidelineZOffset() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
+        float GetBackgroundScrollMaxWorldY() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
 
@@ -98,6 +99,7 @@ namespace Stage
         float m_guidelineWidthPaddingWorld;
         float m_guidelineZOffset;
         std::string m_backgroundTexturePath;
+        float m_backgroundScrollMaxWorldY;
         float m_heightBonusThreshold;
         float m_heightBonusSeconds;
     };

@@ -77,6 +77,8 @@ namespace Stage
         bool heightBonusSecondsSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
+        float backgroundScrollMaxWorldY = 0.0f;
+        bool backgroundScrollMaxWorldYSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);
