@@ -96,7 +96,7 @@ private:
     void ConfigureCamera(const CameraRigSettings& settings);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
-    void DrawPhysicsDebugOverlay();
+    void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 #endif
     void SetStageState(StageState newState);
     void OnStageStart();
