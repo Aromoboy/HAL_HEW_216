@@ -1316,14 +1316,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        if (m_cameraRig)
-        {
-            scrollOffsetUsedForBackground = m_cameraRig->GetScrollY();
-        }
-        else
-        {
-            scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
-        }
+        scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
         if (m_backgroundRenderer)
         {
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground);
@@ -1335,7 +1328,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     {
         const float playerY = player->GetTransform().position.y;
         const float cameraY = baseCamera ? baseCamera->GetPosition().y : 0.0f;
-        const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : cameraY;
+        const float scrollY = cameraY;
 
         std::ostringstream oss;
         oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
@@ -1705,6 +1698,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     m_gameCamera->SetPosition(cameraPosition);
+    m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
