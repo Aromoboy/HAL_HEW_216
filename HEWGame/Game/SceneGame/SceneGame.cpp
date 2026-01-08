@@ -1658,7 +1658,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetFollowSpeed(resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed);
         m_cameraRig->SetTranslationLocked(resolvedSettings.lockTranslation);
         m_cameraRig->SetYawPitchLocked(resolvedSettings.lockYawPitch);
-        m_cameraRig->SetFollowPositionAxes(false, true, false);
+        m_cameraRig->SetFollowPositionAxes(false, !resolvedSettings.fixedPosition, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetDeadZoneY(scrollDeadZoneY);
         m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
