@@ -162,6 +162,7 @@ protected:
     Entities::Entity* m_cameraAnchor = nullptr;
     std::optional<float> m_initialScrollY = std::nullopt;
     std::optional<float> m_initialAnchorY = std::nullopt;
+    std::optional<float> m_initialCameraY = std::nullopt;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     // クリアできたかどうかの判定
