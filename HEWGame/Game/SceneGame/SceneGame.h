@@ -74,6 +74,7 @@ public:
     using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
     using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
     using CameraRigSettings = SceneGameConfig::CameraRigSettings;
+    using GameCameraConfig = SceneGameConfig::GameCameraConfig;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -93,7 +94,7 @@ public:
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
 private:
-    void ConfigureCamera(const CameraRigSettings& settings);
+    void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
@@ -146,6 +147,7 @@ protected:
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
+    GameCameraConfig m_gameCameraConfig{};
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;

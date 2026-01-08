@@ -10,6 +10,9 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyMinY = "minY";
     inline constexpr const char* kCameraRigKeyMaxY = "maxY";
     inline constexpr const char* kCameraRigKeyFollowSpeed = "followSpeed";
+    inline constexpr const char* kCameraRigKeyComfortZonePercentY = "comfortZonePercentY";
+    inline constexpr const char* kCameraRigKeyFollowSpeedY = "followSpeedY";
+    inline constexpr const char* kCameraRigKeyOffsetY = "offsetY";
     inline constexpr const char* kCameraRigKeyOffset = "offset";
     inline constexpr const char* kCameraRigKeyFovDegrees = "fovDegrees";
     inline constexpr const char* kCameraRigKeyYawDegrees = "yawDegrees";

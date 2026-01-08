@@ -109,6 +109,13 @@ namespace SceneGameConfig
         CameraClampSettings clamp{};
     };
 
+    struct GameCameraConfig
+    {
+        float comfortZonePercentY = 0.2f;
+        float followSpeedY = 5.0f;
+        float offsetY = 0.0f;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }

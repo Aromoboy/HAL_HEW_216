@@ -83,30 +83,13 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
-        constexpr float kComfortZonePercentY = 0.2f;
         SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
+        constexpr float kComfortZonePercentY = 0.2f;
+        SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
-            switch (settings.mode)
-            {
-            case SceneGameConfig::CameraRigMode::Fixed:
-                settings.fixedPosition = true;
-                settings.lockTranslation = true;
-                settings.lockYawPitch = true;
-                settings.followSpeed = 0.0f;
-                break;
-            case SceneGameConfig::CameraRigMode::Cinematic:
-                settings.fixedPosition = false;
-                settings.lockTranslation = false;
-                settings.lockYawPitch = false;
-                break;
-            case SceneGameConfig::CameraRigMode::Follow:
-            default:
-                settings.fixedPosition = false;
-                settings.lockTranslation = false;
-                settings.lockYawPitch = true;
-                break;
-            }
-
+            settings.fixedPosition = false;
+            settings.lockTranslation = false;
+            settings.lockYawPitch = true;
             return settings;
         }
         bool ReadOsaraColliderDebugFlag()
@@ -130,6 +113,41 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
+        {
+            DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
+                cameraRotation.x,
+                cameraRotation.y,
+                cameraRotation.z);
+
+            DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
+            DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
+
+            float3 focus
+            {
+                cameraPosition.x + DirectX::XMVectorGetX(forward),
+                cameraPosition.y + DirectX::XMVectorGetY(forward),
+                cameraPosition.z + DirectX::XMVectorGetZ(forward)
+            };
+
+            float3 up
+            {
+                DirectX::XMVectorGetX(upVector),
+                DirectX::XMVectorGetY(upVector),
+                DirectX::XMVectorGetZ(upVector)
+            };
+
+            DirectX::XMFLOAT4X4 viewMatrix;
+            DrawMatrix::CreateViewMatrix(viewMatrix, cameraPosition, focus, up);
+
+            DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
+            DirectX::XMVECTOR targetWorld = DirectX::XMVectorSet(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+            DirectX::XMVECTOR targetView = DirectX::XMVector3TransformCoord(targetWorld, view);
+            return std::abs(DirectX::XMVectorGetZ(targetView));
         }
 
         std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
@@ -208,12 +226,6 @@ namespace
             }
 
             return std::make_pair(minY, maxY);
-        }
-
-        float GetVerticalScrollThresholdWorldY(const Stage::StageData& stageData)
-        {
-            const float thresholdWorldY = stageData.GetGuidelineHeight();
-            return IsFiniteFloat(thresholdWorldY) ? thresholdWorldY : 0.0f;
         }
 
         bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
@@ -588,6 +600,7 @@ bool SceneGame::Load(Core::Input& input)
     SetDepthTest(true);
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig();
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -603,7 +616,7 @@ bool SceneGame::Load(Core::Input& input)
     {
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-        ConfigureCamera(cameraSettings);
+        ConfigureCamera(cameraSettings, m_gameCameraConfig);
         if (player)
         {
             m_cameraRig->Attach(player.get());
@@ -1275,8 +1288,8 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
         if (perspectiveCamera && player)
         {
-            const float comfortZonePercentY = std::clamp(kComfortZonePercentY, 0.0f, 1.0f);
-            float3 targetPosition = player->GetTransform().position;
+            const float comfortZonePercentY = std::clamp(m_gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
+            float3 targetPosition = player ? player->GetTransform().position : m_cameraAnchor->GetTransform().position;
 
             const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
             DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
@@ -1337,24 +1350,21 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         return;
     }
 
-    std::optional<float> scrollOffsetUsedForBackground = std::nullopt;
-    std::string scrollSourceUsed = "none";
+    float scrollOffsetUsedForBackground = 0.0f;
+    const char* scrollSourceUsed = "Camera";
 
-    if (m_backgroundRenderer)
+    auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
+    assert(baseCamera && "SceneGame background requires a BaseCamera.");
+    if (!baseCamera)
     {
-        auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
-        assert(baseCamera && "SceneGame background requires a BaseCamera.");
-        if (!baseCamera)
+        DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
+    }
+    else
+    {
+        scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
+        if (m_backgroundRenderer)
         {
-            DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
-        }
-        else
-        {
-            const float scrollOffset = baseCamera->GetPosition().y;  
-            m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
-
-            scrollOffsetUsedForBackground = scrollOffset;
-            scrollSourceUsed = "Camera";
+            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, kBackgroundParallaxScale);
         }
     }
 
@@ -1369,7 +1379,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         std::optional<float> clampMinY = std::nullopt;
         std::optional<float> clampMaxY = std::nullopt;
 
-        if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+        if (baseCamera)
         {
             cameraY = baseCamera->GetPosition().y;
         }
@@ -1396,15 +1406,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
             << " scrollY=" << scrollY
             << " cameraY=" << cameraY
-            << " scrollOffsetUsedForBackground=";
-        if (scrollOffsetUsedForBackground)
-        {
-            oss << std::fixed << std::setprecision(3) << *scrollOffsetUsedForBackground;
-        }
-        else
-        {
-            oss << "none";
-        }
+            << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
+            << scrollOffsetUsedForBackground;
         oss << " scrollSource=" << scrollSourceUsed
             << " deadZoneY=" << deadZoneY
             << " followSpeedY=" << followSpeedY
@@ -1412,57 +1415,6 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             << "\n";
         ::DebugTrace(oss.str());
     }
-#endif
-        if (player)
-        {
-                const float playerY = player->GetTransform().position.y;
-                const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : playerY;
-                float cameraY = 0.0f;
-                float deadZoneY = 0.0f;
-                float followSpeedY = 0.0f;
-                std::optional<float> clampMinY = std::nullopt;
-                std::optional<float> clampMaxY = std::nullopt;
-                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
-                {
-                        cameraY = baseCamera->GetPosition().y;
-                }
-                if (m_cameraRig)
-                {
-                        deadZoneY = m_cameraRig->GetDeadZoneY();
-                        followSpeedY = m_cameraRig->GetFollowSpeedY();
-                        clampMinY = m_cameraRig->GetClampMinY();
-                        clampMaxY = m_cameraRig->GetClampMaxY();
-                }
-                const auto formatClamp = [](const std::optional<float>& value)
-                {
-                        if (value)
-                        {
-                                std::ostringstream clampStream;
-                                clampStream << std::fixed << std::setprecision(3) << *value;
-                                return clampStream.str();
-                        }
-                        return std::string("none");
-                };
-                std::ostringstream oss;
-                oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
-                    << " scrollY=" << scrollY
-                    << " cameraY=" << cameraY
-                    << " scrollOffsetUsedForBackground=";
-                if (scrollOffsetUsedForBackground)
-                {
-                        oss << std::fixed << std::setprecision(3) << *scrollOffsetUsedForBackground;
-                }
-                else
-                {
-                        oss << "none";
-                }
-                oss << " scrollSource=" << scrollSourceUsed
-                    << " deadZoneY=" << deadZoneY
-                    << " followSpeedY=" << followSpeedY
-                    << " clampY=(" << formatClamp(clampMinY) << ',' << formatClamp(clampMaxY) << ')'
-                    << "\n";
-                ::DebugTrace(oss.str());
-        }
 #endif
 
         {
@@ -1647,9 +1599,18 @@ Core::StepTimer* SceneGame::GetTimer()
     return SceneSpace::Scene::GetTimer();
 }
 
-void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
+void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings,
+    const SceneGameConfig::GameCameraConfig& gameCameraConfig)
 {
-    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyCameraRigMode(settings);
+    if (settings.mode != SceneGameConfig::CameraRigMode::Follow)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Gameplay ignores CameraRigMode=" << static_cast<int>(settings.mode)
+            << " (Fixed/Cinematic should live in non-gameplay scenes).\n";
+        ::DebugTrace(oss.str());
+    }
+
+    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
 
     std::optional<float> clampMinY = settings.clamp.minY;
     std::optional<float> clampMaxY = settings.clamp.maxY;
@@ -1690,22 +1651,91 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_gameCamera->SetFieldOfViewDegrees(resolvedSettings.fovDegrees);
     }
 
-    const float scrollDeadZoneY = resolvedSettings.fixedPosition ? 0.0f : GetVerticalScrollThresholdWorldY(m_stageData);
     const float yawRadians = DirectX::XMConvertToRadians(resolvedSettings.yawDegrees);
     const float pitchRadians = DirectX::XMConvertToRadians(resolvedSettings.pitchDegrees);
+    const float followSpeed = resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed;
+    const float followSpeedY = resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.followSpeedY;
+
+    float3 targetPosition{ 0.0f, 0.0f, 0.0f };
+    bool hasTarget = false;
+    if (player)
+    {
+        targetPosition = player->GetTransform().position;
+        if (!resolvedSettings.fixedPosition)
+        {
+            targetPosition.y += gameCameraConfig.offsetY;
+        }
+        hasTarget = true;
+    }
+
+    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
+    float3 cameraPosition = resolvedSettings.offset;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        cameraPosition = CameraSpace::StoreFloat3(desiredPos);
+    }
+
+    float scrollDeadZoneY = 0.0f;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        const float comfortZonePercentY = std::clamp(gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
+        float3 planeSample = targetPosition;
+        if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+        {
+            planeSample.z = *m_stagePlaneZ;
+        }
+        const float viewDepth = ComputeViewDepth(cameraPosition, cameraRotation, planeSample);
+        if (IsFiniteFloat(viewDepth) && viewDepth > 0.0f)
+        {
+            const float fovRadians = DirectX::XMConvertToRadians(resolvedSettings.fovDegrees);
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
+            if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
+            {
+                const float comfortHeight = visibleHeight * comfortZonePercentY;
+                scrollDeadZoneY = comfortHeight * 0.5f;
+            }
+        }
+    }
 
     if (m_cameraRig)
     {
         m_cameraRig->SetOffset(resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
-        m_cameraRig->SetFollowSpeed(resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed);
-        m_cameraRig->SetTranslationLocked(resolvedSettings.lockTranslation);
-        m_cameraRig->SetYawPitchLocked(resolvedSettings.lockYawPitch);
-        m_cameraRig->SetFollowPositionAxes(false, !resolvedSettings.fixedPosition, false);
+        m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
+        m_cameraRig->SetFollowSpeedY(resolvedSettings.followSpeed);
+        m_cameraRig->SetTranslationLocked(false);
+        m_cameraRig->SetYawPitchLocked(true);
+        m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetDeadZoneY(scrollDeadZoneY);
         m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
+
+        const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
+            && m_cameraRig->IsFollowingPositionY()
+            && !m_cameraRig->IsFollowingPositionZ();
+        const bool flagsOk = followAxesOk
+            && !m_cameraRig->IsTranslationLocked()
+            && m_cameraRig->IsYawPitchLocked()
+            && !m_cameraRig->IsInheritingRotation();
+        const float expectedFollowSpeedY = resolvedSettings.followSpeed;
+        const bool speedOk = std::abs(m_cameraRig->GetFollowSpeedY() - expectedFollowSpeedY) <= 0.001f;
+
+        if (!flagsOk || !speedOk)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Gameplay camera rig flags invalid. followAxesOk=" << std::boolalpha
+                << followAxesOk << " translationLocked=" << m_cameraRig->IsTranslationLocked()
+                << " yawPitchLocked=" << m_cameraRig->IsYawPitchLocked()
+                << " inheritRotation=" << m_cameraRig->IsInheritingRotation()
+                << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
+                << " expectedFollowSpeedY=" << expectedFollowSpeedY << "\n";
+            ::DebugTrace(oss.str());
+            assert(false && "Gameplay camera rig flags are invalid.");
+        }
     }
 
     if (!m_gameCamera)
@@ -1714,11 +1744,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         return;
     }
 
-    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
-    float3 cameraPosition = resolvedSettings.offset;
-    if (!resolvedSettings.fixedPosition && player)
+    if (!resolvedSettings.fixedPosition && hasTarget)
     {
-        float3 targetPosition = player->GetTransform().position;
         if (m_cameraRig)
         {
             m_cameraRig->ResetVerticalScroll(targetPosition);
