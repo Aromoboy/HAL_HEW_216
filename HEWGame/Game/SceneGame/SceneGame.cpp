@@ -1286,7 +1286,7 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
     if (activeCamera)
     {
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
-        if (perspectiveCamera && (player || m_cameraAnchor))
+        if (perspectiveCamera && player)
         {
             const float comfortZonePercentY = std::clamp(m_gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
             float3 targetPosition = player ? player->GetTransform().position : m_cameraAnchor->GetTransform().position;
