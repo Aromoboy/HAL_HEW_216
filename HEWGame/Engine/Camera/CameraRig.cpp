@@ -145,6 +145,11 @@ std::optional<float> CameraRig::GetClampMaxY() const
         return m_maxYClamp;
 }
 
+float CameraRig::GetScrollY() const
+{
+        return m_scrollY;
+}
+
 void CameraRig::ResetVerticalScroll(const float3& targetPosition)
 {
         if (!std::isfinite(targetPosition.y))

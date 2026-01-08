@@ -37,6 +37,7 @@ public:
         float GetComfortZoneBottomY() const;
         std::optional<float> GetClampMinY() const;
         std::optional<float> GetClampMaxY() const;
+        float GetScrollY() const;
         void ResetVerticalScroll(const float3& targetPosition);
         void SetTranslationLocked(bool locked);
         bool IsTranslationLocked() const;
