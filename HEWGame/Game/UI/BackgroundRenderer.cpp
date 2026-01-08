@@ -57,6 +57,8 @@ void BackgroundRenderer::Shutdown()
 
 void BackgroundRenderer::Draw(float scrollOffset) const
 {
+    Sprite::ScopedPassDefaults guard;
+
     if (!m_ready || m_layers.empty())
     {
         return;
@@ -75,13 +77,14 @@ void BackgroundRenderer::Draw(float scrollOffset) const
             continue;
         }
 
+        Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::SetTexture(layer.texture.get());
         const float parallaxOffsetY = scrollOffset * layer.config.parallaxFactor;
         const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
         Sprite::SetUVPos(parallaxOffset);
         Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
         Sprite::SetColor(layer.config.tintColor);
-        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::Draw();
     }
 
