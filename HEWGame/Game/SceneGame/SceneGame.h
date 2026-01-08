@@ -162,6 +162,7 @@ protected:
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
     float m_scrollY = 0.0f;
+    SceneGameConfig::BackgroundScrollSource m_backgroundScrollSource = SceneGameConfig::BackgroundScrollSource::Anchor;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
