@@ -591,6 +591,7 @@ bool SceneGame::Load(Core::Input& input)
     SetDepthTest(true);
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    const auto previousScrollSource = m_backgroundScrollSource;
     m_backgroundScrollSource = cameraSettings.backgroundScrollSource;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
@@ -608,6 +609,10 @@ bool SceneGame::Load(Core::Input& input)
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
         ConfigureCamera(cameraSettings);
+        if (previousScrollSource != m_backgroundScrollSource)
+        {
+            CaptureBackgroundScrollOrigin(true);
+        }
         if (player)
         {
             m_cameraRig->Attach(player.get());
@@ -1342,6 +1347,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                         return origin ? value - *origin : value;
                 };
 
+                // 背景はカメラの実位置を基準にして dead zone でカメラが止まった時の「背景のズレ」を防ぐ。
                 switch (m_backgroundScrollSource)
                 {
                 case SceneGameConfig::BackgroundScrollSource::Anchor:
