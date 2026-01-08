@@ -1710,12 +1710,15 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         return;
     }
 
-    if (!resolvedSettings.fixedPosition && hasTarget)
-    {
+        if (!resolvedSettings.fixedPosition && hasTarget)
+        {
         if (m_cameraRig)
         {
             m_cameraRig->ResetVerticalScroll(targetPosition);
-            targetPosition.y = m_cameraRig->GetScrollY();
+            if (std::isfinite(targetPosition.y))
+            {
+                targetPosition.y -= scrollDeadZoneY;
+            }
         }
 
         DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);

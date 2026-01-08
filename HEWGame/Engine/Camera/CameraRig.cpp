@@ -156,19 +156,6 @@ void CameraRig::ResetVerticalScroll(const float3& targetPosition)
         m_hasScrollY = true;
 }
 
-float CameraRig::GetScrollY() const
-{
-        if (m_hasScrollY)
-        {
-                return m_scrollY;
-        }
-        if (m_camera)
-        {
-                return m_camera->GetPosition().y;
-        }
-        return 0.0f;
-}
-
 void CameraRig::SetTranslationLocked(bool locked)
 {
         if (m_lockTranslation == locked)
