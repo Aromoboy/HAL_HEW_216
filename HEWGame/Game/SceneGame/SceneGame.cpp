@@ -91,6 +91,46 @@ namespace
             settings.lockYawPitch = true;
             return settings;
         }
+
+        std::string NormalizeStageIdentifier(const std::string& value)
+        {
+            auto begin = value.begin();
+            auto end = value.end();
+            while (begin != end && std::isspace(static_cast<unsigned char>(*begin)))
+            {
+                ++begin;
+            }
+            while (end != begin && std::isspace(static_cast<unsigned char>(*(end - 1))))
+            {
+                --end;
+            }
+
+            std::string normalized;
+            normalized.reserve(static_cast<size_t>(std::distance(begin, end)));
+            for (auto it = begin; it != end; ++it)
+            {
+                char ch = *it;
+                if (ch == '\\')
+                {
+                    ch = '/';
+                }
+                normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+            }
+            return normalized;
+        }
+
+        bool IsCakeOrOsaraPreset(const std::string& value)
+        {
+            const std::string normalized = NormalizeStageIdentifier(value);
+            return normalized == "cake" || normalized == "osara";
+        }
+
+        bool IsCakeOrOsaraModelPath(const std::string& value)
+        {
+            const std::string normalized = NormalizeStageIdentifier(value);
+            return normalized == "assets/model/cake.fbx" || normalized == "assets/model/osara.fbx";
+        }
+
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -180,6 +220,11 @@ namespace
                     continue;
                 }
 
+                if (IsCakeOrOsaraPreset(entity->GetTag()))
+                {
+                    continue;
+                }
+
                 const AABB bounds = entity->GetAABB();
                 if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(bounds.max.y))
                 {
@@ -196,6 +241,11 @@ namespace
                 for (const auto& obj : stageObjects)
                 {
                     if (!obj.model || !obj.model->HasLocalBounds())
+                    {
+                        continue;
+                    }
+
+                    if (IsCakeOrOsaraPreset(obj.colliderPresetId) || IsCakeOrOsaraModelPath(obj.modelPath))
                     {
                         continue;
                     }
