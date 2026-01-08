@@ -62,6 +62,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_inheritRotation(true)
         , m_minYClamp(std::nullopt)
         , m_maxYClamp(std::nullopt)
+        , m_scrollY(0.0f)
+        , m_hasScrollY(false)
 {
 }
 
@@ -143,6 +145,37 @@ void CameraRig::SetDeadZoneY(float deadZoneY)
 float CameraRig::GetDeadZoneY() const
 {
         return m_deadZoneY;
+}
+
+void CameraRig::ResetVerticalScroll(const float3& targetPosition)
+{
+        if (!std::isfinite(targetPosition.y))
+        {
+                return;
+        }
+
+        if (m_deadZoneY > 0.0f)
+        {
+                m_scrollY = targetPosition.y - m_deadZoneY;
+        }
+        else
+        {
+                m_scrollY = targetPosition.y;
+        }
+        m_hasScrollY = true;
+}
+
+float CameraRig::GetScrollY() const
+{
+        if (m_hasScrollY)
+        {
+                return m_scrollY;
+        }
+        if (m_camera)
+        {
+                return m_camera->GetPosition().y;
+        }
+        return 0.0f;
 }
 
 void CameraRig::SetTranslationLocked(bool locked)
@@ -231,8 +264,28 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
 
         const auto& targetTransform = target->GetTransform();
         const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
+        float3 targetPosition = targetTransform.position;
 
-        DirectX::XMVECTOR targetPos = LoadFloat3(targetTransform.position);
+        if (m_followPositionY)
+        {
+                if (m_deadZoneY > 0.0f && std::isfinite(targetPosition.y))
+                {
+                        const float desiredScrollY = targetPosition.y - m_deadZoneY;
+                        if (!m_hasScrollY || desiredScrollY > m_scrollY)
+                        {
+                                m_scrollY = desiredScrollY;
+                                m_hasScrollY = true;
+                        }
+                        targetPosition.y = m_scrollY;
+                }
+                else if (std::isfinite(targetPosition.y))
+                {
+                        m_scrollY = targetPosition.y;
+                        m_hasScrollY = true;
+                }
+        }
+
+        DirectX::XMVECTOR targetPos = LoadFloat3(targetPosition);
         DirectX::XMVECTOR offsetVec = RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(targetPos, offsetVec);
 
@@ -257,14 +310,6 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                         desiredPosValue.z = currentPosValue.z;
                 }
 
-                if (m_followPositionY && m_deadZoneY > 0.0f)
-                {
-                        const float deltaY = desiredPosValue.y - currentPosValue.y;
-                        if (std::abs(deltaY) <= m_deadZoneY)
-                        {
-                                desiredPosValue.y = currentPosValue.y;
-                        }
-                }
                 const float alphaXZ = Clamp01(m_followSpeed * ctx.dt);
                 const float alphaY  = Clamp01(m_followSpeedY * ctx.dt);
 

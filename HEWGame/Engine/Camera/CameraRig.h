@@ -34,6 +34,8 @@ public:
         float GetFollowSpeedY() const;
         void SetDeadZoneY(float deadZoneY);
         float GetDeadZoneY() const;
+        void ResetVerticalScroll(const float3& targetPosition);
+        float GetScrollY() const;
         void SetTranslationLocked(bool locked);
         bool IsTranslationLocked() const;
 
@@ -71,4 +73,6 @@ private:
         bool m_inheritRotation;
         std::optional<float> m_minYClamp;
         std::optional<float> m_maxYClamp;
+        float m_scrollY;
+        bool m_hasScrollY;
 };
