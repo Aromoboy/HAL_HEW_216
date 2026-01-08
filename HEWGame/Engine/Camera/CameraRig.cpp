@@ -260,11 +260,8 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 if (m_deadZoneY > 0.0f && std::isfinite(targetPosition.y))
                 {
                         const float desiredScrollY = targetPosition.y - m_deadZoneY;
-                        if (!m_hasScrollY || desiredScrollY > m_scrollY)
-                        {
-                                m_scrollY = desiredScrollY;
-                                m_hasScrollY = true;
-                        }
+                        m_scrollY = desiredScrollY;
+                        m_hasScrollY = true;
                         targetPosition.y = m_scrollY;
                 }
                 else if (std::isfinite(targetPosition.y))
