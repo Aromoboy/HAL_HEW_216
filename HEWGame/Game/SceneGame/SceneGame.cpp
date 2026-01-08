@@ -83,7 +83,6 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
-        SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
         constexpr float kComfortZonePercentY = 0.2f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
