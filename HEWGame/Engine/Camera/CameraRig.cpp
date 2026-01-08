@@ -128,6 +128,16 @@ float CameraRig::GetDeadZoneY() const
         return m_deadZoneY;
 }
 
+std::optional<float> CameraRig::GetClampMinY() const
+{
+        return m_minYClamp;
+}
+
+std::optional<float> CameraRig::GetClampMaxY() const
+{
+        return m_maxYClamp;
+}
+
 void CameraRig::ResetVerticalScroll(const float3& targetPosition)
 {
         if (!std::isfinite(targetPosition.y))
