@@ -28,6 +28,7 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         : Core::UpdateNode(Core::UpdatePhase::Camera, 0)
         , m_camera(std::move(camera))
         , m_target()
+        , m_targetRaw(nullptr)
         , m_offset{ 0.0f, 0.0f, 0.0f }
         , m_yaw(0.0f)
         , m_pitch(0.0f)
@@ -227,6 +228,13 @@ void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
+        m_targetRaw = target.get();
+}
+
+void CameraRig::Attach(Entities::Entity* target)
+{
+        m_target.reset();
+        m_targetRaw = target;
 }
 
 void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
@@ -237,12 +245,13 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         }
 
         auto target = m_target.lock();
-        if (!target)
+        Entities::Entity* targetEntity = target ? target.get() : m_targetRaw;
+        if (!targetEntity)
         {
                 return;
         }
 
-        const auto& targetTransform = target->GetTransform();
+        const auto& targetTransform = targetEntity->GetTransform();
         const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
         float3 targetPosition = targetTransform.position;
 

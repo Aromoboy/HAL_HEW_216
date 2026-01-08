@@ -609,7 +609,7 @@ bool SceneGame::Load(Core::Input& input)
         ConfigureCamera(cameraSettings);
         if (player)
         {
-            m_cameraRig->Attach(player);
+            m_cameraRig->Attach(player.get());
         }
     }
 

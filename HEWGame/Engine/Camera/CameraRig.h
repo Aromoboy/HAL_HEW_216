@@ -53,12 +53,14 @@ public:
         void SetClampY(std::optional<float> minY, std::optional<float> maxY);
 
         void Attach(const std::shared_ptr<Entities::Entity>& target);
+        void Attach(Entities::Entity* target);
 
         void OnUpdate(const Core::UpdateContext& ctx) override;
 
 private:
         std::shared_ptr<CameraSpace::BaseCamera> m_camera;
         std::weak_ptr<Entities::Entity> m_target;
+        Entities::Entity* m_targetRaw;
         float3 m_offset;
         float m_yaw;
         float m_pitch;
