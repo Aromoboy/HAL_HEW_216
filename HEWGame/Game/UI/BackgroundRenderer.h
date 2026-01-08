@@ -18,6 +18,7 @@ struct BackgroundRendererConfig
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
+    float scrollMaxWorldY = 0.0f;
     std::vector<BackgroundLayer> layers;
 };
 

@@ -476,12 +476,13 @@ void SceneComposer::ComposeUI(Composition& result)
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
-        constexpr float kDefaultBackgroundParallax = 0.001f;
+        constexpr float kDefaultBackgroundParallax = 1.0f;
         BackgroundRendererConfig backgroundConfig{};
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        backgroundConfig.scrollMaxWorldY = result.stageData.GetBackgroundScrollMaxWorldY();
         backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
         if (!result.backgroundRenderer->Initialize(backgroundConfig))
