@@ -150,7 +150,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
-    if (m_background) m_background->Draw(0.0f, 1.0f);
+    if (m_background) m_background->Draw(0.0f);
     
     (void)activeCamera;
 }
