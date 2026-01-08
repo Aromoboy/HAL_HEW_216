@@ -59,7 +59,6 @@ void BackgroundRenderer::Draw(float scrollOffset, float parallaxFactor) const
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     Sprite::SetColor(m_config.tintColor);
     Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::Draw();
 
     SetDepthTest(true);
