@@ -34,6 +34,8 @@ public:
         float GetFollowSpeedY() const;
         void SetDeadZoneY(float deadZoneY);
         float GetDeadZoneY() const;
+        std::optional<float> GetClampMinY() const;
+        std::optional<float> GetClampMaxY() const;
         void ResetVerticalScroll(const float3& targetPosition);
         float GetScrollY() const;
         void SetTranslationLocked(bool locked);

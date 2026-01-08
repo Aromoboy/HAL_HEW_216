@@ -83,6 +83,7 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
+        constexpr float kComfortZonePercentY = 0.2f;
         SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
         {
             switch (settings.mode)
@@ -1226,14 +1227,9 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 #endif
 
 #if defined(_DEBUG)
-void SceneGame::DrawPhysicsDebugOverlay()
+void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
     if (!g_DebugDrawEnabled)
-    {
-        return;
-    }
-
-    if (!g_DrawColliders)
     {
         return;
     }
@@ -1255,29 +1251,81 @@ void SceneGame::DrawPhysicsDebugOverlay()
         DrawColliderOverlay(*entity, fixtureColor);
     };
 
-    drawEntity(player.get());
-
-    if (m_sweetsManager)
+    if (g_DrawColliders)
     {
-        const auto drawState = [&](SweetsSpace::SweetsState state)
-        {
-            const auto& list = m_sweetsManager->GetByState(state);
-            for (const auto& sweets : list)
-            {
-                drawEntity(sweets.get());
-            }
-        };
+        drawEntity(player.get());
 
-        drawState(SweetsSpace::SweetsState::Active);
-        drawState(SweetsSpace::SweetsState::Stacked);
-        drawState(SweetsSpace::SweetsState::Carried);
+        if (m_sweetsManager)
+        {
+            const auto drawState = [&](SweetsSpace::SweetsState state)
+            {
+                const auto& list = m_sweetsManager->GetByState(state);
+                for (const auto& sweets : list)
+                {
+                    drawEntity(sweets.get());
+                }
+            };
+
+            drawState(SweetsSpace::SweetsState::Active);
+            drawState(SweetsSpace::SweetsState::Stacked);
+            drawState(SweetsSpace::SweetsState::Carried);
+        }
+
+        if (g_RegisterOsaraColliders)
+        {
+            for (const auto& entity : m_stagePhysicsEntities)
+            {
+                drawEntity(entity.get());
+            }
+        }
     }
 
-    if (g_RegisterOsaraColliders)
+    if (activeCamera)
     {
-        for (const auto& entity : m_stagePhysicsEntities)
+        auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
+        if (perspectiveCamera && (player || m_cameraAnchor))
         {
-            drawEntity(entity.get());
+            const float comfortZonePercentY = std::clamp(kComfortZonePercentY, 0.0f, 1.0f);
+            float3 targetPosition = player ? player->GetTransform().position : m_cameraAnchor->GetTransform().position;
+
+            const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
+            DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
+            DirectX::XMVECTOR targetWorld = DirectX::XMVectorSet(targetPosition.x, targetPosition.y, targetPosition.z, 1.0f);
+            DirectX::XMVECTOR targetView = DirectX::XMVector3TransformCoord(targetWorld, viewMatrix);
+            const float viewZ = std::abs(DirectX::XMVectorGetZ(targetView));
+
+            const float fovRadians = DirectX::XMConvertToRadians(perspectiveCamera->GetFieldOfViewDegrees());
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
+            const float visibleWidth = visibleHeight * perspectiveCamera->GetAspectRatio();
+            const float comfortHeight = visibleHeight * comfortZonePercentY;
+
+            if (IsFiniteFloat(visibleHeight) && IsFiniteFloat(visibleWidth) && visibleHeight > 0.0f)
+            {
+                const float halfWidth = visibleWidth * 0.5f;
+                const float halfComfortHeight = comfortHeight * 0.5f;
+                const float depth = viewZ;
+
+                DirectX::XMMATRIX inverseView = DirectX::XMMatrixInverse(nullptr, viewMatrix);
+                const auto toWorld = [&](float x, float y)
+                {
+                    DirectX::XMVECTOR viewPoint = DirectX::XMVectorSet(x, y, depth, 1.0f);
+                    DirectX::XMVECTOR worldPoint = DirectX::XMVector3TransformCoord(viewPoint, inverseView);
+                    DirectX::XMFLOAT3 worldValue;
+                    DirectX::XMStoreFloat3(&worldValue, worldPoint);
+                    return worldValue;
+                };
+
+                const DirectX::XMFLOAT4 zoneColor(0.2f, 1.0f, 0.2f, 0.85f);
+                DirectX::XMFLOAT3 leftTop = toWorld(-halfWidth, halfComfortHeight);
+                DirectX::XMFLOAT3 rightTop = toWorld(halfWidth, halfComfortHeight);
+                DirectX::XMFLOAT3 leftBottom = toWorld(-halfWidth, -halfComfortHeight);
+                DirectX::XMFLOAT3 rightBottom = toWorld(halfWidth, -halfComfortHeight);
+
+                Geometory::AddLine(leftTop, rightTop, zoneColor);
+                Geometory::AddLine(leftBottom, rightBottom, zoneColor);
+                Geometory::AddLine(leftTop, leftBottom, zoneColor);
+                Geometory::AddLine(rightTop, rightBottom, zoneColor);
+            }
         }
     }
 
@@ -1292,6 +1340,8 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
 
 void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+        std::optional<float> scrollOffsetUsedForBackground = std::nullopt;
+        std::string scrollSourceUsed = "none";
         if (m_backgroundRenderer)
         {
                 float scrollOffset = 0.0f;
@@ -1346,6 +1396,12 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 {
                         return origin ? value - *origin : value;
                 };
+                const auto applyScrollOffset = [&](float value, const char* sourceLabel)
+                {
+                        scrollOffset = value;
+                        scrollOffsetUsedForBackground = value;
+                        scrollSourceUsed = sourceLabel;
+                };
 
                 // 背景はカメラの実位置を基準にして dead zone でカメラが止まった時の「背景のズレ」を防ぐ。
                 switch (m_backgroundScrollSource)
@@ -1353,27 +1409,27 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 case SceneGameConfig::BackgroundScrollSource::Anchor:
                         if (hasAnchorY)
                         {
-                                scrollOffset = applyOrigin(anchorY, m_initialAnchorY);
+                                applyScrollOffset(applyOrigin(anchorY, m_initialAnchorY), "Anchor");
                         }
                         break;
                 case SceneGameConfig::BackgroundScrollSource::ScrollY:
                         if (hasScrollY)
                         {
-                                scrollOffset = applyOrigin(scrollY, m_initialScrollY);
+                                applyScrollOffset(applyOrigin(scrollY, m_initialScrollY), "ScrollY");
                         }
                         break;
                 case SceneGameConfig::BackgroundScrollSource::Camera:
                         if (hasCameraY)
                         {
-                                scrollOffset = applyOrigin(cameraY, m_initialCameraY);
+                                applyScrollOffset(applyOrigin(cameraY, m_initialCameraY), "Camera");
                         }
                         else if (hasScrollY)
                         {
-                                scrollOffset = applyOrigin(scrollY, m_initialScrollY);
+                                applyScrollOffset(applyOrigin(scrollY, m_initialScrollY), "ScrollY");
                         }
                         else if (hasAnchorY)
                         {
-                                scrollOffset = applyOrigin(anchorY, m_initialAnchorY);
+                                applyScrollOffset(applyOrigin(anchorY, m_initialAnchorY), "Anchor");
                         }
                         break;
                 }
@@ -1393,14 +1449,48 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 const float playerY = player->GetTransform().position.y;
                 const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : playerY;
                 float cameraY = 0.0f;
+                float deadZoneY = 0.0f;
+                float followSpeedY = 0.0f;
+                std::optional<float> clampMinY = std::nullopt;
+                std::optional<float> clampMaxY = std::nullopt;
                 if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
                 {
                         cameraY = baseCamera->GetPosition().y;
                 }
+                if (m_cameraRig)
+                {
+                        deadZoneY = m_cameraRig->GetDeadZoneY();
+                        followSpeedY = m_cameraRig->GetFollowSpeedY();
+                        clampMinY = m_cameraRig->GetClampMinY();
+                        clampMaxY = m_cameraRig->GetClampMaxY();
+                }
+                const auto formatClamp = [](const std::optional<float>& value)
+                {
+                        if (value)
+                        {
+                                std::ostringstream clampStream;
+                                clampStream << std::fixed << std::setprecision(3) << *value;
+                                return clampStream.str();
+                        }
+                        return std::string("none");
+                };
                 std::ostringstream oss;
                 oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
                     << " scrollY=" << scrollY
                     << " cameraY=" << cameraY
+                    << " scrollOffsetUsedForBackground=";
+                if (scrollOffsetUsedForBackground)
+                {
+                        oss << std::fixed << std::setprecision(3) << *scrollOffsetUsedForBackground;
+                }
+                else
+                {
+                        oss << "none";
+                }
+                oss << " scrollSource=" << scrollSourceUsed
+                    << " deadZoneY=" << deadZoneY
+                    << " followSpeedY=" << followSpeedY
+                    << " clampY=(" << formatClamp(clampMinY) << ',' << formatClamp(clampMaxY) << ')'
                     << "\n";
                 ::DebugTrace(oss.str());
         }
@@ -1546,7 +1636,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         m_drawSystem->DebugDrawQueued(activeCamera);
 
 #if defined(_DEBUG)
-        DrawPhysicsDebugOverlay();
+        DrawPhysicsDebugOverlay(activeCamera);
 #endif
 
 }
