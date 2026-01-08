@@ -1351,7 +1351,6 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
 
     float scrollOffsetUsedForBackground = 0.0f;
-    const char* scrollSourceUsed = "Camera";
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -1372,47 +1371,13 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     if (player)
     {
         const float playerY = player->GetTransform().position.y;
-        float scrollY = playerY;
-        float cameraY = 0.0f;
-        float deadZoneY = 0.0f;
-        float followSpeedY = 0.0f;
-        std::optional<float> clampMinY = std::nullopt;
-        std::optional<float> clampMaxY = std::nullopt;
-
-        if (baseCamera)
-        {
-            cameraY = baseCamera->GetPosition().y;
-            scrollY = cameraY;
-        }
-        if (m_cameraRig)
-        {
-            deadZoneY = m_cameraRig->GetDeadZoneY();
-            followSpeedY = m_cameraRig->GetFollowSpeedY();
-            clampMinY = m_cameraRig->GetClampMinY();
-            clampMaxY = m_cameraRig->GetClampMaxY();
-        }
-
-        const auto formatClamp = [](const std::optional<float>& value)
-        {
-            if (value)
-            {
-                std::ostringstream clampStream;
-                clampStream << std::fixed << std::setprecision(3) << *value;
-                return clampStream.str();
-            }
-            return std::string("none");
-        };
+        const float cameraY = baseCamera ? baseCamera->GetPosition().y : 0.0f;
 
         std::ostringstream oss;
         oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
-            << " scrollY=" << scrollY
             << " cameraY=" << cameraY
             << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
-            << scrollOffsetUsedForBackground;
-        oss << " scrollSource=" << scrollSourceUsed
-            << " deadZoneY=" << deadZoneY
-            << " followSpeedY=" << followSpeedY
-            << " clampY=(" << formatClamp(clampMinY) << ',' << formatClamp(clampMaxY) << ')'
+            << scrollOffsetUsedForBackground
             << "\n";
         ::DebugTrace(oss.str());
     }
