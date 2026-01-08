@@ -141,6 +141,13 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 		hr = GetDevice()->CreateSamplerState(&samplerDesc, &g_pSamplerState[i]);
 		if (FAILED(hr)) { return hr; }
 	}
+	D3D11_SAMPLER_DESC linearClampSamplerDesc = samplerDesc;
+	linearClampSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	linearClampSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linearClampSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	linearClampSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	hr = GetDevice()->CreateSamplerState(&linearClampSamplerDesc, &g_pSamplerState[SAMPLER_LINEAR_CLAMP]);
+	if (FAILED(hr)) { return hr; }
 	D3D11_SAMPLER_DESC postProcessSamplerDesc = samplerDesc;
 	postProcessSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	postProcessSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;

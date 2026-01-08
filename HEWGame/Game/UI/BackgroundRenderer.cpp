@@ -66,6 +66,7 @@ void BackgroundRenderer::Draw(float scrollOffset) const
 
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
+    SetSamplerState(SAMPLER_LINEAR_CLAMP);
 
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
