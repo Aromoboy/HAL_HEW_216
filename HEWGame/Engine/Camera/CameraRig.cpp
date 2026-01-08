@@ -364,5 +364,4 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 m_camera->SetRotation(newRotation);
         }
 
-        m_camera->RecalculateView();
 }

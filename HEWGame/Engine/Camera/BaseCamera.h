@@ -32,7 +32,6 @@ namespace CameraSpace
                 const Components::Transform& GetTransform() const;
 
         protected:
-                friend class ::CameraRig;
                 void RecalculateView() override;
                 virtual void UpdateProjection();
 
