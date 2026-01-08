@@ -98,7 +98,6 @@ private:
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 #endif
-    void CaptureBackgroundScrollOrigin(bool force);
     void SetStageState(StageState newState);
     void OnStageStart();
     void OnStageClear();
@@ -157,12 +156,7 @@ protected:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    SceneGameConfig::BackgroundScrollSource m_backgroundScrollSource = SceneGameConfig::BackgroundScrollSource::Anchor;
     Core::Input* m_inputService = nullptr;
-    Entities::Entity* m_cameraAnchor = nullptr;
-    std::optional<float> m_initialScrollY = std::nullopt;
-    std::optional<float> m_initialAnchorY = std::nullopt;
-    std::optional<float> m_initialCameraY = std::nullopt;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     // クリアできたかどうかの判定

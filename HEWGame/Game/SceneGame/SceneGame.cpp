@@ -565,10 +565,6 @@ bool SceneGame::Load(Core::Input& input)
     }
     m_playerModel = std::move(loaderResult.playerModel);
     player = std::move(loaderResult.player);
-    m_cameraAnchor = player.get();
-    m_initialScrollY.reset();
-    m_initialAnchorY.reset();
-    m_initialCameraY.reset();
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
@@ -592,8 +588,6 @@ bool SceneGame::Load(Core::Input& input)
     SetDepthTest(true);
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
-    const auto previousScrollSource = m_backgroundScrollSource;
-    m_backgroundScrollSource = cameraSettings.backgroundScrollSource;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -610,10 +604,6 @@ bool SceneGame::Load(Core::Input& input)
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
         ConfigureCamera(cameraSettings);
-        if (previousScrollSource != m_backgroundScrollSource)
-        {
-            CaptureBackgroundScrollOrigin(true);
-        }
         if (player)
         {
             m_cameraRig->Attach(player.get());
@@ -1340,110 +1330,89 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
 
 void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
-        std::optional<float> scrollOffsetUsedForBackground = std::nullopt;
-        std::string scrollSourceUsed = "none";
-        if (m_backgroundRenderer)
+    // 描画確認用の数値
+    if (!activeCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
+        return;
+    }
+
+    std::optional<float> scrollOffsetUsedForBackground = std::nullopt;
+    std::string scrollSourceUsed = "none";
+
+    if (m_backgroundRenderer)
+    {
+        auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
+        assert(baseCamera && "SceneGame background requires a BaseCamera.");
+        if (!baseCamera)
         {
-                float scrollOffset = 0.0f;
-                float scrollY = 0.0f;
-                bool hasScrollY = false;
-                if (m_cameraRig)
-                {
-                        scrollY = m_cameraRig->GetScrollY();
-                        hasScrollY = true;
-                }
-                else if (player)
-                {
-                        scrollY = player->GetTransform().position.y;
-                        hasScrollY = true;
-                }
-
-                float anchorY = 0.0f;
-                bool hasAnchorY = false;
-                if (m_cameraAnchor)
-                {
-                        anchorY = m_cameraAnchor->GetTransform().position.y;
-                        hasAnchorY = true;
-                }
-                else if (player)
-                {
-                        anchorY = player->GetTransform().position.y;
-                        hasAnchorY = true;
-                }
-
-                float cameraY = 0.0f;
-                bool hasCameraY = false;
-                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
-                {
-                        cameraY = baseCamera->GetPosition().y;
-                        hasCameraY = true;
-                }
-
-                if (hasScrollY && !m_initialScrollY)
-                {
-                        m_initialScrollY = scrollY;
-                }
-                if (hasAnchorY && !m_initialAnchorY)
-                {
-                        m_initialAnchorY = anchorY;
-                }
-                if (hasCameraY && !m_initialCameraY)
-                {
-                        m_initialCameraY = cameraY;
-                }
-
-                const auto applyOrigin = [](float value, const std::optional<float>& origin)
-                {
-                        return origin ? value - *origin : value;
-                };
-                const auto applyScrollOffset = [&](float value, const char* sourceLabel)
-                {
-                        scrollOffset = value;
-                        scrollOffsetUsedForBackground = value;
-                        scrollSourceUsed = sourceLabel;
-                };
-
-                // 背景はカメラの実位置を基準にして dead zone でカメラが止まった時の「背景のズレ」を防ぐ。
-                switch (m_backgroundScrollSource)
-                {
-                case SceneGameConfig::BackgroundScrollSource::Anchor:
-                        if (hasAnchorY)
-                        {
-                                applyScrollOffset(applyOrigin(anchorY, m_initialAnchorY), "Anchor");
-                        }
-                        break;
-                case SceneGameConfig::BackgroundScrollSource::ScrollY:
-                        if (hasScrollY)
-                        {
-                                applyScrollOffset(applyOrigin(scrollY, m_initialScrollY), "ScrollY");
-                        }
-                        break;
-                case SceneGameConfig::BackgroundScrollSource::Camera:
-                        if (hasCameraY)
-                        {
-                                applyScrollOffset(applyOrigin(cameraY, m_initialCameraY), "Camera");
-                        }
-                        else if (hasScrollY)
-                        {
-                                applyScrollOffset(applyOrigin(scrollY, m_initialScrollY), "ScrollY");
-                        }
-                        else if (hasAnchorY)
-                        {
-                                applyScrollOffset(applyOrigin(anchorY, m_initialAnchorY), "Anchor");
-                        }
-                        break;
-                }
-                m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
+            DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
         }
-
-        // 描画確認用の数値
-        if (!activeCamera)
+        else
         {
-                DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
-                return;
+            const float scrollOffset = baseCamera->GetPosition().y;  
+            m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
+
+            scrollOffsetUsedForBackground = scrollOffset;
+            scrollSourceUsed = "Camera";
         }
+    }
 
 #if defined(_DEBUG)
+    if (player)
+    {
+        const float playerY = player->GetTransform().position.y;
+        const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : playerY;
+        float cameraY = 0.0f;
+        float deadZoneY = 0.0f;
+        float followSpeedY = 0.0f;
+        std::optional<float> clampMinY = std::nullopt;
+        std::optional<float> clampMaxY = std::nullopt;
+
+        if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+        {
+            cameraY = baseCamera->GetPosition().y;
+        }
+        if (m_cameraRig)
+        {
+            deadZoneY = m_cameraRig->GetDeadZoneY();
+            followSpeedY = m_cameraRig->GetFollowSpeedY();
+            clampMinY = m_cameraRig->GetClampMinY();
+            clampMaxY = m_cameraRig->GetClampMaxY();
+        }
+
+        const auto formatClamp = [](const std::optional<float>& value)
+        {
+            if (value)
+            {
+                std::ostringstream clampStream;
+                clampStream << std::fixed << std::setprecision(3) << *value;
+                return clampStream.str();
+            }
+            return std::string("none");
+        };
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
+            << " scrollY=" << scrollY
+            << " cameraY=" << cameraY
+            << " scrollOffsetUsedForBackground=";
+        if (scrollOffsetUsedForBackground)
+        {
+            oss << std::fixed << std::setprecision(3) << *scrollOffsetUsedForBackground;
+        }
+        else
+        {
+            oss << "none";
+        }
+        oss << " scrollSource=" << scrollSourceUsed
+            << " deadZoneY=" << deadZoneY
+            << " followSpeedY=" << followSpeedY
+            << " clampY=(" << formatClamp(clampMinY) << ',' << formatClamp(clampMaxY) << ')'
+            << "\n";
+        ::DebugTrace(oss.str());
+    }
+#endif
         if (player)
         {
                 const float playerY = player->GetTransform().position.y;
@@ -1678,56 +1647,6 @@ Core::StepTimer* SceneGame::GetTimer()
     return SceneSpace::Scene::GetTimer();
 }
 
-void SceneGame::CaptureBackgroundScrollOrigin(bool force)
-{
-    float scrollY = 0.0f;
-    bool hasScrollY = false;
-    if (m_cameraRig)
-    {
-        scrollY = m_cameraRig->GetScrollY();
-        hasScrollY = true;
-    }
-    else if (player)
-    {
-        scrollY = player->GetTransform().position.y;
-        hasScrollY = true;
-    }
-
-    float anchorY = 0.0f;
-    bool hasAnchorY = false;
-    if (m_cameraAnchor)
-    {
-        anchorY = m_cameraAnchor->GetTransform().position.y;
-        hasAnchorY = true;
-    }
-    else if (player)
-    {
-        anchorY = player->GetTransform().position.y;
-        hasAnchorY = true;
-    }
-
-    float cameraY = 0.0f;
-    bool hasCameraY = false;
-    if (m_gameCamera)
-    {
-        cameraY = m_gameCamera->GetPosition().y;
-        hasCameraY = true;
-    }
-
-    if (force || !m_initialScrollY)
-    {
-        m_initialScrollY = hasScrollY ? std::optional<float>(scrollY) : std::nullopt;
-    }
-    if (force || !m_initialAnchorY)
-    {
-        m_initialAnchorY = hasAnchorY ? std::optional<float>(anchorY) : std::nullopt;
-    }
-    if (force || !m_initialCameraY)
-    {
-        m_initialCameraY = hasCameraY ? std::optional<float>(cameraY) : std::nullopt;
-    }
-}
-
 void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
 {
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyCameraRigMode(settings);
@@ -1826,7 +1745,6 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
-    CaptureBackgroundScrollOrigin(true);
 
     static bool loggedCameraSettings = false;
     if (!loggedCameraSettings)
@@ -1975,7 +1893,6 @@ void SceneGame::ResetPlaySession()
     if (player && m_cameraRig)
     {
         m_cameraRig->ResetVerticalScroll(player->GetTransform().position);
-        CaptureBackgroundScrollOrigin(true);
     }
     else if (!m_cameraRig)
     {
