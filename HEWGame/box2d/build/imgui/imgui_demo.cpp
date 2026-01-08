@@ -312,7 +312,7 @@ static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, Exampl
 // (this allocates _many_ more times than most other code in either Dear ImGui or others demo)
 static ExampleTreeNode* ExampleTree_CreateDemoTree()
 {
-    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
+	static const char* root_names[] = { "Strawberry", "Pineapple", "Blueberry", "Banana","Cream","Kiwi"," Mikan ","Muscat","Melon",  };
     const size_t NAME_MAX_LEN = sizeof(ExampleTreeNode::Name);
     char name_buf[NAME_MAX_LEN];
     int uid = 0;
@@ -934,7 +934,7 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
             // Using the _simplified_ one-liner ListBox() api here
             // See "List boxes" section for examples of how to use the more flexible BeginListBox()/EndListBox() api.
             IMGUI_DEMO_MARKER("Widgets/Basic/ListBox");
-            const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+			const char* items[] = {"Strawberry", "Pineapple", "Blueberry", "Banana", "Cream", "Kiwi", " Mikan ", "Muscat", "Melon",};
             static int item_current = 1;
             ImGui::ListBox("listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
             ImGui::SameLine(); HelpMarker(
@@ -6701,8 +6701,7 @@ static void ShowDemoWindowTables()
     // Note that the "Advanced" example also showcase manually triggering a sort (e.g. if item quantities have been modified)
     static const char* template_items_names[] =
     {
-        "Banana", "Apple", "Cherry", "Watermelon", "Grapefruit", "Strawberry", "Mango",
-        "Kiwi", "Orange", "Pineapple", "Blueberry", "Plum", "Coconut", "Pear", "Apricot"
+		"Strawberry", "Pineapple", "Blueberry", "Banana", "Cream", "Kiwi", " Mikan ", "Muscat", "Melon",
     };
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
