@@ -290,8 +290,8 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                         desiredPosValue.z = currentPosValue.z;
                 }
 
-                const float alphaXZ = Clamp01(m_followSpeed * ctx.dt);
-                const float alphaY  = Clamp01(m_followSpeedY * ctx.dt);
+                const float alphaXZ = Clamp01(1.0f - std::exp(-m_followSpeed * ctx.dt));
+                const float alphaY  = Clamp01(1.0f - std::exp(-m_followSpeedY * ctx.dt));
 
                 float newX = currentPosValue.x;
                 float newY = currentPosValue.y;
