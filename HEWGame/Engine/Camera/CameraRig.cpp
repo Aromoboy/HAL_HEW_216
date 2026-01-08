@@ -145,14 +145,7 @@ void CameraRig::ResetVerticalScroll(const float3& targetPosition)
                 return;
         }
 
-        if (m_deadZoneY > 0.0f)
-        {
-                m_scrollY = targetPosition.y - m_deadZoneY;
-        }
-        else
-        {
-                m_scrollY = targetPosition.y;
-        }
+        m_scrollY = targetPosition.y;
         m_hasScrollY = true;
 }
 
@@ -254,17 +247,29 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
 
         if (m_followPositionY)
         {
-                if (m_deadZoneY > 0.0f && std::isfinite(targetPosition.y))
+                if (std::isfinite(targetPosition.y))
                 {
-                        const float desiredScrollY = targetPosition.y - m_deadZoneY;
-                        m_scrollY = desiredScrollY;
-                        m_hasScrollY = true;
+                        if (!m_hasScrollY)
+                        {
+                                m_scrollY = targetPosition.y;
+                                m_hasScrollY = true;
+                        }
+
+                        if (m_deadZoneY > 0.0f)
+                        {
+                                const float lowerBound = m_scrollY - m_deadZoneY;
+                                const float upperBound = m_scrollY + m_deadZoneY;
+                                if (targetPosition.y < lowerBound || targetPosition.y > upperBound)
+                                {
+                                        m_scrollY = targetPosition.y;
+                                }
+                        }
+                        else
+                        {
+                                m_scrollY = targetPosition.y;
+                        }
+
                         targetPosition.y = m_scrollY;
-                }
-                else if (std::isfinite(targetPosition.y))
-                {
-                        m_scrollY = targetPosition.y;
-                        m_hasScrollY = true;
                 }
         }
 
