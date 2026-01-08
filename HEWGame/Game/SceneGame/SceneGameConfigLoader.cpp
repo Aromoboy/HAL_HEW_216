@@ -234,6 +234,24 @@ namespace
         }
         return std::nullopt;
     }
+
+    std::optional<SceneGameConfig::CameraRigMode> ParseCameraRigMode(const std::string& value)
+    {
+        const std::string lowered = ToLowerCopy(TrimWhitespace(value));
+        if (lowered == "fixed" || lowered == "static")
+        {
+            return SceneGameConfig::CameraRigMode::Fixed;
+        }
+        if (lowered == "follow" || lowered == "tracking")
+        {
+            return SceneGameConfig::CameraRigMode::Follow;
+        }
+        if (lowered == "cinematic" || lowered == "drama")
+        {
+            return SceneGameConfig::CameraRigMode::Cinematic;
+        }
+        return std::nullopt;
+    }
 }
 
 namespace SceneGameConfig
@@ -2423,7 +2441,21 @@ namespace SceneGameConfig
         {
             const std::string key = entry.key;
             const std::string value = TrimWhitespace(entry.value);
-            if (key == GameplayConfig::kCameraRigKeyMinY)
+            if (key == GameplayConfig::kCameraRigKeyMode)
+            {
+                if (auto parsed = ParseCameraRigMode(value))
+                {
+                    settings.mode = *parsed;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Unknown camera rig mode '" << value
+                        << "'; using default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyMinY)
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
@@ -2435,14 +2467,6 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.clamp.maxY = *parsed;
-                }
-            }
-            else if (key == GameplayConfig::kCameraRigKeyFixedPosition)
-            {
-                bool parsedValue = settings.fixedPosition;
-                if (ParseBool(value, parsedValue))
-                {
-                    settings.fixedPosition = parsedValue;
                 }
             }
             else if (key == GameplayConfig::kCameraRigKeyFollowSpeed)
