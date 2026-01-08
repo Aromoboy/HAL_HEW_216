@@ -9,6 +9,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <utility>
 #include <vector>
 #include <DirectXMath.h>
 
@@ -214,6 +215,24 @@ namespace
         }
 
         return false;
+    }
+
+    std::optional<SceneGameConfig::CameraRigMode> ParseCameraRigMode(const std::string& value)
+    {
+        const std::string lowered = ToLowerCopy(TrimWhitespace(value));
+        if (lowered == "fixed" || lowered == "static")
+        {
+            return SceneGameConfig::CameraRigMode::Fixed;
+        }
+        if (lowered == "follow" || lowered == "tracking")
+        {
+            return SceneGameConfig::CameraRigMode::Follow;
+        }
+        if (lowered == "cinematic" || lowered == "drama")
+        {
+            return SceneGameConfig::CameraRigMode::Cinematic;
+        }
+        return std::nullopt;
     }
 }
 
@@ -2384,5 +2403,151 @@ namespace SceneGameConfig
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;
+    }
+
+    CameraRigSettings LoadCameraRigSettings()
+    {
+        CameraRigSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCameraRig, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera rig config section '" << GameplayConfig::kSectionCameraRig
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = entry.key;
+            const std::string value = TrimWhitespace(entry.value);
+            if (key == GameplayConfig::kCameraRigKeyMode)
+            {
+                if (auto parsed = ParseCameraRigMode(value))
+                {
+                    settings.mode = *parsed;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Unknown camera rig mode '" << value
+                        << "'; using default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyMinY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.clamp.minY = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyMaxY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.clamp.maxY = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFollowSpeed)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.followSpeed = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyOffset)
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.offset = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFovDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fovDegrees = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyYawDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.yawDegrees = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyPitchDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.pitchDegrees = *parsed;
+                }
+            }
+        }
+
+        if (settings.clamp.minY && settings.clamp.maxY && *settings.clamp.minY > *settings.clamp.maxY)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera rig clamp range invalid (minY=" << *settings.clamp.minY
+                << ", maxY=" << *settings.clamp.maxY << "). Swapping values.\n";
+            ::DebugTrace(oss.str());
+            std::swap(settings.clamp.minY, settings.clamp.maxY);
+        }
+
+        return settings;
+    }
+
+    GameCameraConfig LoadGameCameraConfig()
+    {
+        GameCameraConfig config{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCameraRig, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Game camera config section '" << GameplayConfig::kSectionCameraRig
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return config;
+        }
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = entry.key;
+            const std::string value = TrimWhitespace(entry.value);
+            if (key == GameplayConfig::kCameraRigKeyComfortZoneTopPercentY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.comfortZoneTopPercentY = std::clamp(*parsed, 0.0f, 1.0f);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyComfortZoneBottomPercentY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.comfortZoneBottomPercentY = std::clamp(*parsed, 0.0f, 1.0f);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFollowSpeedY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.followSpeedY = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyOffsetY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.offsetY = *parsed;
+                }
+            }
+        }
+
+        return config;
     }
 }

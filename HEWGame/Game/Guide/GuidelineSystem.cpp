@@ -55,6 +55,7 @@ void GuidelineSystem::TickCooldowns(float deltaSeconds)
 GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
                                                       std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses)
 {
+    bool guidelineAdvanced = false;
     GameplayProgression::GuidelineState guidelineState{
         m_heightMeters,
         m_stepMeters,
@@ -88,6 +89,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
                                                             guidelineCheck.triggerHeight);
             guidelineState = std::move(guidelineAdvance.state);
             pendingBonuses = std::move(guidelineAdvance.pendingBonuses);
+            guidelineAdvanced = true;
         }
     }
 
@@ -100,6 +102,8 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
 
     UpdateResult result{};
     result.pendingBonuses = std::move(pendingBonuses);
+    result.guidelineAdvanced = guidelineAdvanced;
+    result.guidelineHeightMeters = guidelineAdvanced ? m_heightMeters : 0.0f;
     return result;
 }
 

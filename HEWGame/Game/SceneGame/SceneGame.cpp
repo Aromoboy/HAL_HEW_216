@@ -22,16 +22,17 @@
 #include "SceneComposer.h"
 #include "SceneGameLoader.h"
 #include "SceneGameUIOverlay.h"
+#include "SceneGameConfigLoader.h"
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
+#include "CameraMath.h"
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
 #include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
-#include <cctype>
 #include <initializer_list>
 #include <cmath>
 #include <fstream>
@@ -80,6 +81,14 @@ namespace
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
+        {
+            settings.fixedPosition = false;
+            settings.lockTranslation = false;
+            settings.lockYawPitch = true;
+            return settings;
+        }
+
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -101,6 +110,41 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
+        {
+            DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
+                cameraRotation.x,
+                cameraRotation.y,
+                cameraRotation.z);
+
+            DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
+            DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
+
+            float3 focus
+            {
+                cameraPosition.x + DirectX::XMVectorGetX(forward),
+                cameraPosition.y + DirectX::XMVectorGetY(forward),
+                cameraPosition.z + DirectX::XMVectorGetZ(forward)
+            };
+
+            float3 up
+            {
+                DirectX::XMVectorGetX(upVector),
+                DirectX::XMVectorGetY(upVector),
+                DirectX::XMVectorGetZ(upVector)
+            };
+
+            DirectX::XMFLOAT4X4 viewMatrix;
+            DrawMatrix::CreateViewMatrix(viewMatrix, cameraPosition, focus, up);
+
+            DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
+            DirectX::XMVECTOR targetWorld = DirectX::XMVectorSet(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+            DirectX::XMVECTOR targetView = DirectX::XMVector3TransformCoord(targetWorld, view);
+            return std::abs(DirectX::XMVectorGetZ(targetView));
         }
 
         std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
@@ -291,35 +335,6 @@ namespace
             DebugColliderRenderer::DrawHull(worldCorners, transform.position.z, color);
         }
 #endif
-
-        DirectX::XMVECTOR LoadFloat3(const float3& value)
-        {
-            return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
-        }
-
-        float3 StoreFloat3(DirectX::FXMVECTOR value)
-        {
-            DirectX::XMFLOAT3 temp;
-            DirectX::XMStoreFloat3(&temp, value);
-            return float3{ temp.x, temp.y, temp.z };
-        }
-
-        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
-        {
-            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
-            return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
-        }
-
-        constexpr CameraPrototypeSettings kFixedSideViewCameraPreset
-        {
-            true,
-            0.0f,
-            //カメラ設定
-            float3{ 0.0f, 5.5f, -25.0f },
-            45.0f,
-            DirectX::XMConvertToRadians(0.0f),
-            DirectX::XMConvertToRadians(-10.0f)
-        };
 
 }
 
@@ -518,9 +533,10 @@ bool SceneGame::Load(Core::Input& input)
     DepthStencil* pDSV = GetDefaultDSV();
     SetRenderTargets(1, &pRTV, pDSV);
     SetDepthTest(true);
-    m_cameraAnchor = std::make_shared<Entities::Entity>("PlayerAnchor");
 
-    const auto& cameraSettings = kFixedSideViewCameraPreset;
+    SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig(); // Source of truth: gameplay.cfg [camera.rig].
+    m_cameraRigSettings = cameraSettings;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -536,10 +552,10 @@ bool SceneGame::Load(Core::Input& input)
     {
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-        ConfigureCamera(cameraSettings);
-        if (m_cameraAnchor)
+        ConfigureCamera(cameraSettings, m_gameCameraConfig);
+        if (player)
         {
-            m_cameraRig->Attach(m_cameraAnchor);
+            m_cameraRig->Attach(player.get());
         }
     }
 
@@ -792,6 +808,10 @@ SceneGame::~SceneGame()
 
 void SceneGame::ConfigureUpdates()
 {
+        std::ostringstream configureLog;
+        configureLog << kLogPrefix << "ConfigureUpdates begin scenePtr=" << this << "\n";
+        ::DebugTrace(configureLog.str());
+
         if (m_physicsBinder && !m_physicsRegistered)
         {
                 if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
@@ -917,6 +937,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
     if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
     {
+        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
     m_guidelineSystem.TickCooldowns(ctx.dt);
@@ -934,20 +955,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 #endif
 
-    float deltaTime = ctx.timer.DeltaTime();
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
-    }
-
+    const auto& platform = m_stageData.GetPlatform(0);
+    const float stageFloorY = platform.center.y;
     m_playerController.UpdatePlayerBounds({
         player.get(),
         m_gameCamera.get(),
         m_sweetsManager.get(),
-        ctx.dt
+        ctx.dt,
+        stageFloorY
     });
 
     switch (m_stageState)
@@ -987,6 +1002,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         GuidelineSystem::UpdateResult guidelineResult =
             m_guidelineSystem.Update(guidelineInput, {});
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
+        if (guidelineResult.guidelineAdvanced)
+        {
+            UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+        }
         break;
     }
     case StageState::TimeUp:
@@ -995,6 +1014,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::ShowingResult:
         break;
+    }
+
+    float deltaTime = ctx.timer.DeltaTime();
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.spinEnabled)
+        {
+            obj.currentRotation += obj.spinSpeed * deltaTime;
+        }
     }
 
     if (m_stageState == StageState::ShowingResult)
@@ -1143,16 +1171,25 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 #endif
 
 #if defined(_DEBUG)
-void SceneGame::DrawPhysicsDebugOverlay()
+void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
     if (!g_DebugDrawEnabled)
     {
         return;
     }
 
-    if (!g_DrawColliders)
+    if (m_cameraRig)
     {
-        return;
+        const auto clampMinY = m_cameraRig->GetClampMinY();
+        const auto clampMaxY = m_cameraRig->GetClampMaxY();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[DebugOverlay] cameraRig comfortTopY=" << m_cameraRig->GetComfortZoneTopY()
+            << " comfortBottomY=" << m_cameraRig->GetComfortZoneBottomY()
+            << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
+            << " clampMinY=" << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
+            << " clampMaxY=" << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"))
+            << "\n";
+        ::DebugTrace(oss.str());
     }
 
     const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
@@ -1172,29 +1209,82 @@ void SceneGame::DrawPhysicsDebugOverlay()
         DrawColliderOverlay(*entity, fixtureColor);
     };
 
-    drawEntity(player.get());
-
-    if (m_sweetsManager)
+    if (g_DrawColliders)
     {
-        const auto drawState = [&](SweetsSpace::SweetsState state)
-        {
-            const auto& list = m_sweetsManager->GetByState(state);
-            for (const auto& sweets : list)
-            {
-                drawEntity(sweets.get());
-            }
-        };
+        drawEntity(player.get());
 
-        drawState(SweetsSpace::SweetsState::Active);
-        drawState(SweetsSpace::SweetsState::Stacked);
-        drawState(SweetsSpace::SweetsState::Carried);
+        if (m_sweetsManager)
+        {
+            const auto drawState = [&](SweetsSpace::SweetsState state)
+            {
+                const auto& list = m_sweetsManager->GetByState(state);
+                for (const auto& sweets : list)
+                {
+                    drawEntity(sweets.get());
+                }
+            };
+
+            drawState(SweetsSpace::SweetsState::Active);
+            drawState(SweetsSpace::SweetsState::Stacked);
+            drawState(SweetsSpace::SweetsState::Carried);
+        }
+
+        if (g_RegisterOsaraColliders)
+        {
+            for (const auto& entity : m_stagePhysicsEntities)
+            {
+                drawEntity(entity.get());
+            }
+        }
     }
 
-    if (g_RegisterOsaraColliders)
+    if (activeCamera)
     {
-        for (const auto& entity : m_stagePhysicsEntities)
+        auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
+        if (perspectiveCamera && player)
         {
-            drawEntity(entity.get());
+            const float comfortZoneTopPercentY = std::clamp(m_gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
+            const float comfortZoneBottomPercentY = std::clamp(m_gameCameraConfig.comfortZoneBottomPercentY, 0.0f, 1.0f);
+            float3 targetPosition = player->GetTransform().position;
+
+            const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
+            DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
+            DirectX::XMVECTOR targetWorld = DirectX::XMVectorSet(targetPosition.x, targetPosition.y, targetPosition.z, 1.0f);
+            DirectX::XMVECTOR targetView = DirectX::XMVector3TransformCoord(targetWorld, viewMatrix);
+            const float viewZ = std::abs(DirectX::XMVectorGetZ(targetView));
+
+            const float fovRadians = DirectX::XMConvertToRadians(perspectiveCamera->GetFieldOfViewDegrees());
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
+            const float visibleWidth = visibleHeight * perspectiveCamera->GetAspectRatio();
+            const float comfortTopHeight = visibleHeight * comfortZoneTopPercentY;
+            const float comfortBottomHeight = visibleHeight * comfortZoneBottomPercentY;
+
+            if (IsFiniteFloat(visibleHeight) && IsFiniteFloat(visibleWidth) && visibleHeight > 0.0f)
+            {
+                const float halfWidth = visibleWidth * 0.5f;
+                const float depth = viewZ;
+
+                DirectX::XMMATRIX inverseView = DirectX::XMMatrixInverse(nullptr, viewMatrix);
+                const auto toWorld = [&](float x, float y)
+                {
+                    DirectX::XMVECTOR viewPoint = DirectX::XMVectorSet(x, y, depth, 1.0f);
+                    DirectX::XMVECTOR worldPoint = DirectX::XMVector3TransformCoord(viewPoint, inverseView);
+                    DirectX::XMFLOAT3 worldValue;
+                    DirectX::XMStoreFloat3(&worldValue, worldPoint);
+                    return worldValue;
+                };
+
+                const DirectX::XMFLOAT4 zoneColor(0.2f, 1.0f, 0.2f, 0.85f);
+                DirectX::XMFLOAT3 leftTop = toWorld(-halfWidth, comfortTopHeight);
+                DirectX::XMFLOAT3 rightTop = toWorld(halfWidth, comfortTopHeight);
+                DirectX::XMFLOAT3 leftBottom = toWorld(-halfWidth, -comfortBottomHeight);
+                DirectX::XMFLOAT3 rightBottom = toWorld(halfWidth, -comfortBottomHeight);
+
+                Geometory::AddLine(leftTop, rightTop, zoneColor);
+                Geometory::AddLine(leftBottom, rightBottom, zoneColor);
+                Geometory::AddLine(leftTop, leftBottom, zoneColor);
+                Geometory::AddLine(rightTop, rightBottom, zoneColor);
+            }
         }
     }
 
@@ -1209,17 +1299,63 @@ void SceneGame::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera
 
 void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+    // 描画確認用の数値
+    if (!activeCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
+        return;
+    }
+
+    float scrollOffsetUsedForBackground = 0.0f;
+
+    auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
+    assert(baseCamera && "SceneGame background requires a BaseCamera.");
+    if (!baseCamera)
+    {
+        DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
+    }
+    else
+    {
+        scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
         if (m_backgroundRenderer)
         {
-                m_backgroundRenderer->Draw();
+            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground);
         }
+    }
 
-        // 描画確認用の数値
-        if (!activeCamera)
+#if defined(_DEBUG)
+    if (player)
+    {
+        const float playerY = player->GetTransform().position.y;
+        const float cameraY = baseCamera ? baseCamera->GetPosition().y : 0.0f;
+        const float scrollY = cameraY;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
+            << " cameraY=" << cameraY
+            << " scrollY=" << std::fixed << std::setprecision(3) << scrollY
+            << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
+            << scrollOffsetUsedForBackground
+            << " comfortTopY=" << (m_cameraRig ? m_cameraRig->GetComfortZoneTopY() : 0.0f)
+            << " comfortBottomY=" << (m_cameraRig ? m_cameraRig->GetComfortZoneBottomY() : 0.0f)
+            << " followSpeedY=" << (m_cameraRig ? m_cameraRig->GetFollowSpeedY() : 0.0f);
+        if (m_cameraRig)
         {
-                DebugTrace(std::string(kLogPrefix) + "Draw skipped: no active camera registered.\n");
-                return;
+            const auto clampMinY = m_cameraRig->GetClampMinY();
+            const auto clampMaxY = m_cameraRig->GetClampMaxY();
+            oss << " clampMinY="
+                << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
+                << " clampMaxY="
+                << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"));
         }
+        else
+        {
+            oss << " clampMinY=none clampMaxY=none";
+        }
+        oss << "\n";
+        ::DebugTrace(oss.str());
+    }
+#endif
 
         {
                 ::LightingSettings lighting{};
@@ -1361,7 +1497,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         m_drawSystem->DebugDrawQueued(activeCamera);
 
 #if defined(_DEBUG)
-        DrawPhysicsDebugOverlay();
+        DrawPhysicsDebugOverlay(activeCamera);
 #endif
 
 }
@@ -1403,21 +1539,142 @@ Core::StepTimer* SceneGame::GetTimer()
     return SceneSpace::Scene::GetTimer();
 }
 
-void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
+void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings,
+    const SceneGameConfig::GameCameraConfig& gameCameraConfig)
 {
+    if (settings.mode != SceneGameConfig::CameraRigMode::Follow)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Gameplay ignores CameraRigMode=" << static_cast<int>(settings.mode)
+            << " (Fixed/Cinematic should live in non-gameplay scenes).\n";
+        ::DebugTrace(oss.str());
+    }
+
+    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
+
+    // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
+    std::optional<float> visualMinY = settings.clamp.minY;
+    std::optional<float> visualMaxY = settings.clamp.maxY;
+    const bool shouldClampY = visualMinY || visualMaxY;
+
     if (m_gameCamera)
     {
-        m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
+        m_gameCamera->SetFieldOfViewDegrees(resolvedSettings.fovDegrees);
+    }
+
+    const float yawRadians = DirectX::XMConvertToRadians(resolvedSettings.yawDegrees);
+    const float pitchRadians = DirectX::XMConvertToRadians(resolvedSettings.pitchDegrees);
+    const float followSpeed = resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed;
+    const float followSpeedY = resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.followSpeedY;
+
+    float3 targetPosition{ 0.0f, 0.0f, 0.0f };
+    bool hasTarget = false;
+    if (player)
+    {
+        targetPosition = player->GetTransform().position;
+        if (!resolvedSettings.fixedPosition)
+        {
+            targetPosition.y += gameCameraConfig.offsetY;
+        }
+        hasTarget = true;
+    }
+
+    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
+    float3 cameraPosition = resolvedSettings.offset;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        cameraPosition = CameraSpace::StoreFloat3(desiredPos);
+    }
+
+    float comfortZoneTopY = 0.0f;
+    float comfortZoneBottomY = 0.0f;
+    std::optional<float> halfViewHeightWorld = std::nullopt;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        const float comfortZoneTopPercentY = std::clamp(gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
+        const float comfortZoneBottomPercentY = std::clamp(gameCameraConfig.comfortZoneBottomPercentY, 0.0f, 1.0f);
+        float3 planeSample = targetPosition;
+        if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+        {
+            planeSample.z = *m_stagePlaneZ;
+        }
+        const float viewDepth = ComputeViewDepth(cameraPosition, cameraRotation, planeSample);
+        if (IsFiniteFloat(viewDepth) && viewDepth > 0.0f)
+        {
+            const float fovRadians = DirectX::XMConvertToRadians(resolvedSettings.fovDegrees);
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
+            if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
+            {
+                halfViewHeightWorld = 0.5f * visibleHeight;
+                comfortZoneTopY = visibleHeight * comfortZoneTopPercentY;
+                comfortZoneBottomY = visibleHeight * comfortZoneBottomPercentY;
+            }
+        }
+    }
+
+    std::optional<float> minScrollY = visualMinY;
+    std::optional<float> maxScrollY = visualMaxY;
+    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    {
+        if (minScrollY)
+        {
+            minScrollY = *minScrollY + *halfViewHeightWorld;
+        }
+        if (maxScrollY)
+        {
+            maxScrollY = *maxScrollY - *halfViewHeightWorld;
+        }
+    }
+
+    if (minScrollY && maxScrollY && *minScrollY > *maxScrollY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera scroll clamp range invalid after view adjustment (minY=" << *minScrollY
+            << ", maxY=" << *maxScrollY << "). Using visual bounds instead.\n";
+        ::DebugTrace(oss.str());
+        minScrollY = visualMinY;
+        maxScrollY = visualMaxY;
     }
 
     if (m_cameraRig)
     {
-        m_cameraRig->SetOffset(settings.offset);
-        m_cameraRig->SetYaw(settings.yawRadians);
-        m_cameraRig->SetPitch(settings.pitchRadians);
-        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
-        m_cameraRig->SetTranslationLocked(settings.fixedPosition);
-        m_cameraRig->SetYawPitchLocked(settings.fixedPosition);
+        m_cameraRig->SetOffset(resolvedSettings.offset);
+        m_cameraRig->SetYaw(yawRadians);
+        m_cameraRig->SetPitch(pitchRadians);
+        m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
+        m_cameraRig->SetFollowSpeedY(followSpeedY);
+        m_cameraRig->SetTranslationLocked(false);
+        m_cameraRig->SetYawPitchLocked(true);
+        m_cameraRig->SetFollowPositionAxes(false, true, false);
+        m_cameraRig->SetInheritRotation(false);
+        m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
+        m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt, shouldClampY ? maxScrollY : std::nullopt);
+
+        const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
+            && m_cameraRig->IsFollowingPositionY()
+            && !m_cameraRig->IsFollowingPositionZ();
+        const bool flagsOk = followAxesOk
+            && !m_cameraRig->IsTranslationLocked()
+            && m_cameraRig->IsYawPitchLocked()
+            && !m_cameraRig->IsInheritingRotation();
+        const float expectedFollowSpeedY = followSpeedY;
+        const bool speedOk = std::abs(m_cameraRig->GetFollowSpeedY() - followSpeedY) <= 0.001f;
+
+        if (!flagsOk || !speedOk)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Gameplay camera rig flags invalid. followAxesOk=" << std::boolalpha
+                << followAxesOk << " translationLocked=" << m_cameraRig->IsTranslationLocked()
+                << " yawPitchLocked=" << m_cameraRig->IsYawPitchLocked()
+                << " inheritRotation=" << m_cameraRig->IsInheritingRotation()
+                << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
+                << " expectedFollowSpeedY=" << expectedFollowSpeedY << "\n";
+            ::DebugTrace(oss.str());
+            assert(false && "Gameplay camera rig flags are invalid.");
+        }
     }
 
     if (!m_gameCamera)
@@ -1426,42 +1683,124 @@ void SceneGame::ConfigureCamera(const CameraPrototypeSettings& settings)
         return;
     }
 
-    float3 cameraRotation{ settings.pitchRadians, settings.yawRadians, 0.0f };
-    float3 cameraPosition = settings.offset;
-    if (!settings.fixedPosition && m_cameraAnchor)
+    if (!resolvedSettings.fixedPosition && hasTarget)
     {
-        const auto& anchorTransform = m_cameraAnchor->GetTransform();
-        cameraRotation.x += anchorTransform.rotation.x;
-        cameraRotation.y += anchorTransform.rotation.y;
-        cameraRotation.z += anchorTransform.rotation.z;
+        if (m_cameraRig)
+        {
+            targetPosition.y = m_cameraRig->ClampScrollY(targetPosition.y);
+            m_cameraRig->ResetVerticalScroll(targetPosition);
+        }
 
-        DirectX::XMVECTOR anchorPos = LoadFloat3(anchorTransform.position);
-        DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
-        cameraPosition = StoreFloat3(desiredPos);
+        cameraPosition = CameraSpace::StoreFloat3(desiredPos);
     }
 
     m_gameCamera->SetPosition(cameraPosition);
+    m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
 
-    std::ostringstream oss;
-    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
-        << ", fov=" << settings.fovDegrees
-        << ", followSpeed=" << settings.followSpeed
-        << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
-        << ", yaw=" << settings.yawRadians << ", pitch=" << settings.pitchRadians << "\n";
-    if (settings.fixedPosition)
+    static bool loggedCameraSettings = false;
+    if (!loggedCameraSettings)
     {
-        const float yawDegrees = DirectX::XMConvertToDegrees(settings.yawRadians);
-        const float pitchDegrees = DirectX::XMConvertToDegrees(settings.pitchRadians);
+        std::ostringstream settingsLog;
+        settingsLog << kLogPrefix << "Camera settings: fixed=" << std::boolalpha << resolvedSettings.fixedPosition
+            << ", translationLocked=" << resolvedSettings.lockTranslation
+            << ", followSpeed=" << resolvedSettings.followSpeed << "\n";
+        ::DebugTrace(settingsLog.str());
+        loggedCameraSettings = true;
+    }
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << resolvedSettings.fixedPosition
+        << ", fov=" << resolvedSettings.fovDegrees
+        << ", followSpeed=" << resolvedSettings.followSpeed
+        << ", offset=" << resolvedSettings.offset.x << ',' << resolvedSettings.offset.y << ',' << resolvedSettings.offset.z
+        << ", yawDegrees=" << resolvedSettings.yawDegrees << ", pitchDegrees=" << resolvedSettings.pitchDegrees << "\n";
+    if (resolvedSettings.fixedPosition)
+    {
         oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
-            << cameraPosition.z << ") yaw=" << yawDegrees << "deg pitch=" << pitchDegrees << "deg\n";
+            << cameraPosition.z << ") yaw=" << resolvedSettings.yawDegrees << "deg pitch=" << resolvedSettings.pitchDegrees << "deg\n";
     }
     ::DebugTrace(oss.str());
 
+}
+
+void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
+{
+    if (!m_cameraRig)
+    {
+        return;
+    }
+
+    std::optional<float> visualMinY = m_cameraRigSettings.clamp.minY;
+    std::optional<float> visualMaxY = m_cameraRigSettings.clamp.maxY;
+    if (IsFiniteFloat(heightMeters) && heightMeters > 0.0f)
+    {
+        if (visualMaxY)
+        {
+            visualMaxY = std::max(*visualMaxY, heightMeters);
+        }
+        else
+        {
+            visualMaxY = heightMeters;
+        }
+    }
+
+    const bool shouldClampY = visualMinY || visualMaxY;
+    std::optional<float> halfViewHeightWorld = std::nullopt;
+    if (m_gameCamera && player)
+    {
+        float3 planeSample = player->GetTransform().position;
+        if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+        {
+            planeSample.z = *m_stagePlaneZ;
+        }
+
+        const float3 cameraPosition = m_gameCamera->GetPosition();
+        const float3 cameraRotation = m_gameCamera->GetRotation();
+        const float viewDepth = ComputeViewDepth(cameraPosition, cameraRotation, planeSample);
+        if (IsFiniteFloat(viewDepth) && viewDepth > 0.0f)
+        {
+            const float fovRadians = DirectX::XMConvertToRadians(m_gameCamera->GetFieldOfViewDegrees());
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
+            if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
+            {
+                halfViewHeightWorld = 0.5f * visibleHeight;
+            }
+        }
+    }
+
+    std::optional<float> minScrollY = visualMinY;
+    std::optional<float> maxScrollY = visualMaxY;
+    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    {
+        if (minScrollY)
+        {
+            minScrollY = *minScrollY + *halfViewHeightWorld;
+        }
+        if (maxScrollY)
+        {
+            maxScrollY = *maxScrollY - *halfViewHeightWorld;
+        }
+    }
+
+    if (minScrollY && maxScrollY && *minScrollY > *maxScrollY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera scroll clamp range invalid after phase update (minY=" << *minScrollY
+            << ", maxY=" << *maxScrollY << "). Using visual bounds instead.\n";
+        ::DebugTrace(oss.str());
+        minScrollY = visualMinY;
+        maxScrollY = visualMaxY;
+    }
+
+    m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
+                           shouldClampY ? maxScrollY : std::nullopt);
 }
 
 void SceneGame::SetStageState(StageState newState)
@@ -1582,13 +1921,13 @@ void SceneGame::ResetPlaySession()
         player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
-    else if (!m_cameraAnchor)
+    if (player && m_cameraRig)
     {
-        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped anchor realignment: camera anchor missing.\n");
+        m_cameraRig->ResetVerticalScroll(player->GetTransform().position);
     }
-    else
+    else if (!m_cameraRig)
     {
-        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession found no stage anchors to realign.\n");
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped camera rig realignment: camera rig missing.\n");
     }
 
     m_gameplayRules.ResetSession();

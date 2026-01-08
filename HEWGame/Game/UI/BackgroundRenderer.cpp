@@ -19,14 +19,30 @@ BackgroundRenderer::~BackgroundRenderer()
 bool BackgroundRenderer::Initialize(const BackgroundRendererConfig& config)
 {
     m_config = config;
-    if (m_config.texturePath.empty())
+    m_layers.clear();
+    if (m_config.layers.empty())
     {
         return false;
     }
 
-    if (!LoadTexture(m_config.texturePath))
+    for (const auto& layer : m_config.layers)
     {
-        return false;
+        if (layer.texturePath.empty())
+        {
+            Diagnostics::LogInfo("[BackgroundRenderer] Background layer texture path empty.");
+            m_layers.clear();
+            return false;
+        }
+
+        auto texture = LoadTexture(layer.texturePath);
+        if (!texture)
+        {
+            m_layers.clear();
+            return false;
+        }
+
+        LoadedLayer loadedLayer{ layer, std::move(texture) };
+        m_layers.push_back(std::move(loadedLayer));
     }
 
     m_ready = true;
@@ -35,13 +51,15 @@ bool BackgroundRenderer::Initialize(const BackgroundRendererConfig& config)
 
 void BackgroundRenderer::Shutdown()
 {
-    m_texture.reset();
+    m_layers.clear();
     m_ready = false;
 }
 
-void BackgroundRenderer::Draw() const
+void BackgroundRenderer::Draw(float scrollOffset) const
 {
-    if (!m_ready || !m_texture)
+    Sprite::ScopedPassDefaults guard;
+
+    if (!m_ready || m_layers.empty())
     {
         return;
     }
@@ -52,34 +70,44 @@ void BackgroundRenderer::Draw() const
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
-    Sprite::SetTexture(m_texture.get());
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-    Sprite::SetColor(m_config.tintColor);
-    Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::Draw();
+    for (const auto& layer : m_layers)
+    {
+        if (!layer.texture)
+        {
+            continue;
+        }
+
+        Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
+        Sprite::SetTexture(layer.texture.get());
+        const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
+        const float parallaxOffsetY = scrollDirection * scrollOffset * layer.config.parallaxFactor;
+        const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
+        Sprite::SetUVPos(parallaxOffset);
+        Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+        Sprite::SetColor(layer.config.tintColor);
+        Sprite::Draw();
+    }
 
     SetDepthTest(true);
 }
 
-bool BackgroundRenderer::LoadTexture(const std::string& path)
+std::unique_ptr<Texture> BackgroundRenderer::LoadTexture(const std::string& path) const
 {
-    m_texture = std::make_unique<Texture>();
-    if (!m_texture)
+    auto texture = std::make_unique<Texture>();
+    if (!texture)
     {
-        return false;
+        return nullptr;
     }
 
-    const HRESULT hr = m_texture->Create(path.c_str());
+    const HRESULT hr = texture->Create(path.c_str());
     if (FAILED(hr))
     {
         std::ostringstream oss;
         oss << "[BackgroundRenderer] Failed to load texture: " << path << " hr=0x" << std::hex << hr;
         Diagnostics::LogInfo(oss.str());
-        m_texture.reset();
-        return false;
+        return nullptr;
     }
 
-    return true;
+    return texture;
 }

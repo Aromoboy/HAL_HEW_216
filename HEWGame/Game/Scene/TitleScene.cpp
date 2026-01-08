@@ -53,11 +53,18 @@ void TitleScene::OnEnter()
     SetActiveCamera(registeredCamera);
 
     BackgroundRendererConfig cfg{};
-    cfg.texturePath = "Assets/Texture/StartScreen.png";
-    m_background = std::make_unique<BackgroundRenderer>();
-    if (!m_background->Initialize(cfg)) 
+    BackgroundRendererConfig::BackgroundLayer layer;
+    layer.texturePath = "Assets/Texture/StartScreen.png";
+    layer.parallaxFactor = 0.0f;
+    layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    cfg.layers.push_back(layer);
+    if (!cfg.layers.empty())
     {
-        m_background.reset();
+        m_background = std::make_unique<BackgroundRenderer>();
+        if (!m_background->Initialize(cfg))
+        {
+            m_background.reset();
+        }
     }
 
 }
@@ -150,7 +157,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
-    if (m_background) m_background->Draw();
+    if (m_background) m_background->Draw(0.0f);
     
     (void)activeCamera;
 }

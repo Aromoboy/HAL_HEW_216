@@ -82,6 +82,41 @@ namespace SceneGameConfig
         std::optional<float> groundZ = std::nullopt;
     };
 
+    struct CameraClampSettings
+    {
+        std::optional<float> minY = std::nullopt;
+        std::optional<float> maxY = std::nullopt;
+    };
+
+    enum class CameraRigMode
+    {
+        Fixed,
+        Follow,
+        Cinematic,
+    };
+
+    struct CameraRigSettings
+    {
+        CameraRigMode mode = CameraRigMode::Follow;
+        bool fixedPosition = false;
+        bool lockTranslation = false;
+        bool lockYawPitch = false;
+        float followSpeed = 5.0f;
+        float3 offset{ 0.0f, 5.5f, -25.0f };
+        float fovDegrees = 45.0f;
+        float yawDegrees = 0.0f;
+        float pitchDegrees = -10.0f;
+        CameraClampSettings clamp{};
+    };
+
+    struct GameCameraConfig
+    {
+        float comfortZoneTopPercentY = 0.1f;
+        float comfortZoneBottomPercentY = 0.1f;
+        float followSpeedY = 5.0f;
+        float offsetY = 0.0f;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }

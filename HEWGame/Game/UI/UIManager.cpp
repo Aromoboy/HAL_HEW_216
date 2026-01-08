@@ -1,4 +1,5 @@
 #include "UIManager.h"
+#include "Sprite.h"
 #include "Texture.h"
 
 #include <sstream>
@@ -112,6 +113,8 @@ void UIManager::UpdateHUD(const HUDUpdateData& data)
 
 void UIManager::Draw()
 {
+    Sprite::ScopedPassDefaults guard;
+
     if (!m_cachedData)
     {
         return;

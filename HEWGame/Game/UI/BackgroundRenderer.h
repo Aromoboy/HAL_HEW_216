@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <DirectXMath.h>
 
@@ -9,8 +10,15 @@ class Texture;
 
 struct BackgroundRendererConfig
 {
-    std::string texturePath;
-    DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    struct BackgroundLayer
+    {
+        std::string texturePath;
+        float parallaxFactor = 0.0f;
+        bool invertScroll = true;
+        DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    };
+
+    std::vector<BackgroundLayer> layers;
 };
 
 class BackgroundRenderer
@@ -21,13 +29,19 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
-    void Draw() const;
+    void Draw(float scrollOffset) const;
 
 private:
-    bool LoadTexture(const std::string& path);
+    std::unique_ptr<Texture> LoadTexture(const std::string& path) const;
+
+    struct LoadedLayer
+    {
+        BackgroundRendererConfig::BackgroundLayer config;
+        std::unique_ptr<Texture> texture;
+    };
 
     BackgroundRendererConfig m_config{};
-    std::unique_ptr<Texture> m_texture;
+    std::vector<LoadedLayer> m_layers;
     bool m_ready = false;
     DirectX::XMFLOAT4X4 m_identityMatrix;
 };
