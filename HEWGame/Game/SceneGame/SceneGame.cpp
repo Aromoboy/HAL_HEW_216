@@ -83,7 +83,6 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
-        constexpr float kComfortZonePercentY = 0.2f;
         SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
         {
             switch (settings.mode)
@@ -130,6 +129,41 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
+        {
+            DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
+                cameraRotation.x,
+                cameraRotation.y,
+                cameraRotation.z);
+
+            DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
+            DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
+                DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
+
+            float3 focus
+            {
+                cameraPosition.x + DirectX::XMVectorGetX(forward),
+                cameraPosition.y + DirectX::XMVectorGetY(forward),
+                cameraPosition.z + DirectX::XMVectorGetZ(forward)
+            };
+
+            float3 up
+            {
+                DirectX::XMVectorGetX(upVector),
+                DirectX::XMVectorGetY(upVector),
+                DirectX::XMVectorGetZ(upVector)
+            };
+
+            DirectX::XMFLOAT4X4 viewMatrix;
+            DrawMatrix::CreateViewMatrix(viewMatrix, cameraPosition, focus, up);
+
+            DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMatrix);
+            DirectX::XMVECTOR targetWorld = DirectX::XMVectorSet(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+            DirectX::XMVECTOR targetView = DirectX::XMVector3TransformCoord(targetWorld, view);
+            return std::abs(DirectX::XMVectorGetZ(targetView));
         }
 
         std::optional<float> ComputeReceiverHeightFromBounds(const AABB& bounds, float receiverY)
@@ -208,12 +242,6 @@ namespace
             }
 
             return std::make_pair(minY, maxY);
-        }
-
-        float GetVerticalScrollThresholdWorldY(const Stage::StageData& stageData)
-        {
-            const float thresholdWorldY = stageData.GetGuidelineHeight();
-            return IsFiniteFloat(thresholdWorldY) ? thresholdWorldY : 0.0f;
         }
 
         bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
@@ -588,6 +616,7 @@ bool SceneGame::Load(Core::Input& input)
     SetDepthTest(true);
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig();
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -603,7 +632,7 @@ bool SceneGame::Load(Core::Input& input)
     {
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
-        ConfigureCamera(cameraSettings);
+        ConfigureCamera(cameraSettings, m_gameCameraConfig);
         if (player)
         {
             m_cameraRig->Attach(player.get());
@@ -1275,7 +1304,7 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
         if (perspectiveCamera && (player || m_cameraAnchor))
         {
-            const float comfortZonePercentY = std::clamp(kComfortZonePercentY, 0.0f, 1.0f);
+            const float comfortZonePercentY = std::clamp(m_gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
             float3 targetPosition = player ? player->GetTransform().position : m_cameraAnchor->GetTransform().position;
 
             const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
@@ -1647,7 +1676,8 @@ Core::StepTimer* SceneGame::GetTimer()
     return SceneSpace::Scene::GetTimer();
 }
 
-void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
+void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings,
+    const SceneGameConfig::GameCameraConfig& gameCameraConfig)
 {
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyCameraRigMode(settings);
 
@@ -1690,16 +1720,62 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_gameCamera->SetFieldOfViewDegrees(resolvedSettings.fovDegrees);
     }
 
-    const float scrollDeadZoneY = resolvedSettings.fixedPosition ? 0.0f : GetVerticalScrollThresholdWorldY(m_stageData);
     const float yawRadians = DirectX::XMConvertToRadians(resolvedSettings.yawDegrees);
     const float pitchRadians = DirectX::XMConvertToRadians(resolvedSettings.pitchDegrees);
+    const float followSpeed = resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed;
+    const float followSpeedY = resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.followSpeedY;
+
+    float3 targetPosition{ 0.0f, 0.0f, 0.0f };
+    bool hasTarget = false;
+    if (player)
+    {
+        targetPosition = player->GetTransform().position;
+        if (!resolvedSettings.fixedPosition)
+        {
+            targetPosition.y += gameCameraConfig.offsetY;
+        }
+        hasTarget = true;
+    }
+
+    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
+    float3 cameraPosition = resolvedSettings.offset;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
+        cameraPosition = CameraSpace::StoreFloat3(desiredPos);
+    }
+
+    float scrollDeadZoneY = 0.0f;
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
+        const float comfortZonePercentY = std::clamp(gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
+        float3 planeSample = targetPosition;
+        if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+        {
+            planeSample.z = *m_stagePlaneZ;
+        }
+        const float viewDepth = ComputeViewDepth(cameraPosition, cameraRotation, planeSample);
+        if (IsFiniteFloat(viewDepth) && viewDepth > 0.0f)
+        {
+            const float fovRadians = DirectX::XMConvertToRadians(resolvedSettings.fovDegrees);
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
+            if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
+            {
+                const float comfortHeight = visibleHeight * comfortZonePercentY;
+                scrollDeadZoneY = comfortHeight * 0.5f;
+            }
+        }
+    }
 
     if (m_cameraRig)
     {
         m_cameraRig->SetOffset(resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
-        m_cameraRig->SetFollowSpeed(resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed);
+        m_cameraRig->SetFollowSpeed(followSpeed);
+        m_cameraRig->SetFollowSpeedY(followSpeedY);
         m_cameraRig->SetTranslationLocked(resolvedSettings.lockTranslation);
         m_cameraRig->SetYawPitchLocked(resolvedSettings.lockYawPitch);
         m_cameraRig->SetFollowPositionAxes(false, !resolvedSettings.fixedPosition, false);
@@ -1714,11 +1790,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         return;
     }
 
-    float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
-    float3 cameraPosition = resolvedSettings.offset;
-    if (!resolvedSettings.fixedPosition && player)
+    if (!resolvedSettings.fixedPosition && hasTarget)
     {
-        float3 targetPosition = player->GetTransform().position;
         if (m_cameraRig)
         {
             m_cameraRig->ResetVerticalScroll(targetPosition);

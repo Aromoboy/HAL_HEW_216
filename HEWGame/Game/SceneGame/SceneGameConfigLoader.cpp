@@ -2499,4 +2499,48 @@ namespace SceneGameConfig
 
         return settings;
     }
+
+    GameCameraConfig LoadGameCameraConfig()
+    {
+        GameCameraConfig config{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCameraRig, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Game camera config section '" << GameplayConfig::kSectionCameraRig
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return config;
+        }
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = entry.key;
+            const std::string value = TrimWhitespace(entry.value);
+            if (key == GameplayConfig::kCameraRigKeyComfortZonePercentY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.comfortZonePercentY = std::clamp(*parsed, 0.0f, 1.0f);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyFollowSpeedY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.followSpeedY = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyOffsetY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.offsetY = *parsed;
+                }
+            }
+        }
+
+        return config;
+    }
 }
