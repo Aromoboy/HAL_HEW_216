@@ -41,6 +41,8 @@ public:
     struct UpdateResult
     {
         std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses;
+        bool guidelineAdvanced = false;
+        float guidelineHeightMeters = 0.0f;
     };
 
     GuidelineSystem() = default;

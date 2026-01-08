@@ -536,6 +536,7 @@ bool SceneGame::Load(Core::Input& input)
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
     m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig(); // Source of truth: gameplay.cfg [camera.rig].
+    m_cameraRigSettings = cameraSettings;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -936,6 +937,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
     if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
     {
+        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
     m_guidelineSystem.TickCooldowns(ctx.dt);
@@ -952,15 +954,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         }
     }
 #endif
-
-    float deltaTime = ctx.timer.DeltaTime();
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
-    }
 
     const auto& platform = m_stageData.GetPlatform(0);
     const float stageFloorY = platform.center.y;
@@ -1009,6 +1002,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         GuidelineSystem::UpdateResult guidelineResult =
             m_guidelineSystem.Update(guidelineInput, {});
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
+        if (guidelineResult.guidelineAdvanced)
+        {
+            UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+        }
         break;
     }
     case StageState::TimeUp:
@@ -1017,6 +1014,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::ShowingResult:
         break;
+    }
+
+    float deltaTime = ctx.timer.DeltaTime();
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.spinEnabled)
+        {
+            obj.currentRotation += obj.spinSpeed * deltaTime;
+        }
     }
 
     if (m_stageState == StageState::ShowingResult)
@@ -1728,6 +1734,79 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
     ::DebugTrace(oss.str());
 
+}
+
+void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
+{
+    if (!m_cameraRig)
+    {
+        return;
+    }
+
+    std::optional<float> visualMinY = m_cameraRigSettings.clamp.minY;
+    std::optional<float> visualMaxY = m_cameraRigSettings.clamp.maxY;
+    if (IsFiniteFloat(heightMeters) && heightMeters > 0.0f)
+    {
+        if (visualMaxY)
+        {
+            visualMaxY = std::max(*visualMaxY, heightMeters);
+        }
+        else
+        {
+            visualMaxY = heightMeters;
+        }
+    }
+
+    const bool shouldClampY = visualMinY || visualMaxY;
+    std::optional<float> halfViewHeightWorld = std::nullopt;
+    if (m_gameCamera && player)
+    {
+        float3 planeSample = player->GetTransform().position;
+        if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+        {
+            planeSample.z = *m_stagePlaneZ;
+        }
+
+        const float3 cameraPosition = m_gameCamera->GetPosition();
+        const float3 cameraRotation = m_gameCamera->GetRotation();
+        const float viewDepth = ComputeViewDepth(cameraPosition, cameraRotation, planeSample);
+        if (IsFiniteFloat(viewDepth) && viewDepth > 0.0f)
+        {
+            const float fovRadians = DirectX::XMConvertToRadians(m_gameCamera->GetFieldOfViewDegrees());
+            const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
+            if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
+            {
+                halfViewHeightWorld = 0.5f * visibleHeight;
+            }
+        }
+    }
+
+    std::optional<float> minScrollY = visualMinY;
+    std::optional<float> maxScrollY = visualMaxY;
+    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    {
+        if (minScrollY)
+        {
+            minScrollY = *minScrollY + *halfViewHeightWorld;
+        }
+        if (maxScrollY)
+        {
+            maxScrollY = *maxScrollY - *halfViewHeightWorld;
+        }
+    }
+
+    if (minScrollY && maxScrollY && *minScrollY > *maxScrollY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera scroll clamp range invalid after phase update (minY=" << *minScrollY
+            << ", maxY=" << *maxScrollY << "). Using visual bounds instead.\n";
+        ::DebugTrace(oss.str());
+        minScrollY = visualMinY;
+        maxScrollY = visualMaxY;
+    }
+
+    m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
+                           shouldClampY ? maxScrollY : std::nullopt);
 }
 
 void SceneGame::SetStageState(StageState newState)

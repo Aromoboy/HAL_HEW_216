@@ -95,6 +95,7 @@ public:
     Core::StepTimer* GetTimer() override;
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void UpdateCameraBoundsForPhase(float heightMeters);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
@@ -148,6 +149,7 @@ protected:
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
     GameCameraConfig m_gameCameraConfig{};
+    CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
