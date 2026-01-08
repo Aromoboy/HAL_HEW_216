@@ -26,6 +26,7 @@
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
+#include "CameraMath.h"
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
@@ -379,24 +380,6 @@ namespace
             DebugColliderRenderer::DrawHull(worldCorners, transform.position.z, color);
         }
 #endif
-
-        DirectX::XMVECTOR LoadFloat3(const float3& value)
-        {
-            return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
-        }
-
-        float3 StoreFloat3(DirectX::FXMVECTOR value)
-        {
-            DirectX::XMFLOAT3 temp;
-            DirectX::XMStoreFloat3(&temp, value);
-            return float3{ temp.x, temp.y, temp.z };
-        }
-
-        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
-        {
-            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
-            return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
-        }
 
 }
 
@@ -1694,10 +1677,10 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             targetPosition.y = m_cameraRig->GetScrollY();
         }
 
-        DirectX::XMVECTOR anchorPos = LoadFloat3(targetPosition);
-        DirectX::XMVECTOR rotatedOffset = RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
-        cameraPosition = StoreFloat3(desiredPos);
+        cameraPosition = CameraSpace::StoreFloat3(desiredPos);
     }
 
     if (shouldClampY && clampMinY && cameraPosition.y < *clampMinY)

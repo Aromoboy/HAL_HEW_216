@@ -93,6 +93,9 @@
     <ClCompile Include="Engine\Camera\BaseCamera.cpp">
       <Filter>Engine\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Camera\CameraMath.cpp">
+      <Filter>Engine\Camera</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\Camera\CameraManager.cpp">
       <Filter>Engine\Camera</Filter>
     </ClCompile>
@@ -442,6 +445,9 @@
       <Filter>Game\UI</Filter>
     </ClCompile>
     <ClInclude Include="Engine\Camera\BaseCamera.h">
+      <Filter>Engine\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Camera\CameraMath.h">
       <Filter>Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Camera\CameraManager.h">

@@ -1,4 +1,5 @@
 #include "CameraRig.h"
+#include "CameraMath.h"
 #include "Entities/Entity.h"
 // カメラの追従や回転計算がしやすくなった
 
@@ -7,29 +8,8 @@
 
 #include <DirectXMath.h>
 
-#include "Entities/Entity.h"
-
 namespace
 {
-        DirectX::XMVECTOR LoadFloat3(const float3& value)
-        {
-                return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
-        }
-
-        float3 StoreFloat3(DirectX::FXMVECTOR value)
-        {
-                DirectX::XMFLOAT3 temp;
-                DirectX::XMStoreFloat3(&temp, value);
-                return float3{ temp.x, temp.y, temp.z };
-        }
-// オフセットをヤー・ピッチで回転させて、
-// カメラの相対位置を柔軟にコントロールするためのヘルパー
-        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
-        {
-                DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
-                return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
-        }
-
         float Clamp01(float value)
         {
                 if (value < 0.0f)
@@ -285,13 +265,13 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 }
         }
 
-        DirectX::XMVECTOR targetPos = LoadFloat3(targetPosition);
-        DirectX::XMVECTOR offsetVec = RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
+        DirectX::XMVECTOR targetPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR offsetVec = CameraSpace::RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(targetPos, offsetVec);
 
         if (!m_lockTranslation)
         {
-                DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
+                DirectX::XMVECTOR currentPos = CameraSpace::LoadFloat3(m_camera->GetPosition());
                 DirectX::XMFLOAT3 currentPosValue;
                 DirectX::XMFLOAT3 desiredPosValue;
                 DirectX::XMStoreFloat3(&currentPosValue, currentPos);
