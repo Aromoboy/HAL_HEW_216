@@ -1288,7 +1288,7 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         if (perspectiveCamera && player)
         {
             const float comfortZonePercentY = std::clamp(m_gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
-            float3 targetPosition = player ? player->GetTransform().position : m_cameraAnchor->GetTransform().position;
+            float3 targetPosition = player->GetTransform().position;
 
             const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
             DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
