@@ -53,6 +53,7 @@ public:
         bool IsInheritingRotation() const;
 
         void SetClampY(std::optional<float> minY, std::optional<float> maxY);
+        float ClampScrollY(float scrollY) const;
 
         void Attach(const std::shared_ptr<Entities::Entity>& target);
         void Attach(Entities::Entity* target);

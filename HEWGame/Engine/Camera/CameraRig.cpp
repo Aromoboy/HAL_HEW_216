@@ -152,7 +152,7 @@ void CameraRig::ResetVerticalScroll(const float3& targetPosition)
                 return;
         }
 
-        m_scrollY = targetPosition.y;
+        m_scrollY = ClampScrollY(targetPosition.y);
         m_hasScrollY = true;
 }
 
@@ -222,6 +222,20 @@ void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
         m_maxYClamp = maxY;
 }
 
+float CameraRig::ClampScrollY(float scrollY) const
+{
+        float clamped = scrollY;
+        if (m_minYClamp && std::isfinite(*m_minYClamp) && clamped < *m_minYClamp)
+        {
+                clamped = *m_minYClamp;
+        }
+        if (m_maxYClamp && std::isfinite(*m_maxYClamp) && clamped > *m_maxYClamp)
+        {
+                clamped = *m_maxYClamp;
+        }
+        return clamped;
+}
+
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
@@ -280,6 +294,7 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                                 m_scrollY = targetPosition.y;
                         }
 
+                        m_scrollY = ClampScrollY(m_scrollY);
                         targetPosition.y = m_scrollY;
                 }
         }
@@ -332,16 +347,6 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 {
                         newZ = currentPosValue.z +
                                (desiredPosValue.z - currentPosValue.z) * alphaXZ;
-                }
-
-                // Y clamp（上下限）
-                if (m_minYClamp && newY < *m_minYClamp)
-                {
-                        newY = *m_minYClamp;
-                }
-                if (m_maxYClamp && newY > *m_maxYClamp)
-                {
-                        newY = *m_maxYClamp;
                 }
 
                 m_camera->SetPosition(float3{ newX, newY, newZ });

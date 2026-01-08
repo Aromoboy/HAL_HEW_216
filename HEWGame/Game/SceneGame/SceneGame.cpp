@@ -33,7 +33,6 @@
 #include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
-#include <cctype>
 #include <initializer_list>
 #include <cmath>
 #include <fstream>
@@ -88,45 +87,6 @@ namespace
             settings.lockTranslation = false;
             settings.lockYawPitch = true;
             return settings;
-        }
-
-        std::string NormalizeStageIdentifier(const std::string& value)
-        {
-            auto begin = value.begin();
-            auto end = value.end();
-            while (begin != end && std::isspace(static_cast<unsigned char>(*begin)))
-            {
-                ++begin;
-            }
-            while (end != begin && std::isspace(static_cast<unsigned char>(*(end - 1))))
-            {
-                --end;
-            }
-
-            std::string normalized;
-            normalized.reserve(static_cast<size_t>(std::distance(begin, end)));
-            for (auto it = begin; it != end; ++it)
-            {
-                char ch = *it;
-                if (ch == '\\')
-                {
-                    ch = '/';
-                }
-                normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
-            }
-            return normalized;
-        }
-
-        bool IsCakeOrOsaraPreset(const std::string& value)
-        {
-            const std::string normalized = NormalizeStageIdentifier(value);
-            return normalized == "cake" || normalized == "osara";
-        }
-
-        bool IsCakeOrOsaraModelPath(const std::string& value)
-        {
-            const std::string normalized = NormalizeStageIdentifier(value);
-            return normalized == "assets/model/cake.fbx" || normalized == "assets/model/osara.fbx";
         }
 
         bool ReadOsaraColliderDebugFlag()
@@ -201,78 +161,6 @@ namespace
             }
 
             return std::max(0.0f, height);
-        }
-
-        std::optional<std::pair<float, float>> ComputeDecorationYBounds(
-            const std::vector<std::shared_ptr<Entities::PhysicalEntity>>& physicsEntities,
-            const std::vector<StageObject>& stageObjects)
-        {
-            bool hasBounds = false;
-            float minY = std::numeric_limits<float>::infinity();
-            float maxY = -std::numeric_limits<float>::infinity();
-
-            for (const auto& entity : physicsEntities)
-            {
-                if (!entity)
-                {
-                    continue;
-                }
-
-                if (IsCakeOrOsaraPreset(entity->GetTag()))
-                {
-                    continue;
-                }
-
-                const AABB bounds = entity->GetAABB();
-                if (!IsFiniteFloat(bounds.min.y) || !IsFiniteFloat(bounds.max.y))
-                {
-                    continue;
-                }
-
-                minY = std::min(minY, std::min(bounds.min.y, bounds.max.y));
-                maxY = std::max(maxY, std::max(bounds.min.y, bounds.max.y));
-                hasBounds = true;
-            }
-
-            if (!hasBounds)
-            {
-                for (const auto& obj : stageObjects)
-                {
-                    if (!obj.model || !obj.model->HasLocalBounds())
-                    {
-                        continue;
-                    }
-
-                    if (IsCakeOrOsaraPreset(obj.colliderPresetId) || IsCakeOrOsaraModelPath(obj.modelPath))
-                    {
-                        continue;
-                    }
-
-                    const AABB bounds = obj.model->GetLocalBounds();
-                    const float scaledMinY = std::min(bounds.min.y * obj.transform.scale.y,
-                        bounds.max.y * obj.transform.scale.y);
-                    const float scaledMaxY = std::max(bounds.min.y * obj.transform.scale.y,
-                        bounds.max.y * obj.transform.scale.y);
-                    const float worldMinY = obj.transform.position.y + scaledMinY;
-                    const float worldMaxY = obj.transform.position.y + scaledMaxY;
-
-                    if (!IsFiniteFloat(worldMinY) || !IsFiniteFloat(worldMaxY))
-                    {
-                        continue;
-                    }
-
-                    minY = std::min(minY, std::min(worldMinY, worldMaxY));
-                    maxY = std::max(maxY, std::max(worldMinY, worldMaxY));
-                    hasBounds = true;
-                }
-            }
-
-            if (!hasBounds)
-            {
-                return std::nullopt;
-            }
-
-            return std::make_pair(minY, maxY);
         }
 
         bool TryFindShadowReceiverYFromStage(const AABB& entityBounds,
@@ -1656,39 +1544,10 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
 
-    std::optional<float> clampMinY = settings.clamp.minY;
-    std::optional<float> clampMaxY = settings.clamp.maxY;
-    const bool shouldClampY = clampMinY || clampMaxY;
-    const std::optional<float> configMinY = clampMinY;
-    const std::optional<float> configMaxY = clampMaxY;
-
-    if (shouldClampY)
-    {
-        if (const auto decorationBounds = ComputeDecorationYBounds(m_stagePhysicsEntities, m_stageObjects))
-        {
-            const auto& [decorMinY, decorMaxY] = *decorationBounds;
-            if (IsFiniteFloat(decorMinY))
-            {
-                clampMinY = clampMinY ? std::optional<float>(std::max(*clampMinY, decorMinY))
-                    : std::optional<float>(decorMinY);
-            }
-            if (IsFiniteFloat(decorMaxY))
-            {
-                clampMaxY = clampMaxY ? std::optional<float>(std::min(*clampMaxY, decorMaxY))
-                    : std::optional<float>(decorMaxY);
-            }
-        }
-
-        if (clampMinY && clampMaxY && *clampMinY > *clampMaxY)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Camera clamp range invalid after decoration bounds (minY=" << *clampMinY
-                << ", maxY=" << *clampMaxY << "). Using config range instead.\n";
-            ::DebugTrace(oss.str());
-            clampMinY = configMinY;
-            clampMaxY = configMaxY;
-        }
-    }
+    // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
+    std::optional<float> visualMinY = settings.clamp.minY;
+    std::optional<float> visualMaxY = settings.clamp.maxY;
+    const bool shouldClampY = visualMinY || visualMaxY;
 
     if (m_gameCamera)
     {
@@ -1724,6 +1583,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     float comfortZoneTopY = 0.0f;
     float comfortZoneBottomY = 0.0f;
+    std::optional<float> halfViewHeightWorld = std::nullopt;
     if (!resolvedSettings.fixedPosition && hasTarget)
     {
         const float comfortZoneTopPercentY = std::clamp(gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
@@ -1740,10 +1600,35 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
             if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
             {
+                halfViewHeightWorld = 0.5f * visibleHeight;
                 comfortZoneTopY = visibleHeight * comfortZoneTopPercentY;
                 comfortZoneBottomY = visibleHeight * comfortZoneBottomPercentY;
             }
         }
+    }
+
+    std::optional<float> minScrollY = visualMinY;
+    std::optional<float> maxScrollY = visualMaxY;
+    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    {
+        if (minScrollY)
+        {
+            minScrollY = *minScrollY + *halfViewHeightWorld;
+        }
+        if (maxScrollY)
+        {
+            maxScrollY = *maxScrollY - *halfViewHeightWorld;
+        }
+    }
+
+    if (minScrollY && maxScrollY && *minScrollY > *maxScrollY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera scroll clamp range invalid after view adjustment (minY=" << *minScrollY
+            << ", maxY=" << *maxScrollY << "). Using visual bounds instead.\n";
+        ::DebugTrace(oss.str());
+        minScrollY = visualMinY;
+        maxScrollY = visualMaxY;
     }
 
     if (m_cameraRig)
@@ -1758,7 +1643,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
-        m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
+        m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt, shouldClampY ? maxScrollY : std::nullopt);
 
         const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
             && m_cameraRig->IsFollowingPositionY()
@@ -1790,10 +1675,11 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         return;
     }
 
-        if (!resolvedSettings.fixedPosition && hasTarget)
-        {
+    if (!resolvedSettings.fixedPosition && hasTarget)
+    {
         if (m_cameraRig)
         {
+            targetPosition.y = m_cameraRig->ClampScrollY(targetPosition.y);
             m_cameraRig->ResetVerticalScroll(targetPosition);
         }
 
@@ -1801,15 +1687,6 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
         cameraPosition = CameraSpace::StoreFloat3(desiredPos);
-    }
-
-    if (shouldClampY && clampMinY && cameraPosition.y < *clampMinY)
-    {
-        cameraPosition.y = *clampMinY;
-    }
-    if (shouldClampY && clampMaxY && cameraPosition.y > *clampMaxY)
-    {
-        cameraPosition.y = *clampMaxY;
     }
 
     m_gameCamera->SetPosition(cameraPosition);
