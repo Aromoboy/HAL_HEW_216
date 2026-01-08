@@ -82,7 +82,6 @@ namespace
         constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
-        constexpr float kBackgroundParallaxScale = 0.001f;
         constexpr float kComfortZonePercentY = 0.2f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
@@ -1362,7 +1361,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
         if (m_backgroundRenderer)
         {
-            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, kBackgroundParallaxScale);
+            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground);
         }
     }
 
