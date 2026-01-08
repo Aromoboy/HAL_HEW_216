@@ -13,6 +13,7 @@ public:
 	static void Init();
 	static void Uninit();
 	static void Draw();
+	static void ResetStateToDefaults();
 
 	static void SetOffset(DirectX::XMFLOAT2 offset);
 	static void SetSize(DirectX::XMFLOAT2 size);
@@ -27,6 +28,20 @@ public:
 
 	static void SetVertexShader(Shader* vs);
 	static void SetPixelShader(Shader* ps);
+
+	class ScopedPassDefaults
+	{
+	public:
+		ScopedPassDefaults();
+		~ScopedPassDefaults();
+
+		ScopedPassDefaults(const ScopedPassDefaults&) = delete;
+		ScopedPassDefaults& operator=(const ScopedPassDefaults&) = delete;
+	};
+
+#ifdef _DEBUG
+	static bool g_inSpritePass;
+#endif
 
 private:
 	struct Data
