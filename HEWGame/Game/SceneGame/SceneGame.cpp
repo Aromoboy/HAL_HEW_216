@@ -1350,24 +1350,21 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         return;
     }
 
-    std::optional<float> scrollOffsetUsedForBackground = std::nullopt;
-    std::string scrollSourceUsed = "none";
+    float scrollOffsetUsedForBackground = 0.0f;
+    const char* scrollSourceUsed = "Camera";
 
-    if (m_backgroundRenderer)
+    auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
+    assert(baseCamera && "SceneGame background requires a BaseCamera.");
+    if (!baseCamera)
     {
-        auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
-        assert(baseCamera && "SceneGame background requires a BaseCamera.");
-        if (!baseCamera)
+        DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
+    }
+    else
+    {
+        scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
+        if (m_backgroundRenderer)
         {
-            DebugTrace(std::string(kLogPrefix) + "Background skipped: active camera is not a BaseCamera.\n");
-        }
-        else
-        {
-            const float scrollOffset = baseCamera->GetPosition().y;  
-            m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
-
-            scrollOffsetUsedForBackground = scrollOffset;
-            scrollSourceUsed = "Camera";
+            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, kBackgroundParallaxScale);
         }
     }
 
@@ -1382,7 +1379,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         std::optional<float> clampMinY = std::nullopt;
         std::optional<float> clampMaxY = std::nullopt;
 
-        if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+        if (baseCamera)
         {
             cameraY = baseCamera->GetPosition().y;
         }
@@ -1409,15 +1406,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
             << " scrollY=" << scrollY
             << " cameraY=" << cameraY
-            << " scrollOffsetUsedForBackground=";
-        if (scrollOffsetUsedForBackground)
-        {
-            oss << std::fixed << std::setprecision(3) << *scrollOffsetUsedForBackground;
-        }
-        else
-        {
-            oss << "none";
-        }
+            << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
+            << scrollOffsetUsedForBackground;
         oss << " scrollSource=" << scrollSourceUsed
             << " deadZoneY=" << deadZoneY
             << " followSpeedY=" << followSpeedY
