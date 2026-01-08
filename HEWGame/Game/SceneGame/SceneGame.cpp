@@ -84,28 +84,12 @@ namespace
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
         SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
+        constexpr float kComfortZonePercentY = 0.2f;
+        SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
-            switch (settings.mode)
-            {
-            case SceneGameConfig::CameraRigMode::Fixed:
-                settings.fixedPosition = true;
-                settings.lockTranslation = true;
-                settings.lockYawPitch = true;
-                settings.followSpeed = 0.0f;
-                break;
-            case SceneGameConfig::CameraRigMode::Cinematic:
-                settings.fixedPosition = false;
-                settings.lockTranslation = false;
-                settings.lockYawPitch = false;
-                break;
-            case SceneGameConfig::CameraRigMode::Follow:
-            default:
-                settings.fixedPosition = false;
-                settings.lockTranslation = false;
-                settings.lockYawPitch = true;
-                break;
-            }
-
+            settings.fixedPosition = false;
+            settings.lockTranslation = false;
+            settings.lockYawPitch = true;
             return settings;
         }
         bool ReadOsaraColliderDebugFlag()
@@ -1679,7 +1663,15 @@ Core::StepTimer* SceneGame::GetTimer()
 void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings,
     const SceneGameConfig::GameCameraConfig& gameCameraConfig)
 {
-    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyCameraRigMode(settings);
+    if (settings.mode != SceneGameConfig::CameraRigMode::Follow)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Gameplay ignores CameraRigMode=" << static_cast<int>(settings.mode)
+            << " (Fixed/Cinematic should live in non-gameplay scenes).\n";
+        ::DebugTrace(oss.str());
+    }
+
+    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
 
     std::optional<float> clampMinY = settings.clamp.minY;
     std::optional<float> clampMaxY = settings.clamp.maxY;
@@ -1774,14 +1766,37 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetOffset(resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
-        m_cameraRig->SetFollowSpeed(followSpeed);
-        m_cameraRig->SetFollowSpeedY(followSpeedY);
-        m_cameraRig->SetTranslationLocked(resolvedSettings.lockTranslation);
-        m_cameraRig->SetYawPitchLocked(resolvedSettings.lockYawPitch);
-        m_cameraRig->SetFollowPositionAxes(false, !resolvedSettings.fixedPosition, false);
+        m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
+        m_cameraRig->SetFollowSpeedY(resolvedSettings.followSpeed);
+        m_cameraRig->SetTranslationLocked(false);
+        m_cameraRig->SetYawPitchLocked(true);
+        m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetDeadZoneY(scrollDeadZoneY);
         m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
+
+        const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
+            && m_cameraRig->IsFollowingPositionY()
+            && !m_cameraRig->IsFollowingPositionZ();
+        const bool flagsOk = followAxesOk
+            && !m_cameraRig->IsTranslationLocked()
+            && m_cameraRig->IsYawPitchLocked()
+            && !m_cameraRig->IsInheritingRotation();
+        const float expectedFollowSpeedY = resolvedSettings.followSpeed;
+        const bool speedOk = std::abs(m_cameraRig->GetFollowSpeedY() - expectedFollowSpeedY) <= 0.001f;
+
+        if (!flagsOk || !speedOk)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Gameplay camera rig flags invalid. followAxesOk=" << std::boolalpha
+                << followAxesOk << " translationLocked=" << m_cameraRig->IsTranslationLocked()
+                << " yawPitchLocked=" << m_cameraRig->IsYawPitchLocked()
+                << " inheritRotation=" << m_cameraRig->IsInheritingRotation()
+                << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
+                << " expectedFollowSpeedY=" << expectedFollowSpeedY << "\n";
+            ::DebugTrace(oss.str());
+            assert(false && "Gameplay camera rig flags are invalid.");
+        }
     }
 
     if (!m_gameCamera)
