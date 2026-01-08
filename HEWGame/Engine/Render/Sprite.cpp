@@ -79,9 +79,33 @@ float4 main(PS_IN pin) : SV_TARGET {
 	m_data.mesh = std::make_shared<MeshBuffer>();
 	m_data.mesh->Create(desc);
 
+	// シェーダー
+	m_defVS = std::make_shared<VertexShader>();
+	m_defVS->Compile(VS);
+	m_data.vs = m_defVS.get();
+	m_defPS = std::make_shared <PixelShader>();
+	m_defPS->Compile(PS);
+	m_data.ps = m_defPS.get();
+
+	// パラメーター
+	ResetStateToDefaults();
+}
+void Sprite::Uninit()
+{
+}
+void Sprite::Draw()
+{
 #ifdef _DEBUG
 	assert(g_inSpritePass && "Sprite::Draw called outside of sprite pass");
 #endif
+	m_data.vs->WriteBuffer(0, m_data.matrix);
+	m_data.vs->WriteBuffer(1, m_data.param);
+	m_data.vs->Bind();
+	m_data.ps->SetTexture(0, m_data.texture);
+	m_data.ps->Bind();
+	m_data.mesh->Draw();
+}
+
 void Sprite::ResetStateToDefaults()
 {
 	m_data.param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
@@ -93,35 +117,6 @@ void Sprite::ResetStateToDefaults()
 	m_data.texture = nullptr;
 	m_data.vs = m_defVS.get();
 	m_data.ps = m_defPS.get();
-}
-
-	// パラメーター
-	m_data.param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	m_data.param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	m_data.param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	DirectX::XMStoreFloat4x4(&m_data.matrix[0], DirectX::XMMatrixIdentity());
-	DirectX::XMStoreFloat4x4(&m_data.matrix[1], DirectX::XMMatrixIdentity());
-	DirectX::XMStoreFloat4x4(&m_data.matrix[2], DirectX::XMMatrixIdentity());
-
-	// シェーダー
-	m_defVS = std::make_shared<VertexShader>();
-	m_defVS->Compile(VS);
-	m_data.vs = m_defVS.get();
-	m_defPS = std::make_shared <PixelShader>();
-	m_defPS->Compile(PS);
-	m_data.ps = m_defPS.get();
-}
-void Sprite::Uninit()
-{
-}
-void Sprite::Draw()
-{
-	m_data.vs->WriteBuffer(0, m_data.matrix);
-	m_data.vs->WriteBuffer(1, m_data.param);
-	m_data.vs->Bind();
-	m_data.ps->SetTexture(0, m_data.texture);
-	m_data.ps->Bind();
-	m_data.mesh->Draw();
 }
 
 void Sprite::SetOffset(DirectX::XMFLOAT2 offset)
