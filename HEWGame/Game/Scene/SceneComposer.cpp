@@ -478,11 +478,11 @@ void SceneComposer::ComposeUI(Composition& result)
     {
         constexpr float kDefaultBackgroundParallax = 0.001f;
         BackgroundRendererConfig backgroundConfig{};
-        backgroundConfig.layers.push_back(BackgroundRendererConfig::BackgroundLayer{
-            backgroundTexture,
-            kDefaultBackgroundParallax,
-            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)
-        });
+        BackgroundRendererConfig::BackgroundLayer layer;
+        layer.texturePath = backgroundTexture;
+        layer.parallaxFactor = kDefaultBackgroundParallax;
+        layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
         if (!result.backgroundRenderer->Initialize(backgroundConfig))
         {
