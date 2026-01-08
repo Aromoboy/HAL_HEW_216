@@ -95,8 +95,16 @@ namespace SceneGameConfig
         Camera,
     };
 
+    enum class CameraRigMode
+    {
+        Fixed,
+        Follow,
+        Cinematic,
+    };
+
     struct CameraRigSettings
     {
+        CameraRigMode mode = CameraRigMode::Follow;
         bool fixedPosition = false;
         bool lockTranslation = false;
         bool lockYawPitch = false;

@@ -83,24 +83,31 @@ namespace
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kBackgroundParallaxScale = 0.001f;
-        const SceneGameConfig::CameraRigSettings kFixedSideViewCameraPreset = []()
+        SceneGameConfig::CameraRigSettings ApplyCameraRigMode(SceneGameConfig::CameraRigSettings settings)
         {
-            SceneGameConfig::CameraRigSettings settings{};
-            settings.fixedPosition = true;
-            settings.lockTranslation = true;
-            settings.lockYawPitch = true;
-            settings.followSpeed = 0.0f;
+            switch (settings.mode)
+            {
+            case SceneGameConfig::CameraRigMode::Fixed:
+                settings.fixedPosition = true;
+                settings.lockTranslation = true;
+                settings.lockYawPitch = true;
+                settings.followSpeed = 0.0f;
+                break;
+            case SceneGameConfig::CameraRigMode::Cinematic:
+                settings.fixedPosition = false;
+                settings.lockTranslation = false;
+                settings.lockYawPitch = false;
+                break;
+            case SceneGameConfig::CameraRigMode::Follow:
+            default:
+                settings.fixedPosition = false;
+                settings.lockTranslation = false;
+                settings.lockYawPitch = true;
+                break;
+            }
+
             return settings;
-        }();
-        const SceneGameConfig::CameraRigSettings kScrollSideViewCameraPreset = []()
-        {
-            SceneGameConfig::CameraRigSettings settings{};
-            settings.fixedPosition = false;
-            settings.lockTranslation = false;
-            settings.lockYawPitch = true;
-            settings.followSpeed = 4.0f;
-            return settings;
-        }();
+        }
         bool ReadOsaraColliderDebugFlag()
         {
                 const char* value = std::getenv("r.DebugOsaraColliders");
@@ -584,11 +591,6 @@ bool SceneGame::Load(Core::Input& input)
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
     m_backgroundScrollSource = cameraSettings.backgroundScrollSource;
-    const auto& cameraPreset = cameraSettings.fixedPosition ? kFixedSideViewCameraPreset : kScrollSideViewCameraPreset;
-    cameraSettings.fixedPosition = cameraPreset.fixedPosition;
-    cameraSettings.followSpeed = cameraPreset.followSpeed;
-    cameraSettings.lockTranslation = cameraPreset.lockTranslation;
-    cameraSettings.lockYawPitch = cameraPreset.lockYawPitch;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1603,6 +1605,8 @@ void SceneGame::CaptureBackgroundScrollOrigin(bool force)
 
 void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settings)
 {
+    SceneGameConfig::CameraRigSettings resolvedSettings = ApplyCameraRigMode(settings);
+
     std::optional<float> clampMinY = settings.clamp.minY;
     std::optional<float> clampMaxY = settings.clamp.maxY;
     const bool shouldClampY = clampMinY || clampMaxY;
@@ -1639,21 +1643,21 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     if (m_gameCamera)
     {
-        m_gameCamera->SetFieldOfViewDegrees(settings.fovDegrees);
+        m_gameCamera->SetFieldOfViewDegrees(resolvedSettings.fovDegrees);
     }
 
-    const float scrollDeadZoneY = settings.fixedPosition ? 0.0f : GetVerticalScrollThresholdWorldY(m_stageData);
-    const float yawRadians = DirectX::XMConvertToRadians(settings.yawDegrees);
-    const float pitchRadians = DirectX::XMConvertToRadians(settings.pitchDegrees);
+    const float scrollDeadZoneY = resolvedSettings.fixedPosition ? 0.0f : GetVerticalScrollThresholdWorldY(m_stageData);
+    const float yawRadians = DirectX::XMConvertToRadians(resolvedSettings.yawDegrees);
+    const float pitchRadians = DirectX::XMConvertToRadians(resolvedSettings.pitchDegrees);
 
     if (m_cameraRig)
     {
-        m_cameraRig->SetOffset(settings.offset);
+        m_cameraRig->SetOffset(resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
-        m_cameraRig->SetFollowSpeed(settings.fixedPosition ? 0.0f : settings.followSpeed);
-        m_cameraRig->SetTranslationLocked(settings.lockTranslation);
-        m_cameraRig->SetYawPitchLocked(true);
+        m_cameraRig->SetFollowSpeed(resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed);
+        m_cameraRig->SetTranslationLocked(resolvedSettings.lockTranslation);
+        m_cameraRig->SetYawPitchLocked(resolvedSettings.lockYawPitch);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetDeadZoneY(scrollDeadZoneY);
@@ -1667,8 +1671,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
-    float3 cameraPosition = settings.offset;
-    if (!settings.fixedPosition && player)
+    float3 cameraPosition = resolvedSettings.offset;
+    if (!resolvedSettings.fixedPosition && player)
     {
         float3 targetPosition = player->GetTransform().position;
         if (m_cameraRig)
@@ -1678,7 +1682,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         }
 
         DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
-        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(settings.offset, cameraRotation.y, cameraRotation.x);
+        DirectX::XMVECTOR rotatedOffset = CameraSpace::RotateOffset(resolvedSettings.offset, cameraRotation.y, cameraRotation.x);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(anchorPos, rotatedOffset);
         cameraPosition = CameraSpace::StoreFloat3(desiredPos);
     }
@@ -1703,23 +1707,23 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     if (!loggedCameraSettings)
     {
         std::ostringstream settingsLog;
-        settingsLog << kLogPrefix << "Camera settings: fixed=" << std::boolalpha << settings.fixedPosition
-            << ", translationLocked=" << settings.lockTranslation
-            << ", followSpeed=" << settings.followSpeed << "\n";
+        settingsLog << kLogPrefix << "Camera settings: fixed=" << std::boolalpha << resolvedSettings.fixedPosition
+            << ", translationLocked=" << resolvedSettings.lockTranslation
+            << ", followSpeed=" << resolvedSettings.followSpeed << "\n";
         ::DebugTrace(settingsLog.str());
         loggedCameraSettings = true;
     }
 
     std::ostringstream oss;
-    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << settings.fixedPosition
-        << ", fov=" << settings.fovDegrees
-        << ", followSpeed=" << settings.followSpeed
-        << ", offset=" << settings.offset.x << ',' << settings.offset.y << ',' << settings.offset.z
-        << ", yawDegrees=" << settings.yawDegrees << ", pitchDegrees=" << settings.pitchDegrees << "\n";
-    if (settings.fixedPosition)
+    oss << kLogPrefix << "Configured camera prototype: fixed=" << std::boolalpha << resolvedSettings.fixedPosition
+        << ", fov=" << resolvedSettings.fovDegrees
+        << ", followSpeed=" << resolvedSettings.followSpeed
+        << ", offset=" << resolvedSettings.offset.x << ',' << resolvedSettings.offset.y << ',' << resolvedSettings.offset.z
+        << ", yawDegrees=" << resolvedSettings.yawDegrees << ", pitchDegrees=" << resolvedSettings.pitchDegrees << "\n";
+    if (resolvedSettings.fixedPosition)
     {
         oss << kLogPrefix << "[CameraStatic] Final position (" << cameraPosition.x << ',' << cameraPosition.y << ','
-            << cameraPosition.z << ") yaw=" << settings.yawDegrees << "deg pitch=" << settings.pitchDegrees << "deg\n";
+            << cameraPosition.z << ") yaw=" << resolvedSettings.yawDegrees << "deg pitch=" << resolvedSettings.pitchDegrees << "deg\n";
     }
     ::DebugTrace(oss.str());
 

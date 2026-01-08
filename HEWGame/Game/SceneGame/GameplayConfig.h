@@ -6,9 +6,9 @@ namespace GameplayConfig
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
     inline constexpr const char* kSectionPlayerTransform = "player.transform";
     inline constexpr const char* kSectionCameraRig = "camera.rig";
+    inline constexpr const char* kCameraRigKeyMode = "mode";
     inline constexpr const char* kCameraRigKeyMinY = "minY";
     inline constexpr const char* kCameraRigKeyMaxY = "maxY";
-    inline constexpr const char* kCameraRigKeyFixedPosition = "fixedPosition";
     inline constexpr const char* kCameraRigKeyFollowSpeed = "followSpeed";
     inline constexpr const char* kCameraRigKeyOffset = "offset";
     inline constexpr const char* kCameraRigKeyFovDegrees = "fovDegrees";
