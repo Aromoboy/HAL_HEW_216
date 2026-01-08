@@ -32,8 +32,9 @@ public:
         float GetFollowSpeed() const;
         void SetFollowSpeedY(float followSpeed);
         float GetFollowSpeedY() const;
-        void SetDeadZoneY(float deadZoneY);
-        float GetDeadZoneY() const;
+        void SetComfortZoneY(float comfortTopY, float comfortBottomY);
+        float GetComfortZoneTopY() const;
+        float GetComfortZoneBottomY() const;
         std::optional<float> GetClampMinY() const;
         std::optional<float> GetClampMaxY() const;
         void ResetVerticalScroll(const float3& targetPosition);
@@ -67,7 +68,8 @@ private:
         float m_pitch;
         float m_followSpeed;
         float m_followSpeedY;
-        float m_deadZoneY;
+        float m_comfortZoneTopY;
+        float m_comfortZoneBottomY;
         bool m_lockTranslation;
         bool m_lockYawPitch;
         bool m_followPositionX;
