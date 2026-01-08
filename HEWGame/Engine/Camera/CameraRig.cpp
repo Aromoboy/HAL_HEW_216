@@ -34,7 +34,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_pitch(0.0f)
         , m_followSpeed(5.0f)
         , m_followSpeedY(5.0f)
-        , m_deadZoneY(0.0f)
+        , m_comfortZoneTopY(0.0f)
+        , m_comfortZoneBottomY(0.0f)
         , m_lockTranslation(false)
         , m_lockYawPitch(false)
         , m_followPositionX(true)
@@ -118,14 +119,20 @@ float CameraRig::GetFollowSpeedY() const
         return m_followSpeedY;
 }
 
-void CameraRig::SetDeadZoneY(float deadZoneY)
+void CameraRig::SetComfortZoneY(float comfortTopY, float comfortBottomY)
 {
-        m_deadZoneY = deadZoneY < 0.0f ? 0.0f : deadZoneY;
+        m_comfortZoneTopY = comfortTopY < 0.0f ? 0.0f : comfortTopY;
+        m_comfortZoneBottomY = comfortBottomY < 0.0f ? 0.0f : comfortBottomY;
 }
 
-float CameraRig::GetDeadZoneY() const
+float CameraRig::GetComfortZoneTopY() const
 {
-        return m_deadZoneY;
+        return m_comfortZoneTopY;
+}
+
+float CameraRig::GetComfortZoneBottomY() const
+{
+        return m_comfortZoneBottomY;
 }
 
 std::optional<float> CameraRig::GetClampMinY() const
@@ -255,13 +262,17 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                                 m_hasScrollY = true;
                         }
 
-                        if (m_deadZoneY > 0.0f)
+                        if (m_comfortZoneTopY > 0.0f || m_comfortZoneBottomY > 0.0f)
                         {
-                                const float lowerBound = m_scrollY - m_deadZoneY;
-                                const float upperBound = m_scrollY + m_deadZoneY;
-                                if (targetPosition.y < lowerBound || targetPosition.y > upperBound)
+                                const float lowerBound = m_scrollY - m_comfortZoneBottomY;
+                                const float upperBound = m_scrollY + m_comfortZoneTopY;
+                                if (targetPosition.y < lowerBound)
                                 {
-                                        m_scrollY = targetPosition.y;
+                                        m_scrollY = targetPosition.y + m_comfortZoneBottomY;
+                                }
+                                else if (targetPosition.y > upperBound)
+                                {
+                                        m_scrollY = targetPosition.y - m_comfortZoneTopY;
                                 }
                         }
                         else

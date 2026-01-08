@@ -111,7 +111,8 @@ namespace SceneGameConfig
 
     struct GameCameraConfig
     {
-        float comfortZonePercentY = 0.2f;
+        float comfortZoneTopPercentY = 0.1f;
+        float comfortZoneBottomPercentY = 0.1f;
         float followSpeedY = 5.0f;
         float offsetY = 0.0f;
     };

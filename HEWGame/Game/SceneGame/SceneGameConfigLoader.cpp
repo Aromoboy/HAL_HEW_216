@@ -2518,11 +2518,18 @@ namespace SceneGameConfig
         {
             const std::string key = entry.key;
             const std::string value = TrimWhitespace(entry.value);
-            if (key == GameplayConfig::kCameraRigKeyComfortZonePercentY)
+            if (key == GameplayConfig::kCameraRigKeyComfortZoneTopPercentY)
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
-                    config.comfortZonePercentY = std::clamp(*parsed, 0.0f, 1.0f);
+                    config.comfortZoneTopPercentY = std::clamp(*parsed, 0.0f, 1.0f);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyComfortZoneBottomPercentY)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.comfortZoneBottomPercentY = std::clamp(*parsed, 0.0f, 1.0f);
                 }
             }
             else if (key == GameplayConfig::kCameraRigKeyFollowSpeedY)

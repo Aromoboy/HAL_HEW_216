@@ -1289,7 +1289,8 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         const auto clampMinY = m_cameraRig->GetClampMinY();
         const auto clampMaxY = m_cameraRig->GetClampMaxY();
         std::ostringstream oss;
-        oss << kLogPrefix << "[DebugOverlay] cameraRig deadZoneY=" << m_cameraRig->GetDeadZoneY()
+        oss << kLogPrefix << "[DebugOverlay] cameraRig comfortTopY=" << m_cameraRig->GetComfortZoneTopY()
+            << " comfortBottomY=" << m_cameraRig->GetComfortZoneBottomY()
             << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
             << " clampMinY=" << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
             << " clampMaxY=" << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"))
@@ -1348,7 +1349,8 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
         if (perspectiveCamera && player)
         {
-            const float comfortZonePercentY = std::clamp(m_gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
+            const float comfortZoneTopPercentY = std::clamp(m_gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
+            const float comfortZoneBottomPercentY = std::clamp(m_gameCameraConfig.comfortZoneBottomPercentY, 0.0f, 1.0f);
             float3 targetPosition = player->GetTransform().position;
 
             const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
@@ -1360,12 +1362,12 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             const float fovRadians = DirectX::XMConvertToRadians(perspectiveCamera->GetFieldOfViewDegrees());
             const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
             const float visibleWidth = visibleHeight * perspectiveCamera->GetAspectRatio();
-            const float comfortHeight = visibleHeight * comfortZonePercentY;
+            const float comfortTopHeight = visibleHeight * comfortZoneTopPercentY;
+            const float comfortBottomHeight = visibleHeight * comfortZoneBottomPercentY;
 
             if (IsFiniteFloat(visibleHeight) && IsFiniteFloat(visibleWidth) && visibleHeight > 0.0f)
             {
                 const float halfWidth = visibleWidth * 0.5f;
-                const float halfComfortHeight = comfortHeight * 0.5f;
                 const float depth = viewZ;
 
                 DirectX::XMMATRIX inverseView = DirectX::XMMatrixInverse(nullptr, viewMatrix);
@@ -1379,10 +1381,10 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
                 };
 
                 const DirectX::XMFLOAT4 zoneColor(0.2f, 1.0f, 0.2f, 0.85f);
-                DirectX::XMFLOAT3 leftTop = toWorld(-halfWidth, halfComfortHeight);
-                DirectX::XMFLOAT3 rightTop = toWorld(halfWidth, halfComfortHeight);
-                DirectX::XMFLOAT3 leftBottom = toWorld(-halfWidth, -halfComfortHeight);
-                DirectX::XMFLOAT3 rightBottom = toWorld(halfWidth, -halfComfortHeight);
+                DirectX::XMFLOAT3 leftTop = toWorld(-halfWidth, comfortTopHeight);
+                DirectX::XMFLOAT3 rightTop = toWorld(halfWidth, comfortTopHeight);
+                DirectX::XMFLOAT3 leftBottom = toWorld(-halfWidth, -comfortBottomHeight);
+                DirectX::XMFLOAT3 rightBottom = toWorld(halfWidth, -comfortBottomHeight);
 
                 Geometory::AddLine(leftTop, rightTop, zoneColor);
                 Geometory::AddLine(leftBottom, rightBottom, zoneColor);
@@ -1438,7 +1440,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             << " cameraY=" << cameraY
             << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
             << scrollOffsetUsedForBackground
-            << " deadZoneY=" << (m_cameraRig ? m_cameraRig->GetDeadZoneY() : 0.0f)
+            << " comfortTopY=" << (m_cameraRig ? m_cameraRig->GetComfortZoneTopY() : 0.0f)
+            << " comfortBottomY=" << (m_cameraRig ? m_cameraRig->GetComfortZoneBottomY() : 0.0f)
             << " followSpeedY=" << (m_cameraRig ? m_cameraRig->GetFollowSpeedY() : 0.0f);
         if (m_cameraRig)
         {
@@ -1719,10 +1722,12 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         cameraPosition = CameraSpace::StoreFloat3(desiredPos);
     }
 
-    float scrollDeadZoneY = 0.0f;
+    float comfortZoneTopY = 0.0f;
+    float comfortZoneBottomY = 0.0f;
     if (!resolvedSettings.fixedPosition && hasTarget)
     {
-        const float comfortZonePercentY = std::clamp(gameCameraConfig.comfortZonePercentY, 0.0f, 1.0f);
+        const float comfortZoneTopPercentY = std::clamp(gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
+        const float comfortZoneBottomPercentY = std::clamp(gameCameraConfig.comfortZoneBottomPercentY, 0.0f, 1.0f);
         float3 planeSample = targetPosition;
         if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
         {
@@ -1735,8 +1740,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             const float visibleHeight = 2.0f * std::tan(0.5f * fovRadians) * viewDepth;
             if (IsFiniteFloat(visibleHeight) && visibleHeight > 0.0f)
             {
-                const float comfortHeight = visibleHeight * comfortZonePercentY;
-                scrollDeadZoneY = comfortHeight * 0.5f;
+                comfortZoneTopY = visibleHeight * comfortZoneTopPercentY;
+                comfortZoneBottomY = visibleHeight * comfortZoneBottomPercentY;
             }
         }
     }
@@ -1752,7 +1757,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetYawPitchLocked(true);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
-        m_cameraRig->SetDeadZoneY(scrollDeadZoneY);
+        m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
         m_cameraRig->SetClampY(shouldClampY ? clampMinY : std::nullopt, shouldClampY ? clampMaxY : std::nullopt);
 
         const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
@@ -1790,10 +1795,6 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         if (m_cameraRig)
         {
             m_cameraRig->ResetVerticalScroll(targetPosition);
-            if (std::isfinite(targetPosition.y))
-            {
-                targetPosition.y -= scrollDeadZoneY;
-            }
         }
 
         DirectX::XMVECTOR anchorPos = CameraSpace::LoadFloat3(targetPosition);
