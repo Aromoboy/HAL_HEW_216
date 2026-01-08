@@ -186,6 +186,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
   </ImportGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp" />
+    <ClCompile Include="Engine\Camera\CameraMath.cpp" />
     <ClCompile Include="Engine\Camera\CameraManager.cpp" />
     <ClCompile Include="Engine\Camera\CameraRig.cpp" />
     <ClCompile Include="Engine\Camera\CameraTarget.cpp" />
@@ -303,6 +304,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\UI\TitleRenderer.cpp" />
     <ClCompile Include="Game\UI\UIManager.cpp" />
     <ClInclude Include="Engine\Camera\BaseCamera.h" />
+    <ClInclude Include="Engine\Camera\CameraMath.h" />
     <ClInclude Include="Engine\Camera\CameraManager.h" />
     <ClInclude Include="Engine\Camera\CameraRig.h" />
     <ClInclude Include="Engine\Camera\ICamera.h" />
