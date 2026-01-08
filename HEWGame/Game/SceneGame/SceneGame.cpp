@@ -1236,6 +1236,19 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         return;
     }
 
+    if (m_cameraRig)
+    {
+        const auto clampMinY = m_cameraRig->GetClampMinY();
+        const auto clampMaxY = m_cameraRig->GetClampMaxY();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[DebugOverlay] cameraRig deadZoneY=" << m_cameraRig->GetDeadZoneY()
+            << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
+            << " clampMinY=" << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
+            << " clampMaxY=" << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"))
+            << "\n";
+        ::DebugTrace(oss.str());
+    }
+
     const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
     const Color boundsColor = MakeColor(0.0f, 0.7f, 1.0f, 1.0f);
 
@@ -1377,7 +1390,22 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             << " cameraY=" << cameraY
             << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
             << scrollOffsetUsedForBackground
-            << "\n";
+            << " deadZoneY=" << (m_cameraRig ? m_cameraRig->GetDeadZoneY() : 0.0f)
+            << " followSpeedY=" << (m_cameraRig ? m_cameraRig->GetFollowSpeedY() : 0.0f);
+        if (m_cameraRig)
+        {
+            const auto clampMinY = m_cameraRig->GetClampMinY();
+            const auto clampMaxY = m_cameraRig->GetClampMaxY();
+            oss << " clampMinY="
+                << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
+                << " clampMaxY="
+                << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"));
+        }
+        else
+        {
+            oss << " clampMinY=none clampMaxY=none";
+        }
+        oss << "\n";
         ::DebugTrace(oss.str());
     }
 #endif
