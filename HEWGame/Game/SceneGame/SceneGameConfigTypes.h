@@ -88,13 +88,6 @@ namespace SceneGameConfig
         std::optional<float> maxY = std::nullopt;
     };
 
-    enum class BackgroundScrollSource
-    {
-        ScrollY,
-        Anchor,
-        Camera,
-    };
-
     enum class CameraRigMode
     {
         Fixed,
@@ -114,7 +107,6 @@ namespace SceneGameConfig
         float yawDegrees = 0.0f;
         float pitchDegrees = -10.0f;
         CameraClampSettings clamp{};
-        BackgroundScrollSource backgroundScrollSource = BackgroundScrollSource::Anchor;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

@@ -14,7 +14,6 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyFovDegrees = "fovDegrees";
     inline constexpr const char* kCameraRigKeyYawDegrees = "yawDegrees";
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
-    inline constexpr const char* kCameraRigKeyBackgroundScrollSource = "backgroundScrollSource";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionPowerUps = "powerups";
