@@ -87,8 +87,6 @@ public:
     void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
-    void UpdateCameraAnchor(const Core::UpdateContext& ctx);
-    void UpdateVerticalScroll(const Core::UpdateContext& ctx);
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
     Render::ModelRenderer* GetRenderer() override;
     Core::UpdateScheduler& GetScheduler() override;
@@ -115,8 +113,6 @@ protected:
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
-    std::shared_ptr<Entities::Entity> m_cameraAnchor;
-    std::unique_ptr<Core::UpdateNode> m_cameraAnchorUpdateNode;
     std::unique_ptr<SoundManagerEX> m_pManager;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
@@ -129,7 +125,6 @@ protected:
     bool m_physicsRegistered = false;
     bool m_contactDispatchRegistered = false;
     bool m_cameraRigRegistered = false;
-    bool m_cameraAnchorUpdateRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
@@ -161,7 +156,6 @@ protected:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
-    float m_scrollY = 0.0f;
     SceneGameConfig::BackgroundScrollSource m_backgroundScrollSource = SceneGameConfig::BackgroundScrollSource::Anchor;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
