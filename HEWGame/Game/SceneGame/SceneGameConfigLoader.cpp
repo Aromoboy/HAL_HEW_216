@@ -216,6 +216,24 @@ namespace
 
         return false;
     }
+
+    std::optional<SceneGameConfig::BackgroundScrollSource> ParseBackgroundScrollSource(const std::string& value)
+    {
+        const std::string lowered = ToLowerCopy(TrimWhitespace(value));
+        if (lowered == "scrolly" || lowered == "scroll_y" || lowered == "scroll")
+        {
+            return SceneGameConfig::BackgroundScrollSource::ScrollY;
+        }
+        if (lowered == "anchor" || lowered == "camera_anchor")
+        {
+            return SceneGameConfig::BackgroundScrollSource::Anchor;
+        }
+        if (lowered == "camera")
+        {
+            return SceneGameConfig::BackgroundScrollSource::Camera;
+        }
+        return std::nullopt;
+    }
 }
 
 namespace SceneGameConfig
@@ -2460,6 +2478,20 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.pitchDegrees = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyBackgroundScrollSource)
+            {
+                if (auto parsed = ParseBackgroundScrollSource(value))
+                {
+                    settings.backgroundScrollSource = *parsed;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Unknown background scroll source '" << value
+                        << "'; using default.\n";
+                    ::DebugTrace(oss.str());
                 }
             }
         }

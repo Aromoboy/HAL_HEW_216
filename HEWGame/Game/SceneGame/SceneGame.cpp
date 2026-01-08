@@ -625,6 +625,7 @@ bool SceneGame::Load(Core::Input& input)
     }
 
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
+    m_backgroundScrollSource = cameraSettings.backgroundScrollSource;
     const auto& cameraPreset = cameraSettings.fixedPosition ? kFixedSideViewCameraPreset : kScrollSideViewCameraPreset;
     cameraSettings.fixedPosition = cameraPreset.fixedPosition;
     cameraSettings.followSpeed = cameraPreset.followSpeed;
@@ -1351,10 +1352,28 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         if (m_backgroundRenderer)
         {
                 float scrollOffset = 0.0f;
-                if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                switch (m_backgroundScrollSource)
                 {
-                        const float3& cameraPos = baseCamera->GetPosition();
-                        scrollOffset = cameraPos.y;
+                case SceneGameConfig::BackgroundScrollSource::Anchor:
+                        if (m_cameraAnchor)
+                        {
+                                scrollOffset = m_cameraAnchor->GetTransform().position.y;
+                        }
+                        else
+                        {
+                                scrollOffset = m_scrollY;
+                        }
+                        break;
+                case SceneGameConfig::BackgroundScrollSource::ScrollY:
+                        scrollOffset = m_scrollY;
+                        break;
+                case SceneGameConfig::BackgroundScrollSource::Camera:
+                        if (auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera))
+                        {
+                                const float3& cameraPos = baseCamera->GetPosition();
+                                scrollOffset = cameraPos.y;
+                        }
+                        break;
                 }
                 m_backgroundRenderer->Draw(scrollOffset, kBackgroundParallaxScale);
         }
