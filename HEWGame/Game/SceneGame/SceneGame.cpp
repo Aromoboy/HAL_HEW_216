@@ -1671,7 +1671,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
-        m_cameraRig->SetFollowSpeedY(resolvedSettings.followSpeed);
+        m_cameraRig->SetFollowSpeedY(followSpeedY);
         m_cameraRig->SetTranslationLocked(false);
         m_cameraRig->SetYawPitchLocked(true);
         m_cameraRig->SetFollowPositionAxes(false, true, false);
@@ -1686,8 +1686,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             && !m_cameraRig->IsTranslationLocked()
             && m_cameraRig->IsYawPitchLocked()
             && !m_cameraRig->IsInheritingRotation();
-        const float expectedFollowSpeedY = resolvedSettings.followSpeed;
-        const bool speedOk = std::abs(m_cameraRig->GetFollowSpeedY() - expectedFollowSpeedY) <= 0.001f;
+        const float expectedFollowSpeedY = followSpeedY;
+        const bool speedOk = std::abs(m_cameraRig->GetFollowSpeedY() - followSpeedY) <= 0.001f;
 
         if (!flagsOk || !speedOk)
         {
