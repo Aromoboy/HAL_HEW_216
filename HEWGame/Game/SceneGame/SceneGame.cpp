@@ -1310,7 +1310,14 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
+        if (m_cameraRig)
+        {
+            scrollOffsetUsedForBackground = m_cameraRig->GetScrollY();
+        }
+        else
+        {
+            scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
+        }
         if (m_backgroundRenderer)
         {
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground);
@@ -1322,10 +1329,12 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     {
         const float playerY = player->GetTransform().position.y;
         const float cameraY = baseCamera ? baseCamera->GetPosition().y : 0.0f;
+        const float scrollY = m_cameraRig ? m_cameraRig->GetScrollY() : cameraY;
 
         std::ostringstream oss;
         oss << kLogPrefix << "[DrawWorld] playerY=" << std::fixed << std::setprecision(3) << playerY
             << " cameraY=" << cameraY
+            << " scrollY=" << std::fixed << std::setprecision(3) << scrollY
             << " scrollOffsetUsedForBackground=" << std::fixed << std::setprecision(3)
             << scrollOffsetUsedForBackground
             << " comfortTopY=" << (m_cameraRig ? m_cameraRig->GetComfortZoneTopY() : 0.0f)
