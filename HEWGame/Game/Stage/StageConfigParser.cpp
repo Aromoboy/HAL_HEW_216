@@ -207,6 +207,7 @@ namespace Stage
         result.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         result.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        result.backgroundScrollMaxWorldY = StageConfigDefaults::kDefaultBackgroundScrollMaxWorldY;
 
         for (const auto& entry : lines)
         {
@@ -812,6 +813,21 @@ namespace Stage
                 {
                     result.backgroundTexturePath = rawValue;
                     result.backgroundTextureSet = true;
+                }
+            }
+            else if (key == "backgroundScrollMaxWorldY")
+            {
+                try
+                {
+                    result.backgroundScrollMaxWorldY = std::stof(rawValue);
+                    result.backgroundScrollMaxWorldYSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundScrollMaxWorldY on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
                 }
             }
             else

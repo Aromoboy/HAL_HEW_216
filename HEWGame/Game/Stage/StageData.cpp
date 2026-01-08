@@ -208,6 +208,11 @@ namespace Stage
         return m_backgroundTexturePath;
     }
 
+    float StageData::GetBackgroundScrollMaxWorldY() const noexcept
+    {
+        return m_backgroundScrollMaxWorldY;
+    }
+
     float StageData::GetHeightBonusThreshold() const noexcept
     {
         return m_heightBonusThreshold;
@@ -252,6 +257,7 @@ namespace Stage
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
         m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
         m_guidelineZOffset = normalized.guidelineZOffset;
+        m_backgroundScrollMaxWorldY = normalized.backgroundScrollMaxWorldY;
         m_heightBonusThreshold = normalized.heightBonusThreshold;
         m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
@@ -287,6 +293,7 @@ namespace Stage
             << " guidelineZOffset=" << m_guidelineZOffset
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
+            << " backgroundScrollMaxWorldY=" << m_backgroundScrollMaxWorldY
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
 

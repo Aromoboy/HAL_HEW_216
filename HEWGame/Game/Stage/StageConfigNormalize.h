@@ -38,6 +38,7 @@ namespace Stage
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
         std::string backgroundTexturePath;
+        float backgroundScrollMaxWorldY = 0.0f;
         float heightBonusThreshold = 0.0f;
         float heightBonusSeconds = 0.0f;
 
@@ -74,6 +75,7 @@ namespace Stage
         static constexpr float kDefaultGuidelineZOffset = 0.1f;
         static constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
         static constexpr float kDefaultHeightBonusSeconds = 5.0f;
+        static constexpr float kDefaultBackgroundScrollMaxWorldY = 50.0f;
 
         static float DefaultGuidelineWidthPaddingWorld();
         static float DefaultPlayerMoveSpeed();
