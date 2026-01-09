@@ -240,6 +240,21 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const float buttonHeight = 220.0f;  
 
     // カーソルで色を切り替えて描画
+    DirectX::XMFLOAT4X4 uiProjection;
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(
+        &uiProjection,
+        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
+    );
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+    Sprite::SetProjection(uiProjection);
+    Sprite::SetView(identity);
+    Sprite::SetWorld(identity);
+    Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
+    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     SetSamplerState(SAMPLER_POINT);
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
