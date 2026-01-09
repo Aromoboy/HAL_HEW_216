@@ -183,7 +183,6 @@ namespace
             aliases.emplace(NormalizeForKey(alias), target);
         };
 
-        addAlias("パイナップル.png", "pineapple.png");
         addAlias("パイナップル.png", "pineapple.png");
         addAlias("バナナ.png", "banana.png");
         addAlias("ブルーベリー.png", "blueberry.png");
