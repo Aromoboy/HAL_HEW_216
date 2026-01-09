@@ -15,6 +15,7 @@
  
 #include <memory>
 #include <cmath>
+#include <sstream>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -66,12 +67,24 @@ void TitleScene::OnEnter()
     }
 
     // UI ボタン用テクスチャ読み込み
-    m_texStartRed.Create("Assets/Texture/start_red_btn.png");
-    m_texStartGreen.Create("Assets/Texture/start_green_btn.png");
-    m_texPowerUpRed.Create("Assets/Texture/kyouka_red_btn.png");
-    m_texPowerUpGreen.Create("Assets/Texture/kyouka_green_btn.png");
-    m_texExitRed.Create("Assets/Texture/exit_red_btn.png");
-    m_texExitGreen.Create("Assets/Texture/exit_green_btn.png");
+    auto loadButtonTexture = [](Texture& texture, const char* path, bool& valid)
+        {
+            const HRESULT hr = texture.Create(path);
+            valid = SUCCEEDED(hr);
+            if (FAILED(hr))
+            {
+                std::ostringstream oss;
+                oss << "[TitleScene] Texture load failed: " << path << "\n";
+                ::OutputDebugStringA(oss.str().c_str());
+            }
+        };
+
+    loadButtonTexture(m_texStartRed, "Assets/Texture/start_red_btn.png", m_texStartRedValid);
+    loadButtonTexture(m_texStartGreen, "Assets/Texture/start_green_btn.png", m_texStartGreenValid);
+    loadButtonTexture(m_texPowerUpRed, "Assets/Texture/kyouka_red_btn.png", m_texPowerUpRedValid);
+    loadButtonTexture(m_texPowerUpGreen, "Assets/Texture/kyouka_green_btn.png", m_texPowerUpGreenValid);
+    loadButtonTexture(m_texExitRed, "Assets/Texture/exit_red_btn.png", m_texExitRedValid);
+    loadButtonTexture(m_texExitGreen, "Assets/Texture/exit_green_btn.png", m_texExitGreenValid);
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
@@ -200,10 +213,32 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     
     (void)activeCamera;
 
-    auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
+    auto drawUIButton = [](Texture& tex,
+                           bool isValid,
+                           const char* label,
+                           float centerX,
+                           float centerY,
+                           float targetWidth,
+                           float targetHeight)
         {
+            if (!isValid)
+            {
+                std::ostringstream oss;
+                oss << "[TitleScene] Skip UI texture (invalid): " << label << "\n";
+                ::OutputDebugStringA(oss.str().c_str());
+                return;
+            }
+
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
+            if (texWidth == 0.0f || texHeight == 0.0f)
+            {
+                std::ostringstream oss;
+                oss << "[TitleScene] Skip UI texture (zero size): " << label
+                    << " width=" << texWidth << " height=" << texHeight << "\n";
+                ::OutputDebugStringA(oss.str().c_str());
+                return;
+            }
 
             const float snappedWidth = std::round(targetWidth);
             const float snappedHeight = std::round(targetHeight);
@@ -256,9 +291,27 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
     SetSamplerState(SAMPLER_POINT);
-    drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);
+    drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
+                 m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
+                 m_cursor == 0 ? "start_green_btn" : "start_red_btn",
+                 centerX,
+                 startY + spacing * 0,
+                 buttonWidth,
+                 buttonHeight);
+    drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed,
+                 m_cursor == 1 ? m_texPowerUpGreenValid : m_texPowerUpRedValid,
+                 m_cursor == 1 ? "kyouka_green_btn" : "kyouka_red_btn",
+                 centerX,
+                 startY + spacing * 1,
+                 buttonWidth,
+                 buttonHeight);
+    drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed,
+                 m_cursor == 2 ? m_texExitGreenValid : m_texExitRedValid,
+                 m_cursor == 2 ? "exit_green_btn" : "exit_red_btn",
+                 centerX,
+                 startY + spacing * 2,
+                 buttonWidth,
+                 buttonHeight);
 
     SetSamplerState(previousSampler);
 }
