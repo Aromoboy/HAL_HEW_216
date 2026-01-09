@@ -14,7 +14,6 @@ struct BackgroundRendererConfig
     {
         std::string texturePath;
         float parallaxFactor = 0.0f;
-        bool invertScroll = true;
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
