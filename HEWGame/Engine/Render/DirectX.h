@@ -48,5 +48,6 @@ void SetCullingMode(D3D11_CULL_MODE cull);
 void SetDepthTest(bool enable);
 void SetBlendMode(BlendMode blend);
 void SetSamplerState(SamplerState state);
+SamplerState GetSamplerState();
 
 #endif

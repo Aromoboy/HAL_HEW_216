@@ -14,6 +14,7 @@
 #include "TitleRenderer.h"
  
 #include <memory>
+#include <cmath>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -65,12 +66,12 @@ void TitleScene::OnEnter()
     }
 
     // UI ボタン用テクスチャ読み込み
-    m_texStartRed.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI5.png");
-    m_texStartGreen.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI6.png");
-    m_texPowerUpRed.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI3.png");
-    m_texPowerUpGreen.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI4.png");
-    m_texExitRed.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI1.png");
-    m_texExitGreen.Create(L"Assets/Texture/\u30bf\u30a4\u30c8\u30eb\u753b\u9762UI2.png");
+    m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
+    m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
+    m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
+    m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
+    m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
+    m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
@@ -194,6 +195,9 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+    const SamplerState previousSampler = GetSamplerState();
+    SetSamplerState(SAMPLER_POINT);
+
     if (m_background) m_background->Draw();
     
     (void)activeCamera;
@@ -203,10 +207,17 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
 
-            // 元画像比率に合わせてスケール
-            float scaleX = targetWidth / texWidth;
-            float scaleY = targetHeight / texHeight;
+            const float snappedWidth = std::round(targetWidth);
+            const float snappedHeight = std::round(targetHeight);
+            const float snappedCenterX = std::round(centerX);
+            const float snappedCenterY = std::round(centerY);
 
+            float scaleX = snappedWidth / texWidth;
+            float scaleY = snappedHeight / texHeight;
+            DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
+
+
+    SetSamplerState(previousSampler);
             // 原点をテクスチャ中心に移動
             DirectX::XMMATRIX centering = DirectX::XMMatrixTranslation(-texWidth * 0.5f, -texHeight * 0.5f, 0.0f);
 
