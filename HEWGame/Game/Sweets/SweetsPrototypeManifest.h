@@ -15,6 +15,11 @@ namespace SweetsSpace
         Blueberry,
         Pineapple,
         Banana,
+        Kiwi,
+        Mikan,
+        Muscat,
+        Melon,
+
     };
 
     struct SweetsPrototypeDescriptor

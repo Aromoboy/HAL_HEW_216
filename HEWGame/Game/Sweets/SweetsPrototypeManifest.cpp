@@ -108,6 +108,16 @@ namespace
             return "pineapple";
         case SweetsSpace::SweetsType::Banana:
             return "banana";
+
+
+        case SweetsSpace::SweetsType::Kiwi:
+            return "Kiwi";
+        case SweetsSpace::SweetsType::Mikan:
+            return "Mikan";
+        case SweetsSpace::SweetsType::Muscat:
+            return "Muscat";
+        case SweetsSpace::SweetsType::Melon:
+            return "Melon";
         }
         return std::string{};
     }
@@ -140,6 +150,19 @@ namespace SweetsSpace
             "High-detail pineapple with leafy crown", "pineapple");
         Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx",
             "Low-poly curved banana fruit", "banana");
+
+        //01/09
+        Register(SweetsType::Kiwi, "Kiwi", "Assets/Model/Kiwi_High.fbx",
+            "Low-poly curved Kiwi fruit", "Kiwi");
+
+        Register(SweetsType::Mikan, "Mikan", "Assets/Model/Mikan_high.fbx",
+            "Low-poly curved Mikan fruit", "Mikan");
+
+        Register(SweetsType::Muscat, "Muscat", "Assets/Model/Masukatoo_high.fbx",
+            "Low-poly curved Muscat fruit", "Muscat");
+
+        Register(SweetsType::Melon, "Melon", "Assets/Model/meron_high.fbx",
+            "Low-poly curved Melon fruit", "Melon");
 
         RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
         RegisterExtraAlias("Fairy", "Player");
@@ -348,6 +371,10 @@ namespace SweetsSpace
                 if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
                 if (normalized == NormalizeKey(ToString(SweetsType::Pineapple))) return SweetsType::Pineapple;
                 if (normalized == NormalizeKey(ToString(SweetsType::Banana))) return SweetsType::Banana;
+                if (normalized == NormalizeKey(ToString(SweetsType::Kiwi))) return SweetsType::Kiwi;
+                if (normalized == NormalizeKey(ToString(SweetsType::Mikan))) return SweetsType::Mikan;
+                if (normalized == NormalizeKey(ToString(SweetsType::Muscat))) return SweetsType::Muscat;
+                if (normalized == NormalizeKey(ToString(SweetsType::Melon))) return SweetsType::Melon;
                 return std::nullopt;
             };
 
@@ -521,6 +548,18 @@ namespace SweetsSpace
             return "Pineapple";
         case SweetsType::Banana:
             return "Banana";
+
+
+            //01/09
+        case SweetsType::Kiwi:
+            return "Kiwi";
+        case SweetsType::Mikan:
+            return "Mikan";
+        case SweetsType::Muscat:
+            return "Muscat";
+        case SweetsType::Melon:
+            return "Melon";
+
         default:
             return "Unknown";
         }
