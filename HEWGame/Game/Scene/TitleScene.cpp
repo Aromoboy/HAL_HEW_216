@@ -196,8 +196,6 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
     const SamplerState previousSampler = GetSamplerState();
-    SetSamplerState(SAMPLER_POINT);
-
     if (m_background) m_background->Draw();
     
     (void)activeCamera;
@@ -242,6 +240,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const float buttonHeight = 220.0f;  
 
     // カーソルで色を切り替えて描画
+    SetSamplerState(SAMPLER_POINT);
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);
