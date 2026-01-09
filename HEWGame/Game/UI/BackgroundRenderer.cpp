@@ -122,7 +122,7 @@ void BackgroundRenderer::Draw(float scrollOffset) const
         float vScale = 1.0f;
         float u0 = 0.0f;
         float v0 = 0.0f;
-        // Contract (view window for tall texture; tiling logic is forbidden):
+        // 契約（高解像度テクスチャ用表示ウィンドウ；タイリングロジックは禁止）:
         // t = clamp01(scrollOffset / scrollMaxWorldY)
         // tLayer = clamp01(t * parallaxFactor)
         // maxV0 = 1 - vScale
