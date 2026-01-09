@@ -1699,6 +1699,25 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     m_gameCamera->SetPosition(cameraPosition);
     m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
+    const float cameraMaxY = m_backgroundScrollOriginY + m_stageData.GetBackgroundScrollMaxWorldY();
+    if (m_cameraRig)
+    {
+        const std::optional<float> clampMinY = m_cameraRig->GetClampMinY();
+        std::optional<float> clampMaxY = cameraMaxY;
+        if (const std::optional<float> existingMaxY = m_cameraRig->GetClampMaxY())
+        {
+            clampMaxY = std::min(*existingMaxY, clampMaxY.value());
+        }
+        m_cameraRig->SetClampY(clampMinY, clampMaxY);
+    }
+    if (m_cameraRigSettings.clamp.maxY)
+    {
+        m_cameraRigSettings.clamp.maxY = std::min(*m_cameraRigSettings.clamp.maxY, cameraMaxY);
+    }
+    else
+    {
+        m_cameraRigSettings.clamp.maxY = cameraMaxY;
+    }
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
