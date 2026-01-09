@@ -543,10 +543,14 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             if (matchedNode)
             {
                 nodeTransform = matchedNode->mTransformation;
+                for (const aiNode* parent = matchedNode->mParent; parent; parent = parent->mParent)
+                {
+                    nodeTransform = parent->mTransformation * nodeTransform;
+                }
                 hasNodeTransform = true;
                 std::ostringstream oss;
                 oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
-                const aiMatrix4x4& m = matchedNode->mTransformation;
+                const aiMatrix4x4& m = nodeTransform;
                 oss << "[" << m.a1 << "," << m.a2 << "," << m.a3 << "," << m.a4 << ";"
                     << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
                     << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
