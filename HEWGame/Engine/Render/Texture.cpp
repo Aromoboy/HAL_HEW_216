@@ -3,6 +3,7 @@
 #include "Diagnostics/Logger.h"
 #include <cstring>
 #include <cwchar>
+#include <filesystem>
 #include <sstream>
 #include <string>
 
@@ -29,17 +30,54 @@ HRESULT Texture::Create(const char* fileName)
 	}
 
 	// 字変換
-	wchar_t wPath[MAX_PATH];
-	const int wideCount = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, fileName, -1, wPath, MAX_PATH);
+	wchar_t wPath[MAX_PATH] = {};
+	int wideCount = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, fileName, -1, wPath, MAX_PATH);
+	if (wideCount == 0)
+	{
+		wideCount = MultiByteToWideChar(CP_ACP, 0, fileName, -1, wPath, MAX_PATH);
+	}
 	if (wideCount == 0)
 	{
 		const DWORD err = GetLastError();
 		std::ostringstream oss;
-		oss << "[Texture] MultiByteToWideChar(CP_UTF8) failed for " << fileName
+		oss << "[Texture] MultiByteToWideChar failed for " << fileName
 			<< " err=0x" << std::hex << err;
 		Diagnostics::LogInfo(oss.str());
 		return E_INVALIDARG;
 	}
+
+	auto wideToUtf8 = [](const wchar_t* value) -> std::string
+	{
+		if (!value)
+		{
+			return std::string();
+		}
+		const int needed = WideCharToMultiByte(CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr);
+		if (needed <= 0)
+		{
+			return std::string();
+		}
+		std::string buffer(static_cast<size_t>(needed - 1), '\0');
+		WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer.data(), needed, nullptr, nullptr);
+		return buffer;
+	};
+
+	std::ostringstream logPath;
+	logPath << "[Texture] Converted path: source=" << fileName << " wide=" << wideToUtf8(wPath);
+#if defined(__cpp_lib_filesystem)
+	{
+		std::error_code existsError;
+		const bool exists = std::filesystem::exists(std::filesystem::path(wPath), existsError);
+		logPath << " exists=" << (exists ? "true" : "false");
+		if (existsError)
+		{
+			logPath << " exists_err=0x" << std::hex << existsError.value();
+		}
+	}
+#else
+	logPath << " exists=unavailable";
+#endif
+	Diagnostics::LogInfo(logPath.str());
 
 	// ファイル別読み込み
 	DirectX::TexMetadata mdata;
