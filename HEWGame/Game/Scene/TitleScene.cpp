@@ -1,4 +1,4 @@
-#include "TitleScene.h"
+﻿#include "TitleScene.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -66,12 +66,12 @@ void TitleScene::OnEnter()
     }
 
     // UI ボタン用テクスチャ読み込み
-    m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
-    m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
-    m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
-    m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
-    m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
-    m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
+    m_texStartRed.Create("Assets/Texture/start_red_btn.png");
+    m_texStartGreen.Create("Assets/Texture/start_green_btn.png");
+    m_texPowerUpRed.Create("Assets/Texture/kyouka_red_btn.png");
+    m_texPowerUpGreen.Create("Assets/Texture/kyouka_green_btn.png");
+    m_texExitRed.Create("Assets/Texture/exit_red_btn.png");
+    m_texExitGreen.Create("Assets/Texture/exit_green_btn.png");
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
