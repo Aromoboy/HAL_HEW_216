@@ -143,9 +143,9 @@ void BackgroundRenderer::Draw(float scrollOffset) const
         const float epsU = texWidth > 0.0f ? 0.5f / texWidth : 0.0f;
         const float epsV = texHeight > 0.0f ? 0.5f / texHeight : 0.0f;
         const float maxU0 = std::max(1.0f - uScale - epsU, epsU);
-        const float maxV0 = std::max(1.0f - vScale - epsV, epsV);
+        const float maxV0Clamp = std::max(1.0f - vScale - epsV, epsV);
         u0 = ClampRange(u0, epsU, maxU0);
-        v0 = ClampRange(v0, epsV, maxV0);
+        v0 = ClampRange(v0, epsV, maxV0Clamp);
 
         Sprite::SetUVPos(DirectX::XMFLOAT2(u0, v0));
         Sprite::SetUVScale(DirectX::XMFLOAT2(uScale, vScale));
