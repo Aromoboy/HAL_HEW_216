@@ -93,6 +93,7 @@ if(PROJECT_IS_TOP_LEVEL)
 			GIT_TAG master
 			GIT_SHALLOW TRUE
 			GIT_PROGRESS TRUE
+			UPDATE_DISCONNECTED TRUE
 		)
 		FetchContent_MakeAvailable(enkits)
 
