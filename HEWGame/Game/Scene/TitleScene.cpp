@@ -214,7 +214,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
 
             float scaleX = snappedWidth / texWidth;
             float scaleY = snappedHeight / texHeight;
-            DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
+            DirectX::XMMATRIX snappedTranslation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
 
 
     SetSamplerState(previousSampler);
@@ -224,11 +224,8 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             // スケーリング
             DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scaleX, scaleY, 1.0f);
 
-            // 画面上の中心位置に移動
-            DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(centerX, centerY, 0.0f);
-
             // 掛け順: 画面移動 * スケーリング * 原点補正
-            DirectX::XMMATRIX world = translation * scaling * centering;
+            DirectX::XMMATRIX world = snappedTranslation * scaling * centering;
 
             DirectX::XMFLOAT4X4 worldFloat;
             DirectX::XMStoreFloat4x4(&worldFloat, world);
