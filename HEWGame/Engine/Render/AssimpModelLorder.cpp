@@ -189,6 +189,10 @@ namespace
         addAlias("ブルーベリー.png", "blueberry.png");
         addAlias("ストロベリー.png", "strawberry.png");
         addAlias("いちご.png", "strawberry.png");
+        addAlias("キウイ.png", "kiwi.png");
+        addAlias("みかん.png", "mikan.png");
+        addAlias("マスカット.png", "muscat.png");
+        addAlias("メロン.png", "melon.png");
         addAlias("クリーム.png", "cream.png");
 
         return aliases;
