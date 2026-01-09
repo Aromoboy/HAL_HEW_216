@@ -216,8 +216,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             float scaleY = snappedHeight / texHeight;
             DirectX::XMMATRIX snappedTranslation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
 
-
-    SetSamplerState(previousSampler);
             // 原点をテクスチャ中心に移動
             DirectX::XMMATRIX centering = DirectX::XMMatrixTranslation(-texWidth * 0.5f, -texHeight * 0.5f, 0.0f);
 
@@ -247,5 +245,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);
-    
+
+    SetSamplerState(previousSampler);
 }
