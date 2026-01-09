@@ -62,6 +62,12 @@ private:
     Texture m_texPowerUpGreen;
     Texture m_texExitRed;
     Texture m_texExitGreen;
+    bool m_texStartRedValid = false;
+    bool m_texStartGreenValid = false;
+    bool m_texPowerUpRedValid = false;
+    bool m_texPowerUpGreenValid = false;
+    bool m_texExitRedValid = false;
+    bool m_texExitGreenValid = false;
 
     struct MenuItem
     {
