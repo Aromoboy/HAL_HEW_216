@@ -7,6 +7,7 @@
 #include "Texture.h"
 
 #include <algorithm>
+#include <cassert>
 #include <sstream>
 
 namespace
@@ -168,6 +169,17 @@ void BackgroundRenderer::Draw(float scrollOffset) const
             const float maxV0Clamp = std::max(1.0f - vScale - epsV, epsV);
             v0 = ClampRange(v0, epsV, maxV0Clamp);
         }
+
+        const float minScale = 0.0001f;
+        uScale = ClampRange(uScale, minScale, 1.0f);
+        vScale = ClampRange(vScale, minScale, 1.0f);
+        u0 = ClampRange(u0, 0.0f, 1.0f - uScale);
+        v0 = ClampRange(v0, 0.0f, 1.0f - vScale);
+
+        assert(uScale > 0.0f && uScale <= 1.0f);
+        assert(vScale > 0.0f && vScale <= 1.0f);
+        assert(u0 >= 0.0f && u0 <= 1.0f - uScale);
+        assert(v0 >= 0.0f && v0 <= 1.0f - vScale);
 
         Sprite::SetUVPos(DirectX::XMFLOAT2(u0, v0));
         Sprite::SetUVScale(DirectX::XMFLOAT2(uScale, vScale));
