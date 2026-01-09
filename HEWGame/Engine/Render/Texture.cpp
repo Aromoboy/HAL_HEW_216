@@ -2,6 +2,7 @@
 #include "TextureLoad.h"
 #include "Diagnostics/Logger.h"
 #include <cstring>
+#include <cwchar>
 #include <sstream>
 #include <string>
 
@@ -29,8 +30,16 @@ HRESULT Texture::Create(const char* fileName)
 
 	// 字変換
 	wchar_t wPath[MAX_PATH];
-	size_t wLen = 0;
-	MultiByteToWideChar(0, 0, fileName, -1, wPath, MAX_PATH);
+	const int wideCount = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, fileName, -1, wPath, MAX_PATH);
+	if (wideCount == 0)
+	{
+		const DWORD err = GetLastError();
+		std::ostringstream oss;
+		oss << "[Texture] MultiByteToWideChar(CP_UTF8) failed for " << fileName
+			<< " err=0x" << std::hex << err;
+		Diagnostics::LogInfo(oss.str());
+		return E_INVALIDARG;
+	}
 
 	// ファイル別読み込み
 	DirectX::TexMetadata mdata;
@@ -52,6 +61,43 @@ HRESULT Texture::Create(const char* fileName)
 	}
 
 	// シェーダリソース生
+	hr = CreateShaderResourceView(GetDevice(), image.GetImages(), image.GetImageCount(), mdata, &m_pSRV);
+	if (SUCCEEDED(hr))
+	{
+		m_width = (UINT)mdata.width;
+		m_height = (UINT)mdata.height;
+	}
+	return hr;
+}
+
+HRESULT Texture::Create(const wchar_t* fileName)
+{
+	HRESULT hr = S_OK;
+
+	if (!fileName)
+	{
+		Diagnostics::LogInfo("[Texture] Create called with null fileName.");
+		return E_INVALIDARG;
+	}
+
+	DirectX::TexMetadata mdata;
+	DirectX::ScratchImage image;
+	const bool isTga = wcsstr(fileName, L".tga") != nullptr;
+	if (isTga)
+		hr = DirectX::LoadFromTGAFile(fileName, &mdata, image);
+	else
+		hr = DirectX::LoadFromWICFile(fileName, DirectX::WIC_FLAGS::WIC_FLAGS_IGNORE_SRGB, &mdata, image);
+	if (FAILED(hr))
+	{
+		if (!isTga)
+		{
+			std::ostringstream oss;
+			oss << "[Texture] LoadFromWICFile failed for wide path hr=0x" << std::hex << hr;
+			Diagnostics::LogInfo(oss.str());
+		}
+		return hr;
+	}
+
 	hr = CreateShaderResourceView(GetDevice(), image.GetImages(), image.GetImageCount(), mdata, &m_pSRV);
 	if (SUCCEEDED(hr))
 	{

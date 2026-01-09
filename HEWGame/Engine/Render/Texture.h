@@ -11,6 +11,7 @@ public:
     Texture();
     virtual ~Texture();
     HRESULT Create(const char* fileName);
+    HRESULT Create(const wchar_t* fileName);
     HRESULT Create(DXGI_FORMAT format, UINT width, UINT height, const void* pData = nullptr);
     HRESULT CreateFromMemory(const void* data, size_t size, const char* formatHint = nullptr);
 
