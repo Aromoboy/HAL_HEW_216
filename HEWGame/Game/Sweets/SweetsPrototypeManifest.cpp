@@ -371,6 +371,10 @@ namespace SweetsSpace
                 if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
                 if (normalized == NormalizeKey(ToString(SweetsType::Pineapple))) return SweetsType::Pineapple;
                 if (normalized == NormalizeKey(ToString(SweetsType::Banana))) return SweetsType::Banana;
+                if (normalized == NormalizeKey(ToString(SweetsType::Kiwi))) return SweetsType::Kiwi;
+                if (normalized == NormalizeKey(ToString(SweetsType::Mikan))) return SweetsType::Mikan;
+                if (normalized == NormalizeKey(ToString(SweetsType::Muscat))) return SweetsType::Muscat;
+                if (normalized == NormalizeKey(ToString(SweetsType::Melon))) return SweetsType::Melon;
                 return std::nullopt;
             };
 
