@@ -118,6 +118,17 @@ void UIManager::Draw()
         return;
     }
 
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+    Sprite::SetProjection(identity);
+    Sprite::SetView(identity);
+    Sprite::SetWorld(identity);
+    Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
+    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+
     const SamplerState previousSampler = GetSamplerState();
     SetSamplerState(SAMPLER_POINT);
 
