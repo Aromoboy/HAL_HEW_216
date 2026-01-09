@@ -1,4 +1,5 @@
 #include "UIManager.h"
+#include "DirectX.h"
 #include "Texture.h"
 
 #include <sstream>
@@ -117,6 +118,9 @@ void UIManager::Draw()
         return;
     }
 
+    const SamplerState previousSampler = GetSamplerState();
+    SetSamplerState(SAMPLER_POINT);
+
     const HUDUpdateData& data = *m_cachedData;
     if (m_hudRenderer && data.showHud)
     {
@@ -135,4 +139,6 @@ void UIManager::Draw()
             : data.hud.remainingSeconds;
         m_timerDisplay.Draw(remainingSeconds);
     }
+
+    SetSamplerState(previousSampler);
 }

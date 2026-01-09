@@ -14,6 +14,7 @@
 #include "TitleRenderer.h"
  
 #include <memory>
+#include <cmath>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -64,13 +65,13 @@ void TitleScene::OnEnter()
         m_background.reset();
     }
 
-    // UI ƒ{ƒ^ƒ“—pƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İ
-    m_texStartRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI5.png");
-    m_texStartGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI6.png");
-    m_texPowerUpRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI3.png");
-    m_texPowerUpGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI4.png");
-    m_texExitRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI1.png");
-    m_texExitGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI2.png");
+    // UI ãƒœã‚¿ãƒ³ç”¨ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿
+    m_texStartRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI5.png");
+    m_texStartGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI6.png");
+    m_texPowerUpRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI3.png");
+    m_texPowerUpGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI4.png");
+    m_texExitRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI1.png");
+    m_texExitGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI2.png");
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
@@ -121,8 +122,8 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-    // XVˆ—iƒL[“ü—Í‚ÆƒJ[ƒ\ƒ‹‘€ìj
-    // –îˆóã‰º‚ÅƒJ[ƒ\ƒ‹ˆÚ“®AŒˆ’è‚ÅƒV[ƒ“Ø‘Ö
+    // æ›´æ–°å‡¦ç†ï¼ˆã‚­ãƒ¼å…¥åŠ›ã¨ã‚«ãƒ¼ã‚½ãƒ«æ“ä½œï¼‰
+    // çŸ¢å°ä¸Šä¸‹ã§ã‚«ãƒ¼ã‚½ãƒ«ç§»å‹•ã€æ±ºå®šã§ã‚·ãƒ¼ãƒ³åˆ‡æ›¿
     float vertical = input->GetAxis(Core::ActionId::RotateYaw); 
     if (vertical > 0.5f)   
     {
@@ -135,7 +136,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         if (m_cursor >= static_cast<int>(TitleMenu::Max)) m_cursor = 0;
     }
 
-    // Œˆ’è
+    // æ±ºå®š
     if (input->IsTrigger(Core::ActionId::Confirm))
     {
         switch (static_cast<TitleMenu>(m_cursor))
@@ -194,6 +195,9 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+    const SamplerState previousSampler = GetSamplerState();
+    SetSamplerState(SAMPLER_POINT);
+
     if (m_background) m_background->Draw();
     
     (void)activeCamera;
@@ -203,20 +207,27 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
 
-            // Œ³‰æ‘œ”ä—¦‚É‡‚í‚¹‚ÄƒXƒP[ƒ‹
-            float scaleX = targetWidth / texWidth;
-            float scaleY = targetHeight / texHeight;
+            const float snappedWidth = std::round(targetWidth);
+            const float snappedHeight = std::round(targetHeight);
+            const float snappedCenterX = std::round(centerX);
+            const float snappedCenterY = std::round(centerY);
 
-            // Œ´“_‚ğƒeƒNƒXƒ`ƒƒ’†S‚ÉˆÚ“®
+            float scaleX = snappedWidth / texWidth;
+            float scaleY = snappedHeight / texHeight;
+            DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
+
+
+    SetSamplerState(previousSampler);
+            // åŸç‚¹ã‚’ãƒ†ã‚¯ã‚¹ãƒãƒ£ä¸­å¿ƒã«ç§»å‹•
             DirectX::XMMATRIX centering = DirectX::XMMatrixTranslation(-texWidth * 0.5f, -texHeight * 0.5f, 0.0f);
 
-            // ƒXƒP[ƒŠƒ“ƒO
+            // ã‚¹ã‚±ãƒ¼ãƒªãƒ³ã‚°
             DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scaleX, scaleY, 1.0f);
 
-            // ‰æ–Êã‚Ì’†SˆÊ’u‚ÉˆÚ“®
+            // ç”»é¢ä¸Šã®ä¸­å¿ƒä½ç½®ã«ç§»å‹•
             DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(centerX, centerY, 0.0f);
 
-            // Š|‚¯‡: ‰æ–ÊˆÚ“® * ƒXƒP[ƒŠƒ“ƒO * Œ´“_•â³
+            // æ›ã‘é †: ç”»é¢ç§»å‹• * ã‚¹ã‚±ãƒ¼ãƒªãƒ³ã‚° * åŸç‚¹è£œæ­£
             DirectX::XMMATRIX world = translation * scaling * centering;
 
             DirectX::XMFLOAT4X4 worldFloat;
@@ -227,15 +238,15 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             Sprite::Draw();
         };
 
-    // --- ƒ{ƒ^ƒ“”z’u ---
-    const float centerX = 640.0f;   // ‰æ–Ê’†‰›
-    const float startY = 250.0f;    // Å‰‚Ìƒ{ƒ^ƒ“ 
-    const float spacing = 240.0f;   // ƒ{ƒ^ƒ“ŠÔ‚ÌcŠÔŠu
+    // --- ãƒœã‚¿ãƒ³é…ç½® ---
+    const float centerX = 640.0f;   // ç”»é¢ä¸­å¤®
+    const float startY = 250.0f;    // æœ€åˆã®ãƒœã‚¿ãƒ³ 
+    const float spacing = 240.0f;   // ãƒœã‚¿ãƒ³é–“ã®ç¸¦é–“éš”
 
     const float buttonWidth = 600.0f;  
     const float buttonHeight = 220.0f;  
 
-    // ƒJ[ƒ\ƒ‹‚ÅF‚ğØ‚è‘Ö‚¦‚Ä•`‰æ
+    // ã‚«ãƒ¼ã‚½ãƒ«ã§è‰²ã‚’åˆ‡ã‚Šæ›¿ãˆã¦æç”»
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);

@@ -8,6 +8,7 @@ namespace
 	ID3D11DepthStencilState*	g_pDepthStencilState[2];
 	ID3D11BlendState*			g_pBlendState[BLEND_MAX];
 	ID3D11SamplerState*			g_pSamplerState[SAMPLER_MAX];
+	SamplerState				g_currentSamplerState = SAMPLER_LINEAR;
 }
 
 namespace
@@ -139,6 +140,7 @@ HRESULT InitDirectX(HWND hWnd, UINT width, UINT height, bool fullscreen)
 		if (FAILED(hr)) { return hr; }
 	}
 	SetSamplerState(SAMPLER_LINEAR);
+	g_currentSamplerState = SAMPLER_LINEAR;
 
 	return S_OK;
 }
@@ -217,4 +219,10 @@ void SetSamplerState(SamplerState state)
 {
 	if (state < 0 || state >= SAMPLER_MAX) return;
 	GetContext()->PSSetSamplers(0, 1, &g_pSamplerState[state]);
+	g_currentSamplerState = state;
+}
+
+SamplerState GetSamplerState()
+{
+	return g_currentSamplerState;
 }
