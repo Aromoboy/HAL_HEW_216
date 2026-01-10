@@ -32,6 +32,7 @@ constexpr float kCostScaleOffset = 0.07f;
 constexpr const char* kCostTextureName = "Cost";
 constexpr const char* kFrameTextureName = "Frame";
 constexpr const char* kBackFrameTexturenName = "BackFrame";
+constexpr const char* kBackgroundTextureName = "PowerUpBG";
 
 
 constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
@@ -118,6 +119,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 	m_cost = a_cache.Get(kCostTextureName);
 	m_iconFrame = a_cache.Get(kFrameTextureName);
 	m_backFrame = a_cache.Get(kBackFrameTexturenName);
+	m_background = a_cache.Get(kBackgroundTextureName);
 }
 
 PowerUpRenderer::~PowerUpRenderer()
@@ -351,6 +353,34 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
 	RenderString(data, world, view, proj, NodeCost);
+}
+
+void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera)
+{
+	if (!m_background)
+	{
+		return;
+	}
+
+	const DirectX::XMFLOAT4X4& view = camera.GetView();
+	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
+
+	DirectX::XMFLOAT4X4 world;
+	float3 position;
+	float3 scale;
+
+	// 画面中央・最背面
+	position = { 0.0f, 0.0f, 2.4f };
+	scale = { 3.6f, 2.0f, 1.0f };
+
+	DrawMatrix::CreateWorldMatrix(
+		world,
+		position,
+		scale,
+		float3{ 0.0f, 0.0f, 0.0f }
+	);
+
+	DrawSprite(m_background, world, view, proj);
 }
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)

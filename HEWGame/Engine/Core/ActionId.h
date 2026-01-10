@@ -20,5 +20,6 @@ namespace Core
         SpeedReset,
         ColliderNudgeUp,
         ColliderNudgeDown,
+        MoveMenu
     };
 }
