@@ -30,6 +30,27 @@ namespace
         return width > 0.0f && height > 0.0f;
     }
 
+    bool TryGetViewportSizeFromContext(float& width, float& height)
+    {
+        ID3D11DeviceContext* context = GetContext();
+        if (!context)
+        {
+            return false;
+        }
+
+        D3D11_VIEWPORT viewport{};
+        UINT count = 1;
+        context->RSGetViewports(&count, &viewport);
+        if (count == 0)
+        {
+            return false;
+        }
+
+        width = viewport.Width;
+        height = viewport.Height;
+        return width > 0.0f && height > 0.0f;
+    }
+
     UVWindow ComputeVerticalUVWindow(
         float textureWidth,
         float textureHeight,
@@ -170,7 +191,16 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
 
     float viewportWidth = 0.0f;
     float viewportHeight = 0.0f;
-    const bool hasViewport = TryGetViewportSize(viewportWidth, viewportHeight);
+    bool hasViewport = TryGetViewportSize(viewportWidth, viewportHeight);
+    if (!hasViewport)
+    {
+        hasViewport = TryGetViewportSizeFromContext(viewportWidth, viewportHeight);
+    }
+    if (!hasViewport)
+    {
+        Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background draw.");
+        return;
+    }
 
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
@@ -190,29 +220,19 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
         const float adjustedScrollOffset = scrollDirection * scrollOffset;
         const float layerPixelsPerUnit = layer.config.scrollOffsetInPixels ? 1.0f : pixelsPerUnit;
-        if (hasViewport)
-        {
-            const float textureWidth = static_cast<float>(layer.texture->GetWidth());
-            const float textureHeight = static_cast<float>(layer.texture->GetHeight());
-            const UVWindow window = ComputeVerticalUVWindow(
-                textureWidth,
-                textureHeight,
-                viewportWidth,
-                viewportHeight,
-                adjustedScrollOffset,
-                layer.config.parallaxFactor,
-                layer.config.baseOffset01,
-                layerPixelsPerUnit);
-            Sprite::SetUVPos({ window.u0, window.v0 });
-            Sprite::SetUVScale({ window.scaleX, window.scaleY });
-        }
-        else
-        {
-            const float parallaxOffsetY = adjustedScrollOffset * layer.config.parallaxFactor;
-            const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
-            Sprite::SetUVPos(parallaxOffset);
-            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-        }
+        const float textureWidth = static_cast<float>(layer.texture->GetWidth());
+        const float textureHeight = static_cast<float>(layer.texture->GetHeight());
+        const UVWindow window = ComputeVerticalUVWindow(
+            textureWidth,
+            textureHeight,
+            viewportWidth,
+            viewportHeight,
+            adjustedScrollOffset,
+            layer.config.parallaxFactor,
+            layer.config.baseOffset01,
+            layerPixelsPerUnit);
+        Sprite::SetUVPos({ window.u0, window.v0 });
+        Sprite::SetUVScale({ window.scaleX, window.scaleY });
         Sprite::SetColor(layer.config.tintColor);
         Sprite::Draw();
     }
