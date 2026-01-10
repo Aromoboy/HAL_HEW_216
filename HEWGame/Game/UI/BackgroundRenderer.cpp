@@ -37,6 +37,7 @@ namespace
         float screenHeight,
         float scrollOffset,
         float parallaxFactor,
+        float baseOffset01,
         float pixelsPerUnit)
     {
         UVWindow out{};
@@ -49,6 +50,7 @@ namespace
         const float textureAspect = textureWidth / textureHeight;
         const float scrollWorld = scrollOffset * parallaxFactor;
         const float scrollPx = scrollWorld * pixelsPerUnit;
+        const float clampedBaseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
 
         if (textureAspect < screenAspect)
         {
@@ -59,7 +61,8 @@ namespace
             }
 
             const float maxOffsetPx = std::max(0.0f, textureWidth - visibleWidthPx);
-            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
+            const float baseOffsetPx = clampedBaseOffset01 * visibleWidthPx;
+            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
             const float segmentWidthUV = std::clamp(visibleWidthPx / textureWidth, 0.0f, 1.0f);
 
             float u0 = offsetPx / textureWidth;
@@ -78,7 +81,8 @@ namespace
             }
 
             const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
-            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
+            const float baseOffsetPx = clampedBaseOffset01 * visibleHeightPx;
+            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
             const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
 
             float v0 = offsetPx / textureHeight;
@@ -185,6 +189,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         Sprite::SetTexture(layer.texture.get());
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
         const float adjustedScrollOffset = scrollDirection * scrollOffset;
+        const float layerPixelsPerUnit = layer.config.scrollOffsetInPixels ? 1.0f : pixelsPerUnit;
         if (hasViewport)
         {
             const float textureWidth = static_cast<float>(layer.texture->GetWidth());
@@ -196,7 +201,8 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
                 viewportHeight,
                 adjustedScrollOffset,
                 layer.config.parallaxFactor,
-                pixelsPerUnit);
+                layer.config.baseOffset01,
+                layerPixelsPerUnit);
             Sprite::SetUVPos({ window.u0, window.v0 });
             Sprite::SetUVScale({ window.scaleX, window.scaleY });
         }
