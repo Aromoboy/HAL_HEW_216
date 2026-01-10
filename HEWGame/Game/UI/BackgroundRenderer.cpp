@@ -17,54 +17,6 @@ namespace
         float scaleY = 1.0f;
     };
 
-    bool TryGetViewportSize(float& width, float& height)
-    {
-        auto* context = GetContext();
-        if (context)
-        {
-            UINT count = 1;
-            D3D11_VIEWPORT viewport{};
-            context->RSGetViewports(&count, &viewport);
-            if (count > 0)
-            {
-                width = viewport.Width;
-                height = viewport.Height;
-                return width > 0.0f && height > 0.0f;
-            }
-        }
-
-        RenderTarget* rtv = GetDefaultRTV();
-        if (!rtv)
-        {
-            return false;
-        }
-
-        width = static_cast<float>(rtv->GetWidth());
-        height = static_cast<float>(rtv->GetHeight());
-        return width > 0.0f && height > 0.0f;
-    }
-
-    bool TryGetViewportSizeFromContext(float& width, float& height)
-    {
-        ID3D11DeviceContext* context = GetContext();
-        if (!context)
-        {
-            return false;
-        }
-
-        D3D11_VIEWPORT viewport{};
-        UINT count = 1;
-        context->RSGetViewports(&count, &viewport);
-        if (count == 0)
-        {
-            return false;
-        }
-
-        width = viewport.Width;
-        height = viewport.Height;
-        return width > 0.0f && height > 0.0f;
-    }
-
     UVWindow ComputeVerticalUVWindow(
         float textureWidth,
         float textureHeight,
@@ -203,16 +155,10 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
-    float viewportWidth = 0.0f;
-    float viewportHeight = 0.0f;
-    bool hasViewport = TryGetViewportSize(viewportWidth, viewportHeight);
-    if (!hasViewport)
+    ID3D11DeviceContext* context = GetContext();
+    if (!context)
     {
-        hasViewport = TryGetViewportSizeFromContext(viewportWidth, viewportHeight);
-    }
-    if (!hasViewport)
-    {
-        Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background draw.");
+        Diagnostics::LogInfo("[BackgroundRenderer] Viewport context unavailable; skipping background draw.");
         return;
     }
 
@@ -226,6 +172,17 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             continue;
         }
 
+        UINT viewportCount = 1;
+        D3D11_VIEWPORT viewport{};
+        context->RSGetViewports(&viewportCount, &viewport);
+        if (viewportCount == 0)
+        {
+            Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background layer.");
+            continue;
+        }
+
+        const float viewportWidth = viewport.Width;
+        const float viewportHeight = viewport.Height;
         SetSamplerState(ToSamplerState(layer.config.samplingMode));
         Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
         // Aspect is corrected via UVs; geometry stays in NDC.
