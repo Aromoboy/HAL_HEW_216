@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameplayProgression.h"
+#include "Vector.h"
 #include <deque>
 #include <memory>
 #include <unordered_set>
@@ -22,6 +23,8 @@ public:
         float thicknessPixels = 0.0f;
         float widthPaddingWorld = 0.0f;
         float zOffset = 0.0f;
+        float3 spinAxis{ 0.0f, 0.0f, 0.0f };
+        float spinSpeedDegPerSec = 0.0f;
         float cooldownDurationSeconds = 0.0f;
         float cooldownRemainingSeconds = 0.0f;
         float centerX = 0.0f;
