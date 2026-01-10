@@ -213,13 +213,30 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     
     (void)activeCamera;
 
-    auto drawUIButton = [](Texture& tex,
-                           bool isValid,
-                           const char* label,
-                           float centerX,
-                           float centerY,
-                           float targetWidth,
-                           float targetHeight)
+    DirectX::XMFLOAT4X4 uiProjection;
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(
+        &uiProjection,
+        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
+    );
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+    Sprite::SetProjection(uiProjection);
+    Sprite::SetView(identity);
+    Sprite::SetWorld(identity);
+    Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
+    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+    SetSamplerState(SAMPLER_POINT);
+
+    auto drawUIButton = [&](Texture& tex,
+                            bool isValid,
+                            const char* label,
+                            float centerX,
+                            float centerY,
+                            float targetWidth,
+                            float targetHeight)
         {
             if (!isValid)
             {
@@ -240,26 +257,10 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
                 return;
             }
 
-            const float snappedWidth = std::round(targetWidth);
-            const float snappedHeight = std::round(targetHeight);
-            const float snappedCenterX = std::round(centerX);
-            const float snappedCenterY = std::round(centerY);
-
-            const float scaleX = snappedWidth;
-            const float scaleY = snappedHeight;
-
-            const DirectX::XMMATRIX centering = DirectX::XMMatrixTranslation(-0.5f, -0.5f, 0.0f);
-            const DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scaleX, scaleY, 1.0f);
-            const DirectX::XMMATRIX snappedTranslation = DirectX::XMMatrixTranslation(snappedCenterX, snappedCenterY, 0.0f);
-            const DirectX::XMMATRIX world = centering * scaling * snappedTranslation;
-
-            DirectX::XMFLOAT4X4 worldFloat;
-            DirectX::XMStoreFloat4x4(&worldFloat, world);
-
             Sprite::SetTexture(&tex);
-            Sprite::SetWorld(worldFloat);
-            Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
-            Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+            Sprite::SetWorld(identity);
+            Sprite::SetSize(DirectX::XMFLOAT2(targetWidth, targetHeight));
+            Sprite::SetOffset(DirectX::XMFLOAT2(centerX, centerY));
             Sprite::Draw();
         };
 
@@ -274,22 +275,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const float startY = (screenHeight - groupHeight) * 0.5f + buttonHeight * 0.5f;
 
     // カーソルで色を切り替えて描画
-    DirectX::XMFLOAT4X4 uiProjection;
-    DirectX::XMFLOAT4X4 identity;
-    DirectX::XMStoreFloat4x4(
-        &uiProjection,
-        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
-    );
-    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
-    Sprite::SetProjection(uiProjection);
-    Sprite::SetView(identity);
-    Sprite::SetWorld(identity);
-    Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-    Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-    Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-    SetSamplerState(SAMPLER_POINT);
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
                  m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
                  m_cursor == 0 ? "start_green_btn" : "start_red_btn",
