@@ -205,11 +205,9 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const SamplerState previousSampler = GetSamplerState();
     if (m_background) m_background->Draw();
     
-    const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
-    const DirectX::XMFLOAT4X4& proj = activeCamera->GetProjection();
+    const auto& view = activeCamera->GetView();
+    const auto& proj = activeCamera->GetProjection();
 
-    Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
-    Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
@@ -218,10 +216,8 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     auto drawUIButton = [&](Texture& tex,
                             bool isValid,
                             const char* label,
-                            float centerX,
-                            float centerY,
-                            float targetWidth,
-                            float targetHeight)
+                            const float3& position,
+                            const float3& scale)
         {
             if (!isValid)
             {
@@ -243,51 +239,42 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
             }
 
             DirectX::XMFLOAT4X4 world;
-            float3 position{ centerX, centerY, 1.0f };
-            float3 scale{ targetWidth, targetHeight, 1.0f };
-
             DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
 
             Sprite::SetTexture(&tex);
             Sprite::SetWorld(world);
             Sprite::SetView(view);
             Sprite::SetProjection(proj);
+            Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
+            Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
             Sprite::Draw();
         };
 
     // --- ボタン配置 ---
-    const float centerX = 640.0f;   // 画面中央
-    const float screenHeight = 720.0f;
-    const float spacing = 240.0f;   // ボタン間の縦間隔
-
-    const float buttonWidth = 600.0f;
-    const float buttonHeight = 220.0f;
-    const float groupHeight = spacing * 2.0f + buttonHeight;
-    const float startY = (screenHeight - groupHeight) * 0.5f + buttonHeight * 0.5f;
+    const float buttonSpacing = 0.7f;
+    const float3 buttonScale{ 1.6f, 0.6f, 1.0f };
+    const float3 buttonBasePosition{ 0.0f, 0.6f, 1.0f };
+    const float3 startButtonPosition{ buttonBasePosition.x, buttonBasePosition.y, buttonBasePosition.z };
+    const float3 powerUpButtonPosition{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing, buttonBasePosition.z };
+    const float3 exitButtonPosition{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing * 2.0f, buttonBasePosition.z };
 
     // カーソルで色を切り替えて描画
     SetDepthTest(false);
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
                  m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
                  m_cursor == 0 ? "start_green_btn" : "start_red_btn",
-                 centerX,
-                 startY + spacing * 0,
-                 buttonWidth,
-                 buttonHeight);
+                 startButtonPosition,
+                 buttonScale);
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed,
                  m_cursor == 1 ? m_texPowerUpGreenValid : m_texPowerUpRedValid,
                  m_cursor == 1 ? "kyouka_green_btn" : "kyouka_red_btn",
-                 centerX,
-                 startY + spacing * 1,
-                 buttonWidth,
-                 buttonHeight);
+                 powerUpButtonPosition,
+                 buttonScale);
     drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed,
                  m_cursor == 2 ? m_texExitGreenValid : m_texExitRedValid,
                  m_cursor == 2 ? "exit_green_btn" : "exit_red_btn",
-                 centerX,
-                 startY + spacing * 2,
-                 buttonWidth,
-                 buttonHeight);
+                 exitButtonPosition,
+                 buttonScale);
     SetDepthTest(true);
 
     SetSamplerState(previousSampler);
