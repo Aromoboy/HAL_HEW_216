@@ -202,6 +202,7 @@ namespace Stage
         result.guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
         result.guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
         result.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
+        result.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
         result.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
         result.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
         result.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
@@ -736,6 +737,21 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineThicknessPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "guidelineThicknessWorld")
+            {
+                try
+                {
+                    result.guidelineThicknessWorld = std::stof(rawValue);
+                    result.guidelineThicknessWorldSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineThicknessWorld on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

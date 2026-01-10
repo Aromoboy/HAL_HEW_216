@@ -193,6 +193,11 @@ namespace Stage
         return m_guidelineThicknessPixels;
     }
 
+    float StageData::GetGuidelineThicknessWorld() const noexcept
+    {
+        return m_guidelineThicknessWorld;
+    }
+
     float StageData::GetGuidelineWidthPaddingWorld() const noexcept
     {
         return m_guidelineWidthPaddingWorld;
@@ -260,6 +265,7 @@ namespace Stage
         m_guidelineHeight = normalized.guidelineHeight;
         m_guidelineStep = normalized.guidelineStep;
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
+        m_guidelineThicknessWorld = normalized.guidelineThicknessWorld;
         m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
         m_guidelineZOffset = normalized.guidelineZOffset;
         m_guidelineModelPath = normalized.guidelineModelPath;
@@ -295,6 +301,7 @@ namespace Stage
             << " guidelineHeight=" << m_guidelineHeight
             << " guidelineStep=" << m_guidelineStep
             << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
+            << " guidelineThicknessWorld=" << m_guidelineThicknessWorld
             << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
             << " guidelineZOffset=" << m_guidelineZOffset
             << " guidelineModelPath='" << m_guidelineModelPath << "'"

@@ -35,6 +35,7 @@ namespace Stage
         float guidelineHeight = 0.0f;
         float guidelineStep = 0.0f;
         float guidelineThicknessPixels = 0.0f;
+        float guidelineThicknessWorld = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
         std::string guidelineModelPath;
@@ -73,6 +74,7 @@ namespace Stage
         static constexpr float kDefaultGuidelineHeight = 2.0f;
         static constexpr float kDefaultGuidelineStep = 1.0f;
         static constexpr float kDefaultGuidelineThicknessPixels = 3.0f;
+        static constexpr float kDefaultGuidelineThicknessWorld = 0.05f;
         static constexpr float kDefaultGuidelineZOffset = 0.1f;
         static constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
         static constexpr float kDefaultHeightBonusSeconds = 5.0f;

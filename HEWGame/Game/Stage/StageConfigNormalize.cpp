@@ -242,6 +242,7 @@ namespace Stage
         float guidelineHeight = parsed.guidelineHeight;
         float guidelineStep = parsed.guidelineStep;
         float guidelineThicknessPixels = parsed.guidelineThicknessPixels;
+        float guidelineThicknessWorld = parsed.guidelineThicknessWorld;
         float guidelineWidthPaddingWorld = parsed.guidelineWidthPaddingWorld;
         float guidelineZOffset = parsed.guidelineZOffset;
         std::string guidelineModelPath = parsed.guidelineModelPath;
@@ -291,6 +292,13 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineThicknessPixels not specified; defaulting to "
                 << guidelineThicknessPixels << "\n";
+        }
+        if (!parsed.guidelineThicknessWorldSet)
+        {
+            guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessWorld not specified; defaulting to "
+                << guidelineThicknessWorld << "\n";
         }
         if (!parsed.guidelineWidthPaddingSet)
         {
@@ -838,6 +846,13 @@ namespace Stage
                 << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineThicknessPixels << "\n";
             guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
         }
+        if (!std::isfinite(guidelineThicknessWorld) || guidelineThicknessWorld <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineThicknessWorld value " << guidelineThicknessWorld
+                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineThicknessWorld << "\n";
+            guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
+        }
         if (!std::isfinite(guidelineWidthPaddingWorld) || guidelineWidthPaddingWorld < 0.0f)
         {
             std::ostringstream oss;
@@ -915,6 +930,7 @@ namespace Stage
         normalized.guidelineHeight = guidelineHeight;
         normalized.guidelineStep = guidelineStep;
         normalized.guidelineThicknessPixels = guidelineThicknessPixels;
+        normalized.guidelineThicknessWorld = guidelineThicknessWorld;
         normalized.guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
         normalized.guidelineZOffset = guidelineZOffset;
         normalized.guidelineModelPath = std::move(guidelineModelPath);
@@ -965,6 +981,7 @@ namespace Stage
         normalized.guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
         normalized.guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
         normalized.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
+        normalized.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
         normalized.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
         normalized.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
         normalized.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
