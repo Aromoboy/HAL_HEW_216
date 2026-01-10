@@ -4,7 +4,64 @@
 #include "DirectX.h"
 #include "Sprite.h"
 #include "Texture.h"
+#include <algorithm>
 #include <sstream>
+
+namespace
+{
+    struct UVWindow
+    {
+        float v0 = 0.0f;
+        float scaleY = 1.0f;
+    };
+
+    bool TryGetViewportSize(float& width, float& height)
+    {
+        RenderTarget* rtv = GetDefaultRTV();
+        if (!rtv)
+        {
+            return false;
+        }
+
+        width = static_cast<float>(rtv->GetWidth());
+        height = static_cast<float>(rtv->GetHeight());
+        return width > 0.0f && height > 0.0f;
+    }
+
+    UVWindow ComputeVerticalUVWindow(
+        float textureWidth,
+        float textureHeight,
+        float screenWidth,
+        float screenHeight,
+        float scrollOffset,
+        float parallaxFactor,
+        float pixelsPerUnit = 1.0f)
+    {
+        UVWindow out{};
+        if (textureWidth <= 0.0f || textureHeight <= 0.0f || screenWidth <= 0.0f || screenHeight <= 0.0f)
+        {
+            return out;
+        }
+
+        const float visibleHeightPx = textureWidth * (screenHeight / screenWidth);
+        if (visibleHeightPx <= 0.0f)
+        {
+            return out;
+        }
+
+        const float scrollPx = scrollOffset * pixelsPerUnit * parallaxFactor;
+        const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
+        const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
+        const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
+
+        float v0 = offsetPx / textureHeight;
+        v0 = std::clamp(v0, 0.0f, 1.0f - segmentHeightUV);
+
+        out.v0 = v0;
+        out.scaleY = segmentHeightUV;
+        return out;
+    }
+}
 
 BackgroundRenderer::BackgroundRenderer()
 {
@@ -67,6 +124,10 @@ void BackgroundRenderer::Draw(float scrollOffset) const
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    const bool hasViewport = TryGetViewportSize(viewportWidth, viewportHeight);
+
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
     Sprite::SetProjection(m_identityMatrix);
@@ -81,10 +142,28 @@ void BackgroundRenderer::Draw(float scrollOffset) const
         Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::SetTexture(layer.texture.get());
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
-        const float parallaxOffsetY = scrollDirection * scrollOffset * layer.config.parallaxFactor;
-        const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
-        Sprite::SetUVPos(parallaxOffset);
-        Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+        const float adjustedScrollOffset = scrollDirection * scrollOffset;
+        if (hasViewport)
+        {
+            const float textureWidth = static_cast<float>(layer.texture->GetWidth());
+            const float textureHeight = static_cast<float>(layer.texture->GetHeight());
+            const UVWindow window = ComputeVerticalUVWindow(
+                textureWidth,
+                textureHeight,
+                viewportWidth,
+                viewportHeight,
+                adjustedScrollOffset,
+                layer.config.parallaxFactor);
+            Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, window.v0));
+            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, window.scaleY));
+        }
+        else
+        {
+            const float parallaxOffsetY = adjustedScrollOffset * layer.config.parallaxFactor;
+            const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
+            Sprite::SetUVPos(parallaxOffset);
+            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+        }
         Sprite::SetColor(layer.config.tintColor);
         Sprite::Draw();
     }
