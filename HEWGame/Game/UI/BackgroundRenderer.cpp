@@ -47,7 +47,8 @@ namespace
 
         const float screenAspect = screenWidth / screenHeight;
         const float textureAspect = textureWidth / textureHeight;
-        const float scrollPx = scrollOffset * pixelsPerUnit * parallaxFactor;
+        const float scrollWorld = scrollOffset * parallaxFactor;
+        const float scrollPx = scrollWorld * pixelsPerUnit;
 
         if (textureAspect < screenAspect)
         {
