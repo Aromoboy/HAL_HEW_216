@@ -37,6 +37,8 @@ namespace Stage
         float guidelineThicknessPixels = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
+        std::string guidelineModelPath;
+        std::string guidelineMaterialKey;
         std::string backgroundTexturePath;
         float heightBonusThreshold = 0.0f;
         float heightBonusSeconds = 0.0f;
@@ -82,6 +84,8 @@ namespace Stage
         static const DirectX::XMFLOAT4& DefaultPlatformSecondaryColor();
         static const float3& DefaultPickupOffsetLocalCells();
         static const std::string& DefaultBackgroundTexturePath();
+        static const std::string& DefaultGuidelineModelPath();
+        static const std::string& DefaultGuidelineMaterialKey();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();
         static const std::vector<float>& DefaultMiniThresholds();

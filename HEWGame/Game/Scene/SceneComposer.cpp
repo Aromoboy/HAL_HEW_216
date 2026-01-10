@@ -223,6 +223,8 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineThicknessPixels=" << result.stageData.GetGuidelineThicknessPixels()
             << " guidelineWidthPaddingWorld=" << result.stageData.GetGuidelineWidthPaddingWorld()
             << " guidelineZOffset=" << result.stageData.GetGuidelineZOffset()
+            << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
+            << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
             << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
@@ -379,7 +381,54 @@ void SceneComposer::ComposePhysics(Composition& result)
     }
     if (result.drawSystem && result.guidelineHeightMeters > 0.0f)
     {
-        result.guidelineActor = std::make_unique<GuidelineActor>();
+        std::shared_ptr<Render::Model> guidelineModel;
+        const std::string& guidelineModelPath = result.stageData.GetGuidelineModelPath();
+        const std::string& guidelineMaterialKey = result.stageData.GetGuidelineMaterialKey();
+        if (!guidelineModelPath.empty())
+        {
+            guidelineModel = Render::ModelCache::Instance().Get(guidelineModelPath);
+            if (!guidelineModel)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Guideline model load failed path='" << guidelineModelPath
+                    << "'; fallback quad will be used.\n";
+                DebugTrace(oss.str());
+            }
+            else
+            {
+                if (!guidelineMaterialKey.empty())
+                {
+                    guidelineModel->SetMaterialKey(guidelineMaterialKey);
+                }
+                std::ostringstream oss;
+                oss << kLogPrefix << "Guideline model loaded path='" << guidelineModelPath
+                    << "' materialKey='" << guidelineMaterialKey << "'\n";
+                DebugTrace(oss.str());
+            }
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Guideline model path empty; fallback quad will be used.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (guidelineModel)
+        {
+            result.guidelineActor = std::make_unique<GuidelineActor>(guidelineModel);
+        }
+        else
+        {
+            result.guidelineActor = std::make_unique<GuidelineActor>();
+            if (result.guidelineActor && !guidelineMaterialKey.empty())
+            {
+                const auto model = result.guidelineActor->GetModel();
+                if (model)
+                {
+                    model->SetMaterialKey(guidelineMaterialKey);
+                }
+            }
+        }
         if (result.guidelineActor)
         {
             const float guidelineZ = result.stageData.GetPlaneZ() + result.guidelineZOffset;

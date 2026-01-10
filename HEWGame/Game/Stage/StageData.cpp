@@ -203,6 +203,16 @@ namespace Stage
         return m_guidelineZOffset;
     }
 
+    const std::string& StageData::GetGuidelineModelPath() const noexcept
+    {
+        return m_guidelineModelPath;
+    }
+
+    const std::string& StageData::GetGuidelineMaterialKey() const noexcept
+    {
+        return m_guidelineMaterialKey;
+    }
+
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -252,6 +262,8 @@ namespace Stage
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
         m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
         m_guidelineZOffset = normalized.guidelineZOffset;
+        m_guidelineModelPath = normalized.guidelineModelPath;
+        m_guidelineMaterialKey = normalized.guidelineMaterialKey;
         m_heightBonusThreshold = normalized.heightBonusThreshold;
         m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
@@ -285,6 +297,8 @@ namespace Stage
             << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
             << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
             << " guidelineZOffset=" << m_guidelineZOffset
+            << " guidelineModelPath='" << m_guidelineModelPath << "'"
+            << " guidelineMaterialKey='" << m_guidelineMaterialKey << "'"
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"

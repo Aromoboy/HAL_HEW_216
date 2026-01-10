@@ -147,6 +147,11 @@ GuidelineActor::GuidelineActor()
 {
 }
 
+GuidelineActor::GuidelineActor(std::shared_ptr<Render::Model> model)
+    : Entities::Entity(Transform{}, std::move(model), Core::UpdatePhase::Gameplay, 0, kGuidelineTag)
+{
+}
+
 void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, float width, float thickness)
 {
     const float safeWidth = (std::isfinite(width) && width > 0.0f) ? width : 0.01f;
