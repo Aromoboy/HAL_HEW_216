@@ -183,8 +183,8 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
                 adjustedScrollOffset,
                 layer.config.parallaxFactor,
                 pixelsPerUnit);
-            Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, window.v0));
-            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, window.scaleY));
+            Sprite::SetUVPos(DirectX::XMFLOAT2(window.u0, window.v0));
+            Sprite::SetUVScale(DirectX::XMFLOAT2(window.scaleX, window.scaleY));
         }
         else
         {
