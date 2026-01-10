@@ -4,6 +4,7 @@
 #include "DirectX.h"
 #include "Sprite.h"
 #include "Texture.h"
+#include <algorithm>
 #include <sstream>
 
 BackgroundRenderer::BackgroundRenderer()
@@ -64,12 +65,24 @@ void BackgroundRenderer::Draw(float scrollOffset) const
         return;
     }
 
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    if (!TryGetViewportSize(viewportWidth, viewportHeight))
+    {
+        return;
+    }
+
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
     Sprite::SetWorld(m_identityMatrix);
     Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
+    DirectX::XMFLOAT4X4 projection;
+    DirectX::XMStoreFloat4x4(
+        &projection,
+        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, viewportWidth, viewportHeight, 0.0f, 0.0f, 1.0f)
+    );
+    Sprite::SetProjection(projection);
     for (const auto& layer : m_layers)
     {
         if (!layer.texture)
@@ -77,8 +90,23 @@ void BackgroundRenderer::Draw(float scrollOffset) const
             continue;
         }
 
-        Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
-        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
+        const float textureWidth = static_cast<float>(layer.texture->GetWidth());
+        const float textureHeight = static_cast<float>(layer.texture->GetHeight());
+        if (textureWidth <= 0.0f || textureHeight <= 0.0f)
+        {
+            continue;
+        }
+
+        const float scaleX = viewportWidth / textureWidth;
+        const float scaleY = viewportHeight / textureHeight;
+        const float scale = layer.config.fitMode == BackgroundRendererConfig::FitMode::Contain
+            ? std::min(scaleX, scaleY)
+            : std::max(scaleX, scaleY);
+        const float scaledWidth = textureWidth * scale;
+        const float scaledHeight = textureHeight * scale;
+
+        Sprite::SetSize(DirectX::XMFLOAT2(scaledWidth, scaledHeight));
+        Sprite::SetOffset(DirectX::XMFLOAT2(viewportWidth * 0.5f, viewportHeight * 0.5f));
         Sprite::SetTexture(layer.texture.get());
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
         const float parallaxOffsetY = scrollDirection * scrollOffset * layer.config.parallaxFactor;
@@ -90,6 +118,19 @@ void BackgroundRenderer::Draw(float scrollOffset) const
     }
 
     SetDepthTest(true);
+}
+
+bool BackgroundRenderer::TryGetViewportSize(float& width, float& height) const
+{
+    RenderTarget* rtv = GetDefaultRTV();
+    if (!rtv)
+    {
+        return false;
+    }
+
+    width = static_cast<float>(rtv->GetWidth());
+    height = static_cast<float>(rtv->GetHeight());
+    return width > 0.0f && height > 0.0f;
 }
 
 std::unique_ptr<Texture> BackgroundRenderer::LoadTexture(const std::string& path) const
