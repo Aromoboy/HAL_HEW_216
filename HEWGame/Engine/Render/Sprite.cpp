@@ -17,9 +17,9 @@ struct VS_OUT {
 	float4 color : COLOR0;
 };
 cbuffer Matrix : register(b0) {
-	float4x4 world;
-	float4x4 view;
-	float4x4 proj;
+	row_major float4x4 world;
+	row_major float4x4 view;
+	row_major float4x4 proj;
 };
 cbuffer Param : register(b1) {
 	float2 offset;
@@ -134,18 +134,15 @@ void Sprite::SetTexture(Texture* tex)
 }
 void Sprite::SetWorld(DirectX::XMFLOAT4X4 world)
 {
-	const DirectX::XMMATRIX worldMatrix = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&world));
-	DirectX::XMStoreFloat4x4(&m_data.matrix[0], worldMatrix);
+	m_data.matrix[0] = world;
 }
 void Sprite::SetView(DirectX::XMFLOAT4X4 view)
 {
-	const DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&view));
-	DirectX::XMStoreFloat4x4(&m_data.matrix[1], viewMatrix);
+	m_data.matrix[1] = view;
 }
 void Sprite::SetProjection(DirectX::XMFLOAT4X4 proj)
 {
-	const DirectX::XMMATRIX projMatrix = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&proj));
-	DirectX::XMStoreFloat4x4(&m_data.matrix[2], projMatrix);
+	m_data.matrix[2] = proj;
 }
 void Sprite::SetVertexShader(Shader* vs)
 {
