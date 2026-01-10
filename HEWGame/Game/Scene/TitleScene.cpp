@@ -257,11 +257,13 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
 
     // --- ボタン配置 ---
     const float centerX = 640.0f;   // 画面中央
-    const float startY = 250.0f;    // 最初のボタン 
+    const float screenHeight = 720.0f;
     const float spacing = 240.0f;   // ボタン間の縦間隔
 
-    const float buttonWidth = 600.0f;  
-    const float buttonHeight = 220.0f;  
+    const float buttonWidth = 600.0f;
+    const float buttonHeight = 220.0f;
+    const float groupHeight = spacing * 2.0f + buttonHeight;
+    const float startY = (screenHeight - groupHeight) * 0.5f + buttonHeight * 0.5f;
 
     // カーソルで色を切り替えて描画
     DirectX::XMFLOAT4X4 uiProjection;
