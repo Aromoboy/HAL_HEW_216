@@ -1306,6 +1306,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         return;
     }
 
+    // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
     float pixelsPerUnit = 1.0f;
 
