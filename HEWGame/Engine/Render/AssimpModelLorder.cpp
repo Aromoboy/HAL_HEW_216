@@ -92,7 +92,16 @@ namespace
         case SweetsType::Banana:
             return "Assets/Texture/banana.png";
         case SweetsType::Cream:
-            return "Assets/Texture/cream.png";
+            return "Assets/Texture/Cream.png";
+
+        case SweetsType::Kiwi :
+            return "Assets/Texture/kiwi.png";
+        case SweetsType::Mikan:
+            return "Assets/Texture/mikan.png";
+        case SweetsType::Muscat:
+            return "Assets/Texture/muscat.png";
+        case SweetsType::Melon:
+            return "Assets/Texture/melon.png";
         default:
             return std::nullopt;
         }
@@ -138,13 +147,30 @@ namespace
         }
         if (contains("cream"))
         {
-            return "Assets/Texture/cream.png";
+            return "Assets/Texture/Cream.png";
         }
         if (contains("banana"))
         {
             return "Assets/Texture/banana.png";
         }
 
+        //01/09追加分
+        if (contains("kiwi"))
+        {
+            return "Assets/Texture/kiwi.png";
+        }
+        if (contains("mikan"))
+        {
+            return "Assets/Texture/mikan.png";
+        }
+        if (contains("muscat"))
+        {
+            return "Assets/Texture/muscat.png";
+        }
+        if (contains("melon"))
+        {
+            return "Assets/Texture/melon.png";
+        }
         return std::nullopt;
     }
 
@@ -157,12 +183,15 @@ namespace
             aliases.emplace(NormalizeForKey(alias), target);
         };
 
-        addAlias("パイナップル.png", "pineapple.png");
         addAlias("パイナップル.png", "pineapple.png");
         addAlias("バナナ.png", "banana.png");
         addAlias("ブルーベリー.png", "blueberry.png");
         addAlias("ストロベリー.png", "strawberry.png");
         addAlias("いちご.png", "strawberry.png");
+        addAlias("キウイ.png", "kiwi.png");
+        addAlias("みかん.png", "mikan.png");
+        addAlias("マスカット.png", "muscat.png");
+        addAlias("メロン.png", "melon.png");
         addAlias("クリーム.png", "cream.png");
 
         return aliases;
@@ -244,6 +273,15 @@ namespace
             }
         }
 
+        if (normalizedModelPath.find("guideline") != std::string::npos)
+        {
+            const std::string guidelineTexture = "Assets/Texture/GuideLine.png";
+            if (std::filesystem::exists(guidelineTexture))
+            {
+                return guidelineTexture;
+            }
+        }
+
         return std::nullopt;
     }
 
@@ -303,7 +341,8 @@ namespace
 std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     const std::string& path,
     ID3D11Device* device,
-    TextureCache& textureCache)
+    TextureCache& textureCache,
+    const MaterialTuningSettings& materialTuningSettings)
 {
     unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenUVCoords;
     const std::string normalizedPath = NormalizePath(path);
@@ -407,7 +446,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
+    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache, materialTuningSettings);
     const bool hasTextureOverride = ResolveTextureOverrideForModel(normalizedPath).has_value();
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
@@ -446,13 +485,14 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             baseMaterial->GetAmbient(),
             baseMaterial->GetSpecular(),
             nullptr);
+        ApplyMaterialTuning(*untexturedMaterial, "default", materialTuningSettings);
         materials.push_back(std::move(untexturedMaterial));
         meshPtr->SetMaterialID(static_cast<unsigned int>(materials.size() - 1));
     }
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, bounds);
+    return std::make_shared<ModelDX>(meshes, materials, &materialTuningSettings, bounds);
 }
 
 // メッシュ作成
@@ -661,12 +701,14 @@ AssimpModelLorder::MakeMaterial(
     const std::string& directory,
     const std::string& modelFilename,
     ID3D11Device* device,
-    TextureCache& textureCache)
+    TextureCache& textureCache,
+    const MaterialTuningSettings& materialTuningSettings)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
+    const std::string defaultMaterialKey = "default";
 
     if (!textureLoadingEnabled)
     {
@@ -880,7 +922,9 @@ AssimpModelLorder::MakeMaterial(
             }
         }
 
-        materials[i] = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        ApplyMaterialTuning(*material, defaultMaterialKey, materialTuningSettings);
+        materials[i] = std::move(material);
     }
 
     return materials;

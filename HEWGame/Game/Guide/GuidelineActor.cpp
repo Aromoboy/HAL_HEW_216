@@ -1,10 +1,11 @@
-#include "GuidelineActor.h"
+﻿#include "GuidelineActor.h"
 
 #include "AABB.h"
 #include "MaterialDX.h"
 #include "MeshDX.h"
 #include "ModelDX.h"
 
+#include <DirectXMath.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -147,12 +148,105 @@ GuidelineActor::GuidelineActor()
 {
 }
 
+GuidelineActor::GuidelineActor(std::shared_ptr<Render::Model> model)
+    : Entities::Entity(Transform{}, std::move(model), Core::UpdatePhase::Gameplay, 0, kGuidelineTag)
+{
+}
+
+void GuidelineActor::OnUpdate(const Core::UpdateContext& ctx)
+{
+    Entities::Entity::OnUpdate(ctx);
+    AdvanceSpin(ctx.dt);
+}
+
+void GuidelineActor::AdvanceSpin(float deltaSeconds)
+{
+    if (!std::isfinite(deltaSeconds) || deltaSeconds == 0.0f)
+    {
+        return;
+    }
+
+    if (!std::isfinite(m_spinSpeedDegPerSec) || m_spinSpeedDegPerSec == 0.0f)
+    {
+        return;
+    }
+
+    const float deltaRadians = DirectX::XMConvertToRadians(m_spinSpeedDegPerSec) * deltaSeconds;
+    if (!std::isfinite(deltaRadians) || deltaRadians == 0.0f)
+    {
+        return;
+    }
+
+    m_spinAngleRadians += deltaRadians;
+    if (std::isfinite(m_spinAngleRadians))
+    {
+        m_spinAngleRadians = std::fmod(m_spinAngleRadians, DirectX::XM_2PI);
+    }
+    else
+    {
+        m_spinAngleRadians = 0.0f;
+    }
+
+    ApplyRotation();
+}
+
 void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, float width, float thickness)
 {
     const float safeWidth = (std::isfinite(width) && width > 0.0f) ? width : 0.01f;
     const float safeThickness = (std::isfinite(thickness) && thickness > 0.0f) ? thickness : 0.01f;
+    float3 scale{ safeWidth, safeThickness, 1.0f };
+    const Render::Model* model = GetRenderableModel();
+    if (model && model->HasLocalBounds())
+    {
+        const AABB& bounds = model->GetLocalBounds();
+        const float3 size
+        {
+            bounds.max.x - bounds.min.x,
+            bounds.max.y - bounds.min.y,
+            bounds.max.z - bounds.min.z,
+        };
+        if (std::isfinite(size.x) && size.x > 0.0f
+            && std::isfinite(size.y) && size.y > 0.0f)
+        {
+            // Scale relative to the model's local bounding box so width/thickness match the model extents.
+            scale = float3{ safeWidth / size.x, safeThickness / size.y, 1.0f };
+        }
+    }
 
     m_transform.position = float3{ centerX, height, planeZ };
-    m_transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    m_transform.scale = float3{ safeWidth, safeThickness, 1.0f };
+    m_transform.scale = scale;
+    ApplyRotation();
+}
+
+void GuidelineActor::SetSpin(const float3& axis, float speedDegPerSec)
+{
+    m_spinSpeedDegPerSec = std::isfinite(speedDegPerSec) ? speedDegPerSec : 0.0f;
+
+    const float lengthSq = (axis.x * axis.x) + (axis.y * axis.y) + (axis.z * axis.z);
+    if (std::isfinite(axis.x) && std::isfinite(axis.y) && std::isfinite(axis.z) && lengthSq > 0.0f)
+    {
+        const float invLength = 1.0f / std::sqrt(lengthSq);
+        m_spinAxis = float3{ axis.x * invLength, axis.y * invLength, axis.z * invLength };
+    }
+    else
+    {
+        m_spinAxis = float3{ 0.0f, 1.0f, 0.0f };
+    }
+
+    ApplyRotation();
+}
+
+void GuidelineActor::ApplyRotation()
+{
+    const float3 spinRotation
+    {
+        m_spinAxis.x * m_spinAngleRadians,
+        m_spinAxis.y * m_spinAngleRadians,
+        m_spinAxis.z * m_spinAngleRadians
+    };
+    m_transform.rotation = float3{
+        m_baseRotation.x + spinRotation.x,
+        m_baseRotation.y + spinRotation.y,
+        m_baseRotation.z + spinRotation.z
+    };
 }

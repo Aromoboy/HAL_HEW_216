@@ -191,7 +191,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     const float minX = camPos.x - halfWidth;
     const float maxX = camPos.x + halfWidth;
-    const float minY = camPos.y - halfHeight - kPlayerMinimumYMargin;
+    const float minY = input.stageFloorY - kPlayerMinimumYMargin;
 
     const bool changed =
         !m_cachedPlayerBoundsValid ||

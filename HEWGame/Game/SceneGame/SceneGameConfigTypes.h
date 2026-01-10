@@ -2,8 +2,11 @@
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
+#include "MaterialTuningSettings.h"
 
 #include <DirectXMath.h>
+#include <optional>
+#include <string>
 
 namespace SceneGameConfig
 {
@@ -35,12 +38,15 @@ namespace SceneGameConfig
         float vignetteStrength = 1.2f;
         float bloomThreshold = 0.8f;
         float bloomIntensity = 0.15f;
+        float grainAmount = 0.0f;
         float fxaaEdgeThreshold = 0.166f;
         float fxaaEdgeThresholdMin = 0.0833f;
         float fxaaSubpixelQuality = 0.75f;
         bool enableFog = true;
         bool enableVignette = true;
         bool enableBloom = true;
+        bool grainEnable = false;
+        bool grainAnimate = false;
         bool enableFxaa = false;
     };
 
@@ -61,6 +67,58 @@ namespace SceneGameConfig
         DirectX::XMFLOAT4 rimParams{ 0.0f, 0.0f, 0.0f, 0.0f };
         bool rimEnable = false;
     };
+
+    struct BlobShadowSettings
+    {
+        bool enable = true;
+        bool debugNoDepthTest = false;
+        bool forceReceiverZ = false;
+        float opacity = 0.35f;
+        float softness = 0.4f;
+        float maxHeight = 6.0f;
+        float minScale = 0.35f;
+        float receiverBias = 0.01f;
+        float groundY = 0.0f;
+        std::optional<float> groundZ = std::nullopt;
+    };
+
+    struct CameraClampSettings
+    {
+        std::optional<float> minY = std::nullopt;
+        std::optional<float> maxY = std::nullopt;
+    };
+
+    enum class CameraRigMode
+    {
+        Fixed,
+        Follow,
+        Cinematic,
+    };
+
+    struct CameraRigSettings
+    {
+        CameraRigMode mode = CameraRigMode::Follow;
+        bool fixedPosition = false;
+        bool lockTranslation = false;
+        bool lockYawPitch = false;
+        float followSpeed = 5.0f;
+        float3 offset{ 0.0f, 5.5f, -25.0f };
+        float fovDegrees = 45.0f;
+        float yawDegrees = 0.0f;
+        float pitchDegrees = -10.0f;
+        CameraClampSettings clamp{};
+    };
+
+    struct GameCameraConfig
+    {
+        float comfortZoneTopPercentY = 0.1f;
+        float comfortZoneBottomPercentY = 0.1f;
+        float followSpeedY = 5.0f;
+        float offsetY = 0.0f;
+    };
+
+    using MaterialTuningProfile = ::MaterialTuningProfile;
+    using MaterialTuningSettings = ::MaterialTuningSettings;
 }
 
 #endif

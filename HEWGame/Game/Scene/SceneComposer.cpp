@@ -1,4 +1,4 @@
-#include "SceneComposer.h"
+﻿#include "SceneComposer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -111,6 +111,8 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
     result.renderPostProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
     result.lightingSettings = SceneGameConfig::LoadLightingSettings();
+    result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
+    result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
@@ -221,6 +223,11 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineThicknessPixels=" << result.stageData.GetGuidelineThicknessPixels()
             << " guidelineWidthPaddingWorld=" << result.stageData.GetGuidelineWidthPaddingWorld()
             << " guidelineZOffset=" << result.stageData.GetGuidelineZOffset()
+            << " guidelineSpinAxis=(" << result.stageData.GetGuidelineSpinAxis().x << ','
+            << result.stageData.GetGuidelineSpinAxis().y << ',' << result.stageData.GetGuidelineSpinAxis().z << ')'
+            << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
+            << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
+            << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
             << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
@@ -277,11 +284,21 @@ void SceneComposer::ComposeRules(Composition& result)
     result.guidelineThicknessPixels = result.stageData.GetGuidelineThicknessPixels();
     result.guidelineWidthPaddingWorld = result.stageData.GetGuidelineWidthPaddingWorld();
     result.guidelineZOffset = result.stageData.GetGuidelineZOffset();
+    result.guidelineSpinAxis = result.stageData.GetGuidelineSpinAxis();
+    result.guidelineSpinSpeedDegPerSec = result.stageData.GetGuidelineSpinSpeedDegPerSec();
     result.guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
     result.guidelineCooldownRemainingSeconds = 0.0f;
     result.guidelineCenterX = 0.0f;
     result.guidelineWidthWorld = 0.0f;
-    result.guidelineThicknessWorld = kGuidelineThicknessMeters;
+    result.guidelineThicknessWorld = result.stageData.GetGuidelineThicknessWorld();
+    if (!std::isfinite(result.guidelineThicknessWorld) || result.guidelineThicknessWorld <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Guideline thickness world " << result.guidelineThicknessWorld
+            << " invalid; using fallback " << kGuidelineThicknessMeters << "\n";
+        DebugTrace(oss.str());
+        result.guidelineThicknessWorld = kGuidelineThicknessMeters;
+    }
 
     {
         bool boundsValid = false;
@@ -377,7 +394,54 @@ void SceneComposer::ComposePhysics(Composition& result)
     }
     if (result.drawSystem && result.guidelineHeightMeters > 0.0f)
     {
-        result.guidelineActor = std::make_unique<GuidelineActor>();
+        std::shared_ptr<Render::Model> guidelineModel;
+        const std::string& guidelineModelPath = result.stageData.GetGuidelineModelPath();
+        const std::string& guidelineMaterialKey = result.stageData.GetGuidelineMaterialKey();
+        if (!guidelineModelPath.empty())
+        {
+            guidelineModel = Render::ModelCache::Instance().Get(guidelineModelPath);
+            if (!guidelineModel)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Guideline model load failed path='" << guidelineModelPath
+                    << "'; fallback quad will be used.\n";
+                DebugTrace(oss.str());
+            }
+            else
+            {
+                if (!guidelineMaterialKey.empty())
+                {
+                    guidelineModel->SetMaterialKey(guidelineMaterialKey);
+                }
+                std::ostringstream oss;
+                oss << kLogPrefix << "Guideline model loaded path='" << guidelineModelPath
+                    << "' materialKey='" << guidelineMaterialKey << "'\n";
+                DebugTrace(oss.str());
+            }
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Guideline model path empty; fallback quad will be used.\n";
+            DebugTrace(oss.str());
+        }
+
+        if (guidelineModel)
+        {
+            result.guidelineActor = std::make_unique<GuidelineActor>(guidelineModel);
+        }
+        else
+        {
+            result.guidelineActor = std::make_unique<GuidelineActor>();
+            if (result.guidelineActor && !guidelineMaterialKey.empty())
+            {
+                const auto model = result.guidelineActor->GetModel();
+                if (model)
+                {
+                    model->SetMaterialKey(guidelineMaterialKey);
+                }
+            }
+        }
         if (result.guidelineActor)
         {
             const float guidelineZ = result.stageData.GetPlaneZ() + result.guidelineZOffset;
@@ -474,8 +538,17 @@ void SceneComposer::ComposeUI(Composition& result)
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
+        // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
+        constexpr float kDefaultBackgroundParallax = 0.0001f;
         BackgroundRendererConfig backgroundConfig{};
-        backgroundConfig.texturePath = backgroundTexture;
+        BackgroundRendererConfig::BackgroundLayer layer;
+        layer.texturePath = backgroundTexture;
+        layer.parallaxFactor = kDefaultBackgroundParallax;
+        layer.scrollOffsetInPixels = false;
+        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
+        layer.baseOffset01 = 4.00f;
+        layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
         if (!result.backgroundRenderer->Initialize(backgroundConfig))
         {

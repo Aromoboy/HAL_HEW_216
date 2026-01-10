@@ -42,6 +42,8 @@ public:
         float guidelineThicknessPixels = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
+        float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
+        float guidelineSpinSpeedDegPerSec = 0.0f;
         float guidelineCooldownDurationSeconds = 0.0f;
         float guidelineCooldownRemainingSeconds = 0.0f;
         float guidelineCenterX = 0.0f;
@@ -51,6 +53,8 @@ public:
         float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
+        SceneGameConfig::BlobShadowSettings blobShadowSettings{};
+        SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;

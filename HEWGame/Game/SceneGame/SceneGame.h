@@ -1,4 +1,4 @@
-// ゲーム本編のプレイ中シーンをまとめたファイルだ
+﻿// ゲーム本編のプレイ中シーンをまとめたファイルだ
 // ステージ設定を読み込んでプレイヤーやスイーツやカメラを動かす流れを組み立てる
 // 進行状態や結果は画面表示や強化選択に渡される
 #ifndef __SCENE_GAME_H__
@@ -26,28 +26,25 @@
 #include "BackgroundRenderer.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
+#include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
 
-
-struct CameraPrototypeSettings
-{
-    bool fixedPosition = false;
-    float followSpeed = 5.0f;
-    float3 offset{ 0.0f, 0.0f, 0.0f };
-    float fovDegrees = 60.0f;
-    float yawRadians = 0.0f;
-    float pitchRadians = 0.0f;
-};
-
 namespace Systems
 {
     class DrawSystem;
+}
+
+namespace Core
+{
+    class UpdateNode;
+    struct UpdateContext;
 }
 
 namespace SweetsSpace
@@ -74,6 +71,10 @@ public:
     using PlayerSpawnTransform = SceneGameConfig::PlayerSpawnTransform;
     using RenderPostProcessSettings = SceneGameConfig::RenderPostProcessSettings;
     using SceneLightingSettings = SceneGameConfig::LightingSettings;
+    using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
+    using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
+    using CameraRigSettings = SceneGameConfig::CameraRigSettings;
+    using GameCameraConfig = SceneGameConfig::GameCameraConfig;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -93,10 +94,11 @@ public:
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
 private:
-    void ConfigureCamera(const CameraPrototypeSettings& settings);
+    void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void UpdateCameraBoundsForPhase(float heightMeters);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
-    void DrawPhysicsDebugOverlay();
+    void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 #endif
     void SetStageState(StageState newState);
     void OnStageStart();
@@ -107,12 +109,12 @@ private:
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
     void Initialize(const Stage::StageData& stageData);
-    
+
+protected:
     std::vector<StageObject> m_stageObjects;
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
-    std::shared_ptr<Entities::Entity> m_cameraAnchor;
     std::unique_ptr<SoundManagerEX> m_pManager;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
@@ -139,10 +141,17 @@ private:
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
+    std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
+    float m_backgroundScrollOriginY = 0.0f;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
+    BlobShadowSettings m_blobShadowSettings{};
+    MaterialTuningSettings m_materialTuningSettings{};
+    GameCameraConfig m_gameCameraConfig{};
+    CameraRigSettings m_cameraRigSettings{};
+    std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerPickupBoxWidth = 0.0f;

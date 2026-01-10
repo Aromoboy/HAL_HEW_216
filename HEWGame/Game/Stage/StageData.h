@@ -56,8 +56,13 @@ namespace Stage
         float GetGuidelineHeight() const noexcept;
         float GetGuidelineStep() const noexcept;
         float GetGuidelineThicknessPixels() const noexcept;
+        float GetGuidelineThicknessWorld() const noexcept;
         float GetGuidelineWidthPaddingWorld() const noexcept;
         float GetGuidelineZOffset() const noexcept;
+        float3 GetGuidelineSpinAxis() const noexcept;
+        float GetGuidelineSpinSpeedDegPerSec() const noexcept;
+        const std::string& GetGuidelineModelPath() const noexcept;
+        const std::string& GetGuidelineMaterialKey() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
@@ -95,8 +100,13 @@ namespace Stage
         float m_guidelineHeight;
         float m_guidelineStep;
         float m_guidelineThicknessPixels;
+        float m_guidelineThicknessWorld;
         float m_guidelineWidthPaddingWorld;
         float m_guidelineZOffset;
+        float3 m_guidelineSpinAxis;
+        float m_guidelineSpinSpeedDegPerSec;
+        std::string m_guidelineModelPath;
+        std::string m_guidelineMaterialKey;
         std::string m_backgroundTexturePath;
         float m_heightBonusThreshold;
         float m_heightBonusSeconds;

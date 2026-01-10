@@ -193,6 +193,11 @@ namespace Stage
         return m_guidelineThicknessPixels;
     }
 
+    float StageData::GetGuidelineThicknessWorld() const noexcept
+    {
+        return m_guidelineThicknessWorld;
+    }
+
     float StageData::GetGuidelineWidthPaddingWorld() const noexcept
     {
         return m_guidelineWidthPaddingWorld;
@@ -201,6 +206,26 @@ namespace Stage
     float StageData::GetGuidelineZOffset() const noexcept
     {
         return m_guidelineZOffset;
+    }
+
+    float3 StageData::GetGuidelineSpinAxis() const noexcept
+    {
+        return m_guidelineSpinAxis;
+    }
+
+    float StageData::GetGuidelineSpinSpeedDegPerSec() const noexcept
+    {
+        return m_guidelineSpinSpeedDegPerSec;
+    }
+
+    const std::string& StageData::GetGuidelineModelPath() const noexcept
+    {
+        return m_guidelineModelPath;
+    }
+
+    const std::string& StageData::GetGuidelineMaterialKey() const noexcept
+    {
+        return m_guidelineMaterialKey;
     }
 
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
@@ -250,8 +275,13 @@ namespace Stage
         m_guidelineHeight = normalized.guidelineHeight;
         m_guidelineStep = normalized.guidelineStep;
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
+        m_guidelineThicknessWorld = normalized.guidelineThicknessWorld;
         m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
         m_guidelineZOffset = normalized.guidelineZOffset;
+        m_guidelineSpinAxis = normalized.guidelineSpinAxis;
+        m_guidelineSpinSpeedDegPerSec = normalized.guidelineSpinSpeedDegPerSec;
+        m_guidelineModelPath = normalized.guidelineModelPath;
+        m_guidelineMaterialKey = normalized.guidelineMaterialKey;
         m_heightBonusThreshold = normalized.heightBonusThreshold;
         m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
@@ -283,8 +313,14 @@ namespace Stage
             << " guidelineHeight=" << m_guidelineHeight
             << " guidelineStep=" << m_guidelineStep
             << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
+            << " guidelineThicknessWorld=" << m_guidelineThicknessWorld
             << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
             << " guidelineZOffset=" << m_guidelineZOffset
+            << " guidelineSpinAxis=(" << m_guidelineSpinAxis.x << ',' << m_guidelineSpinAxis.y << ','
+            << m_guidelineSpinAxis.z << ')'
+            << " guidelineSpinSpeedDegPerSec=" << m_guidelineSpinSpeedDegPerSec
+            << " guidelineModelPath='" << m_guidelineModelPath << "'"
+            << " guidelineMaterialKey='" << m_guidelineMaterialKey << "'"
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"

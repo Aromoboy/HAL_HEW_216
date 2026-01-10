@@ -53,7 +53,11 @@ AssimpModelLorder();
 
 ~AssimpModelLorder() override = default;
 
-    virtual std::shared_ptr<Render::Model> Load(const std::string& path, ID3D11Device* device, TextureCache& textureCache) override;
+    virtual std::shared_ptr<Render::Model> Load(
+        const std::string& path,
+        ID3D11Device* device,
+        TextureCache& textureCache,
+        const MaterialTuningSettings& materialTuningSettings) override;
 	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) override;
 
 private:
@@ -72,7 +76,13 @@ private:
 	void MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes, Animation::AnimationArray& a_outAnimeTransform);
 	// Model生成用関数
 	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes);
-	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(const aiScene*, const std::string& directory, const std::string& modelFilename, ID3D11Device* device, TextureCache& textureCache);
+	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(
+        const aiScene*,
+        const std::string& directory,
+        const std::string& modelFilename,
+        ID3D11Device* device,
+        TextureCache& textureCache,
+        const MaterialTuningSettings& materialTuningSettings);
 
 	void MakeVertexWeightHasBone(const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
 	void MakeVertexWeight(const void* a_ptr, int a_meshIndex, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones);

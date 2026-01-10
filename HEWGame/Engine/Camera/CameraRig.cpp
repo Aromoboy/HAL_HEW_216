@@ -1,34 +1,15 @@
 #include "CameraRig.h"
+#include "CameraMath.h"
 #include "Entities/Entity.h"
 // カメラの追従や回転計算がしやすくなった
 
+#include <cmath>
 #include <utility>
 
 #include <DirectXMath.h>
 
-#include "Entities/Entity.h"
-
 namespace
 {
-        DirectX::XMVECTOR LoadFloat3(const float3& value)
-        {
-                return DirectX::XMVectorSet(value.x, value.y, value.z, 0.0f);
-        }
-
-        float3 StoreFloat3(DirectX::FXMVECTOR value)
-        {
-                DirectX::XMFLOAT3 temp;
-                DirectX::XMStoreFloat3(&temp, value);
-                return float3{ temp.x, temp.y, temp.z };
-        }
-// オフセットをヤー・ピッチで回転させて、
-// カメラの相対位置を柔軟にコントロールするためのヘルパー
-        DirectX::XMVECTOR RotateOffset(const float3& offset, float yaw, float pitch)
-        {
-                DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, 0.0f);
-                return DirectX::XMVector3Transform(LoadFloat3(offset), rotation);
-        }
-
         float Clamp01(float value)
         {
                 if (value < 0.0f)
@@ -47,12 +28,24 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         : Core::UpdateNode(Core::UpdatePhase::Camera, 0)
         , m_camera(std::move(camera))
         , m_target()
+        , m_targetRaw(nullptr)
         , m_offset{ 0.0f, 0.0f, 0.0f }
         , m_yaw(0.0f)
         , m_pitch(0.0f)
         , m_followSpeed(5.0f)
+        , m_followSpeedY(5.0f)
+        , m_comfortZoneTopY(0.0f)
+        , m_comfortZoneBottomY(0.0f)
         , m_lockTranslation(false)
         , m_lockYawPitch(false)
+        , m_followPositionX(true)
+        , m_followPositionY(true)
+        , m_followPositionZ(true)
+        , m_inheritRotation(true)
+        , m_minYClamp(std::nullopt)
+        , m_maxYClamp(std::nullopt)
+        , m_scrollY(0.0f)
+        , m_hasScrollY(false)
 {
 }
 
@@ -102,12 +95,70 @@ float CameraRig::GetPitch() const
 
 void CameraRig::SetFollowSpeed(float followSpeed)
 {
-        m_followSpeed = followSpeed < 0.0f ? 0.0f : followSpeed;
+        const float clampedSpeed = followSpeed < 0.0f ? 0.0f : followSpeed;
+        const float previousSpeed = m_followSpeed;
+        m_followSpeed = clampedSpeed;
+        if (m_followSpeedY == previousSpeed)
+        {
+                m_followSpeedY = clampedSpeed;
+        }
 }
 
 float CameraRig::GetFollowSpeed() const
 {
 	return m_followSpeed;
+}
+
+void CameraRig::SetFollowSpeedY(float followSpeed)
+{
+        m_followSpeedY = followSpeed < 0.0f ? 0.0f : followSpeed;
+}
+
+float CameraRig::GetFollowSpeedY() const
+{
+        return m_followSpeedY;
+}
+
+void CameraRig::SetComfortZoneY(float comfortTopY, float comfortBottomY)
+{
+        m_comfortZoneTopY = comfortTopY < 0.0f ? 0.0f : comfortTopY;
+        m_comfortZoneBottomY = comfortBottomY < 0.0f ? 0.0f : comfortBottomY;
+}
+
+float CameraRig::GetComfortZoneTopY() const
+{
+        return m_comfortZoneTopY;
+}
+
+float CameraRig::GetComfortZoneBottomY() const
+{
+        return m_comfortZoneBottomY;
+}
+
+std::optional<float> CameraRig::GetClampMinY() const
+{
+        return m_minYClamp;
+}
+
+std::optional<float> CameraRig::GetClampMaxY() const
+{
+        return m_maxYClamp;
+}
+
+float CameraRig::GetScrollY() const
+{
+        return m_scrollY;
+}
+
+void CameraRig::ResetVerticalScroll(const float3& targetPosition)
+{
+        if (!std::isfinite(targetPosition.y))
+        {
+                return;
+        }
+
+        m_scrollY = ClampScrollY(targetPosition.y);
+        m_hasScrollY = true;
 }
 
 void CameraRig::SetTranslationLocked(bool locked)
@@ -138,9 +189,68 @@ bool CameraRig::IsYawPitchLocked() const
         return m_lockYawPitch;
 }
 
+void CameraRig::SetFollowPositionAxes(bool followX, bool followY, bool followZ)
+{
+        m_followPositionX = followX;
+        m_followPositionY = followY;
+        m_followPositionZ = followZ;
+}
+
+bool CameraRig::IsFollowingPositionX() const
+{
+        return m_followPositionX;
+}
+
+bool CameraRig::IsFollowingPositionY() const
+{
+        return m_followPositionY;
+}
+
+bool CameraRig::IsFollowingPositionZ() const
+{
+        return m_followPositionZ;
+}
+
+void CameraRig::SetInheritRotation(bool inheritRotation)
+{
+        m_inheritRotation = inheritRotation;
+}
+
+bool CameraRig::IsInheritingRotation() const
+{
+        return m_inheritRotation;
+}
+
+void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
+{
+        m_minYClamp = minY;
+        m_maxYClamp = maxY;
+}
+
+float CameraRig::ClampScrollY(float scrollY) const
+{
+        float clamped = scrollY;
+        if (m_minYClamp && std::isfinite(*m_minYClamp) && clamped < *m_minYClamp)
+        {
+                clamped = *m_minYClamp;
+        }
+        if (m_maxYClamp && std::isfinite(*m_maxYClamp) && clamped > *m_maxYClamp)
+        {
+                clamped = *m_maxYClamp;
+        }
+        return clamped;
+}
+
 void CameraRig::Attach(const std::shared_ptr<Entities::Entity>& target)
 {
         m_target = target;
+        m_targetRaw = target.get();
+}
+
+void CameraRig::Attach(Entities::Entity* target)
+{
+        m_target.reset();
+        m_targetRaw = target;
 }
 
 void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
@@ -151,24 +261,101 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         }
 
         auto target = m_target.lock();
-        if (!target)
+        Entities::Entity* targetEntity = target ? target.get() : m_targetRaw;
+        if (!targetEntity)
         {
                 return;
         }
 
-        const auto& targetTransform = target->GetTransform();
-        const float3 targetRotation = targetTransform.rotation;
+        const auto& targetTransform = targetEntity->GetTransform();
+        const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
+        float3 targetPosition = targetTransform.position;
 
-        DirectX::XMVECTOR targetPos = LoadFloat3(targetTransform.position);
-        DirectX::XMVECTOR offsetVec = RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
+        if (m_followPositionY)
+        {
+                if (std::isfinite(targetPosition.y))
+                {
+                        if (!m_hasScrollY)
+                        {
+                                m_scrollY = targetPosition.y;
+                                m_hasScrollY = true;
+                        }
+
+                        if (m_comfortZoneTopY > 0.0f || m_comfortZoneBottomY > 0.0f)
+                        {
+                                const float lowerBound = m_scrollY - m_comfortZoneBottomY;
+                                const float upperBound = m_scrollY + m_comfortZoneTopY;
+                                if (targetPosition.y < lowerBound)
+                                {
+                                        m_scrollY = targetPosition.y + m_comfortZoneBottomY;
+                                }
+                                else if (targetPosition.y > upperBound)
+                                {
+                                        m_scrollY = targetPosition.y - m_comfortZoneTopY;
+                                }
+                        }
+                        else
+                        {
+                                m_scrollY = targetPosition.y;
+                        }
+
+                        m_scrollY = ClampScrollY(m_scrollY);
+                        targetPosition.y = m_scrollY;
+                }
+        }
+
+        DirectX::XMVECTOR targetPos = CameraSpace::LoadFloat3(targetPosition);
+        DirectX::XMVECTOR offsetVec = CameraSpace::RotateOffset(m_offset, targetRotation.y + m_yaw, targetRotation.x + m_pitch);
         DirectX::XMVECTOR desiredPos = DirectX::XMVectorAdd(targetPos, offsetVec);
 
         if (!m_lockTranslation)
         {
-                DirectX::XMVECTOR currentPos = LoadFloat3(m_camera->GetPosition());
-                const float alpha = Clamp01(m_followSpeed * ctx.dt);
-                DirectX::XMVECTOR newPos = DirectX::XMVectorLerp(currentPos, desiredPos, alpha);
-                m_camera->SetPosition(StoreFloat3(newPos));
+                DirectX::XMVECTOR currentPos = CameraSpace::LoadFloat3(m_camera->GetPosition());
+                DirectX::XMFLOAT3 currentPosValue;
+                DirectX::XMFLOAT3 desiredPosValue;
+                DirectX::XMStoreFloat3(&currentPosValue, currentPos);
+                DirectX::XMStoreFloat3(&desiredPosValue, desiredPos);
+
+                if (!m_followPositionX)
+                {
+                        desiredPosValue.x = currentPosValue.x;
+                }
+                if (!m_followPositionY)
+                {
+                        desiredPosValue.y = currentPosValue.y;
+                }
+                if (!m_followPositionZ)
+                {
+                        desiredPosValue.z = currentPosValue.z;
+                }
+
+                const float alphaXZ = Clamp01(1.0f - std::exp(-m_followSpeed * ctx.dt));
+                const float alphaY  = Clamp01(1.0f - std::exp(-m_followSpeedY * ctx.dt));
+
+                float newX = currentPosValue.x;
+                float newY = currentPosValue.y;
+                float newZ = currentPosValue.z;
+
+                if (m_followPositionX)
+                {
+                        newX = currentPosValue.x +
+                               (desiredPosValue.x - currentPosValue.x) * alphaXZ;
+                }
+
+                if (m_followPositionY)
+                {
+                        newY = currentPosValue.y +
+                               (desiredPosValue.y - currentPosValue.y) * alphaY;
+                }
+
+                if (m_followPositionZ)
+                {
+                        newZ = currentPosValue.z +
+                               (desiredPosValue.z - currentPosValue.z) * alphaXZ;
+                }
+
+                m_camera->SetPosition(float3{ newX, newY, newZ });
+
         }
 
         float3 newRotation
@@ -182,5 +369,4 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 m_camera->SetRotation(newRotation);
         }
 
-        m_camera->RecalculateView();
 }

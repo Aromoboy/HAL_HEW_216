@@ -104,11 +104,16 @@ void ShaderList::SetBones(DirectX::XMFLOAT4X4* bones200)
 }
 void ShaderList::SetMaterial(const Model::Material& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	constexpr float lightResponse = 1.0f;
+	constexpr float sssIntensity = 0.0f;
+	constexpr DirectX::XMFLOAT3 sssColor = {1.0f, 1.0f, 1.0f};
+	DirectX::XMFLOAT4 param[6] = {
 		material.diffuse,
 		material.ambient,
 		material.specular,
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(lightResponse, sssIntensity, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(sssColor.x, sssColor.y, sssColor.z, 0.0f)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.pTexture ? 1.0f : 0.0f;
@@ -124,11 +129,16 @@ void ShaderList::SetMaterial(const Model::Material& material)
 
 void ShaderList::SetMaterial(const MaterialDX& material)
 {
-	DirectX::XMFLOAT4 param[4] = {
+	const float lightResponse = material.GetLightResponse();
+	const float sssIntensity = material.GetSssIntensity();
+	const DirectX::XMFLOAT3 sssColor = material.GetSssColor();
+	DirectX::XMFLOAT4 param[6] = {
 		material.GetDiffuse(),
 		material.GetAmbient(),
 		material.GetSpecular(),
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)
+		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(lightResponse, sssIntensity, 0.0f, 0.0f),
+		DirectX::XMFLOAT4(sssColor.x, sssColor.y, sssColor.z, 0.0f)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.GetTexture() ? 1.0f : 0.0f;
@@ -311,6 +321,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -340,9 +352,12 @@ float4 main(PS_IN pin) : SV_TARGET
 
 	float keyWrap = lightParams[1].w;
 	float fillWrap = lightParams[3].w;
-	float3 keyColor = lightParams[0].rgb * lightParams[0].a;
+	float3 keyLightColor = lightParams[0].rgb * lightParams[0].a;
 	float3 fillColor = lightParams[2].rgb * lightParams[2].a;
-	float3 key = keyColor * WrapLambert(N, L, keyWrap);
+	float lightResponse = max(0.0001f, objLighting.x);
+	float sssIntensity = objLighting.y;
+	float3 sssColor = objSSSColor.rgb;
+	float3 key = keyLightColor * WrapLambert(N, L, keyWrap);
 	float3 fill = fillColor * WrapLambert(N, F, fillWrap);
 	float hemiFactor = saturate(N.y * 0.5f + 0.5f);
 	float hemiSkyAlpha = lightParams[4].a;
@@ -350,12 +365,16 @@ float4 main(PS_IN pin) : SV_TARGET
 	float rim = pow(saturate(1.0f - dot(N, V)), max(0.0001f, lightParams[7].x));
 
 	float3 lighting = hemi + key + fill;
+	lighting = pow(saturate(lighting), lightResponse);
 
 	float3 color = albedo * lighting;
 	if (lightParams[7].w >= 0.5f)
 	{
 		color += lightParams[6].rgb * lightParams[6].a * rim;
 	}
+	float back = saturate(dot(-N, L));
+	float sss = back * back * sssIntensity;
+	color += sssColor * sss * keyLightColor;
 
 
 	return float4(saturate(color), 1.0f);
@@ -379,6 +398,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -421,6 +442,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -473,6 +496,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {
@@ -521,6 +546,8 @@ cbuffer Material : register(b0)
 	float4 objAmbient;
 	float4 objSpecular;
 	float4 objFlags; // .x = テクスチャ有無フラグ (1.0f = テクスチャあり)
+	float4 objLighting; // .x = lightResponse, .y = sssIntensity
+	float4 objSSSColor; // rgb = sssColor
 };
 cbuffer Light : register(b1)
 {

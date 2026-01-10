@@ -18,6 +18,10 @@ void GuidelineSystem::Configure(const Config& config, std::unique_ptr<GuidelineA
     m_widthWorld = config.widthWorld;
     m_thicknessWorld = config.thicknessWorld;
     m_guidelineActor = std::move(actor);
+    if (m_guidelineActor)
+    {
+        m_guidelineActor->SetSpin(config.spinAxis, config.spinSpeedDegPerSec);
+    }
 }
 
 void GuidelineSystem::ResetHeight(float heightMeters, float stepMeters)
@@ -50,11 +54,17 @@ void GuidelineSystem::TickCooldowns(float deltaSeconds)
     {
         m_triggerCooldownSeconds = std::max(0.0f, m_triggerCooldownSeconds - deltaSeconds);
     }
+
+    if (m_guidelineActor)
+    {
+        m_guidelineActor->AdvanceSpin(deltaSeconds);
+    }
 }
 
 GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
                                                       std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses)
 {
+    bool guidelineAdvanced = false;
     GameplayProgression::GuidelineState guidelineState{
         m_heightMeters,
         m_stepMeters,
@@ -88,6 +98,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
                                                             guidelineCheck.triggerHeight);
             guidelineState = std::move(guidelineAdvance.state);
             pendingBonuses = std::move(guidelineAdvance.pendingBonuses);
+            guidelineAdvanced = true;
         }
     }
 
@@ -100,6 +111,8 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
 
     UpdateResult result{};
     result.pendingBonuses = std::move(pendingBonuses);
+    result.guidelineAdvanced = guidelineAdvanced;
+    result.guidelineHeightMeters = guidelineAdvanced ? m_heightMeters : 0.0f;
     return result;
 }
 

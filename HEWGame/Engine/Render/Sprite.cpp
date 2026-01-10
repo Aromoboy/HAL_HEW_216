@@ -1,8 +1,13 @@
 #include "Sprite.h"
 
+#include <cassert>
+
 Sprite::Data Sprite::m_data;
 std::shared_ptr<VertexShader> Sprite::m_defVS;
 std::shared_ptr<PixelShader> Sprite::m_defPS;
+#ifdef _DEBUG
+bool Sprite::g_inSpritePass = false;
+#endif
 
 void Sprite::Init()
 {
@@ -65,7 +70,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 		{{ 0.5f,-0.5f, 0.0f}, {1.0f, 1.0f}},
 	};
 
-	// メッシュ
+	// 繝｡繝�繧ｷ繝･
 	MeshBuffer::Description desc = {};
 	desc.pVtx = vtx;
 	desc.vtxSize = sizeof(Vertex);
@@ -74,33 +79,44 @@ float4 main(PS_IN pin) : SV_TARGET {
 	m_data.mesh = std::make_shared<MeshBuffer>();
 	m_data.mesh->Create(desc);
 
-	// パラメーター
-	m_data.param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	m_data.param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	m_data.param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	DirectX::XMStoreFloat4x4(&m_data.matrix[0], DirectX::XMMatrixIdentity());
-	DirectX::XMStoreFloat4x4(&m_data.matrix[1], DirectX::XMMatrixIdentity());
-	DirectX::XMStoreFloat4x4(&m_data.matrix[2], DirectX::XMMatrixIdentity());
-
-	// シェーダー
+	// 繧ｷ繧ｧ繝ｼ繝繝ｼ
 	m_defVS = std::make_shared<VertexShader>();
 	m_defVS->Compile(VS);
 	m_data.vs = m_defVS.get();
 	m_defPS = std::make_shared <PixelShader>();
 	m_defPS->Compile(PS);
 	m_data.ps = m_defPS.get();
+
+	// 繝代Λ繝｡繝ｼ繧ｿ繝ｼ
+	ResetStateToDefaults();
 }
 void Sprite::Uninit()
 {
 }
 void Sprite::Draw()
 {
+#ifdef _DEBUG
+	assert(g_inSpritePass && "Sprite::Draw called outside of sprite pass");
+#endif
 	m_data.vs->WriteBuffer(0, m_data.matrix);
 	m_data.vs->WriteBuffer(1, m_data.param);
 	m_data.vs->Bind();
 	m_data.ps->SetTexture(0, m_data.texture);
 	m_data.ps->Bind();
 	m_data.mesh->Draw();
+}
+
+void Sprite::ResetStateToDefaults()
+{
+	m_data.param[0] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+	m_data.param[1] = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+	m_data.param[2] = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	DirectX::XMStoreFloat4x4(&m_data.matrix[0], DirectX::XMMatrixIdentity());
+	DirectX::XMStoreFloat4x4(&m_data.matrix[1], DirectX::XMMatrixIdentity());
+	DirectX::XMStoreFloat4x4(&m_data.matrix[2], DirectX::XMMatrixIdentity());
+	m_data.texture = nullptr;
+	m_data.vs = m_defVS.get();
+	m_data.ps = m_defPS.get();
 }
 
 void Sprite::SetOffset(DirectX::XMFLOAT2 offset)
@@ -157,4 +173,19 @@ void Sprite::SetPixelShader(Shader* ps)
 		m_data.ps = ps;
 	else
 		m_data.ps = m_defPS.get();
+}
+Sprite::ScopedPassDefaults::ScopedPassDefaults()
+{
+	ResetStateToDefaults();
+#ifdef _DEBUG
+	g_inSpritePass = true;
+#endif
+}
+
+Sprite::ScopedPassDefaults::~ScopedPassDefaults()
+{
+	ResetStateToDefaults();
+#ifdef _DEBUG
+	g_inSpritePass = false;
+#endif
 }

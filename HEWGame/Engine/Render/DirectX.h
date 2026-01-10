@@ -28,6 +28,7 @@ enum SamplerState
 {
         SAMPLER_LINEAR,
         SAMPLER_POINT,
+        SAMPLER_POSTPROCESS,
         SAMPLER_MAX
 };
 
@@ -47,6 +48,7 @@ bool IsDirectXReady();
 void SetRenderTargets(UINT num, RenderTarget** ppViews, DepthStencil* pView);
 void SetCullingMode(D3D11_CULL_MODE cull);
 void SetDepthTest(bool enable);
+void SetDepthTestWrite(bool enable, bool write);
 void SetBlendMode(BlendMode blend);
 void SetSamplerState(SamplerState state);
 
@@ -66,11 +68,15 @@ struct PostProcessParams
         float bloomThreshold;
         float padding2;
         DirectX::XMFLOAT2 invScreenSize;
-        float fxaaEdgeThreshold;
-        float fxaaEdgeThresholdMin;
-        float fxaaSubpixelQuality;
-        int fxaaEnable;
-        float padding3[2];
+	float fxaaEdgeThreshold;
+	float fxaaEdgeThresholdMin;
+	float fxaaSubpixelQuality;
+	int fxaaEnable;
+	float postTime;
+	float grainAmount;
+	int grainEnable;
+	int grainAnimate;
+	DirectX::XMFLOAT2 padding3;
 };
 
 void BindPostProcessParams(
@@ -86,9 +92,13 @@ void BindPostProcessParams(
         float microBloomIntensity = 0.15f,
         float bloomThreshold = 0.8f,
         const DirectX::XMFLOAT2& invScreenSize = DirectX::XMFLOAT2(1.0f, 1.0f),
-        float fxaaEdgeThreshold = 0.166f,
-        float fxaaEdgeThresholdMin = 0.0833f,
-        float fxaaSubpixelQuality = 0.75f,
-        int fxaaEnable = 0);
+	float fxaaEdgeThreshold = 0.166f,
+	float fxaaEdgeThresholdMin = 0.0833f,
+	float fxaaSubpixelQuality = 0.75f,
+	int fxaaEnable = 0,
+	float postTime = 0.0f,
+	float grainAmount = 0.0f,
+	int grainEnable = 0,
+	int grainAnimate = 0);
 
 #endif

@@ -220,7 +220,7 @@ void Draw()
                 ID3D11ShaderResourceView* sceneDepthSRV = dxContext.GetSceneDepthSRV();
                 context->PSSetShaderResources(0, 1, &sceneSRV);
                 context->PSSetShaderResources(1, 1, &sceneDepthSRV);
-                SetSamplerState(SAMPLER_LINEAR);
+                SetSamplerState(SAMPLER_POSTPROCESS);
                 const auto& postSettings = g_postProcessSettings;
                 DirectX::XMFLOAT4 fogColor = DirectX::XMFLOAT4(
                         postSettings.fogColor.x,
@@ -241,6 +241,7 @@ void Draw()
                         invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
                 }
                 const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
+                float postTime = static_cast<float>(g_stepTimer.FrameIndex()) * g_stepTimer.DeltaTime();
 
                 if (!postSettings.enableFog)
                 {
@@ -272,7 +273,11 @@ void Draw()
                         postSettings.fxaaEdgeThreshold,
                         postSettings.fxaaEdgeThresholdMin,
                         postSettings.fxaaSubpixelQuality,
-                        postSettings.enableFxaa ? 1 : 0);
+                        postSettings.enableFxaa ? 1 : 0,
+                        postTime,
+                        postSettings.grainAmount,
+                        postSettings.grainEnable ? 1 : 0,
+                        postSettings.grainAnimate ? 1 : 0);
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);

@@ -35,8 +35,13 @@ namespace Stage
         float guidelineHeight = 0.0f;
         float guidelineStep = 0.0f;
         float guidelineThicknessPixels = 0.0f;
+        float guidelineThicknessWorld = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
+        float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
+        float guidelineSpinSpeedDegPerSec = 0.0f;
+        std::string guidelineModelPath;
+        std::string guidelineMaterialKey;
         std::string backgroundTexturePath;
         float heightBonusThreshold = 0.0f;
         float heightBonusSeconds = 0.0f;
@@ -71,7 +76,9 @@ namespace Stage
         static constexpr float kDefaultGuidelineHeight = 2.0f;
         static constexpr float kDefaultGuidelineStep = 1.0f;
         static constexpr float kDefaultGuidelineThicknessPixels = 3.0f;
+        static constexpr float kDefaultGuidelineThicknessWorld = 0.05f;
         static constexpr float kDefaultGuidelineZOffset = 0.1f;
+        static constexpr float kDefaultGuidelineSpinSpeedDegPerSec = 0.0f;
         static constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
         static constexpr float kDefaultHeightBonusSeconds = 5.0f;
 
@@ -81,7 +88,10 @@ namespace Stage
         static const DirectX::XMFLOAT4& DefaultPlatformPrimaryColor();
         static const DirectX::XMFLOAT4& DefaultPlatformSecondaryColor();
         static const float3& DefaultPickupOffsetLocalCells();
+        static const float3& DefaultGuidelineSpinAxis();
         static const std::string& DefaultBackgroundTexturePath();
+        static const std::string& DefaultGuidelineModelPath();
+        static const std::string& DefaultGuidelineMaterialKey();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();
         static const std::vector<float>& DefaultMiniThresholds();

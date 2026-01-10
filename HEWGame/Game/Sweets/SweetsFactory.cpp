@@ -58,6 +58,44 @@ namespace
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
+    constexpr const char* kDefaultSweetsMaterialKey = "sweets";
+
+    std::string ResolveMaterialKeyForType(SweetsSpace::SweetsType type)
+    {
+        switch (type)
+        {
+        case SweetsSpace::SweetsType::Cream:
+            return "cream";
+        case SweetsSpace::SweetsType::Strawberry:
+            return "strawberry";
+        case SweetsSpace::SweetsType::Blueberry:
+            return "blueberry";
+        case SweetsSpace::SweetsType::Pineapple:
+            return "pineapple";
+        case SweetsSpace::SweetsType::Banana:
+            return "banana";
+        case SweetsSpace::SweetsType::Kiwi :
+            return "kiwi";
+        case SweetsSpace::SweetsType::Mikan:
+            return "mikan";
+        case SweetsSpace::SweetsType::Muscat:
+            return "muscat";
+        case SweetsSpace::SweetsType::Melon:
+            return "melon";
+        }
+        return kDefaultSweetsMaterialKey;
+    }
+
+    std::string ResolveMaterialKeyForDescriptor(const SweetsSpace::SweetsPrototypeDescriptor& descriptor,
+        SweetsSpace::SweetsType type)
+    {
+        if (!descriptor.materialKey.empty())
+        {
+            return descriptor.materialKey;
+        }
+
+        return ResolveMaterialKeyForType(type);
+    }
 
     const char* ToString(SweetsSpace::ColliderShape shape)
     {
@@ -644,6 +682,7 @@ namespace SweetsSpace
                         << "' path='" << primaryPath << "' loaded=" << std::boolalpha << static_cast<bool>(model) << "\n";
                     Diagnostics::LogInfo(modelLog.str());
                 }
+                model->SetMaterialKey(ResolveMaterialKeyForDescriptor(*descriptor, type));
 
                 Transform physicsTransform = transform;
                 physicsTransform.scale = preset.scale;
@@ -942,8 +981,35 @@ namespace SweetsSpace
         case SweetsType::Banana:
             preset.spawnWeight = 0.9f;
             preset.scale = float3{ 0.32f, 0.32f, 0.32f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Capsule, float3{ 0.005f, 0.005f, 0.005f } };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.005f, 0.005f, 0.005f } };
             return preset;
+
+
+
+        case SweetsType::Kiwi:
+            preset.spawnWeight = 0.9f;
+            preset.scale = float3{ 0.24f, 0.36f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
+            return preset;
+
+        case SweetsType::Mikan:
+            preset.spawnWeight = 0.9f;
+            preset.scale = float3{ 0.24f, 0.28f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.005f, 0.005f, 0.005f } };
+            return preset;
+
+        case SweetsType::Muscat:
+            preset.spawnWeight = 1.0f;
+            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
+            return preset;
+
+        case SweetsType::Melon:
+            preset.spawnWeight = 1.0f;
+            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
+            return preset;
+
         default:
             return std::nullopt;
         }
