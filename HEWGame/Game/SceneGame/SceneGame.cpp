@@ -1307,6 +1307,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
 
     float scrollOffsetUsedForBackground = 0.0f;
+    float pixelsPerUnit = 1.0f;
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -1317,9 +1318,39 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     else
     {
         scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
+        if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
+        {
+            RenderTarget* defaultRTV = GetDefaultRTV();
+            if (defaultRTV)
+            {
+                const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
+                if (viewportHeight > 0.0f)
+                {
+                    float3 planeSample{ 0.0f, 0.0f, 0.0f };
+                    if (player)
+                    {
+                        planeSample = player->GetTransform().position;
+                    }
+                    if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
+                    {
+                        planeSample.z = *m_stagePlaneZ;
+                    }
+                    const float viewZ = ComputeViewDepth(baseCamera->GetPosition(), baseCamera->GetRotation(), planeSample);
+                    if (IsFiniteFloat(viewZ) && viewZ > 0.0f)
+                    {
+                        const float fovRadians = DirectX::XMConvertToRadians(perspectiveCamera->GetFieldOfViewDegrees());
+                        const float visibleHeightWorld = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
+                        if (IsFiniteFloat(visibleHeightWorld) && visibleHeightWorld > 0.0f)
+                        {
+                            pixelsPerUnit = viewportHeight / visibleHeightWorld;
+                        }
+                    }
+                }
+            }
+        }
         if (m_backgroundRenderer)
         {
-            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground);
+            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
         }
     }
 
