@@ -19,6 +19,20 @@ namespace
 
     bool TryGetViewportSize(float& width, float& height)
     {
+        auto* context = GetContext();
+        if (context)
+        {
+            UINT count = 1;
+            D3D11_VIEWPORT viewport{};
+            context->RSGetViewports(&count, &viewport);
+            if (count > 0)
+            {
+                width = viewport.Width;
+                height = viewport.Height;
+                return width > 0.0f && height > 0.0f;
+            }
+        }
+
         RenderTarget* rtv = GetDefaultRTV();
         if (!rtv)
         {
