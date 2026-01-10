@@ -9,6 +9,7 @@
 #include "SettingScene.h"
 #include "EffectTestScene.h"
 #include "DirectX.h"
+#include "DrawMatrix.h"
 
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
@@ -86,13 +87,6 @@ void TitleScene::OnEnter()
     loadButtonTexture(m_texExitRed, "Assets/Texture/exit_red_btn.png", m_texExitRedValid);
     loadButtonTexture(m_texExitGreen, "Assets/Texture/exit_green_btn.png", m_texExitGreenValid);
 
-    DirectX::XMFLOAT4X4 proj;
-    DirectX::XMStoreFloat4x4(
-        &proj,
-        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
-    );
-    Sprite::SetProjection(proj);
-   
 }
 
 void TitleScene::OnExit()
@@ -211,18 +205,9 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const SamplerState previousSampler = GetSamplerState();
     if (m_background) m_background->Draw();
     
-    (void)activeCamera;
+    const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
+    const DirectX::XMFLOAT4X4& proj = activeCamera->GetProjection();
 
-    DirectX::XMFLOAT4X4 uiProjection;
-    DirectX::XMFLOAT4X4 identity;
-    DirectX::XMStoreFloat4x4(
-        &uiProjection,
-        DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
-    );
-    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
-    Sprite::SetProjection(uiProjection);
-    Sprite::SetView(identity);
-    Sprite::SetWorld(identity);
     Sprite::SetSize(DirectX::XMFLOAT2(1.0f, 1.0f));
     Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetColor(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -257,10 +242,16 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
                 return;
             }
 
+            DirectX::XMFLOAT4X4 world;
+            float3 position{ centerX, centerY, 1.0f };
+            float3 scale{ targetWidth, targetHeight, 1.0f };
+
+            DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
+
             Sprite::SetTexture(&tex);
-            Sprite::SetWorld(identity);
-            Sprite::SetSize(DirectX::XMFLOAT2(targetWidth, targetHeight));
-            Sprite::SetOffset(DirectX::XMFLOAT2(centerX, centerY));
+            Sprite::SetWorld(world);
+            Sprite::SetView(view);
+            Sprite::SetProjection(proj);
             Sprite::Draw();
         };
 
