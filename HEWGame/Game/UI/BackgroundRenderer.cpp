@@ -95,8 +95,9 @@ namespace
                 return out;
             }
 
-            const float maxOffsetPx = std::max(0.0f, textureWidth - visibleWidthPx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
+            const float offsetRangePx = textureWidth - visibleWidthPx;
+            const float maxOffsetPx = std::max(0.0f, offsetRangePx);
+            const float baseOffsetPx = clampedBaseOffset01 * offsetRangePx;
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
             const float segmentWidthUV = std::clamp(visibleWidthPx / textureWidth, 0.0f, 1.0f);
 
@@ -115,8 +116,9 @@ namespace
                 return out;
             }
 
-            const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
+            const float offsetRangePx = textureHeight - visibleHeightPx;
+            const float maxOffsetPx = std::max(0.0f, offsetRangePx);
+            const float baseOffsetPx = clampedBaseOffset01 * offsetRangePx;
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
             const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
 
