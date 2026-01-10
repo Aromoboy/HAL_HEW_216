@@ -275,6 +275,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const float startY = (screenHeight - groupHeight) * 0.5f + buttonHeight * 0.5f;
 
     // カーソルで色を切り替えて描画
+    SetDepthTest(false);
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
                  m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
                  m_cursor == 0 ? "start_green_btn" : "start_red_btn",
@@ -296,6 +297,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
                  startY + spacing * 2,
                  buttonWidth,
                  buttonHeight);
+    SetDepthTest(true);
 
     SetSamplerState(previousSampler);
 }
