@@ -6,6 +6,7 @@
 #include "Texture.h"
 #include <algorithm>
 #include <sstream>
+#include <vector>
 
 namespace
 {
@@ -17,19 +18,6 @@ namespace
         float scaleY = 1.0f;
     };
 
-    bool TryGetViewportSize(float& width, float& height)
-    {
-        RenderTarget* rtv = GetDefaultRTV();
-        if (!rtv)
-        {
-            return false;
-        }
-
-        width = static_cast<float>(rtv->GetWidth());
-        height = static_cast<float>(rtv->GetHeight());
-        return width > 0.0f && height > 0.0f;
-    }
-
     UVWindow ComputeVerticalUVWindow(
         float textureWidth,
         float textureHeight,
@@ -37,6 +25,7 @@ namespace
         float screenHeight,
         float scrollOffset,
         float parallaxFactor,
+        float baseOffset01,
         float pixelsPerUnit)
     {
         UVWindow out{};
@@ -49,45 +38,62 @@ namespace
         const float textureAspect = textureWidth / textureHeight;
         const float scrollWorld = scrollOffset * parallaxFactor;
         const float scrollPx = scrollWorld * pixelsPerUnit;
+        const float clampedBaseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
 
-        if (textureAspect < screenAspect)
+        if (textureAspect > screenAspect)
         {
-            const float visibleWidthPx = textureHeight * screenAspect;
-            if (visibleWidthPx <= 0.0f)
+            const float scaleX = screenAspect / textureAspect;
+            if (scaleX <= 0.0f)
             {
                 return out;
             }
 
-            const float maxOffsetPx = std::max(0.0f, textureWidth - visibleWidthPx);
-            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
-            const float segmentWidthUV = std::clamp(visibleWidthPx / textureWidth, 0.0f, 1.0f);
+            const float visibleWidthPx = textureWidth * scaleX;
+            const float offsetRangePx = textureWidth - visibleWidthPx;
+            const float maxOffsetPx = std::max(0.0f, offsetRangePx);
+            const float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
+            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
 
             float u0 = offsetPx / textureWidth;
-            u0 = std::clamp(u0, 0.0f, 1.0f - segmentWidthUV);
+            u0 = std::clamp(u0, 0.0f, 1.0f - scaleX);
 
             out.u0 = u0;
-            out.scaleX = segmentWidthUV;
+            out.scaleX = scaleX;
             out.scaleY = 1.0f;
         }
-        else
+        else if (textureAspect < screenAspect)
         {
-            const float visibleHeightPx = textureWidth * (screenHeight / screenWidth);
-            if (visibleHeightPx <= 0.0f)
+            const float scaleY = textureAspect / screenAspect;
+            if (scaleY <= 0.0f)
             {
                 return out;
             }
 
-            const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
-            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
-            const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
+            const float visibleHeightPx = textureHeight * scaleY;
+            const float offsetRangePx = textureHeight - visibleHeightPx;
+            const float maxOffsetPx = std::max(0.0f, offsetRangePx);
+            const float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
+            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
 
             float v0 = offsetPx / textureHeight;
-            v0 = std::clamp(v0, 0.0f, 1.0f - segmentHeightUV);
+            v0 = std::clamp(v0, 0.0f, 1.0f - scaleY);
 
             out.v0 = v0;
-            out.scaleY = segmentHeightUV;
+            out.scaleY = scaleY;
         }
         return out;
+    }
+
+    SamplerState ToSamplerState(BackgroundRendererConfig::SamplingMode mode)
+    {
+        switch (mode)
+        {
+        case BackgroundRendererConfig::SamplingMode::Clamp:
+            return SAMPLER_POSTPROCESS;
+        case BackgroundRendererConfig::SamplingMode::Wrap:
+        default:
+            return SAMPLER_LINEAR;
+        }
     }
 }
 
@@ -152,13 +158,13 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
     SetDepthTest(false);
     SetBlendMode(BLEND_ALPHA);
 
-    float viewportWidth = 0.0f;
-    float viewportHeight = 0.0f;
-    const bool hasViewport = TryGetViewportSize(viewportWidth, viewportHeight);
+    ID3D11DeviceContext* context = GetContext();
+    if (!context)
+    {
+        Diagnostics::LogInfo("[BackgroundRenderer] Viewport context unavailable; skipping background draw.");
+        return;
+    }
 
-    Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
     for (const auto& layer : m_layers)
     {
         if (!layer.texture)
@@ -166,38 +172,54 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             continue;
         }
 
+        UINT viewportCount = 0;
+        context->RSGetViewports(&viewportCount, nullptr);
+        const bool hasViewport = viewportCount > 0;
+        if (!hasViewport)
+        {
+            Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background layer.");
+            continue;
+        }
+
+        std::vector<D3D11_VIEWPORT> viewports(viewportCount);
+        context->RSGetViewports(&viewportCount, viewports.data());
+        const D3D11_VIEWPORT& viewport = viewports.front();
+
+        const float viewportWidth = viewport.Width;
+        const float viewportHeight = viewport.Height;
+        Sprite::ResetStateToDefaults();
+        Sprite::SetWorld(m_identityMatrix);
+        Sprite::SetView(m_identityMatrix);
+        Sprite::SetProjection(m_identityMatrix);
+        SetSamplerState(ToSamplerState(layer.config.samplingMode));
         Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
         // Aspect is corrected via UVs; geometry stays in NDC.
         Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::SetTexture(layer.texture.get());
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
         const float adjustedScrollOffset = scrollDirection * scrollOffset;
-        if (hasViewport)
+        const float layerPixelsPerUnit = layer.config.scrollOffsetInPixels ? 1.0f : pixelsPerUnit;
+        const float textureWidth = static_cast<float>(layer.texture->GetWidth());
+        const float textureHeight = static_cast<float>(layer.texture->GetHeight());
+        const UVWindow window = ComputeVerticalUVWindow(
+            textureWidth,
+            textureHeight,
+            viewportWidth,
+            viewportHeight,
+            adjustedScrollOffset,
+            layer.config.parallaxFactor,
+            layer.config.baseOffset01,
+            layerPixelsPerUnit);
+        Sprite::SetUVPos({ window.u0, window.v0 });
+        if (!(window.scaleX == 1.0f && window.scaleY == 1.0f))
         {
-            const float textureWidth = static_cast<float>(layer.texture->GetWidth());
-            const float textureHeight = static_cast<float>(layer.texture->GetHeight());
-            const UVWindow window = ComputeVerticalUVWindow(
-                textureWidth,
-                textureHeight,
-                viewportWidth,
-                viewportHeight,
-                adjustedScrollOffset,
-                layer.config.parallaxFactor,
-                pixelsPerUnit);
-            Sprite::SetUVPos({ window.u0, window.v0 });
             Sprite::SetUVScale({ window.scaleX, window.scaleY });
-        }
-        else
-        {
-            const float parallaxOffsetY = adjustedScrollOffset * layer.config.parallaxFactor;
-            const DirectX::XMFLOAT2 parallaxOffset(0.0f, parallaxOffsetY);
-            Sprite::SetUVPos(parallaxOffset);
-            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
         }
         Sprite::SetColor(layer.config.tintColor);
         Sprite::Draw();
     }
 
+    SetSamplerState(SAMPLER_LINEAR);
     SetDepthTest(true);
 }
 
