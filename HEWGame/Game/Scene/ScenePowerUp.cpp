@@ -36,6 +36,7 @@ namespace SceneSpace
                 cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
+                cache.Load("PowerUpBG", GetDevice(), L"Assets/Texture/upgrade_menu_background.png");
 
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
@@ -161,7 +162,7 @@ namespace SceneSpace
                 {
                         return;
                 }
-
+                m_powerUpRenderer->DrawBackground(*activeCamera);
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
