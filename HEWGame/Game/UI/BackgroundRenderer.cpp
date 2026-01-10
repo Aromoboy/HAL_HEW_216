@@ -6,6 +6,7 @@
 #include "Texture.h"
 #include <algorithm>
 #include <sstream>
+#include <vector>
 
 namespace
 {
@@ -164,9 +165,6 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         return;
     }
 
-    Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
     for (const auto& layer : m_layers)
     {
         if (!layer.texture)
@@ -174,17 +172,25 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             continue;
         }
 
-        UINT viewportCount = 1;
-        D3D11_VIEWPORT viewport{};
-        context->RSGetViewports(&viewportCount, &viewport);
-        if (viewportCount == 0)
+        UINT viewportCount = 0;
+        context->RSGetViewports(&viewportCount, nullptr);
+        const bool hasViewport = viewportCount > 0;
+        if (!hasViewport)
         {
             Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background layer.");
             continue;
         }
 
+        std::vector<D3D11_VIEWPORT> viewports(viewportCount);
+        context->RSGetViewports(&viewportCount, viewports.data());
+        const D3D11_VIEWPORT& viewport = viewports.front();
+
         const float viewportWidth = viewport.Width;
         const float viewportHeight = viewport.Height;
+        Sprite::ResetStateToDefaults();
+        Sprite::SetWorld(m_identityMatrix);
+        Sprite::SetView(m_identityMatrix);
+        Sprite::SetProjection(m_identityMatrix);
         SetSamplerState(ToSamplerState(layer.config.samplingMode));
         Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
         // Aspect is corrected via UVs; geometry stays in NDC.
@@ -205,7 +211,10 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             layer.config.baseOffset01,
             layerPixelsPerUnit);
         Sprite::SetUVPos({ window.u0, window.v0 });
-        Sprite::SetUVScale({ window.scaleX, window.scaleY });
+        if (!(window.scaleX == 1.0f && window.scaleY == 1.0f))
+        {
+            Sprite::SetUVScale({ window.scaleX, window.scaleY });
+        }
         Sprite::SetColor(layer.config.tintColor);
         Sprite::Draw();
     }
