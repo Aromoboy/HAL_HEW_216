@@ -216,8 +216,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     auto drawUIButton = [&](Texture& tex,
                             bool isValid,
                             const char* label,
-                            const float3& position,
-                            const float3& scale)
+                            const DirectX::XMFLOAT4X4& world)
         {
             if (!isValid)
             {
@@ -238,9 +237,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
                 return;
             }
 
-            DirectX::XMFLOAT4X4 world;
-            DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
-
             Sprite::SetTexture(&tex);
             Sprite::SetWorld(world);
             Sprite::SetView(view);
@@ -254,27 +250,39 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     const float buttonSpacing = 0.7f;
     const float3 buttonScale{ 1.6f, 0.6f, 1.0f };
     const float3 buttonBasePosition{ 0.0f, 0.6f, 1.0f };
-    const float3 startButtonPosition{ buttonBasePosition.x, buttonBasePosition.y, buttonBasePosition.z };
-    const float3 powerUpButtonPosition{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing, buttonBasePosition.z };
-    const float3 exitButtonPosition{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing * 2.0f, buttonBasePosition.z };
 
     // カーソルで色を切り替えて描画
     SetDepthTest(false);
-    drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
-                 m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
-                 m_cursor == 0 ? "start_green_btn" : "start_red_btn",
-                 startButtonPosition,
-                 buttonScale);
-    drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed,
-                 m_cursor == 1 ? m_texPowerUpGreenValid : m_texPowerUpRedValid,
-                 m_cursor == 1 ? "kyouka_green_btn" : "kyouka_red_btn",
-                 powerUpButtonPosition,
-                 buttonScale);
-    drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed,
-                 m_cursor == 2 ? m_texExitGreenValid : m_texExitRedValid,
-                 m_cursor == 2 ? "exit_green_btn" : "exit_red_btn",
-                 exitButtonPosition,
-                 buttonScale);
+    {
+        DirectX::XMFLOAT4X4 world;
+        float3 position{ buttonBasePosition.x, buttonBasePosition.y, buttonBasePosition.z };
+        float3 scale{ buttonScale.x, buttonScale.y, buttonScale.z };
+        DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed,
+                     m_cursor == 0 ? m_texStartGreenValid : m_texStartRedValid,
+                     m_cursor == 0 ? "start_green_btn" : "start_red_btn",
+                     world);
+    }
+    {
+        DirectX::XMFLOAT4X4 world;
+        float3 position{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing, buttonBasePosition.z };
+        float3 scale{ buttonScale.x, buttonScale.y, buttonScale.z };
+        DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed,
+                     m_cursor == 1 ? m_texPowerUpGreenValid : m_texPowerUpRedValid,
+                     m_cursor == 1 ? "kyouka_green_btn" : "kyouka_red_btn",
+                     world);
+    }
+    {
+        DirectX::XMFLOAT4X4 world;
+        float3 position{ buttonBasePosition.x, buttonBasePosition.y - buttonSpacing * 2.0f, buttonBasePosition.z };
+        float3 scale{ buttonScale.x, buttonScale.y, buttonScale.z };
+        DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f, 0.0f, 0.0f });
+        drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed,
+                     m_cursor == 2 ? m_texExitGreenValid : m_texExitRedValid,
+                     m_cursor == 2 ? "exit_green_btn" : "exit_red_btn",
+                     world);
+    }
     SetDepthTest(true);
 
     SetSamplerState(previousSampler);
