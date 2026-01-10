@@ -481,6 +481,7 @@ void SceneComposer::ComposeUI(Composition& result)
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
+        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
