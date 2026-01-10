@@ -93,6 +93,18 @@ namespace
         }
         return out;
     }
+
+    SamplerState ToSamplerState(BackgroundRendererConfig::SamplingMode mode)
+    {
+        switch (mode)
+        {
+        case BackgroundRendererConfig::SamplingMode::Clamp:
+            return SAMPLER_POSTPROCESS;
+        case BackgroundRendererConfig::SamplingMode::Wrap:
+        default:
+            return SAMPLER_LINEAR;
+        }
+    }
 }
 
 BackgroundRenderer::BackgroundRenderer()
@@ -170,6 +182,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             continue;
         }
 
+        SetSamplerState(ToSamplerState(layer.config.samplingMode));
         Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
         // Aspect is corrected via UVs; geometry stays in NDC.
         Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
@@ -204,6 +217,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         Sprite::Draw();
     }
 
+    SetSamplerState(SAMPLER_LINEAR);
     SetDepthTest(true);
 }
 
