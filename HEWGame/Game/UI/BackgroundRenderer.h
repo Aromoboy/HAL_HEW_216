@@ -10,11 +10,18 @@ class Texture;
 
 struct BackgroundRendererConfig
 {
+    enum class FitMode
+    {
+        Contain,
+        Cover
+    };
+
     struct BackgroundLayer
     {
         std::string texturePath;
         float parallaxFactor = 0.0f;
         bool invertScroll = true;
+        FitMode fitMode = FitMode::Cover;
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
@@ -33,6 +40,7 @@ public:
 
 private:
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;
+    bool TryGetViewportSize(float& width, float& height) const;
 
     struct LoadedLayer
     {
