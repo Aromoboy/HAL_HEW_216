@@ -11,7 +11,9 @@ namespace
 {
     struct UVWindow
     {
+        float u0 = 0.0f;
         float v0 = 0.0f;
+        float scaleX = 1.0f;
         float scaleY = 1.0f;
     };
 
@@ -43,22 +45,47 @@ namespace
             return out;
         }
 
-        const float visibleHeightPx = textureWidth * (screenHeight / screenWidth);
-        if (visibleHeightPx <= 0.0f)
-        {
-            return out;
-        }
-
+        const float screenAspect = screenWidth / screenHeight;
+        const float textureAspect = textureWidth / textureHeight;
         const float scrollPx = scrollOffset * pixelsPerUnit * parallaxFactor;
-        const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
-        const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
-        const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
 
-        float v0 = offsetPx / textureHeight;
-        v0 = std::clamp(v0, 0.0f, 1.0f - segmentHeightUV);
+        if (textureAspect < screenAspect)
+        {
+            const float visibleWidthPx = textureHeight * screenAspect;
+            if (visibleWidthPx <= 0.0f)
+            {
+                return out;
+            }
 
-        out.v0 = v0;
-        out.scaleY = segmentHeightUV;
+            const float maxOffsetPx = std::max(0.0f, textureWidth - visibleWidthPx);
+            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
+            const float segmentWidthUV = std::clamp(visibleWidthPx / textureWidth, 0.0f, 1.0f);
+
+            float u0 = offsetPx / textureWidth;
+            u0 = std::clamp(u0, 0.0f, 1.0f - segmentWidthUV);
+
+            out.u0 = u0;
+            out.scaleX = segmentWidthUV;
+            out.scaleY = 1.0f;
+        }
+        else
+        {
+            const float visibleHeightPx = textureWidth * (screenHeight / screenWidth);
+            if (visibleHeightPx <= 0.0f)
+            {
+                return out;
+            }
+
+            const float maxOffsetPx = std::max(0.0f, textureHeight - visibleHeightPx);
+            const float offsetPx = std::clamp(scrollPx, 0.0f, maxOffsetPx);
+            const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
+
+            float v0 = offsetPx / textureHeight;
+            v0 = std::clamp(v0, 0.0f, 1.0f - segmentHeightUV);
+
+            out.v0 = v0;
+            out.scaleY = segmentHeightUV;
+        }
         return out;
     }
 }
@@ -154,8 +181,8 @@ void BackgroundRenderer::Draw(float scrollOffset) const
                 viewportHeight,
                 adjustedScrollOffset,
                 layer.config.parallaxFactor);
-            Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, window.v0));
-            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, window.scaleY));
+            Sprite::SetUVPos(DirectX::XMFLOAT2(window.u0, window.v0));
+            Sprite::SetUVScale(DirectX::XMFLOAT2(window.scaleX, window.scaleY));
         }
         else
         {
