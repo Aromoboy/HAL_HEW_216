@@ -18,6 +18,8 @@ namespace
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     const std::string kDefaultBackgroundTexturePath = "Assets/Texture/background.png";
+    const std::string kDefaultGuidelineModelPath = "Assets/Model/GuideLine.fbx";
+    const std::string kDefaultGuidelineMaterialKey = "guideline";
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
     const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
@@ -83,6 +85,16 @@ namespace Stage
     const std::string& StageConfigDefaults::DefaultBackgroundTexturePath()
     {
         return kDefaultBackgroundTexturePath;
+    }
+
+    const std::string& StageConfigDefaults::DefaultGuidelineModelPath()
+    {
+        return kDefaultGuidelineModelPath;
+    }
+
+    const std::string& StageConfigDefaults::DefaultGuidelineMaterialKey()
+    {
+        return kDefaultGuidelineMaterialKey;
     }
 
     const std::vector<float>& StageConfigDefaults::DefaultThresholds()
@@ -232,6 +244,8 @@ namespace Stage
         float guidelineThicknessPixels = parsed.guidelineThicknessPixels;
         float guidelineWidthPaddingWorld = parsed.guidelineWidthPaddingWorld;
         float guidelineZOffset = parsed.guidelineZOffset;
+        std::string guidelineModelPath = parsed.guidelineModelPath;
+        std::string guidelineMaterialKey = parsed.guidelineMaterialKey;
         float heightBonusThreshold = parsed.heightBonusThreshold;
         float heightBonusSeconds = parsed.heightBonusSeconds;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
@@ -291,6 +305,22 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineZOffset not specified; defaulting to "
                 << guidelineZOffset << "\n";
+        }
+
+        if (!parsed.guidelineModelPathSet)
+        {
+            guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineModelPath not specified; defaulting to '"
+                << guidelineModelPath << "'.\n";
+        }
+
+        if (!parsed.guidelineMaterialKeySet)
+        {
+            guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineMaterialKey not specified; defaulting to '"
+                << guidelineMaterialKey << "'.\n";
         }
 
         if (!parsed.heightBonusThresholdSet)
@@ -887,6 +917,8 @@ namespace Stage
         normalized.guidelineThicknessPixels = guidelineThicknessPixels;
         normalized.guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
         normalized.guidelineZOffset = guidelineZOffset;
+        normalized.guidelineModelPath = std::move(guidelineModelPath);
+        normalized.guidelineMaterialKey = std::move(guidelineMaterialKey);
         normalized.heightBonusThreshold = heightBonusThreshold;
         normalized.heightBonusSeconds = heightBonusSeconds;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
@@ -935,6 +967,8 @@ namespace Stage
         normalized.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
         normalized.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
         normalized.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
+        normalized.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
+        normalized.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
