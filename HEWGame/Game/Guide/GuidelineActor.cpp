@@ -1,4 +1,4 @@
-#include "GuidelineActor.h"
+﻿#include "GuidelineActor.h"
 
 #include "AABB.h"
 #include "MaterialDX.h"
@@ -147,12 +147,35 @@ GuidelineActor::GuidelineActor()
 {
 }
 
+GuidelineActor::GuidelineActor(std::shared_ptr<Render::Model> model)
+    : Entities::Entity(Transform{}, std::move(model), Core::UpdatePhase::Gameplay, 0, kGuidelineTag)
+{
+}
+
 void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, float width, float thickness)
 {
     const float safeWidth = (std::isfinite(width) && width > 0.0f) ? width : 0.01f;
     const float safeThickness = (std::isfinite(thickness) && thickness > 0.0f) ? thickness : 0.01f;
+    float3 scale{ safeWidth, safeThickness, 1.0f };
+    const Render::Model* model = GetRenderableModel();
+    if (model && model->HasLocalBounds())
+    {
+        const AABB& bounds = model->GetLocalBounds();
+        const float3 size
+        {
+            bounds.max.x - bounds.min.x,
+            bounds.max.y - bounds.min.y,
+            bounds.max.z - bounds.min.z,
+        };
+        if (std::isfinite(size.x) && size.x > 0.0f
+            && std::isfinite(size.y) && size.y > 0.0f)
+        {
+            // Scale relative to the model's local bounding box so width/thickness match the model extents.
+            scale = float3{ safeWidth / size.x, safeThickness / size.y, 1.0f };
+        }
+    }
 
     m_transform.position = float3{ centerX, height, planeZ };
-    m_transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
-    m_transform.scale = float3{ safeWidth, safeThickness, 1.0f };
+    m_transform.rotation = float3{ 30.0f, 0.0f, 0.0f };
+    m_transform.scale = scale;
 }
