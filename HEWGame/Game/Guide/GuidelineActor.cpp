@@ -1,4 +1,4 @@
-#include "GuidelineActor.h"
+﻿#include "GuidelineActor.h"
 
 #include "AABB.h"
 #include "MaterialDX.h"
@@ -176,6 +176,6 @@ void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, 
     }
 
     m_transform.position = float3{ centerX, height, planeZ };
-    m_transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
+    m_transform.rotation = float3{ 30.0f, 0.0f, 0.0f };
     m_transform.scale = scale;
 }
