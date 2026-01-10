@@ -10,11 +10,20 @@ class Texture;
 
 struct BackgroundRendererConfig
 {
+    enum class SamplingMode
+    {
+        Wrap,
+        Clamp
+    };
+
     struct BackgroundLayer
     {
         std::string texturePath;
         float parallaxFactor = 0.0f;
         bool invertScroll = true;
+        SamplingMode samplingMode = SamplingMode::Wrap;
+        float baseOffset01 = 0.0f;
+        bool scrollOffsetInPixels = false;
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
 
@@ -29,7 +38,8 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
-    void Draw(float scrollOffset) const;
+    // Aspect correction is handled via the UV window; sprite size stays at 2x2 in clip space.
+    void Draw(float scrollOffset, float pixelsPerUnit) const;
 
 private:
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;

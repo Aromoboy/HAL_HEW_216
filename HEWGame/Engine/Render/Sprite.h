@@ -16,8 +16,11 @@ public:
 	static void ResetStateToDefaults();
 
 	static void SetOffset(DirectX::XMFLOAT2 offset);
+	// Full size in clip-space (NDC): 2.0 = fullscreen.
 	static void SetSize(DirectX::XMFLOAT2 size);
+	// UV offset; UV (0,0) is the top of the texture.
 	static void SetUVPos(DirectX::XMFLOAT2 pos);
+	// uv = base * scale + offset; scale < 1 = window, scale > 1 = tiling.
 	static void SetUVScale(DirectX::XMFLOAT2 scale);
 	static void SetColor(DirectX::XMFLOAT4 color);
 	static void SetTexture(Texture* tex);

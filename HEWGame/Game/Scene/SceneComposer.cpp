@@ -1,4 +1,4 @@
-#include "SceneComposer.h"
+﻿#include "SceneComposer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -476,11 +476,15 @@ void SceneComposer::ComposeUI(Composition& result)
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
-        constexpr float kDefaultBackgroundParallax = 0.001f;
+        // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
+        constexpr float kDefaultBackgroundParallax = 0.0001f;
         BackgroundRendererConfig backgroundConfig{};
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
+        layer.scrollOffsetInPixels = false;
+        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
+        layer.baseOffset01 = 4.00f;
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();

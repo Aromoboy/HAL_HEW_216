@@ -92,7 +92,16 @@ namespace
         case SweetsType::Banana:
             return "Assets/Texture/banana.png";
         case SweetsType::Cream:
-            return "Assets/Texture/cream.png";
+            return "Assets/Texture/Cream.png";
+
+        case SweetsType::Kiwi :
+            return "Assets/Texture/kiwi.png";
+        case SweetsType::Mikan:
+            return "Assets/Texture/mikan.png";
+        case SweetsType::Muscat:
+            return "Assets/Texture/muscat.png";
+        case SweetsType::Melon:
+            return "Assets/Texture/melon.png";
         default:
             return std::nullopt;
         }
@@ -138,13 +147,30 @@ namespace
         }
         if (contains("cream"))
         {
-            return "Assets/Texture/cream.png";
+            return "Assets/Texture/Cream.png";
         }
         if (contains("banana"))
         {
             return "Assets/Texture/banana.png";
         }
 
+        //01/09追加分
+        if (contains("kiwi"))
+        {
+            return "Assets/Texture/kiwi.png";
+        }
+        if (contains("mikan"))
+        {
+            return "Assets/Texture/mikan.png";
+        }
+        if (contains("muscat"))
+        {
+            return "Assets/Texture/muscat.png";
+        }
+        if (contains("melon"))
+        {
+            return "Assets/Texture/melon.png";
+        }
         return std::nullopt;
     }
 
@@ -157,12 +183,15 @@ namespace
             aliases.emplace(NormalizeForKey(alias), target);
         };
 
-        addAlias("パイナップル.png", "pineapple.png");
         addAlias("パイナップル.png", "pineapple.png");
         addAlias("バナナ.png", "banana.png");
         addAlias("ブルーベリー.png", "blueberry.png");
         addAlias("ストロベリー.png", "strawberry.png");
         addAlias("いちご.png", "strawberry.png");
+        addAlias("キウイ.png", "kiwi.png");
+        addAlias("みかん.png", "mikan.png");
+        addAlias("マスカット.png", "muscat.png");
+        addAlias("メロン.png", "melon.png");
         addAlias("クリーム.png", "cream.png");
 
         return aliases;

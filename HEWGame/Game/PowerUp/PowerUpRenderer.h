@@ -156,6 +156,7 @@ public:
 	void DrawHud(const CameraSpace::ICamera& camera);
 	void DrawCursor(std::shared_ptr<Texture2D> texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera&);
 	void DrawNode(const NodeRenderData& data , const CameraSpace::ICamera&);
+	void DrawBackground(const CameraSpace::ICamera& camera);
 
 
 
@@ -208,7 +209,7 @@ private:
 	std::shared_ptr<Texture2D> m_cost;
 	std::shared_ptr<Texture2D> m_iconFrame;
 	std::shared_ptr<Texture2D> m_backFrame;
-
+	std::shared_ptr<Texture2D> m_background;
 
 	// 文字描画用関数
 	bool CreateTextResources();

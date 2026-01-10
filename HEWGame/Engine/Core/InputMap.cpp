@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <Xinput.h>
 
 #ifndef VK_A
 #define VK_A 0x41
@@ -52,15 +53,17 @@ namespace Core
         m_bindings[ActionId::DebugConsole] = MakeBinding(VK_F1, 0, -1, 1.0f);
         m_bindings[ActionId::DebugToggle] = MakeBinding(VK_F5, 0, -1, 1.0f);
         m_bindings[ActionId::ToggleFullscreen] = MakeBinding(VK_F11, 0, -1, 1.0f);
-        m_bindings[ActionId::CameraToggle] = MakeBinding(VK_RETURN, 0, -1, 1.0f);
+        m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, XINPUT_GAMEPAD_A, -1, 1.0f);
         m_bindings[ActionId::CameraHeightToggle] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
         m_bindings[ActionId::SpeedBoost] = MakeBinding('1', 0, -1, 1.0f);
         m_bindings[ActionId::SpeedReset] = MakeBinding('2', 0, -1, 1.0f);
         m_bindings[ActionId::ColliderNudgeUp] = MakeBinding(VK_F2, 0, -1, 1.0f);
         m_bindings[ActionId::ColliderNudgeDown] = MakeBinding(VK_F3, 0, -1, 1.0f);
+        m_bindings[ActionId::MoveMenu] = MakeBinding(0, 0, 2, 1.0f);
 
         m_axisKeys[ActionId::MoveX] = { VK_A, VK_D };
         m_axisKeys[ActionId::RotateYaw] = { VK_S, VK_W };
+        m_axisKeys[ActionId::MoveMenu] = { VK_UP, VK_DOWN }; 
 
         m_actionKeys[ActionId::Drop] = { 'Q' };
         m_actionKeys[ActionId::Confirm] = { static_cast<unsigned char>('E'), VK_RETURN };

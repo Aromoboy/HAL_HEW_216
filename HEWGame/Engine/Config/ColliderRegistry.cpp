@@ -96,7 +96,7 @@ namespace
             return vertices;
         }
 
-        constexpr int kArcSegments = 6;
+        constexpr int kArcSegments = 3;
         const float startRight = -B2_PI * 0.5f;
         const float endRight = B2_PI * 0.5f;
         const float startLeft = B2_PI * 0.5f;

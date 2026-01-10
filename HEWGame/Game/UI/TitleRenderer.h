@@ -6,7 +6,7 @@
 #include "MeshDX.h"
 #include "Shader.h"
 #include "TextureDX.h"
-
+#include "Sprite.h"
 
 
 class TitleRendererTexture : public Texture

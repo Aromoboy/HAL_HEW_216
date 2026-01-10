@@ -107,6 +107,13 @@ namespace Systems
                 const auto validateShapeAndBody = [&](b2ShapeId shapeId)
                     {
                         ShapeValidationResult result{};
+                        const uint64_t shapeKey = b2StoreShapeId(shapeId);
+                        if (m_destroyedShapeIds.contains(shapeKey))
+                        {
+                                result.reason = "destroyed shape";
+                                return result;
+                        }
+
                         if (!b2Shape_IsValid(shapeId))
                         {
                                 result.reason = "invalid shape";
@@ -117,13 +124,6 @@ namespace Systems
                         if (b2Body_IsValid(bodyId))
                         {
                                 result.bodyKey = b2StoreBodyId(bodyId);
-                        }
-
-                        const uint64_t shapeKey = b2StoreShapeId(shapeId);
-                        if (m_destroyedShapeIds.contains(shapeKey))
-                        {
-                                result.reason = "destroyed shape";
-                                return result;
                         }
 
                         if (!b2Body_IsValid(bodyId))
@@ -273,11 +273,6 @@ namespace Systems
 
                         if (!fixturesValid)
                         {
-                                if (bodiesMatchShapes)
-                                {
-                                        recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB,
-                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
-                                }
                                 continue;
                         }
 
@@ -325,11 +320,6 @@ namespace Systems
 
                         if (!fixturesValid)
                         {
-                                if (bodiesMatchShapes)
-                                {
-                                        recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB,
-                                            "missing body or fixtures", shapeAValidation.bodyKey, shapeBValidation.bodyKey);
-                                }
                                 continue;
                         }
 

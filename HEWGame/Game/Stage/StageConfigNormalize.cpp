@@ -1,4 +1,4 @@
-#include "Stage/StageConfigNormalize.h"
+﻿#include "Stage/StageConfigNormalize.h"
 
 #include <algorithm>
 #include <cmath>
@@ -17,7 +17,7 @@ namespace
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
-    const std::string kDefaultBackgroundTexturePath = "Assets/Texture/Title.jpg";
+    const std::string kDefaultBackgroundTexturePath = "Assets/Texture/background.png";
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
     const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
