@@ -40,46 +40,46 @@ namespace
         const float scrollPx = scrollWorld * pixelsPerUnit;
         const float clampedBaseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
 
-        if (textureAspect < screenAspect)
+        if (textureAspect > screenAspect)
         {
-            const float visibleWidthPx = textureHeight * screenAspect;
-            if (visibleWidthPx <= 0.0f)
+            const float scaleX = screenAspect / textureAspect;
+            if (scaleX <= 0.0f)
             {
                 return out;
             }
 
+            const float visibleWidthPx = textureWidth * scaleX;
             const float offsetRangePx = textureWidth - visibleWidthPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
             const float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
-            const float segmentWidthUV = std::clamp(visibleWidthPx / textureWidth, 0.0f, 1.0f);
 
             float u0 = offsetPx / textureWidth;
-            u0 = std::clamp(u0, 0.0f, 1.0f - segmentWidthUV);
+            u0 = std::clamp(u0, 0.0f, 1.0f - scaleX);
 
             out.u0 = u0;
-            out.scaleX = segmentWidthUV;
+            out.scaleX = scaleX;
             out.scaleY = 1.0f;
         }
-        else
+        else if (textureAspect < screenAspect)
         {
-            const float visibleHeightPx = textureWidth * (screenHeight / screenWidth);
-            if (visibleHeightPx <= 0.0f)
+            const float scaleY = textureAspect / screenAspect;
+            if (scaleY <= 0.0f)
             {
                 return out;
             }
 
+            const float visibleHeightPx = textureHeight * scaleY;
             const float offsetRangePx = textureHeight - visibleHeightPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
             const float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
-            const float segmentHeightUV = std::clamp(visibleHeightPx / textureHeight, 0.0f, 1.0f);
 
             float v0 = offsetPx / textureHeight;
-            v0 = std::clamp(v0, 0.0f, 1.0f - segmentHeightUV);
+            v0 = std::clamp(v0, 0.0f, 1.0f - scaleY);
 
             out.v0 = v0;
-            out.scaleY = segmentHeightUV;
+            out.scaleY = scaleY;
         }
         return out;
     }
