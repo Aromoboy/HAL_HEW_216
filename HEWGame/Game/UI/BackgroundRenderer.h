@@ -29,7 +29,7 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
-    void Draw(float scrollOffset) const;
+    void Draw(float scrollOffset, float pixelsPerUnit) const;
 
 private:
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;

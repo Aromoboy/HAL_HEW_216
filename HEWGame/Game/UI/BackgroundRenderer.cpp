@@ -37,7 +37,7 @@ namespace
         float screenHeight,
         float scrollOffset,
         float parallaxFactor,
-        float pixelsPerUnit = 1.0f)
+        float pixelsPerUnit)
     {
         UVWindow out{};
         if (textureWidth <= 0.0f || textureHeight <= 0.0f || screenWidth <= 0.0f || screenHeight <= 0.0f)
@@ -139,7 +139,7 @@ void BackgroundRenderer::Shutdown()
     m_ready = false;
 }
 
-void BackgroundRenderer::Draw(float scrollOffset) const
+void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
 {
     Sprite::ScopedPassDefaults guard;
 
@@ -180,9 +180,10 @@ void BackgroundRenderer::Draw(float scrollOffset) const
                 viewportWidth,
                 viewportHeight,
                 adjustedScrollOffset,
-                layer.config.parallaxFactor);
-            Sprite::SetUVPos(DirectX::XMFLOAT2(window.u0, window.v0));
-            Sprite::SetUVScale(DirectX::XMFLOAT2(window.scaleX, window.scaleY));
+                layer.config.parallaxFactor,
+                pixelsPerUnit);
+            Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, window.v0));
+            Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, window.scaleY));
         }
         else
         {
