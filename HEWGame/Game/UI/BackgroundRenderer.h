@@ -29,6 +29,7 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
+    // Aspect correction is handled via the UV window; sprite size stays at 2x2 in clip space.
     void Draw(float scrollOffset, float pixelsPerUnit) const;
 
 private:
