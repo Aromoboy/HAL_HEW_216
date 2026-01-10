@@ -205,6 +205,8 @@ namespace Stage
         result.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
         result.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
         result.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
+        result.guidelineSpinAxis = StageConfigDefaults::DefaultGuidelineSpinAxis();
+        result.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         result.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
         result.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
         result.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
@@ -782,6 +784,38 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineZOffset on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "guidelineSpinAxis")
+            {
+                bool error = false;
+                auto parsed = ParseFloatList(rawValue, &error);
+                if (error || parsed.size() < 3)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "guidelineSpinAxis on line " << lineNumber
+                        << " must contain three floats. Raw='" << rawValue << "'\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.guidelineSpinAxis = float3{ parsed[0], parsed[1], parsed[2] };
+                    result.guidelineSpinAxisSet = true;
+                }
+            }
+            else if (key == "guidelineSpinSpeedDegPerSec")
+            {
+                try
+                {
+                    result.guidelineSpinSpeedDegPerSec = std::stof(rawValue);
+                    result.guidelineSpinSpeedSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineSpinSpeedDegPerSec on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

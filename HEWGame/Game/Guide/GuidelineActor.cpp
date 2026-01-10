@@ -5,6 +5,7 @@
 #include "MeshDX.h"
 #include "ModelDX.h"
 
+#include <DirectXMath.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -152,6 +153,43 @@ GuidelineActor::GuidelineActor(std::shared_ptr<Render::Model> model)
 {
 }
 
+void GuidelineActor::OnUpdate(const Core::UpdateContext& ctx)
+{
+    Entities::Entity::OnUpdate(ctx);
+    AdvanceSpin(ctx.dt);
+}
+
+void GuidelineActor::AdvanceSpin(float deltaSeconds)
+{
+    if (!std::isfinite(deltaSeconds) || deltaSeconds == 0.0f)
+    {
+        return;
+    }
+
+    if (!std::isfinite(m_spinSpeedDegPerSec) || m_spinSpeedDegPerSec == 0.0f)
+    {
+        return;
+    }
+
+    const float deltaRadians = DirectX::XMConvertToRadians(m_spinSpeedDegPerSec) * deltaSeconds;
+    if (!std::isfinite(deltaRadians) || deltaRadians == 0.0f)
+    {
+        return;
+    }
+
+    m_spinAngleRadians += deltaRadians;
+    if (std::isfinite(m_spinAngleRadians))
+    {
+        m_spinAngleRadians = std::fmod(m_spinAngleRadians, DirectX::XM_2PI);
+    }
+    else
+    {
+        m_spinAngleRadians = 0.0f;
+    }
+
+    ApplyRotation();
+}
+
 void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, float width, float thickness)
 {
     const float safeWidth = (std::isfinite(width) && width > 0.0f) ? width : 0.01f;
@@ -176,6 +214,39 @@ void GuidelineActor::UpdateGuideline(float centerX, float height, float planeZ, 
     }
 
     m_transform.position = float3{ centerX, height, planeZ };
-    m_transform.rotation = float3{ 30.0f, 0.0f, 0.0f };
     m_transform.scale = scale;
+    ApplyRotation();
+}
+
+void GuidelineActor::SetSpin(const float3& axis, float speedDegPerSec)
+{
+    m_spinSpeedDegPerSec = std::isfinite(speedDegPerSec) ? speedDegPerSec : 0.0f;
+
+    const float lengthSq = (axis.x * axis.x) + (axis.y * axis.y) + (axis.z * axis.z);
+    if (std::isfinite(axis.x) && std::isfinite(axis.y) && std::isfinite(axis.z) && lengthSq > 0.0f)
+    {
+        const float invLength = 1.0f / std::sqrt(lengthSq);
+        m_spinAxis = float3{ axis.x * invLength, axis.y * invLength, axis.z * invLength };
+    }
+    else
+    {
+        m_spinAxis = float3{ 0.0f, 1.0f, 0.0f };
+    }
+
+    ApplyRotation();
+}
+
+void GuidelineActor::ApplyRotation()
+{
+    const float3 spinRotation
+    {
+        m_spinAxis.x * m_spinAngleRadians,
+        m_spinAxis.y * m_spinAngleRadians,
+        m_spinAxis.z * m_spinAngleRadians
+    };
+    m_transform.rotation = float3{
+        m_baseRotation.x + spinRotation.x,
+        m_baseRotation.y + spinRotation.y,
+        m_baseRotation.z + spinRotation.z
+    };
 }

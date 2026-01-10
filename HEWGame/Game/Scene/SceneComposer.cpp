@@ -223,6 +223,9 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineThicknessPixels=" << result.stageData.GetGuidelineThicknessPixels()
             << " guidelineWidthPaddingWorld=" << result.stageData.GetGuidelineWidthPaddingWorld()
             << " guidelineZOffset=" << result.stageData.GetGuidelineZOffset()
+            << " guidelineSpinAxis=(" << result.stageData.GetGuidelineSpinAxis().x << ','
+            << result.stageData.GetGuidelineSpinAxis().y << ',' << result.stageData.GetGuidelineSpinAxis().z << ')'
+            << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
             << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
             << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
             << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
@@ -281,6 +284,8 @@ void SceneComposer::ComposeRules(Composition& result)
     result.guidelineThicknessPixels = result.stageData.GetGuidelineThicknessPixels();
     result.guidelineWidthPaddingWorld = result.stageData.GetGuidelineWidthPaddingWorld();
     result.guidelineZOffset = result.stageData.GetGuidelineZOffset();
+    result.guidelineSpinAxis = result.stageData.GetGuidelineSpinAxis();
+    result.guidelineSpinSpeedDegPerSec = result.stageData.GetGuidelineSpinSpeedDegPerSec();
     result.guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
     result.guidelineCooldownRemainingSeconds = 0.0f;
     result.guidelineCenterX = 0.0f;

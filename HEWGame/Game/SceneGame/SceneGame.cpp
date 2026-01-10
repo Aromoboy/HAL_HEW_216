@@ -419,6 +419,8 @@ bool SceneGame::Load(Core::Input& input)
     guidelineConfig.thicknessPixels = composition->guidelineThicknessPixels;
     guidelineConfig.widthPaddingWorld = composition->guidelineWidthPaddingWorld;
     guidelineConfig.zOffset = composition->guidelineZOffset;
+    guidelineConfig.spinAxis = composition->guidelineSpinAxis;
+    guidelineConfig.spinSpeedDegPerSec = composition->guidelineSpinSpeedDegPerSec;
     guidelineConfig.cooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
     guidelineConfig.cooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
     guidelineConfig.centerX = composition->guidelineCenterX;

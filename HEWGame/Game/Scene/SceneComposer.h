@@ -42,6 +42,8 @@ public:
         float guidelineThicknessPixels = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
         float guidelineZOffset = 0.0f;
+        float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
+        float guidelineSpinSpeedDegPerSec = 0.0f;
         float guidelineCooldownDurationSeconds = 0.0f;
         float guidelineCooldownRemainingSeconds = 0.0f;
         float guidelineCenterX = 0.0f;

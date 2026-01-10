@@ -73,6 +73,10 @@ namespace Stage
         bool guidelineWidthPaddingSet = false;
         float guidelineZOffset = 0.0f;
         bool guidelineZOffsetSet = false;
+        float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
+        bool guidelineSpinAxisSet = false;
+        float guidelineSpinSpeedDegPerSec = 0.0f;
+        bool guidelineSpinSpeedSet = false;
         std::string guidelineModelPath;
         bool guidelineModelPathSet = false;
         std::string guidelineMaterialKey;
