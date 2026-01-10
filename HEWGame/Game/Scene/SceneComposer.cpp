@@ -285,7 +285,15 @@ void SceneComposer::ComposeRules(Composition& result)
     result.guidelineCooldownRemainingSeconds = 0.0f;
     result.guidelineCenterX = 0.0f;
     result.guidelineWidthWorld = 0.0f;
-    result.guidelineThicknessWorld = kGuidelineThicknessMeters;
+    result.guidelineThicknessWorld = result.stageData.GetGuidelineThicknessWorld();
+    if (!std::isfinite(result.guidelineThicknessWorld) || result.guidelineThicknessWorld <= 0.0f)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Guideline thickness world " << result.guidelineThicknessWorld
+            << " invalid; using fallback " << kGuidelineThicknessMeters << "\n";
+        DebugTrace(oss.str());
+        result.guidelineThicknessWorld = kGuidelineThicknessMeters;
+    }
 
     {
         bool boundsValid = false;

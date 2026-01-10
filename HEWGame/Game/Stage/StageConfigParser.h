@@ -67,6 +67,8 @@ namespace Stage
         bool guidelineStepSet = false;
         float guidelineThicknessPixels = 0.0f;
         bool guidelineThicknessSet = false;
+        float guidelineThicknessWorld = 0.0f;
+        bool guidelineThicknessWorldSet = false;
         float guidelineWidthPaddingWorld = 0.0f;
         bool guidelineWidthPaddingSet = false;
         float guidelineZOffset = 0.0f;
