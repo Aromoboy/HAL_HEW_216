@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <string>
 
 #include <box2d/box2d.h>
 
@@ -17,6 +18,11 @@ namespace Systems
     class PhysicsMachine;
 }
 
+namespace SceneGameConfig
+{
+    struct CreamAdhesionSettings;
+}
+
 namespace SweetsSpace
 {
     class SweetsContacts
@@ -26,12 +32,15 @@ namespace SweetsSpace
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnUpdate(float dt);
+        void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
 
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
+        void ClearPendingAdhesionsForSweets(ActiveSweets* sweets);
         void Reset();
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
@@ -48,10 +57,10 @@ namespace SweetsSpace
 
         struct JointPairKey
         {
-            ActiveSweets* first{ nullptr };
-            ActiveSweets* second{ nullptr };
+            Entities::PhysicalEntity* first{ nullptr };
+            Entities::PhysicalEntity* second{ nullptr };
 
-            static JointPairKey Make(ActiveSweets* a, ActiveSweets* b)
+            static JointPairKey Make(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
             {
                 JointPairKey key{};
                 if (a < b)
@@ -77,21 +86,35 @@ namespace SweetsSpace
         {
             std::size_t operator()(const JointPairKey& key) const noexcept
             {
-                std::size_t h1 = std::hash<ActiveSweets*>{}(key.first);
-                std::size_t h2 = std::hash<ActiveSweets*>{}(key.second);
+                std::size_t h1 = std::hash<Entities::PhysicalEntity*>{}(key.first);
+                std::size_t h2 = std::hash<Entities::PhysicalEntity*>{}(key.second);
                 return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
             }
         };
 
+        struct PendingAdhesion
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* other{ nullptr };
+            float elapsedSeconds{ 0.0f };
+            bool stillTouching{ false };
+        };
+
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
+        void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
+        float m_creamAdhesionDelaySeconds{ 0.3f };
+        std::unordered_set<std::string> m_creamAllowedTags;
+        std::unordered_set<std::string> m_creamBlockedTags;
 
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
     };
 }

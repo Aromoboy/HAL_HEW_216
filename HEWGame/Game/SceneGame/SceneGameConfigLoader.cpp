@@ -86,6 +86,24 @@ namespace
         return value.size() >= suffix.size() && value.compare(value.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
+    std::vector<std::string> ParseTagList(const std::string& value)
+    {
+        std::vector<std::string> tags;
+        std::stringstream stream(value);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            std::string trimmed = TrimWhitespace(token);
+            if (trimmed.empty())
+            {
+                continue;
+            }
+            trimmed = ToLowerCopy(trimmed);
+            tags.push_back(std::move(trimmed));
+        }
+        return tags;
+    }
+
     std::optional<float> TryParseFloatToken(const std::string& token)
     {
         try
@@ -2780,5 +2798,51 @@ namespace SceneGameConfig
         }
 
         return config;
+    }
+
+    CreamAdhesionSettings LoadCreamAdhesionSettings()
+    {
+        CreamAdhesionSettings settings{};
+        settings.adhesionDelaySeconds = 0.3f;
+        settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
+        settings.blockedTags = { "osara", "fairy" };
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCream, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Cream adhesion config section '" << GameplayConfig::kSectionCream
+                << "' not found at '" << kGameplayConfigPath << "'. Using defaults.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            const std::string key = TrimWhitespace(entry.key);
+            const std::string value = TrimWhitespace(entry.value);
+            if (key.empty() || value.empty())
+            {
+                continue;
+            }
+
+            if (key == GameplayConfig::kCreamKeyAdhesionDelaySeconds)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.adhesionDelaySeconds = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyAllowedTags)
+            {
+                settings.allowedTags = ParseTagList(value);
+            }
+            else if (key == GameplayConfig::kCreamKeyBlockedTags)
+            {
+                settings.blockedTags = ParseTagList(value);
+            }
+        }
+
+        return settings;
     }
 }

@@ -7,6 +7,7 @@
 #include <DirectXMath.h>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace SceneGameConfig
 {
@@ -134,6 +135,13 @@ namespace SceneGameConfig
         float comfortZoneBottomPercentY = 0.1f;
         float followSpeedY = 5.0f;
         float offsetY = 0.0f;
+    };
+
+    struct CreamAdhesionSettings
+    {
+        float adhesionDelaySeconds = 0.3f;
+        std::vector<std::string> allowedTags;
+        std::vector<std::string> blockedTags;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

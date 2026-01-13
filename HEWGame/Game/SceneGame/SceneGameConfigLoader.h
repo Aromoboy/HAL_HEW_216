@@ -37,6 +37,7 @@ namespace SceneGameConfig
     MaterialTuningSettings LoadMaterialTuningSettings();
     CameraRigSettings LoadCameraRigSettings();
     GameCameraConfig LoadGameCameraConfig();
+    CreamAdhesionSettings LoadCreamAdhesionSettings();
 }
 
 #endif

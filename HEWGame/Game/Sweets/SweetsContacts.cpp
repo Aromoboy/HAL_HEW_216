@@ -1,8 +1,13 @@
 #include "Sweets/SweetsContacts.h"
 
+#include <algorithm>
 #include <sstream>
+#include <vector>
 
 #include "CollisionLayer.h"
+#include "MaterialDX.h"
+#include "ModelDX.h"
+#include "SceneGameConfigTypes.h"
 #include "Sweets/BaseSweets.h"
 #include "Sweets/SweetsKeyUtils.h"
 #include "SweetsPrototypeManifest.h"
@@ -50,6 +55,30 @@ namespace SweetsSpace
     {
     }
 
+    void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
+    {
+        m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
+        m_creamAllowedTags.clear();
+        for (const auto& tag : settings.allowedTags)
+        {
+            const std::string normalized = NormalizeKey(tag);
+            if (!normalized.empty())
+            {
+                m_creamAllowedTags.insert(normalized);
+            }
+        }
+
+        m_creamBlockedTags.clear();
+        for (const auto& tag : settings.blockedTags)
+        {
+            const std::string normalized = NormalizeKey(tag);
+            if (!normalized.empty())
+            {
+                m_creamBlockedTags.insert(normalized);
+            }
+        }
+    }
+
     void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
         if (!a || !b)
@@ -75,19 +104,16 @@ namespace SweetsSpace
         }
 
         ActiveSweets* cream = nullptr;
-        ActiveSweets* other = nullptr;
-        if (sweetsA && sweetsB)
+        Entities::PhysicalEntity* other = nullptr;
+        if (sweetsA && IsCreamTag(sweetsA->GetTag()))
         {
-            if (IsCreamTag(sweetsA->GetTag()))
-            {
-                cream = sweetsA;
-                other = sweetsB;
-            }
-            else if (IsCreamTag(sweetsB->GetTag()))
-            {
-                cream = sweetsB;
-                other = sweetsA;
-            }
+            cream = sweetsA;
+            other = b;
+        }
+        else if (sweetsB && IsCreamTag(sweetsB->GetTag()))
+        {
+            cream = sweetsB;
+            other = a;
         }
 
         if (cream && other)
@@ -99,7 +125,7 @@ namespace SweetsSpace
                     << "' はまだ運ばれてないから接着をスキップするよ \n";
                 DebugTrace(oss.str());
             }
-            else if (m_physicsMachine)
+            else if (IsAdhesionTargetAllowed(*cream, *other))
             {
                 const JointPairKey key = JointPairKey::Make(cream, other);
                 auto existing = m_creamWeldJoints.find(key);
@@ -115,49 +141,24 @@ namespace SweetsSpace
 
                 if (existing == m_creamWeldJoints.end())
                 {
-                    const auto& posA = cream->GetTransform().position;
-                    const auto& posB = other->GetTransform().position;
-                    const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
-                    const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
-                        *cream,
-                        *other,
-                        anchor,
-                        kCreamWeldLinearHertz,
-                        kCreamWeldLinearDampingRatio,
-                        kCreamWeldAngularHertz,
-                        kCreamWeldAngularDampingRatio,
-                        false);
-                    if (b2Joint_IsValid(jointId))
+                    auto pendingIt = m_pendingAdhesions.find(key);
+                    if (pendingIt == m_pendingAdhesions.end())
                     {
-                        m_creamWeldJoints.emplace(key, jointId);
-                        cream->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
-                        cream->SetAngularVelocity(0.0f);
-                        other->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
-                        other->SetAngularVelocity(0.0f);
-                        const bool creamSupported = HasSupportingContact(*cream, nullptr);
-                        const bool otherSupported = HasSupportingContact(*other, nullptr);
-                        const bool shouldSleep = creamSupported && otherSupported;
-                        if (cream->HasBox2DBody())
-                        {
-                            b2Body_SetAwake(cream->GetBox2DBodyId(), !shouldSleep);
-                        }
-
-                        if (other->HasBox2DBody())
-                        {
-                            b2Body_SetAwake(other->GetBox2DBodyId(), !shouldSleep);
-                        }
-
-                        std::ostringstream cementLog;
-                        cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
-                                  << "' を溶接したよ \n";
-                        DebugTrace(cementLog.str());
+                        PendingAdhesion pending{};
+                        pending.cream = cream;
+                        pending.other = other;
+                        pending.elapsedSeconds = 0.0f;
+                        pending.stillTouching = true;
+                        m_pendingAdhesions.emplace(key, pending);
+                    }
+                    else
+                    {
+                        pendingIt->second.cream = cream;
+                        pendingIt->second.other = other;
+                        pendingIt->second.elapsedSeconds = 0.0f;
+                        pendingIt->second.stillTouching = true;
                     }
                 }
-            }
-            else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
-            {
-                DebugTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
-                *m_warnedMissingPhysicsMachine = true;
             }
         }
 
@@ -195,24 +196,22 @@ namespace SweetsSpace
         }
 
         ActiveSweets* cream = nullptr;
-        ActiveSweets* other = nullptr;
-        if (sweetsA && sweetsB)
+        Entities::PhysicalEntity* other = nullptr;
+        if (sweetsA && IsCreamTag(sweetsA->GetTag()))
         {
-            if (IsCreamTag(sweetsA->GetTag()))
-            {
-                cream = sweetsA;
-                other = sweetsB;
-            }
-            else if (IsCreamTag(sweetsB->GetTag()))
-            {
-                cream = sweetsB;
-                other = sweetsA;
-            }
+            cream = sweetsA;
+            other = b;
+        }
+        else if (sweetsB && IsCreamTag(sweetsB->GetTag()))
+        {
+            cream = sweetsB;
+            other = a;
         }
 
         if (cream && other)
         {
             const JointPairKey key = JointPairKey::Make(cream, other);
+            m_pendingAdhesions.erase(key);
             auto it = m_creamWeldJoints.find(key);
             if (it != m_creamWeldJoints.end())
             {
@@ -234,6 +233,45 @@ namespace SweetsSpace
             oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' の接触が終わったよ \n";
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
+        }
+    }
+
+    void SweetsContacts::OnUpdate(float dt)
+    {
+        if (m_pendingAdhesions.empty())
+        {
+            return;
+        }
+
+        if (dt <= 0.0f)
+        {
+            return;
+        }
+
+        for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
+        {
+            PendingAdhesion& pending = it->second;
+            if (!pending.cream || !pending.other || !pending.stillTouching)
+            {
+                it = m_pendingAdhesions.erase(it);
+                continue;
+            }
+
+            pending.elapsedSeconds += dt;
+            if (pending.elapsedSeconds < m_creamAdhesionDelaySeconds)
+            {
+                ++it;
+                continue;
+            }
+
+            if (!pending.cream->WasEverCarried() || !IsAdhesionTargetAllowed(*pending.cream, *pending.other))
+            {
+                it = m_pendingAdhesions.erase(it);
+                continue;
+            }
+
+            TryCreateCreamWeldJoint(pending.cream, pending.other);
+            it = m_pendingAdhesions.erase(it);
         }
     }
 
@@ -285,19 +323,45 @@ namespace SweetsSpace
         m_hasSweetsContact.erase(sweets);
     }
 
-    void SweetsContacts::Reset()
+    void SweetsContacts::ClearPendingAdhesionsForSweets(ActiveSweets* sweets)
     {
-        m_contactStates.clear();
-        m_hasSweetsContact.clear();
-    }
-
-    void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
-    {
-        if (!sweets || m_creamWeldJoints.empty())
+        if (!sweets || m_pendingAdhesions.empty())
         {
             return;
         }
 
+        for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
+        {
+            if (it->second.cream == sweets || it->second.other == sweets)
+            {
+                it = m_pendingAdhesions.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void SweetsContacts::Reset()
+    {
+        m_contactStates.clear();
+        m_hasSweetsContact.clear();
+        m_pendingAdhesions.clear();
+    }
+
+    void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        ClearPendingAdhesionsForSweets(sweets);
+        if (m_creamWeldJoints.empty())
+        {
+            return;
+        }
         if (!m_physicsMachine)
         {
             if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
@@ -330,9 +394,11 @@ namespace SweetsSpace
     {
         if (m_creamWeldJoints.empty())
         {
+            m_pendingAdhesions.clear();
             return;
         }
 
+        m_pendingAdhesions.clear();
         if (!m_physicsMachine)
         {
             if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
@@ -414,5 +480,172 @@ namespace SweetsSpace
         {
             m_contactStates.erase(it);
         }
+    }
+
+    bool SweetsContacts::IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const
+    {
+        if (&other == &cream)
+        {
+            return false;
+        }
+
+        if (IsCreamTag(other.GetTag()))
+        {
+            return false;
+        }
+
+        const bool isSweetsTarget = dynamic_cast<const ActiveSweets*>(&other) != nullptr;
+        if (!isSweetsTarget && other.GetCollisionLayer() != Collision::CollisionLayer::Stage)
+        {
+            return false;
+        }
+
+        std::vector<std::string> keys;
+        const std::string tagKey = NormalizeKey(other.GetTag());
+        if (!tagKey.empty())
+        {
+            keys.push_back(tagKey);
+        }
+
+        if (const auto& colliderComponent = other.GetBoxColliderComponent())
+        {
+            const std::string colliderKey = NormalizeKey(colliderComponent->colliderId);
+            if (!colliderKey.empty())
+            {
+                keys.push_back(colliderKey);
+            }
+        }
+
+        if (const auto* model = other.GetRenderableModel())
+        {
+            if (auto material = model->GetMaterial(0).lock())
+            {
+                const std::string materialKey = NormalizeKey(material->GetMaterialKey());
+                if (!materialKey.empty())
+                {
+                    keys.push_back(materialKey);
+                }
+            }
+        }
+
+        if (!m_creamBlockedTags.empty())
+        {
+            for (const auto& key : keys)
+            {
+                if (m_creamBlockedTags.find(key) != m_creamBlockedTags.end())
+                {
+                    return false;
+                }
+            }
+        }
+
+        if (!m_creamAllowedTags.empty())
+        {
+            bool allowed = false;
+            for (const auto& key : keys)
+            {
+                if (m_creamAllowedTags.find(key) != m_creamAllowedTags.end())
+                {
+                    allowed = true;
+                    break;
+                }
+            }
+
+            if (!allowed)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void SweetsContacts::TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other)
+    {
+        if (!cream || !other)
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                DebugTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
+                *m_warnedMissingPhysicsMachine = true;
+            }
+            return;
+        }
+
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        auto existing = m_creamWeldJoints.find(key);
+        if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
+                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+            DebugTrace(oss.str());
+            m_creamWeldJoints.erase(existing);
+            existing = m_creamWeldJoints.end();
+        }
+
+        if (existing != m_creamWeldJoints.end())
+        {
+            return;
+        }
+
+        const auto& posA = cream->GetTransform().position;
+        const auto& posB = other->GetTransform().position;
+        const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
+        const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+            *cream,
+            *other,
+            anchor,
+            kCreamWeldLinearHertz,
+            kCreamWeldLinearDampingRatio,
+            kCreamWeldAngularHertz,
+            kCreamWeldAngularDampingRatio,
+            false);
+        if (!b2Joint_IsValid(jointId))
+        {
+            return;
+        }
+
+        m_creamWeldJoints.emplace(key, jointId);
+
+        if (cream->GetPhysical().IsDynamic())
+        {
+            cream->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+            cream->SetAngularVelocity(0.0f);
+        }
+
+        if (other->GetPhysical().IsDynamic())
+        {
+            other->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+            other->SetAngularVelocity(0.0f);
+        }
+
+        const bool creamSupported = HasSupportingContact(*cream, nullptr);
+        bool otherSupported = true;
+        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+        {
+            otherSupported = HasSupportingContact(*otherSweets, nullptr);
+        }
+
+        const bool shouldSleep = creamSupported && otherSupported;
+        if (cream->HasBox2DBody() && cream->GetPhysical().IsDynamic())
+        {
+            b2Body_SetAwake(cream->GetBox2DBodyId(), !shouldSleep);
+        }
+
+        if (other->HasBox2DBody() && other->GetPhysical().IsDynamic())
+        {
+            b2Body_SetAwake(other->GetBox2DBodyId(), !shouldSleep);
+        }
+
+        std::ostringstream cementLog;
+        cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
+                  << "' を溶接したよ \n";
+        DebugTrace(cementLog.str());
     }
 }
