@@ -2808,7 +2808,7 @@ namespace SceneGameConfig
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
         settings.requireSupport = false;
-        settings.requireCarried = true;
+        settings.requireCarried = false;
         settings.allowAirAdhesionToSweets = true;
 
         std::vector<Config::SectionLine> lines;
