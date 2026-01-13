@@ -1184,14 +1184,14 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
     {
         const auto clampMinY = m_cameraRig->GetClampMinY();
         const auto clampMaxY = m_cameraRig->GetClampMaxY();
-        std::ostringstream oss;
+        /*std::ostringstream oss;
         oss << kLogPrefix << "[DebugOverlay] cameraRig comfortTopY=" << m_cameraRig->GetComfortZoneTopY()
             << " comfortBottomY=" << m_cameraRig->GetComfortZoneBottomY()
             << " followSpeedY=" << m_cameraRig->GetFollowSpeedY()
             << " clampMinY=" << (clampMinY ? std::to_string(*clampMinY) : std::string("none"))
             << " clampMaxY=" << (clampMaxY ? std::to_string(*clampMaxY) : std::string("none"))
             << "\n";
-        ::DebugTrace(oss.str());
+        ::DebugTrace(oss.str());*/
     }
 
     const Color fixtureColor = MakeColor(1.0f, 0.1f, 0.1f, 1.0f);
