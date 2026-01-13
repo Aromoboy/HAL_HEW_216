@@ -127,6 +127,8 @@ namespace SweetsSpace
     {
         float spawnWeight = 1.0f;
         float3 scale{ 1.0f, 1.0f, 1.0f };
+        float3 rotationMinDegrees{ 0.0f, 0.0f, 0.0f };
+        float3 rotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
         ColliderPreset colliderPreset;
     };
 }

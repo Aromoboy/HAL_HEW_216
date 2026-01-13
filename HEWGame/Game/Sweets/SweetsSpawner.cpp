@@ -1333,12 +1333,19 @@ namespace SweetsSpace
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 
+        bool hasFactoryPreset = false;
+        float3 rotationMinDegrees = m_randomRotationMinDegrees;
+        float3 rotationMaxDegrees = m_randomRotationMaxDegrees;
+
         if (m_factory)
         {
             auto presetIt = m_factory->GetFactoryPresets().find(normalizedKind);
             if (presetIt != m_factory->GetFactoryPresets().end())
             {
                 transform.scale = presetIt->second.scale;
+                rotationMinDegrees = presetIt->second.rotationMinDegrees;
+                rotationMaxDegrees = presetIt->second.rotationMaxDegrees;
+                hasFactoryPreset = true;
             }
             else if (m_warnedMissingFactoryPresetKinds.insert(normalizedKind).second)
             {
@@ -1356,14 +1363,15 @@ namespace SweetsSpace
             return (lo + hi) * 0.5f;
         };
 
-        const float sampledPitch = computeDeterministicRotation(m_randomRotationMinDegrees.x, m_randomRotationMaxDegrees.x);
-        const float sampledYaw = computeDeterministicRotation(m_randomRotationMinDegrees.y, m_randomRotationMaxDegrees.y);
-        const float sampledRoll = computeDeterministicRotation(m_randomRotationMinDegrees.z, m_randomRotationMaxDegrees.z);
+        const float sampledPitch = computeDeterministicRotation(rotationMinDegrees.x, rotationMaxDegrees.x);
+        const float sampledYaw = computeDeterministicRotation(rotationMinDegrees.y, rotationMaxDegrees.y);
+        const float sampledRoll = computeDeterministicRotation(rotationMinDegrees.z, rotationMaxDegrees.z);
         transform.rotation = float3{ sampledPitch, sampledYaw, sampledRoll };
 
         std::ostringstream oss;
         oss << kLogPrefix << "スポーン回転を決めたよ pitch/yaw/roll(deg)="
             << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
+            << " rotationSource=" << (hasFactoryPreset ? "preset" : "global")
             << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
             << " origin=" << originSelection.origin.x << ',' << originSelection.origin.y << ',' << originSelection.origin.z
             << " lane=" << originSelection.laneLabel << "\n";
