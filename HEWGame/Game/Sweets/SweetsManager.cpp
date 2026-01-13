@@ -12,6 +12,7 @@
 #endif
 
 #include "Core/UpdateScheduler.h"
+#include "SceneGameConfigLoader.h"
 #include "Sweets/BaseSweets.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
@@ -76,6 +77,7 @@ namespace SweetsSpace
             &m_warnedMissingDrawSystem, &m_warnedMissingPhysicsMachine, &m_warnedMissingScheduler)
         , m_renderer(m_registry)
     {
+        m_contacts.ConfigureCreamAdhesion(SceneGameConfig::LoadCreamAdhesionSettings());
     }
 
     SweetsManager::~SweetsManager()
@@ -90,6 +92,7 @@ namespace SweetsSpace
     void SweetsManager::OnUpdate(const Core::UpdateContext& ctx)
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
+        m_contacts.OnUpdate(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
     }
 

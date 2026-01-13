@@ -6,6 +6,7 @@ namespace GameplayConfig
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
     inline constexpr const char* kSectionPlayerTransform = "player.transform";
     inline constexpr const char* kSectionCameraRig = "camera.rig";
+    inline constexpr const char* kSectionCream = "cream";
     inline constexpr const char* kCameraRigKeyMode = "mode";
     inline constexpr const char* kCameraRigKeyMinY = "minY";
     inline constexpr const char* kCameraRigKeyMaxY = "maxY";
@@ -18,6 +19,9 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyFovDegrees = "fovDegrees";
     inline constexpr const char* kCameraRigKeyYawDegrees = "yawDegrees";
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
+    inline constexpr const char* kCreamKeyAdhesionDelaySeconds = "adhesionDelaySeconds";
+    inline constexpr const char* kCreamKeyAllowedTags = "allowedTags";
+    inline constexpr const char* kCreamKeyBlockedTags = "blockedTags";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionPowerUps = "powerups";
