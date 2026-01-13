@@ -12,6 +12,7 @@
 #include "Sweets/SweetsKeyUtils.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Physics/PhysicsMachine.h"
+#include "Diagnostics/Logger.h"
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -33,6 +34,12 @@ namespace
         (void)message;
     }
 #endif
+
+    void LogInfoAndTrace(const std::string& message)
+    {
+        Diagnostics::LogInfo(message);
+        DebugTrace(message);
+    }
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kCreamWeldLinearHertz = 6.0f;
@@ -737,7 +744,7 @@ namespace SweetsSpace
         {
             if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
             {
-                DebugTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
+                LogInfoAndTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
                 *m_warnedMissingPhysicsMachine = true;
             }
             return;
@@ -764,13 +771,40 @@ namespace SweetsSpace
             otherSupportedForAdhesion = other->GetPhysical().IsDynamic() && otherSupportedForSleep;
         }
 
+        auto contactCounts = [&](const ActiveSweets* target)
+        {
+            int foundationContacts = 0;
+            int stageContacts = 0;
+            int sweetsContacts = 0;
+            if (target)
+            {
+                if (const ContactState* state = FindContactState(*target))
+                {
+                    foundationContacts = state->foundationContacts;
+                    stageContacts = state->stageContacts;
+                    sweetsContacts = state->sweetsContacts;
+                }
+            }
+            std::ostringstream oss;
+            oss << "foundationContacts=" << foundationContacts
+                << " stageContacts=" << stageContacts
+                << " sweetsContacts=" << sweetsContacts;
+            if (!target)
+            {
+                oss << " (non-sweets)";
+            }
+            return oss.str();
+        };
+
         if (m_creamRequireSupport && !creamSupported && !otherSupportedForAdhesion && !allowAirAdhesion
             && !(creamLocked && otherLocked))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "クリーム接着をスキップ: 空中で支えがないよ cream='"
-                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
-            DebugTrace(oss.str());
+                << cream->GetTag() << "' other='" << other->GetTag() << "' "
+                << "[cream " << contactCounts(cream) << "] "
+                << "[other " << contactCounts(otherSweets) << "]\n";
+            LogInfoAndTrace(oss.str());
             return;
         }
 
@@ -782,8 +816,10 @@ namespace SweetsSpace
         {
             std::ostringstream oss;
             oss << kLogPrefix << "クリーム接着をスキップ: 接地がないよ cream='"
-                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
-            DebugTrace(oss.str());
+                << cream->GetTag() << "' other='" << other->GetTag() << "' "
+                << "[cream " << contactCounts(cream) << "] "
+                << "[other " << contactCounts(otherSweets) << "]\n";
+            LogInfoAndTrace(oss.str());
             return;
         }
         auto existing = m_creamWeldJoints.find(key);
@@ -792,7 +828,7 @@ namespace SweetsSpace
             std::ostringstream oss;
             oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
                 << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
-            DebugTrace(oss.str());
+            LogInfoAndTrace(oss.str());
             m_creamWeldJoints.erase(existing);
             existing = m_creamWeldJoints.end();
         }
@@ -847,7 +883,7 @@ namespace SweetsSpace
         std::ostringstream cementLog;
         cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
                   << "' を溶接したよ \n";
-        DebugTrace(cementLog.str());
+        LogInfoAndTrace(cementLog.str());
     }
 
     void SweetsContacts::BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context)
