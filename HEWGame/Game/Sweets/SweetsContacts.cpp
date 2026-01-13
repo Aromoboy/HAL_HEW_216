@@ -72,6 +72,8 @@ namespace SweetsSpace
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
+        m_creamRequireSupport = settings.requireSupport;
+        m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
         m_creamAllowedTags.clear();
         for (const auto& tag : settings.allowedTags)
         {
@@ -515,13 +517,22 @@ namespace SweetsSpace
             return false;
         }
 
+        auto logRejectedTarget = [&](const char* reason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "クリーム接着対象外 (" << reason << ") other='" << other.GetTag() << "'\n";
+            DebugTrace(oss.str());
+        };
+
         if (IsBlockedCreamTargetTag(other.GetTag()))
         {
+            logRejectedTarget("blocked tag");
             return false;
         }
 
         if (IsCreamTag(other.GetTag()))
         {
+            logRejectedTarget("cream target");
             return false;
         }
 
@@ -529,6 +540,7 @@ namespace SweetsSpace
         const Collision::CollisionLayer otherLayer = other.GetCollisionLayer();
         if (!isSweetsTarget && otherLayer != Collision::CollisionLayer::Stage)
         {
+            logRejectedTarget("non-sweets target");
             return false;
         }
 
@@ -536,6 +548,7 @@ namespace SweetsSpace
         const std::string tagKey = NormalizeKey(other.GetTag());
         if (otherLayer == Collision::CollisionLayer::Stage && tagKey != kStageCakeKey)
         {
+            logRejectedTarget("stage tag not cake");
             return false;
         }
         if (!tagKey.empty())
@@ -570,6 +583,7 @@ namespace SweetsSpace
             {
                 if (m_creamBlockedTags.find(key) != m_creamBlockedTags.end())
                 {
+                    logRejectedTarget("blocked tag list");
                     return false;
                 }
             }
@@ -589,6 +603,7 @@ namespace SweetsSpace
 
             if (!allowed)
             {
+                logRejectedTarget("not in allowed tag list");
                 return false;
             }
         }
@@ -618,26 +633,44 @@ namespace SweetsSpace
         const bool creamSupported = HasSupportingContact(*cream, nullptr);
         bool otherSupportedForAdhesion = false;
         bool otherSupportedForSleep = true;
-        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        float pendingElapsedSeconds = 0.0f;
+        if (const auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
+        {
+            pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+        }
+        const bool pendingLongEnough = pendingElapsedSeconds >= m_creamAdhesionDelaySeconds;
+        auto* otherSweets = dynamic_cast<ActiveSweets*>(other);
+        const bool otherIsSweetsTarget = otherSweets != nullptr;
+        const bool allowAirAdhesion = m_creamAllowAirAdhesionToSweets && otherIsSweetsTarget && pendingLongEnough;
+        if (otherSweets)
         {
             otherSupportedForSleep = HasSupportingContact(*otherSweets, nullptr);
             otherSupportedForAdhesion = other->GetPhysical().IsDynamic() && otherSupportedForSleep;
         }
 
-        if (!creamSupported && !otherSupportedForAdhesion && !(creamLocked && otherLocked))
+        if (m_creamRequireSupport && !creamSupported && !otherSupportedForAdhesion && !allowAirAdhesion
+            && !(creamLocked && otherLocked))
         {
+            std::ostringstream oss;
+            oss << kLogPrefix << "クリーム接着をスキップ: 空中で支えがないよ cream='"
+                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+            DebugTrace(oss.str());
             return;
         }
 
         const ContactState* creamContact = FindContactState(*cream);
         const bool creamHasFoundationOrStage = creamContact
             && (creamContact->foundationContacts > 0 || creamContact->stageContacts > 0);
-        if (!creamHasFoundationOrStage && !creamLocked && !otherLocked)
+        if (m_creamRequireSupport && !creamHasFoundationOrStage && !creamLocked && !otherLocked
+            && !otherSupportedForAdhesion && !allowAirAdhesion)
         {
+            std::ostringstream oss;
+            oss << kLogPrefix << "クリーム接着をスキップ: 接地がないよ cream='"
+                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+            DebugTrace(oss.str());
             return;
         }
-
-        const JointPairKey key = JointPairKey::Make(cream, other);
         auto existing = m_creamWeldJoints.find(key);
         if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
         {

@@ -112,6 +112,8 @@ namespace SweetsSpace
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
         float m_creamAdhesionDelaySeconds{ 0.3f };
+        bool m_creamRequireSupport{ true };
+        bool m_creamAllowAirAdhesionToSweets{ false };
         std::unordered_set<std::string> m_creamAllowedTags;
         std::unordered_set<std::string> m_creamBlockedTags;
 

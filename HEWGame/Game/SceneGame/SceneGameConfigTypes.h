@@ -142,6 +142,8 @@ namespace SceneGameConfig
         float adhesionDelaySeconds = 0.3f;
         std::vector<std::string> allowedTags;
         std::vector<std::string> blockedTags;
+        bool requireSupport = true;
+        bool allowAirAdhesionToSweets = false;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

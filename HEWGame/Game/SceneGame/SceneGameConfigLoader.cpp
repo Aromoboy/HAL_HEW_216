@@ -2806,6 +2806,8 @@ namespace SceneGameConfig
         settings.adhesionDelaySeconds = 0.3f;
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
+        settings.requireSupport = true;
+        settings.allowAirAdhesionToSweets = false;
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCream, lines))
@@ -2840,6 +2842,24 @@ namespace SceneGameConfig
             else if (key == GameplayConfig::kCreamKeyBlockedTags)
             {
                 settings.blockedTags = ParseTagList(value);
+            }
+            else if (key == GameplayConfig::kCreamKeyRequireSupport)
+            {
+                if (!ParseBool(value, settings.requireSupport))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid bool for key '" << key << "' in cream config.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyAllowAirAdhesionToSweets)
+            {
+                if (!ParseBool(value, settings.allowAirAdhesionToSweets))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid bool for key '" << key << "' in cream config.\n";
+                    ::DebugTrace(oss.str());
+                }
             }
         }
 
