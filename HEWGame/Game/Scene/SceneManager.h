@@ -49,6 +49,8 @@ namespace SceneSpace
         virtual void Draw() = 0;
         virtual void OnEnter() {}
         virtual void OnExit() {}
+        virtual void OnTransitionBegin() {}
+        virtual void OnTransitionEnd() {}
     };
 
     class SceneManager
@@ -63,6 +65,8 @@ namespace SceneSpace
         IScene* GetActiveScene();
         const IScene* GetActiveScene() const;
         float GetFadeAlpha() const;
+        SceneTransitionController::State GetTransitionState() const;
+        bool IsTransitioning() const;
 
     private:
         void ActivatePendingScene();
@@ -75,6 +79,7 @@ namespace SceneSpace
         bool m_sceneLoaded;
         bool m_sceneEntered;
         SceneTransitionController m_transition;
+        SceneTransitionController::State m_lastTransitionState;
     };
 }
 
