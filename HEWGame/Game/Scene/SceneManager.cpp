@@ -224,20 +224,6 @@ namespace SceneSpace
     void SceneManager::RequestSceneChange(std::unique_ptr<IScene> scene)
     {
         m_pendingScene = std::move(scene);
-        if (!m_transition.IsEnabled())
-        {
-            ActivatePendingScene();
-            return;
-        }
-
-        if (m_activeScene)
-        {
-            m_transition.BeginFadeOut();
-        }
-        else
-        {
-            ActivatePendingScene();
-        }
     }
 
     void SceneManager::Update()
@@ -245,55 +231,8 @@ namespace SceneSpace
         m_timer.Tick();
         const float deltaSeconds = m_timer.DeltaTime();
         m_transition.Update(deltaSeconds);
-
-        if (m_pendingScene && m_transition.GetState() == SceneTransitionController::State::Idle)
-        {
-            if (!m_transition.IsEnabled())
-            {
-                ActivatePendingScene();
-            }
-            else if (m_activeScene)
-            {
-                m_transition.BeginFadeOut();
-            }
-            else
-            {
-                ActivatePendingScene();
-            }
-        }
-
-        if (m_transition.GetState() == SceneTransitionController::State::Switching)
-        {
-            ActivatePendingScene();
-            m_transition.BeginFadeIn();
-        }
-
-        const SceneTransitionController::State currentState = m_transition.GetState();
-        if (m_lastTransitionState == SceneTransitionController::State::Idle
-            && currentState != SceneTransitionController::State::Idle)
-        {
-            if (m_activeScene)
-            {
-                m_activeScene->OnTransitionBegin();
-            }
-        }
-        else if (m_lastTransitionState != SceneTransitionController::State::Idle
-            && currentState == SceneTransitionController::State::Idle)
-        {
-            if (m_activeScene)
-            {
-                m_activeScene->OnTransitionEnd();
-            }
-        }
-
-        m_lastTransitionState = currentState;
-        m_input.Enable(!m_transition.IsTransitioning());
-
-        if (m_activeScene && !m_transition.IsTransitioning())
-        {
-            assert(m_sceneLoaded && m_sceneEntered);
-            m_activeScene->Update(m_timer, m_input);
-        }
+        AdvanceTransition();
+        UpdateActiveSceneIfAllowed();
     }
 
     void SceneManager::Draw()
@@ -323,6 +262,81 @@ namespace SceneSpace
     void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings)
     {
         m_transition.Configure(settings);
+    }
+
+    void SceneManager::AdvanceTransition()
+    {
+        const SceneTransitionController::State stateBefore = m_transition.GetState();
+        switch (stateBefore)
+        {
+        case SceneTransitionController::State::Idle:
+            if (m_pendingScene)
+            {
+                if (!m_transition.IsEnabled())
+                {
+                    // instant switch: transition disabled, skip fade entirely.
+                    ActivatePendingScene();
+                }
+                else if (m_activeScene)
+                {
+                    m_transition.BeginFadeOut();
+                }
+                else
+                {
+                    // skip fade: no active scene yet, load immediately.
+                    ActivatePendingScene();
+                }
+            }
+            break;
+        case SceneTransitionController::State::Switching:
+            ActivatePendingScene();
+            if (m_transition.IsEnabled())
+            {
+                m_transition.BeginFadeIn();
+            }
+            else
+            {
+                m_transition.Reset();
+            }
+            break;
+        case SceneTransitionController::State::FadingOut:
+        case SceneTransitionController::State::Holding:
+        case SceneTransitionController::State::FadingIn:
+        default:
+            break;
+        }
+
+        const SceneTransitionController::State stateAfter = m_transition.GetState();
+        if (m_lastTransitionState == SceneTransitionController::State::Idle
+            && stateAfter != SceneTransitionController::State::Idle)
+        {
+            if (m_activeScene)
+            {
+                m_activeScene->OnTransitionBegin();
+            }
+        }
+        else if (m_lastTransitionState != SceneTransitionController::State::Idle
+            && stateAfter == SceneTransitionController::State::Idle)
+        {
+            if (m_activeScene)
+            {
+                m_activeScene->OnTransitionEnd();
+            }
+        }
+
+        m_lastTransitionState = stateAfter;
+        m_input.Enable(!m_transition.IsTransitioning());
+    }
+
+    void SceneManager::UpdateActiveSceneIfAllowed()
+    {
+        if (m_activeScene && !m_transition.IsTransitioning())
+        {
+            assert(m_sceneLoaded && m_sceneEntered);
+            m_activeScene->Update(m_timer, m_input);
+        }
+    }
+
     SceneTransitionController::State SceneManager::GetTransitionState() const
     {
         return m_transition.GetState();

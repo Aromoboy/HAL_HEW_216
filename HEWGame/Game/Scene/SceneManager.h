@@ -80,6 +80,8 @@ namespace SceneSpace
         bool IsTransitioning() const;
 
     private:
+        void AdvanceTransition();
+        void UpdateActiveSceneIfAllowed();
         void ActivatePendingScene();
         void LogSceneEvent(const char* eventLabel, const IScene* scene) const;
 
