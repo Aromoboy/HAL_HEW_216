@@ -37,6 +37,7 @@ namespace
     constexpr const char* kLogPrefix = "[SceneGame] ";
     constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
     constexpr const char* kRenderSettingsSection = "render.settings";
+    constexpr const char* kRenderFadeSection = "render.fade";
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
@@ -231,6 +232,32 @@ namespace
         if (lowered == "cinematic" || lowered == "drama")
         {
             return SceneGameConfig::CameraRigMode::Cinematic;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<SceneGameConfig::RenderFadeEasing> ParseRenderFadeEasing(const std::string& value)
+    {
+        const std::string lowered = ToLowerCopy(TrimWhitespace(value));
+        if (lowered == "linear")
+        {
+            return SceneGameConfig::RenderFadeEasing::Linear;
+        }
+        if (lowered == "smoothstep" || lowered == "smooth")
+        {
+            return SceneGameConfig::RenderFadeEasing::SmoothStep;
+        }
+        if (lowered == "easein" || lowered == "in")
+        {
+            return SceneGameConfig::RenderFadeEasing::EaseIn;
+        }
+        if (lowered == "easeout" || lowered == "out")
+        {
+            return SceneGameConfig::RenderFadeEasing::EaseOut;
+        }
+        if (lowered == "easeinout" || lowered == "inout" || lowered == "ease")
+        {
+            return SceneGameConfig::RenderFadeEasing::EaseInOut;
         }
         return std::nullopt;
     }
@@ -964,6 +991,210 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.fxaa.enable not found; using default=" << std::boolalpha << settings.enableFxaa
                 << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    RenderFadeSettings LoadRenderFadeSettings()
+    {
+        RenderFadeSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderFadeSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] Missing config; defaulting fade settings section='"
+                << kRenderFadeSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedEnable = false;
+        bool parsedFadeIn = false;
+        bool parsedFadeOut = false;
+        bool parsedHold = false;
+        bool parsedColor = false;
+        bool parsedEasing = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enable = parsedValue;
+                    parsedEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed enable=" << std::boolalpha << settings.enable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "fadeinseconds")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fadeInSeconds = std::max(0.0f, *parsed);
+                    parsedFadeIn = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed fadeInSeconds=" << settings.fadeInSeconds
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid fadeInSeconds value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fadeInSeconds << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "fadeoutseconds")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.fadeOutSeconds = std::max(0.0f, *parsed);
+                    parsedFadeOut = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed fadeOutSeconds=" << settings.fadeOutSeconds
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid fadeOutSeconds value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.fadeOutSeconds << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "holdseconds")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.holdSeconds = std::max(0.0f, *parsed);
+                    parsedHold = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed holdSeconds=" << settings.holdSeconds
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid holdSeconds value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.holdSeconds << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "color")
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.color = *parsed;
+                    parsedColor = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed color=("
+                        << settings.color.x << ',' << settings.color.y << ',' << settings.color.z
+                        << ") from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid color value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=("
+                        << settings.color.x << ',' << settings.color.y << ',' << settings.color.z << ")\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "easing")
+            {
+                if (auto parsed = ParseRenderFadeEasing(value))
+                {
+                    settings.easing = *parsed;
+                    parsedEasing = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Parsed easing='" << value
+                        << "' from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderFade] Invalid easing value='" << value
+                        << "' on line=" << lineNumber << "; keeping default\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] enable not found; using default=" << std::boolalpha << settings.enable
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFadeIn)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] fadeInSeconds not found; using default=" << settings.fadeInSeconds
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedFadeOut)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] fadeOutSeconds not found; using default=" << settings.fadeOutSeconds
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedHold)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] holdSeconds not found; using default=" << settings.holdSeconds
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedColor)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] color not found; using default=("
+                << settings.color.x << ',' << settings.color.y << ',' << settings.color.z
+                << ") (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedEasing)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderFade] easing not found; using default (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 
