@@ -1049,6 +1049,10 @@ namespace SweetsSpace
                 << " resolvedKey='" << resolvedKey << "'"
                 << " spawnWeight=" << preset.spawnWeight
                 << " scale=(" << preset.scale.x << ',' << preset.scale.y << ',' << preset.scale.z << ')'
+                << " rotationMin=(" << preset.rotationMinDegrees.x << ',' << preset.rotationMinDegrees.y << ','
+                << preset.rotationMinDegrees.z << ')'
+                << " rotationMax=(" << preset.rotationMaxDegrees.x << ',' << preset.rotationMaxDegrees.y << ','
+                << preset.rotationMaxDegrees.z << ')'
                 << " collider=" << ::ToString(preset.colliderPreset.shape)
                 << " padding=(" << preset.colliderPreset.padding.x << ',' << preset.colliderPreset.padding.y << ','
                 << preset.colliderPreset.padding.z << ")\n";
@@ -1067,6 +1071,8 @@ namespace SweetsSpace
                 flush();
                 preset = FactoryPreset{};
                 preset.scale = float3{ 1.0f, 1.0f, 1.0f };
+                preset.rotationMinDegrees = float3{ 0.0f, 0.0f, 0.0f };
+                preset.rotationMaxDegrees = float3{ 0.0f, 0.0f, 0.0f };
                 preset.colliderPreset.shape = ColliderShape::Box;
                 preset.colliderPreset.padding = float3{ 0.0f, 0.0f, 0.0f };
                 presetKey = value;
@@ -1092,6 +1098,14 @@ namespace SweetsSpace
             else if (key == "padding")
             {
                 localError |= !ParseFloat3Value(value, preset.colliderPreset.padding);
+            }
+            else if (key == "rotationMinDegrees" || key == "rotationMin")
+            {
+                localError |= !ParseFloat3Value(value, preset.rotationMinDegrees);
+            }
+            else if (key == "rotationMaxDegrees" || key == "rotationMax")
+            {
+                localError |= !ParseFloat3Value(value, preset.rotationMaxDegrees);
             }
             else if (key == "colliderPreset" || key == "colliderShape")
             {
