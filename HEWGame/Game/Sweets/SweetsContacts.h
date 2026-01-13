@@ -133,6 +133,7 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        // NOTE: Pending maps store non-owning pointers; clear them whenever a sweets/target entity is deleted.
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
         std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;
     };
