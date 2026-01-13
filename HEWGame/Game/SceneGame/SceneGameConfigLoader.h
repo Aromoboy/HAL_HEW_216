@@ -31,6 +31,7 @@ namespace SceneGameConfig
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
     RenderPostProcessSettings LoadRenderPostProcessSettings();
+    RenderFadeSettings LoadRenderFadeSettings();
     LightingSettings LoadLightingSettings();
     BlobShadowSettings LoadBlobShadowSettings();
     MaterialTuningSettings LoadMaterialTuningSettings();

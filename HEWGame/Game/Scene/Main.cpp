@@ -25,6 +25,7 @@
 #include "FullscreenManager.h"
 #include "ShaderCache.h"
 #include "SceneGameConfigLoader.h"
+#include "Texture.h"
 
 namespace
 {
@@ -33,6 +34,8 @@ namespace
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
         HRESULT g_comInitResult = E_FAIL;
         SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
+        SceneGameConfig::RenderFadeSettings g_renderFadeSettings{};
+        std::unique_ptr<Texture> g_fadeTexture;
 
         std::filesystem::path GetExecutableDirectory()
         {
@@ -52,6 +55,53 @@ namespace
                         "[Scenario] startup -> load TitleScene -> spawn 5-10 sweets -> single gameplay loop -> exit request");
                 Diagnostics::LogInfo(
                         "[Scenario] success: no hangs across 3 runs, platform visible, >=3 sweets types readable, player stable");
+        }
+
+        void DrawSceneFadeOverlay(float alpha)
+        {
+                if (!g_renderFadeSettings.enable || alpha <= 0.0f || !g_fadeTexture)
+                {
+                        return;
+                }
+
+                RenderTarget* defaultRTV = GetDefaultRTV();
+                if (defaultRTV)
+                {
+                        SetRenderTargets(1, &defaultRTV, nullptr);
+                }
+
+                SetDepthTest(false);
+                SetBlendMode(BLEND_ALPHA);
+
+                Sprite::ScopedPassDefaults guard;
+                Sprite::SetWorld(DirectX::XMFLOAT4X4(
+                        1.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f));
+                Sprite::SetView(DirectX::XMFLOAT4X4(
+                        1.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f));
+                Sprite::SetProjection(DirectX::XMFLOAT4X4(
+                        1.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f));
+                Sprite::SetTexture(g_fadeTexture.get());
+                Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+                Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
+                Sprite::SetColor(DirectX::XMFLOAT4(
+                        g_renderFadeSettings.color.x,
+                        g_renderFadeSettings.color.y,
+                        g_renderFadeSettings.color.z,
+                        alpha));
+                Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
+                Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+                Sprite::Draw();
+
+                SetDepthTest(true);
         }
 
 }
@@ -85,6 +135,12 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         Geometory::Init();
         Sprite::Init();
         ShaderList::Init();
+        g_fadeTexture = std::make_unique<Texture>();
+        const uint32_t solidWhite = 0xFFFFFFFF;
+        if (FAILED(g_fadeTexture->Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, &solidWhite)))
+        {
+                g_fadeTexture.reset();
+        }
         const auto shaderDir = GetExecutableDirectory() / "assets" / "shaders";
         ShaderCache::Instance().Load(
                 "postprocess",
@@ -92,9 +148,11 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
                 shaderDir / "postprocess_vs.cso",
                 shaderDir / "postprocess_ps.cso");
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
+        g_renderFadeSettings = SceneGameConfig::LoadRenderFadeSettings();
 
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
+        g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
 
         LogBootScenario();
@@ -112,6 +170,7 @@ void Uninit()
         g_input.Shutdown();
 
         g_sceneManager.reset();
+        g_fadeTexture.reset();
 
         ShaderList::Uninit();
         Sprite::Uninit();
@@ -287,6 +346,11 @@ void Draw()
 
                 ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
                 context->PSSetShaderResources(0, 2, nullSRVs);
+        }
+
+        if (g_sceneManager)
+        {
+                DrawSceneFadeOverlay(g_sceneManager->GetFadeAlpha());
         }
 
         EndDrawDirectX();

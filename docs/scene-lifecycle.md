@@ -52,3 +52,14 @@ Because the scheduler sorts by phase first, the **effective execution order** fo
 5. **Late phase**: `SweetsSpace::LateUpdateNode`
 
 > Note: `Scene::RootUpdate` also registers `SceneSpace::CameraUpdateNode` (Camera phase, priority `0`) after `ConfigureUpdates`, so it runs **after** `DrawSystem` and `CameraRig` within the Camera phase.
+
+## Scene transition input rule
+
+`SceneManager` controls scene fade transitions via `SceneTransitionController` and applies the following runtime contract:
+
+* When a transition starts (fade-out begins), `SceneManager` **globally disables input** by calling `Core::Input::Enable(false)` and calls `IScene::OnTransitionBegin()` on the currently active scene.
+* While transitioning (`FadingOut`, `Switching`, `FadingIn`), `SceneManager::Update` **does not call** `IScene::Update`, so no input or gameplay updates run.
+* During `Switching`, the old scene is exited and the pending scene is loaded/entered, but it remains in a transitioning state; if the new scene becomes active during a transition, it receives `OnTransitionBegin()` immediately.
+* When fade-in completes (`Idle`), `SceneManager` calls `IScene::OnTransitionEnd()` on the active scene and re-enables input.
+
+This guarantees that **no input events are delivered** to either the outgoing scene during fade-out or the incoming scene until fade-in finishes.

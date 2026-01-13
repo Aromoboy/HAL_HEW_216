@@ -4,6 +4,8 @@
 #ifndef __SCENE_MANAGER_H__
 #define __SCENE_MANAGER_H__
 
+#include "SceneGameConfigTypes.h"
+
 #include <memory>
 
 namespace Core
@@ -14,6 +16,40 @@ namespace Core
 
 namespace SceneSpace
 {
+    class SceneTransitionController
+    {
+    public:
+        enum class State
+        {
+            Idle,
+            FadingOut,
+            Holding,
+            Switching,
+            FadingIn,
+        };
+
+        SceneTransitionController();
+        void Configure(const SceneGameConfig::RenderFadeSettings& settings);
+        void BeginFadeOut();
+        void BeginFadeIn();
+        void Update(float deltaSeconds);
+        void Reset();
+        State GetState() const;
+        bool IsTransitioning() const;
+        bool IsEnabled() const;
+        float GetAlpha() const;
+
+    private:
+        State m_state;
+        float m_elapsed;
+        float m_duration;
+        float m_fadeOutSeconds;
+        float m_fadeInSeconds;
+        float m_holdSeconds;
+        SceneGameConfig::RenderFadeEasing m_easing;
+        bool m_enabled;
+    };
+
     class IScene
     {
     public:
@@ -23,6 +59,8 @@ namespace SceneSpace
         virtual void Draw() = 0;
         virtual void OnEnter() {}
         virtual void OnExit() {}
+        virtual void OnTransitionBegin() {}
+        virtual void OnTransitionEnd() {}
     };
 
     class SceneManager
@@ -32,12 +70,18 @@ namespace SceneSpace
 
         void SetInitialScene(std::unique_ptr<IScene> scene);
         void RequestSceneChange(std::unique_ptr<IScene> scene);
+        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
         void Update();
         void Draw();
         IScene* GetActiveScene();
         const IScene* GetActiveScene() const;
+        float GetFadeAlpha() const;
+        SceneTransitionController::State GetTransitionState() const;
+        bool IsTransitioning() const;
 
     private:
+        void AdvanceTransition();
+        void UpdateActiveSceneIfAllowed();
         void ActivatePendingScene();
         void LogSceneEvent(const char* eventLabel, const IScene* scene) const;
 
@@ -47,6 +91,8 @@ namespace SceneSpace
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;
         bool m_sceneEntered;
+        SceneTransitionController m_transition;
+        SceneTransitionController::State m_lastTransitionState;
     };
 }
 
