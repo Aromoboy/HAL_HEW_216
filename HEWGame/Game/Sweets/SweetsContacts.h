@@ -52,6 +52,7 @@ namespace SweetsSpace
         struct ContactState
         {
             int foundationContacts{ 0 };
+            int stageContacts{ 0 };
             int sweetsContacts{ 0 };
         };
 
@@ -104,6 +105,8 @@ namespace SweetsSpace
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
+        const ContactState* FindContactState(const ActiveSweets& sweets) const;
+        bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;

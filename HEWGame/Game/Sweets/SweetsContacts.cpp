@@ -54,6 +54,11 @@ namespace
         const std::string normalized = SweetsSpace::NormalizeKey(tag);
         return normalized == kBlockedOsaraKey || normalized == kBlockedFairyKey;
     }
+
+    bool IsStageSupportingTag(const std::string& tag)
+    {
+        return SweetsSpace::NormalizeKey(tag) != kBlockedOsaraKey;
+    }
 }
 
 namespace SweetsSpace
@@ -291,20 +296,21 @@ namespace SweetsSpace
             *foundationOnly = false;
         }
 
-        auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
-        if (it == m_contactStates.end())
+        const ContactState* state = FindContactState(sweets);
+        if (!state)
         {
             return false;
         }
 
-        const bool hasFoundation = it->second.foundationContacts > 0;
-        const bool hasSweetsContact = it->second.sweetsContacts > 0;
+        const bool hasFoundation = state->foundationContacts > 0;
+        const bool hasStage = state->stageContacts > 0;
+        const bool hasSweetsContact = state->sweetsContacts > 0;
         if (foundationOnly)
         {
-            *foundationOnly = hasFoundation && !hasSweetsContact;
+            *foundationOnly = (hasFoundation || hasStage) && !hasSweetsContact;
         }
 
-        return hasFoundation || hasSweetsContact;
+        return hasFoundation || hasStage || hasSweetsContact;
     }
 
     bool SweetsContacts::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
@@ -447,9 +453,13 @@ namespace SweetsSpace
 
         ContactState& state = m_contactStates[sweets];
         const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
-        if (otherLayer == Collision::CollisionLayer::Floor || otherLayer == Collision::CollisionLayer::Stage)
+        if (otherLayer == Collision::CollisionLayer::Floor)
         {
             ++state.foundationContacts;
+        }
+        else if (otherLayer == Collision::CollisionLayer::Stage && IsStageSupportingTag(other->GetTag()))
+        {
+            ++state.stageContacts;
         }
         else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
         {
@@ -473,10 +483,16 @@ namespace SweetsSpace
 
         ContactState& state = it->second;
         const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
-        if ((otherLayer == Collision::CollisionLayer::Floor || otherLayer == Collision::CollisionLayer::Stage)
-            && state.foundationContacts > 0)
+        if (otherLayer == Collision::CollisionLayer::Floor && state.foundationContacts > 0)
         {
             --state.foundationContacts;
+        }
+        else if (otherLayer == Collision::CollisionLayer::Stage && IsStageSupportingTag(other->GetTag()))
+        {
+            if (state.stageContacts > 0)
+            {
+                --state.stageContacts;
+            }
         }
         else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
         {
@@ -486,7 +502,7 @@ namespace SweetsSpace
             }
         }
 
-        if (state.foundationContacts <= 0 && state.sweetsContacts <= 0)
+        if (state.foundationContacts <= 0 && state.stageContacts <= 0 && state.sweetsContacts <= 0)
         {
             m_contactStates.erase(it);
         }
@@ -597,6 +613,30 @@ namespace SweetsSpace
             return;
         }
 
+        const bool creamLocked = IsCementedOrLocked(*cream);
+        const bool otherLocked = IsCementedOrLocked(*other);
+        const bool creamSupported = HasSupportingContact(*cream, nullptr);
+        bool otherSupportedForAdhesion = false;
+        bool otherSupportedForSleep = true;
+        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+        {
+            otherSupportedForSleep = HasSupportingContact(*otherSweets, nullptr);
+            otherSupportedForAdhesion = other->GetPhysical().IsDynamic() && otherSupportedForSleep;
+        }
+
+        if (!creamSupported && !otherSupportedForAdhesion && !(creamLocked && otherLocked))
+        {
+            return;
+        }
+
+        const ContactState* creamContact = FindContactState(*cream);
+        const bool creamHasFoundationOrStage = creamContact
+            && (creamContact->foundationContacts > 0 || creamContact->stageContacts > 0);
+        if (!creamHasFoundationOrStage && !creamLocked && !otherLocked)
+        {
+            return;
+        }
+
         const JointPairKey key = JointPairKey::Make(cream, other);
         auto existing = m_creamWeldJoints.find(key);
         if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
@@ -645,14 +685,7 @@ namespace SweetsSpace
             other->SetAngularVelocity(0.0f);
         }
 
-        const bool creamSupported = HasSupportingContact(*cream, nullptr);
-        bool otherSupported = true;
-        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
-        {
-            otherSupported = HasSupportingContact(*otherSweets, nullptr);
-        }
-
-        const bool shouldSleep = creamSupported && otherSupported;
+        const bool shouldSleep = creamSupported && otherSupportedForSleep;
         if (cream->HasBox2DBody() && cream->GetPhysical().IsDynamic())
         {
             b2Body_SetAwake(cream->GetBox2DBodyId(), !shouldSleep);
@@ -667,5 +700,34 @@ namespace SweetsSpace
         cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
                   << "' を溶接したよ \n";
         DebugTrace(cementLog.str());
+    }
+
+    const SweetsContacts::ContactState* SweetsContacts::FindContactState(const ActiveSweets& sweets) const
+    {
+        auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
+        if (it == m_contactStates.end())
+        {
+            return nullptr;
+        }
+
+        return &it->second;
+    }
+
+    bool SweetsContacts::IsCementedOrLocked(const Entities::PhysicalEntity& entity) const
+    {
+        if (!entity.GetPhysical().IsDynamic())
+        {
+            return true;
+        }
+
+        for (const auto& entry : m_creamWeldJoints)
+        {
+            if (entry.first.first == &entity || entry.first.second == &entity)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
