@@ -60,6 +60,12 @@ namespace
     {
         return SweetsSpace::NormalizeKey(tag) != kBlockedOsaraKey;
     }
+
+    bool IsPendingDeletion(const Entities::PhysicalEntity* entity)
+    {
+        const auto* sweets = dynamic_cast<const SweetsSpace::BaseSweets*>(entity);
+        return sweets && (sweets->IsPendingDestroy() || sweets->IsSafeToDelete());
+    }
 }
 
 namespace SweetsSpace
@@ -291,6 +297,12 @@ namespace SweetsSpace
         for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
         {
             PendingAdhesion& pending = it->second;
+            if (IsPendingDeletion(pending.cream) || IsPendingDeletion(pending.other))
+            {
+                it = m_pendingAdhesions.erase(it);
+                continue;
+            }
+
             if (!pending.cream || !pending.other || !pending.stillTouching)
             {
                 if (pending.cream && pending.other && !pending.stillTouching && pending.graceSecondsRemaining > 0.0f)
@@ -324,6 +336,12 @@ namespace SweetsSpace
         for (auto it = m_pendingBreaks.begin(); it != m_pendingBreaks.end();)
         {
             PendingBreak& pending = it->second;
+            if (IsPendingDeletion(pending.cream) || IsPendingDeletion(pending.other))
+            {
+                it = m_pendingBreaks.erase(it);
+                continue;
+            }
+
             if (!pending.cream || !pending.other || !pending.stillSeparated)
             {
                 it = m_pendingBreaks.erase(it);

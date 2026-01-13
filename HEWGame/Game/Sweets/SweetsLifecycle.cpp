@@ -516,6 +516,12 @@ namespace SweetsSpace
             return;
         }
 
+        if (m_contacts)
+        {
+            m_contacts->ClearContactState(sweets.get());
+            m_contacts->ClearSweetsContact(sweets.get());
+            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "Erase");
+        }
         sweets->MarkPendingDestroy();
     }
 
@@ -677,6 +683,8 @@ namespace SweetsSpace
             if (m_contacts)
             {
                 m_contacts->ClearContactState(sweets.get());
+                m_contacts->ClearSweetsContact(sweets.get());
+                m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "RegisterWithSystems");
             }
             sweets->MarkPendingDestroy();
             sweets->Enable(false);
