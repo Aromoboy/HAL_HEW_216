@@ -2807,8 +2807,8 @@ namespace SceneGameConfig
         settings.adhesionGraceSeconds = 0.08f;
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
-        settings.requireSupport = true;
-        settings.allowAirAdhesionToSweets = false;
+        settings.requireSupport = false;
+        settings.allowAirAdhesionToSweets = true;
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCream, lines))
