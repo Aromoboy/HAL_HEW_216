@@ -2804,6 +2804,7 @@ namespace SceneGameConfig
     {
         CreamAdhesionSettings settings{};
         settings.adhesionDelaySeconds = 0.3f;
+        settings.adhesionGraceSeconds = 0.08f;
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
         settings.requireSupport = true;
@@ -2833,6 +2834,13 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.adhesionDelaySeconds = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyAdhesionGraceSeconds)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.adhesionGraceSeconds = std::max(0.0f, *parsed);
                 }
             }
             else if (key == GameplayConfig::kCreamKeyAllowedTags)

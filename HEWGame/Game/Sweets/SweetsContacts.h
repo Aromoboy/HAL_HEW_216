@@ -100,6 +100,8 @@ namespace SweetsSpace
             Entities::PhysicalEntity* other{ nullptr };
             float elapsedSeconds{ 0.0f };
             bool stillTouching{ false };
+            bool awaitingRestore{ false };
+            float graceSecondsRemaining{ 0.0f };
         };
         struct PendingBreak
         {
@@ -122,6 +124,7 @@ namespace SweetsSpace
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
         float m_creamAdhesionDelaySeconds{ 0.3f };
+        float m_creamAdhesionGraceSeconds{ 0.08f };
         bool m_creamRequireSupport{ true };
         bool m_creamAllowAirAdhesionToSweets{ false };
         std::unordered_set<std::string> m_creamAllowedTags;

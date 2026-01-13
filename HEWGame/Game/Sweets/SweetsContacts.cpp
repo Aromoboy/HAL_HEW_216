@@ -73,6 +73,7 @@ namespace SweetsSpace
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
+        m_creamAdhesionGraceSeconds = std::max(0.0f, settings.adhesionGraceSeconds);
         m_creamRequireSupport = settings.requireSupport;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
         m_creamAllowedTags.clear();
@@ -170,14 +171,17 @@ namespace SweetsSpace
                         pending.other = other;
                         pending.elapsedSeconds = 0.0f;
                         pending.stillTouching = true;
+                        pending.awaitingRestore = false;
+                        pending.graceSecondsRemaining = 0.0f;
                         m_pendingAdhesions.emplace(key, pending);
                     }
                     else
                     {
                         pendingIt->second.cream = cream;
                         pendingIt->second.other = other;
-                        pendingIt->second.elapsedSeconds = 0.0f;
                         pendingIt->second.stillTouching = true;
+                        pendingIt->second.awaitingRestore = false;
+                        pendingIt->second.graceSecondsRemaining = 0.0f;
                     }
                 }
             }
@@ -231,32 +235,38 @@ namespace SweetsSpace
 
         if (cream && other)
         {
-            const JointPairKey key = JointPairKey::Make(cream, other);
-            if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
-            {
-                pendingIt->second.stillTouching = false;
-            }
-            if (m_creamWeldJoints.find(key) != m_creamWeldJoints.end())
-            {
-                auto breakIt = m_pendingBreaks.find(key);
-                if (breakIt == m_pendingBreaks.end())
-                {
-                    PendingBreak pending{};
-                    pending.cream = cream;
-                    pending.other = other;
-                    pending.elapsedSeconds = 0.0f;
-                    pending.stillSeparated = true;
-                    m_pendingBreaks.emplace(key, pending);
-                }
-                else
-                {
-                    breakIt->second.cream = cream;
-                    breakIt->second.other = other;
-                    breakIt->second.elapsedSeconds = 0.0f;
-                    breakIt->second.stillSeparated = true;
-                }
-            }
-        }
+const JointPairKey key = JointPairKey::Make(cream, other);
+
+
+if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
+{
+    pendingIt->second.stillTouching = false;
+    pendingIt->second.awaitingRestore = true;
+    pendingIt->second.graceSecondsRemaining =
+        std::max(pendingIt->second.graceSecondsRemaining, m_creamAdhesionGraceSeconds);
+}
+
+
+if (auto it = m_creamWeldJoints.find(key); it != m_creamWeldJoints.end())
+{
+    auto breakIt = m_pendingBreaks.find(key);
+    if (breakIt == m_pendingBreaks.end())
+    {
+        PendingBreak pending{};
+        pending.cream = cream;
+        pending.other = other;
+        pending.elapsedSeconds = 0.0f;
+        pending.stillSeparated = true;
+        m_pendingBreaks.emplace(key, pending);
+    }
+    else
+    {
+        breakIt->second.cream = cream;
+        breakIt->second.other = other;
+        breakIt->second.elapsedSeconds = 0.0f;
+        breakIt->second.stillSeparated = true;
+    }
+}
 
         if (!m_loggedContactNotification)
         {
@@ -284,6 +294,13 @@ namespace SweetsSpace
             PendingAdhesion& pending = it->second;
             if (!pending.cream || !pending.other || !pending.stillTouching)
             {
+                if (pending.cream && pending.other && !pending.stillTouching && pending.graceSecondsRemaining > 0.0f)
+                {
+                    pending.graceSecondsRemaining = std::max(0.0f, pending.graceSecondsRemaining - dt);
+                    ++it;
+                    continue;
+                }
+
                 it = m_pendingAdhesions.erase(it);
                 continue;
             }
