@@ -426,6 +426,11 @@ namespace SweetsSpace
         }
 
         BreakCreamWeldJoint(cream, other, context ? context : "RequestCreamWeldBreak");
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        if (auto it = m_pendingBreaks.find(key); it != m_pendingBreaks.end())
+        {
+            m_pendingBreaks.erase(it);
+        }
     }
 
     void SweetsContacts::Reset()
@@ -862,7 +867,6 @@ namespace SweetsSpace
         }
 
         m_creamWeldJoints.erase(it);
-        m_pendingBreaks.erase(key);
     }
 
     const SweetsContacts::ContactState* SweetsContacts::FindContactState(const ActiveSweets& sweets) const
