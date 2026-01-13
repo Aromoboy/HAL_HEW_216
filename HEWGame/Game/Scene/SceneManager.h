@@ -14,6 +14,32 @@ namespace Core
 
 namespace SceneSpace
 {
+    class SceneTransitionController
+    {
+    public:
+        enum class State
+        {
+            Idle,
+            FadingOut,
+            Switching,
+            FadingIn,
+        };
+
+        SceneTransitionController();
+        void BeginFadeOut();
+        void BeginFadeIn();
+        void Update(float deltaSeconds);
+        void Reset();
+        State GetState() const;
+        bool IsTransitioning() const;
+        float GetAlpha() const;
+
+    private:
+        State m_state;
+        float m_elapsed;
+        float m_duration;
+    };
+
     class IScene
     {
     public:
@@ -36,6 +62,7 @@ namespace SceneSpace
         void Draw();
         IScene* GetActiveScene();
         const IScene* GetActiveScene() const;
+        float GetFadeAlpha() const;
 
     private:
         void ActivatePendingScene();
@@ -47,6 +74,7 @@ namespace SceneSpace
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;
         bool m_sceneEntered;
+        SceneTransitionController m_transition;
     };
 }
 
