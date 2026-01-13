@@ -41,6 +41,7 @@ namespace SweetsSpace
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
         void ClearPendingAdhesionsForSweets(ActiveSweets* sweets);
+        void RequestCreamWeldBreak(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void Reset();
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
@@ -102,11 +103,20 @@ namespace SweetsSpace
             bool awaitingRestore{ false };
             float graceSecondsRemaining{ 0.0f };
         };
+        struct PendingBreak
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* other{ nullptr };
+            float elapsedSeconds{ 0.0f };
+            bool stillSeparated{ false };
+        };
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
+        void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
+        void ClearPendingBreaksForSweets(ActiveSweets* sweets);
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
 
@@ -124,5 +134,6 @@ namespace SweetsSpace
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
+        std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;
     };
 }
