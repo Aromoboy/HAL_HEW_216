@@ -2808,6 +2808,7 @@ namespace SceneGameConfig
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
         settings.requireSupport = false;
+        settings.requireCarried = true;
         settings.allowAirAdhesionToSweets = true;
 
         std::vector<Config::SectionLine> lines;
@@ -2854,6 +2855,15 @@ namespace SceneGameConfig
             else if (key == GameplayConfig::kCreamKeyRequireSupport)
             {
                 if (!ParseBool(value, settings.requireSupport))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid bool for key '" << key << "' in cream config.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyRequireCarried)
+            {
+                if (!ParseBool(value, settings.requireCarried))
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Invalid bool for key '" << key << "' in cream config.\n";
