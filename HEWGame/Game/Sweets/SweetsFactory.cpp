@@ -993,7 +993,7 @@ namespace SweetsSpace
         case SweetsType::Mikan:
             preset.spawnWeight = 0.9f;
             preset.scale = float3{ 0.24f, 0.28f, 0.32f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.005f, 0.005f, 0.005f } };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.005f, 0.005f, 0.005f } };
             return preset;
 
         case SweetsType::Muscat:
