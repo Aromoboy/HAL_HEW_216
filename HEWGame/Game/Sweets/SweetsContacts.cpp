@@ -727,7 +727,7 @@ namespace SweetsSpace
 
             if (!allowed)
             {
-                logRejectedTarget("not in allowed tags");
+                logRejectedTarget("not in allowed list");
                 return false;
             }
         }
@@ -740,37 +740,6 @@ namespace SweetsSpace
         if (!cream || !other)
         {
             return;
-        }
-
-        if (!m_physicsMachine)
-        {
-            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
-            {
-                LogInfoAndTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
-                *m_warnedMissingPhysicsMachine = true;
-            }
-            return;
-        }
-
-        const bool creamLocked = IsCementedOrLocked(*cream);
-        const bool otherLocked = IsCementedOrLocked(*other);
-        const bool creamSupported = HasSupportingContact(*cream, nullptr);
-        bool otherSupportedForAdhesion = false;
-        bool otherSupportedForSleep = true;
-        const JointPairKey key = JointPairKey::Make(cream, other);
-        float pendingElapsedSeconds = 0.0f;
-        if (const auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
-        {
-            pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
-        }
-        const bool pendingLongEnough = pendingElapsedSeconds >= m_creamAdhesionDelaySeconds;
-        auto* otherSweets = dynamic_cast<ActiveSweets*>(other);
-        const bool otherIsSweetsTarget = otherSweets != nullptr;
-        const bool allowAirAdhesion = m_creamAllowAirAdhesionToSweets && otherIsSweetsTarget && pendingLongEnough;
-        if (otherSweets)
-        {
-            otherSupportedForSleep = HasSupportingContact(*otherSweets, nullptr);
-            otherSupportedForAdhesion = other->GetPhysical().IsDynamic() && otherSupportedForSleep;
         }
 
         auto contactCounts = [&](const ActiveSweets* target)
@@ -798,15 +767,55 @@ namespace SweetsSpace
             return oss.str();
         };
 
+        auto logRefusedAdhesion = [&](const char* reason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "クリーム接着を拒否 (" << reason << ") cream='" << cream->GetTag()
+                << "' other='" << other->GetTag() << "' "
+                << "[cream " << contactCounts(cream) << "] "
+                << "[other " << contactCounts(dynamic_cast<ActiveSweets*>(other)) << "] "
+                << "requireSupport=" << std::boolalpha << m_creamRequireSupport
+                << " allowAirAdhesionToSweets=" << std::boolalpha << m_creamAllowAirAdhesionToSweets
+                << std::noboolalpha << "\n";
+            LogInfoAndTrace(oss.str());
+        };
+
+        if (!m_physicsMachine)
+        {
+            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                LogInfoAndTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
+                *m_warnedMissingPhysicsMachine = true;
+            }
+            logRefusedAdhesion("物理マシン未設定");
+            return;
+        }
+
+        const bool creamLocked = IsCementedOrLocked(*cream);
+        const bool otherLocked = IsCementedOrLocked(*other);
+        const bool creamSupported = HasSupportingContact(*cream, nullptr);
+        bool otherSupportedForAdhesion = false;
+        bool otherSupportedForSleep = true;
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        float pendingElapsedSeconds = 0.0f;
+        if (const auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
+        {
+            pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+        }
+        const bool pendingLongEnough = pendingElapsedSeconds >= m_creamAdhesionDelaySeconds;
+        auto* otherSweets = dynamic_cast<ActiveSweets*>(other);
+        const bool otherIsSweetsTarget = otherSweets != nullptr;
+        const bool allowAirAdhesion = m_creamAllowAirAdhesionToSweets && otherIsSweetsTarget && pendingLongEnough;
+        if (otherSweets)
+        {
+            otherSupportedForSleep = HasSupportingContact(*otherSweets, nullptr);
+            otherSupportedForAdhesion = other->GetPhysical().IsDynamic() && otherSupportedForSleep;
+        }
+
         if (m_creamRequireSupport && !creamSupported && !otherSupportedForAdhesion && !allowAirAdhesion
             && !(creamLocked && otherLocked))
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "クリーム接着をスキップ: 空中で支えがないよ cream='"
-                << cream->GetTag() << "' other='" << other->GetTag() << "' "
-                << "[cream " << contactCounts(cream) << "] "
-                << "[other " << contactCounts(otherSweets) << "]\n";
-            LogInfoAndTrace(oss.str());
+            logRefusedAdhesion("空中で支えがない");
             return;
         }
 
@@ -816,12 +825,7 @@ namespace SweetsSpace
         if (m_creamRequireSupport && !creamHasFoundationOrStage && !creamLocked && !otherLocked
             && !otherSupportedForAdhesion && !allowAirAdhesion)
         {
-            std::ostringstream oss;
-            oss << kLogPrefix << "クリーム接着をスキップ: 接地がないよ cream='"
-                << cream->GetTag() << "' other='" << other->GetTag() << "' "
-                << "[cream " << contactCounts(cream) << "] "
-                << "[other " << contactCounts(otherSweets) << "]\n";
-            LogInfoAndTrace(oss.str());
+            logRefusedAdhesion("接地がない");
             return;
         }
         auto existing = m_creamWeldJoints.find(key);
