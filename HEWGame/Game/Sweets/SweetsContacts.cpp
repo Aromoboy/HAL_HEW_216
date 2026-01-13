@@ -72,6 +72,7 @@ namespace SweetsSpace
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
+        m_creamAdhesionGraceSeconds = std::max(0.0f, settings.adhesionGraceSeconds);
         m_creamRequireSupport = settings.requireSupport;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
         m_creamAllowedTags.clear();
@@ -165,14 +166,17 @@ namespace SweetsSpace
                         pending.other = other;
                         pending.elapsedSeconds = 0.0f;
                         pending.stillTouching = true;
+                        pending.awaitingRestore = false;
+                        pending.graceSecondsRemaining = 0.0f;
                         m_pendingAdhesions.emplace(key, pending);
                     }
                     else
                     {
                         pendingIt->second.cream = cream;
                         pendingIt->second.other = other;
-                        pendingIt->second.elapsedSeconds = 0.0f;
                         pendingIt->second.stillTouching = true;
+                        pendingIt->second.awaitingRestore = false;
+                        pendingIt->second.graceSecondsRemaining = 0.0f;
                     }
                 }
             }
@@ -227,7 +231,14 @@ namespace SweetsSpace
         if (cream && other)
         {
             const JointPairKey key = JointPairKey::Make(cream, other);
-            m_pendingAdhesions.erase(key);
+            auto pendingIt = m_pendingAdhesions.find(key);
+            if (pendingIt != m_pendingAdhesions.end())
+            {
+                pendingIt->second.stillTouching = false;
+                pendingIt->second.awaitingRestore = true;
+                pendingIt->second.graceSecondsRemaining =
+                    std::max(pendingIt->second.graceSecondsRemaining, m_creamAdhesionGraceSeconds);
+            }
             auto it = m_creamWeldJoints.find(key);
             if (it != m_creamWeldJoints.end())
             {
@@ -269,6 +280,13 @@ namespace SweetsSpace
             PendingAdhesion& pending = it->second;
             if (!pending.cream || !pending.other || !pending.stillTouching)
             {
+                if (pending.cream && pending.other && !pending.stillTouching && pending.graceSecondsRemaining > 0.0f)
+                {
+                    pending.graceSecondsRemaining = std::max(0.0f, pending.graceSecondsRemaining - dt);
+                    ++it;
+                    continue;
+                }
+
                 it = m_pendingAdhesions.erase(it);
                 continue;
             }

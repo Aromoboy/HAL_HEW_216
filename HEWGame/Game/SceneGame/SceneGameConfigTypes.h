@@ -140,6 +140,7 @@ namespace SceneGameConfig
     struct CreamAdhesionSettings
     {
         float adhesionDelaySeconds = 0.3f;
+        float adhesionGraceSeconds = 0.08f;
         std::vector<std::string> allowedTags;
         std::vector<std::string> blockedTags;
         bool requireSupport = true;
