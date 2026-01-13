@@ -331,7 +331,8 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (!pending.cream->WasEverCarried() || !IsAdhesionTargetAllowed(*pending.cream, *pending.other))
+            if ((m_creamRequireCarried && !pending.cream->WasEverCarried())
+                || !IsAdhesionTargetAllowed(*pending.cream, *pending.other))
             {
                 it = m_pendingAdhesions.erase(it);
                 continue;
