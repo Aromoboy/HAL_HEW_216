@@ -235,38 +235,37 @@ namespace SweetsSpace
 
         if (cream && other)
         {
-const JointPairKey key = JointPairKey::Make(cream, other);
+            const JointPairKey key = JointPairKey::Make(cream, other);
 
+            if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
+            {
+                pendingIt->second.stillTouching = false;
+                pendingIt->second.awaitingRestore = true;
+                pendingIt->second.graceSecondsRemaining =
+                    std::max(pendingIt->second.graceSecondsRemaining, m_creamAdhesionGraceSeconds);
+            }
 
-if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
-{
-    pendingIt->second.stillTouching = false;
-    pendingIt->second.awaitingRestore = true;
-    pendingIt->second.graceSecondsRemaining =
-        std::max(pendingIt->second.graceSecondsRemaining, m_creamAdhesionGraceSeconds);
-}
-
-
-if (auto it = m_creamWeldJoints.find(key); it != m_creamWeldJoints.end())
-{
-    auto breakIt = m_pendingBreaks.find(key);
-    if (breakIt == m_pendingBreaks.end())
-    {
-        PendingBreak pending{};
-        pending.cream = cream;
-        pending.other = other;
-        pending.elapsedSeconds = 0.0f;
-        pending.stillSeparated = true;
-        m_pendingBreaks.emplace(key, pending);
-    }
-    else
-    {
-        breakIt->second.cream = cream;
-        breakIt->second.other = other;
-        breakIt->second.elapsedSeconds = 0.0f;
-        breakIt->second.stillSeparated = true;
-    }
-}
+            if (auto it = m_creamWeldJoints.find(key); it != m_creamWeldJoints.end())
+            {
+                auto breakIt = m_pendingBreaks.find(key);
+                if (breakIt == m_pendingBreaks.end())
+                {
+                    PendingBreak pending{};
+                    pending.cream = cream;
+                    pending.other = other;
+                    pending.elapsedSeconds = 0.0f;
+                    pending.stillSeparated = true;
+                    m_pendingBreaks.emplace(key, pending);
+                }
+                else
+                {
+                    breakIt->second.cream = cream;
+                    breakIt->second.other = other;
+                    breakIt->second.elapsedSeconds = 0.0f;
+                    breakIt->second.stillSeparated = true;
+                }
+            }
+        }
 
         if (!m_loggedContactNotification)
         {
