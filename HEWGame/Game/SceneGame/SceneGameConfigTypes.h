@@ -50,6 +50,25 @@ namespace SceneGameConfig
         bool enableFxaa = false;
     };
 
+    enum class RenderFadeEasing
+    {
+        Linear,
+        SmoothStep,
+        EaseIn,
+        EaseOut,
+        EaseInOut,
+    };
+
+    struct RenderFadeSettings
+    {
+        bool enable = true;
+        float fadeInSeconds = 0.5f;
+        float fadeOutSeconds = 0.5f;
+        float holdSeconds = 0.0f;
+        float3 color{ 0.0f, 0.0f, 0.0f };
+        RenderFadeEasing easing = RenderFadeEasing::Linear;
+    };
+
     struct LightingSettings
     {
         int mode = 1;

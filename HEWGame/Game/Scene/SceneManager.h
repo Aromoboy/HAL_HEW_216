@@ -4,6 +4,8 @@
 #ifndef __SCENE_MANAGER_H__
 #define __SCENE_MANAGER_H__
 
+#include "SceneGameConfigTypes.h"
+
 #include <memory>
 
 namespace Core
@@ -21,23 +23,31 @@ namespace SceneSpace
         {
             Idle,
             FadingOut,
+            Holding,
             Switching,
             FadingIn,
         };
 
         SceneTransitionController();
+        void Configure(const SceneGameConfig::RenderFadeSettings& settings);
         void BeginFadeOut();
         void BeginFadeIn();
         void Update(float deltaSeconds);
         void Reset();
         State GetState() const;
         bool IsTransitioning() const;
+        bool IsEnabled() const;
         float GetAlpha() const;
 
     private:
         State m_state;
         float m_elapsed;
         float m_duration;
+        float m_fadeOutSeconds;
+        float m_fadeInSeconds;
+        float m_holdSeconds;
+        SceneGameConfig::RenderFadeEasing m_easing;
+        bool m_enabled;
     };
 
     class IScene
@@ -60,6 +70,7 @@ namespace SceneSpace
 
         void SetInitialScene(std::unique_ptr<IScene> scene);
         void RequestSceneChange(std::unique_ptr<IScene> scene);
+        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
         void Update();
         void Draw();
         IScene* GetActiveScene();
