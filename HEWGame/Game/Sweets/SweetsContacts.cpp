@@ -39,11 +39,20 @@ namespace
     constexpr float kCreamWeldAngularHertz = 6.0f;
     constexpr float kCreamWeldLinearDampingRatio = 0.7f;
     constexpr float kCreamWeldAngularDampingRatio = 0.7f;
+    constexpr const char* kStageCakeKey = "cake";
+    constexpr const char* kBlockedOsaraKey = "osara";
+    constexpr const char* kBlockedFairyKey = "fairy";
 
     bool IsCreamTag(const std::string& tag)
     {
         static const std::string kCreamKey = SweetsSpace::NormalizeKey(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
         return SweetsSpace::NormalizeKey(tag) == kCreamKey;
+    }
+
+    bool IsBlockedCreamTargetTag(const std::string& tag)
+    {
+        const std::string normalized = SweetsSpace::NormalizeKey(tag);
+        return normalized == kBlockedOsaraKey || normalized == kBlockedFairyKey;
     }
 }
 
@@ -438,7 +447,7 @@ namespace SweetsSpace
 
         ContactState& state = m_contactStates[sweets];
         const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
-        if (otherLayer == Collision::CollisionLayer::Floor)
+        if (otherLayer == Collision::CollisionLayer::Floor || otherLayer == Collision::CollisionLayer::Stage)
         {
             ++state.foundationContacts;
         }
@@ -464,7 +473,8 @@ namespace SweetsSpace
 
         ContactState& state = it->second;
         const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
-        if (otherLayer == Collision::CollisionLayer::Floor && state.foundationContacts > 0)
+        if ((otherLayer == Collision::CollisionLayer::Floor || otherLayer == Collision::CollisionLayer::Stage)
+            && state.foundationContacts > 0)
         {
             --state.foundationContacts;
         }
@@ -489,19 +499,29 @@ namespace SweetsSpace
             return false;
         }
 
+        if (IsBlockedCreamTargetTag(other.GetTag()))
+        {
+            return false;
+        }
+
         if (IsCreamTag(other.GetTag()))
         {
             return false;
         }
 
         const bool isSweetsTarget = dynamic_cast<const ActiveSweets*>(&other) != nullptr;
-        if (!isSweetsTarget && other.GetCollisionLayer() != Collision::CollisionLayer::Stage)
+        const Collision::CollisionLayer otherLayer = other.GetCollisionLayer();
+        if (!isSweetsTarget && otherLayer != Collision::CollisionLayer::Stage)
         {
             return false;
         }
 
         std::vector<std::string> keys;
         const std::string tagKey = NormalizeKey(other.GetTag());
+        if (otherLayer == Collision::CollisionLayer::Stage && tagKey != kStageCakeKey)
+        {
+            return false;
+        }
         if (!tagKey.empty())
         {
             keys.push_back(tagKey);

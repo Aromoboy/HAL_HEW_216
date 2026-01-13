@@ -310,6 +310,14 @@ namespace Systems
             return b2_nullJointId;
         }
 
+        const b2BodyType bodyTypeA = b2Body_GetType(bodyIdA);
+        const b2BodyType bodyTypeB = b2Body_GetType(bodyIdB);
+        if (bodyTypeA == b2_staticBody && bodyTypeB == b2_staticBody)
+        {
+            DebugTrace("[PhysicsMachine] Skipping weld joint between static bodies.\n");
+            return b2_nullJointId;
+        }
+
         b2WeldJointDef jointDef = b2DefaultWeldJointDef();
         jointDef.base.bodyIdA = bodyIdA;
         jointDef.base.bodyIdB = bodyIdB;
