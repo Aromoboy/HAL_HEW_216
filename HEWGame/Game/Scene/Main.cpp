@@ -34,6 +34,7 @@ namespace
         std::unique_ptr<SceneSpace::SceneManager> g_sceneManager;
         HRESULT g_comInitResult = E_FAIL;
         SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
+        SceneGameConfig::RenderFadeSettings g_renderFadeSettings{};
         std::unique_ptr<Texture> g_fadeTexture;
 
         std::filesystem::path GetExecutableDirectory()
@@ -58,7 +59,7 @@ namespace
 
         void DrawSceneFadeOverlay(float alpha)
         {
-                if (alpha <= 0.0f || !g_fadeTexture)
+                if (!g_renderFadeSettings.enable || alpha <= 0.0f || !g_fadeTexture)
                 {
                         return;
                 }
@@ -91,7 +92,11 @@ namespace
                 Sprite::SetTexture(g_fadeTexture.get());
                 Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
                 Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-                Sprite::SetColor(DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, alpha));
+                Sprite::SetColor(DirectX::XMFLOAT4(
+                        g_renderFadeSettings.color.x,
+                        g_renderFadeSettings.color.y,
+                        g_renderFadeSettings.color.z,
+                        alpha));
                 Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
                 Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
                 Sprite::Draw();
@@ -143,9 +148,11 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
                 shaderDir / "postprocess_vs.cso",
                 shaderDir / "postprocess_ps.cso");
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
+        g_renderFadeSettings = SceneGameConfig::LoadRenderFadeSettings();
 
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
+        g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
 
         LogBootScenario();

@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -37,17 +38,66 @@ namespace SceneSpace
     namespace
     {
         constexpr float kFadeDurationSeconds = 0.5f;
+
+        float ApplyFadeEasing(float t, SceneGameConfig::RenderFadeEasing easing)
+        {
+            t = std::clamp(t, 0.0f, 1.0f);
+            switch (easing)
+            {
+            case SceneGameConfig::RenderFadeEasing::SmoothStep:
+                return t * t * (3.0f - 2.0f * t);
+            case SceneGameConfig::RenderFadeEasing::EaseIn:
+                return t * t;
+            case SceneGameConfig::RenderFadeEasing::EaseOut:
+                return 1.0f - (1.0f - t) * (1.0f - t);
+            case SceneGameConfig::RenderFadeEasing::EaseInOut:
+                if (t < 0.5f)
+                {
+                    return 2.0f * t * t;
+                }
+                return 1.0f - std::pow(-2.0f * t + 2.0f, 2.0f) * 0.5f;
+            case SceneGameConfig::RenderFadeEasing::Linear:
+            default:
+                return t;
+            }
+        }
     }
 
     SceneTransitionController::SceneTransitionController()
         : m_state(State::Idle)
         , m_elapsed(0.0f)
         , m_duration(kFadeDurationSeconds)
+        , m_fadeOutSeconds(kFadeDurationSeconds)
+        , m_fadeInSeconds(kFadeDurationSeconds)
+        , m_holdSeconds(0.0f)
+        , m_easing(SceneGameConfig::RenderFadeEasing::Linear)
+        , m_enabled(true)
     {
+    }
+
+    void SceneTransitionController::Configure(const SceneGameConfig::RenderFadeSettings& settings)
+    {
+        m_enabled = settings.enable;
+        m_fadeOutSeconds = std::max(0.0f, settings.fadeOutSeconds);
+        m_fadeInSeconds = std::max(0.0f, settings.fadeInSeconds);
+        m_holdSeconds = std::max(0.0f, settings.holdSeconds);
+        m_easing = settings.easing;
+        if (!m_enabled)
+        {
+            Reset();
+        }
     }
 
     void SceneTransitionController::BeginFadeOut()
     {
+        if (!m_enabled)
+        {
+            m_state = State::Switching;
+            m_elapsed = 0.0f;
+            m_duration = 0.0f;
+            return;
+        }
+
         if (m_state != State::Idle)
         {
             return;
@@ -55,17 +105,25 @@ namespace SceneSpace
 
         m_state = State::FadingOut;
         m_elapsed = 0.0f;
+        m_duration = m_fadeOutSeconds;
     }
 
     void SceneTransitionController::BeginFadeIn()
     {
+        if (!m_enabled)
+        {
+            Reset();
+            return;
+        }
+
         m_state = State::FadingIn;
         m_elapsed = 0.0f;
+        m_duration = m_fadeInSeconds;
     }
 
     void SceneTransitionController::Update(float deltaSeconds)
     {
-        if (m_state != State::FadingOut && m_state != State::FadingIn)
+        if (m_state != State::FadingOut && m_state != State::FadingIn && m_state != State::Holding)
         {
             return;
         }
@@ -78,6 +136,20 @@ namespace SceneSpace
 
         m_elapsed = m_duration;
         if (m_state == State::FadingOut)
+        {
+            if (m_holdSeconds > 0.0f)
+            {
+                m_state = State::Holding;
+                m_elapsed = 0.0f;
+                m_duration = m_holdSeconds;
+                return;
+            }
+
+            m_state = State::Switching;
+            return;
+        }
+
+        if (m_state == State::Holding)
         {
             m_state = State::Switching;
             return;
@@ -102,22 +174,33 @@ namespace SceneSpace
         return m_state != State::Idle;
     }
 
+    bool SceneTransitionController::IsEnabled() const
+    {
+        return m_enabled;
+    }
+
     float SceneTransitionController::GetAlpha() const
     {
+        if (!m_enabled)
+        {
+            return 0.0f;
+        }
+
         if (m_state == State::Idle)
         {
             return 0.0f;
         }
 
         const float progress = m_duration > 0.0f ? std::clamp(m_elapsed / m_duration, 0.0f, 1.0f) : 1.0f;
+        const float eased = ApplyFadeEasing(progress, m_easing);
         if (m_state == State::FadingOut)
         {
-            return progress;
+            return eased;
         }
 
         if (m_state == State::FadingIn)
         {
-            return 1.0f - progress;
+            return 1.0f - eased;
         }
 
         return 1.0f;
@@ -140,6 +223,12 @@ namespace SceneSpace
     void SceneManager::RequestSceneChange(std::unique_ptr<IScene> scene)
     {
         m_pendingScene = std::move(scene);
+        if (!m_transition.IsEnabled())
+        {
+            ActivatePendingScene();
+            return;
+        }
+
         if (m_activeScene)
         {
             m_transition.BeginFadeOut();
@@ -158,7 +247,11 @@ namespace SceneSpace
 
         if (m_pendingScene && m_transition.GetState() == SceneTransitionController::State::Idle)
         {
-            if (m_activeScene)
+            if (!m_transition.IsEnabled())
+            {
+                ActivatePendingScene();
+            }
+            else if (m_activeScene)
             {
                 m_transition.BeginFadeOut();
             }
@@ -203,6 +296,11 @@ namespace SceneSpace
     float SceneManager::GetFadeAlpha() const
     {
         return m_transition.GetAlpha();
+    }
+
+    void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings)
+    {
+        m_transition.Configure(settings);
     }
 
     void SceneManager::ActivatePendingScene()
