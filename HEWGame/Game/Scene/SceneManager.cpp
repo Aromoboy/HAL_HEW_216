@@ -128,6 +128,7 @@ namespace SceneSpace
         , m_input(input)
         , m_sceneLoaded(false)
         , m_sceneEntered(false)
+        , m_lastTransitionState(SceneTransitionController::State::Idle)
     {
     }
 
@@ -174,6 +175,27 @@ namespace SceneSpace
             m_transition.BeginFadeIn();
         }
 
+        const SceneTransitionController::State currentState = m_transition.GetState();
+        if (m_lastTransitionState == SceneTransitionController::State::Idle
+            && currentState != SceneTransitionController::State::Idle)
+        {
+            if (m_activeScene)
+            {
+                m_activeScene->OnTransitionBegin();
+            }
+        }
+        else if (m_lastTransitionState != SceneTransitionController::State::Idle
+            && currentState == SceneTransitionController::State::Idle)
+        {
+            if (m_activeScene)
+            {
+                m_activeScene->OnTransitionEnd();
+            }
+        }
+
+        m_lastTransitionState = currentState;
+        m_input.Enable(!m_transition.IsTransitioning());
+
         if (m_activeScene && !m_transition.IsTransitioning())
         {
             assert(m_sceneLoaded && m_sceneEntered);
@@ -203,6 +225,16 @@ namespace SceneSpace
     float SceneManager::GetFadeAlpha() const
     {
         return m_transition.GetAlpha();
+    }
+
+    SceneTransitionController::State SceneManager::GetTransitionState() const
+    {
+        return m_transition.GetState();
+    }
+
+    bool SceneManager::IsTransitioning() const
+    {
+        return m_transition.IsTransitioning();
     }
 
     void SceneManager::ActivatePendingScene()
@@ -246,6 +278,11 @@ namespace SceneSpace
 
         m_activeScene->OnEnter();
         m_sceneEntered = true;
+
+        if (m_transition.IsTransitioning())
+        {
+            m_activeScene->OnTransitionBegin();
+        }
     }
 
     void SceneManager::LogSceneEvent(const char* eventLabel, const IScene* scene) const
