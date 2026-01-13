@@ -323,6 +323,8 @@ namespace SceneSpace
     void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings)
     {
         m_transition.Configure(settings);
+    }
+
     SceneTransitionController::State SceneManager::GetTransitionState() const
     {
         return m_transition.GetState();
