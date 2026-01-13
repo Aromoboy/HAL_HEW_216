@@ -39,6 +39,7 @@ namespace
     constexpr float kCreamWeldAngularHertz = 6.0f;
     constexpr float kCreamWeldLinearDampingRatio = 0.7f;
     constexpr float kCreamWeldAngularDampingRatio = 0.7f;
+    constexpr float kCreamWeldBreakGraceSeconds = 0.25f;
     constexpr const char* kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
     constexpr const char* kBlockedFairyKey = "fairy";
@@ -134,6 +135,11 @@ namespace SweetsSpace
 
         if (cream && other)
         {
+            const JointPairKey key = JointPairKey::Make(cream, other);
+            if (auto breakIt = m_pendingBreaks.find(key); breakIt != m_pendingBreaks.end())
+            {
+                m_pendingBreaks.erase(breakIt);
+            }
             if (!cream->WasEverCarried())
             {
                 std::ostringstream oss;
@@ -143,7 +149,6 @@ namespace SweetsSpace
             }
             else if (IsAdhesionTargetAllowed(*cream, *other))
             {
-                const JointPairKey key = JointPairKey::Make(cream, other);
                 auto existing = m_creamWeldJoints.find(key);
                 if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
                 {
@@ -227,19 +232,29 @@ namespace SweetsSpace
         if (cream && other)
         {
             const JointPairKey key = JointPairKey::Make(cream, other);
-            m_pendingAdhesions.erase(key);
-            auto it = m_creamWeldJoints.find(key);
-            if (it != m_creamWeldJoints.end())
+            if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
             {
-                if (m_physicsMachine && b2Joint_IsValid(it->second))
+                pendingIt->second.stillTouching = false;
+            }
+            if (m_creamWeldJoints.find(key) != m_creamWeldJoints.end())
+            {
+                auto breakIt = m_pendingBreaks.find(key);
+                if (breakIt == m_pendingBreaks.end())
                 {
-                    m_physicsMachine->DestroyJoint(it->second);
-                    std::ostringstream cementLog;
-                    cementLog << kLogPrefix << "cementの溶接を外したよ '" << cream->GetTag() << "' と '"
-                              << other->GetTag() << "'\n";
-                    DebugTrace(cementLog.str());
+                    PendingBreak pending{};
+                    pending.cream = cream;
+                    pending.other = other;
+                    pending.elapsedSeconds = 0.0f;
+                    pending.stillSeparated = true;
+                    m_pendingBreaks.emplace(key, pending);
                 }
-                m_creamWeldJoints.erase(it);
+                else
+                {
+                    breakIt->second.cream = cream;
+                    breakIt->second.other = other;
+                    breakIt->second.elapsedSeconds = 0.0f;
+                    breakIt->second.stillSeparated = true;
+                }
             }
         }
 
@@ -254,7 +269,7 @@ namespace SweetsSpace
 
     void SweetsContacts::OnUpdate(float dt)
     {
-        if (m_pendingAdhesions.empty())
+        if (m_pendingAdhesions.empty() && m_pendingBreaks.empty())
         {
             return;
         }
@@ -288,6 +303,33 @@ namespace SweetsSpace
 
             TryCreateCreamWeldJoint(pending.cream, pending.other);
             it = m_pendingAdhesions.erase(it);
+        }
+
+        for (auto it = m_pendingBreaks.begin(); it != m_pendingBreaks.end();)
+        {
+            PendingBreak& pending = it->second;
+            if (!pending.cream || !pending.other || !pending.stillSeparated)
+            {
+                it = m_pendingBreaks.erase(it);
+                continue;
+            }
+
+            const JointPairKey key = JointPairKey::Make(pending.cream, pending.other);
+            if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
+            {
+                it = m_pendingBreaks.erase(it);
+                continue;
+            }
+
+            pending.elapsedSeconds += dt;
+            if (pending.elapsedSeconds < kCreamWeldBreakGraceSeconds)
+            {
+                ++it;
+                continue;
+            }
+
+            BreakCreamWeldJoint(pending.cream, pending.other, "OnUpdate");
+            it = m_pendingBreaks.erase(it);
         }
     }
 
@@ -360,11 +402,22 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsContacts::RequestCreamWeldBreak(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context)
+    {
+        if (!cream || !other)
+        {
+            return;
+        }
+
+        BreakCreamWeldJoint(cream, other, context ? context : "RequestCreamWeldBreak");
+    }
+
     void SweetsContacts::Reset()
     {
         m_contactStates.clear();
         m_hasSweetsContact.clear();
         m_pendingAdhesions.clear();
+        m_pendingBreaks.clear();
     }
 
     void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
@@ -375,6 +428,7 @@ namespace SweetsSpace
         }
 
         ClearPendingAdhesionsForSweets(sweets);
+        ClearPendingBreaksForSweets(sweets);
         if (m_creamWeldJoints.empty())
         {
             return;
@@ -407,15 +461,37 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsContacts::ClearPendingBreaksForSweets(ActiveSweets* sweets)
+    {
+        if (!sweets || m_pendingBreaks.empty())
+        {
+            return;
+        }
+
+        for (auto it = m_pendingBreaks.begin(); it != m_pendingBreaks.end();)
+        {
+            if (it->second.cream == sweets || it->second.other == sweets)
+            {
+                it = m_pendingBreaks.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     void SweetsContacts::ClearCreamWeldJoints(const char* context)
     {
         if (m_creamWeldJoints.empty())
         {
             m_pendingAdhesions.clear();
+            m_pendingBreaks.clear();
             return;
         }
 
         m_pendingAdhesions.clear();
+        m_pendingBreaks.clear();
         if (!m_physicsMachine)
         {
             if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
@@ -733,6 +809,44 @@ namespace SweetsSpace
         cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
                   << "' を溶接したよ \n";
         DebugTrace(cementLog.str());
+    }
+
+    void SweetsContacts::BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context)
+    {
+        if (!cream || !other)
+        {
+            return;
+        }
+
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        auto it = m_creamWeldJoints.find(key);
+        if (it == m_creamWeldJoints.end())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << (context ? context : "BreakCreamWeldJoint")
+                    << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                *m_warnedMissingPhysicsMachine = true;
+            }
+        }
+        else if (b2Joint_IsValid(it->second))
+        {
+            m_physicsMachine->DestroyJoint(it->second);
+            std::ostringstream cementLog;
+            cementLog << kLogPrefix << "cementの溶接を外したよ '" << cream->GetTag() << "' と '"
+                      << other->GetTag() << "'\n";
+            DebugTrace(cementLog.str());
+        }
+
+        m_creamWeldJoints.erase(it);
+        m_pendingBreaks.erase(key);
     }
 
     const SweetsContacts::ContactState* SweetsContacts::FindContactState(const ActiveSweets& sweets) const
