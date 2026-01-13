@@ -642,8 +642,8 @@ namespace SweetsSpace
         auto logRejectedTarget = [&](const char* reason)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "クリーム接着対象外 (" << reason << ") other='" << other.GetTag() << "'\n";
-            DebugTrace(oss.str());
+            oss << kLogPrefix << "クリーム接着対象外 (reasonKey=" << reason << ") other='" << other.GetTag() << "'\n";
+            LogInfoAndTrace(oss.str());
         };
 
         if (IsBlockedCreamTargetTag(other.GetTag()))
@@ -662,7 +662,7 @@ namespace SweetsSpace
         const Collision::CollisionLayer otherLayer = other.GetCollisionLayer();
         if (!isSweetsTarget && otherLayer != Collision::CollisionLayer::Stage)
         {
-            logRejectedTarget("non-sweets target");
+            logRejectedTarget("non-sweets");
             return false;
         }
 
@@ -670,7 +670,7 @@ namespace SweetsSpace
         const std::string tagKey = NormalizeKey(other.GetTag());
         if (otherLayer == Collision::CollisionLayer::Stage && tagKey != kStageCakeKey)
         {
-            logRejectedTarget("stage tag not cake");
+            logRejectedTarget("stage not cake");
             return false;
         }
         if (!tagKey.empty())
@@ -705,7 +705,7 @@ namespace SweetsSpace
             {
                 if (m_creamBlockedTags.find(key) != m_creamBlockedTags.end())
                 {
-                    logRejectedTarget("blocked tag list");
+                    logRejectedTarget("blocked tag");
                     return false;
                 }
             }
@@ -725,7 +725,7 @@ namespace SweetsSpace
 
             if (!allowed)
             {
-                logRejectedTarget("not in allowed tag list");
+                logRejectedTarget("not in allowed tags");
                 return false;
             }
         }
@@ -852,6 +852,10 @@ namespace SweetsSpace
             false);
         if (!b2Joint_IsValid(jointId))
         {
+            std::ostringstream oss;
+            oss << kLogPrefix << "クリーム接着ジョイント作成に失敗したよ cream='"
+                << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+            LogInfoAndTrace(oss.str());
             return;
         }
 
