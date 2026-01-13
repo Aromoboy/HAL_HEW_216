@@ -20,6 +20,10 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyYawDegrees = "yawDegrees";
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
     inline constexpr const char* kCreamKeyAdhesionDelaySeconds = "adhesionDelaySeconds";
+    inline constexpr const char* kCreamKeyBreakImpulseThreshold = "breakImpulseThreshold";
+    inline constexpr const char* kCreamKeyLockedGravityScale = "lockedGravityScale";
+    inline constexpr const char* kCreamKeyLockedLinearDamping = "lockedLinearDamping";
+    inline constexpr const char* kCreamKeyLockedAngularDamping = "lockedAngularDamping";
     inline constexpr const char* kCreamKeyAllowedTags = "allowedTags";
     inline constexpr const char* kCreamKeyBlockedTags = "blockedTags";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";

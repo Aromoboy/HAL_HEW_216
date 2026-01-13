@@ -20,6 +20,7 @@ namespace Systems
         {
         public:
                 using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+                using HitContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, float, float)>;
 
                 explicit Box2DContactListener(PhysicsMachine& physicsMachine);
 
@@ -29,6 +30,7 @@ namespace Systems
 
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
+                void SetHitContactCallback(HitContactCallback callback);
                 void EnableMeshContactLogging(bool enabled);
                 void EnableDroppedEventLogging(bool enabled);
                 void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
@@ -43,6 +45,7 @@ namespace Systems
                 b2WorldId m_worldId{ b2_nullWorldId };
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
+                HitContactCallback m_onHitContact;
                 bool m_logMeshContacts = false;
                 bool m_logDroppedEvents = false;
                 PhysicsMachine* m_physicsMachine = nullptr;

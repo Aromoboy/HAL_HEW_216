@@ -2804,6 +2804,10 @@ namespace SceneGameConfig
     {
         CreamAdhesionSettings settings{};
         settings.adhesionDelaySeconds = 0.3f;
+        settings.breakImpulseThreshold = 5.0f;
+        settings.lockedGravityScale = 0.0f;
+        settings.lockedLinearDamping = 8.0f;
+        settings.lockedAngularDamping = 8.0f;
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
 
@@ -2831,6 +2835,34 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.adhesionDelaySeconds = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyBreakImpulseThreshold)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.breakImpulseThreshold = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyLockedGravityScale)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.lockedGravityScale = *parsed;
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyLockedLinearDamping)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.lockedLinearDamping = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyLockedAngularDamping)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.lockedAngularDamping = std::max(0.0f, *parsed);
                 }
             }
             else if (key == GameplayConfig::kCreamKeyAllowedTags)

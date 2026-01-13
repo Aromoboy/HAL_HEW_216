@@ -32,6 +32,7 @@ namespace SweetsSpace
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnHitContact(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float normalImpulse, float tangentImpulse);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
 
@@ -107,11 +108,18 @@ namespace SweetsSpace
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
+        bool HasWeldJointForEntity(const Entities::PhysicalEntity& entity) const;
+        void ApplyCementedState(ActiveSweets& sweets) const;
+        void RestoreCementedStateIfFree(Entities::PhysicalEntity& entity);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
         float m_creamAdhesionDelaySeconds{ 0.3f };
+        float m_creamBreakImpulseThreshold{ 0.0f };
+        float m_creamLockedGravityScale{ 0.0f };
+        float m_creamLockedLinearDamping{ 0.0f };
+        float m_creamLockedAngularDamping{ 0.0f };
         std::unordered_set<std::string> m_creamAllowedTags;
         std::unordered_set<std::string> m_creamBlockedTags;
 

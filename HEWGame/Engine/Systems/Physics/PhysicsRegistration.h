@@ -20,6 +20,7 @@ namespace Systems
     {
     public:
         using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+        using HitContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, float, float)>;
 
         explicit PhysicsRegistration(PhysicsMachine& physicsMachine);
 
@@ -28,17 +29,19 @@ namespace Systems
         void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
         void UnregisterAllPhysicsBodies();
         void ValidatePlayerPhysicsRegistration();
-        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd);
+        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, HitContactCallback onHit);
 
     private:
         struct ContactHandler
         {
             ContactCallback onBegin;
             ContactCallback onEnd;
+            HitContactCallback onHit;
         };
 
         void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
         void DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
+        void DispatchHitContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float normalImpulse, float tangentImpulse);
 
         PhysicsMachine* m_physicsMachine = nullptr;
         std::shared_ptr<Box2DContactListener> m_contactListener;

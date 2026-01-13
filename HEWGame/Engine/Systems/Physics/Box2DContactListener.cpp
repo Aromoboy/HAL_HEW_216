@@ -1,12 +1,15 @@
 #include "Systems/Physics/Box2DContactListener.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cmath>
 #include <sstream>
 #include <span>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include <box2d/collision.h>
 #include <box2d/id.h>
@@ -326,9 +329,92 @@ namespace Systems
                         EndContact(entityA, entityB);
                 }
 
-                // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
-                (void)events.hitEvents;
-                (void)events.hitCount;
+                const auto tryGetImpulses = [](b2ShapeId shapeIdA, b2ShapeId shapeIdB, float& outNormal, float& outTangent)
+                    {
+                        outNormal = 0.0f;
+                        outTangent = 0.0f;
+
+                        const int capacity = b2Shape_GetContactCapacity(shapeIdA);
+                        if (capacity <= 0)
+                        {
+                                return false;
+                        }
+
+                        std::vector<b2ContactData> contacts(static_cast<size_t>(capacity));
+                        const int count = b2Shape_GetContactData(shapeIdA, contacts.data(), capacity);
+                        if (count <= 0)
+                        {
+                                return false;
+                        }
+
+                        const uint64_t keyA = b2StoreShapeId(shapeIdA);
+                        const uint64_t keyB = b2StoreShapeId(shapeIdB);
+                        bool found = false;
+                        for (int i = 0; i < count; ++i)
+                        {
+                                const b2ContactData& data = contacts[static_cast<size_t>(i)];
+                                const uint64_t dataA = b2StoreShapeId(data.shapeIdA);
+                                const uint64_t dataB = b2StoreShapeId(data.shapeIdB);
+                                if (!((dataA == keyA && dataB == keyB) || (dataA == keyB && dataB == keyA)))
+                                {
+                                        continue;
+                                }
+
+                                found = true;
+                                for (int pointIndex = 0; pointIndex < data.manifold.pointCount; ++pointIndex)
+                                {
+                                        const b2ManifoldPoint& point = data.manifold.points[pointIndex];
+                                        const float normalImpulse = std::max(std::fabs(point.normalImpulse), std::fabs(point.totalNormalImpulse));
+                                        const float tangentImpulse = std::fabs(point.tangentImpulse);
+                                        outNormal = std::max(outNormal, normalImpulse);
+                                        outTangent = std::max(outTangent, tangentImpulse);
+                                }
+                        }
+
+                        return found;
+                    };
+
+                const std::span<const b2ContactHitEvent> hitEvents =
+                    (events.hitEvents && events.hitCount > 0)
+                        ? std::span<const b2ContactHitEvent>(
+                              events.hitEvents, static_cast<size_t>(events.hitCount))
+                        : std::span<const b2ContactHitEvent>();
+                for (const b2ContactHitEvent& evt : hitEvents)
+                {
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
+                        {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("hit", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                continue;
+                        }
+
+                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
+                        {
+                                continue;
+                        }
+
+                        if (m_onHitContact)
+                        {
+                                float normalImpulse = 0.0f;
+                                float tangentImpulse = 0.0f;
+                                (void)tryGetImpulses(evt.shapeIdA, evt.shapeIdB, normalImpulse, tangentImpulse);
+                                m_onHitContact(*entityA, *entityB, normalImpulse, tangentImpulse);
+                        }
+                }
 
                 flushDroppedEventLogs();
                 m_destroyedBodyIds.clear();
@@ -344,6 +430,11 @@ namespace Systems
         void Box2DContactListener::SetEndContactCallback(ContactCallback callback)
         {
                 m_onEndContact = std::move(callback);
+        }
+
+        void Box2DContactListener::SetHitContactCallback(HitContactCallback callback)
+        {
+                m_onHitContact = std::move(callback);
         }
 
         void Box2DContactListener::EnableMeshContactLogging(bool enabled)

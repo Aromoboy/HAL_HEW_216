@@ -1,6 +1,7 @@
 #include "Sweets/SweetsContacts.h"
 
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 #include <vector>
 
@@ -72,6 +73,10 @@ namespace SweetsSpace
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
+        m_creamBreakImpulseThreshold = std::max(0.0f, settings.breakImpulseThreshold);
+        m_creamLockedGravityScale = settings.lockedGravityScale;
+        m_creamLockedLinearDamping = std::max(0.0f, settings.lockedLinearDamping);
+        m_creamLockedAngularDamping = std::max(0.0f, settings.lockedAngularDamping);
         m_creamAllowedTags.clear();
         for (const auto& tag : settings.allowedTags)
         {
@@ -229,15 +234,12 @@ namespace SweetsSpace
             auto it = m_creamWeldJoints.find(key);
             if (it != m_creamWeldJoints.end())
             {
-                if (m_physicsMachine && b2Joint_IsValid(it->second))
+                if (!b2Joint_IsValid(it->second))
                 {
-                    m_physicsMachine->DestroyJoint(it->second);
-                    std::ostringstream cementLog;
-                    cementLog << kLogPrefix << "cementの溶接を外したよ '" << cream->GetTag() << "' と '"
-                              << other->GetTag() << "'\n";
-                    DebugTrace(cementLog.str());
+                    m_creamWeldJoints.erase(it);
+                    RestoreCementedStateIfFree(*cream);
+                    RestoreCementedStateIfFree(*other);
                 }
-                m_creamWeldJoints.erase(it);
             }
         }
 
@@ -248,6 +250,41 @@ namespace SweetsSpace
             DebugTrace(oss.str());
             m_loggedContactNotification = true;
         }
+    }
+
+    void SweetsContacts::OnHitContact(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float normalImpulse, float tangentImpulse)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        const float impulse = std::max(std::abs(normalImpulse), std::abs(tangentImpulse));
+        if (impulse < m_creamBreakImpulseThreshold)
+        {
+            return;
+        }
+
+        const JointPairKey key = JointPairKey::Make(a, b);
+        auto it = m_creamWeldJoints.find(key);
+        if (it == m_creamWeldJoints.end())
+        {
+            return;
+        }
+
+        if (m_physicsMachine && b2Joint_IsValid(it->second))
+        {
+            m_physicsMachine->DestroyJoint(it->second);
+        }
+        m_creamWeldJoints.erase(it);
+
+        RestoreCementedStateIfFree(*a);
+        RestoreCementedStateIfFree(*b);
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "衝撃でcementの溶接が壊れたよ impulse=" << impulse
+            << " a='" << a->GetTag() << "' b='" << b->GetTag() << "'\n";
+        DebugTrace(oss.str());
     }
 
     void SweetsContacts::OnUpdate(float dt)
@@ -385,13 +422,16 @@ namespace SweetsSpace
                 oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
                 DebugTrace(oss.str());
                 *m_warnedMissingPhysicsMachine = true;
-            }
+                }
         }
 
+        std::unordered_set<Entities::PhysicalEntity*> affected;
         for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
         {
             if (it->first.first == sweets || it->first.second == sweets)
             {
+                affected.insert(it->first.first);
+                affected.insert(it->first.second);
                 if (m_physicsMachine)
                 {
                     m_physicsMachine->DestroyJoint(it->second);
@@ -401,6 +441,14 @@ namespace SweetsSpace
             else
             {
                 ++it;
+            }
+        }
+
+        for (Entities::PhysicalEntity* entity : affected)
+        {
+            if (entity)
+            {
+                RestoreCementedStateIfFree(*entity);
             }
         }
     }
@@ -421,18 +469,29 @@ namespace SweetsSpace
                 std::ostringstream oss;
                 oss << kLogPrefix << context << " でクリーム接着ジョイントを外せなかったよ 物理マシン未設定 \n";
                 DebugTrace(oss.str());
-                *m_warnedMissingPhysicsMachine = true;
+                        *m_warnedMissingPhysicsMachine = true;
             }
         }
 
+        std::unordered_set<Entities::PhysicalEntity*> affected;
         for (const auto& entry : m_creamWeldJoints)
         {
+            affected.insert(entry.first.first);
+            affected.insert(entry.first.second);
             if (m_physicsMachine)
             {
                 m_physicsMachine->DestroyJoint(entry.second);
             }
         }
         m_creamWeldJoints.clear();
+
+        for (Entities::PhysicalEntity* entity : affected)
+        {
+            if (entity)
+            {
+                RestoreCementedStateIfFree(*entity);
+            }
+        }
     }
 
     void SweetsContacts::OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState)
@@ -685,6 +744,12 @@ namespace SweetsSpace
             other->SetAngularVelocity(0.0f);
         }
 
+        ApplyCementedState(*cream);
+        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+        {
+            ApplyCementedState(*otherSweets);
+        }
+
         const bool shouldSleep = creamSupported && otherSupportedForSleep;
         if (cream->HasBox2DBody() && cream->GetPhysical().IsDynamic())
         {
@@ -720,6 +785,14 @@ namespace SweetsSpace
             return true;
         }
 
+        if (const auto* sweets = dynamic_cast<const ActiveSweets*>(&entity))
+        {
+            if (sweets->IsCemented())
+            {
+                return true;
+            }
+        }
+
         for (const auto& entry : m_creamWeldJoints)
         {
             if (entry.first.first == &entity || entry.first.second == &entity)
@@ -729,5 +802,36 @@ namespace SweetsSpace
         }
 
         return false;
+    }
+
+    bool SweetsContacts::HasWeldJointForEntity(const Entities::PhysicalEntity& entity) const
+    {
+        for (const auto& entry : m_creamWeldJoints)
+        {
+            if (entry.first.first == &entity || entry.first.second == &entity)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void SweetsContacts::ApplyCementedState(ActiveSweets& sweets) const
+    {
+        sweets.ApplyCementedPhysics(m_creamLockedGravityScale, m_creamLockedLinearDamping, m_creamLockedAngularDamping);
+    }
+
+    void SweetsContacts::RestoreCementedStateIfFree(Entities::PhysicalEntity& entity)
+    {
+        if (HasWeldJointForEntity(entity))
+        {
+            return;
+        }
+
+        if (auto* sweets = dynamic_cast<ActiveSweets*>(&entity))
+        {
+            sweets->RestoreCementedPhysics();
+        }
     }
 }

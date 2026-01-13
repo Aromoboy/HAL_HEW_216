@@ -71,7 +71,23 @@ namespace SweetsSpace
             m_wasEverCarried = value;
         }
 
+        bool IsCemented() const noexcept
+        {
+            return m_cemented;
+        }
+
+        void ApplyCementedPhysics(float gravityScale, float linearDamping, float angularDamping);
+        void RestoreCementedPhysics();
+
     private:
+        struct CementedPhysicsState
+        {
+            float gravityScale{ 0.0f };
+            float linearDamping{ 0.0f };
+            float angularDamping{ 0.0f };
+            bool hasStored{ false };
+        };
+
         void SyncFromPhysics();
         void RefreshRenderTransform();
 
@@ -79,6 +95,8 @@ namespace SweetsSpace
         bool m_safeToDelete = true;
         bool m_missingModelWarned = false;
         bool m_wasEverCarried = false;
+        bool m_cemented = false;
+        CementedPhysicsState m_cementedState{};
         VisualTransform m_visual{};
         Transform m_renderTransform{};
     };

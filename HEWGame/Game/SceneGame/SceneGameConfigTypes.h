@@ -140,6 +140,10 @@ namespace SceneGameConfig
     struct CreamAdhesionSettings
     {
         float adhesionDelaySeconds = 0.3f;
+        float breakImpulseThreshold = 0.0f;
+        float lockedGravityScale = 0.0f;
+        float lockedLinearDamping = 0.0f;
+        float lockedAngularDamping = 0.0f;
         std::vector<std::string> allowedTags;
         std::vector<std::string> blockedTags;
     };

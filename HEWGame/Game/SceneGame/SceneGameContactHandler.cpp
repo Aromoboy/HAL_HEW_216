@@ -20,5 +20,12 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, SweetsSpace:
             {
                 m_sweetsManager->OnContactEnd(&a, &b);
             }
+        },
+        [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float normalImpulse, float tangentImpulse)
+        {
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->OnContactHit(&a, &b, normalImpulse, tangentImpulse);
+            }
         });
 }

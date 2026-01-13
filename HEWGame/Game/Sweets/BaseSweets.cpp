@@ -81,6 +81,48 @@ namespace SweetsSpace
         return m_renderTransform;
     }
 
+    void BaseSweets::ApplyCementedPhysics(float gravityScale, float linearDamping, float angularDamping)
+    {
+        if (HasBox2DBody())
+        {
+            const b2BodyId bodyId = GetBox2DBodyId();
+            if (!m_cemented && !m_cementedState.hasStored)
+            {
+                m_cementedState.gravityScale = b2Body_GetGravityScale(bodyId);
+                m_cementedState.linearDamping = b2Body_GetLinearDamping(bodyId);
+                m_cementedState.angularDamping = b2Body_GetAngularDamping(bodyId);
+                m_cementedState.hasStored = true;
+            }
+
+            b2Body_SetGravityScale(bodyId, gravityScale);
+            b2Body_SetLinearDamping(bodyId, linearDamping);
+            b2Body_SetAngularDamping(bodyId, angularDamping);
+            SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+            SetAngularVelocity(0.0f);
+        }
+
+        m_cemented = true;
+    }
+
+    void BaseSweets::RestoreCementedPhysics()
+    {
+        if (!m_cemented)
+        {
+            return;
+        }
+
+        if (HasBox2DBody() && m_cementedState.hasStored)
+        {
+            const b2BodyId bodyId = GetBox2DBodyId();
+            b2Body_SetGravityScale(bodyId, m_cementedState.gravityScale);
+            b2Body_SetLinearDamping(bodyId, m_cementedState.linearDamping);
+            b2Body_SetAngularDamping(bodyId, m_cementedState.angularDamping);
+        }
+
+        m_cementedState.hasStored = false;
+        m_cemented = false;
+    }
+
     void BaseSweets::SyncFromPhysics()
     {
         float3 renderOffset{};
