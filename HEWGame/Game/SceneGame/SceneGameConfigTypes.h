@@ -144,6 +144,7 @@ namespace SceneGameConfig
         std::vector<std::string> allowedTags;
         std::vector<std::string> blockedTags;
         bool requireSupport = true;
+        bool requireCarried = true;
         bool allowAirAdhesionToSweets = false;
     };
 

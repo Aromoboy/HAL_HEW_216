@@ -88,6 +88,7 @@ namespace SweetsSpace
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
         m_creamAdhesionGraceSeconds = std::max(0.0f, settings.adhesionGraceSeconds);
         m_creamRequireSupport = settings.requireSupport;
+        m_creamRequireCarried = settings.requireCarried;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
         m_creamAllowedTags.clear();
         for (const auto& tag : settings.allowedTags)
@@ -154,7 +155,7 @@ namespace SweetsSpace
             {
                 m_pendingBreaks.erase(breakIt);
             }
-            if (!cream->WasEverCarried())
+            if (m_creamRequireCarried && !cream->WasEverCarried())
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "クリーム '" << cream->GetTag()

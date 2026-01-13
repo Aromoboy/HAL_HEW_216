@@ -24,6 +24,7 @@ namespace GameplayConfig
     inline constexpr const char* kCreamKeyAllowedTags = "allowedTags";
     inline constexpr const char* kCreamKeyBlockedTags = "blockedTags";
     inline constexpr const char* kCreamKeyRequireSupport = "requireSupport";
+    inline constexpr const char* kCreamKeyRequireCarried = "requireCarried";
     inline constexpr const char* kCreamKeyAllowAirAdhesionToSweets = "allowAirAdhesionToSweets";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
