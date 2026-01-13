@@ -274,7 +274,7 @@ namespace SceneSpace
             {
                 if (!m_transition.IsEnabled())
                 {
-                    // instant switch: transition disabled, skip fade entirely.
+                    // インスタントスイッチ：遷移を無効化し、フェードを完全にスキップする
                     ActivatePendingScene();
                 }
                 else if (m_activeScene)
@@ -283,7 +283,7 @@ namespace SceneSpace
                 }
                 else
                 {
-                    // skip fade: no active scene yet, load immediately.
+                    // フェードをスキップ：アクティブなシーンはまだないため、すぐに読み込む
                     ActivatePendingScene();
                 }
             }
