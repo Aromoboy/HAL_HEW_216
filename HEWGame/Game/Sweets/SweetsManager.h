@@ -94,6 +94,7 @@ namespace SweetsSpace
         void SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state);
         void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
+        void ClearRetryContacts();
 
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);

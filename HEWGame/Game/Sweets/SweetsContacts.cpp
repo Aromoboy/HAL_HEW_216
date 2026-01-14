@@ -755,6 +755,7 @@ namespace SweetsSpace
         m_contactStates.clear();
         m_hasSweetsContact.clear();
         m_contactHitImpulses.clear();
+        ClearCreamWeldJoints("Reset");
         ClearCementClusters("Reset");
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
