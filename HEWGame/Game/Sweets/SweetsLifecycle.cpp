@@ -697,6 +697,11 @@ namespace SweetsSpace
             return false;
         }
 
+        if (m_contacts)
+        {
+            m_contacts->RegisterSweetsHandle(sweets);
+        }
+
         const auto cleanupFailedRegistration = [&](const std::string& reason)
         {
             std::ostringstream oss;
@@ -709,6 +714,7 @@ namespace SweetsSpace
                 m_contacts->ClearSweetsContact(sweets.get());
                 m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "RegisterWithSystems");
                 m_contacts->RemoveCementClusterForSweets(sweets.get(), "RegisterWithSystems");
+                m_contacts->UnregisterSweetsHandle(sweets.get());
             }
             sweets->MarkPendingDestroy();
             sweets->Enable(false);
@@ -919,6 +925,7 @@ namespace SweetsSpace
         if (m_contacts)
         {
             m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
+            m_contacts->UnregisterSweetsHandle(sweets.get());
         }
     }
 }
