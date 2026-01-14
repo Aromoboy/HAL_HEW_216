@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <box2d/box2d.h>
@@ -136,6 +137,7 @@ namespace SweetsSpace
         void CleanupInvalidContacts();
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
+        bool ShouldLogCreamPairEvent(ActiveSweets* cream, Entities::PhysicalEntity* other, std::string_view eventKey);
         void UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity);
@@ -156,6 +158,7 @@ namespace SweetsSpace
         bool m_creamAllowAirAdhesionToSweets{ false };
         std::unordered_set<std::string> m_creamAllowedTags;
         std::unordered_set<std::string> m_creamBlockedTags;
+        std::unordered_set<std::size_t> m_loggedCreamPairEvents;
 
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
