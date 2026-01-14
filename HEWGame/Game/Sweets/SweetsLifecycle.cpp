@@ -597,6 +597,7 @@ namespace SweetsSpace
         {
             m_contacts->ClearContactState(sweets.get());
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
+            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
             m_contacts->RemoveCementClusterForSweets(sweets.get(), "TryMarkAsCarried");
         }
 
@@ -652,6 +653,7 @@ namespace SweetsSpace
         if (m_contacts)
         {
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
+            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
             m_contacts->RemoveCementClusterForSweets(sweets.get(), "ReleaseCarriedSweets");
         }
 
