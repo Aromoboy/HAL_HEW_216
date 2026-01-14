@@ -451,6 +451,35 @@ namespace SweetsSpace
 #endif
     }
 
+    void SweetsLifecycle::FlushDeferredUnregisters()
+    {
+        if (m_pendingPhysicsUnregister.empty())
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            return;
+        }
+
+        for (const auto& sweets : m_pendingPhysicsUnregister)
+        {
+            if (!sweets)
+            {
+                continue;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "deferred unregister (Late) tag='" << sweets->GetTag() << "'\n";
+            DebugTrace(oss.str());
+            m_physicsMachine->UnregisterBody(*sweets);
+        }
+
+        m_pendingPhysicsUnregister.clear();
+        m_pendingPhysicsUnregisterLookup.clear();
+    }
+
     void SweetsLifecycle::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
     {
         if (!(std::isfinite(minX) && std::isfinite(maxX)))
@@ -897,7 +926,10 @@ namespace SweetsSpace
             const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
             if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
             {
-                m_physicsMachine->UnregisterBody(*sweets);
+                if (m_pendingPhysicsUnregisterLookup.insert(sweets.get()).second)
+                {
+                    m_pendingPhysicsUnregister.push_back(sweets);
+                }
             }
         }
         else if (logWarnings && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)

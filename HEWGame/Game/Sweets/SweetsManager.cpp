@@ -99,6 +99,7 @@ namespace SweetsSpace
 
     void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
     {
+        m_lifecycle.FlushDeferredUnregisters();
         m_lifecycle.OnLateUpdate(ctx);
     }
 
