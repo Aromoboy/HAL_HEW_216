@@ -676,6 +676,11 @@ namespace SweetsSpace
             *m_warnedMissingPhysicsMachine = true;
         }
 
+        if (m_contacts)
+        {
+            sweets->SetRecentlyReleasedCooldownSeconds(m_contacts->GetCreamReleaseCooldownSeconds());
+        }
+
         std::ostringstream oss;
         oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());

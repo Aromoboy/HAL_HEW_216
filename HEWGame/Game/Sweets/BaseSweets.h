@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -71,6 +72,21 @@ namespace SweetsSpace
             m_wasEverCarried = value;
         }
 
+        void SetRecentlyReleasedCooldownSeconds(float seconds) noexcept
+        {
+            m_recentlyReleasedSecondsRemaining = std::max(0.0f, seconds);
+        }
+
+        bool IsRecentlyReleased() const noexcept
+        {
+            return m_recentlyReleasedSecondsRemaining > 0.0f;
+        }
+
+        float GetRecentlyReleasedSecondsRemaining() const noexcept
+        {
+            return m_recentlyReleasedSecondsRemaining;
+        }
+
     private:
         void SyncFromPhysics();
         void RefreshRenderTransform();
@@ -79,6 +95,7 @@ namespace SweetsSpace
         bool m_safeToDelete = true;
         bool m_missingModelWarned = false;
         bool m_wasEverCarried = false;
+        float m_recentlyReleasedSecondsRemaining = 0.0f;
         VisualTransform m_visual{};
         Transform m_renderTransform{};
     };

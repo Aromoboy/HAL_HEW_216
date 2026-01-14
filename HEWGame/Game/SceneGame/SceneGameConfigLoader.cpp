@@ -2806,6 +2806,7 @@ namespace SceneGameConfig
         settings.adhesionDelaySeconds = 0.3f;
         settings.adhesionGraceSeconds = 0.08f;
         settings.breakImpulseThreshold = 6.0f;
+        settings.releaseCooldownSeconds = 0.0f;
         settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
         settings.blockedTags = { "osara", "fairy" };
         settings.requireSupport = false;
@@ -2855,6 +2856,13 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.breakImpulseThreshold = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyReleaseCooldownSeconds)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.releaseCooldownSeconds = std::max(0.0f, *parsed);
                 }
             }
             else if (key == GameplayConfig::kCreamKeyAllowedTags)
