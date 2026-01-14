@@ -762,6 +762,15 @@ SceneGame::~SceneGame()
         m_contactDispatchRegistered = false;
     }
 
+    if (m_physicsLateRegistered && m_physicsBinder)
+    {
+        if (auto* lateNode = m_physicsBinder->GetRegistrationLateUpdateNode())
+        {
+            Unregister(*lateNode);
+        }
+        m_physicsLateRegistered = false;
+    }
+
     if (m_cameraRigRegistered && m_cameraRig)
     {
         Unregister(*m_cameraRig);
@@ -836,6 +845,14 @@ void SceneGame::ConfigureUpdates()
                         {
                                 m_contactDispatchRegistered = Register(*contactNode);
                         }
+                }
+        }
+
+        if (m_physicsBinder && !m_physicsLateRegistered)
+        {
+                if (auto* lateNode = m_physicsBinder->GetRegistrationLateUpdateNode())
+                {
+                        m_physicsLateRegistered = Register(*lateNode);
                 }
         }
 

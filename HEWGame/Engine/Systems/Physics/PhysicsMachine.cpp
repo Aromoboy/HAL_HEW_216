@@ -133,7 +133,9 @@ namespace Systems
             (void)ctx;
             if (m_owner.m_contactListener)
             {
+                m_owner.m_isDispatchingContacts = true;
                 m_owner.m_contactListener->ProcessContacts();
+                m_owner.m_isDispatchingContacts = false;
             }
         }
 
@@ -255,6 +257,11 @@ namespace Systems
     Core::IUpdatable* PhysicsMachine::GetContactDispatchNode() const
     {
         return m_contactDispatchNode.get();
+    }
+
+    bool PhysicsMachine::IsContactDispatching() const noexcept
+    {
+        return m_isDispatchingContacts;
     }
 
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const

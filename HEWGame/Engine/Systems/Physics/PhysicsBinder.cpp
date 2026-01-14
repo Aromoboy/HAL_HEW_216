@@ -87,6 +87,16 @@ namespace Systems
         }
     }
 
+    Core::IUpdatable* PhysicsBinder::GetRegistrationLateUpdateNode()
+    {
+        if (m_registration)
+        {
+            return m_registration->GetLateUpdateNode();
+        }
+
+        return nullptr;
+    }
+
     void PhysicsBinder::ValidatePlayerPhysicsRegistration()
     {
         if (m_registration)

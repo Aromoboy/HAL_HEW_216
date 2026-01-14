@@ -38,8 +38,28 @@ namespace
 
 namespace Systems
 {
+    class LateUpdateNode : public Core::UpdateNode
+    {
+    public:
+        explicit LateUpdateNode(PhysicsRegistration& owner)
+            : Core::UpdateNode(Core::UpdatePhase::Late, 0)
+            , m_owner(owner)
+        {
+        }
+
+        void OnUpdate(const Core::UpdateContext& ctx) override
+        {
+            (void)ctx;
+            m_owner.FlushPendingUnregisters();
+        }
+
+    private:
+        PhysicsRegistration& m_owner;
+    };
+
     PhysicsRegistration::PhysicsRegistration(PhysicsMachine& physicsMachine)
         : m_physicsMachine(&physicsMachine)
+        , m_lateUpdateNode(std::make_unique<LateUpdateNode>(*this))
     {
         m_contactListener = std::make_shared<Box2DContactListener>(physicsMachine);
         if (m_contactListener)
@@ -66,6 +86,14 @@ namespace Systems
 #if defined(_DEBUG)
             m_contactListener->EnableDroppedEventLogging(true);
 #endif
+        }
+    }
+
+    PhysicsRegistration::~PhysicsRegistration()
+    {
+        if (m_lateUpdateNode)
+        {
+            m_lateUpdateNode->ReleaseRegistrationHandle();
         }
     }
 
@@ -171,6 +199,19 @@ namespace Systems
             return;
         }
 
+        if (m_physicsMachine && m_physicsMachine->IsContactDispatching())
+        {
+            const auto [it, inserted] = m_pendingUnregisters.insert(entity);
+            if (inserted)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "Unregister deferred due to contact dispatch for tag='"
+                    << entity->GetTag() << "'.\n";
+                DebugTrace(oss.str());
+            }
+            return;
+        }
+
         const bool fixtureBuildFailed = entity->HasFixtureBuildFailure();
 
         const auto tracked = m_registeredPhysicsBodies.find(entity);
@@ -219,6 +260,16 @@ namespace Systems
         }
     }
 
+    Core::IUpdatable* PhysicsRegistration::GetLateUpdateNode()
+    {
+        return m_lateUpdateNode.get();
+    }
+
+    const Core::IUpdatable* PhysicsRegistration::GetLateUpdateNode() const
+    {
+        return m_lateUpdateNode.get();
+    }
+
     void PhysicsRegistration::ValidatePlayerPhysicsRegistration()
     {
         if (!m_playerEntity || !m_physicsMachine)
@@ -245,6 +296,22 @@ namespace Systems
         {
             DebugTrace(std::string(kLogPrefix) + "Player body present in PhysicsMachine after prior recovery.\n");
             m_loggedPlayerBodyRecovery = false;
+        }
+    }
+
+    void PhysicsRegistration::FlushPendingUnregisters()
+    {
+        if (m_pendingUnregisters.empty())
+        {
+            return;
+        }
+
+        std::vector<Entities::PhysicalEntity*> pending(m_pendingUnregisters.begin(), m_pendingUnregisters.end());
+        m_pendingUnregisters.clear();
+
+        for (Entities::PhysicalEntity* entity : pending)
+        {
+            UnregisterPhysicsBody(entity);
         }
     }
 
