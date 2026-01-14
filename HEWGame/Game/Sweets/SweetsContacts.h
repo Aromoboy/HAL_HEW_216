@@ -187,6 +187,7 @@ namespace SweetsSpace
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
         std::unordered_map<JointPairKey, float, JointPairHash> m_contactHitImpulses;
+        // NOTE: Optional cache for cement contacts; cluster builds use live Box2D contact data.
         std::unordered_map<Entities::PhysicalEntity*, std::unordered_set<Entities::PhysicalEntity*>> m_cementAdjacency;
         std::unordered_set<std::shared_ptr<CementCluster>> m_cementClusters;
         std::unordered_map<ActiveSweets*, std::shared_ptr<CementCluster>> m_cementClusterLookup;
