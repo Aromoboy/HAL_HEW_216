@@ -33,6 +33,9 @@ namespace SweetsSpace
     public:
         SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
 
+        void RegisterSweetsHandle(const std::shared_ptr<ActiveSweets>& sweets);
+        void UnregisterSweetsHandle(ActiveSweets* sweets);
+
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
@@ -65,6 +68,28 @@ namespace SweetsSpace
 
 
     private:
+        struct WeakSweetsHash
+        {
+            std::size_t operator()(const std::weak_ptr<ActiveSweets>& handle) const noexcept
+            {
+                const auto locked = handle.lock();
+                return std::hash<ActiveSweets*>{}(locked.get());
+            }
+        };
+
+        struct WeakSweetsEqual
+        {
+            bool operator()(const std::weak_ptr<ActiveSweets>& lhs,
+                            const std::weak_ptr<ActiveSweets>& rhs) const noexcept
+            {
+                return !lhs.owner_before(rhs) && !rhs.owner_before(lhs);
+            }
+        };
+
+        using WeakSweetsHandle = std::weak_ptr<ActiveSweets>;
+        using WeakSweetsSet = std::unordered_set<WeakSweetsHandle, WeakSweetsHash, WeakSweetsEqual>;
+        using WeakSweetsMap = std::unordered_map<WeakSweetsHandle, WeakSweetsSet, WeakSweetsHash, WeakSweetsEqual>;
+
         struct ContactState
         {
             int foundationContacts{ 0 };
@@ -150,6 +175,7 @@ namespace SweetsSpace
         void ClearHitImpulsesForSweets(ActiveSweets* sweets);
         void ClearPendingCementClustersForEntity(Entities::PhysicalEntity* entity);
         void CleanupInvalidContacts();
+        void PruneCementGraph();
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
         bool ShouldLogCreamPairEvent(ActiveSweets* cream, Entities::PhysicalEntity* other, std::string_view eventKey);
@@ -163,6 +189,9 @@ namespace SweetsSpace
         void CreateCementClusterJoints(CementCluster& cluster, const char* context);
         bool IsCementClusterCandidate(const Entities::PhysicalEntity& entity) const;
         bool IsCakeEntity(const Entities::PhysicalEntity& entity) const;
+        WeakSweetsHandle FindSweetsHandle(ActiveSweets* sweets) const;
+        void RemoveCementAdjacencyNode(const WeakSweetsHandle& handle);
+        void RemoveCakeAdjacencyNode(const WeakSweetsHandle& handle);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
@@ -187,8 +216,11 @@ namespace SweetsSpace
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
         std::unordered_map<JointPairKey, float, JointPairHash> m_contactHitImpulses;
-        // NOTE: Optional cache for cement contacts; cluster builds use live Box2D contact data.
-        std::unordered_map<Entities::PhysicalEntity*, std::unordered_set<Entities::PhysicalEntity*>> m_cementAdjacency;
+        // NOTE: Optional cache for cement contacts; cluster builds use adjacency graph data.
+        std::unordered_map<ActiveSweets*, WeakSweetsHandle> m_sweetsHandleLookup;
+        WeakSweetsMap m_cementAdjacency;
+        std::unordered_map<std::string, WeakSweetsSet> m_cementCakeAdjacency;
+        Entities::PhysicalEntity* m_cementCakeEntity{ nullptr };
         std::unordered_set<std::shared_ptr<CementCluster>> m_cementClusters;
         std::unordered_map<ActiveSweets*, std::shared_ptr<CementCluster>> m_cementClusterLookup;
         // NOTE: Pending maps store non-owning pointers; clear them whenever a sweets/target entity is deleted.

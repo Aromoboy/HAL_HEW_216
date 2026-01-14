@@ -47,7 +47,7 @@ namespace
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kCreamWeldBreakGraceSeconds = 0.25f;
-    constexpr const char* kStageCakeKey = "cake";
+    const std::string kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
     constexpr const char* kBlockedFairyKey = "fairy";
 
@@ -113,28 +113,6 @@ namespace
         return true;
     }
 
-    Entities::PhysicalEntity* GetEntityFromContact(b2BodyId bodyId, b2ShapeId shapeId)
-    {
-        if (b2Shape_IsValid(shapeId))
-        {
-            if (void* userData = b2Shape_GetUserData(shapeId))
-            {
-                return static_cast<Entities::PhysicalEntity*>(userData);
-            }
-        }
-
-        if (!b2Body_IsValid(bodyId))
-        {
-            return nullptr;
-        }
-
-        if (void* userData = b2Body_GetUserData(bodyId))
-        {
-            return static_cast<Entities::PhysicalEntity*>(userData);
-        }
-
-        return nullptr;
-    }
 }
 
 namespace SweetsSpace
@@ -143,6 +121,26 @@ namespace SweetsSpace
         : m_physicsMachine(physicsMachine)
         , m_warnedMissingPhysicsMachine(warnedMissingPhysicsMachine)
     {
+    }
+
+    void SweetsContacts::RegisterSweetsHandle(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        m_sweetsHandleLookup[sweets.get()] = sweets;
+    }
+
+    void SweetsContacts::UnregisterSweetsHandle(ActiveSweets* sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        m_sweetsHandleLookup.erase(sweets);
     }
 
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
@@ -803,6 +801,7 @@ namespace SweetsSpace
         m_contactHitImpulses.clear();
         ClearCreamWeldJoints("Reset");
         ClearCementClusters("Reset");
+        m_sweetsHandleLookup.clear();
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
         m_pendingCementClusters.clear();
@@ -940,6 +939,8 @@ namespace SweetsSpace
 
     void SweetsContacts::CleanupInvalidContacts()
     {
+        PruneCementGraph();
+
         for (auto it = m_contactStates.begin(); it != m_contactStates.end();)
         {
             if (!HasValidBodyAndShapes(it->first))
@@ -976,79 +977,6 @@ namespace SweetsSpace
             {
                 ++it;
             }
-        }
-
-        std::size_t removedAdjacencyNodes = 0;
-        std::size_t removedAdjacencyLinks = 0;
-        for (auto it = m_cementAdjacency.begin(); it != m_cementAdjacency.end();)
-        {
-            Entities::PhysicalEntity* entity = it->first;
-            if (!HasValidBodyAndShapes(entity))
-            {
-                for (auto* neighbor : it->second)
-                {
-                    auto neighborIt = m_cementAdjacency.find(neighbor);
-                    if (neighborIt != m_cementAdjacency.end())
-                    {
-                        const std::size_t erased = neighborIt->second.erase(entity);
-                        removedAdjacencyLinks += erased;
-                        if (neighborIt->second.empty())
-                        {
-                            m_cementAdjacency.erase(neighborIt);
-                            ++removedAdjacencyNodes;
-                        }
-                    }
-                }
-
-                removedAdjacencyLinks += it->second.size();
-                it = m_cementAdjacency.erase(it);
-                ++removedAdjacencyNodes;
-                continue;
-            }
-
-            for (auto neighborIt = it->second.begin(); neighborIt != it->second.end();)
-            {
-                Entities::PhysicalEntity* neighbor = *neighborIt;
-                if (!HasValidBodyAndShapes(neighbor))
-                {
-                    neighborIt = it->second.erase(neighborIt);
-                    ++removedAdjacencyLinks;
-                    auto reverseIt = m_cementAdjacency.find(neighbor);
-                    if (reverseIt != m_cementAdjacency.end())
-                    {
-                        const std::size_t erased = reverseIt->second.erase(entity);
-                        removedAdjacencyLinks += erased;
-                        if (reverseIt->second.empty())
-                        {
-                            m_cementAdjacency.erase(reverseIt);
-                            ++removedAdjacencyNodes;
-                        }
-                    }
-                }
-                else
-                {
-                    ++neighborIt;
-                }
-            }
-
-            if (it->second.empty())
-            {
-                it = m_cementAdjacency.erase(it);
-                ++removedAdjacencyNodes;
-            }
-            else
-            {
-                ++it;
-            }
-        }
-
-        if (removedAdjacencyNodes > 0)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix
-                << "CleanupInvalidContacts で cement adjacency ノードを "
-                << removedAdjacencyNodes << " 件削除したよ\n";
-            DebugTrace(oss.str());
         }
     };
 
@@ -1105,6 +1033,8 @@ namespace SweetsSpace
         if (m_cementClusters.empty())
         {
             m_cementAdjacency.clear();
+            m_cementCakeAdjacency.clear();
+            m_cementCakeEntity = nullptr;
             m_cementClusterLookup.clear();
             return;
         }
@@ -1122,6 +1052,8 @@ namespace SweetsSpace
         }
 
         m_cementAdjacency.clear();
+        m_cementCakeAdjacency.clear();
+        m_cementCakeEntity = nullptr;
         m_cementClusterLookup.clear();
         m_cementClusters.clear();
     }
@@ -1619,26 +1551,95 @@ namespace SweetsSpace
             return false;
         }
 
-        if (!IsCementClusterCandidate(*a) || !IsCementClusterCandidate(*b))
+        const bool aIsCake = IsCakeEntity(*a);
+        const bool bIsCake = IsCakeEntity(*b);
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+
+        if (sweetsA && sweetsB)
         {
-            return false;
+            if (!IsCementClusterCandidate(*sweetsA) || !IsCementClusterCandidate(*sweetsB))
+            {
+                return false;
+            }
+
+            const auto handleA = FindSweetsHandle(sweetsA);
+            const auto handleB = FindSweetsHandle(sweetsB);
+            if (handleA.expired() || handleB.expired())
+            {
+                RemoveCementAdjacencyForEntity(sweetsA);
+                RemoveCementAdjacencyForEntity(sweetsB);
+                return false;
+            }
+
+            const auto itA = m_cementAdjacency.find(handleA);
+            if (itA != m_cementAdjacency.end() && itA->second.find(handleB) != itA->second.end())
+            {
+                return false;
+            }
+
+            const auto itB = m_cementAdjacency.find(handleB);
+            if (itB != m_cementAdjacency.end() && itB->second.find(handleA) != itB->second.end())
+            {
+                return false;
+            }
+
+            m_cementAdjacency[handleA].insert(handleB);
+            m_cementAdjacency[handleB].insert(handleA);
+            return true;
         }
 
-        const auto itA = m_cementAdjacency.find(a);
-        if (itA != m_cementAdjacency.end() && itA->second.find(b) != itA->second.end())
+        if (sweetsA && bIsCake)
         {
-            return false;
+            if (!IsCementClusterCandidate(*sweetsA))
+            {
+                return false;
+            }
+
+            const auto handleA = FindSweetsHandle(sweetsA);
+            if (handleA.expired())
+            {
+                RemoveCementAdjacencyForEntity(sweetsA);
+                return false;
+            }
+
+            auto& cakeSet = m_cementCakeAdjacency[kStageCakeKey];
+            if (cakeSet.find(handleA) != cakeSet.end())
+            {
+                return false;
+            }
+
+            cakeSet.insert(handleA);
+            m_cementCakeEntity = b;
+            return true;
         }
 
-        const auto itB = m_cementAdjacency.find(b);
-        if (itB != m_cementAdjacency.end() && itB->second.find(a) != itB->second.end())
+        if (sweetsB && aIsCake)
         {
-            return false;
+            if (!IsCementClusterCandidate(*sweetsB))
+            {
+                return false;
+            }
+
+            const auto handleB = FindSweetsHandle(sweetsB);
+            if (handleB.expired())
+            {
+                RemoveCementAdjacencyForEntity(sweetsB);
+                return false;
+            }
+
+            auto& cakeSet = m_cementCakeAdjacency[kStageCakeKey];
+            if (cakeSet.find(handleB) != cakeSet.end())
+            {
+                return false;
+            }
+
+            cakeSet.insert(handleB);
+            m_cementCakeEntity = a;
+            return true;
         }
 
-        m_cementAdjacency[a].insert(b);
-        m_cementAdjacency[b].insert(a);
-        return true;
+        return false;
     }
 
     void SweetsContacts::UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
@@ -1663,24 +1664,73 @@ namespace SweetsSpace
             return;
         }
 
-        auto itA = m_cementAdjacency.find(a);
-        if (itA != m_cementAdjacency.end())
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+        const bool aIsCake = IsCakeEntity(*a);
+        const bool bIsCake = IsCakeEntity(*b);
+
+        if (sweetsA && sweetsB)
         {
-            itA->second.erase(b);
-            if (itA->second.empty())
+            const auto handleA = FindSweetsHandle(sweetsA);
+            const auto handleB = FindSweetsHandle(sweetsB);
+            if (!handleA.expired())
             {
-                m_cementAdjacency.erase(itA);
+                auto itA = m_cementAdjacency.find(handleA);
+                if (itA != m_cementAdjacency.end())
+                {
+                    itA->second.erase(handleB);
+                    if (itA->second.empty())
+                    {
+                        m_cementAdjacency.erase(itA);
+                    }
+                }
+            }
+
+            if (!handleB.expired())
+            {
+                auto itB = m_cementAdjacency.find(handleB);
+                if (itB != m_cementAdjacency.end())
+                {
+                    itB->second.erase(handleA);
+                    if (itB->second.empty())
+                    {
+                        m_cementAdjacency.erase(itB);
+                    }
+                }
+            }
+            return;
+        }
+
+        if (sweetsA && bIsCake)
+        {
+            const auto handleA = FindSweetsHandle(sweetsA);
+            if (auto cakeIt = m_cementCakeAdjacency.find(kStageCakeKey);
+                cakeIt != m_cementCakeAdjacency.end())
+            {
+                cakeIt->second.erase(handleA);
+                if (cakeIt->second.empty())
+                {
+                    m_cementCakeAdjacency.erase(cakeIt);
+                }
+            }
+        }
+        else if (sweetsB && aIsCake)
+        {
+            const auto handleB = FindSweetsHandle(sweetsB);
+            if (auto cakeIt = m_cementCakeAdjacency.find(kStageCakeKey);
+                cakeIt != m_cementCakeAdjacency.end())
+            {
+                cakeIt->second.erase(handleB);
+                if (cakeIt->second.empty())
+                {
+                    m_cementCakeAdjacency.erase(cakeIt);
+                }
             }
         }
 
-        auto itB = m_cementAdjacency.find(b);
-        if (itB != m_cementAdjacency.end())
+        if (m_cementCakeAdjacency.empty())
         {
-            itB->second.erase(a);
-            if (itB->second.empty())
-            {
-                m_cementAdjacency.erase(itB);
-            }
+            m_cementCakeEntity = nullptr;
         }
     }
 
@@ -1761,26 +1811,29 @@ namespace SweetsSpace
             return;
         }
 
-        auto it = m_cementAdjacency.find(entity);
-        if (it == m_cementAdjacency.end())
+        PruneCementGraph();
+
+        if (IsCakeEntity(*entity))
+        {
+            m_cementCakeAdjacency.clear();
+            m_cementCakeEntity = nullptr;
+            return;
+        }
+
+        auto* sweets = dynamic_cast<ActiveSweets*>(entity);
+        if (!sweets)
         {
             return;
         }
 
-        for (auto* neighbor : it->second)
+        const auto handle = FindSweetsHandle(sweets);
+        if (handle.expired())
         {
-            auto neighborIt = m_cementAdjacency.find(neighbor);
-            if (neighborIt != m_cementAdjacency.end())
-            {
-                neighborIt->second.erase(entity);
-                if (neighborIt->second.empty())
-                {
-                    m_cementAdjacency.erase(neighborIt);
-                }
-            }
+            return;
         }
 
-        m_cementAdjacency.erase(it);
+        RemoveCementAdjacencyNode(handle);
+        RemoveCakeAdjacencyNode(handle);
     }
 
     std::shared_ptr<SweetsContacts::CementCluster> SweetsContacts::BuildCementCluster(ActiveSweets* cream, Entities::PhysicalEntity* other)
@@ -1800,104 +1853,105 @@ namespace SweetsSpace
             return nullptr;
         }
 
-        std::unordered_set<Entities::PhysicalEntity*> visited;
-        std::queue<Entities::PhysicalEntity*> frontier;
-        visited.insert(cream);
-        frontier.push(cream);
-        if (other != cream)
+        PruneCementGraph();
+
+        std::unordered_set<std::shared_ptr<ActiveSweets>> visited;
+        std::queue<WeakSweetsHandle> frontier;
+
+        const auto creamHandle = FindSweetsHandle(cream);
+        if (creamHandle.expired())
         {
-            visited.insert(other);
-            frontier.push(other);
+            RemoveCementAdjacencyForEntity(cream);
+            return nullptr;
+        }
+        if (auto creamLocked = creamHandle.lock())
+        {
+            visited.insert(creamLocked);
+            frontier.push(creamHandle);
+        }
+        else
+        {
+            RemoveCementAdjacencyNode(creamHandle);
+            return nullptr;
         }
 
-        std::vector<b2ContactData> contactsBuffer;
+        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+        {
+            const auto otherHandle = FindSweetsHandle(otherSweets);
+            if (otherHandle.expired())
+            {
+                RemoveCementAdjacencyForEntity(otherSweets);
+                return nullptr;
+            }
+            if (auto otherLocked = otherHandle.lock())
+            {
+                visited.insert(otherLocked);
+                frontier.push(otherHandle);
+            }
+            else
+            {
+                RemoveCementAdjacencyNode(otherHandle);
+                return nullptr;
+            }
+        }
+
         while (!frontier.empty())
         {
-            auto* current = frontier.front();
+            const auto currentHandle = frontier.front();
             frontier.pop();
 
-            if (!current || !HasValidBodyAndShapes(current))
+            auto currentLocked = currentHandle.lock();
+            if (!currentLocked)
+            {
+                RemoveCementAdjacencyNode(currentHandle);
+                continue;
+            }
+
+            if (!HasValidBodyAndShapes(currentLocked.get()) || IsPendingDeletion(currentLocked.get()))
+            {
+                RemoveCementAdjacencyNode(currentHandle);
+                continue;
+            }
+
+            auto adjacencyIt = m_cementAdjacency.find(currentHandle);
+            if (adjacencyIt == m_cementAdjacency.end())
             {
                 continue;
             }
 
-            if (IsPendingDeletion(current) || !IsCementClusterCandidate(*current))
+            for (auto neighborIt = adjacencyIt->second.begin(); neighborIt != adjacencyIt->second.end();)
             {
-                continue;
+                const auto neighborHandle = *neighborIt;
+                auto neighborLocked = neighborHandle.lock();
+                if (!neighborLocked)
+                {
+                    neighborIt = adjacencyIt->second.erase(neighborIt);
+                    RemoveCementAdjacencyNode(neighborHandle);
+                    continue;
+                }
+
+                if (!HasValidBodyAndShapes(neighborLocked.get()) || IsPendingDeletion(neighborLocked.get()))
+                {
+                    neighborIt = adjacencyIt->second.erase(neighborIt);
+                    RemoveCementAdjacencyNode(neighborHandle);
+                    continue;
+                }
+
+                const auto insertResult = visited.insert(neighborLocked);
+                if (insertResult.second)
+                {
+                    frontier.push(neighborHandle);
+                }
+
+                ++neighborIt;
             }
+        }
 
-            const b2BodyId currentBodyId = current->GetBox2DBodyId();
-            if (!b2Body_IsValid(currentBodyId))
-            {
-                continue;
-            }
-
-            const int capacity = b2Body_GetContactCapacity(currentBodyId);
-            if (capacity <= 0)
-            {
-                continue;
-            }
-
-            contactsBuffer.resize(static_cast<std::size_t>(capacity));
-            const int contactCount = b2Body_GetContactData(currentBodyId, contactsBuffer.data(), capacity);
-            const uint64_t currentKey = b2StoreBodyId(currentBodyId);
-            for (int i = 0; i < contactCount; ++i)
-            {
-                const auto& contact = contactsBuffer[i];
-                if (contact.manifold.pointCount <= 0)
-                {
-                    continue;
-                }
-
-                if (!b2Shape_IsValid(contact.shapeIdA) || !b2Shape_IsValid(contact.shapeIdB))
-                {
-                    continue;
-                }
-
-                const b2BodyId bodyIdA = b2Shape_GetBody(contact.shapeIdA);
-                const b2BodyId bodyIdB = b2Shape_GetBody(contact.shapeIdB);
-                if (!b2Body_IsValid(bodyIdA) || !b2Body_IsValid(bodyIdB))
-                {
-                    continue;
-                }
-
-                Entities::PhysicalEntity* neighbor = nullptr;
-                if (b2StoreBodyId(bodyIdA) == currentKey)
-                {
-                    neighbor = GetEntityFromContact(bodyIdB, contact.shapeIdB);
-                }
-                else if (b2StoreBodyId(bodyIdB) == currentKey)
-                {
-                    neighbor = GetEntityFromContact(bodyIdA, contact.shapeIdA);
-                }
-                else
-                {
-                    continue;
-                }
-
-                if (!neighbor)
-                {
-                    continue;
-                }
-
-                if (visited.find(neighbor) != visited.end())
-                {
-                    continue;
-                }
-
-                if (!HasValidBodyAndShapes(neighbor))
-                {
-                    continue;
-                }
-
-                if (IsPendingDeletion(neighbor) || !IsCementClusterCandidate(*neighbor))
-                {
-                    continue;
-                }
-
-                visited.insert(neighbor);
-                frontier.push(neighbor);
-            }
+        std::unordered_set<Entities::PhysicalEntity*> members;
+        members.reserve(visited.size());
+        for (const auto& member : visited)
+        {
+            members.insert(member.get());
         }
 
         std::shared_ptr<CementCluster> targetCluster;
@@ -1906,26 +1960,35 @@ namespace SweetsSpace
         Entities::PhysicalEntity* anchor = nullptr;
         bool anchoredToCake = false;
 
-        for (auto* member : visited)
+        if (m_cementCakeEntity && !HasValidBodyAndShapes(m_cementCakeEntity))
         {
-            if (auto* sweets = dynamic_cast<ActiveSweets*>(member))
+            m_cementCakeEntity = nullptr;
+        }
+
+        for (const auto& member : visited)
+        {
+            auto* sweets = member.get();
+            sweetsSet.insert(sweets);
+            auto it = m_cementClusterLookup.find(sweets);
+            if (it != m_cementClusterLookup.end())
             {
-                sweetsSet.insert(sweets);
-                auto it = m_cementClusterLookup.find(sweets);
-                if (it != m_cementClusterLookup.end())
+                if (!targetCluster)
                 {
-                    if (!targetCluster)
-                    {
-                        targetCluster = it->second;
-                    }
-                    clustersToRemove.insert(it->second);
+                    targetCluster = it->second;
                 }
+                clustersToRemove.insert(it->second);
             }
 
-            if (!anchor && IsCakeEntity(*member))
+            if (!anchoredToCake && m_cementCakeEntity)
             {
-                anchor = member;
-                anchoredToCake = true;
+                const WeakSweetsHandle handle = member;
+                auto cakeIt = m_cementCakeAdjacency.find(kStageCakeKey);
+                if (cakeIt != m_cementCakeAdjacency.end()
+                    && cakeIt->second.find(handle) != cakeIt->second.end())
+                {
+                    anchor = m_cementCakeEntity;
+                    anchoredToCake = true;
+                }
             }
         }
 
@@ -1962,7 +2025,7 @@ namespace SweetsSpace
 
             RemoveCementCluster(targetCluster, "CementClusterUpdate");
             targetCluster->joints.clear();
-            targetCluster->members = visited;
+            targetCluster->members = members;
             targetCluster->sweets = std::move(sweetsSet);
             targetCluster->anchor = anchor;
             targetCluster->anchoredToCake = anchoredToCake;
@@ -1985,7 +2048,7 @@ namespace SweetsSpace
         }
 
         auto cluster = std::make_shared<CementCluster>();
-        cluster->members = visited;
+        cluster->members = members;
         cluster->sweets = std::move(sweetsSet);
         cluster->anchor = anchor;
         cluster->anchoredToCake = anchoredToCake;
@@ -2155,5 +2218,261 @@ namespace SweetsSpace
         }
 
         return false;
+    }
+
+    void SweetsContacts::PruneCementGraph()
+    {
+        std::size_t removedAdjacencyNodes = 0;
+        std::size_t removedAdjacencyLinks = 0;
+        const auto eraseByOwner = [](WeakSweetsSet& set, const WeakSweetsHandle& handle)
+        {
+            std::size_t removed = 0;
+            for (auto it = set.begin(); it != set.end();)
+            {
+                if (WeakSweetsEqual{}(*it, handle))
+                {
+                    it = set.erase(it);
+                    ++removed;
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            return removed;
+        };
+
+        for (auto it = m_sweetsHandleLookup.begin(); it != m_sweetsHandleLookup.end();)
+        {
+            if (it->second.expired())
+            {
+                it = m_sweetsHandleLookup.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_cementAdjacency.begin(); it != m_cementAdjacency.end();)
+        {
+            const auto currentHandle = it->first;
+            auto currentLocked = currentHandle.lock();
+            if (!currentLocked || !HasValidBodyAndShapes(currentLocked.get()) || IsPendingDeletion(currentLocked.get()))
+            {
+                for (const auto& neighborHandle : it->second)
+                {
+                    auto neighborIt = m_cementAdjacency.find(neighborHandle);
+                    if (neighborIt != m_cementAdjacency.end())
+                    {
+                        const std::size_t erased = eraseByOwner(neighborIt->second, currentHandle);
+                        removedAdjacencyLinks += erased;
+                        if (neighborIt->second.empty())
+                        {
+                            m_cementAdjacency.erase(neighborIt);
+                            ++removedAdjacencyNodes;
+                        }
+                    }
+                }
+
+                removedAdjacencyLinks += it->second.size();
+                it = m_cementAdjacency.erase(it);
+                ++removedAdjacencyNodes;
+                continue;
+            }
+
+            for (auto neighborIt = it->second.begin(); neighborIt != it->second.end();)
+            {
+                const auto neighborHandle = *neighborIt;
+                auto neighborLocked = neighborHandle.lock();
+                if (!neighborLocked || !HasValidBodyAndShapes(neighborLocked.get())
+                    || IsPendingDeletion(neighborLocked.get()))
+                {
+                    neighborIt = it->second.erase(neighborIt);
+                    ++removedAdjacencyLinks;
+                    auto reverseIt = m_cementAdjacency.find(neighborHandle);
+                    if (reverseIt != m_cementAdjacency.end())
+                    {
+                        const std::size_t erased = eraseByOwner(reverseIt->second, currentHandle);
+                        removedAdjacencyLinks += erased;
+                        if (reverseIt->second.empty())
+                        {
+                            m_cementAdjacency.erase(reverseIt);
+                            ++removedAdjacencyNodes;
+                        }
+                    }
+                }
+                else
+                {
+                    ++neighborIt;
+                }
+            }
+
+            if (it->second.empty())
+            {
+                it = m_cementAdjacency.erase(it);
+                ++removedAdjacencyNodes;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto mapIt = m_cementCakeAdjacency.begin(); mapIt != m_cementCakeAdjacency.end();)
+        {
+            auto& cakeSet = mapIt->second;
+            for (auto it = cakeSet.begin(); it != cakeSet.end();)
+            {
+                auto locked = it->lock();
+                if (!locked || !HasValidBodyAndShapes(locked.get()) || IsPendingDeletion(locked.get()))
+                {
+                    it = cakeSet.erase(it);
+                    ++removedAdjacencyLinks;
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+
+            if (cakeSet.empty())
+            {
+                mapIt = m_cementCakeAdjacency.erase(mapIt);
+            }
+            else
+            {
+                ++mapIt;
+            }
+        }
+
+        if (m_cementCakeAdjacency.empty())
+        {
+            m_cementCakeEntity = nullptr;
+        }
+        else if (m_cementCakeEntity && !HasValidBodyAndShapes(m_cementCakeEntity))
+        {
+            m_cementCakeEntity = nullptr;
+        }
+
+        if (removedAdjacencyNodes > 0 || removedAdjacencyLinks > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix
+                << "PruneCementGraph で cement adjacency ノードを "
+                << removedAdjacencyNodes << " 件削除したよ"
+                << " link=" << removedAdjacencyLinks
+                << "\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+    SweetsContacts::WeakSweetsHandle SweetsContacts::FindSweetsHandle(ActiveSweets* sweets) const
+    {
+        if (!sweets)
+        {
+            return {};
+        }
+
+        auto it = m_sweetsHandleLookup.find(sweets);
+        if (it == m_sweetsHandleLookup.end())
+        {
+            return {};
+        }
+
+        return it->second;
+    }
+
+    void SweetsContacts::RemoveCementAdjacencyNode(const WeakSweetsHandle& handle)
+    {
+        auto it = m_cementAdjacency.find(handle);
+        if (it == m_cementAdjacency.end())
+        {
+            for (auto scanIt = m_cementAdjacency.begin(); scanIt != m_cementAdjacency.end(); ++scanIt)
+            {
+                if (WeakSweetsEqual{}(scanIt->first, handle))
+                {
+                    it = scanIt;
+                    break;
+                }
+            }
+        }
+
+        if (it == m_cementAdjacency.end())
+        {
+            return;
+        }
+
+        const auto eraseByOwner = [&](WeakSweetsSet& set)
+        {
+            for (auto setIt = set.begin(); setIt != set.end();)
+            {
+                if (WeakSweetsEqual{}(*setIt, handle))
+                {
+                    setIt = set.erase(setIt);
+                }
+                else
+                {
+                    ++setIt;
+                }
+            }
+        };
+
+        for (const auto& neighborHandle : it->second)
+        {
+            auto neighborIt = m_cementAdjacency.find(neighborHandle);
+            if (neighborIt == m_cementAdjacency.end())
+            {
+                for (auto scanIt = m_cementAdjacency.begin(); scanIt != m_cementAdjacency.end(); ++scanIt)
+                {
+                    if (WeakSweetsEqual{}(scanIt->first, neighborHandle))
+                    {
+                        neighborIt = scanIt;
+                        break;
+                    }
+                }
+            }
+
+            if (neighborIt != m_cementAdjacency.end())
+            {
+                eraseByOwner(neighborIt->second);
+                if (neighborIt->second.empty())
+                {
+                    m_cementAdjacency.erase(neighborIt);
+                }
+            }
+        }
+
+        m_cementAdjacency.erase(it);
+    }
+
+    void SweetsContacts::RemoveCakeAdjacencyNode(const WeakSweetsHandle& handle)
+    {
+        if (auto cakeIt = m_cementCakeAdjacency.find(kStageCakeKey);
+            cakeIt != m_cementCakeAdjacency.end())
+        {
+            auto& cakeSet = cakeIt->second;
+            for (auto it = cakeSet.begin(); it != cakeSet.end();)
+            {
+                if (WeakSweetsEqual{}(*it, handle))
+                {
+                    it = cakeSet.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+
+            if (cakeSet.empty())
+            {
+                m_cementCakeAdjacency.erase(cakeIt);
+            }
+        }
+
+        if (m_cementCakeAdjacency.empty())
+        {
+            m_cementCakeEntity = nullptr;
+        }
     }
 }
