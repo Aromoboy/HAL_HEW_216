@@ -24,6 +24,7 @@ namespace Core
                 void Enable(bool value);
                 void SetRegistrationHandle(RegistrationHandle&& handle);
                 void ReleaseRegistrationHandle();
+                void ReleaseRegistrationHandleWithoutUnregister();
 
                 // スケジューラが参照する基本情報 派生先で上書きする必要はない
                 UpdatePhase GetPhase() const override;

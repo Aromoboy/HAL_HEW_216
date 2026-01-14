@@ -54,6 +54,11 @@ namespace Core
                 m_registrationHandle.Reset();
         }
 
+        void UpdateNode::ReleaseRegistrationHandleWithoutUnregister()
+        {
+                m_registrationHandle.Release();
+        }
+
         UpdatePhase UpdateNode::GetPhase() const
         {
                 return m_phase;

@@ -881,7 +881,15 @@ namespace SweetsSpace
 
         if (m_scheduler)
         {
-            sweets->ReleaseRegistrationHandle();
+            if (m_scheduler->IsTicking())
+            {
+                m_scheduler->Unregister(*sweets);
+                sweets->ReleaseRegistrationHandleWithoutUnregister();
+            }
+            else
+            {
+                sweets->ReleaseRegistrationHandle();
+            }
         }
         else if (logWarnings && m_warnedMissingScheduler && !*m_warnedMissingScheduler)
         {
