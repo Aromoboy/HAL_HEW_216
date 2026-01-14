@@ -131,6 +131,58 @@ namespace
         return b2Body_GetShapeCount(bodyId);
     }
 
+    int GetBodyFixtureCount(const Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return 0;
+        }
+
+        const auto& colliderComponent = entity->GetBoxColliderComponent();
+        return colliderComponent ? colliderComponent->createdFixtureCount : 0;
+    }
+
+    void AppendPendingEntityInfo(std::ostringstream& oss, const char* label, const Entities::PhysicalEntity* entity)
+    {
+        if (!label)
+        {
+            return;
+        }
+
+        oss << " " << label << "_tag='";
+        if (entity)
+        {
+            oss << entity->GetTag() << "'";
+        }
+        else
+        {
+            oss << "<null>'";
+        }
+        oss << " " << label << "_shapeCount=" << GetBodyShapeCount(entity)
+            << " " << label << "_fixtureCount=" << GetBodyFixtureCount(entity);
+    }
+
+    void LogPendingAdhesionRemoval(const char* reason,
+        const Entities::PhysicalEntity* cream,
+        const Entities::PhysicalEntity* other)
+    {
+        if (!cream && !other)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "pending adhesion removed";
+        if (reason && *reason)
+        {
+            oss << " reason=" << reason;
+        }
+        AppendPendingEntityInfo(oss, "cream", cream);
+        AppendPendingEntityInfo(oss, "other", other);
+        oss << "\n";
+        LogInfoAndTrace(oss.str());
+    }
+
     void LogInvalidPendingEntity(const char* pendingLabel, const Entities::PhysicalEntity* entity)
     {
         if (!pendingLabel || !entity)
@@ -140,7 +192,8 @@ namespace
 
         std::ostringstream oss;
         oss << kLogPrefix << "pending " << pendingLabel << " removed (invalid entity) tag='"
-            << entity->GetTag() << "' shapeCount=" << GetBodyShapeCount(entity) << "\n";
+            << entity->GetTag() << "' shapeCount=" << GetBodyShapeCount(entity)
+            << " fixtureCount=" << GetBodyFixtureCount(entity) << "\n";
         LogInfoAndTrace(oss.str());
     }
 
@@ -156,18 +209,24 @@ namespace
             return false;
         }
 
-        if (HasValidBodyAndShapes(entity))
-        {
-            return true;
-        }
-
         const b2BodyId bodyId = entity->GetBox2DBodyId();
         if (!b2Body_IsValid(bodyId))
         {
             return false;
         }
 
-        return b2Body_GetShapeCount(bodyId) > 0;
+        const int shapeCount = b2Body_GetShapeCount(bodyId);
+        if (shapeCount > 0 && GetBodyFixtureCount(entity) == 0)
+        {
+            return true;
+        }
+
+        if (HasValidBodyAndShapes(entity))
+        {
+            return true;
+        }
+
+        return shapeCount > 0;
     }
 
 }
@@ -870,6 +929,7 @@ namespace SweetsSpace
                     continue;
                 }
 
+                LogPendingAdhesionRemoval("contact_lost", pending.cream, pending.other);
                 it = m_pendingAdhesions.erase(it);
                 continue;
             }
@@ -895,6 +955,7 @@ namespace SweetsSpace
             if ((m_creamRequireCarried && !pending.cream->WasEverCarried())
                 || !IsAdhesionTargetAllowed(*pending.cream, *pending.other))
             {
+                LogPendingAdhesionRemoval("target_rejected", pending.cream, pending.other);
                 it = m_pendingAdhesions.erase(it);
                 continue;
             }
@@ -1093,6 +1154,7 @@ namespace SweetsSpace
         {
             if (it->second.cream == entity || it->second.other == entity)
             {
+                LogPendingAdhesionRemoval("clear_for_entity", it->second.cream, it->second.other);
                 it = m_pendingAdhesions.erase(it);
             }
             else
@@ -1299,6 +1361,7 @@ namespace SweetsSpace
             const bool otherValid = HasValidContactStateEntity(it->second.other);
             if (!creamValid || !otherValid)
             {
+                LogPendingAdhesionRemoval("invalid_contact_state", it->second.cream, it->second.other);
                 if (!creamValid)
                 {
                     appendInvalidEntity(it->second.cream);
@@ -1347,6 +1410,7 @@ namespace SweetsSpace
             {
                 if (it->second.cream == entity || it->second.other == entity)
                 {
+                    LogPendingAdhesionRemoval("invalid_entity", it->second.cream, it->second.other);
                     LogInvalidPendingEntity("adhesion", entity);
                     it = m_pendingAdhesions.erase(it);
                 }
