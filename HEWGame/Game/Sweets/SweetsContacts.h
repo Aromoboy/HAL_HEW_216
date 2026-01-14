@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <unordered_map>
 #include <unordered_set>
@@ -59,6 +59,9 @@ namespace SweetsSpace
         void ClearCementClusters(const char* context);
 
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
+
+        void RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity);
+
 
     private:
         struct ContactState
@@ -151,7 +154,6 @@ namespace SweetsSpace
         bool ShouldLogCreamPairEvent(ActiveSweets* cream, Entities::PhysicalEntity* other, std::string_view eventKey);
         void UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
-        void RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity);
         std::shared_ptr<CementCluster> BuildCementCluster(ActiveSweets* cream, Entities::PhysicalEntity* other);
         void RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context);
         void CreateCementClusterJoints(CementCluster& cluster, const char* context);

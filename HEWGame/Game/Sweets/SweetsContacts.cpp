@@ -1,4 +1,4 @@
-#include "Sweets/SweetsContacts.h"
+﻿#include "Sweets/SweetsContacts.h"
 
 #include <algorithm>
 #include <cmath>
@@ -904,7 +904,6 @@ for (auto it = m_pendingCementClusters.begin(); it != m_pendingCementClusters.en
     }
 }
 
-// 2. агрессивно чистим adjacency
 std::size_t removedAdjacencyLinks = 0;
 for (auto it = m_cementAdjacency.begin(); it != m_cementAdjacency.end();)
 {
@@ -961,6 +960,7 @@ if (removedAdjacencyLinks > 0)
         << removedAdjacencyLinks << " 件削除したよ\n";
     DebugTrace(oss.str());
 }
+    };
 
     void SweetsContacts::ClearCreamWeldJoints(const char* context)
     {
@@ -1819,7 +1819,8 @@ if (!invalidNeighbors.empty())
         LogInfoAndTrace(oss.str());
 
         return cluster;
-    }
+            }
+    };
 
     void SweetsContacts::RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context)
     {
