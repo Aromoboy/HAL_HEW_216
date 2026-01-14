@@ -66,6 +66,7 @@ namespace SweetsSpace
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
         , m_warnedMissingPhaseCallback(false)
+        , m_isResetting(false)
         , m_registry()
         , m_factory(physicsMachine)
         , m_spawner(m_factory, m_registry, [this](const std::string& kind, const Transform& transform)
@@ -162,6 +163,17 @@ namespace SweetsSpace
     {
         m_contacts.ClearCementClusters("RetryReset");
         m_contacts.ClearCreamWeldJoints("RetryReset");
+    }
+
+    void SweetsManager::SetResetting(bool resetting)
+    {
+        m_isResetting = resetting;
+        m_contacts.SetResetting(resetting);
+    }
+
+    bool SweetsManager::IsResetting() const noexcept
+    {
+        return m_isResetting;
     }
 
     void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
