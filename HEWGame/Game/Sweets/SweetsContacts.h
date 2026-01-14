@@ -37,6 +37,10 @@ namespace SweetsSpace
         void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
+        float GetCreamReleaseCooldownSeconds() const noexcept
+        {
+            return m_creamReleaseCooldownSeconds;
+        }
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
@@ -151,6 +155,7 @@ namespace SweetsSpace
         float m_creamAdhesionDelaySeconds{ 0.3f };
         float m_creamAdhesionGraceSeconds{ 0.08f };
         float m_creamBreakImpulseThreshold{ 0.0f };
+        float m_creamReleaseCooldownSeconds{ 0.0f };
         bool m_creamRequireSupport{ true };
         bool m_creamRequireCarried{ true };
         bool m_creamAllowAirAdhesionToSweets{ false };

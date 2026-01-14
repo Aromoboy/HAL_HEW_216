@@ -129,6 +129,7 @@ namespace SweetsSpace
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
         m_creamAdhesionGraceSeconds = std::max(0.0f, settings.adhesionGraceSeconds);
         m_creamBreakImpulseThreshold = std::max(0.0f, settings.breakImpulseThreshold);
+        m_creamReleaseCooldownSeconds = std::max(0.0f, settings.releaseCooldownSeconds);
         m_creamRequireSupport = settings.requireSupport;
         m_creamRequireCarried = settings.requireCarried;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
@@ -199,7 +200,15 @@ namespace SweetsSpace
             {
                 m_pendingBreaks.erase(breakIt);
             }
-            if (m_creamRequireCarried && !cream->WasEverCarried())
+            if (cream->IsRecentlyReleased() && m_creamReleaseCooldownSeconds > 0.0f)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム '" << cream->GetTag()
+                    << "' は recently released だから接着をブロックするよ cooldown残り="
+                    << cream->GetRecentlyReleasedSecondsRemaining() << "s\n";
+                DebugTrace(oss.str());
+            }
+            else if (m_creamRequireCarried && !cream->WasEverCarried())
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "クリーム '" << cream->GetTag()

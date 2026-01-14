@@ -142,6 +142,7 @@ namespace SceneGameConfig
         float adhesionDelaySeconds = 0.3f;
         float adhesionGraceSeconds = 0.08f;
         float breakImpulseThreshold = 0.0f;
+        float releaseCooldownSeconds = 0.0f;
         std::vector<std::string> allowedTags;
         std::vector<std::string> blockedTags;
         bool requireSupport = true;
