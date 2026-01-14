@@ -541,8 +541,9 @@ namespace SweetsSpace
 
         if (m_contacts)
         {
-            m_contacts->Reset();
+            m_contacts->ClearCementClusters("ClearAllSweets");
             m_contacts->ClearCreamWeldJoints("ClearAllSweets");
+            m_contacts->Reset();
         }
 
         std::size_t staged = 0;

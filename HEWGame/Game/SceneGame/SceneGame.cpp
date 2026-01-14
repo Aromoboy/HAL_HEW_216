@@ -990,6 +990,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->ClearRetryContacts();
+            }
             SetStageState(StageState::Playing);
         }
         fRads.z += 0.001f;

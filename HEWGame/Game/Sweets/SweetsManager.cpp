@@ -158,6 +158,12 @@ namespace SweetsSpace
         m_lifecycle.ClearAllSweets();
     }
 
+    void SweetsManager::ClearRetryContacts()
+    {
+        m_contacts.ClearCementClusters("RetryReset");
+        m_contacts.ClearCreamWeldJoints("RetryReset");
+    }
+
     void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
     {
         m_phaseChangeCallback = std::move(callback);
