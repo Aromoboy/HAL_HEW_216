@@ -123,6 +123,14 @@ namespace
             << "' callsite=" << callsite << "\n";
         DebugTrace(oss.str());
     }
+
+    void LogDeferredDestroy(const Entities::PhysicalEntity& body, const char* callsite)
+    {
+        std::ostringstream oss;
+        oss << "[PhysicsMachine] deferred destroy tag='" << body.GetTag()
+            << "' callsite=" << callsite << "\n";
+        DebugTrace(oss.str());
+    }
 }
 
 namespace Systems
@@ -145,6 +153,8 @@ namespace Systems
                 m_owner.m_contactListener->ProcessContacts();
                 m_owner.m_isDispatchingContacts = false;
             }
+
+            m_owner.FlushPendingBodyDestroys();
         }
 
     private:
@@ -447,7 +457,11 @@ namespace Systems
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData)
     {
-        if (m_bodies.empty()) return;
+        if (m_bodies.empty())
+        {
+            QueueBodyDestruction(body, preserveColliderData, "PhysicsMachine::UnregisterBody");
+            return;
+        }
         auto* bodyPtr = &body;
         auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
         if (it == m_bodies.end())
@@ -460,18 +474,17 @@ namespace Systems
                 DebugTrace(oss.str());
             }
 #endif
-            LogImmediateDestroy(body, "PhysicsMachine::UnregisterBody");
-            DestroyBody(body, preserveColliderData);
+            QueueBodyDestruction(body, preserveColliderData, "PhysicsMachine::UnregisterBody");
             return;
         }
 
         m_bodies.erase(it, m_bodies.end());
-        LogImmediateDestroy(body, "PhysicsMachine::UnregisterBody");
-        DestroyBody(body, preserveColliderData);
+        QueueBodyDestruction(body, preserveColliderData, "PhysicsMachine::UnregisterBody");
     }
 
     void PhysicsMachine::ClearBodies()
     {
+        FlushPendingBodyDestroys();
         for (Entities::PhysicalEntity* body : m_bodies)
         {
             if (body)
@@ -483,6 +496,42 @@ namespace Systems
         m_bodyMap.clear();
         m_contactResolver.Clear();
         m_bodies.clear();
+    }
+
+    void PhysicsMachine::QueueBodyDestruction(Entities::PhysicalEntity& body, bool preserveColliderData, const char* callsite)
+    {
+        const auto [it, inserted] = m_pendingBodyDestroys.emplace(&body, preserveColliderData);
+        if (!inserted && !preserveColliderData)
+        {
+            it->second = false;
+        }
+
+        if (inserted)
+        {
+            LogDeferredDestroy(body, callsite);
+        }
+    }
+
+    void PhysicsMachine::FlushPendingBodyDestroys()
+    {
+        if (m_pendingBodyDestroys.empty())
+        {
+            return;
+        }
+
+        auto pending = std::move(m_pendingBodyDestroys);
+        m_pendingBodyDestroys.clear();
+
+        for (const auto& entry : pending)
+        {
+            Entities::PhysicalEntity* body = entry.first;
+            if (!body)
+            {
+                continue;
+            }
+
+            DestroyBody(*body, entry.second);
+        }
     }
 
     void PhysicsMachine::SyncBodies(float dt)

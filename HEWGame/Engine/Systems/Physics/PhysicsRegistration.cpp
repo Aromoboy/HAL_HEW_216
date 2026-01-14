@@ -209,16 +209,20 @@ namespace Systems
             return;
         }
 
-        if (m_physicsMachine && m_physicsMachine->IsContactDispatching())
+        const auto [it, inserted] = m_pendingUnregisters.insert(entity);
+        if (inserted)
         {
-            const auto [it, inserted] = m_pendingUnregisters.insert(entity);
-            if (inserted)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Unregister deferred due to contact dispatch for tag='"
-                    << entity->GetTag() << "'.\n";
-                DebugTrace(oss.str());
-            }
+            std::ostringstream oss;
+            oss << kLogPrefix << "Unregister deferred until LateUpdate for tag='"
+                << entity->GetTag() << "'.\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+    void PhysicsRegistration::UnregisterPhysicsBodyImmediate(Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
             return;
         }
 
@@ -322,7 +326,7 @@ namespace Systems
 
         for (Entities::PhysicalEntity* entity : pending)
         {
-            UnregisterPhysicsBody(entity);
+            UnregisterPhysicsBodyImmediate(entity);
         }
     }
 

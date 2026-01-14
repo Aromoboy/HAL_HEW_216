@@ -50,6 +50,7 @@ namespace Systems
         void DispatchLostContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
         void DispatchHitContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed);
         void FlushPendingUnregisters();
+        void UnregisterPhysicsBodyImmediate(Entities::PhysicalEntity* entity);
 
         PhysicsMachine* m_physicsMachine = nullptr;
         std::shared_ptr<Box2DContactListener> m_contactListener;
