@@ -112,6 +112,29 @@ namespace
 
         return true;
     }
+
+    Entities::PhysicalEntity* GetEntityFromContact(b2BodyId bodyId, b2ShapeId shapeId)
+    {
+        if (b2Shape_IsValid(shapeId))
+        {
+            if (void* userData = b2Shape_GetUserData(shapeId))
+            {
+                return static_cast<Entities::PhysicalEntity*>(userData);
+            }
+        }
+
+        if (!b2Body_IsValid(bodyId))
+        {
+            return nullptr;
+        }
+
+        if (void* userData = b2Body_GetUserData(bodyId))
+        {
+            return static_cast<Entities::PhysicalEntity*>(userData);
+        }
+
+        return nullptr;
+    }
 }
 
 namespace SweetsSpace
@@ -1787,24 +1810,73 @@ namespace SweetsSpace
             frontier.push(other);
         }
 
-        bool adjacencyComplete = true;
+        std::vector<b2ContactData> contactsBuffer;
         while (!frontier.empty())
         {
             auto* current = frontier.front();
             frontier.pop();
-            auto adjIt = m_cementAdjacency.find(current);
-            if (adjIt == m_cementAdjacency.end())
+
+            if (!current || !HasValidBodyAndShapes(current))
             {
-                adjacencyComplete = false;
-                break;
+                continue;
             }
 
-            std::vector<Entities::PhysicalEntity*> invalidNeighbors;
-            for (auto* neighbor : adjIt->second)
+            if (IsPendingDeletion(current) || !IsCementClusterCandidate(*current))
             {
-                if (!HasValidBodyAndShapes(neighbor))
+                continue;
+            }
+
+            const b2BodyId currentBodyId = current->GetBox2DBodyId();
+            if (!b2Body_IsValid(currentBodyId))
+            {
+                continue;
+            }
+
+            const int capacity = b2Body_GetContactCapacity(currentBodyId);
+            if (capacity <= 0)
+            {
+                continue;
+            }
+
+            contactsBuffer.resize(static_cast<std::size_t>(capacity));
+            const int contactCount = b2Body_GetContactData(currentBodyId, contactsBuffer.data(), capacity);
+            const uint64_t currentKey = b2StoreBodyId(currentBodyId);
+            for (int i = 0; i < contactCount; ++i)
+            {
+                const auto& contact = contactsBuffer[i];
+                if (contact.manifold.pointCount <= 0)
                 {
-                    invalidNeighbors.push_back(neighbor);
+                    continue;
+                }
+
+                if (!b2Shape_IsValid(contact.shapeIdA) || !b2Shape_IsValid(contact.shapeIdB))
+                {
+                    continue;
+                }
+
+                const b2BodyId bodyIdA = b2Shape_GetBody(contact.shapeIdA);
+                const b2BodyId bodyIdB = b2Shape_GetBody(contact.shapeIdB);
+                if (!b2Body_IsValid(bodyIdA) || !b2Body_IsValid(bodyIdB))
+                {
+                    continue;
+                }
+
+                Entities::PhysicalEntity* neighbor = nullptr;
+                if (b2StoreBodyId(bodyIdA) == currentKey)
+                {
+                    neighbor = GetEntityFromContact(bodyIdB, contact.shapeIdB);
+                }
+                else if (b2StoreBodyId(bodyIdB) == currentKey)
+                {
+                    neighbor = GetEntityFromContact(bodyIdA, contact.shapeIdA);
+                }
+                else
+                {
+                    continue;
+                }
+
+                if (!neighbor)
+                {
                     continue;
                 }
 
@@ -1813,37 +1885,20 @@ namespace SweetsSpace
                     continue;
                 }
 
+                if (!HasValidBodyAndShapes(neighbor))
+                {
+                    continue;
+                }
+
                 if (IsPendingDeletion(neighbor) || !IsCementClusterCandidate(*neighbor))
                 {
-                    adjacencyComplete = false;
-                    break;
+                    continue;
                 }
 
                 visited.insert(neighbor);
                 frontier.push(neighbor);
             }
-
-            if (!invalidNeighbors.empty())
-            {
-                if (auto currentIt = m_cementAdjacency.find(current);
-                    currentIt != m_cementAdjacency.end())
-                {
-                    for (auto* neighbor : invalidNeighbors)
-                    {
-                        currentIt->second.erase(neighbor);
-                    }
-                    if (currentIt->second.empty())
-                    {
-                        m_cementAdjacency.erase(currentIt);
-                    }
-                }
-
-                for (auto* neighbor : invalidNeighbors)
-                {
-                    RemoveCementAdjacencyForEntity(neighbor);
-                }
-            }
-
+        }
 
         std::shared_ptr<CementCluster> targetCluster;
         std::unordered_set<std::shared_ptr<CementCluster>> clustersToRemove;
@@ -1951,8 +2006,7 @@ namespace SweetsSpace
         LogInfoAndTrace(oss.str());
 
         return cluster;
-            }
-    };
+    }
 
     void SweetsContacts::RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context)
     {
