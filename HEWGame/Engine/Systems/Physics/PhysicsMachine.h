@@ -112,6 +112,8 @@ namespace Systems
 
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
+        void QueueBodyDestruction(Entities::PhysicalEntity& body, bool preserveColliderData, const char* callsite);
+        void FlushPendingBodyDestroys();
         void RegisterContactEntity(Entities::PhysicalEntity& body, b2BodyId bodyId);
         void UnregisterContactEntity(b2BodyId bodyId);
 
@@ -121,6 +123,7 @@ namespace Systems
         std::unique_ptr<ContactDispatchNode> m_contactDispatchNode;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
+        std::unordered_map<Entities::PhysicalEntity*, bool> m_pendingBodyDestroys;
         ContactResolver m_contactResolver;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
