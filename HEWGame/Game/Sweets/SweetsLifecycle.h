@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_set>
+#include <vector>
 
 #include "Core/IUpdatable.h"
 #include "Sweets/SweetsTypes.h"
@@ -39,6 +40,7 @@ namespace SweetsSpace
 
         void OnUpdate(const Core::UpdateContext& ctx);
         void OnLateUpdate(const Core::UpdateContext& ctx);
+        void FlushDeferredUnregisters();
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
@@ -70,6 +72,8 @@ namespace SweetsSpace
         bool* m_warnedMissingScheduler;
 
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
+        std::unordered_set<ActiveSweets*> m_pendingPhysicsUnregisterLookup;
+        std::vector<std::shared_ptr<ActiveSweets>> m_pendingPhysicsUnregister;
         bool m_hasHorizontalBounds{ false };
         float m_minHorizontalBound{ 0.0f };
         float m_maxHorizontalBound{ 0.0f };
