@@ -826,6 +826,62 @@ namespace SweetsSpace
                 ++it;
             }
         }
+
+        std::size_t removedAdjacencyLinks = 0;
+        for (auto it = m_cementAdjacency.begin(); it != m_cementAdjacency.end();)
+        {
+            Entities::PhysicalEntity* entity = it->first;
+            if (!HasValidBodyAndShapes(entity))
+            {
+                for (auto* neighbor : it->second)
+                {
+                    auto neighborIt = m_cementAdjacency.find(neighbor);
+                    if (neighborIt != m_cementAdjacency.end())
+                    {
+                        const std::size_t erased = neighborIt->second.erase(entity);
+                        removedAdjacencyLinks += erased;
+                        if (neighborIt->second.empty())
+                        {
+                            m_cementAdjacency.erase(neighborIt);
+                        }
+                    }
+                }
+
+                removedAdjacencyLinks += it->second.size();
+                it = m_cementAdjacency.erase(it);
+                continue;
+            }
+
+            for (auto neighborIt = it->second.begin(); neighborIt != it->second.end();)
+            {
+                if (!HasValidBodyAndShapes(*neighborIt))
+                {
+                    neighborIt = it->second.erase(neighborIt);
+                    ++removedAdjacencyLinks;
+                }
+                else
+                {
+                    ++neighborIt;
+                }
+            }
+
+            if (it->second.empty())
+            {
+                it = m_cementAdjacency.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if (removedAdjacencyLinks > 0)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "CleanupInvalidContacts で cement adjacency を "
+                << removedAdjacencyLinks << " 件削除したよ \n";
+            DebugTrace(oss.str());
+        }
     }
 
     void SweetsContacts::ClearCreamWeldJoints(const char* context)
