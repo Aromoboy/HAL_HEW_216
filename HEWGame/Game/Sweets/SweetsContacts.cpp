@@ -73,6 +73,45 @@ namespace
         const auto* sweets = dynamic_cast<const SweetsSpace::BaseSweets*>(entity);
         return sweets && (sweets->IsPendingDestroy() || sweets->IsSafeToDelete());
     }
+
+    bool HasValidBodyAndShapes(const Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = entity->GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        const int shapeCount = b2Body_GetShapeCount(bodyId);
+        if (shapeCount <= 0)
+        {
+            return false;
+        }
+
+        std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
+        const int writtenShapes = b2Body_GetShapes(bodyId, shapes.data(), shapeCount);
+        shapes.resize(static_cast<size_t>(std::max(0, writtenShapes)));
+
+        if (shapes.empty())
+        {
+            return false;
+        }
+
+        for (const b2ShapeId shapeId : shapes)
+        {
+            if (!b2Shape_IsValid(shapeId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 namespace SweetsSpace
@@ -292,6 +331,8 @@ namespace SweetsSpace
 
     void SweetsContacts::OnUpdate(float dt)
     {
+        CleanupInvalidContacts();
+
         if (m_pendingAdhesions.empty() && m_pendingBreaks.empty())
         {
             return;
@@ -427,14 +468,19 @@ namespace SweetsSpace
 
     void SweetsContacts::ClearPendingAdhesionsForSweets(ActiveSweets* sweets)
     {
-        if (!sweets || m_pendingAdhesions.empty())
+        ClearPendingAdhesionsForEntity(sweets);
+    }
+
+    void SweetsContacts::ClearPendingAdhesionsForEntity(Entities::PhysicalEntity* entity)
+    {
+        if (!entity || m_pendingAdhesions.empty())
         {
             return;
         }
 
         for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
         {
-            if (it->second.cream == sweets || it->second.other == sweets)
+            if (it->second.cream == entity || it->second.other == entity)
             {
                 it = m_pendingAdhesions.erase(it);
             }
@@ -521,6 +567,34 @@ namespace SweetsSpace
             if (it->second.cream == sweets || it->second.other == sweets)
             {
                 it = m_pendingBreaks.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void SweetsContacts::CleanupInvalidContacts()
+    {
+        for (auto it = m_contactStates.begin(); it != m_contactStates.end();)
+        {
+            if (!HasValidBodyAndShapes(it->first))
+            {
+                m_hasSweetsContact.erase(it->first);
+                it = m_contactStates.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
+        {
+            if (!HasValidBodyAndShapes(it->second.cream) || !HasValidBodyAndShapes(it->second.other))
+            {
+                it = m_pendingAdhesions.erase(it);
             }
             else
             {

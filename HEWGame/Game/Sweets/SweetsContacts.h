@@ -41,6 +41,7 @@ namespace SweetsSpace
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
         void ClearPendingAdhesionsForSweets(ActiveSweets* sweets);
+        void ClearPendingAdhesionsForEntity(Entities::PhysicalEntity* entity);
         void RequestCreamWeldBreak(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void Reset();
 
@@ -117,6 +118,7 @@ namespace SweetsSpace
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
+        void CleanupInvalidContacts();
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
 
