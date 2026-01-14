@@ -774,6 +774,14 @@ namespace SweetsSpace
             if (it->first.first == sweets || it->first.second == sweets)
             {
                 it = m_contactHitImpulses.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     void SweetsContacts::CleanupInvalidContacts()
     {
         for (auto it = m_contactStates.begin(); it != m_contactStates.end();)
