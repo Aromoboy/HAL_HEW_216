@@ -734,6 +734,15 @@ namespace SweetsSpace
             return false;
         }
 
+        if (m_registry)
+        {
+            const auto found = m_registry->Lookup().find(sweets);
+            if (found == m_registry->Lookup().end())
+            {
+                m_registry->SetState(sweets, SweetsState::Active);
+            }
+        }
+
         if (m_contacts)
         {
             m_contacts->RegisterSweetsHandle(sweets);

@@ -39,6 +39,9 @@ namespace SweetsSpace
 
         void RegisterSweetsHandle(const std::shared_ptr<ActiveSweets>& sweets);
         void UnregisterSweetsHandle(ActiveSweets* sweets);
+        void RegisterAdhesionTarget(const std::shared_ptr<Entities::PhysicalEntity>& entity);
+        void UnregisterAdhesionTarget(Entities::PhysicalEntity* entity);
+        void ClearAdhesionTargets();
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
@@ -227,6 +230,7 @@ namespace SweetsSpace
         std::unordered_map<JointPairKey, float, JointPairHash> m_contactHitImpulses;
         // NOTE: Optional cache for cement contacts; cluster builds use adjacency graph data.
         std::unordered_map<ActiveSweets*, WeakSweetsHandle> m_sweetsHandleLookup;
+        std::unordered_map<Entities::PhysicalEntity*, std::weak_ptr<Entities::PhysicalEntity>> m_adhesionTargetLookup;
         WeakSweetsMap m_cementAdjacency;
         std::unordered_map<std::string, WeakSweetsSet> m_cementCakeAdjacency;
         Entities::PhysicalEntity* m_cementCakeEntity{ nullptr };

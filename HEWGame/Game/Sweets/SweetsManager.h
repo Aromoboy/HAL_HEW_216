@@ -95,6 +95,8 @@ namespace SweetsSpace
         void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
         void ClearRetryContacts();
+        void RegisterCreamAdhesionTargets(const std::vector<std::shared_ptr<Entities::PhysicalEntity>>& targets);
+        void ClearCreamAdhesionTargets();
         void SetResetting(bool resetting);
         bool IsResetting() const noexcept;
 
