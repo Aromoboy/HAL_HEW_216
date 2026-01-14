@@ -5,6 +5,7 @@
 #include <queue>
 #include <sstream>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "CollisionLayer.h"
@@ -265,6 +266,13 @@ namespace SweetsSpace
                     }
                     else
                     {
+                        if (ShouldLogCreamPairEvent(cream, other, "duplicateContactBegin"))
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "duplicateContactBegin cream='" << cream->GetTag()
+                                << "' other='" << other->GetTag() << "'\n";
+                            LogInfoAndTrace(oss.str());
+                        }
                         pendingIt->second.cream = cream;
                         pendingIt->second.other = other;
                         pendingIt->second.stillTouching = true;
@@ -1367,6 +1375,18 @@ namespace SweetsSpace
             return;
         }
 
+        const auto itA = m_cementAdjacency.find(a);
+        if (itA != m_cementAdjacency.end() && itA->second.find(b) != itA->second.end())
+        {
+            return;
+        }
+
+        const auto itB = m_cementAdjacency.find(b);
+        if (itB != m_cementAdjacency.end() && itB->second.find(a) != itB->second.end())
+        {
+            return;
+        }
+
         m_cementAdjacency[a].insert(b);
         m_cementAdjacency[b].insert(a);
     }
@@ -1477,57 +1497,95 @@ namespace SweetsSpace
             }
         }
 
-        auto cluster = std::make_shared<CementCluster>();
-        cluster->members = visited;
+        std::shared_ptr<CementCluster> targetCluster;
+        std::unordered_set<std::shared_ptr<CementCluster>> clustersToRemove;
+        std::unordered_set<ActiveSweets*> sweetsSet;
+        Entities::PhysicalEntity* anchor = nullptr;
+        bool anchoredToCake = false;
+
         for (auto* member : visited)
         {
             if (auto* sweets = dynamic_cast<ActiveSweets*>(member))
             {
-                cluster->sweets.insert(sweets);
+                sweetsSet.insert(sweets);
+                auto it = m_cementClusterLookup.find(sweets);
+                if (it != m_cementClusterLookup.end())
+                {
+                    if (!targetCluster)
+                    {
+                        targetCluster = it->second;
+                    }
+                    clustersToRemove.insert(it->second);
+                }
             }
 
-            if (!cluster->anchor && IsCakeEntity(*member))
+            if (!anchor && IsCakeEntity(*member))
             {
-                cluster->anchor = member;
-                cluster->anchoredToCake = true;
+                anchor = member;
+                anchoredToCake = true;
             }
         }
 
-        if (!cluster->anchor)
+        if (!anchor)
         {
-            if (cluster->sweets.find(cream) != cluster->sweets.end())
+            if (sweetsSet.find(cream) != sweetsSet.end())
             {
-                cluster->anchor = cream;
+                anchor = cream;
             }
-            else if (!cluster->sweets.empty())
+            else if (!sweetsSet.empty())
             {
-                cluster->anchor = *cluster->sweets.begin();
+                anchor = *sweetsSet.begin();
             }
             else
             {
-                cluster->anchor = other;
+                anchor = other;
             }
         }
 
-        if (!cluster->anchor)
+        if (!anchor)
         {
             return nullptr;
         }
 
-        std::unordered_set<std::shared_ptr<CementCluster>> clustersToRemove;
-        for (auto* sweets : cluster->sweets)
+        if (targetCluster)
         {
-            auto it = m_cementClusterLookup.find(sweets);
-            if (it != m_cementClusterLookup.end())
+            for (const auto& existing : clustersToRemove)
             {
-                clustersToRemove.insert(it->second);
+                if (existing != targetCluster)
+                {
+                    RemoveCementCluster(existing, "CementClusterMerge");
+                }
             }
+
+            RemoveCementCluster(targetCluster, "CementClusterUpdate");
+            targetCluster->joints.clear();
+            targetCluster->members = visited;
+            targetCluster->sweets = std::move(sweetsSet);
+            targetCluster->anchor = anchor;
+            targetCluster->anchoredToCake = anchoredToCake;
+            CreateCementClusterJoints(*targetCluster, "CementClusterUpdate");
+            m_cementClusters.insert(targetCluster);
+            for (auto* sweets : targetCluster->sweets)
+            {
+                m_cementClusterLookup[sweets] = targetCluster;
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "cement クラスター更新 size=" << targetCluster->sweets.size()
+                << " members=" << targetCluster->members.size()
+                << " anchor='" << targetCluster->anchor->GetTag() << "'"
+                << " anchoredToCake=" << std::boolalpha << targetCluster->anchoredToCake << std::noboolalpha
+                << "\n";
+            LogInfoAndTrace(oss.str());
+
+            return targetCluster;
         }
 
-        for (const auto& existing : clustersToRemove)
-        {
-            RemoveCementCluster(existing, "CementClusterRebuild");
-        }
+        auto cluster = std::make_shared<CementCluster>();
+        cluster->members = visited;
+        cluster->sweets = std::move(sweetsSet);
+        cluster->anchor = anchor;
+        cluster->anchoredToCake = anchoredToCake;
 
         CreateCementClusterJoints(*cluster, "CementClusterCreate");
         m_cementClusters.insert(cluster);
