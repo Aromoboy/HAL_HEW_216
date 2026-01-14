@@ -410,6 +410,7 @@ namespace Systems
             // ワールド比較はやめる 単一ワールド前提で素直に使う
             m_bodies.push_back(bodyPtr);
             m_bodyMap.emplace(bodyPtr, existing);
+            RegisterContactEntity(body, existing);
 #if defined(_DEBUG)
             std::ostringstream oss;
             oss << "[PhysicsMachine] Registered pre-created body for tag='" << body.GetTag() << "'\n";
@@ -436,6 +437,7 @@ namespace Systems
         {
             body.SetBox2DBodyId(bodyId);
             m_bodyMap.emplace(bodyPtr, bodyId);
+            RegisterContactEntity(body, bodyId);
             return;
         }
 
@@ -479,6 +481,7 @@ namespace Systems
             }
         }
         m_bodyMap.clear();
+        m_contactResolver.Clear();
         m_bodies.clear();
     }
 
@@ -612,6 +615,7 @@ namespace Systems
 
                 body->SetBox2DBodyId(bodyId);
                 m_bodyMap[body] = bodyId;
+                RegisterContactEntity(*body, bodyId);
             }
 
             ++it;
@@ -1183,6 +1187,65 @@ namespace Systems
         return failBodyCreation("Failed to build fixtures for");
     }
 
+    std::optional<PhysicsMachine::ContactResolver::EntityRef> PhysicsMachine::ContactResolver::Resolve(uint64_t bodyKey) const
+    {
+        const auto it = m_entities.find(bodyKey);
+        if (it == m_entities.end())
+        {
+            return std::nullopt;
+        }
+
+        return it->second;
+    }
+
+    void PhysicsMachine::ContactResolver::Register(uint64_t bodyKey, EntityRef ref)
+    {
+        m_entities[bodyKey] = std::move(ref);
+    }
+
+    void PhysicsMachine::ContactResolver::Unregister(uint64_t bodyKey)
+    {
+        m_entities.erase(bodyKey);
+    }
+
+    void PhysicsMachine::ContactResolver::Clear()
+    {
+        m_entities.clear();
+    }
+
+    std::optional<PhysicsMachine::ContactEntityRef> PhysicsMachine::ResolveContactEntity(b2BodyId bodyId) const
+    {
+        if (!b2Body_IsValid(bodyId))
+        {
+            return std::nullopt;
+        }
+
+        const uint64_t bodyKey = b2StoreBodyId(bodyId);
+        return m_contactResolver.Resolve(bodyKey);
+    }
+
+    void PhysicsMachine::RegisterContactEntity(Entities::PhysicalEntity& body, b2BodyId bodyId)
+    {
+        if (!b2Body_IsValid(bodyId))
+        {
+            return;
+        }
+
+        const uint64_t bodyKey = b2StoreBodyId(bodyId);
+        m_contactResolver.Register(bodyKey, ContactEntityRef{ &body, body.GetTag() });
+    }
+
+    void PhysicsMachine::UnregisterContactEntity(b2BodyId bodyId)
+    {
+        if (!b2Body_IsValid(bodyId))
+        {
+            return;
+        }
+
+        const uint64_t bodyKey = b2StoreBodyId(bodyId);
+        m_contactResolver.Unregister(bodyKey);
+    }
+
     void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData)
     {
         auto it = m_bodyMap.find(const_cast<Entities::PhysicalEntity*>(&body));
@@ -1190,6 +1253,8 @@ namespace Systems
         {
             return;
         }
+
+        UnregisterContactEntity(it->second);
 
         if (b2Body_IsValid(it->second))
         {
