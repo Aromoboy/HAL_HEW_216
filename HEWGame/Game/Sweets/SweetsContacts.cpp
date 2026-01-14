@@ -462,11 +462,27 @@ namespace SweetsSpace
             return;
         }
 
+        const auto clearPendingForDeletion = [this](Entities::PhysicalEntity* entity)
+        {
+            if (!entity)
+            {
+                return;
+            }
+
+            ClearPendingAdhesionsForEntity(entity);
+            if (auto* sweets = dynamic_cast<ActiveSweets*>(entity))
+            {
+                ClearPendingBreaksForSweets(sweets);
+            }
+        };
+
         for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
         {
             PendingAdhesion& pending = it->second;
             if (IsPendingDeletion(pending.cream) || IsPendingDeletion(pending.other))
             {
+                clearPendingForDeletion(pending.cream);
+                clearPendingForDeletion(pending.other);
                 it = m_pendingAdhesions.erase(it);
                 continue;
             }
@@ -518,6 +534,8 @@ namespace SweetsSpace
             PendingBreak& pending = it->second;
             if (IsPendingDeletion(pending.cream) || IsPendingDeletion(pending.other))
             {
+                clearPendingForDeletion(pending.cream);
+                clearPendingForDeletion(pending.other);
                 it = m_pendingBreaks.erase(it);
                 continue;
             }

@@ -295,6 +295,23 @@ namespace SweetsSpace
         m_contacts.OnContactEnd(a, b);
     }
 
+    void SweetsManager::OnContactLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        if (sweetsA)
+        {
+            m_contacts.ClearContactState(sweetsA);
+            m_contacts.ClearPendingAdhesionsForSweets(sweetsA);
+        }
+
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+        if (sweetsB && sweetsB != sweetsA)
+        {
+            m_contacts.ClearContactState(sweetsB);
+            m_contacts.ClearPendingAdhesionsForSweets(sweetsB);
+        }
+    }
+
     void SweetsManager::OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed)
     {
         m_contacts.OnContactHit(a, b, approachSpeed);
