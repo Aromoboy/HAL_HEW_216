@@ -867,6 +867,11 @@ namespace SweetsSpace
             return;
         }
 
+        if (m_contacts)
+        {
+            m_contacts->NotifyUnregisterOrRetry();
+        }
+
         if (m_scheduler)
         {
             sweets->ReleaseRegistrationHandle();

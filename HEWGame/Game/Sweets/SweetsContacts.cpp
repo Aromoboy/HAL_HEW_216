@@ -187,7 +187,11 @@ namespace SweetsSpace
             return;
         }
 
-        UpdateCementAdjacencyBegin(a, b);
+        const bool adjacencyUpdated = UpdateCementAdjacencyBegin(a, b);
+        if (adjacencyUpdated)
+        {
+            RequestCementClusterRebuild(a, b);
+        }
 
         if (sweetsA)
         {
@@ -459,14 +463,31 @@ namespace SweetsSpace
     {
         CleanupInvalidContacts();
 
-        const bool checkBreakImpulse = m_creamWeldBreakImpulseThreshold > 0.0f;
-        if (m_pendingAdhesions.empty() && m_pendingBreaks.empty() && m_pendingCementClusters.empty() && !checkBreakImpulse)
+        if (!m_pendingCementClusterRebuilds.empty())
         {
+            if (m_cementClusterRebuildDelayFrames > 0)
+            {
+                --m_cementClusterRebuildDelayFrames;
+            }
+            else
+            {
+                ProcessPendingCementClusterRebuilds();
+            }
+        }
+
+        const bool checkBreakImpulse = m_creamWeldBreakImpulseThreshold > 0.0f;
+        const bool hasPendingRebuilds =
+            !m_pendingCementClusterRebuilds.empty() || m_cementClusterRebuildDelayFrames > 0;
+        if (m_pendingAdhesions.empty() && m_pendingBreaks.empty() && m_pendingCementClusters.empty()
+            && !checkBreakImpulse && !hasPendingRebuilds)
+        {
+            m_deferCementClusterRebuild = false;
             return;
         }
 
         if (dt <= 0.0f)
         {
+            m_deferCementClusterRebuild = false;
             return;
         }
 
@@ -657,6 +678,8 @@ namespace SweetsSpace
                 BreakCreamWeldJoint(cream, other, "BreakImpulseThreshold");
             }
         }
+
+        m_deferCementClusterRebuild = false;
     }
 
     bool SweetsContacts::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
@@ -759,7 +782,16 @@ namespace SweetsSpace
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
         m_pendingCementClusters.clear();
+        m_pendingCementClusterRebuilds.clear();
+        m_cementClusterRebuildDelayFrames = 0;
+        m_deferCementClusterRebuild = false;
         m_loggedCreamPairEvents.clear();
+        m_loggedContactNotification = false;
+    }
+
+    void SweetsContacts::NotifyUnregisterOrRetry()
+    {
+        DeferCementClusterRebuild();
     }
 
     void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
@@ -826,7 +858,7 @@ namespace SweetsSpace
 
     void SweetsContacts::ClearPendingCementClustersForEntity(Entities::PhysicalEntity* entity)
     {
-        if (!entity || m_pendingCementClusters.empty())
+        if (!entity)
         {
             return;
         }
@@ -841,6 +873,24 @@ namespace SweetsSpace
             {
                 ++it;
             }
+        }
+
+        for (auto it = m_pendingCementClusterRebuilds.begin(); it != m_pendingCementClusterRebuilds.end();)
+        {
+            const JointPairKey& key = *it;
+            if (key.first == entity || key.second == entity)
+            {
+                it = m_pendingCementClusterRebuilds.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if (m_pendingCementClusterRebuilds.empty())
+        {
+            m_cementClusterRebuildDelayFrames = 0;
         }
     }
 
@@ -902,6 +952,24 @@ for (auto it = m_pendingCementClusters.begin(); it != m_pendingCementClusters.en
     {
         ++it;
     }
+}
+
+for (auto it = m_pendingCementClusterRebuilds.begin(); it != m_pendingCementClusterRebuilds.end();)
+{
+    const JointPairKey& key = *it;
+    if (!HasValidBodyAndShapes(key.first) || !HasValidBodyAndShapes(key.second))
+    {
+        it = m_pendingCementClusterRebuilds.erase(it);
+    }
+    else
+    {
+        ++it;
+    }
+}
+
+if (m_pendingCementClusterRebuilds.empty())
+{
+    m_cementClusterRebuildDelayFrames = 0;
 }
 
 std::size_t removedAdjacencyLinks = 0;
@@ -1502,11 +1570,11 @@ if (removedAdjacencyLinks > 0)
         return m_loggedCreamPairEvents.insert(combined).second;
     }
 
-    void SweetsContacts::UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    bool SweetsContacts::UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
         if (!a || !b)
         {
-            return;
+            return false;
         }
 
         const bool aValid = HasValidBodyAndShapes(a);
@@ -1521,33 +1589,34 @@ if (removedAdjacencyLinks > 0)
             {
                 RemoveCementAdjacencyForEntity(b);
             }
-            return;
+            return false;
         }
 
         if (IsPendingDeletion(a) || IsPendingDeletion(b))
         {
-            return;
+            return false;
         }
 
         if (!IsCementClusterCandidate(*a) || !IsCementClusterCandidate(*b))
         {
-            return;
+            return false;
         }
 
         const auto itA = m_cementAdjacency.find(a);
         if (itA != m_cementAdjacency.end() && itA->second.find(b) != itA->second.end())
         {
-            return;
+            return false;
         }
 
         const auto itB = m_cementAdjacency.find(b);
         if (itB != m_cementAdjacency.end() && itB->second.find(a) != itB->second.end())
         {
-            return;
+            return false;
         }
 
         m_cementAdjacency[a].insert(b);
         m_cementAdjacency[b].insert(a);
+        return true;
     }
 
     void SweetsContacts::UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
@@ -1591,6 +1660,76 @@ if (removedAdjacencyLinks > 0)
                 m_cementAdjacency.erase(itB);
             }
         }
+    }
+
+    void SweetsContacts::RequestCementClusterRebuild(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        if (!IsCementClusterCandidate(*a) || !IsCementClusterCandidate(*b))
+        {
+            return;
+        }
+
+        m_pendingCementClusterRebuilds.insert(JointPairKey::Make(a, b));
+        const int requestedDelay = 1 + (m_deferCementClusterRebuild ? 1 : 0);
+        m_cementClusterRebuildDelayFrames = std::max(m_cementClusterRebuildDelayFrames, requestedDelay);
+    }
+
+    void SweetsContacts::ProcessPendingCementClusterRebuilds()
+    {
+        if (m_pendingCementClusterRebuilds.empty())
+        {
+            return;
+        }
+
+        std::vector<JointPairKey> rebuilds;
+        rebuilds.reserve(m_pendingCementClusterRebuilds.size());
+        for (const auto& key : m_pendingCementClusterRebuilds)
+        {
+            rebuilds.push_back(key);
+        }
+        m_pendingCementClusterRebuilds.clear();
+        m_cementClusterRebuildDelayFrames = 0;
+
+        for (const auto& key : rebuilds)
+        {
+            Entities::PhysicalEntity* first = key.first;
+            Entities::PhysicalEntity* second = key.second;
+            auto* sweets = dynamic_cast<ActiveSweets*>(first);
+            Entities::PhysicalEntity* other = second;
+            if (!sweets)
+            {
+                sweets = dynamic_cast<ActiveSweets*>(second);
+                other = first;
+            }
+
+            if (!sweets || !other)
+            {
+                continue;
+            }
+
+            if (IsPendingDeletion(sweets) || IsPendingDeletion(other))
+            {
+                continue;
+            }
+
+            BuildCementCluster(sweets, other);
+        }
+    }
+
+    void SweetsContacts::DeferCementClusterRebuild()
+    {
+        m_deferCementClusterRebuild = true;
+        if (m_pendingCementClusterRebuilds.empty())
+        {
+            return;
+        }
+
+        m_cementClusterRebuildDelayFrames = std::max(m_cementClusterRebuildDelayFrames, 1) + 1;
     }
 
     void SweetsContacts::RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity)

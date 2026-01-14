@@ -52,6 +52,7 @@ namespace SweetsSpace
         void ClearPendingAdhesionsForEntity(Entities::PhysicalEntity* entity);
         void RequestCreamWeldBreak(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void Reset();
+        void NotifyUnregisterOrRetry();
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
         void ClearCreamWeldJoints(const char* context);
@@ -152,9 +153,12 @@ namespace SweetsSpace
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
         bool ShouldLogCreamPairEvent(ActiveSweets* cream, Entities::PhysicalEntity* other, std::string_view eventKey);
-        void UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        bool UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         std::shared_ptr<CementCluster> BuildCementCluster(ActiveSweets* cream, Entities::PhysicalEntity* other);
+        void RequestCementClusterRebuild(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void ProcessPendingCementClusterRebuilds();
+        void DeferCementClusterRebuild();
         void RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context);
         void CreateCementClusterJoints(CementCluster& cluster, const char* context);
         bool IsCementClusterCandidate(const Entities::PhysicalEntity& entity) const;
@@ -190,5 +194,8 @@ namespace SweetsSpace
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
         std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;
         std::unordered_map<JointPairKey, PendingCementCluster, JointPairHash> m_pendingCementClusters;
+        std::unordered_set<JointPairKey, JointPairHash> m_pendingCementClusterRebuilds;
+        int m_cementClusterRebuildDelayFrames{ 0 };
+        bool m_deferCementClusterRebuild{ false };
     };
 }
