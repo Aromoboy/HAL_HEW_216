@@ -53,8 +53,6 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
-    constexpr float kCarriedLinearDamping = 6.0f;
-    constexpr float kCarriedAngularDamping = 6.0f;
 
     float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
@@ -599,47 +597,14 @@ namespace SweetsSpace
         if (m_contacts)
         {
             m_contacts->ClearContactState(sweets.get());
+            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
+            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
+            m_contacts->RemoveCementClusterForSweets(sweets.get(), "TryMarkAsCarried");
         }
 
         if (m_physicsMachine)
         {
-            const b2BodyId bodyId = m_physicsMachine->FindBody(*sweets);
-            if (b2Body_IsValid(bodyId))
-            {
-                const auto existingState = m_carriedPhysicsStates.find(sweets.get());
-                CarriedPhysicsState storedState{};
-                if (existingState == m_carriedPhysicsStates.end())
-                {
-                    storedState.bodyType = b2Body_GetType(bodyId);
-                    storedState.gravityScale = b2Body_GetGravityScale(bodyId);
-                    storedState.linearDamping = b2Body_GetLinearDamping(bodyId);
-                    storedState.angularDamping = b2Body_GetAngularDamping(bodyId);
-                    m_carriedPhysicsStates.emplace(sweets.get(), storedState);
-                }
-                else
-                {
-                    storedState = existingState->second;
-                }
-
-                b2Body_SetType(bodyId, b2_kinematicBody);
-                b2Body_SetGravityScale(bodyId, 0.0f);
-                b2Body_SetLinearDamping(bodyId, std::max(storedState.linearDamping, kCarriedLinearDamping));
-                b2Body_SetAngularDamping(bodyId, std::max(storedState.angularDamping, kCarriedAngularDamping));
-
-                std::ostringstream oss;
-                oss << kLogPrefix << "swap to kinematic tag='" << sweets->GetTag()
-                    << "' gravityScale=" << storedState.gravityScale
-                    << " linearDamping=" << storedState.linearDamping
-                    << " angularDamping=" << storedState.angularDamping << "\n";
-                DebugTrace(oss.str());
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "TryMarkAsCarried で無効なボディだったので kinematic へ切り替えられない tag='"
-                    << sweets->GetTag() << "'\n";
-                DebugTrace(oss.str());
-            }
+            m_physicsMachine->UnregisterBody(*sweets, true);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
@@ -688,52 +653,35 @@ namespace SweetsSpace
         }
         if (m_contacts)
         {
-            sweets->SetRecentlyReleasedCooldownSeconds(m_contacts->GetCreamReleaseCooldownSeconds());
+            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
+            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
+            m_contacts->RemoveCementClusterForSweets(sweets.get(), "ReleaseCarriedSweets");
         }
 
         if (m_physicsMachine)
         {
-            const b2BodyId bodyId = m_physicsMachine->FindBody(*sweets);
-            if (b2Body_IsValid(bodyId))
+            m_physicsMachine->RegisterBody(*sweets);
+            const auto& colliderComponent = sweets->GetBoxColliderComponent();
+            const int createdFixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
+            if (createdFixtureCount == 0)
             {
-                b2Body_SetType(bodyId, b2_dynamicBody);
-
-                auto stateIt = m_carriedPhysicsStates.find(sweets.get());
-                if (stateIt != m_carriedPhysicsStates.end())
-                {
-                    const CarriedPhysicsState& storedState = stateIt->second;
-                    b2Body_SetGravityScale(bodyId, storedState.gravityScale);
-                    b2Body_SetLinearDamping(bodyId, storedState.linearDamping);
-                    b2Body_SetAngularDamping(bodyId, storedState.angularDamping);
-                    m_carriedPhysicsStates.erase(stateIt);
-
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "restore dynamic tag='" << sweets->GetTag()
-                        << "' gravityScale=" << storedState.gravityScale
-                        << " linearDamping=" << storedState.linearDamping
-                        << " angularDamping=" << storedState.angularDamping << "\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "restore dynamic (no stored state) tag='" << sweets->GetTag() << "'\n";
-                    DebugTrace(oss.str());
-                }
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "ReleaseCarriedSweets で無効なボディだったので dynamic へ戻せない tag='"
+                std::ostringstream warn;
+                warn << kLogPrefix << "ReleaseCarriedSweets fixtureCount=0 再登録 tag='"
                     << sweets->GetTag() << "'\n";
-                DebugTrace(oss.str());
-                m_carriedPhysicsStates.erase(sweets.get());
+                DebugTrace(warn.str());
+                sweets->DetachPhysicsMachine();
+                sweets->AttachPhysicsMachine(m_physicsMachine);
             }
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
             DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ \n");
             *m_warnedMissingPhysicsMachine = true;
+        }
+
+        if (m_contacts)
+        {
+            sweets->SetRecentlyReleasedCooldownSeconds(m_contacts->GetCreamReleaseCooldownSeconds());
         }
 
         std::ostringstream oss;
@@ -972,7 +920,5 @@ namespace SweetsSpace
         {
             m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
         }
-
-        m_carriedPhysicsStates.erase(sweets.get());
     }
 }
