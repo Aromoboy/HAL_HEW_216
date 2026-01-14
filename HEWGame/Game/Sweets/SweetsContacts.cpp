@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <queue>
 #include <sstream>
 #include <vector>
 
@@ -74,6 +75,45 @@ namespace
         const auto* sweets = dynamic_cast<const SweetsSpace::BaseSweets*>(entity);
         return sweets && (sweets->IsPendingDestroy() || sweets->IsSafeToDelete());
     }
+
+    bool HasValidBodyAndShapes(const Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = entity->GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        const int shapeCount = b2Body_GetShapeCount(bodyId);
+        if (shapeCount <= 0)
+        {
+            return false;
+        }
+
+        std::vector<b2ShapeId> shapes(static_cast<size_t>(shapeCount));
+        const int writtenShapes = b2Body_GetShapes(bodyId, shapes.data(), shapeCount);
+        shapes.resize(static_cast<size_t>(std::max(0, writtenShapes)));
+
+        if (shapes.empty())
+        {
+            return false;
+        }
+
+        for (const b2ShapeId shapeId : shapes)
+        {
+            if (!b2Shape_IsValid(shapeId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 namespace SweetsSpace
@@ -126,6 +166,8 @@ namespace SweetsSpace
         {
             return;
         }
+
+        UpdateCementAdjacencyBegin(a, b);
 
         if (sweetsA)
         {
@@ -225,6 +267,8 @@ namespace SweetsSpace
         {
             return;
         }
+
+        UpdateCementAdjacencyEnd(a, b);
 
         if (sweetsA)
         {
@@ -357,6 +401,8 @@ namespace SweetsSpace
 
     void SweetsContacts::OnUpdate(float dt)
     {
+        CleanupInvalidContacts();
+
         if (m_pendingAdhesions.empty() && m_pendingBreaks.empty())
         {
             return;
@@ -494,14 +540,19 @@ namespace SweetsSpace
 
     void SweetsContacts::ClearPendingAdhesionsForSweets(ActiveSweets* sweets)
     {
-        if (!sweets || m_pendingAdhesions.empty())
+        ClearPendingAdhesionsForEntity(sweets);
+    }
+
+    void SweetsContacts::ClearPendingAdhesionsForEntity(Entities::PhysicalEntity* entity)
+    {
+        if (!entity || m_pendingAdhesions.empty())
         {
             return;
         }
 
         for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
         {
-            if (it->second.cream == sweets || it->second.other == sweets)
+            if (it->second.cream == entity || it->second.other == entity)
             {
                 it = m_pendingAdhesions.erase(it);
             }
@@ -532,6 +583,7 @@ namespace SweetsSpace
         m_contactStates.clear();
         m_hasSweetsContact.clear();
         m_contactHitImpulses.clear();
+        ClearCementClusters("Reset");
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
     }
@@ -609,6 +661,26 @@ namespace SweetsSpace
             if (it->first.first == sweets || it->first.second == sweets)
             {
                 it = m_contactHitImpulses.erase(it);
+    void SweetsContacts::CleanupInvalidContacts()
+    {
+        for (auto it = m_contactStates.begin(); it != m_contactStates.end();)
+        {
+            if (!HasValidBodyAndShapes(it->first))
+            {
+                m_hasSweetsContact.erase(it->first);
+                it = m_contactStates.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
+        {
+            if (!HasValidBodyAndShapes(it->second.cream) || !HasValidBodyAndShapes(it->second.other))
+            {
+                it = m_pendingAdhesions.erase(it);
             }
             else
             {
@@ -647,6 +719,48 @@ namespace SweetsSpace
             }
         }
         m_creamWeldJoints.clear();
+    }
+
+    void SweetsContacts::RemoveCementClusterForSweets(ActiveSweets* sweets, const char* context)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        auto it = m_cementClusterLookup.find(sweets);
+        if (it != m_cementClusterLookup.end())
+        {
+            RemoveCementCluster(it->second, context ? context : "RemoveCementClusterForSweets");
+        }
+
+        RemoveCementAdjacencyForEntity(sweets);
+    }
+
+    void SweetsContacts::ClearCementClusters(const char* context)
+    {
+        if (m_cementClusters.empty())
+        {
+            m_cementAdjacency.clear();
+            m_cementClusterLookup.clear();
+            return;
+        }
+
+        std::vector<std::shared_ptr<CementCluster>> clusters;
+        clusters.reserve(m_cementClusters.size());
+        for (const auto& cluster : m_cementClusters)
+        {
+            clusters.push_back(cluster);
+        }
+
+        for (const auto& cluster : clusters)
+        {
+            RemoveCementCluster(cluster, context ? context : "ClearCementClusters");
+        }
+
+        m_cementAdjacency.clear();
+        m_cementClusterLookup.clear();
+        m_cementClusters.clear();
     }
 
     void SweetsContacts::OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState)
@@ -982,6 +1096,8 @@ namespace SweetsSpace
         cementLog << kLogPrefix << "cementで '" << cream->GetTag() << "' と '" << other->GetTag()
                   << "' を溶接したよ \n";
         LogInfoAndTrace(cementLog.str());
+
+        BuildCementCluster(cream, other);
     }
 
     void SweetsContacts::BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context)
@@ -1030,6 +1146,334 @@ namespace SweetsSpace
         }
 
         return &it->second;
+    }
+
+    void SweetsContacts::UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        if (IsPendingDeletion(a) || IsPendingDeletion(b))
+        {
+            return;
+        }
+
+        if (!IsCementClusterCandidate(*a) || !IsCementClusterCandidate(*b))
+        {
+            return;
+        }
+
+        m_cementAdjacency[a].insert(b);
+        m_cementAdjacency[b].insert(a);
+    }
+
+    void SweetsContacts::UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        auto itA = m_cementAdjacency.find(a);
+        if (itA != m_cementAdjacency.end())
+        {
+            itA->second.erase(b);
+            if (itA->second.empty())
+            {
+                m_cementAdjacency.erase(itA);
+            }
+        }
+
+        auto itB = m_cementAdjacency.find(b);
+        if (itB != m_cementAdjacency.end())
+        {
+            itB->second.erase(a);
+            if (itB->second.empty())
+            {
+                m_cementAdjacency.erase(itB);
+            }
+        }
+    }
+
+    void SweetsContacts::RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return;
+        }
+
+        auto it = m_cementAdjacency.find(entity);
+        if (it == m_cementAdjacency.end())
+        {
+            return;
+        }
+
+        for (auto* neighbor : it->second)
+        {
+            auto neighborIt = m_cementAdjacency.find(neighbor);
+            if (neighborIt != m_cementAdjacency.end())
+            {
+                neighborIt->second.erase(entity);
+                if (neighborIt->second.empty())
+                {
+                    m_cementAdjacency.erase(neighborIt);
+                }
+            }
+        }
+
+        m_cementAdjacency.erase(it);
+    }
+
+    std::shared_ptr<SweetsContacts::CementCluster> SweetsContacts::BuildCementCluster(ActiveSweets* cream, Entities::PhysicalEntity* other)
+    {
+        if (!cream || !other)
+        {
+            return nullptr;
+        }
+
+        if (!IsCementClusterCandidate(*cream) || !IsCementClusterCandidate(*other))
+        {
+            return nullptr;
+        }
+
+        std::unordered_set<Entities::PhysicalEntity*> visited;
+        std::queue<Entities::PhysicalEntity*> frontier;
+        visited.insert(cream);
+        frontier.push(cream);
+        if (other != cream)
+        {
+            visited.insert(other);
+            frontier.push(other);
+        }
+
+        while (!frontier.empty())
+        {
+            auto* current = frontier.front();
+            frontier.pop();
+            auto adjIt = m_cementAdjacency.find(current);
+            if (adjIt == m_cementAdjacency.end())
+            {
+                continue;
+            }
+
+            for (auto* neighbor : adjIt->second)
+            {
+                if (!neighbor || visited.find(neighbor) != visited.end())
+                {
+                    continue;
+                }
+
+                if (IsPendingDeletion(neighbor) || !IsCementClusterCandidate(*neighbor))
+                {
+                    continue;
+                }
+
+                visited.insert(neighbor);
+                frontier.push(neighbor);
+            }
+        }
+
+        auto cluster = std::make_shared<CementCluster>();
+        cluster->members = visited;
+        for (auto* member : visited)
+        {
+            if (auto* sweets = dynamic_cast<ActiveSweets*>(member))
+            {
+                cluster->sweets.insert(sweets);
+            }
+
+            if (!cluster->anchor && IsCakeEntity(*member))
+            {
+                cluster->anchor = member;
+                cluster->anchoredToCake = true;
+            }
+        }
+
+        if (!cluster->anchor)
+        {
+            if (cluster->sweets.find(cream) != cluster->sweets.end())
+            {
+                cluster->anchor = cream;
+            }
+            else if (!cluster->sweets.empty())
+            {
+                cluster->anchor = *cluster->sweets.begin();
+            }
+            else
+            {
+                cluster->anchor = other;
+            }
+        }
+
+        if (!cluster->anchor)
+        {
+            return nullptr;
+        }
+
+        std::unordered_set<std::shared_ptr<CementCluster>> clustersToRemove;
+        for (auto* sweets : cluster->sweets)
+        {
+            auto it = m_cementClusterLookup.find(sweets);
+            if (it != m_cementClusterLookup.end())
+            {
+                clustersToRemove.insert(it->second);
+            }
+        }
+
+        for (const auto& existing : clustersToRemove)
+        {
+            RemoveCementCluster(existing, "CementClusterRebuild");
+        }
+
+        CreateCementClusterJoints(*cluster, "CementClusterCreate");
+        m_cementClusters.insert(cluster);
+        for (auto* sweets : cluster->sweets)
+        {
+            m_cementClusterLookup[sweets] = cluster;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "cement クラスター作成 size=" << cluster->sweets.size()
+            << " members=" << cluster->members.size()
+            << " anchor='" << cluster->anchor->GetTag() << "'"
+            << " anchoredToCake=" << std::boolalpha << cluster->anchoredToCake << std::noboolalpha
+            << "\n";
+        LogInfoAndTrace(oss.str());
+
+        return cluster;
+    }
+
+    void SweetsContacts::RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context)
+    {
+        if (!cluster)
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << (context ? context : "RemoveCementCluster")
+                    << " でcementクラスターを外せなかったよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                *m_warnedMissingPhysicsMachine = true;
+            }
+        }
+        else
+        {
+            for (const auto& jointId : cluster->joints)
+            {
+                if (b2Joint_IsValid(jointId))
+                {
+                    m_physicsMachine->DestroyJoint(jointId);
+                }
+            }
+        }
+
+        for (auto* sweets : cluster->sweets)
+        {
+            auto it = m_cementClusterLookup.find(sweets);
+            if (it != m_cementClusterLookup.end() && it->second == cluster)
+            {
+                m_cementClusterLookup.erase(it);
+            }
+        }
+
+        m_cementClusters.erase(cluster);
+    }
+
+    void SweetsContacts::CreateCementClusterJoints(CementCluster& cluster, const char* context)
+    {
+        if (!m_physicsMachine || !cluster.anchor)
+        {
+            if (!m_physicsMachine && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << (context ? context : "CreateCementClusterJoints")
+                    << " でcementクラスターの溶接に失敗したよ 物理マシン未設定 \n";
+                DebugTrace(oss.str());
+                *m_warnedMissingPhysicsMachine = true;
+            }
+            return;
+        }
+
+        for (auto* member : cluster.members)
+        {
+            if (!member || member == cluster.anchor)
+            {
+                continue;
+            }
+
+            const JointPairKey key = JointPairKey::Make(cluster.anchor, member);
+            if (m_creamWeldJoints.find(key) != m_creamWeldJoints.end())
+            {
+                continue;
+            }
+
+            const auto& posA = cluster.anchor->GetTransform().position;
+            const auto& posB = member->GetTransform().position;
+            const b2Vec2 anchor{ 0.5f * (posA.x + posB.x), 0.5f * (posA.y + posB.y) };
+            const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                *cluster.anchor,
+                *member,
+                anchor,
+                kCreamWeldLinearHertz,
+                kCreamWeldLinearDampingRatio,
+                kCreamWeldAngularHertz,
+                kCreamWeldAngularDampingRatio,
+                false);
+            if (!b2Joint_IsValid(jointId))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cementクラスター溶接に失敗したよ anchor='"
+                    << cluster.anchor->GetTag() << "' member='" << member->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+                continue;
+            }
+
+            cluster.joints.push_back(jointId);
+
+            if (cluster.anchor->GetPhysical().IsDynamic())
+            {
+                cluster.anchor->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                cluster.anchor->SetAngularVelocity(0.0f);
+            }
+
+            if (member->GetPhysical().IsDynamic())
+            {
+                member->SetLinearVelocity(float3{ 0.0f, 0.0f, 0.0f });
+                member->SetAngularVelocity(0.0f);
+            }
+        }
+    }
+
+    bool SweetsContacts::IsCementClusterCandidate(const Entities::PhysicalEntity& entity) const
+    {
+        if (IsBlockedCreamTargetTag(entity.GetTag()))
+        {
+            return false;
+        }
+
+        if (dynamic_cast<const ActiveSweets*>(&entity))
+        {
+            return true;
+        }
+
+        return IsCakeEntity(entity);
+    }
+
+    bool SweetsContacts::IsCakeEntity(const Entities::PhysicalEntity& entity) const
+    {
+        if (entity.GetCollisionLayer() != Collision::CollisionLayer::Stage)
+        {
+            return false;
+        }
+
+        return NormalizeKey(entity.GetTag()) == kStageCakeKey;
     }
 
     bool SweetsContacts::IsCementedOrLocked(const Entities::PhysicalEntity& entity) const
