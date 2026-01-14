@@ -629,6 +629,22 @@ namespace Systems
         const auto shapeConfig = body.GetBox2DShapeConfig();
         const std::string& tag = body.GetTag();
 
+        const auto shapeTypeToString = [](Physics::Box2DShapeConfig::Type type)
+        {
+            switch (type)
+            {
+            case Physics::Box2DShapeConfig::Type::Box:
+                return "Box";
+            case Physics::Box2DShapeConfig::Type::Polygon:
+                return "Polygon";
+            case Physics::Box2DShapeConfig::Type::Circle:
+                return "Circle";
+            case Physics::Box2DShapeConfig::Type::None:
+            default:
+                return "None";
+            }
+        };
+
         auto failBodyCreation = [&](const std::string& reason)
         {
             colliderComponent->createdFixtureCount = 0;
@@ -1062,6 +1078,60 @@ namespace Systems
                 allFixturesCreated = false;
                 break;
             }
+        }
+
+        const auto isSweetDebugTag = [&](const std::string& sourceTag)
+        {
+            std::string lower = sourceTag;
+            std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+            return lower == "cream" || lower == "strawberry" || lower == "cake";
+        };
+
+#if defined(_DEBUG)
+        if (isSweetDebugTag(tag))
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] FixtureCount tag='" << tag
+                << "' fixtureCount=" << fixtureCount
+                << " scaledShapes=" << scaledShapes.size()
+                << " colliderShapes=" << colliderComponent->shapes.size() << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
+
+        if (fixtureCount == 0)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicsMachine] FixtureCount=0 for tag='" << tag
+                << "' colliderId='" << colliderComponent->colliderId
+                << "' registryLookup=" << (registryDefinition ? "hit" : "miss");
+            if (shapeConfig)
+            {
+                oss << " shapeConfig={type=" << shapeTypeToString(shapeConfig->type)
+                    << " bodyType=" << ToString(shapeConfig->bodyType)
+                    << " fixedRotation=" << std::boolalpha << shapeConfig->fixedRotation
+                    << " angularDamping=" << shapeConfig->angularDamping
+                    << " linearDamping=" << shapeConfig->linearDamping
+                    << " density=" << shapeConfig->density
+                    << " friction=" << shapeConfig->friction
+                    << " restitution=" << shapeConfig->restitution
+                    << " radius=" << shapeConfig->radius
+                    << " polygonRadius=" << shapeConfig->polygonRadius
+                    << " vertices=" << shapeConfig->vertices.size()
+                    << " offset=(" << shapeConfig->offset.x << "," << shapeConfig->offset.y << ")}";
+            }
+            else
+            {
+                oss << " shapeConfig=<none>";
+            }
+            oss << "\n";
+            DebugTrace(oss.str());
+#if defined(_DEBUG)
+            assert(false && "Fixture creation resulted in zero shapes.");
+#endif
         }
 
         if (allFixturesCreated && fixtureCount > 0)
