@@ -115,9 +115,38 @@ namespace
         return true;
     }
 
+    int GetBodyShapeCount(const Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return 0;
+        }
+
+        const b2BodyId bodyId = entity->GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return 0;
+        }
+
+        return b2Body_GetShapeCount(bodyId);
+    }
+
+    void LogInvalidPendingEntity(const char* pendingLabel, const Entities::PhysicalEntity* entity)
+    {
+        if (!pendingLabel || !entity)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "pending " << pendingLabel << " removed (invalid entity) tag='"
+            << entity->GetTag() << "' shapeCount=" << GetBodyShapeCount(entity) << "\n";
+        LogInfoAndTrace(oss.str());
+    }
+
     bool HasValidContactStateEntity(const Entities::PhysicalEntity* entity)
     {
-        if (!HasValidBodyAndShapes(entity))
+        if (!entity)
         {
             return false;
         }
@@ -127,9 +156,18 @@ namespace
             return false;
         }
 
-        const auto& colliderComponent = entity->GetBoxColliderComponent();
-        const int createdFixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
-        return createdFixtureCount > 0;
+        if (HasValidBodyAndShapes(entity))
+        {
+            return true;
+        }
+
+        const b2BodyId bodyId = entity->GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        return b2Body_GetShapeCount(bodyId) > 0;
     }
 
 }
@@ -1196,10 +1234,12 @@ namespace SweetsSpace
                 if (!creamValid)
                 {
                     appendInvalidEntity(it->second.cream);
+                    LogInvalidPendingEntity("adhesion", it->second.cream);
                 }
                 if (!otherValid)
                 {
                     appendInvalidEntity(it->second.other);
+                    LogInvalidPendingEntity("adhesion", it->second.other);
                 }
                 it = m_pendingAdhesions.erase(it);
             }
@@ -1218,10 +1258,12 @@ namespace SweetsSpace
                 if (!creamValid)
                 {
                     appendInvalidEntity(it->second.cream);
+                    LogInvalidPendingEntity("cement", it->second.cream);
                 }
                 if (!otherValid)
                 {
                     appendInvalidEntity(it->second.other);
+                    LogInvalidPendingEntity("cement", it->second.other);
                 }
                 it = m_pendingCementClusters.erase(it);
             }
@@ -1237,6 +1279,7 @@ namespace SweetsSpace
             {
                 if (it->second.cream == entity || it->second.other == entity)
                 {
+                    LogInvalidPendingEntity("adhesion", entity);
                     it = m_pendingAdhesions.erase(it);
                 }
                 else
@@ -1249,6 +1292,7 @@ namespace SweetsSpace
             {
                 if (it->second.cream == entity || it->second.other == entity)
                 {
+                    LogInvalidPendingEntity("break", entity);
                     it = m_pendingBreaks.erase(it);
                 }
                 else
