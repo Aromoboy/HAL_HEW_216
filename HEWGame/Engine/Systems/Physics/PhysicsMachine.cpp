@@ -153,7 +153,24 @@ namespace Systems
                 m_owner.m_contactListener->ProcessContacts();
                 m_owner.m_isDispatchingContacts = false;
             }
+        }
 
+    private:
+        PhysicsMachine& m_owner;
+    };
+
+    class PhysicsMachine::DeferredDestroyNode : public Core::UpdateNode
+    {
+    public:
+        explicit DeferredDestroyNode(PhysicsMachine& owner)
+            : Core::UpdateNode(Core::UpdatePhase::Late, 0)
+            , m_owner(owner)
+        {
+        }
+
+        void OnUpdate(const Core::UpdateContext& ctx) override
+        {
+            (void)ctx;
             m_owner.FlushPendingBodyDestroys();
         }
 
@@ -167,6 +184,7 @@ namespace Systems
         , m_system(m_box2dSystem)
         , m_contactListener()
         , m_contactDispatchNode(std::make_unique<ContactDispatchNode>(*this))
+        , m_deferredDestroyNode(std::make_unique<DeferredDestroyNode>(*this))
         , m_bodies()
         , m_bodyMap()
         , m_defaultBodyDef()
@@ -275,6 +293,11 @@ namespace Systems
     Core::IUpdatable* PhysicsMachine::GetContactDispatchNode() const
     {
         return m_contactDispatchNode.get();
+    }
+
+    Core::IUpdatable* PhysicsMachine::GetDestroyLateUpdateNode() const
+    {
+        return m_deferredDestroyNode.get();
     }
 
     bool PhysicsMachine::IsContactDispatching() const noexcept
@@ -484,15 +507,15 @@ namespace Systems
 
     void PhysicsMachine::ClearBodies()
     {
-        FlushPendingBodyDestroys();
         for (Entities::PhysicalEntity* body : m_bodies)
         {
             if (body)
             {
                 LogImmediateDestroy(*body, "PhysicsMachine::ClearBodies");
-                DestroyBody(*body, false);
+                QueueBodyDestruction(*body, false, "PhysicsMachine::ClearBodies");
             }
         }
+        FlushPendingBodyDestroys();
         m_bodyMap.clear();
         m_contactResolver.Clear();
         m_bodies.clear();

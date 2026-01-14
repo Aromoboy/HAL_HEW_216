@@ -81,6 +81,7 @@ namespace Systems
         SystemPtr GetSystem() const;
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
         Core::IUpdatable* GetContactDispatchNode() const;
+        Core::IUpdatable* GetDestroyLateUpdateNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
         bool IsContactDispatching() const noexcept;
 
@@ -109,6 +110,7 @@ namespace Systems
 
     private:
         class ContactDispatchNode;
+        class DeferredDestroyNode;
 
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
@@ -121,6 +123,7 @@ namespace Systems
         SystemPtr m_system;
         ContactListenerPtr m_contactListener;
         std::unique_ptr<ContactDispatchNode> m_contactDispatchNode;
+        std::unique_ptr<DeferredDestroyNode> m_deferredDestroyNode;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
         std::unordered_map<Entities::PhysicalEntity*, bool> m_pendingBodyDestroys;

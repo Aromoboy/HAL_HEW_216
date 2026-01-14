@@ -132,6 +132,7 @@ protected:
     bool m_physicsRegistered = false;
     bool m_contactDispatchRegistered = false;
     bool m_physicsLateRegistered = false;
+    bool m_physicsDestroyLateRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
