@@ -26,6 +26,7 @@ namespace Systems
         virtual void UnregisterPhysicsBody(Entities::PhysicalEntity* entity) = 0;
         virtual void UnregisterAllPhysicsBodies() = 0;
         virtual void ValidatePlayerPhysicsRegistration() = 0;
-        virtual void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit) = 0;
+        virtual void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
+            ContactHitCallback onHit) = 0;
     };
 }

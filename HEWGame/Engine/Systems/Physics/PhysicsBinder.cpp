@@ -95,11 +95,13 @@ namespace Systems
         }
     }
 
-    void PhysicsBinder::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit)
+    void PhysicsBinder::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
+        ContactHitCallback onHit)
     {
         if (m_registration)
         {
-            m_registration->AddContactHandler(std::move(onBegin), std::move(onEnd), std::move(onHit));
+            m_registration->AddContactHandler(std::move(onBegin), std::move(onEnd), std::move(onLost),
+                std::move(onHit));
         }
     }
 }

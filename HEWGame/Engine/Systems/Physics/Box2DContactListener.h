@@ -30,6 +30,7 @@ namespace Systems
 
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
+                void SetContactLostCallback(ContactCallback callback);
                 void SetHitContactCallback(ContactHitCallback callback);
                 void EnableMeshContactLogging(bool enabled);
                 void EnableDroppedEventLogging(bool enabled);
@@ -38,6 +39,7 @@ namespace Systems
         private:
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
                 void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
+                void LostContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
                 void HitContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, float approachSpeed);
                 Entities::PhysicalEntity* GetEntityForBody(b2BodyId bodyId) const;
                 Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
@@ -46,6 +48,7 @@ namespace Systems
                 b2WorldId m_worldId{ b2_nullWorldId };
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
+                ContactCallback m_onContactLost;
                 ContactHitCallback m_onHitContact;
                 bool m_logMeshContacts = false;
                 bool m_logDroppedEvents = false;

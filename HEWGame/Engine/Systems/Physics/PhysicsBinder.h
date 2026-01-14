@@ -20,7 +20,8 @@ namespace Systems
         void UnregisterPhysicsBody(Entities::PhysicalEntity* entity) override;
         void UnregisterAllPhysicsBodies() override;
         void ValidatePlayerPhysicsRegistration() override;
-        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit) override;
+        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
+            ContactHitCallback onHit) override;
 
         std::unique_ptr<PhysicsMachine> m_physicsMachine;
         std::unique_ptr<PhysicsRegistration> m_registration;

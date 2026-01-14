@@ -52,6 +52,10 @@ namespace Systems
                 {
                     DispatchEndContact(a, b);
                 });
+            m_contactListener->SetContactLostCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+                {
+                    DispatchLostContact(a, b);
+                });
             m_contactListener->SetHitContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed)
                 {
                     DispatchHitContact(a, b, approachSpeed);
@@ -244,9 +248,11 @@ namespace Systems
         }
     }
 
-    void PhysicsRegistration::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit)
+    void PhysicsRegistration::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
+        ContactHitCallback onHit)
     {
-        m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd), std::move(onHit) });
+        m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd), std::move(onLost),
+            std::move(onHit) });
     }
 
     void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
@@ -267,6 +273,17 @@ namespace Systems
             if (handler.onEnd)
             {
                 handler.onEnd(a, b);
+            }
+        }
+    }
+
+    void PhysicsRegistration::DispatchLostContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+    {
+        for (const auto& handler : m_contactHandlers)
+        {
+            if (handler.onLost)
+            {
+                handler.onLost(a, b);
             }
         }
     }

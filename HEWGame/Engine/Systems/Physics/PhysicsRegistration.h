@@ -29,18 +29,20 @@ namespace Systems
         void UnregisterPhysicsBody(Entities::PhysicalEntity* entity);
         void UnregisterAllPhysicsBodies();
         void ValidatePlayerPhysicsRegistration();
-        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit);
+        void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost, ContactHitCallback onHit);
 
     private:
         struct ContactHandler
         {
             ContactCallback onBegin;
             ContactCallback onEnd;
+            ContactCallback onLost;
             ContactHitCallback onHit;
         };
 
         void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
         void DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
+        void DispatchLostContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
         void DispatchHitContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed);
 
         PhysicsMachine* m_physicsMachine = nullptr;

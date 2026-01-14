@@ -66,6 +66,7 @@ namespace Systems
                         bool valid{ false };
                         const char* reason{ nullptr };
                         uint64_t bodyKey{ 0 };
+                        bool destroyedShape{ false };
                 };
 
                 struct DroppedEventKey
@@ -110,6 +111,15 @@ namespace Systems
                         const uint64_t shapeKey = b2StoreShapeId(shapeId);
                         if (m_destroyedShapeIds.contains(shapeKey))
                         {
+                                result.destroyedShape = true;
+                                if (b2Shape_IsValid(shapeId))
+                                {
+                                        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+                                        if (b2Body_IsValid(bodyId))
+                                        {
+                                                result.bodyKey = b2StoreBodyId(bodyId);
+                                        }
+                                }
                                 result.reason = "destroyed shape";
                                 return result;
                         }
@@ -253,6 +263,31 @@ namespace Systems
                         }
                     };
 
+                const auto resolveDroppedEntity = [&](b2ShapeId shapeId, uint64_t bodyKey)
+                    {
+                        if (b2Shape_IsValid(shapeId))
+                        {
+                                if (Entities::PhysicalEntity* entity = GetEntityForShape(shapeId))
+                                {
+                                        return entity;
+                                }
+                        }
+
+                        if (bodyKey != 0)
+                        {
+                                const b2BodyId bodyId = b2LoadBodyId(bodyKey);
+                                if (b2Body_IsValid(bodyId))
+                                {
+                                        if (Entities::PhysicalEntity* entity = GetEntityForBody(bodyId))
+                                        {
+                                                return entity;
+                                        }
+                                }
+                        }
+
+                        return static_cast<Entities::PhysicalEntity*>(nullptr);
+                    };
+
                 const auto flushDroppedEventLogs = [&]()
                     {
                         for (const auto& [key, log] : droppedEventLogs)
@@ -337,6 +372,14 @@ namespace Systems
                                     : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
                                 recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB, reason,
                                     shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                if (shapeAValidation.destroyedShape || shapeBValidation.destroyedShape)
+                                {
+                                        Entities::PhysicalEntity* entityA =
+                                            resolveDroppedEntity(evt.shapeIdA, shapeAValidation.bodyKey);
+                                        Entities::PhysicalEntity* entityB =
+                                            resolveDroppedEntity(evt.shapeIdB, shapeBValidation.bodyKey);
+                                        LostContact(entityA, entityB);
+                                }
                                 continue;
                         }
 
@@ -409,6 +452,11 @@ namespace Systems
                 m_onEndContact = std::move(callback);
         }
 
+        void Box2DContactListener::SetContactLostCallback(ContactCallback callback)
+        {
+                m_onContactLost = std::move(callback);
+        }
+
         void Box2DContactListener::SetHitContactCallback(ContactHitCallback callback)
         {
                 m_onHitContact = std::move(callback);
@@ -468,6 +516,19 @@ namespace Systems
                 if (m_onEndContact)
                 {
                         m_onEndContact(*entityA, *entityB);
+                }
+        }
+
+        void Box2DContactListener::LostContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
+        {
+                if (!entityA || !entityB)
+                {
+                        return;
+                }
+
+                if (m_onContactLost)
+                {
+                        m_onContactLost(*entityA, *entityB);
                 }
         }
 
