@@ -1,4 +1,4 @@
-#ifndef SCENE_GAME_CONFIG_TYPES_H_
+﻿#ifndef SCENE_GAME_CONFIG_TYPES_H_
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
@@ -152,7 +152,6 @@ namespace SceneGameConfig
         float weldAngularHertz = 6.0f;
         float weldLinearDampingRatio = 0.7f;
         float weldAngularDampingRatio = 0.7f;
-        float breakImpulseThreshold = 0.0f;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

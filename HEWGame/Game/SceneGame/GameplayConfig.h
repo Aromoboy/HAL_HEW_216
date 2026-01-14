@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace GameplayConfig
 {
@@ -32,7 +32,6 @@ namespace GameplayConfig
     inline constexpr const char* kCreamKeyWeldAngularHertz = "weldAngularHertz";
     inline constexpr const char* kCreamKeyWeldLinearDampingRatio = "weldLinearDampingRatio";
     inline constexpr const char* kCreamKeyWeldAngularDampingRatio = "weldAngularDampingRatio";
-    inline constexpr const char* kCreamKeyBreakImpulseThreshold = "breakImpulseThreshold";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionPowerUps = "powerups";
