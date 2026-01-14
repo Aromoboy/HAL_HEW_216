@@ -4,6 +4,7 @@
 #include <cmath>
 #include <queue>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 #include "CollisionLayer.h"
@@ -212,6 +213,8 @@ namespace SweetsSpace
         if (cream && other)
         {
             const JointPairKey key = JointPairKey::Make(cream, other);
+            bool pendingCreated = false;
+            float pendingElapsedSeconds = 0.0f;
             if (auto breakIt = m_pendingBreaks.find(key); breakIt != m_pendingBreaks.end())
             {
                 m_pendingBreaks.erase(breakIt);
@@ -249,6 +252,7 @@ namespace SweetsSpace
                         pending.awaitingRestore = false;
                         pending.graceSecondsRemaining = 0.0f;
                         m_pendingAdhesions.emplace(key, pending);
+                        pendingCreated = true;
                     }
                     else
                     {
@@ -257,8 +261,26 @@ namespace SweetsSpace
                         pendingIt->second.stillTouching = true;
                         pendingIt->second.awaitingRestore = false;
                         pendingIt->second.graceSecondsRemaining = 0.0f;
+                        pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
                     }
                 }
+            }
+
+            if (auto pendingIt = m_pendingAdhesions.find(key); pendingIt != m_pendingAdhesions.end())
+            {
+                pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+            }
+
+            if (ShouldLogCreamPairEvent(cream, other, "contact_begin"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream contact begin cream='" << cream->GetTag()
+                    << "' other='" << other->GetTag()
+                    << "' layer=" << static_cast<int>(other->GetCollisionLayer())
+                    << " elapsed=" << pendingElapsedSeconds
+                    << " pending_created=" << std::boolalpha << pendingCreated << std::noboolalpha
+                    << "\n";
+                LogInfoAndTrace(oss.str());
             }
         }
 
@@ -460,6 +482,17 @@ namespace SweetsSpace
                 continue;
             }
 
+            if (ShouldLogCreamPairEvent(pending.cream, pending.other, "adhesion_ready"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream adhesion ready cream='" << pending.cream->GetTag()
+                    << "' other='" << pending.other->GetTag()
+                    << "' elapsed=" << pending.elapsedSeconds
+                    << " delay=" << m_creamAdhesionDelaySeconds
+                    << "\n";
+                LogInfoAndTrace(oss.str());
+            }
+
             if ((m_creamRequireCarried && !pending.cream->WasEverCarried())
                 || !IsAdhesionTargetAllowed(*pending.cream, *pending.other))
             {
@@ -656,6 +689,7 @@ namespace SweetsSpace
         ClearCementClusters("Reset");
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
+        m_loggedCreamPairEvents.clear();
     }
 
     void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
@@ -1059,7 +1093,26 @@ namespace SweetsSpace
                 LogInfoAndTrace(std::string(kLogPrefix) + "クリーム接着を作れなかったよ 物理マシン未設定 \n");
                 *m_warnedMissingPhysicsMachine = true;
             }
+            if (ShouldLogCreamPairEvent(cream, other, "missing_physics"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=missing physics cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             logRefusedAdhesion("物理マシン未設定");
+            return;
+        }
+
+        if (!IsAdhesionTargetAllowed(*cream, *other))
+        {
+            if (ShouldLogCreamPairEvent(cream, other, "target_disallowed"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=target disallowed cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             return;
         }
 
@@ -1087,6 +1140,13 @@ namespace SweetsSpace
         if (m_creamRequireSupport && !creamSupported && !otherSupportedForAdhesion && !allowAirAdhesion
             && !(creamLocked && otherLocked))
         {
+            if (ShouldLogCreamPairEvent(cream, other, "no_support"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=no support cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             logRefusedAdhesion("空中で支えがない");
             return;
         }
@@ -1097,6 +1157,13 @@ namespace SweetsSpace
         if (m_creamRequireSupport && !creamHasFoundationOrStage && !creamLocked && !otherLocked
             && !otherSupportedForAdhesion && !allowAirAdhesion)
         {
+            if (ShouldLogCreamPairEvent(cream, other, "no_foundation"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=no foundation cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             logRefusedAdhesion("接地がない");
             return;
         }
@@ -1113,6 +1180,13 @@ namespace SweetsSpace
 
         if (existing != m_creamWeldJoints.end())
         {
+            if (ShouldLogCreamPairEvent(cream, other, "existing_joint"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=existing joint cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             return;
         }
 
@@ -1130,6 +1204,13 @@ namespace SweetsSpace
             false);
         if (!b2Joint_IsValid(jointId))
         {
+            if (ShouldLogCreamPairEvent(cream, other, "joint_create_failed"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream weld early return reason=joint create failed cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             std::ostringstream oss;
             oss << kLogPrefix << "クリーム接着ジョイント作成に失敗したよ cream='"
                 << cream->GetTag() << "' other='" << other->GetTag() << "'\n";
@@ -1216,6 +1297,22 @@ namespace SweetsSpace
         }
 
         return &it->second;
+    }
+
+    bool SweetsContacts::ShouldLogCreamPairEvent(ActiveSweets* cream,
+                                                 Entities::PhysicalEntity* other,
+                                                 std::string_view eventKey)
+    {
+        if (!cream || !other || eventKey.empty())
+        {
+            return false;
+        }
+
+        const JointPairKey key = JointPairKey::Make(cream, other);
+        const std::size_t pairHash = JointPairHash{}(key);
+        const std::size_t eventHash = std::hash<std::string_view>{}(eventKey);
+        const std::size_t combined = pairHash ^ (eventHash + 0x9e3779b9 + (pairHash << 6) + (pairHash >> 2));
+        return m_loggedCreamPairEvents.insert(combined).second;
     }
 
     void SweetsContacts::UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
