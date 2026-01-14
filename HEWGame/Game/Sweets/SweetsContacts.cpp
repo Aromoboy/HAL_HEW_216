@@ -1357,6 +1357,21 @@ namespace SweetsSpace
             return;
         }
 
+        const bool aValid = HasValidBodyAndShapes(a);
+        const bool bValid = HasValidBodyAndShapes(b);
+        if (!aValid || !bValid)
+        {
+            if (!aValid)
+            {
+                RemoveCementAdjacencyForEntity(a);
+            }
+            if (!bValid)
+            {
+                RemoveCementAdjacencyForEntity(b);
+            }
+            return;
+        }
+
         if (IsPendingDeletion(a) || IsPendingDeletion(b))
         {
             return;
@@ -1375,6 +1390,21 @@ namespace SweetsSpace
     {
         if (!a || !b)
         {
+            return;
+        }
+
+        const bool aValid = HasValidBodyAndShapes(a);
+        const bool bValid = HasValidBodyAndShapes(b);
+        if (!aValid || !bValid)
+        {
+            if (!aValid)
+            {
+                RemoveCementAdjacencyForEntity(a);
+            }
+            if (!bValid)
+            {
+                RemoveCementAdjacencyForEntity(b);
+            }
             return;
         }
 
@@ -1460,10 +1490,17 @@ namespace SweetsSpace
                 continue;
             }
 
+            std::vector<Entities::PhysicalEntity*> invalidNeighbors;
             for (auto* neighbor : adjIt->second)
             {
                 if (!neighbor || visited.find(neighbor) != visited.end())
                 {
+                    continue;
+                }
+
+                if (!HasValidBodyAndShapes(neighbor))
+                {
+                    invalidNeighbors.push_back(neighbor);
                     continue;
                 }
 
@@ -1474,6 +1511,26 @@ namespace SweetsSpace
 
                 visited.insert(neighbor);
                 frontier.push(neighbor);
+            }
+
+            if (!invalidNeighbors.empty())
+            {
+                if (auto currentIt = m_cementAdjacency.find(current); currentIt != m_cementAdjacency.end())
+                {
+                    for (auto* neighbor : invalidNeighbors)
+                    {
+                        currentIt->second.erase(neighbor);
+                    }
+                    if (currentIt->second.empty())
+                    {
+                        m_cementAdjacency.erase(currentIt);
+                    }
+                }
+
+                for (auto* neighbor : invalidNeighbors)
+                {
+                    RemoveCementAdjacencyForEntity(neighbor);
+                }
             }
         }
 
