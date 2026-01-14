@@ -295,6 +295,11 @@ namespace SweetsSpace
         m_contacts.OnContactEnd(a, b);
     }
 
+    void SweetsManager::OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed)
+    {
+        m_contacts.OnContactHit(a, b, approachSpeed);
+    }
+
     bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
     {
         return m_contacts.HasSupportingContact(sweets, foundationOnly);

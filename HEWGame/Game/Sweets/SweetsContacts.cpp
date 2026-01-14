@@ -1,6 +1,7 @@
 #include "Sweets/SweetsContacts.h"
 
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 #include <vector>
 
@@ -87,6 +88,7 @@ namespace SweetsSpace
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
         m_creamAdhesionGraceSeconds = std::max(0.0f, settings.adhesionGraceSeconds);
+        m_creamBreakImpulseThreshold = std::max(0.0f, settings.breakImpulseThreshold);
         m_creamRequireSupport = settings.requireSupport;
         m_creamRequireCarried = settings.requireCarried;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
@@ -290,6 +292,69 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsContacts::OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+        if (!sweetsA && !sweetsB)
+        {
+            return;
+        }
+
+        const float sanitizedSpeed = std::isfinite(approachSpeed) ? std::max(0.0f, approachSpeed) : 0.0f;
+        const JointPairKey pairKey = JointPairKey::Make(a, b);
+        if (auto it = m_contactHitImpulses.find(pairKey); it != m_contactHitImpulses.end())
+        {
+            it->second = std::max(it->second, sanitizedSpeed);
+        }
+        else
+        {
+            m_contactHitImpulses.emplace(pairKey, sanitizedSpeed);
+        }
+
+        if (m_creamBreakImpulseThreshold <= 0.0f || sanitizedSpeed < m_creamBreakImpulseThreshold)
+        {
+            return;
+        }
+
+        ActiveSweets* cream = nullptr;
+        Entities::PhysicalEntity* other = nullptr;
+        if (sweetsA && IsCreamTag(sweetsA->GetTag()))
+        {
+            cream = sweetsA;
+            other = b;
+        }
+        else if (sweetsB && IsCreamTag(sweetsB->GetTag()))
+        {
+            cream = sweetsB;
+            other = a;
+        }
+
+        if (!cream || !other)
+        {
+            return;
+        }
+
+        const JointPairKey weldKey = JointPairKey::Make(cream, other);
+        if (m_creamWeldJoints.find(weldKey) == m_creamWeldJoints.end())
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "衝突でクリーム接着が外れたよ cream='" << cream->GetTag()
+            << "' other='" << other->GetTag()
+            << "' impact=" << sanitizedSpeed
+            << " threshold=" << m_creamBreakImpulseThreshold << "\n";
+        LogInfoAndTrace(oss.str());
+        RequestCreamWeldBreak(cream, other, "ContactHit");
+    }
+
     void SweetsContacts::OnUpdate(float dt)
     {
         if (m_pendingAdhesions.empty() && m_pendingBreaks.empty())
@@ -413,6 +478,7 @@ namespace SweetsSpace
         }
 
         m_contactStates.erase(sweets);
+        ClearHitImpulsesForSweets(sweets);
     }
 
     void SweetsContacts::ClearSweetsContact(ActiveSweets* sweets)
@@ -423,6 +489,7 @@ namespace SweetsSpace
         }
 
         m_hasSweetsContact.erase(sweets);
+        ClearHitImpulsesForSweets(sweets);
     }
 
     void SweetsContacts::ClearPendingAdhesionsForSweets(ActiveSweets* sweets)
@@ -464,6 +531,7 @@ namespace SweetsSpace
     {
         m_contactStates.clear();
         m_hasSweetsContact.clear();
+        m_contactHitImpulses.clear();
         m_pendingAdhesions.clear();
         m_pendingBreaks.clear();
     }
@@ -521,6 +589,26 @@ namespace SweetsSpace
             if (it->second.cream == sweets || it->second.other == sweets)
             {
                 it = m_pendingBreaks.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void SweetsContacts::ClearHitImpulsesForSweets(ActiveSweets* sweets)
+    {
+        if (!sweets || m_contactHitImpulses.empty())
+        {
+            return;
+        }
+
+        for (auto it = m_contactHitImpulses.begin(); it != m_contactHitImpulses.end();)
+        {
+            if (it->first.first == sweets || it->first.second == sweets)
+            {
+                it = m_contactHitImpulses.erase(it);
             }
             else
             {

@@ -20,6 +20,7 @@ namespace Systems
         {
         public:
                 using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+                using ContactHitCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, float)>;
 
                 explicit Box2DContactListener(PhysicsMachine& physicsMachine);
 
@@ -29,6 +30,7 @@ namespace Systems
 
                 void SetBeginContactCallback(ContactCallback callback);
                 void SetEndContactCallback(ContactCallback callback);
+                void SetHitContactCallback(ContactHitCallback callback);
                 void EnableMeshContactLogging(bool enabled);
                 void EnableDroppedEventLogging(bool enabled);
                 void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
@@ -36,6 +38,7 @@ namespace Systems
         private:
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
                 void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
+                void HitContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, float approachSpeed);
                 Entities::PhysicalEntity* GetEntityForBody(b2BodyId bodyId) const;
                 Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
                 void LogMeshContact(const b2ContactBeginTouchEvent& evt) const;
@@ -43,6 +46,7 @@ namespace Systems
                 b2WorldId m_worldId{ b2_nullWorldId };
                 ContactCallback m_onBeginContact;
                 ContactCallback m_onEndContact;
+                ContactHitCallback m_onHitContact;
                 bool m_logMeshContacts = false;
                 bool m_logDroppedEvents = false;
                 PhysicsMachine* m_physicsMachine = nullptr;

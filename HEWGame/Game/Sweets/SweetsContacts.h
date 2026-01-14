@@ -32,6 +32,7 @@ namespace SweetsSpace
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
 
@@ -117,6 +118,7 @@ namespace SweetsSpace
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
+        void ClearHitImpulsesForSweets(ActiveSweets* sweets);
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
 
@@ -125,6 +127,7 @@ namespace SweetsSpace
         bool m_loggedContactNotification{ false };
         float m_creamAdhesionDelaySeconds{ 0.3f };
         float m_creamAdhesionGraceSeconds{ 0.08f };
+        float m_creamBreakImpulseThreshold{ 0.0f };
         bool m_creamRequireSupport{ true };
         bool m_creamRequireCarried{ true };
         bool m_creamAllowAirAdhesionToSweets{ false };
@@ -134,6 +137,7 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<JointPairKey, float, JointPairHash> m_contactHitImpulses;
         // NOTE: Pending maps store non-owning pointers; clear them whenever a sweets/target entity is deleted.
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
         std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;

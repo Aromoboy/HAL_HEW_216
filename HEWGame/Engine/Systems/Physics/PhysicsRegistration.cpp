@@ -52,6 +52,10 @@ namespace Systems
                 {
                     DispatchEndContact(a, b);
                 });
+            m_contactListener->SetHitContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed)
+                {
+                    DispatchHitContact(a, b, approachSpeed);
+                });
 
             m_physicsMachine->SetContactListener(m_contactListener);
             m_contactListener->EnableMeshContactLogging(true);
@@ -240,9 +244,9 @@ namespace Systems
         }
     }
 
-    void PhysicsRegistration::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd)
+    void PhysicsRegistration::AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactHitCallback onHit)
     {
-        m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd) });
+        m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd), std::move(onHit) });
     }
 
     void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
@@ -263,6 +267,17 @@ namespace Systems
             if (handler.onEnd)
             {
                 handler.onEnd(a, b);
+            }
+        }
+    }
+
+    void PhysicsRegistration::DispatchHitContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed)
+    {
+        for (const auto& handler : m_contactHandlers)
+        {
+            if (handler.onHit)
+            {
+                handler.onHit(a, b, approachSpeed);
             }
         }
     }
