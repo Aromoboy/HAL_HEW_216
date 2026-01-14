@@ -41,6 +41,7 @@ namespace SweetsSpace
         void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
+        void SetResetting(bool resetting);
         float GetCreamReleaseCooldownSeconds() const noexcept
         {
             return m_creamReleaseCooldownSeconds;
@@ -211,6 +212,7 @@ namespace SweetsSpace
         std::unordered_set<std::string> m_creamAllowedTags;
         std::unordered_set<std::string> m_creamBlockedTags;
         std::unordered_set<std::size_t> m_loggedCreamPairEvents;
+        bool m_isResetting{ false };
 
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;

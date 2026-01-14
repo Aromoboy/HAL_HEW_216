@@ -95,6 +95,8 @@ namespace SweetsSpace
         void Erase(const std::shared_ptr<ActiveSweets>& sweets);
         void ClearAllSweets();
         void ClearRetryContacts();
+        void SetResetting(bool resetting);
+        bool IsResetting() const noexcept;
 
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);
@@ -148,6 +150,7 @@ namespace SweetsSpace
         bool m_warnedMissingPhysicsMachine;
         bool m_warnedMissingScheduler;
         bool m_warnedMissingPhaseCallback;
+        bool m_isResetting;
 
         SweetsRegistry m_registry;
         SweetsFactory m_factory;

@@ -194,8 +194,18 @@ namespace SweetsSpace
         LogInfoAndTrace(oss.str());
     }
 
+    void SweetsContacts::SetResetting(bool resetting)
+    {
+        m_isResetting = resetting;
+    }
+
     void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
+        if (m_isResetting)
+        {
+            return;
+        }
+
         if (!a || !b)
         {
             return;
@@ -331,6 +341,11 @@ namespace SweetsSpace
 
     void SweetsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
+        if (m_isResetting)
+        {
+            return;
+        }
+
         if (!a || !b)
         {
             return;

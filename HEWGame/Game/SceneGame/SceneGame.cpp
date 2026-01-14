@@ -992,6 +992,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             if (m_sweetsManager)
             {
+                m_sweetsManager->SetResetting(true);
                 m_sweetsManager->ClearRetryContacts();
             }
             SetStageState(StageState::Playing);
@@ -1901,6 +1902,7 @@ void SceneGame::ResetPlaySession()
 {
     if (m_sweetsManager)
     {
+        m_sweetsManager->SetResetting(true);
         m_sweetsManager->ClearAllSweets();
         m_sweetsManager->ForceSpawnRefresh();
     }
@@ -1943,6 +1945,7 @@ void SceneGame::ResetPlaySession()
     if (m_sweetsManager)
     {
         m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
+        m_sweetsManager->SetResetting(false);
     }
     else
     {
