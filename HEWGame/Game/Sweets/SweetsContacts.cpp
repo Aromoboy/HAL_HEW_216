@@ -114,6 +114,23 @@ namespace
         return true;
     }
 
+    bool HasValidContactStateEntity(const Entities::PhysicalEntity* entity)
+    {
+        if (!HasValidBodyAndShapes(entity))
+        {
+            return false;
+        }
+
+        if (!entity->HasBox2DBody())
+        {
+            return false;
+        }
+
+        const auto& colliderComponent = entity->GetBoxColliderComponent();
+        const int createdFixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
+        return createdFixtureCount > 0;
+    }
+
 }
 
 namespace SweetsSpace
@@ -965,10 +982,26 @@ namespace SweetsSpace
     {
         PruneCementGraph();
 
+        std::vector<Entities::PhysicalEntity*> invalidEntities;
+
+        const auto appendInvalidEntity = [&invalidEntities](Entities::PhysicalEntity* entity)
+        {
+            if (!entity)
+            {
+                return;
+            }
+
+            if (std::find(invalidEntities.begin(), invalidEntities.end(), entity) == invalidEntities.end())
+            {
+                invalidEntities.push_back(entity);
+            }
+        };
+
         for (auto it = m_contactStates.begin(); it != m_contactStates.end();)
         {
-            if (!HasValidBodyAndShapes(it->first))
+            if (!HasValidContactStateEntity(it->first))
             {
+                appendInvalidEntity(it->first);
                 m_hasSweetsContact.erase(it->first);
                 it = m_contactStates.erase(it);
             }
@@ -980,8 +1013,18 @@ namespace SweetsSpace
 
         for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
         {
-            if (!HasValidBodyAndShapes(it->second.cream) || !HasValidBodyAndShapes(it->second.other))
+            const bool creamValid = HasValidContactStateEntity(it->second.cream);
+            const bool otherValid = HasValidContactStateEntity(it->second.other);
+            if (!creamValid || !otherValid)
             {
+                if (!creamValid)
+                {
+                    appendInvalidEntity(it->second.cream);
+                }
+                if (!otherValid)
+                {
+                    appendInvalidEntity(it->second.other);
+                }
                 it = m_pendingAdhesions.erase(it);
             }
             else
@@ -992,15 +1035,61 @@ namespace SweetsSpace
 
         for (auto it = m_pendingCementClusters.begin(); it != m_pendingCementClusters.end();)
         {
-            if (!HasValidBodyAndShapes(it->second.cream) ||
-                !HasValidBodyAndShapes(it->second.other))
+            const bool creamValid = HasValidContactStateEntity(it->second.cream);
+            const bool otherValid = HasValidContactStateEntity(it->second.other);
+            if (!creamValid || !otherValid)
             {
+                if (!creamValid)
+                {
+                    appendInvalidEntity(it->second.cream);
+                }
+                if (!otherValid)
+                {
+                    appendInvalidEntity(it->second.other);
+                }
                 it = m_pendingCementClusters.erase(it);
             }
             else
             {
                 ++it;
             }
+        }
+
+        for (Entities::PhysicalEntity* entity : invalidEntities)
+        {
+            for (auto it = m_pendingAdhesions.begin(); it != m_pendingAdhesions.end();)
+            {
+                if (it->second.cream == entity || it->second.other == entity)
+                {
+                    it = m_pendingAdhesions.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+
+            for (auto it = m_pendingBreaks.begin(); it != m_pendingBreaks.end();)
+            {
+                if (it->second.cream == entity || it->second.other == entity)
+                {
+                    it = m_pendingBreaks.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+
+            if (auto* sweets = dynamic_cast<ActiveSweets*>(entity))
+            {
+                m_contactStates.erase(sweets);
+                m_hasSweetsContact.erase(sweets);
+            }
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "invalid contact state purged\n";
+            LogInfoAndTrace(oss.str());
         }
     };
 
