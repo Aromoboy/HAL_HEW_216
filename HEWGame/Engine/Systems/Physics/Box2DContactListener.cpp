@@ -357,9 +357,41 @@ namespace Systems
                         EndContact(entityA, entityB);
                 }
 
-                // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
-                (void)events.hitEvents;
-                (void)events.hitCount;
+                const std::span<const b2ContactHitEvent> hitEvents =
+                    (events.hitEvents && events.hitCount > 0)
+                        ? std::span<const b2ContactHitEvent>(
+                              events.hitEvents, static_cast<size_t>(events.hitCount))
+                        : std::span<const b2ContactHitEvent>();
+                for (const b2ContactHitEvent& evt : hitEvents)
+                {
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (!shapeAValidation.valid || !shapeBValidation.valid)
+                        {
+                                const std::string reason = shapeAValidation.reason
+                                    ? shapeAValidation.reason
+                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
+                                recordDroppedEvent("hit", evt.shapeIdA, evt.shapeIdB, reason,
+                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                continue;
+                        }
+
+                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+
+                        const bool entitiesValid = (entityA && entityB);
+                        const bool bodiesMatchShapes = entitiesValid
+                            && shapeMatchesEntity(entityA, evt.shapeIdA)
+                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
+
+                        if (!fixturesValid)
+                        {
+                                continue;
+                        }
+
+                        HitContact(entityA, entityB, evt.approachSpeed);
+                }
 
                 flushDroppedEventLogs();
                 m_destroyedBodyIds.clear();
@@ -375,6 +407,11 @@ namespace Systems
         void Box2DContactListener::SetEndContactCallback(ContactCallback callback)
         {
                 m_onEndContact = std::move(callback);
+        }
+
+        void Box2DContactListener::SetHitContactCallback(ContactHitCallback callback)
+        {
+                m_onHitContact = std::move(callback);
         }
 
         void Box2DContactListener::EnableMeshContactLogging(bool enabled)
@@ -431,6 +468,20 @@ namespace Systems
                 if (m_onEndContact)
                 {
                         m_onEndContact(*entityA, *entityB);
+                }
+        }
+
+        void Box2DContactListener::HitContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB,
+                float approachSpeed)
+        {
+                if (!entityA || !entityB)
+                {
+                        return;
+                }
+
+                if (m_onHitContact)
+                {
+                        m_onHitContact(*entityA, *entityB, approachSpeed);
                 }
         }
 

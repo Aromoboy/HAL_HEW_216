@@ -20,5 +20,12 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, SweetsSpace:
             {
                 m_sweetsManager->OnContactEnd(&a, &b);
             }
+        },
+        [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, float approachSpeed)
+        {
+            if (m_sweetsManager)
+            {
+                m_sweetsManager->OnContactHit(&a, &b, approachSpeed);
+            }
         });
 }

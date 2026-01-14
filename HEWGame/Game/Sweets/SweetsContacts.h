@@ -34,6 +34,7 @@ namespace SweetsSpace
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
 
@@ -131,6 +132,7 @@ namespace SweetsSpace
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
+        void ClearHitImpulsesForSweets(ActiveSweets* sweets);
         void CleanupInvalidContacts();
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
@@ -148,6 +150,7 @@ namespace SweetsSpace
         bool m_loggedContactNotification{ false };
         float m_creamAdhesionDelaySeconds{ 0.3f };
         float m_creamAdhesionGraceSeconds{ 0.08f };
+        float m_creamBreakImpulseThreshold{ 0.0f };
         bool m_creamRequireSupport{ true };
         bool m_creamRequireCarried{ true };
         bool m_creamAllowAirAdhesionToSweets{ false };
@@ -157,6 +160,7 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<JointPairKey, float, JointPairHash> m_contactHitImpulses;
         std::unordered_map<Entities::PhysicalEntity*, std::unordered_set<Entities::PhysicalEntity*>> m_cementAdjacency;
         std::unordered_set<std::shared_ptr<CementCluster>> m_cementClusters;
         std::unordered_map<ActiveSweets*, std::shared_ptr<CementCluster>> m_cementClusterLookup;
