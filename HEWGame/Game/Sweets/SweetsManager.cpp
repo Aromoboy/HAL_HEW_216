@@ -321,6 +321,7 @@ namespace SweetsSpace
         {
             m_contacts.ClearContactState(sweetsA);
             m_contacts.ClearPendingAdhesionsForSweets(sweetsA);
+            m_contacts.ClearPendingBreaksForSweets(sweetsA);
         }
 
         auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
@@ -328,6 +329,7 @@ namespace SweetsSpace
         {
             m_contacts.ClearContactState(sweetsB);
             m_contacts.ClearPendingAdhesionsForSweets(sweetsB);
+            m_contacts.ClearPendingBreaksForSweets(sweetsB);
         }
     }
 
