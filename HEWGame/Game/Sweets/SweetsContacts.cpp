@@ -202,8 +202,7 @@ namespace SweetsSpace
 
     void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
-        if (!a || !b)
-        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b) || m_isResetting)
+        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b))
         {
             const std::size_t count = ++m_invalidContactEvents;
             if (count == 1 || (count % kInvalidContactLogInterval == 0))
@@ -213,6 +212,11 @@ namespace SweetsSpace
                     << " last=begin\n";
                 LogInfoAndTrace(oss.str());
             }
+            return;
+        }
+
+        if (m_isResetting)
+        {
             return;
         }
 
@@ -346,9 +350,7 @@ namespace SweetsSpace
 
     void SweetsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
-
-        if (!a || !b)
-        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b) || m_isResetting)
+        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b))
         {
             const std::size_t count = ++m_invalidContactEvents;
             if (count == 1 || (count % kInvalidContactLogInterval == 0))
@@ -358,6 +360,11 @@ namespace SweetsSpace
                     << " last=end\n";
                 LogInfoAndTrace(oss.str());
             }
+            return;
+        }
+
+        if (m_isResetting)
+        {
             return;
         }
 
