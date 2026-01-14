@@ -112,6 +112,18 @@ namespace
 
         return true;
     }
+
+    bool IsRecentlyRebuiltEntity(const Entities::PhysicalEntity* entity)
+    {
+        const auto* sweets = dynamic_cast<const SweetsSpace::ActiveSweets*>(entity);
+        return sweets && sweets->IsRecentlyRebuilt();
+    }
+
+    float GetRecentlyRebuiltSecondsRemaining(const Entities::PhysicalEntity* entity)
+    {
+        const auto* sweets = dynamic_cast<const SweetsSpace::ActiveSweets*>(entity);
+        return sweets ? sweets->GetRecentlyRebuiltSecondsRemaining() : 0.0f;
+    }
 }
 
 namespace SweetsSpace
@@ -190,6 +202,17 @@ namespace SweetsSpace
         const bool adjacencyUpdated = UpdateCementAdjacencyBegin(a, b);
         if (adjacencyUpdated)
         {
+            if (IsRecentlyRebuiltEntity(a) || IsRecentlyRebuiltEntity(b))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "cluster deferred due to recent rebuild (OnContactBegin)"
+                    << " remainA=" << GetRecentlyRebuiltSecondsRemaining(a)
+                    << "s remainB=" << GetRecentlyRebuiltSecondsRemaining(b)
+                    << "s\n";
+                DebugTrace(oss.str());
+                DeferCementClusterRebuild();
+            }
             RequestCementClusterRebuild(a, b);
         }
 
@@ -583,6 +606,19 @@ namespace SweetsSpace
                 continue;
             }
 
+            if (IsRecentlyRebuiltEntity(pending.cream) || IsRecentlyRebuiltEntity(pending.other))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "cluster deferred due to recent rebuild (PendingCementCluster)"
+                    << " remainCream=" << GetRecentlyRebuiltSecondsRemaining(pending.cream)
+                    << "s remainOther=" << GetRecentlyRebuiltSecondsRemaining(pending.other)
+                    << "s\n";
+                DebugTrace(oss.str());
+                ++it;
+                continue;
+            }
+
             if (BuildCementCluster(pending.cream, pending.other))
             {
                 it = m_pendingCementClusters.erase(it);
@@ -948,6 +984,18 @@ namespace SweetsSpace
                 !HasValidBodyAndShapes(it->second.other))
             {
                 it = m_pendingCementClusters.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_pendingCementClusterRebuilds.begin(); it != m_pendingCementClusterRebuilds.end();)
+        {
+            if (!HasValidBodyAndShapes(it->first) || !HasValidBodyAndShapes(it->second))
+            {
+                it = m_pendingCementClusterRebuilds.erase(it);
             }
             else
             {
@@ -1713,6 +1761,20 @@ namespace SweetsSpace
 
             if (IsPendingDeletion(sweets) || IsPendingDeletion(other))
             {
+                continue;
+            }
+
+            if (IsRecentlyRebuiltEntity(sweets) || IsRecentlyRebuiltEntity(other))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "cluster deferred due to recent rebuild (ProcessPendingCementClusterRebuilds)"
+                    << " remainA=" << GetRecentlyRebuiltSecondsRemaining(sweets)
+                    << "s remainB=" << GetRecentlyRebuiltSecondsRemaining(other)
+                    << "s\n";
+                DebugTrace(oss.str());
+                m_pendingCementClusterRebuilds.insert(key);
+                DeferCementClusterRebuild();
                 continue;
             }
 
