@@ -130,6 +130,12 @@ namespace SweetsSpace
             float elapsedSeconds{ 0.0f };
             bool stillSeparated{ false };
         };
+        struct PendingCementCluster
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* other{ nullptr };
+            float elapsedSeconds{ 0.0f };
+        };
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
@@ -138,6 +144,7 @@ namespace SweetsSpace
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
         void ClearHitImpulsesForSweets(ActiveSweets* sweets);
+        void ClearPendingCementClustersForEntity(Entities::PhysicalEntity* entity);
         void CleanupInvalidContacts();
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
@@ -180,5 +187,6 @@ namespace SweetsSpace
         // NOTE: Pending maps store non-owning pointers; clear them whenever a sweets/target entity is deleted.
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
         std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;
+        std::unordered_map<JointPairKey, PendingCementCluster, JointPairHash> m_pendingCementClusters;
     };
 }
