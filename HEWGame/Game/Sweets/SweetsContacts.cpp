@@ -203,6 +203,31 @@ namespace SweetsSpace
         m_sweetsHandleLookup.erase(sweets);
     }
 
+    void SweetsContacts::RegisterAdhesionTarget(const std::shared_ptr<Entities::PhysicalEntity>& entity)
+    {
+        if (!entity)
+        {
+            return;
+        }
+
+        m_adhesionTargetLookup[entity.get()] = entity;
+    }
+
+    void SweetsContacts::UnregisterAdhesionTarget(Entities::PhysicalEntity* entity)
+    {
+        if (!entity)
+        {
+            return;
+        }
+
+        m_adhesionTargetLookup.erase(entity);
+    }
+
+    void SweetsContacts::ClearAdhesionTargets()
+    {
+        m_adhesionTargetLookup.clear();
+    }
+
     void SweetsContacts::ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings)
     {
         m_creamAdhesionDelaySeconds = std::max(0.0f, settings.adhesionDelaySeconds);
@@ -460,49 +485,178 @@ namespace SweetsSpace
         m_contactStates.clear();
 
         const auto& lookup = m_registry->Lookup();
-        if (lookup.empty())
+        if (lookup.empty() && m_adhesionTargetLookup.empty())
         {
             return;
         }
 
+        const std::size_t registryCount = lookup.size();
         std::unordered_set<JointPairKey, JointPairHash> touchingPairs;
         touchingPairs.reserve(m_pendingAdhesions.size() + m_creamWeldJoints.size());
         std::unordered_set<JointPairKey, JointPairHash> processedContacts;
         processedContacts.reserve(m_pendingAdhesions.size() + m_creamWeldJoints.size());
 
-        for (const auto& entry : lookup)
+        auto processContactPair = [&](ActiveSweets* sweets, Entities::PhysicalEntity* other)
         {
-            ActiveSweets* sweets = entry.first.get();
-            if (!sweets)
+            if (!sweets || !other)
             {
-                continue;
+                return;
             }
 
-            if (IsPendingDeletion(sweets))
+            const JointPairKey key = JointPairKey::Make(sweets, other);
+            const bool contactInserted = processedContacts.insert(key).second;
+            if (contactInserted)
             {
-                continue;
+                UpdateContactStateBegin(sweets, other);
+                if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
+                {
+                    UpdateContactStateBegin(otherSweets, sweets);
+                }
             }
 
-            const b2BodyId sweetsBodyId = sweets->GetBox2DBodyId();
-            if (!b2Body_IsValid(sweetsBodyId))
+            ActiveSweets* cream = nullptr;
+            Entities::PhysicalEntity* creamOther = nullptr;
+            if (IsCreamTag(sweets->GetTag()))
             {
-                continue;
+                cream = sweets;
+                creamOther = other;
+            }
+            else if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other);
+                otherSweets && IsCreamTag(otherSweets->GetTag()))
+            {
+                cream = otherSweets;
+                creamOther = sweets;
             }
 
-            const int capacity = b2Body_GetContactCapacity(sweetsBodyId);
+            if (!cream || !creamOther)
+            {
+                return;
+            }
+
+            const JointPairKey creamKey = JointPairKey::Make(cream, creamOther);
+            touchingPairs.insert(creamKey);
+            if (!contactInserted)
+            {
+                return;
+            }
+
+            if (auto breakIt = m_pendingBreaks.find(creamKey); breakIt != m_pendingBreaks.end())
+            {
+                m_pendingBreaks.erase(breakIt);
+            }
+
+            bool pendingCreated = false;
+            float pendingElapsedSeconds = 0.0f;
+            if (cream->IsRecentlyReleased() && m_creamReleaseCooldownSeconds > 0.0f)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム '" << cream->GetTag()
+                    << "' は recently released だから接着をブロックするよ cooldown残り="
+                    << cream->GetRecentlyReleasedSecondsRemaining() << "s\n";
+                DebugTrace(oss.str());
+            }
+            else if (m_creamRequireCarried && !cream->WasEverCarried())
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム '" << cream->GetTag()
+                    << "' はまだ運ばれてないから接着をスキップするよ \n";
+                DebugTrace(oss.str());
+            }
+            else if (IsAdhesionTargetAllowed(*cream, *creamOther))
+            {
+                auto existing = m_creamWeldJoints.find(creamKey);
+                if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
+                        << cream->GetTag() << "' other='" << creamOther->GetTag() << "'\n";
+                    DebugTrace(oss.str());
+                    m_creamWeldJoints.erase(existing);
+                    existing = m_creamWeldJoints.end();
+                }
+
+                if (existing == m_creamWeldJoints.end())
+                {
+                    auto pendingIt = m_pendingAdhesions.find(creamKey);
+                    if (pendingIt == m_pendingAdhesions.end())
+                    {
+                        PendingAdhesion pending{};
+                        pending.cream = cream;
+                        pending.other = creamOther;
+                        pending.elapsedSeconds = 0.0f;
+                        pending.stillTouching = true;
+                        pending.awaitingRestore = false;
+                        pending.graceSecondsRemaining = 0.0f;
+                        m_pendingAdhesions.emplace(creamKey, pending);
+                        pendingCreated = true;
+                    }
+                    else
+                    {
+                        if (ShouldLogCreamPairEvent(cream, creamOther, "duplicateContactBegin"))
+                        {
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "duplicateContactBegin cream='" << cream->GetTag()
+                                << "' other='" << creamOther->GetTag() << "'\n";
+                            LogInfoAndTrace(oss.str());
+                        }
+                        pendingIt->second.cream = cream;
+                        pendingIt->second.other = creamOther;
+                        pendingIt->second.stillTouching = true;
+                        pendingIt->second.awaitingRestore = false;
+                        pendingIt->second.graceSecondsRemaining = 0.0f;
+                        pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+                    }
+                }
+            }
+
+            if (auto pendingIt = m_pendingAdhesions.find(creamKey); pendingIt != m_pendingAdhesions.end())
+            {
+                pendingIt->second.stillTouching = true;
+                pendingIt->second.awaitingRestore = false;
+                pendingIt->second.graceSecondsRemaining = 0.0f;
+                pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+            }
+
+            if (ShouldLogCreamPairEvent(cream, creamOther, "contact_begin"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream contact begin cream='" << cream->GetTag()
+                    << "' other='" << creamOther->GetTag()
+                    << "' layer=" << static_cast<int>(creamOther->GetCollisionLayer())
+                    << " elapsed=" << pendingElapsedSeconds
+                    << " pending_created=" << std::boolalpha << pendingCreated << std::noboolalpha
+                    << "\n";
+                LogInfoAndTrace(oss.str());
+            }
+        };
+
+        auto pollContactBody = [&](Entities::PhysicalEntity* entity, bool entityIsSweets)
+        {
+            if (!entity || IsPendingDeletion(entity))
+            {
+                return;
+            }
+
+            const b2BodyId entityBodyId = entity->GetBox2DBodyId();
+            if (!b2Body_IsValid(entityBodyId))
+            {
+                return;
+            }
+
+            const int capacity = b2Body_GetContactCapacity(entityBodyId);
             if (capacity <= 0)
             {
-                continue;
+                return;
             }
 
             std::vector<b2ContactData> contactsBuffer(static_cast<std::size_t>(capacity));
-            const int count = b2Body_GetContactData(sweetsBodyId, contactsBuffer.data(), capacity);
+            const int count = b2Body_GetContactData(entityBodyId, contactsBuffer.data(), capacity);
             if (count <= 0)
             {
-                continue;
+                return;
             }
 
-            const uint64_t sweetsKey = b2StoreBodyId(sweetsBodyId);
+            const uint64_t entityKey = b2StoreBodyId(entityBodyId);
             for (int i = 0; i < count; ++i)
             {
                 const b2ContactData& contact = contactsBuffer[static_cast<std::size_t>(i)];
@@ -526,11 +680,11 @@ namespace SweetsSpace
                 const uint64_t bodyKeyA = b2StoreBodyId(bodyIdA);
                 const uint64_t bodyKeyB = b2StoreBodyId(bodyIdB);
                 b2BodyId otherBodyId = b2_nullBodyId;
-                if (bodyKeyA == sweetsKey && bodyKeyB != sweetsKey)
+                if (bodyKeyA == entityKey && bodyKeyB != entityKey)
                 {
                     otherBodyId = bodyIdB;
                 }
-                else if (bodyKeyB == sweetsKey && bodyKeyA != sweetsKey)
+                else if (bodyKeyB == entityKey && bodyKeyA != entityKey)
                 {
                     otherBodyId = bodyIdA;
                 }
@@ -546,137 +700,51 @@ namespace SweetsSpace
                 }
 
                 Entities::PhysicalEntity* other = resolved->entity;
-                if (!other || other == sweets || IsPendingDeletion(other))
+                if (!other || other == entity || IsPendingDeletion(other))
                 {
                     continue;
                 }
 
-                const JointPairKey key = JointPairKey::Make(sweets, other);
-                const bool contactInserted = processedContacts.insert(key).second;
-                if (contactInserted)
+                if (entityIsSweets)
                 {
-                    UpdateContactStateBegin(sweets, other);
-                    if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
-                    {
-                        UpdateContactStateBegin(otherSweets, sweets);
-                    }
+                    auto* sweets = static_cast<ActiveSweets*>(entity);
+                    processContactPair(sweets, other);
                 }
-
-                ActiveSweets* cream = nullptr;
-                Entities::PhysicalEntity* creamOther = nullptr;
-                if (IsCreamTag(sweets->GetTag()))
+                else if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other))
                 {
-                    cream = sweets;
-                    creamOther = other;
-                }
-                else if (auto* otherSweets = dynamic_cast<ActiveSweets*>(other);
-                    otherSweets && IsCreamTag(otherSweets->GetTag()))
-                {
-                    cream = otherSweets;
-                    creamOther = sweets;
-                }
-
-                if (!cream || !creamOther)
-                {
-                    continue;
-                }
-
-                const JointPairKey creamKey = JointPairKey::Make(cream, creamOther);
-                touchingPairs.insert(creamKey);
-                if (!contactInserted)
-                {
-                    continue;
-                }
-
-                if (auto breakIt = m_pendingBreaks.find(creamKey); breakIt != m_pendingBreaks.end())
-                {
-                    m_pendingBreaks.erase(breakIt);
-                }
-
-                bool pendingCreated = false;
-                float pendingElapsedSeconds = 0.0f;
-                if (cream->IsRecentlyReleased() && m_creamReleaseCooldownSeconds > 0.0f)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "クリーム '" << cream->GetTag()
-                        << "' は recently released だから接着をブロックするよ cooldown残り="
-                        << cream->GetRecentlyReleasedSecondsRemaining() << "s\n";
-                    DebugTrace(oss.str());
-                }
-                else if (m_creamRequireCarried && !cream->WasEverCarried())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "クリーム '" << cream->GetTag()
-                        << "' はまだ運ばれてないから接着をスキップするよ \n";
-                    DebugTrace(oss.str());
-                }
-                else if (IsAdhesionTargetAllowed(*cream, *creamOther))
-                {
-                    auto existing = m_creamWeldJoints.find(creamKey);
-                    if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
-                            << cream->GetTag() << "' other='" << creamOther->GetTag() << "'\n";
-                        DebugTrace(oss.str());
-                        m_creamWeldJoints.erase(existing);
-                        existing = m_creamWeldJoints.end();
-                    }
-
-                    if (existing == m_creamWeldJoints.end())
-                    {
-                        auto pendingIt = m_pendingAdhesions.find(creamKey);
-                        if (pendingIt == m_pendingAdhesions.end())
-                        {
-                            PendingAdhesion pending{};
-                            pending.cream = cream;
-                            pending.other = creamOther;
-                            pending.elapsedSeconds = 0.0f;
-                            pending.stillTouching = true;
-                            pending.awaitingRestore = false;
-                            pending.graceSecondsRemaining = 0.0f;
-                            m_pendingAdhesions.emplace(creamKey, pending);
-                            pendingCreated = true;
-                        }
-                        else
-                        {
-                            if (ShouldLogCreamPairEvent(cream, creamOther, "duplicateContactBegin"))
-                            {
-                                std::ostringstream oss;
-                                oss << kLogPrefix << "duplicateContactBegin cream='" << cream->GetTag()
-                                    << "' other='" << creamOther->GetTag() << "'\n";
-                                LogInfoAndTrace(oss.str());
-                            }
-                            pendingIt->second.cream = cream;
-                            pendingIt->second.other = creamOther;
-                            pendingIt->second.stillTouching = true;
-                            pendingIt->second.awaitingRestore = false;
-                            pendingIt->second.graceSecondsRemaining = 0.0f;
-                            pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
-                        }
-                    }
-                }
-
-                if (auto pendingIt = m_pendingAdhesions.find(creamKey); pendingIt != m_pendingAdhesions.end())
-                {
-                    pendingIt->second.stillTouching = true;
-                    pendingIt->second.awaitingRestore = false;
-                    pendingIt->second.graceSecondsRemaining = 0.0f;
-                    pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
-                }
-
-                if (ShouldLogCreamPairEvent(cream, creamOther, "contact_begin"))
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "cream contact begin cream='" << cream->GetTag()
-                        << "' other='" << creamOther->GetTag()
-                        << "' layer=" << static_cast<int>(creamOther->GetCollisionLayer())
-                        << " elapsed=" << pendingElapsedSeconds
-                        << " pending_created=" << std::boolalpha << pendingCreated << std::noboolalpha
-                        << "\n";
-                    LogInfoAndTrace(oss.str());
+                    processContactPair(otherSweets, entity);
                 }
             }
+        };
+
+        for (const auto& entry : lookup)
+        {
+            ActiveSweets* sweets = entry.first.get();
+            pollContactBody(sweets, true);
+        }
+
+        if (!m_adhesionTargetLookup.empty())
+        {
+            for (auto it = m_adhesionTargetLookup.begin(); it != m_adhesionTargetLookup.end();)
+            {
+                if (auto locked = it->second.lock())
+                {
+                    pollContactBody(locked.get(), false);
+                    ++it;
+                }
+                else
+                {
+                    it = m_adhesionTargetLookup.erase(it);
+                }
+            }
+        }
+
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "TickCreamContacts registry=" << registryCount
+                << " processedContacts=" << processedContacts.size()
+                << " adhesionTargets=" << m_adhesionTargetLookup.size() << "\n";
+            DebugTrace(oss.str());
         }
 
         for (auto& entry : m_pendingAdhesions)

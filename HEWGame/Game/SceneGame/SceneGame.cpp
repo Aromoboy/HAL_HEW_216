@@ -537,6 +537,10 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->RegisterCreamAdhesionTargets(m_stagePhysicsEntities);
+    }
 
 #if defined(_DEBUG)
     {

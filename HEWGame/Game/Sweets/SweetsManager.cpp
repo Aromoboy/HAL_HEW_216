@@ -166,6 +166,21 @@ namespace SweetsSpace
         m_contacts.ClearCreamWeldJoints("RetryReset");
     }
 
+    void SweetsManager::RegisterCreamAdhesionTargets(
+        const std::vector<std::shared_ptr<Entities::PhysicalEntity>>& targets)
+    {
+        m_contacts.ClearAdhesionTargets();
+        for (const auto& target : targets)
+        {
+            m_contacts.RegisterAdhesionTarget(target);
+        }
+    }
+
+    void SweetsManager::ClearCreamAdhesionTargets()
+    {
+        m_contacts.ClearAdhesionTargets();
+    }
+
     void SweetsManager::SetResetting(bool resetting)
     {
         m_isResetting = resetting;
@@ -244,12 +259,12 @@ namespace SweetsSpace
 
         sweets->SetWasEverCarried(false);
 
+        SetState(sweets, SweetsState::Active);
+
         if (!m_lifecycle.RegisterWithSystems(sweets))
         {
             return nullptr;
         }
-
-        SetState(sweets, SweetsState::Active);
 
         if (m_physicsMachine && sweets)
         {
