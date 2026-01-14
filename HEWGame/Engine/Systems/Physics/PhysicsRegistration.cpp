@@ -247,7 +247,6 @@ namespace Systems
 
         if (m_physicsMachine)
         {
-            LogImmediateDestroy(*entity, "PhysicsRegistration::UnregisterPhysicsBody");
             entity->DetachPhysicsMachine();
         }
         else

@@ -789,6 +789,18 @@ SceneGame::~SceneGame()
         m_physicsLateRegistered = false;
     }
 
+    if (m_physicsDestroyLateRegistered && m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            if (auto* lateNode = physicsMachine->GetDestroyLateUpdateNode())
+            {
+                Unregister(*lateNode);
+            }
+        }
+        m_physicsDestroyLateRegistered = false;
+    }
+
     if (m_cameraRigRegistered && m_cameraRig)
     {
         Unregister(*m_cameraRig);
@@ -877,6 +889,17 @@ void SceneGame::ConfigureUpdates()
                 if (auto* lateNode = m_physicsBinder->GetRegistrationLateUpdateNode())
                 {
                         m_physicsLateRegistered = Register(*lateNode);
+                }
+        }
+
+        if (m_physicsBinder && !m_physicsDestroyLateRegistered)
+        {
+                if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+                {
+                        if (auto* lateNode = physicsMachine->GetDestroyLateUpdateNode())
+                        {
+                                m_physicsDestroyLateRegistered = Register(*lateNode);
+                        }
                 }
         }
 
