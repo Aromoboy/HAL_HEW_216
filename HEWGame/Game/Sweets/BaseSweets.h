@@ -87,6 +87,21 @@ namespace SweetsSpace
             return m_recentlyReleasedSecondsRemaining;
         }
 
+        void SetRecentlyRebuiltCooldownSeconds(float seconds) noexcept
+        {
+            m_recentlyRebuiltSecondsRemaining = std::max(0.0f, seconds);
+        }
+
+        bool IsRecentlyRebuilt() const noexcept
+        {
+            return m_recentlyRebuiltSecondsRemaining > 0.0f;
+        }
+
+        float GetRecentlyRebuiltSecondsRemaining() const noexcept
+        {
+            return m_recentlyRebuiltSecondsRemaining;
+        }
+
     private:
         void SyncFromPhysics();
         void RefreshRenderTransform();
@@ -96,6 +111,7 @@ namespace SweetsSpace
         bool m_missingModelWarned = false;
         bool m_wasEverCarried = false;
         float m_recentlyReleasedSecondsRemaining = 0.0f;
+        float m_recentlyRebuiltSecondsRemaining = 0.0f;
         VisualTransform m_visual{};
         Transform m_renderTransform{};
     };
