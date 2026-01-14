@@ -796,10 +796,18 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+
+        //記録してあるハイスコアと今回のスコアの比較・書き換え
+        if (m_HighScore.HighScoreCompare(score))
+        {
+            m_HighScore.WriteHighscore(score);
+        }
+
         uiData.hud.remainingSeconds = remainingSeconds;
         uiData.hud.currentHeight = currentHeight;
         uiData.hud.peakHeight = peakHeight;
         uiData.hud.score = score;
+        uiData.hud.HighScore = m_HighScore.GetHighscore();
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -812,6 +820,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.currentHeight = currentHeight;
         uiData.result.peakHeight = peakHeight;
         uiData.result.score = score;
+        uiData.result.HighScore = m_HighScore.GetHighscore();
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;

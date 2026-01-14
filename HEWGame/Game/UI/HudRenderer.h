@@ -1,4 +1,4 @@
-#ifndef HEWGAME_HUD_RENDERER_H
+﻿#ifndef HEWGAME_HUD_RENDERER_H
 #define HEWGAME_HUD_RENDERER_H
 
 #include <cstdint>
@@ -18,6 +18,7 @@ struct HudDisplayData
     float currentHeight = 0.0f;
     float peakHeight = 0.0f;
     int score = 0;
+    int HighScore = 0;
     bool timeUp = false;
     float moveSpeedMultiplier = 1.0f;
     float moveSpeedUnitsPerSecond = 0.0f;

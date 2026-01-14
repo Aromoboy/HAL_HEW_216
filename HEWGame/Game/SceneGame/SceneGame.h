@@ -1,4 +1,4 @@
-// ゲーム本編のプレイ中シーンをまとめたファイルだ
+﻿// ゲーム本編のプレイ中シーンをまとめたファイルだ
 // ステージ設定を読み込んでプレイヤーやスイーツやカメラを動かす流れを組み立てる
 // 進行状態や結果は画面表示や強化選択に渡される
 #ifndef __SCENE_GAME_H__
@@ -27,6 +27,7 @@
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
 #include "ISceneServices.h"
+#include "HighScore.h"
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -157,6 +158,7 @@ private:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
+    HighScore m_HighScore;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;
