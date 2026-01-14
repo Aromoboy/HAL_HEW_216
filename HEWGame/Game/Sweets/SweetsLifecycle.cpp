@@ -658,6 +658,17 @@ namespace SweetsSpace
         if (m_physicsMachine)
         {
             m_physicsMachine->RegisterBody(*sweets);
+            const auto& colliderComponent = sweets->GetBoxColliderComponent();
+            const int createdFixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
+            if (createdFixtureCount == 0)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix << "ReleaseCarriedSweets fixtureCount=0 再登録 tag='"
+                    << sweets->GetTag() << "'\n";
+                DebugTrace(warn.str());
+                sweets->DetachPhysicsMachine();
+                sweets->AttachPhysicsMachine(m_physicsMachine);
+            }
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
