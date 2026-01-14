@@ -73,7 +73,7 @@ namespace SweetsSpace
             {
                 return this->Spawn(kind, transform);
             })
-        , m_contacts(m_physicsMachine, &m_warnedMissingPhysicsMachine)
+        , m_contacts(m_physicsMachine, &m_registry, &m_warnedMissingPhysicsMachine)
         , m_lifecycle(m_registry, m_contacts, m_spawner, m_drawSystem, m_physicsMachine, m_scheduler,
             &m_warnedMissingDrawSystem, &m_warnedMissingPhysicsMachine, &m_warnedMissingScheduler)
         , m_renderer(m_registry)

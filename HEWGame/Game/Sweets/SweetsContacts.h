@@ -28,10 +28,14 @@ namespace SceneGameConfig
 
 namespace SweetsSpace
 {
+    class SweetsRegistry;
+
     class SweetsContacts
     {
     public:
-        SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
+        SweetsContacts(Systems::PhysicsMachine* physicsMachine,
+            SweetsRegistry* registry,
+            bool* warnedMissingPhysicsMachine);
 
         void RegisterSweetsHandle(const std::shared_ptr<ActiveSweets>& sweets);
         void UnregisterSweetsHandle(ActiveSweets* sweets);
@@ -169,6 +173,7 @@ namespace SweetsSpace
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        void TickCreamContacts();
         bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
@@ -195,6 +200,7 @@ namespace SweetsSpace
         void RemoveCakeAdjacencyNode(const WeakSweetsHandle& handle);
 
         Systems::PhysicsMachine* m_physicsMachine;
+        SweetsRegistry* m_registry;
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
         std::size_t m_invalidContactEvents{ 0 };

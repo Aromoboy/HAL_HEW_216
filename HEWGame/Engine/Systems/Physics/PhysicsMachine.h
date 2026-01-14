@@ -4,7 +4,10 @@
 
 #include <box2d/box2d.h>
 
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -51,6 +54,23 @@ namespace Systems
     public:
         using SystemPtr = std::shared_ptr<IPhysicsSystem>;
         using ContactListenerPtr = std::shared_ptr<Box2DContactListener>;
+        struct ContactResolver
+        {
+            struct EntityRef
+            {
+                Entities::PhysicalEntity* entity{ nullptr };
+                std::string tag{};
+            };
+
+            std::optional<EntityRef> Resolve(uint64_t bodyKey) const;
+            void Register(uint64_t bodyKey, EntityRef ref);
+            void Unregister(uint64_t bodyKey);
+            void Clear();
+
+        private:
+            std::unordered_map<uint64_t, EntityRef> m_entities;
+        };
+        using ContactEntityRef = ContactResolver::EntityRef;
 
         explicit PhysicsMachine(const PhysicsTuningParameters& tuning = {});
         ~PhysicsMachine() override;
@@ -70,6 +90,7 @@ namespace Systems
         void ClearBodies();
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
+        std::optional<ContactEntityRef> ResolveContactEntity(b2BodyId bodyId) const;
         b2WorldId GetWorldId() const;
         b2JointId CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
             const Entities::PhysicalEntity& bodyB,
@@ -89,6 +110,8 @@ namespace Systems
 
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
+        void RegisterContactEntity(Entities::PhysicalEntity& body, b2BodyId bodyId);
+        void UnregisterContactEntity(b2BodyId bodyId);
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
@@ -96,6 +119,7 @@ namespace Systems
         std::unique_ptr<ContactDispatchNode> m_contactDispatchNode;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
+        ContactResolver m_contactResolver;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
         PhysicsTuningParameters m_tuning{};
