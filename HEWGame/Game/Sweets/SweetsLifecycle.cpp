@@ -741,6 +741,21 @@ namespace SweetsSpace
             {
                 m_registry->SetState(sweets, SweetsState::Active);
             }
+            else
+            {
+                const SweetsState expectedState = found->second;
+                auto& stateList = m_registry->GetByState(expectedState);
+                const bool listed = std::any_of(stateList.begin(), stateList.end(),
+                    [&sweets](const std::shared_ptr<ActiveSweets>& entry)
+                    {
+                        return entry == sweets;
+                    });
+                if (!listed)
+                {
+                    m_registry->Remove(sweets);
+                    m_registry->SetState(sweets, expectedState);
+                }
+            }
         }
 
         if (m_contacts)
