@@ -549,7 +549,8 @@ namespace SweetsSpace
             return;
         }
 
-        const std::size_t registryCount = lookup.size();
+        const std::size_t registryLookupCount = lookup.size();
+        const int registryTotalCount = m_registry->CountAll();
         std::unordered_set<JointPairKey, JointPairHash> touchingPairs;
         touchingPairs.reserve(m_pendingAdhesions.size() + m_creamWeldJoints.size());
         std::unordered_set<JointPairKey, JointPairHash> processedContacts;
@@ -782,13 +783,15 @@ namespace SweetsSpace
             pollContactBody(sweets, true);
         }
 
+        std::vector<Entities::PhysicalEntity*> adhesionTargets;
         if (!m_adhesionTargetLookup.empty())
         {
+            adhesionTargets.reserve(m_adhesionTargetLookup.size());
             for (auto it = m_adhesionTargetLookup.begin(); it != m_adhesionTargetLookup.end();)
             {
                 if (auto locked = it->second.lock())
                 {
-                    pollContactBody(locked.get(), false);
+                    adhesionTargets.push_back(locked.get());
                     ++it;
                 }
                 else
@@ -798,11 +801,17 @@ namespace SweetsSpace
             }
         }
 
+        for (auto* target : adhesionTargets)
+        {
+            pollContactBody(target, false);
+        }
+
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "TickCreamContacts registry=" << registryCount
+            oss << kLogPrefix << "TickCreamContacts registry=" << registryLookupCount
+                << " registryTotal=" << registryTotalCount
                 << " processedContacts=" << processedContacts.size()
-                << " adhesionTargets=" << m_adhesionTargetLookup.size() << "\n";
+                << " adhesionTargets=" << adhesionTargets.size() << "\n";
             DebugTrace(oss.str());
         }
 
