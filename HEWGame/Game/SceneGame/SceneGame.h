@@ -107,6 +107,8 @@ private:
     void OnStageClear();
     void OnStageFail();
     void OnLateUpdate(const Core::UpdateContext& ctx);
+    void DisableContactListenerOnReset();
+    void RestoreContactListenerAfterReset();
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);

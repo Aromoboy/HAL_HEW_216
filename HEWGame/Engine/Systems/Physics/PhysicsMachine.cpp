@@ -357,6 +357,22 @@ namespace Systems
         b2DestroyJoint(jointId, wakeAttached);
     }
 
+    void PhysicsMachine::DisableContactListenerWorld()
+    {
+        if (m_contactListener)
+        {
+            m_contactListener->SetWorld(b2_nullWorldId);
+        }
+    }
+
+    void PhysicsMachine::RestoreContactListenerWorld()
+    {
+        if (m_contactListener)
+        {
+            m_contactListener->SetWorld(GetWorldId());
+        }
+    }
+
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
         auto* bodyPtr = &body;
