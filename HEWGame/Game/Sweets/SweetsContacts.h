@@ -2,7 +2,9 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include <box2d/box2d.h>
 
@@ -46,6 +48,8 @@ namespace SweetsSpace
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
         void ClearCreamWeldJoints(const char* context);
+        void RemoveCementClusterForSweets(ActiveSweets* sweets, const char* context);
+        void ClearCementClusters(const char* context);
 
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
 
@@ -55,6 +59,15 @@ namespace SweetsSpace
             int foundationContacts{ 0 };
             int stageContacts{ 0 };
             int sweetsContacts{ 0 };
+        };
+
+        struct CementCluster
+        {
+            std::unordered_set<ActiveSweets*> sweets;
+            std::unordered_set<Entities::PhysicalEntity*> members;
+            std::vector<b2JointId> joints;
+            Entities::PhysicalEntity* anchor{ nullptr };
+            bool anchoredToCake{ false };
         };
 
         struct JointPairKey
@@ -119,6 +132,14 @@ namespace SweetsSpace
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
         const ContactState* FindContactState(const ActiveSweets& sweets) const;
         bool IsCementedOrLocked(const Entities::PhysicalEntity& entity) const;
+        void UpdateCementAdjacencyBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void UpdateCementAdjacencyEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity);
+        std::shared_ptr<CementCluster> BuildCementCluster(ActiveSweets* cream, Entities::PhysicalEntity* other);
+        void RemoveCementCluster(const std::shared_ptr<CementCluster>& cluster, const char* context);
+        void CreateCementClusterJoints(CementCluster& cluster, const char* context);
+        bool IsCementClusterCandidate(const Entities::PhysicalEntity& entity) const;
+        bool IsCakeEntity(const Entities::PhysicalEntity& entity) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
@@ -134,6 +155,9 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<Entities::PhysicalEntity*, std::unordered_set<Entities::PhysicalEntity*>> m_cementAdjacency;
+        std::unordered_set<std::shared_ptr<CementCluster>> m_cementClusters;
+        std::unordered_map<ActiveSweets*, std::shared_ptr<CementCluster>> m_cementClusterLookup;
         // NOTE: Pending maps store non-owning pointers; clear them whenever a sweets/target entity is deleted.
         std::unordered_map<JointPairKey, PendingAdhesion, JointPairHash> m_pendingAdhesions;
         std::unordered_map<JointPairKey, PendingBreak, JointPairHash> m_pendingBreaks;
