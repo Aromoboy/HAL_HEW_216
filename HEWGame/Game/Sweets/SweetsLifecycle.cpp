@@ -520,6 +520,7 @@ namespace SweetsSpace
         {
             m_contacts->ClearContactState(sweets.get());
             m_contacts->ClearSweetsContact(sweets.get());
+            m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "Erase");
         }
         sweets->MarkPendingDestroy();
@@ -884,6 +885,11 @@ namespace SweetsSpace
                 << "' の描画登録を外せなかったよ ドローシステム未設定 \n";
             DebugTrace(oss.str());
             *m_warnedMissingDrawSystem = true;
+        }
+
+        if (m_contacts)
+        {
+            m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
         }
     }
 }

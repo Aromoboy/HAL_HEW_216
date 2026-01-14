@@ -177,6 +177,31 @@ namespace Systems
                         return createdFixtures > 0;
                     };
 
+                const auto resolveDroppedEventTag = [&](b2ShapeId shapeId, uint64_t bodyKey)
+                    {
+                        if (b2Shape_IsValid(shapeId))
+                        {
+                            if (Entities::PhysicalEntity* entity = GetEntityForShape(shapeId))
+                            {
+                                return entity->GetTag();
+                            }
+                        }
+
+                        if (bodyKey != 0)
+                        {
+                            const b2BodyId bodyId = b2LoadBodyId(bodyKey);
+                            if (b2Body_IsValid(bodyId))
+                            {
+                                if (Entities::PhysicalEntity* entity = GetEntityForBody(bodyId))
+                                {
+                                    return entity->GetTag();
+                                }
+                            }
+                        }
+
+                        return std::string("<unknown>");
+                    };
+
                 const auto recordDroppedEvent = [&](const char* eventType, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
                                                 std::string reason, uint64_t bodyKeyA, uint64_t bodyKeyB)
                     {
@@ -212,6 +237,12 @@ namespace Systems
                                 else
                                 {
                                         oss << "<invalid>";
+                                }
+                                if (eventType && std::string(eventType) == "end")
+                                {
+                                        const std::string tagA = resolveDroppedEventTag(shapeIdA, bodyKeyA);
+                                        const std::string tagB = resolveDroppedEventTag(shapeIdB, bodyKeyB);
+                                        oss << " tags='" << tagA << "','" << tagB << "'";
                                 }
                                 if (!it->first.reason.empty())
                                 {
