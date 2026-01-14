@@ -196,6 +196,7 @@ namespace SweetsSpace
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
+        std::size_t m_invalidContactEvents{ 0 };
         float m_creamAdhesionDelaySeconds{ 0.3f };
         float m_creamAdhesionGraceSeconds{ 0.08f };
         float m_creamBreakImpulseThreshold{ 0.0f };
