@@ -1680,20 +1680,14 @@ namespace SweetsSpace
             std::vector<Entities::PhysicalEntity*> invalidNeighbors;
             for (auto* neighbor : adjIt->second)
             {
-                if (!neighbor || !HasValidBodyAndShapes(neighbor))
+                if (!HasValidBodyAndShapes(neighbor))
                 {
-                    adjacencyComplete = false;
-                    break;
+                    invalidNeighbors.push_back(neighbor);
+                    continue;
                 }
 
                 if (visited.find(neighbor) != visited.end())
                 {
-                    continue;
-                }
-
-                if (!HasValidBodyAndShapes(neighbor))
-                {
-                    invalidNeighbors.push_back(neighbor);
                     continue;
                 }
 
@@ -1707,26 +1701,26 @@ namespace SweetsSpace
                 frontier.push(neighbor);
             }
 
-if (!invalidNeighbors.empty())
-{
-    if (auto currentIt = m_cementAdjacency.find(current);
-        currentIt != m_cementAdjacency.end())
-    {
-        for (auto* neighbor : invalidNeighbors)
-        {
-            currentIt->second.erase(neighbor);
-        }
-        if (currentIt->second.empty())
-        {
-            m_cementAdjacency.erase(currentIt);
-        }
-    }
+            if (!invalidNeighbors.empty())
+            {
+                if (auto currentIt = m_cementAdjacency.find(current);
+                    currentIt != m_cementAdjacency.end())
+                {
+                    for (auto* neighbor : invalidNeighbors)
+                    {
+                        currentIt->second.erase(neighbor);
+                    }
+                    if (currentIt->second.empty())
+                    {
+                        m_cementAdjacency.erase(currentIt);
+                    }
+                }
 
-    for (auto* neighbor : invalidNeighbors)
-    {
-        RemoveCementAdjacencyForEntity(neighbor);
-    }
-}
+                for (auto* neighbor : invalidNeighbors)
+                {
+                    RemoveCementAdjacencyForEntity(neighbor);
+                }
+            }
 
 
         std::shared_ptr<CementCluster> targetCluster;
