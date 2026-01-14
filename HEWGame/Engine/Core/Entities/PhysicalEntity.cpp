@@ -83,6 +83,13 @@ namespace Entities
 
     PhysicalEntity::~PhysicalEntity()
     {
+        if (m_physicsMachine)
+        {
+            std::ostringstream oss;
+            oss << "[PhysicalEntity] immediate destroy tag='" << GetTag()
+                << "' callsite=PhysicalEntity::~PhysicalEntity\n";
+            DebugTrace(oss.str());
+        }
         DetachPhysicsMachine();
     }
 

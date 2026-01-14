@@ -470,10 +470,14 @@ namespace SweetsSpace
                 continue;
             }
 
+            const auto lookupIt = m_pendingPhysicsUnregisterLookup.find(sweets.get());
+            const bool preserveColliderData = (lookupIt != m_pendingPhysicsUnregisterLookup.end())
+                ? lookupIt->second
+                : false;
             std::ostringstream oss;
             oss << kLogPrefix << "deferred unregister (Late) tag='" << sweets->GetTag() << "'\n";
             DebugTrace(oss.str());
-            m_physicsMachine->UnregisterBody(*sweets);
+            m_physicsMachine->UnregisterBody(*sweets, preserveColliderData);
         }
 
         m_pendingPhysicsUnregister.clear();
@@ -633,7 +637,7 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets, true);
+            EnqueueDeferredPhysicsUnregister(sweets, true);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
@@ -698,6 +702,10 @@ namespace SweetsSpace
                 warn << kLogPrefix << "ReleaseCarriedSweets fixtureCount=0 再登録 tag='"
                     << sweets->GetTag() << "'\n";
                 DebugTrace(warn.str());
+                std::ostringstream immediate;
+                immediate << kLogPrefix << "immediate destroy tag='" << sweets->GetTag()
+                    << "' callsite=SweetsLifecycle::ReleaseCarriedSweets (rebuild)\n";
+                DebugTrace(immediate.str());
                 sweets->DetachPhysicsMachine();
                 sweets->AttachPhysicsMachine(m_physicsMachine);
             }
@@ -934,10 +942,7 @@ namespace SweetsSpace
             const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
             if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
             {
-                if (m_pendingPhysicsUnregisterLookup.insert(sweets.get()).second)
-                {
-                    m_pendingPhysicsUnregister.push_back(sweets);
-                }
+                EnqueueDeferredPhysicsUnregister(sweets, false);
             }
         }
         else if (logWarnings && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
@@ -967,5 +972,25 @@ namespace SweetsSpace
             m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
             m_contacts->UnregisterSweetsHandle(sweets.get());
         }
+    }
+
+    void SweetsLifecycle::EnqueueDeferredPhysicsUnregister(const std::shared_ptr<ActiveSweets>& sweets, bool preserveColliderData)
+    {
+        if (!sweets || !m_physicsMachine)
+        {
+            return;
+        }
+
+        const auto [it, inserted] = m_pendingPhysicsUnregisterLookup.emplace(sweets.get(), preserveColliderData);
+        if (!inserted)
+        {
+            if (preserveColliderData && !it->second)
+            {
+                it->second = true;
+            }
+            return;
+        }
+
+        m_pendingPhysicsUnregister.push_back(sweets);
     }
 }
