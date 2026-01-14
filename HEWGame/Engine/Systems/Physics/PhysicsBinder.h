@@ -19,6 +19,7 @@ namespace Systems
         void RegisterPhysicsBody(Entities::PhysicalEntity& entity) override;
         void UnregisterPhysicsBody(Entities::PhysicalEntity* entity) override;
         void UnregisterAllPhysicsBodies() override;
+        Core::IUpdatable* GetRegistrationLateUpdateNode() override;
         void ValidatePlayerPhysicsRegistration() override;
         void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
             ContactHitCallback onHit) override;

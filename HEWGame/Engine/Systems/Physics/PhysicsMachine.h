@@ -62,6 +62,7 @@ namespace Systems
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
         Core::IUpdatable* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
+        bool IsContactDispatching() const noexcept;
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);
@@ -102,5 +103,6 @@ namespace Systems
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;
         bool m_loggedFirstTick = false;
+        bool m_isDispatchingContacts = false;
     };
 }

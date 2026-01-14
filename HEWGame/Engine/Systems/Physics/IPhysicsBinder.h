@@ -7,6 +7,11 @@ namespace Entities
     class PhysicalEntity;
 }
 
+namespace Core
+{
+    class IUpdatable;
+}
+
 namespace Systems
 {
     class PhysicsMachine;
@@ -25,6 +30,7 @@ namespace Systems
         virtual void RegisterPhysicsBody(Entities::PhysicalEntity& entity) = 0;
         virtual void UnregisterPhysicsBody(Entities::PhysicalEntity* entity) = 0;
         virtual void UnregisterAllPhysicsBodies() = 0;
+        virtual Core::IUpdatable* GetRegistrationLateUpdateNode() = 0;
         virtual void ValidatePlayerPhysicsRegistration() = 0;
         virtual void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd, ContactCallback onLost,
             ContactHitCallback onHit) = 0;
