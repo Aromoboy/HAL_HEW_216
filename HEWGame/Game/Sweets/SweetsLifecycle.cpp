@@ -660,7 +660,6 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            constexpr float kRecentRebuildCooldownSeconds = 0.25f;
             m_physicsMachine->RegisterBody(*sweets);
             const auto& colliderComponent = sweets->GetBoxColliderComponent();
             const int createdFixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
@@ -673,7 +672,6 @@ namespace SweetsSpace
                 sweets->DetachPhysicsMachine();
                 sweets->AttachPhysicsMachine(m_physicsMachine);
             }
-            sweets->SetRecentlyRebuiltCooldownSeconds(kRecentRebuildCooldownSeconds);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {

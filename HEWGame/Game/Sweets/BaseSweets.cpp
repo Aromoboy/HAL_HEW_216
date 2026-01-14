@@ -57,17 +57,10 @@ namespace SweetsSpace
 
     void BaseSweets::OnUpdate(const Core::UpdateContext& ctx)
     {
-        if (m_recentlyReleasedSecondsRemaining > 0.0f || m_recentlyRebuiltSecondsRemaining > 0.0f)
+        if (m_recentlyReleasedSecondsRemaining > 0.0f)
         {
             const float dt = std::isfinite(ctx.dt) ? std::max(0.0f, ctx.dt) : 0.0f;
-            if (m_recentlyReleasedSecondsRemaining > 0.0f)
-            {
-                m_recentlyReleasedSecondsRemaining = std::max(0.0f, m_recentlyReleasedSecondsRemaining - dt);
-            }
-            if (m_recentlyRebuiltSecondsRemaining > 0.0f)
-            {
-                m_recentlyRebuiltSecondsRemaining = std::max(0.0f, m_recentlyRebuiltSecondsRemaining - dt);
-            }
+            m_recentlyReleasedSecondsRemaining = std::max(0.0f, m_recentlyReleasedSecondsRemaining - dt);
         }
         SyncFromPhysics();
         Entities::PhysicalEntity::OnUpdate(ctx);
