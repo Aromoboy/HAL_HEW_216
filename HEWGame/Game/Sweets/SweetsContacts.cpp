@@ -44,10 +44,6 @@ namespace
     }
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
-    constexpr float kCreamWeldLinearHertz = 6.0f;
-    constexpr float kCreamWeldAngularHertz = 6.0f;
-    constexpr float kCreamWeldLinearDampingRatio = 0.7f;
-    constexpr float kCreamWeldAngularDampingRatio = 0.7f;
     constexpr float kCreamWeldBreakGraceSeconds = 0.25f;
     constexpr const char* kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
@@ -132,6 +128,11 @@ namespace SweetsSpace
         m_creamRequireSupport = settings.requireSupport;
         m_creamRequireCarried = settings.requireCarried;
         m_creamAllowAirAdhesionToSweets = settings.allowAirAdhesionToSweets;
+        m_creamWeldLinearHertz = std::max(0.0f, settings.weldLinearHertz);
+        m_creamWeldAngularHertz = std::max(0.0f, settings.weldAngularHertz);
+        m_creamWeldLinearDampingRatio = std::max(0.0f, settings.weldLinearDampingRatio);
+        m_creamWeldAngularDampingRatio = std::max(0.0f, settings.weldAngularDampingRatio);
+        m_creamWeldBreakImpulseThreshold = std::max(0.0f, settings.breakImpulseThreshold);
         m_creamAllowedTags.clear();
         for (const auto& tag : settings.allowedTags)
         {
@@ -151,6 +152,22 @@ namespace SweetsSpace
                 m_creamBlockedTags.insert(normalized);
             }
         }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "クリーム接着設定を適用したよ "
+            << "delay=" << m_creamAdhesionDelaySeconds
+            << " grace=" << m_creamAdhesionGraceSeconds
+            << " requireSupport=" << std::boolalpha << m_creamRequireSupport
+            << " requireCarried=" << std::boolalpha << m_creamRequireCarried
+            << " allowAirAdhesionToSweets=" << std::boolalpha << m_creamAllowAirAdhesionToSweets
+            << std::noboolalpha
+            << " weldLinearHertz=" << m_creamWeldLinearHertz
+            << " weldAngularHertz=" << m_creamWeldAngularHertz
+            << " weldLinearDampingRatio=" << m_creamWeldLinearDampingRatio
+            << " weldAngularDampingRatio=" << m_creamWeldAngularDampingRatio
+            << " breakImpulseThreshold=" << m_creamWeldBreakImpulseThreshold
+            << "\n";
+        LogInfoAndTrace(oss.str());
     }
 
     void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
@@ -403,7 +420,8 @@ namespace SweetsSpace
     {
         CleanupInvalidContacts();
 
-        if (m_pendingAdhesions.empty() && m_pendingBreaks.empty())
+        const bool checkBreakImpulse = m_creamWeldBreakImpulseThreshold > 0.0f;
+        if (m_pendingAdhesions.empty() && m_pendingBreaks.empty() && !checkBreakImpulse)
         {
             return;
         }
@@ -484,6 +502,58 @@ namespace SweetsSpace
 
             BreakCreamWeldJoint(pending.cream, pending.other, "OnUpdate");
             it = m_pendingBreaks.erase(it);
+        }
+
+        if (checkBreakImpulse && m_physicsMachine && !m_creamWeldJoints.empty())
+        {
+            std::vector<std::pair<JointPairKey, float>> jointsToBreak;
+            jointsToBreak.reserve(m_creamWeldJoints.size());
+
+            for (const auto& pair : m_creamWeldJoints)
+            {
+                const b2JointId jointId = pair.second;
+                if (!b2Joint_IsValid(jointId))
+                {
+                    continue;
+                }
+
+                const b2Vec2 force = b2Joint_GetConstraintForce(jointId);
+                const float forceMagnitude = std::sqrt((force.x * force.x) + (force.y * force.y));
+                const float impulse = forceMagnitude * dt;
+                if (impulse >= m_creamWeldBreakImpulseThreshold)
+                {
+                    jointsToBreak.emplace_back(pair.first, impulse);
+                }
+            }
+
+            for (const auto& entry : jointsToBreak)
+            {
+                const JointPairKey& key = entry.first;
+                const float impulse = entry.second;
+                Entities::PhysicalEntity* first = key.first;
+                Entities::PhysicalEntity* second = key.second;
+                auto* cream = dynamic_cast<ActiveSweets*>(first);
+                Entities::PhysicalEntity* other = second;
+                if (!cream || !IsCreamTag(cream->GetTag()))
+                {
+                    cream = dynamic_cast<ActiveSweets*>(second);
+                    other = first;
+                }
+
+                if (!cream || !other)
+                {
+                    continue;
+                }
+
+                std::ostringstream oss;
+                oss << kLogPrefix << "クリーム接着の破断閾値を超えたよ cream='"
+                    << cream->GetTag() << "' other='" << other->GetTag()
+                    << "' threshold=" << m_creamWeldBreakImpulseThreshold
+                    << " impulse=" << impulse << "\n";
+                LogInfoAndTrace(oss.str());
+
+                BreakCreamWeldJoint(cream, other, "BreakImpulseThreshold");
+            }
         }
     }
 
@@ -1053,10 +1123,10 @@ namespace SweetsSpace
             *cream,
             *other,
             anchor,
-            kCreamWeldLinearHertz,
-            kCreamWeldLinearDampingRatio,
-            kCreamWeldAngularHertz,
-            kCreamWeldAngularDampingRatio,
+            m_creamWeldLinearHertz,
+            m_creamWeldLinearDampingRatio,
+            m_creamWeldAngularHertz,
+            m_creamWeldAngularDampingRatio,
             false);
         if (!b2Joint_IsValid(jointId))
         {
@@ -1421,10 +1491,10 @@ namespace SweetsSpace
                 *cluster.anchor,
                 *member,
                 anchor,
-                kCreamWeldLinearHertz,
-                kCreamWeldLinearDampingRatio,
-                kCreamWeldAngularHertz,
-                kCreamWeldAngularDampingRatio,
+                m_creamWeldLinearHertz,
+                m_creamWeldLinearDampingRatio,
+                m_creamWeldAngularHertz,
+                m_creamWeldAngularDampingRatio,
                 false);
             if (!b2Joint_IsValid(jointId))
             {

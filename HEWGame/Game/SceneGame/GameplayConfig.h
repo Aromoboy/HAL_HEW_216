@@ -27,6 +27,11 @@ namespace GameplayConfig
     inline constexpr const char* kCreamKeyRequireSupport = "requireSupport";
     inline constexpr const char* kCreamKeyRequireCarried = "requireCarried";
     inline constexpr const char* kCreamKeyAllowAirAdhesionToSweets = "allowAirAdhesionToSweets";
+    inline constexpr const char* kCreamKeyWeldLinearHertz = "weldLinearHertz";
+    inline constexpr const char* kCreamKeyWeldAngularHertz = "weldAngularHertz";
+    inline constexpr const char* kCreamKeyWeldLinearDampingRatio = "weldLinearDampingRatio";
+    inline constexpr const char* kCreamKeyWeldAngularDampingRatio = "weldAngularDampingRatio";
+    inline constexpr const char* kCreamKeyBreakImpulseThreshold = "breakImpulseThreshold";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionPowerUps = "powerups";

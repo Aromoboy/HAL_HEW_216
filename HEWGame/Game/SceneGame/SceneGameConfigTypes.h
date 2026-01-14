@@ -147,6 +147,11 @@ namespace SceneGameConfig
         bool requireSupport = true;
         bool requireCarried = true;
         bool allowAirAdhesionToSweets = false;
+        float weldLinearHertz = 6.0f;
+        float weldAngularHertz = 6.0f;
+        float weldLinearDampingRatio = 0.7f;
+        float weldAngularDampingRatio = 0.7f;
+        float breakImpulseThreshold = 0.0f;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

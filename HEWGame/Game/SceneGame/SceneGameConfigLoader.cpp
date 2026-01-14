@@ -2811,6 +2811,11 @@ namespace SceneGameConfig
         settings.requireSupport = false;
         settings.requireCarried = false;
         settings.allowAirAdhesionToSweets = true;
+        settings.weldLinearHertz = 6.0f;
+        settings.weldAngularHertz = 6.0f;
+        settings.weldLinearDampingRatio = 0.7f;
+        settings.weldAngularDampingRatio = 0.7f;
+        settings.breakImpulseThreshold = 0.0f;
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCream, lines))
@@ -2885,6 +2890,41 @@ namespace SceneGameConfig
                     std::ostringstream oss;
                     oss << kLogPrefix << "Invalid bool for key '" << key << "' in cream config.\n";
                     ::DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyWeldLinearHertz)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.weldLinearHertz = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyWeldAngularHertz)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.weldAngularHertz = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyWeldLinearDampingRatio)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.weldLinearDampingRatio = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyWeldAngularDampingRatio)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.weldAngularDampingRatio = std::max(0.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCreamKeyBreakImpulseThreshold)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.breakImpulseThreshold = std::max(0.0f, *parsed);
                 }
             }
         }

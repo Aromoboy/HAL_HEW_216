@@ -154,6 +154,11 @@ namespace SweetsSpace
         bool m_creamRequireSupport{ true };
         bool m_creamRequireCarried{ true };
         bool m_creamAllowAirAdhesionToSweets{ false };
+        float m_creamWeldLinearHertz{ 6.0f };
+        float m_creamWeldAngularHertz{ 6.0f };
+        float m_creamWeldLinearDampingRatio{ 0.7f };
+        float m_creamWeldAngularDampingRatio{ 0.7f };
+        float m_creamWeldBreakImpulseThreshold{ 0.0f };
         std::unordered_set<std::string> m_creamAllowedTags;
         std::unordered_set<std::string> m_creamBlockedTags;
 
