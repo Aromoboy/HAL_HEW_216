@@ -208,12 +208,6 @@ namespace SweetsSpace
             return;
         }
 
-        const bool adjacencyUpdated = UpdateCementAdjacencyBegin(a, b);
-        if (adjacencyUpdated)
-        {
-            RequestCementClusterRebuild(a, b);
-        }
-
         if (sweetsA)
         {
             UpdateContactStateBegin(sweetsA, b);
@@ -348,8 +342,6 @@ namespace SweetsSpace
         {
             return;
         }
-
-        UpdateCementAdjacencyEnd(a, b);
 
         if (sweetsA)
         {
@@ -1439,21 +1431,11 @@ namespace SweetsSpace
                   << "' を溶接したよ \n";
         LogInfoAndTrace(cementLog.str());
 
-        auto pendingIt = m_pendingCementClusters.find(key);
-        if (pendingIt == m_pendingCementClusters.end())
+        if (auto pendingIt = m_pendingCementClusters.find(key); pendingIt != m_pendingCementClusters.end())
         {
-            PendingCementCluster pending{};
-            pending.cream = cream;
-            pending.other = other;
-            pending.elapsedSeconds = m_creamAdhesionDelaySeconds;
-            m_pendingCementClusters.emplace(key, pending);
+            m_pendingCementClusters.erase(pendingIt);
         }
-        else
-        {
-            pendingIt->second.cream = cream;
-            pendingIt->second.other = other;
-            pendingIt->second.elapsedSeconds = m_creamAdhesionDelaySeconds;
-        }
+        LogInfoAndTrace(std::string(kLogPrefix) + "cement cluster disabled\n");
     }
 
     void SweetsContacts::BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context)
