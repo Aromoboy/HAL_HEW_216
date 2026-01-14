@@ -47,6 +47,7 @@ namespace
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kCreamWeldBreakGraceSeconds = 0.25f;
+    constexpr std::size_t kInvalidContactLogInterval = 50;
     const std::string kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
     constexpr const char* kBlockedFairyKey = "fairy";
@@ -201,13 +202,17 @@ namespace SweetsSpace
 
     void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
-        if (m_isResetting)
-        {
-            return;
-        }
-
         if (!a || !b)
+        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b) || m_isResetting)
         {
+            const std::size_t count = ++m_invalidContactEvents;
+            if (count == 1 || (count % kInvalidContactLogInterval == 0))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "invalid contact filtered count=" << count
+                    << " last=begin\n";
+                LogInfoAndTrace(oss.str());
+            }
             return;
         }
 
@@ -341,13 +346,18 @@ namespace SweetsSpace
 
     void SweetsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
-        if (m_isResetting)
-        {
-            return;
-        }
 
         if (!a || !b)
+        if (!HasValidBodyAndShapes(a) || !HasValidBodyAndShapes(b) || m_isResetting)
         {
+            const std::size_t count = ++m_invalidContactEvents;
+            if (count == 1 || (count % kInvalidContactLogInterval == 0))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "invalid contact filtered count=" << count
+                    << " last=end\n";
+                LogInfoAndTrace(oss.str());
+            }
             return;
         }
 
