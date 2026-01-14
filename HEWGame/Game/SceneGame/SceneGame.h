@@ -54,9 +54,11 @@ namespace SweetsSpace
 
 class SceneGameUIOverlay;
 class UIManager;
+class SceneGameLateResetNode;
 
 class SceneGame : public SceneSpace::Scene, public SceneSpace::IScene, public SceneSpace::ISceneServices
 {
+    friend class SceneGameLateResetNode;
 public:
     enum class StageState
     {
@@ -104,6 +106,7 @@ private:
     void OnStageStart();
     void OnStageClear();
     void OnStageFail();
+    void OnLateUpdate(const Core::UpdateContext& ctx);
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
@@ -130,6 +133,7 @@ protected:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
+    bool m_resetLateRegistered = false;
     bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
@@ -171,6 +175,8 @@ protected:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
+    bool m_pendingReset = false;
+    std::unique_ptr<Core::UpdateNode> m_resetLateNode;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;

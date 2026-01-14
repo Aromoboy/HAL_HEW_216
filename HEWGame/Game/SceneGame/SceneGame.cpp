@@ -51,6 +51,24 @@
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
 
+class SceneGameLateResetNode : public Core::UpdateNode
+{
+public:
+    explicit SceneGameLateResetNode(SceneGame& owner)
+        : Core::UpdateNode(Core::UpdatePhase::Late, 0)
+        , m_owner(owner)
+    {
+    }
+
+    void OnUpdate(const Core::UpdateContext& ctx) override
+    {
+        m_owner.OnLateUpdate(ctx);
+    }
+
+private:
+    SceneGame& m_owner;
+};
+
 #if defined(_WIN32)
 #       ifndef NOMINMAX
 #               define NOMINMAX
@@ -774,6 +792,12 @@ SceneGame::~SceneGame()
         m_drawRegistered = false;
     }
 
+    if (m_resetLateRegistered && m_resetLateNode)
+    {
+        Unregister(*m_resetLateNode);
+        m_resetLateRegistered = false;
+    }
+
     if (m_sweetsLateRegistered && m_sweetsManager)
     {
         if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
@@ -873,6 +897,16 @@ void SceneGame::ConfigureUpdates()
                 {
                         m_sweetsLateRegistered = Register(*lateNode);
                 }
+        }
+
+        if (!m_resetLateNode)
+        {
+                m_resetLateNode = std::make_unique<SceneGameLateResetNode>(*this);
+        }
+
+        if (!m_resetLateRegistered && m_resetLateNode)
+        {
+                m_resetLateRegistered = Register(*m_resetLateNode);
         }
 
 
@@ -990,12 +1024,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
-            if (m_sweetsManager)
-            {
-                m_sweetsManager->SetResetting(true);
-                m_sweetsManager->ClearRetryContacts();
-            }
-            SetStageState(StageState::Playing);
+            m_pendingReset = true;
         }
         fRads.z += 0.001f;
 
@@ -1865,6 +1894,26 @@ void SceneGame::OnStageFail()
     oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
         << peakHeight << "m score=" << score << "\n";
     ::DebugTrace(oss.str());
+}
+
+void SceneGame::OnLateUpdate(const Core::UpdateContext& ctx)
+{
+    (void)ctx;
+
+    if (!m_pendingReset)
+    {
+        return;
+    }
+
+    m_pendingReset = false;
+
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetResetting(true);
+        m_sweetsManager->ClearRetryContacts();
+    }
+
+    ResetPlaySession();
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
