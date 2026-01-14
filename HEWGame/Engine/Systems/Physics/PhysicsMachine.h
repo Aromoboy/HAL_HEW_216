@@ -80,6 +80,8 @@ namespace Systems
             float angularDampingRatio,
             bool collideConnected = false);
         void DestroyJoint(b2JointId jointId, bool wakeAttached = true);
+        void DisableContactListenerWorld();
+        void RestoreContactListenerWorld();
 
         void SyncBodies(float dt);
         void OnUpdate(const Core::UpdateContext& ctx) override;

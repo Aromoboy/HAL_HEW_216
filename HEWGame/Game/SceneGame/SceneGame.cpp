@@ -1150,6 +1150,33 @@ void SceneGame::ResetGuidelineHeight()
                                   m_stageData.GetGuidelineStep());
 }
 
+void SceneGame::DisableContactListenerOnReset()
+{
+    if (!m_physicsBinder)
+    {
+        return;
+    }
+
+    if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+    {
+        physicsMachine->DisableContactListenerWorld();
+        DebugTrace(std::string(kLogPrefix) + "ContactListener disabled on reset.\n");
+    }
+}
+
+void SceneGame::RestoreContactListenerAfterReset()
+{
+    if (!m_physicsBinder)
+    {
+        return;
+    }
+
+    if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+    {
+        physicsMachine->RestoreContactListenerWorld();
+    }
+}
+
 
 #if defined(_DEBUG)
 void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
@@ -1924,6 +1951,8 @@ void SceneGame::OnLateUpdate(const Core::UpdateContext& ctx)
 
     m_pendingReset = false;
 
+    DisableContactListenerOnReset();
+
     if (m_sweetsManager)
     {
         m_sweetsManager->SetResetting(true);
@@ -1931,6 +1960,7 @@ void SceneGame::OnLateUpdate(const Core::UpdateContext& ctx)
     }
 
     ResetPlaySession();
+    RestoreContactListenerAfterReset();
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
