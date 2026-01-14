@@ -115,6 +115,14 @@ namespace
         const auto& colliderComponent = body.GetBoxColliderComponent();
         return static_cast<bool>(colliderComponent);
     }
+
+    void LogImmediateDestroy(const Entities::PhysicalEntity& body, const char* callsite)
+    {
+        std::ostringstream oss;
+        oss << "[PhysicsMachine] immediate destroy tag='" << body.GetTag()
+            << "' callsite=" << callsite << "\n";
+        DebugTrace(oss.str());
+    }
 }
 
 namespace Systems
@@ -434,11 +442,13 @@ namespace Systems
                 DebugTrace(oss.str());
             }
 #endif
+            LogImmediateDestroy(body, "PhysicsMachine::UnregisterBody");
             DestroyBody(body, preserveColliderData);
             return;
         }
 
         m_bodies.erase(it, m_bodies.end());
+        LogImmediateDestroy(body, "PhysicsMachine::UnregisterBody");
         DestroyBody(body, preserveColliderData);
     }
 
@@ -448,6 +458,7 @@ namespace Systems
         {
             if (body)
             {
+                LogImmediateDestroy(*body, "PhysicsMachine::ClearBodies");
                 DestroyBody(*body, false);
             }
         }

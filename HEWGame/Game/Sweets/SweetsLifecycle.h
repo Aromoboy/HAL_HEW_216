@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -60,6 +61,7 @@ namespace SweetsSpace
 
     private:
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings);
+        void EnqueueDeferredPhysicsUnregister(const std::shared_ptr<ActiveSweets>& sweets, bool preserveColliderData);
 
         SweetsRegistry* m_registry;
         SweetsContacts* m_contacts;
@@ -72,7 +74,7 @@ namespace SweetsSpace
         bool* m_warnedMissingScheduler;
 
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
-        std::unordered_set<ActiveSweets*> m_pendingPhysicsUnregisterLookup;
+        std::unordered_map<ActiveSweets*, bool> m_pendingPhysicsUnregisterLookup;
         std::vector<std::shared_ptr<ActiveSweets>> m_pendingPhysicsUnregister;
         bool m_hasHorizontalBounds{ false };
         float m_minHorizontalBound{ 0.0f };

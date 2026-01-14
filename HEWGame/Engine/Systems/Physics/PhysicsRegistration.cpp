@@ -34,6 +34,14 @@ namespace
         (void)message;
 #endif
     }
+
+    void LogImmediateDestroy(const Entities::PhysicalEntity& entity, const char* callsite)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "immediate destroy tag='" << entity.GetTag()
+            << "' callsite=" << callsite << "\n";
+        DebugTrace(oss.str());
+    }
 }
 
 namespace Systems
@@ -146,6 +154,7 @@ namespace Systems
                     << ", fixtures=" << fixtureCount << "); attempting immediate rebuild.\n";
                 ::DebugTrace(oss.str());
 
+                LogImmediateDestroy(entity, "PhysicsRegistration::RegisterPhysicsBody (rebuild attempt)");
                 entity.DetachPhysicsMachine();
                 entity.AttachPhysicsMachine(m_physicsMachine);
 
@@ -159,6 +168,7 @@ namespace Systems
                         << ", fixtures=" << rebuiltFixtures << ").\n";
                     ::DebugTrace(errorOss.str());
 
+                    LogImmediateDestroy(entity, "PhysicsRegistration::RegisterPhysicsBody (rebuild failed)");
                     entity.DetachPhysicsMachine();
                     m_registeredPhysicsBodies.erase(&entity);
                     return;
@@ -233,6 +243,7 @@ namespace Systems
 
         if (m_physicsMachine)
         {
+            LogImmediateDestroy(*entity, "PhysicsRegistration::UnregisterPhysicsBody");
             entity->DetachPhysicsMachine();
         }
         else
