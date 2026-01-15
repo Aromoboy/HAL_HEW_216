@@ -306,6 +306,11 @@ namespace SweetsSpace
         return m_contacts.HasEverCollidedWithSweets(sweets);
     }
 
+    bool SweetsManager::IsAnchoredToCake(const ActiveSweets& sweets) const
+    {
+        return m_contacts.IsAnchoredToCake(sweets);
+    }
+
     int SweetsManager::GetSweetsCount() const
     {
         return m_registry.CountAll();

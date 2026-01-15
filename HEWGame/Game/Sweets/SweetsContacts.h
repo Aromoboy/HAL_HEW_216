@@ -51,6 +51,7 @@ namespace SweetsSpace
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
+        bool IsAnchoredToCake(const ActiveSweets& sweets) const;
 
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
@@ -158,6 +159,7 @@ namespace SweetsSpace
         bool ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
             const ContactAnchorData& anchorData, b2Vec2& outAnchor) const;
         bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
+        Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
         void FreezeFruitBody(ActiveSweets& fruit);
         void UnfreezeFruitBody(ActiveSweets& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;

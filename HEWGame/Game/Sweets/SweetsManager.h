@@ -133,6 +133,7 @@ namespace SweetsSpace
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
+        bool IsAnchoredToCake(const ActiveSweets& sweets) const;
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;

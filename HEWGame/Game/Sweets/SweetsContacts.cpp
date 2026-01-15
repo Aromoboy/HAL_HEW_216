@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -485,6 +486,53 @@ namespace SweetsSpace
             });
     }
 
+    Entities::PhysicalEntity* SweetsContacts::GetEntityForShape(b2ShapeId shapeId) const
+    {
+        if (!b2Shape_IsValid(shapeId))
+        {
+            return nullptr;
+        }
+
+        if (void* userData = b2Shape_GetUserData(shapeId))
+        {
+            return static_cast<Entities::PhysicalEntity*>(userData);
+        }
+
+        const b2BodyId bodyId = b2Shape_GetBody(shapeId);
+        if (!b2Body_IsValid(bodyId))
+        {
+            return nullptr;
+        }
+
+        if (void* bodyData = b2Body_GetUserData(bodyId))
+        {
+            return static_cast<Entities::PhysicalEntity*>(bodyData);
+        }
+
+        if (!m_physicsMachine)
+        {
+            return nullptr;
+        }
+
+        const uint64_t targetKey = b2StoreBodyId(bodyId);
+        const auto& bodies = m_physicsMachine->GetBodies();
+        for (Entities::PhysicalEntity* entity : bodies)
+        {
+            if (!entity)
+            {
+                continue;
+            }
+
+            const b2BodyId entityBodyId = entity->GetBox2DBodyId();
+            if (b2Body_IsValid(entityBodyId) && b2StoreBodyId(entityBodyId) == targetKey)
+            {
+                return entity;
+            }
+        }
+
+        return nullptr;
+    }
+
     bool SweetsContacts::ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
         const ContactAnchorData& anchorData, b2Vec2& outAnchor) const
     {
@@ -848,6 +896,116 @@ namespace SweetsSpace
     bool SweetsContacts::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
     {
         return m_hasSweetsContact.find(const_cast<ActiveSweets*>(&sweets)) != m_hasSweetsContact.end();
+    }
+
+    bool SweetsContacts::IsAnchoredToCake(const ActiveSweets& sweets) const
+    {
+        std::deque<ActiveSweets*> queue;
+        std::unordered_set<ActiveSweets*> visited;
+        ActiveSweets* start = const_cast<ActiveSweets*>(&sweets);
+        queue.push_back(start);
+        visited.insert(start);
+
+        std::unordered_map<ActiveSweets*, std::vector<ActiveSweets*>> creamToFruits;
+        if (!m_creamWeldJoints.empty())
+        {
+            for (const auto& entry : m_creamWeldJoints)
+            {
+                ActiveSweets* cream = entry.second.cream;
+                ActiveSweets* fruit = entry.second.fruit;
+                if (cream && fruit)
+                {
+                    creamToFruits[cream].push_back(fruit);
+                }
+            }
+        }
+
+        while (!queue.empty())
+        {
+            ActiveSweets* current = queue.front();
+            queue.pop_front();
+            if (!current)
+            {
+                continue;
+            }
+
+            if (m_creamAnchorJoints.contains(current))
+            {
+                return true;
+            }
+
+            const b2BodyId bodyId = current->GetBox2DBodyId();
+            if (b2Body_IsValid(bodyId))
+            {
+                const int capacity = b2Body_GetContactCapacity(bodyId);
+                if (capacity > 0)
+                {
+                    std::vector<b2ContactData> contacts(static_cast<std::size_t>(capacity));
+                    const int count = b2Body_GetContactData(bodyId, contacts.data(), capacity);
+                    for (int i = 0; i < count; ++i)
+                    {
+                        const b2ContactData& data = contacts[static_cast<std::size_t>(i)];
+                        if (data.manifold.pointCount <= 0)
+                        {
+                            continue;
+                        }
+
+                        const bool isShapeA = DoesShapeBelongToEntity(*current, data.shapeIdA);
+                        const bool isShapeB = DoesShapeBelongToEntity(*current, data.shapeIdB);
+                        if (isShapeA == isShapeB)
+                        {
+                            continue;
+                        }
+
+                        const b2ShapeId otherShape = isShapeA ? data.shapeIdB : data.shapeIdA;
+                        Entities::PhysicalEntity* otherEntity = GetEntityForShape(otherShape);
+                        if (!otherEntity || otherEntity == current)
+                        {
+                            continue;
+                        }
+
+                        if (IsCakeTag(otherEntity->GetTag()))
+                        {
+                            return true;
+                        }
+
+                        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(otherEntity))
+                        {
+                            if (visited.insert(otherSweets).second)
+                            {
+                                queue.push_back(otherSweets);
+                            }
+                        }
+                    }
+                }
+            }
+
+            auto fruitIt = m_fruitToCreams.find(current);
+            if (fruitIt != m_fruitToCreams.end())
+            {
+                for (ActiveSweets* cream : fruitIt->second)
+                {
+                    if (cream && visited.insert(cream).second)
+                    {
+                        queue.push_back(cream);
+                    }
+                }
+            }
+
+            auto creamIt = creamToFruits.find(current);
+            if (creamIt != creamToFruits.end())
+            {
+                for (ActiveSweets* fruit : creamIt->second)
+                {
+                    if (fruit && visited.insert(fruit).second)
+                    {
+                        queue.push_back(fruit);
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     void SweetsContacts::ClearContactState(ActiveSweets* sweets)

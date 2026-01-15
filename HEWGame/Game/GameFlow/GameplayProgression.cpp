@@ -155,8 +155,7 @@ namespace GameplayProgression
                     continue;
                 }
 
-                bool foundationOnly = false;
-                if (!input.sweetsManager->HasSupportingContact(*sweets, &foundationOnly))
+                if (!input.sweetsManager->IsAnchoredToCake(*sweets))
                 {
                     continue;
                 }
