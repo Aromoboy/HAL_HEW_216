@@ -226,6 +226,7 @@ private:
 	float			m_parametricBlend;	// パラメトリックの再生割合
 
 	Transforms		m_nodeTransform[MAX_TRANSFORM];	// アニメーション別変形情報
+	Transforms		m_bindLocal;						// バインド姿勢のローカル変形情報
 
 
 	// 以下越智による変更点
