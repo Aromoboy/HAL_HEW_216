@@ -525,27 +525,6 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         bool meshHasBounds = false;
 
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
-        MeshNodeTransformDX meshNodeTransform;
-        {
-            const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
-            {
-                if (!node)
-                {
-                    return nullptr;
-                }
-                if (name == node->mName)
-                {
-                    return node;
-                }
-                for (unsigned int childIdx = 0; childIdx < node->mNumChildren; ++childIdx)
-                {
-                    if (const aiNode* found = self(self, node->mChildren[childIdx], name))
-                    {
-                        return found;
-                    }
-                }
-                return nullptr;
-            };
 
             const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
             if (matchedNode)
@@ -603,29 +582,41 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             {
                 normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
             }
+            if (meshNodeTransform.hasTransform)
+            {
+                normalVec = DirectX::XMVector3TransformNormal(normalVec, normalTransform);
+                normalVec = DirectX::XMVector3Normalize(normalVec);
+            }
 
             DirectX::XMFLOAT3 normalFloat;
             DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
-            vertices[j].pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
+            DirectX::XMVECTOR posVec = DirectX::XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
+            if (meshNodeTransform.hasTransform)
+            {
+                posVec = DirectX::XMVector3TransformCoord(posVec, vertexTransform);
+            }
+            DirectX::XMFLOAT3 posFloat;
+            DirectX::XMStoreFloat3(&posFloat, posVec);
+            vertices[j].pos = posFloat;
             vertices[j].normal = normalFloat;
             vertices[j].uv = DirectX::XMFLOAT2(uv.x, uv.y);
             vertices[j].color = DirectX::XMFLOAT4(col.r, col.g, col.b, col.a);
 
-            minBounds.x = std::min(minBounds.x, pos.x);
-            minBounds.y = std::min(minBounds.y, pos.y);
-            minBounds.z = std::min(minBounds.z, pos.z);
-            maxBounds.x = std::max(maxBounds.x, pos.x);
-            maxBounds.y = std::max(maxBounds.y, pos.y);
-            maxBounds.z = std::max(maxBounds.z, pos.z);
+            minBounds.x = std::min(minBounds.x, posFloat.x);
+            minBounds.y = std::min(minBounds.y, posFloat.y);
+            minBounds.z = std::min(minBounds.z, posFloat.z);
+            maxBounds.x = std::max(maxBounds.x, posFloat.x);
+            maxBounds.y = std::max(maxBounds.y, posFloat.y);
+            maxBounds.z = std::max(maxBounds.z, posFloat.z);
             hasBounds = true;
 
-            meshMin.x = std::min(meshMin.x, pos.x);
-            meshMin.y = std::min(meshMin.y, pos.y);
-            meshMin.z = std::min(meshMin.z, pos.z);
-            meshMax.x = std::max(meshMax.x, pos.x);
-            meshMax.y = std::max(meshMax.y, pos.y);
-            meshMax.z = std::max(meshMax.z, pos.z);
+            meshMin.x = std::min(meshMin.x, posFloat.x);
+            meshMin.y = std::min(meshMin.y, posFloat.y);
+            meshMin.z = std::min(meshMin.z, posFloat.z);
+            meshMax.x = std::max(meshMax.x, posFloat.x);
+            meshMax.y = std::max(meshMax.y, posFloat.y);
+            meshMax.z = std::max(meshMax.z, posFloat.z);
             meshHasBounds = true;
         }
 
@@ -640,7 +631,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         std::vector<BoneDX> bones;
         // ボーン生成
-        MakeVertexWeight(pScene, i, meshNodeTransform, a_nodes, vertices, bones);
+        MakeVertexWeight(pScene, i, a_nodes, vertices, bones);
 
         // インデックス
         indices.resize(mesh->mNumFaces * 3);
@@ -1263,17 +1254,17 @@ NodeIndexDX AssimpModelLorder::FindNode(const char* name, const std::vector<Node
     return static_cast<NodeIndexDX>(it - nodes.begin());
 }
 
-void AssimpModelLorder::MakeVertexWeight(const void* ptr, int a_meshIndex, const MeshNodeTransformDX& meshNodeTransform, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeight(const void* ptr, int a_meshIndex, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     aiMesh* assimpMesh = pScene->mMeshes[a_meshIndex];
     if (assimpMesh->HasBones())
-        MakeVertexWeightHasBone(assimpMesh, meshNodeTransform, a_vertices, a_nodes, a_bones);
+        MakeVertexWeightHasBone(assimpMesh, a_vertices, a_nodes, a_bones);
     else
-        MakeVertexWeightFromNode(ptr, assimpMesh, meshNodeTransform, a_vertices, a_nodes, a_bones);
+        MakeVertexWeightFromNode(ptr, assimpMesh, a_vertices, a_nodes, a_bones);
 }
 
-void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(scene);
     const aiMesh* assimpMesh = reinterpret_cast<const aiMesh*>(ptr);
@@ -1306,13 +1297,8 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     BoneDX bone = {};
     bone.nodeIndex = func(a_nodes[nodeIndex].parent);
     if (bone.nodeIndex != kNodeNone) {
-        // 頂点はメッシュローカル空間。invOffset は「メッシュ空間 -> ボーン空間」を表し、
-        // meshNodeTransform がある場合はその逆行列をここで折り込む。
-        DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].mat);
-        if (meshNodeTransform.hasTransform)
-        {
-            invOffset = invOffset * meshNodeTransform.inverse;
-        }
+        // Invariant: vertices already live in node/mesh space; invOffset is always inverse(globalBind).
+        DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].globalBind);
         DirectX::XMStoreFloat4x4(&bone.invOffset, invOffset);
         // ボーンの情報を設定
         a_bones.resize(1);
@@ -1329,13 +1315,9 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     }
 }
 
-void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
 {
     const aiMesh* assimpMesh = reinterpret_cast<const aiMesh*>(ptr);
-    DirectX::XMMATRIX mFlip =
-        DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
-    DirectX::XMMATRIX mScale =
-        DirectX::XMMatrixScaling(1.f, 1.f, 1.f);
 
     // 読み取り用のウェイトデータ作成
     struct WeightPair
@@ -1361,16 +1343,8 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, const MeshNodeT
             continue;
         }
 
-        // 頂点はメッシュローカル空間。invOffset はメッシュ空間 -> ボーン空間の逆変換。
-        DirectX::XMMATRIX invOffsetMatrix;
-
-        invOffsetMatrix = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
-        invOffsetMatrix = mFlip * invOffsetMatrix * mScale;
-        if (meshNodeTransform.hasTransform)
-        {
-            invOffsetMatrix = invOffsetMatrix * meshNodeTransform.inverse;
-        }
-
+        // Invariant: vertices already live in node/mesh space; invOffset is always inverse(globalBind).
+        DirectX::XMMATRIX invOffsetMatrix = DirectX::XMMatrixInverse(nullptr, a_nodes[boneIt->nodeIndex].globalBind);
         DirectX::XMStoreFloat4x4(&boneIt->invOffset, invOffsetMatrix);
 
         // ウェイトの設定
