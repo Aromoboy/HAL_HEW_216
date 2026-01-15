@@ -29,6 +29,8 @@ namespace SceneGameConfig
         float creamWeldAngularHertz = 0.0f;
         float creamWeldAngularDampingRatio = 0.7f;
         bool creamWeldCollideConnected = false;
+        float creamGluePushOutEpsilon = 0.03f;
+        float creamGlueMaxPushOut = 0.25f;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);

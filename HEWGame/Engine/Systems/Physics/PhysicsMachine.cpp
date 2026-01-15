@@ -181,6 +181,8 @@ namespace Systems
         m_tuning.creamWeldLinearDampingRatio = std::clamp(tuning.creamWeldLinearDampingRatio, 0.0f, 1.0f);
         m_tuning.creamWeldAngularDampingRatio = std::clamp(tuning.creamWeldAngularDampingRatio, 0.0f, 1.0f);
         m_tuning.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
+        m_tuning.creamGluePushOutEpsilon = std::max(0.0f, tuning.creamGluePushOutEpsilon);
+        m_tuning.creamGlueMaxPushOut = std::max(0.0f, tuning.creamGlueMaxPushOut);
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
             ? tuning.maxStepDt
             : (1.0f / 60.0f);

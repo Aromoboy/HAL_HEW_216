@@ -2631,6 +2631,14 @@ namespace SceneGameConfig
                         ::DebugTrace(oss.str());
                     }
                 }
+                else if (key == "creamGluePushOutEpsilon")
+                {
+                    settings.creamGluePushOutEpsilon = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueMaxPushOut")
+                {
+                    settings.creamGlueMaxPushOut = std::max(0.0f, std::stof(value));
+                }
                 else
                 {
                     std::ostringstream oss;
@@ -2671,6 +2679,8 @@ namespace SceneGameConfig
             << ", creamWeldAngularHertz=" << settings.creamWeldAngularHertz
             << ", creamWeldAngularDampingRatio=" << settings.creamWeldAngularDampingRatio
             << ", creamWeldCollideConnected=" << settings.creamWeldCollideConnected
+            << ", creamGluePushOutEpsilon=" << settings.creamGluePushOutEpsilon
+            << ", creamGlueMaxPushOut=" << settings.creamGlueMaxPushOut
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;

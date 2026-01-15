@@ -1090,6 +1090,20 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
         }
+        if (g_DebugDrawEnabled && m_sweetsManager)
+        {
+            SweetsSpace::SweetsContacts::GlueDebugSnapshot glueSnapshot;
+            if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
+            {
+                uiData.hud.showGlueDebug = true;
+                uiData.hud.glueActiveCreamAnchors = glueSnapshot.activeCreamAnchors;
+                uiData.hud.glueActiveFruitGlue = glueSnapshot.activeFruitGlue;
+                uiData.hud.glueFrozenFruit = glueSnapshot.frozenFruit;
+                uiData.hud.glueCreatePerSec = glueSnapshot.createPerSec;
+                uiData.hud.glueRejectPerSec = glueSnapshot.rejectPerSec;
+                uiData.hud.glueCleanupPerSec = glueSnapshot.cleanupPerSec;
+            }
+        }
 
         uiData.result.remainingSeconds = remainingSeconds;
         uiData.result.currentHeight = currentHeight;
@@ -1314,6 +1328,65 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
                 Geometory::AddLine(leftBottom, rightBottom, zoneColor);
                 Geometory::AddLine(leftTop, leftBottom, zoneColor);
                 Geometory::AddLine(rightTop, rightBottom, zoneColor);
+            }
+        }
+    }
+
+    if (m_sweetsManager)
+    {
+        SweetsSpace::SweetsContacts::GlueDebugSnapshot glueSnapshot;
+        if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
+        {
+            const float stagePlaneZ = (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ)) ? *m_stagePlaneZ : 0.0f;
+            const DirectX::XMFLOAT4 anchorColor(1.0f, 0.85f, 0.2f, 0.95f);
+            const DirectX::XMFLOAT4 linkColor(0.2f, 1.0f, 0.3f, 0.85f);
+            const Color creamColor = MakeColor(0.2f, 0.6f, 1.0f, 0.9f);
+            const Color fruitColor = MakeColor(0.8f, 0.3f, 1.0f, 0.9f);
+
+            const auto drawCross = [&](const b2Vec2& point, float size, float z)
+            {
+                const DirectX::XMFLOAT3 center(point.x, point.y, z);
+                Geometory::AddLine(
+                    DirectX::XMFLOAT3(center.x - size, center.y, center.z),
+                    DirectX::XMFLOAT3(center.x + size, center.y, center.z),
+                    anchorColor);
+                Geometory::AddLine(
+                    DirectX::XMFLOAT3(center.x, center.y - size, center.z),
+                    DirectX::XMFLOAT3(center.x, center.y + size, center.z),
+                    anchorColor);
+            };
+
+            for (const b2Vec2& anchor : glueSnapshot.creamAnchors)
+            {
+                drawCross(anchor, 0.15f, stagePlaneZ);
+            }
+
+            for (const auto& link : glueSnapshot.fruitLinks)
+            {
+                float z = stagePlaneZ;
+                if (link.cream)
+                {
+                    const float3 creamPos = link.cream->GetTransform().position;
+                    z = creamPos.z;
+                    DebugColliderRenderer::DrawCircle(float2{ creamPos.x, creamPos.y }, 0.35f, creamPos.z, creamColor);
+                }
+                if (link.fruit)
+                {
+                    const float3 fruitPos = link.fruit->GetTransform().position;
+                    z = fruitPos.z;
+                    DebugColliderRenderer::DrawCircle(float2{ fruitPos.x, fruitPos.y }, 0.28f, fruitPos.z,
+                        link.fruitFrozen ? fruitColor : MakeColor(1.0f, 0.5f, 0.5f, 0.9f));
+                }
+                if (link.cream && link.fruit)
+                {
+                    const float3 creamPos = link.cream->GetTransform().position;
+                    const float3 fruitPos = link.fruit->GetTransform().position;
+                    Geometory::AddLine(
+                        DirectX::XMFLOAT3(creamPos.x, creamPos.y, creamPos.z),
+                        DirectX::XMFLOAT3(fruitPos.x, fruitPos.y, fruitPos.z),
+                        linkColor);
+                }
+                drawCross(link.anchorWorld, 0.12f, z);
             }
         }
     }
