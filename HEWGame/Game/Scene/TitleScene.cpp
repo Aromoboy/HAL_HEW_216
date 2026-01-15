@@ -74,6 +74,7 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void TitleScene::Draw()
 {
+    Sprite::ScopedPassDefaults guard;
     RootDraw();
 }
 
