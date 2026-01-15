@@ -49,6 +49,7 @@ namespace
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr float kCreamWeldBreakGraceSeconds = 0.25f;
     constexpr std::size_t kInvalidContactLogInterval = 50;
+    constexpr std::size_t kCreamAdhesionEventLogLimit = 6;
     const std::string kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
     constexpr const char* kBlockedFairyKey = "fairy";
@@ -336,6 +337,19 @@ namespace SweetsSpace
             << " breakImpulseThreshold=" << m_creamWeldBreakImpulseThreshold
             << "\n";
         LogInfoAndTrace(oss.str());
+
+        m_creamAdhesionConfig.adhesionDelaySeconds = m_creamAdhesionDelaySeconds;
+        m_creamAdhesionConfig.adhesionGraceSeconds = m_creamAdhesionGraceSeconds;
+        m_creamAdhesionConfig.releaseCooldownSeconds = m_creamReleaseCooldownSeconds;
+        m_creamAdhesionConfig.requireSupport = settings.requireSupport;
+        m_creamAdhesionConfig.requireCarried = settings.requireCarried;
+        m_creamAdhesionConfig.weldLinearHertz = m_creamWeldLinearHertz;
+        m_creamAdhesionConfig.weldAngularHertz = m_creamWeldAngularHertz;
+        m_creamAdhesionConfig.weldLinearDampingRatio = m_creamWeldLinearDampingRatio;
+        m_creamAdhesionConfig.weldAngularDampingRatio = m_creamWeldAngularDampingRatio;
+        m_creamAdhesionConfig.breakImpulseThreshold = m_creamWeldBreakImpulseThreshold;
+        m_creamAdhesionConfig.allowedTags = m_creamAllowedTags;
+        m_creamAdhesionConfig.blockedTags = m_creamBlockedTags;
     }
 
     void SweetsContacts::SetResetting(bool resetting)
@@ -362,6 +376,8 @@ namespace SweetsSpace
         {
             return;
         }
+
+        UpdateCreamAdhesionFromBegin(a, b);
 
         auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
         auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
@@ -427,6 +443,8 @@ namespace SweetsSpace
             return;
         }
 
+        UpdateCreamAdhesionFromEnd(a, b);
+
         auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
         auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
         if (!sweetsA && !sweetsB)
@@ -471,6 +489,21 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsContacts::OnContactLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        if (!a || !b)
+        {
+            return;
+        }
+
+        if (m_isResetting)
+        {
+            return;
+        }
+
+        UpdateCreamAdhesionFromLost(a, b);
+    }
+
     void SweetsContacts::OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed)
     {
         if (!a || !b)
@@ -484,6 +517,8 @@ namespace SweetsSpace
         {
             return;
         }
+
+        UpdateCreamAdhesionFromHit(a, b, approachSpeed);
 
         const float sanitizedSpeed = std::isfinite(approachSpeed) ? std::max(0.0f, approachSpeed) : 0.0f;
         const JointPairKey pairKey = JointPairKey::Make(a, b);
@@ -872,6 +907,7 @@ namespace SweetsSpace
 
     void SweetsContacts::OnUpdate(float dt)
     {
+        UpdateCreamAdhesionState(dt);
         TickCreamContacts();
         CleanupInvalidContacts();
 
@@ -1154,7 +1190,7 @@ namespace SweetsSpace
 
     void SweetsContacts::ClearPendingAdhesionsForEntity(Entities::PhysicalEntity* entity)
     {
-        if (!entity || m_pendingAdhesions.empty())
+        if (!entity)
         {
             return;
         }
@@ -1165,6 +1201,30 @@ namespace SweetsSpace
             {
                 LogPendingAdhesionRemoval("clear_for_entity", it->second.cream, it->second.other);
                 it = m_pendingAdhesions.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_creamCandidates.begin(); it != m_creamCandidates.end();)
+        {
+            if (it->second.cream == entity || it->second.target == entity)
+            {
+                it = m_creamCandidates.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        for (auto it = m_creamBonds.begin(); it != m_creamBonds.end();)
+        {
+            if (it->second.cream == entity || it->second.target == entity)
+            {
+                it = m_creamBonds.erase(it);
             }
             else
             {
@@ -1204,6 +1264,10 @@ namespace SweetsSpace
         m_deferCementClusterRebuild = false;
         m_loggedCreamPairEvents.clear();
         m_loggedContactNotification = false;
+        m_creamCandidates.clear();
+        m_creamBonds.clear();
+        m_creamAdhesionClockSeconds = 0.0f;
+        m_creamAdhesionEventLogCount = 0;
     }
 
     void SweetsContacts::NotifyUnregisterOrRetry()
@@ -1602,6 +1666,213 @@ namespace SweetsSpace
         if (state.foundationContacts <= 0 && state.stageContacts <= 0 && state.sweetsContacts <= 0)
         {
             m_contactStates.erase(it);
+        }
+    }
+
+    bool SweetsContacts::ResolveCreamAdhesionPair(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        ActiveSweets*& cream, Entities::PhysicalEntity*& target) const
+    {
+        cream = nullptr;
+        target = nullptr;
+
+        if (!a || !b)
+        {
+            return false;
+        }
+
+        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
+        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
+
+        if (sweetsA && IsCreamTag(sweetsA->GetTag()))
+        {
+            cream = sweetsA;
+            target = b;
+        }
+        else if (sweetsB && IsCreamTag(sweetsB->GetTag()))
+        {
+            cream = sweetsB;
+            target = a;
+        }
+
+        return cream && target;
+    }
+
+    void SweetsContacts::LogCreamAdhesionEvent(const char* label, const ActiveSweets* cream,
+        const Entities::PhysicalEntity* target)
+    {
+        if (!label || !cream || !target)
+        {
+            return;
+        }
+
+        if (m_creamAdhesionEventLogCount >= kCreamAdhesionEventLogLimit)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[CreamAdhesionV2] " << label
+            << " cream='" << cream->GetTag()
+            << "' target='" << target->GetTag() << "'\n";
+        DebugTrace(oss.str());
+        ++m_creamAdhesionEventLogCount;
+    }
+
+    void SweetsContacts::UpdateCreamAdhesionFromBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        ActiveSweets* cream = nullptr;
+        Entities::PhysicalEntity* target = nullptr;
+        if (!ResolveCreamAdhesionPair(a, b, cream, target))
+        {
+            return;
+        }
+
+        CreamAdhesionPairKey key{ cream, target };
+        auto [it, inserted] = m_creamCandidates.try_emplace(key);
+        CreamAdhesionCandidate& candidate = it->second;
+        candidate.cream = cream;
+        candidate.target = target;
+        candidate.touchingShapeCount = std::max(0, candidate.touchingShapeCount + 1);
+        candidate.graceRemaining = std::max(candidate.graceRemaining, m_creamAdhesionConfig.adhesionGraceSeconds);
+        if (inserted)
+        {
+            candidate.timeTouching = 0.0f;
+            candidate.lastRejectReason = CreamAdhesionRejectReason::None;
+        }
+
+        LogCreamAdhesionEvent("contact_begin", cream, target);
+    }
+
+    void SweetsContacts::UpdateCreamAdhesionFromEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        ActiveSweets* cream = nullptr;
+        Entities::PhysicalEntity* target = nullptr;
+        if (!ResolveCreamAdhesionPair(a, b, cream, target))
+        {
+            return;
+        }
+
+        CreamAdhesionPairKey key{ cream, target };
+        auto it = m_creamCandidates.find(key);
+        if (it == m_creamCandidates.end())
+        {
+            return;
+        }
+
+        CreamAdhesionCandidate& candidate = it->second;
+        candidate.touchingShapeCount = std::max(0, candidate.touchingShapeCount - 1);
+        if (candidate.touchingShapeCount == 0)
+        {
+            candidate.graceRemaining = std::max(candidate.graceRemaining, m_creamAdhesionConfig.adhesionGraceSeconds);
+        }
+
+        LogCreamAdhesionEvent("contact_end", cream, target);
+    }
+
+    void SweetsContacts::UpdateCreamAdhesionFromLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    {
+        ActiveSweets* cream = nullptr;
+        Entities::PhysicalEntity* target = nullptr;
+        if (!ResolveCreamAdhesionPair(a, b, cream, target))
+        {
+            return;
+        }
+
+        CreamAdhesionPairKey key{ cream, target };
+        if (auto it = m_creamCandidates.find(key); it != m_creamCandidates.end())
+        {
+            it->second.lastRejectReason = CreamAdhesionRejectReason::ContactLost;
+            m_creamCandidates.erase(it);
+        }
+
+        if (auto it = m_creamBonds.find(key); it != m_creamBonds.end())
+        {
+            it->second.lastBreakReason = CreamBondBreakReason::ContactLost;
+            it->second.lastBreakTimestamp = m_creamAdhesionClockSeconds;
+            it->second.cooldownRemaining = std::max(it->second.cooldownRemaining,
+                m_creamAdhesionConfig.releaseCooldownSeconds);
+        }
+
+        LogCreamAdhesionEvent("contact_lost", cream, target);
+    }
+
+    void SweetsContacts::UpdateCreamAdhesionFromHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        float approachSpeed)
+    {
+        (void)approachSpeed;
+        ActiveSweets* cream = nullptr;
+        Entities::PhysicalEntity* target = nullptr;
+        if (!ResolveCreamAdhesionPair(a, b, cream, target))
+        {
+            return;
+        }
+
+        CreamAdhesionPairKey key{ cream, target };
+        if (auto it = m_creamBonds.find(key); it != m_creamBonds.end())
+        {
+            it->second.lastBreakReason = CreamBondBreakReason::ContactHit;
+            it->second.lastBreakTimestamp = m_creamAdhesionClockSeconds;
+        }
+
+        LogCreamAdhesionEvent("contact_hit", cream, target);
+    }
+
+    void SweetsContacts::UpdateCreamAdhesionState(float dt)
+    {
+        if (dt <= 0.0f)
+        {
+            return;
+        }
+
+        m_creamAdhesionClockSeconds += dt;
+
+        for (auto it = m_creamCandidates.begin(); it != m_creamCandidates.end();)
+        {
+            CreamAdhesionCandidate& candidate = it->second;
+            if (!candidate.cream || !candidate.target
+                || IsPendingDeletion(candidate.cream) || IsPendingDeletion(candidate.target))
+            {
+                candidate.lastRejectReason = CreamAdhesionRejectReason::InvalidEntity;
+                it = m_creamCandidates.erase(it);
+                continue;
+            }
+
+            if (candidate.touchingShapeCount > 0)
+            {
+                candidate.timeTouching += dt;
+                ++it;
+                continue;
+            }
+
+            if (candidate.graceRemaining > 0.0f)
+            {
+                candidate.graceRemaining = std::max(0.0f, candidate.graceRemaining - dt);
+                if (candidate.graceRemaining > 0.0f)
+                {
+                    ++it;
+                    continue;
+                }
+            }
+
+            candidate.lastRejectReason = CreamAdhesionRejectReason::ContactLost;
+            it = m_creamCandidates.erase(it);
+        }
+
+        for (auto it = m_creamBonds.begin(); it != m_creamBonds.end();)
+        {
+            CreamAdhesionBond& bond = it->second;
+            if (!bond.cream || !bond.target || IsPendingDeletion(bond.cream) || IsPendingDeletion(bond.target))
+            {
+                it = m_creamBonds.erase(it);
+                continue;
+            }
+
+            if (bond.cooldownRemaining > 0.0f)
+            {
+                bond.cooldownRemaining = std::max(0.0f, bond.cooldownRemaining - dt);
+            }
+
+            ++it;
         }
     }
 

@@ -331,6 +331,8 @@ namespace SweetsSpace
 
     void SweetsManager::OnContactLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
     {
+        m_contacts.OnContactLost(a, b);
+
         auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
         if (sweetsA)
         {
