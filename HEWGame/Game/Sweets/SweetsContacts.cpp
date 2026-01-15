@@ -71,11 +71,11 @@ namespace SweetsSpace
         if (m_physicsMachine)
         {
             const auto& tuning = m_physicsMachine->GetTuningParameters();
-            m_glueTuning.linearHertz = tuning.creamWeldLinearHertz;
-            m_glueTuning.linearDampingRatio = tuning.creamWeldLinearDampingRatio;
-            m_glueTuning.angularHertz = tuning.creamWeldAngularHertz;
-            m_glueTuning.angularDampingRatio = tuning.creamWeldAngularDampingRatio;
-            m_glueTuning.collideConnected = tuning.creamWeldCollideConnected;
+            m_glueTuning.linearHertz = tuning.creamGlueLinearHertz;
+            m_glueTuning.linearDampingRatio = tuning.creamGlueLinearDampingRatio;
+            m_glueTuning.angularHertz = tuning.creamGlueAngularHertz;
+            m_glueTuning.angularDampingRatio = tuning.creamGlueAngularDampingRatio;
+            m_glueTuning.collideConnected = tuning.creamGlueCollideConnected;
             m_glueTuning.pushOutEpsilon = tuning.creamGluePushOutEpsilon;
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
         }
@@ -287,13 +287,6 @@ namespace SweetsSpace
             }
         }
 
-        if (!m_loggedContactNotification)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' が接触し始めたよ \n";
-            DebugTrace(oss.str());
-            m_loggedContactNotification = true;
-        }
     }
 
     void SweetsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
@@ -323,13 +316,6 @@ namespace SweetsSpace
 
         (void)info;
 
-        if (!m_loggedContactNotification)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "'" << a->GetTag() << "' と '" << b->GetTag() << "' の接触が終わったよ \n";
-            DebugTrace(oss.str());
-            m_loggedContactNotification = true;
-        }
     }
 
     bool SweetsContacts::TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const
@@ -791,15 +777,6 @@ namespace SweetsSpace
         m_glueStats.cleanupCount = 0;
         m_glueStats.elapsedSeconds = 0.0f;
 
-        std::ostringstream oss;
-        oss << kLogPrefix << "glue_stats"
-            << " activeCreamAnchors=" << m_creamAnchorJoints.size()
-            << " activeFruitGlue=" << m_creamWeldJoints.size()
-            << " frozenFruit=" << m_frozenFruitStates.size()
-            << " createPerSec=" << m_glueStats.createPerSec
-            << " rejectPerSec=" << m_glueStats.rejectPerSec
-            << " cleanupPerSec=" << m_glueStats.cleanupPerSec << "\n";
-        DebugTrace(oss.str());
     }
 
     SweetsContacts::GlueDebugSnapshot SweetsContacts::BuildDebugSnapshot() const

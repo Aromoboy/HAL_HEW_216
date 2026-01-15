@@ -176,11 +176,11 @@ namespace Systems
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
         m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
-        m_tuning.creamWeldLinearHertz = std::max(0.0f, tuning.creamWeldLinearHertz);
-        m_tuning.creamWeldAngularHertz = std::max(0.0f, tuning.creamWeldAngularHertz);
-        m_tuning.creamWeldLinearDampingRatio = std::clamp(tuning.creamWeldLinearDampingRatio, 0.0f, 1.0f);
-        m_tuning.creamWeldAngularDampingRatio = std::clamp(tuning.creamWeldAngularDampingRatio, 0.0f, 1.0f);
-        m_tuning.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
+        m_tuning.creamGlueLinearHertz = std::max(0.0f, tuning.creamGlueLinearHertz);
+        m_tuning.creamGlueAngularHertz = std::max(0.0f, tuning.creamGlueAngularHertz);
+        m_tuning.creamGlueLinearDampingRatio = std::clamp(tuning.creamGlueLinearDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamGlueAngularDampingRatio = std::clamp(tuning.creamGlueAngularDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamGlueCollideConnected = tuning.creamGlueCollideConnected;
         m_tuning.creamGluePushOutEpsilon = std::max(0.0f, tuning.creamGluePushOutEpsilon);
         m_tuning.creamGlueMaxPushOut = std::max(0.0f, tuning.creamGlueMaxPushOut);
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
