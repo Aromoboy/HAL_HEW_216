@@ -540,7 +540,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             if (nodeIndex != kNodeNone)
             {
                 meshNodeTransform.hasTransform = true;
-                meshNodeTransform.transform = a_nodes[nodeIndex].globalBind;
+                meshNodeTransform.transform = a_nodes[nodeIndex].mat;
                 meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
                 DirectX::XMFLOAT4X4 globalMatrix{};
                 DirectX::XMStoreFloat4x4(&globalMatrix, meshNodeTransform.transform);
@@ -560,7 +560,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         // ノード変換ルール:
         // - skinned: 頂点はメッシュローカル空間のまま保持する (ノード変換を適用しない)。
-        // - non-skinned: ノードのグローバル変換を頂点へ適用する。
+        // - non-skinned: ノードのローカル変換を頂点へ適用する。
 
         const DirectX::XMMATRIX vertexTransform = meshNodeTransform.hasTransform
             ? meshNodeTransform.transform
