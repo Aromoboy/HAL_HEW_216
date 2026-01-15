@@ -11,6 +11,7 @@
 #include "CollisionLayer.h"
 #include "MaterialDX.h"
 #include "ModelDX.h"
+#include "Geometory.h"
 #include "SceneGameConfigTypes.h"
 #include "Sweets/BaseSweets.h"
 #include "Sweets/SweetsRegistry.h"
@@ -49,6 +50,7 @@ namespace
     constexpr const char* kLogPrefix = "[SweetsManager] ";
     constexpr std::size_t kInvalidContactLogInterval = 50;
     constexpr std::size_t kCreamAdhesionEventLogLimit = 6;
+    constexpr float kCreamDebugDefaultZ = 0.02f;
     const std::string kStageCakeKey = "cake";
     constexpr const char* kBlockedOsaraKey = "osara";
     constexpr const char* kBlockedFairyKey = "fairy";
@@ -140,6 +142,11 @@ namespace
 
         const auto& colliderComponent = entity->GetBoxColliderComponent();
         return colliderComponent ? colliderComponent->createdFixtureCount : 0;
+    }
+
+    DirectX::XMFLOAT3 ToFloat3(const float3& value)
+    {
+        return DirectX::XMFLOAT3(value.x, value.y, value.z);
     }
 
     void AppendPendingEntityInfo(std::ostringstream& oss, const char* label, const Entities::PhysicalEntity* entity)
@@ -601,56 +608,65 @@ namespace SweetsSpace
                     << cream->GetRecentlyReleasedSecondsRemaining() << "s\n";
                 DebugTrace(oss.str());
             }
-            else if (m_creamRequireCarried && !cream->WasEverCarried())
+            else if (m_creamRequireCarried && !IsCreamCarried(*cream))
             {
+                IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason::RequireCarried);
                 std::ostringstream oss;
                 oss << kLogPrefix << "クリーム '" << cream->GetTag()
-                    << "' はまだ運ばれてないから接着をスキップするよ \n";
+                    << "' はcarriedじゃないから接着をスキップするよ \n";
                 DebugTrace(oss.str());
             }
-            else if (IsAdhesionTargetAllowed(*cream, *creamOther))
+            else
             {
-                auto existing = m_creamWeldJoints.find(creamKey);
-                if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
+                CreamAdhesionRejectReason targetReason = CreamAdhesionRejectReason::None;
+                if (!IsAdhesionTargetAllowed(*cream, *creamOther, &targetReason))
                 {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
-                        << cream->GetTag() << "' other='" << creamOther->GetTag() << "'\n";
-                    DebugTrace(oss.str());
-                    m_creamWeldJoints.erase(existing);
-                    existing = m_creamWeldJoints.end();
+                    IncrementCreamAdhesionRejectCounter(targetReason);
                 }
-
-                if (existing == m_creamWeldJoints.end())
+                else
                 {
-                    auto pendingIt = m_pendingAdhesions.find(creamKey);
-                    if (pendingIt == m_pendingAdhesions.end())
+                    auto existing = m_creamWeldJoints.find(creamKey);
+                    if (existing != m_creamWeldJoints.end() && !b2Joint_IsValid(existing->second))
                     {
-                        PendingAdhesion pending{};
-                        pending.cream = cream;
-                        pending.other = creamOther;
-                        pending.elapsedSeconds = 0.0f;
-                        pending.stillTouching = true;
-                        pending.awaitingRestore = false;
-                        pending.graceSecondsRemaining = 0.0f;
-                        m_pendingAdhesions.emplace(creamKey, pending);
-                        pendingCreated = true;
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "壊れたクリーム接着ジョイントを掃除したよ cream='"
+                            << cream->GetTag() << "' other='" << creamOther->GetTag() << "'\n";
+                        DebugTrace(oss.str());
+                        m_creamWeldJoints.erase(existing);
+                        existing = m_creamWeldJoints.end();
                     }
-                    else
+
+                    if (existing == m_creamWeldJoints.end())
                     {
-                        if (ShouldLogCreamPairEvent(cream, creamOther, "duplicateContactBegin"))
+                        auto pendingIt = m_pendingAdhesions.find(creamKey);
+                        if (pendingIt == m_pendingAdhesions.end())
                         {
-                            std::ostringstream oss;
-                            oss << kLogPrefix << "duplicateContactBegin cream='" << cream->GetTag()
-                                << "' other='" << creamOther->GetTag() << "'\n";
-                            LogInfoAndTrace(oss.str());
+                            PendingAdhesion pending{};
+                            pending.cream = cream;
+                            pending.other = creamOther;
+                            pending.elapsedSeconds = 0.0f;
+                            pending.stillTouching = true;
+                            pending.awaitingRestore = false;
+                            pending.graceSecondsRemaining = 0.0f;
+                            m_pendingAdhesions.emplace(creamKey, pending);
+                            pendingCreated = true;
                         }
-                        pendingIt->second.cream = cream;
-                        pendingIt->second.other = creamOther;
-                        pendingIt->second.stillTouching = true;
-                        pendingIt->second.awaitingRestore = false;
-                        pendingIt->second.graceSecondsRemaining = 0.0f;
-                        pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+                        else
+                        {
+                            if (ShouldLogCreamPairEvent(cream, creamOther, "duplicateContactBegin"))
+                            {
+                                std::ostringstream oss;
+                                oss << kLogPrefix << "duplicateContactBegin cream='" << cream->GetTag()
+                                    << "' other='" << creamOther->GetTag() << "'\n";
+                                LogInfoAndTrace(oss.str());
+                            }
+                            pendingIt->second.cream = cream;
+                            pendingIt->second.other = creamOther;
+                            pendingIt->second.stillTouching = true;
+                            pendingIt->second.awaitingRestore = false;
+                            pendingIt->second.graceSecondsRemaining = 0.0f;
+                            pendingElapsedSeconds = pendingIt->second.elapsedSeconds;
+                        }
                     }
                 }
             }
@@ -1078,6 +1094,8 @@ namespace SweetsSpace
         m_creamBonds.clear();
         m_creamAdhesionClockSeconds = 0.0f;
         m_creamAdhesionEventLogCount = 0;
+        m_creamRejectCounters = {};
+        m_creamRejectLogTimestamp = -1.0f;
     }
 
     void SweetsContacts::NotifyUnregisterOrRetry()
@@ -1552,6 +1570,7 @@ namespace SweetsSpace
 
         if (m_creamRequireCarried && !IsCreamCarried(*cream))
         {
+            IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason::RequireCarried);
             LogCreamAdhesionEvent("contact_begin_reject_not_carried", cream, target);
             return;
         }
@@ -1730,13 +1749,14 @@ namespace SweetsSpace
             if (m_creamRequireCarried && !IsCreamCarried(*candidate.cream))
             {
                 candidate.lastRejectReason = CreamAdhesionRejectReason::RequireCarried;
+                IncrementCreamAdhesionRejectCounter(candidate.lastRejectReason);
                 it = m_creamCandidates.erase(it);
                 continue;
             }
 
-            if (!IsAdhesionTargetAllowed(*candidate.cream, *candidate.target))
+            if (!IsAdhesionTargetAllowed(*candidate.cream, *candidate.target, &candidate.lastRejectReason))
             {
-                candidate.lastRejectReason = CreamAdhesionRejectReason::TargetNotAllowed;
+                IncrementCreamAdhesionRejectCounter(candidate.lastRejectReason);
                 it = m_creamCandidates.erase(it);
                 continue;
             }
@@ -1746,6 +1766,7 @@ namespace SweetsSpace
             if (bondIt != m_creamBonds.end() && b2Joint_IsValid(bondIt->second.jointId))
             {
                 candidate.lastRejectReason = CreamAdhesionRejectReason::ExistingBond;
+                IncrementCreamAdhesionRejectCounter(candidate.lastRejectReason);
                 it = m_creamCandidates.erase(it);
                 continue;
             }
@@ -1753,6 +1774,7 @@ namespace SweetsSpace
             if (bondIt != m_creamBonds.end() && bondIt->second.cooldownRemaining > 0.0f)
             {
                 candidate.lastRejectReason = CreamAdhesionRejectReason::CooldownActive;
+                IncrementCreamAdhesionRejectCounter(candidate.lastRejectReason);
                 ++it;
                 continue;
             }
@@ -1809,7 +1831,8 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsContacts::IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const
+    bool SweetsContacts::IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other,
+        CreamAdhesionRejectReason* outReason) const
     {
         if (&other == &cream)
         {
@@ -1825,12 +1848,20 @@ namespace SweetsSpace
 
         if (IsBlockedCreamTargetTag(other.GetTag()))
         {
+            if (outReason)
+            {
+                *outReason = CreamAdhesionRejectReason::TargetBlocked;
+            }
             logRejectedTarget("blocked tag");
             return false;
         }
 
         if (IsCreamTag(other.GetTag()))
         {
+            if (outReason)
+            {
+                *outReason = CreamAdhesionRejectReason::TargetNotSupportedType;
+            }
             logRejectedTarget("cream target");
             return false;
         }
@@ -1839,6 +1870,10 @@ namespace SweetsSpace
         const Collision::CollisionLayer otherLayer = other.GetCollisionLayer();
         if (!isSweetsTarget && otherLayer != Collision::CollisionLayer::Stage)
         {
+            if (outReason)
+            {
+                *outReason = CreamAdhesionRejectReason::TargetNotSupportedType;
+            }
             logRejectedTarget("non-sweets");
             return false;
         }
@@ -1847,6 +1882,10 @@ namespace SweetsSpace
         const std::string tagKey = NormalizeKey(other.GetTag());
         if (otherLayer == Collision::CollisionLayer::Stage && tagKey != kStageCakeKey)
         {
+            if (outReason)
+            {
+                *outReason = CreamAdhesionRejectReason::TargetNotSupportedType;
+            }
             logRejectedTarget("stage not cake");
             return false;
         }
@@ -1882,6 +1921,10 @@ namespace SweetsSpace
             {
                 if (m_creamBlockedTags.find(key) != m_creamBlockedTags.end())
                 {
+                    if (outReason)
+                    {
+                        *outReason = CreamAdhesionRejectReason::TargetBlocked;
+                    }
                     logRejectedTarget("blocked tag");
                     return false;
                 }
@@ -1902,11 +1945,19 @@ namespace SweetsSpace
 
             if (!allowed)
             {
+                if (outReason)
+                {
+                    *outReason = CreamAdhesionRejectReason::TargetNotAllowed;
+                }
                 logRejectedTarget("not in allowed list");
                 return false;
             }
         }
 
+        if (outReason)
+        {
+            *outReason = CreamAdhesionRejectReason::None;
+        }
         return true;
     }
 
@@ -1973,8 +2024,10 @@ namespace SweetsSpace
             return false;
         }
 
-        if (!IsAdhesionTargetAllowed(*cream, *other))
+        CreamAdhesionRejectReason targetReason = CreamAdhesionRejectReason::None;
+        if (!IsAdhesionTargetAllowed(*cream, *other, &targetReason))
         {
+            IncrementCreamAdhesionRejectCounter(targetReason);
             if (ShouldLogCreamPairEvent(cream, other, "target_disallowed"))
             {
                 std::ostringstream oss;
@@ -2034,6 +2087,7 @@ namespace SweetsSpace
         if (auto existingBond = m_creamBonds.find({ cream, other });
             existingBond != m_creamBonds.end() && b2Joint_IsValid(existingBond->second.jointId))
         {
+            IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason::ExistingBond);
             if (ShouldLogCreamPairEvent(cream, other, "existing_joint"))
             {
                 std::ostringstream oss;
@@ -3098,6 +3152,157 @@ namespace SweetsSpace
         }
 
         return false;
+    }
+
+    void SweetsContacts::IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason reason)
+    {
+        switch (reason)
+        {
+        case CreamAdhesionRejectReason::TargetBlocked:
+            ++m_creamRejectCounters.blockedTag;
+            break;
+        case CreamAdhesionRejectReason::RequireCarried:
+            ++m_creamRejectCounters.notCarried;
+            break;
+        case CreamAdhesionRejectReason::TargetNotAllowed:
+            ++m_creamRejectCounters.notAllowed;
+            break;
+        case CreamAdhesionRejectReason::ExistingBond:
+            ++m_creamRejectCounters.alreadyBonded;
+            break;
+        case CreamAdhesionRejectReason::CooldownActive:
+            ++m_creamRejectCounters.cooldown;
+            break;
+        case CreamAdhesionRejectReason::TargetNotSupportedType:
+            ++m_creamRejectCounters.targetNotSupportedType;
+            break;
+        default:
+            break;
+        }
+    }
+
+    void SweetsContacts::DebugLogCreamAdhesionRejectCounters(float minIntervalSeconds)
+    {
+        if (minIntervalSeconds <= 0.0f)
+        {
+            minIntervalSeconds = 0.0f;
+        }
+
+        if (m_creamRejectCounters.Total() == 0)
+        {
+            return;
+        }
+
+        if (m_creamRejectLogTimestamp >= 0.0f
+            && (m_creamAdhesionClockSeconds - m_creamRejectLogTimestamp) < minIntervalSeconds)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[CreamAdhesionRejects] blockedTag=" << m_creamRejectCounters.blockedTag
+            << " notCarried=" << m_creamRejectCounters.notCarried
+            << " notAllowed=" << m_creamRejectCounters.notAllowed
+            << " alreadyBonded=" << m_creamRejectCounters.alreadyBonded
+            << " cooldown=" << m_creamRejectCounters.cooldown
+            << " targetNotSupportedType=" << m_creamRejectCounters.targetNotSupportedType
+            << " total=" << m_creamRejectCounters.Total()
+            << "\n";
+        LogInfoAndTrace(oss.str());
+        m_creamRejectLogTimestamp = m_creamAdhesionClockSeconds;
+    }
+
+    void SweetsContacts::DebugDrawCreamAdhesion() const
+    {
+#if defined(_DEBUG)
+        const DirectX::XMFLOAT4 activeColor(0.3f, 1.0f, 0.4f, 0.9f);
+        const DirectX::XMFLOAT4 candidateColor(0.4f, 0.6f, 1.0f, 0.9f);
+        const DirectX::XMFLOAT4 graceColor(1.0f, 0.85f, 0.2f, 0.9f);
+        const DirectX::XMFLOAT4 cooldownColor(1.0f, 0.3f, 0.3f, 0.85f);
+
+        const auto getPosition = [](const Entities::PhysicalEntity& entity)
+        {
+            return entity.GetTransform().position;
+        };
+
+        for (const auto& entry : m_creamBonds)
+        {
+            const CreamAdhesionBond& bond = entry.second;
+            if (!bond.cream || !bond.target)
+            {
+                continue;
+            }
+
+            const float3 start = getPosition(*bond.cream);
+            const float3 end = getPosition(*bond.target);
+            if (bond.cooldownRemaining > 0.0f || !b2Joint_IsValid(bond.jointId))
+            {
+                Geometory::AddLine(ToFloat3(start), ToFloat3(end), cooldownColor);
+            }
+            else
+            {
+                Geometory::AddLine(ToFloat3(start), ToFloat3(end), activeColor);
+            }
+        }
+
+        for (const auto& entry : m_creamCandidates)
+        {
+            const CreamAdhesionCandidate& candidate = entry.second;
+            if (!candidate.cream || !candidate.target)
+            {
+                continue;
+            }
+
+            const float3 start = getPosition(*candidate.cream);
+            const float3 end = getPosition(*candidate.target);
+            if (candidate.graceRemaining > 0.0f && candidate.touchingShapeCount == 0)
+            {
+                Geometory::AddLine(ToFloat3(start), ToFloat3(end), graceColor);
+            }
+            else
+            {
+                Geometory::AddLine(ToFloat3(start), ToFloat3(end), candidateColor);
+            }
+        }
+
+        for (const auto& entry : m_creamBonds)
+        {
+            const CreamAdhesionBond& bond = entry.second;
+            if (!bond.cream || !bond.target)
+            {
+                continue;
+            }
+
+            if (bond.cooldownRemaining <= 0.0f)
+            {
+                continue;
+            }
+
+            const float3 base = getPosition(*bond.cream);
+            const float barWidth = 0.3f;
+            const float barHeight = 0.06f;
+            const float maxCooldown = std::max(0.01f, m_creamAdhesionConfig.releaseCooldownSeconds);
+            const float ratio = std::clamp(bond.cooldownRemaining / maxCooldown, 0.0f, 1.0f);
+            const float filledWidth = barWidth * ratio;
+            const float z = base.z + kCreamDebugDefaultZ;
+
+            DirectX::XMFLOAT3 leftTop(base.x - barWidth * 0.5f, base.y + 0.4f, z);
+            DirectX::XMFLOAT3 rightTop(base.x + barWidth * 0.5f, base.y + 0.4f, z);
+            DirectX::XMFLOAT3 leftBottom(base.x - barWidth * 0.5f, base.y + 0.4f - barHeight, z);
+            DirectX::XMFLOAT3 rightBottom(base.x + barWidth * 0.5f, base.y + 0.4f - barHeight, z);
+
+            Geometory::AddLine(leftTop, rightTop, cooldownColor);
+            Geometory::AddLine(leftBottom, rightBottom, cooldownColor);
+            Geometory::AddLine(leftTop, leftBottom, cooldownColor);
+            Geometory::AddLine(rightTop, rightBottom, cooldownColor);
+
+            DirectX::XMFLOAT3 fillRight(base.x - barWidth * 0.5f + filledWidth, base.y + 0.4f, z);
+            DirectX::XMFLOAT3 fillRightBottom(base.x - barWidth * 0.5f + filledWidth, base.y + 0.4f - barHeight, z);
+            Geometory::AddLine(leftTop, fillRight, cooldownColor);
+            Geometory::AddLine(leftBottom, fillRightBottom, cooldownColor);
+            Geometory::AddLine(fillRight, fillRightBottom, cooldownColor);
+        }
+#endif
     }
 
     bool SweetsContacts::TryGetContactPoint(const Entities::PhysicalEntity& a, const Entities::PhysicalEntity& b,

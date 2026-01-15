@@ -99,6 +99,8 @@ namespace SweetsSpace
         void ClearCreamAdhesionTargets();
         void SetResetting(bool resetting);
         bool IsResetting() const noexcept;
+        void DebugDrawCreamAdhesion() const;
+        void DebugLogCreamAdhesionRejectCounters(float minIntervalSeconds = 1.0f);
 
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
         bool LoadPhaseSpawnConfig(const std::string& path);

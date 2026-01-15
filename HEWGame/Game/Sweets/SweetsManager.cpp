@@ -192,6 +192,16 @@ namespace SweetsSpace
         return m_isResetting;
     }
 
+    void SweetsManager::DebugDrawCreamAdhesion() const
+    {
+        m_contacts.DebugDrawCreamAdhesion();
+    }
+
+    void SweetsManager::DebugLogCreamAdhesionRejectCounters(float minIntervalSeconds)
+    {
+        m_contacts.DebugLogCreamAdhesionRejectCounters(minIntervalSeconds);
+    }
+
     void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
     {
         m_phaseChangeCallback = std::move(callback);

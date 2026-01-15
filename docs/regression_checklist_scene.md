@@ -16,3 +16,10 @@ This checklist uses the `stage.checklist` section in `Assets/Config/gameplay.cfg
 | ✅ | Pivot vs. collider | Visual pivot adjustments on the platform do not move its collider; collider dimensions follow the descriptor scale while the pivot only shifts rendering. |
 
 Use this table as regression evidence after running the scene; update the notes column when a run reveals differences or confirms parity.
+
+## Cream adhesion scenarios (manual dev checks)
+- **Spawn drop (not carried) → no adhesion**: Let a cream spawn and fall without carrying it. It must not create a bond, and the reject counter should increment `notCarried`.
+- **Carried + contact ≥ delay → adhesion**: Pick up cream (state becomes `Carried`), hold it against a valid target for at least `adhesionDelaySeconds`, and confirm a bond forms.
+- **Short separation < grace → still candidate**: While carried, briefly break contact and restore within `adhesionGraceSeconds`; candidate should persist.
+- **Blocked tags → no adhesion**: Contact `osara`/`fairy` or other blocked tags; ensure no bond, and `blockedTag` increases.
+- **Break impulse threshold** (if enabled): Apply a hit over `breakImpulseThreshold` and confirm the bond breaks and cooldown starts.
