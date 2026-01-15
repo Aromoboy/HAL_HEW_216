@@ -155,6 +155,12 @@ namespace GameplayProgression
                     continue;
                 }
 
+                bool foundationOnly = false;
+                if (!input.sweetsManager->HasSupportingContact(*sweets, &foundationOnly))
+                {
+                    continue;
+                }
+
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
                 if (bounds.max.y >= result.state.heightMeters)
