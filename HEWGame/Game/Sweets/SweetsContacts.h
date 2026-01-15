@@ -76,6 +76,7 @@ namespace SweetsSpace
             float maxPushOut{ 0.25f };
             float maxSpeed{ 0.0f };
             float breakForce{ 0.0f };
+            float impactImpulseThreshold{ 0.0f };
         };
 
         struct ContactAnchorData
@@ -170,6 +171,8 @@ namespace SweetsSpace
         void CleanupInvalidAnchor(ActiveSweets* cream);
         void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
         void RemovePendingGlueForSweets(ActiveSweets* sweets);
+        void TickGlueCooldowns(float dt);
+        bool IsGlueCooldownActive(const ActiveSweets& fruit) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
@@ -183,5 +186,6 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
+        std::unordered_map<ActiveSweets*, float> m_glueCooldowns;
     };
 }
