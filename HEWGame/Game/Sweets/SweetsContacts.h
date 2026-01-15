@@ -58,6 +58,7 @@ namespace SweetsSpace
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
         void ClearCreamWeldJoints(const char* context);
+        void ProcessPendingGlue();
 
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
         void TickDebugStats(float dt);
@@ -86,6 +87,23 @@ namespace SweetsSpace
             b2ShapeId shapeIdB{ b2_nullShapeId };
         };
 
+        struct PendingGlue
+        {
+            ActiveSweets* cream{ nullptr };
+            ActiveSweets* fruit{ nullptr };
+            b2ContactId contactId{ b2_nullContactId };
+            b2ShapeId shapeIdA{ b2_nullShapeId };
+            b2ShapeId shapeIdB{ b2_nullShapeId };
+        };
+
+        struct CreamWeldEntry
+        {
+            ActiveSweets* cream{ nullptr };
+            ActiveSweets* fruit{ nullptr };
+            b2JointId jointId{ b2_nullJointId };
+            b2Vec2 anchorWorld{};
+        };
+
         struct FrozenBodyState
         {
             b2BodyType bodyType{ b2_dynamicBody };
@@ -109,46 +127,33 @@ namespace SweetsSpace
             int sweetsContacts{ 0 };
         };
 
-        struct JointPairKey
+        struct ContactIdHash
         {
-            ActiveSweets* first{ nullptr };
-            ActiveSweets* second{ nullptr };
-
-            static JointPairKey Make(ActiveSweets* a, ActiveSweets* b)
+            std::size_t operator()(const b2ContactId& id) const noexcept
             {
-                JointPairKey key{};
-                if (a < b)
-                {
-                    key.first = a;
-                    key.second = b;
-                }
-                else
-                {
-                    key.first = b;
-                    key.second = a;
-                }
-                return key;
-            }
-
-            bool operator==(const JointPairKey& other) const noexcept
-            {
-                return first == other.first && second == other.second;
+                const std::size_t h1 = std::hash<int32_t>{}(id.index1);
+                const std::size_t h2 = std::hash<uint16_t>{}(id.world0);
+                const std::size_t h3 = std::hash<uint32_t>{}(id.generation);
+                std::size_t seed = h1;
+                seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                return seed;
             }
         };
 
-        struct JointPairHash
+        struct ContactIdEqual
         {
-            std::size_t operator()(const JointPairKey& key) const noexcept
+            bool operator()(const b2ContactId& lhs, const b2ContactId& rhs) const noexcept
             {
-                std::size_t h1 = std::hash<ActiveSweets*>{}(key.first);
-                std::size_t h2 = std::hash<ActiveSweets*>{}(key.second);
-                return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+                return B2_ID_EQUALS(lhs, rhs);
             }
         };
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         bool TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const;
+        bool TryGetContactAnchorData(const b2ContactId& contactId, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
+            ContactAnchorData& outAnchor) const;
         bool ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
             const ContactAnchorData& anchorData, b2Vec2& outAnchor) const;
         bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
@@ -161,9 +166,10 @@ namespace SweetsSpace
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;
         void LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit, const b2Vec2& anchorWorld) const;
-        void CleanupInvalidJoint(const JointPairKey& key, b2JointId& jointId);
+        void CleanupInvalidJoint(const b2ContactId& contactId, CreamWeldEntry& entry);
         void CleanupInvalidAnchor(ActiveSweets* cream);
         void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
+        void RemovePendingGlueForSweets(ActiveSweets* sweets);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
@@ -171,8 +177,8 @@ namespace SweetsSpace
         mutable GlueStats m_glueStats{};
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
-        std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
-        std::unordered_map<JointPairKey, b2Vec2, JointPairHash> m_creamWeldAnchors;
+        std::unordered_map<b2ContactId, PendingGlue, ContactIdHash, ContactIdEqual> m_pendingGlue;
+        std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
         std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;

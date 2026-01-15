@@ -96,6 +96,7 @@ namespace SweetsSpace
 
     void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
     {
+        m_contacts.ProcessPendingGlue();
         m_lifecycle.OnLateUpdate(ctx);
     }
 
