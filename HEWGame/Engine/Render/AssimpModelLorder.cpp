@@ -1180,7 +1180,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
 
     // 再帰処理でAssimpのノード情報を読み取り
     using FuncRecurciveMakeNodes = std::function < NodeIndexDX(aiNode*, NodeIndexDX, DirectX::XMMATRIX) >;
-    FuncRecurciveMakeNodes func = [&func, &a_outNodes, this](aiNode* assimpNode, NodeIndexDX parent, DirectX::XMMATRIX mat)
+    FuncRecurciveMakeNodes func = [&func, &a_outNodes, this](aiNode* assimpNode, NodeIndexDX parent, DirectX::XMMATRIX parentGlobal)
         {
             // assimp側で階層情報が細かく分割されている場合の処理
             std::string name = assimpNode->mName.data;
@@ -1188,8 +1188,8 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             if (name.find("$AssimpFbx") != std::string::npos)
             {
                 // 分割前のノードに到達するまで、各行列を掛け合わせていく
-                mat = localTransform * mat;
-                return func(assimpNode->mChildren[0], parent, mat);
+                parentGlobal = localTransform * parentGlobal;
+                return func(assimpNode->mChildren[0], parent, parentGlobal);
             }
 
             // Assimpのノード情報を格納
@@ -1197,7 +1197,9 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             node.name = name;
             node.parent = parent;
             node.children.resize(assimpNode->mNumChildren);
-            node.mat = localTransform * mat;
+            node.localBind = localTransform;
+            node.globalBind = localTransform * parentGlobal;
+            node.mat = node.globalBind;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1207,7 +1209,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             for (UINT i = 0; i < assimpNode->mNumChildren; ++i)
             {
                 a_outNodes[nodeIndex].children[i] =
-                    func(assimpNode->mChildren[i], nodeIndex, DirectX::XMMatrixIdentity());
+                    func(assimpNode->mChildren[i], nodeIndex, node.globalBind);
             }
 
             return nodeIndex;
@@ -1227,7 +1229,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
         DirectX::XMVECTOR scale;
         DirectX::XMVECTOR rotation;
         DirectX::XMVECTOR translation;
-        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].mat))
+        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].globalBind))
         {
             scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
             rotation = DirectX::XMQuaternionIdentity();
@@ -1304,7 +1306,7 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     bone.nodeIndex = func(a_nodes[nodeIndex].parent);
     if (bone.nodeIndex != kNodeNone) {
         // ノードに保存されている行列を逆行列として設定
-        DirectX::XMStoreFloat4x4(&bone.invOffset, DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].mat));
+        DirectX::XMStoreFloat4x4(&bone.invOffset, DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].globalBind));
         // ボーンの情報を設定
         a_bones.resize(1);
         a_bones[0] = bone;
