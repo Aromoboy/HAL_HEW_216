@@ -385,6 +385,16 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     physicsParameters.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
+    physicsParameters.creamGlueLinearHertz = tuning.creamGlueLinearHertz;
+    physicsParameters.creamGlueLinearDampingRatio = tuning.creamGlueLinearDampingRatio;
+    physicsParameters.creamGlueAngularHertz = tuning.creamGlueAngularHertz;
+    physicsParameters.creamGlueAngularDampingRatio = tuning.creamGlueAngularDampingRatio;
+    physicsParameters.creamGlueCollideConnected = tuning.creamGlueCollideConnected;
+    physicsParameters.creamGluePushOutEpsilon = tuning.creamGluePushOutEpsilon;
+    physicsParameters.creamGlueMaxPushOut = tuning.creamGlueMaxPushOut;
+    physicsParameters.creamGlueMaxSpeed = tuning.creamGlueMaxSpeed;
+    physicsParameters.creamGlueBreakForce = tuning.creamGlueBreakForce;
+    physicsParameters.creamGlueBreakImpulse = tuning.creamGlueBreakImpulse;
     result.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
     Systems::PhysicsMachine* physicsMachine = result.physicsBinder ? result.physicsBinder->GetPhysicsMachine() : nullptr;
     result.drawSystem = std::make_unique<Systems::DrawSystem>();

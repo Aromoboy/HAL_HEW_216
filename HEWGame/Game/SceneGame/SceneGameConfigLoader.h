@@ -24,6 +24,16 @@ namespace SceneGameConfig
         float smallDynamicContinuousThreshold = 0.6f;
         bool continuousCollisionForPlayerProjectiles = true;
         bool continuousCollisionForPlayer = false;
+        float creamGlueLinearHertz = 0.0f;
+        float creamGlueLinearDampingRatio = 0.7f;
+        float creamGlueAngularHertz = 0.0f;
+        float creamGlueAngularDampingRatio = 0.7f;
+        bool creamGlueCollideConnected = false;
+        float creamGluePushOutEpsilon = 0.03f;
+        float creamGlueMaxPushOut = 0.25f;
+        float creamGlueMaxSpeed = 0.0f;
+        float creamGlueBreakForce = 0.0f;
+        float creamGlueBreakImpulse = 0.0f;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);

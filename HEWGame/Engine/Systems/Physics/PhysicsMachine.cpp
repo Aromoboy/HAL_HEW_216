@@ -176,6 +176,16 @@ namespace Systems
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
         m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
+        m_tuning.creamGlueLinearHertz = std::max(0.0f, tuning.creamGlueLinearHertz);
+        m_tuning.creamGlueAngularHertz = std::max(0.0f, tuning.creamGlueAngularHertz);
+        m_tuning.creamGlueLinearDampingRatio = std::clamp(tuning.creamGlueLinearDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamGlueAngularDampingRatio = std::clamp(tuning.creamGlueAngularDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamGlueCollideConnected = tuning.creamGlueCollideConnected;
+        m_tuning.creamGluePushOutEpsilon = std::max(0.0f, tuning.creamGluePushOutEpsilon);
+        m_tuning.creamGlueMaxPushOut = std::max(0.0f, tuning.creamGlueMaxPushOut);
+        m_tuning.creamGlueMaxSpeed = std::max(0.0f, tuning.creamGlueMaxSpeed);
+        m_tuning.creamGlueBreakForce = std::max(0.0f, tuning.creamGlueBreakForce);
+        m_tuning.creamGlueBreakImpulse = std::max(0.0f, tuning.creamGlueBreakImpulse);
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
             ? tuning.maxStepDt
             : (1.0f / 60.0f);
@@ -260,6 +270,11 @@ namespace Systems
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
     {
         return m_bodies;
+    }
+
+    const PhysicsTuningParameters& PhysicsMachine::GetTuningParameters() const
+    {
+        return m_tuning;
     }
 
     void PhysicsMachine::SetGravity(float gravity)
