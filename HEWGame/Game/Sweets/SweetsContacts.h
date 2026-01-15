@@ -45,6 +45,7 @@ namespace SweetsSpace
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
         void OnContactHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
         void OnUpdate(float dt);
         void ConfigureCreamAdhesion(const SceneGameConfig::CreamAdhesionSettings& settings);
@@ -174,8 +175,92 @@ namespace SweetsSpace
             float elapsedSeconds{ 0.0f };
         };
 
+        enum class CreamAdhesionRejectReason
+        {
+            None,
+            ContactLost,
+            InvalidEntity,
+            TargetBlocked,
+            TargetNotAllowed,
+            RequireCarried
+        };
+
+        enum class CreamBondBreakReason
+        {
+            None,
+            ContactHit,
+            ContactLost,
+            Manual
+        };
+
+        struct CreamAdhesionCandidate
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* target{ nullptr };
+            float timeTouching{ 0.0f };
+            float graceRemaining{ 0.0f };
+            int touchingShapeCount{ 0 };
+            CreamAdhesionRejectReason lastRejectReason{ CreamAdhesionRejectReason::None };
+        };
+
+        struct CreamAdhesionBond
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* target{ nullptr };
+            b2JointId jointId{};
+            float cooldownRemaining{ 0.0f };
+            float createdAtSeconds{ 0.0f };
+            float lastBreakTimestamp{ 0.0f };
+            CreamBondBreakReason lastBreakReason{ CreamBondBreakReason::None };
+        };
+
+        struct CreamAdhesionPairKey
+        {
+            ActiveSweets* cream{ nullptr };
+            Entities::PhysicalEntity* target{ nullptr };
+
+            bool operator==(const CreamAdhesionPairKey& other) const noexcept
+            {
+                return cream == other.cream && target == other.target;
+            }
+        };
+
+        struct CreamAdhesionPairHash
+        {
+            std::size_t operator()(const CreamAdhesionPairKey& key) const noexcept
+            {
+                std::size_t h1 = std::hash<ActiveSweets*>{}(key.cream);
+                std::size_t h2 = std::hash<Entities::PhysicalEntity*>{}(key.target);
+                return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+            }
+        };
+
+        struct CreamAdhesionConfig
+        {
+            float adhesionDelaySeconds{ 0.3f };
+            float adhesionGraceSeconds{ 0.08f };
+            float releaseCooldownSeconds{ 0.0f };
+            float weldLinearHertz{ 6.0f };
+            float weldAngularHertz{ 6.0f };
+            float weldLinearDampingRatio{ 0.7f };
+            float weldAngularDampingRatio{ 0.7f };
+            float breakImpulseThreshold{ 0.0f };
+            bool requireSupport{ true };
+            bool requireCarried{ true };
+            std::unordered_set<std::string> allowedTags;
+            std::unordered_set<std::string> blockedTags;
+        };
+
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        void UpdateCreamAdhesionFromBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void UpdateCreamAdhesionFromEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void UpdateCreamAdhesionFromLost(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void UpdateCreamAdhesionFromHit(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, float approachSpeed);
+        void UpdateCreamAdhesionState(float dt);
+        bool ResolveCreamAdhesionPair(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+            ActiveSweets*& cream, Entities::PhysicalEntity*& target) const;
+        void LogCreamAdhesionEvent(const char* label, const ActiveSweets* cream, const Entities::PhysicalEntity* target);
         void TickCreamContacts();
         bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
         void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
@@ -223,6 +308,11 @@ namespace SweetsSpace
         std::unordered_set<std::string> m_creamBlockedTags;
         std::unordered_set<std::size_t> m_loggedCreamPairEvents;
         bool m_isResetting{ false };
+        CreamAdhesionConfig m_creamAdhesionConfig{};
+        std::unordered_map<CreamAdhesionPairKey, CreamAdhesionCandidate, CreamAdhesionPairHash> m_creamCandidates;
+        std::unordered_map<CreamAdhesionPairKey, CreamAdhesionBond, CreamAdhesionPairHash> m_creamBonds;
+        float m_creamAdhesionClockSeconds{ 0.0f };
+        std::size_t m_creamAdhesionEventLogCount{ 0 };
 
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
