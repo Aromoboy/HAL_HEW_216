@@ -51,11 +51,12 @@ std::string		Model::m_errorStr	= "";
 */
 DirectX::XMMATRIX GetMatrixFromAssimpMatrix(aiMatrix4x4 M)
 {
+	// Invariant: CPU-side matrices are row-major; transpose once when sending to shaders.
 	return DirectX::XMMatrixSet(
-		M.a1, M.b1, M.c1, M.d1,
-		M.a2, M.b2, M.c2, M.d2,
-		M.a3, M.b3, M.c3, M.d3,
-		M.a4, M.b4, M.c4, M.d4
+		M.a1, M.a2, M.a3, M.a4,
+		M.b1, M.b2, M.b3, M.b4,
+		M.c1, M.c2, M.c3, M.c4,
+		M.d1, M.d2, M.d3, M.d4
 	);
 }
 

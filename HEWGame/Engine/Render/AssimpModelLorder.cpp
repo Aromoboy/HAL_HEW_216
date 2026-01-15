@@ -580,6 +580,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         for (unsigned int j = 0; j < vertices.size(); ++j)
         {
+            vertices[j] = {};
             aiVector3D pos = mesh->mVertices[j];
             aiVector3D normal = mesh->HasNormals()
                 ? mesh->mNormals[j]
@@ -605,12 +606,10 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             DirectX::XMFLOAT3 normalFloat;
             DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
-            vertices[j] = {
-                DirectX::XMFLOAT3(pos.x, pos.y, pos.z),
-                normalFloat,
-                DirectX::XMFLOAT2(uv.x, uv.y),
-                DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
-            };
+            vertices[j].pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
+            vertices[j].normal = normalFloat;
+            vertices[j].uv = DirectX::XMFLOAT2(uv.x, uv.y);
+            vertices[j].color = DirectX::XMFLOAT4(col.r, col.g, col.b, col.a);
 
             minBounds.x = std::min(minBounds.x, pos.x);
             minBounds.y = std::min(minBounds.y, pos.y);
@@ -1078,7 +1077,15 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
                     XMVectorKeys::iterator prev = it[i];
                     --prev;
                     float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    if (i == 1)
+                    {
+                        result[i] = DirectX::XMQuaternionSlerp(prev->second, it[i]->second, rate);
+                        result[i] = DirectX::XMQuaternionNormalize(result[i]);
+                    }
+                    else
+                    {
+                        result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    }
                 }
             }
 
@@ -1147,7 +1154,15 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
                     XMVectorKeys::iterator prev = it[i];
                     --prev;
                     float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    if (i == 1)
+                    {
+                        result[i] = DirectX::XMQuaternionSlerp(prev->second, it[i]->second, rate);
+                        result[i] = DirectX::XMQuaternionNormalize(result[i]);
+                    }
+                    else
+                    {
+                        result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    }
                 }
             }
 
@@ -1172,24 +1187,19 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
 
     // 再帰処理でAssimpのノード情報を読み取り
     using FuncRecurciveMakeNodes = std::function < NodeIndexDX(aiNode*, NodeIndexDX, DirectX::XMMATRIX) >;
-    FuncRecurciveMakeNodes func = [&func, &a_outNodes, this](aiNode* assimpNode, NodeIndexDX parent, DirectX::XMMATRIX mat)
+    FuncRecurciveMakeNodes func = [&func, &a_outNodes, this](aiNode* assimpNode, NodeIndexDX parent, DirectX::XMMATRIX parentGlobal)
         {
-            // assimp側で階層情報が細かく分割されている場合の処理
             std::string name = assimpNode->mName.data;
             DirectX::XMMATRIX localTransform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
-            if (name.find("$AssimpFbx") != std::string::npos)
-            {
-                // 分割前のノードに到達するまで、各行列を掛け合わせていく
-                mat = localTransform * mat;
-                return func(assimpNode->mChildren[0], parent, mat);
-            }
 
             // Assimpのノード情報を格納
             NodeDX node;
             node.name = name;
             node.parent = parent;
             node.children.resize(assimpNode->mNumChildren);
-            node.mat = localTransform * mat;
+            node.localBind = localTransform;
+            node.globalBind = localTransform * parentGlobal;
+            node.mat = node.globalBind;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1199,7 +1209,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             for (UINT i = 0; i < assimpNode->mNumChildren; ++i)
             {
                 a_outNodes[nodeIndex].children[i] =
-                    func(assimpNode->mChildren[i], nodeIndex, DirectX::XMMatrixIdentity());
+                    func(assimpNode->mChildren[i], nodeIndex, node.globalBind);
             }
 
             return nodeIndex;
@@ -1219,7 +1229,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
         DirectX::XMVECTOR scale;
         DirectX::XMVECTOR rotation;
         DirectX::XMVECTOR translation;
-        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].mat))
+        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].globalBind))
         {
             scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
             rotation = DirectX::XMQuaternionIdentity();
@@ -1309,7 +1319,12 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
 
         // 頂点すべてを割り当てたボーンに100%依存とする
         for (auto vtxIt = a_vertices.begin(); vtxIt != a_vertices.end(); ++vtxIt)
+        {
+            std::fill(std::begin(vtxIt->weight), std::end(vtxIt->weight), 0.0f);
+            std::fill(std::begin(vtxIt->index), std::end(vtxIt->index), 0u);
             vtxIt->weight[0] = 1.0f;
+            vtxIt->index[0] = 0;
+        }
     }
 }
 
@@ -1368,6 +1383,9 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, const MeshNodeT
     // 取得してきた頂点ウェイトを頂点データに書き込み
     for (int i = 0; i < weights.size(); ++i)
     {
+        std::fill(std::begin(a_vertices[i].weight), std::end(a_vertices[i].weight), 0.0f);
+        std::fill(std::begin(a_vertices[i].index), std::end(a_vertices[i].index), 0u);
+
         // プログラム側の割り当て数を超える場合の正規化処理
         if (weights[i].size() >= MAX_WEIGHT)
         {
@@ -1400,11 +1418,13 @@ DirectX::XMMATRIX AssimpModelLorder::GetMatrixFromAssimpMatrix(aiMatrix4x4 M)
 * @param[in] M assimpの行列
 * @return 変換後の行列
 */
+    // Invariant: CPU-side matrices are kept in row-major order.
+    // Transpose exactly once when uploading to HLSL (default column-major) buffers.
     return DirectX::XMMatrixSet(
-        M.a1, M.b1, M.c1, M.d1,
-        M.a2, M.b2, M.c2, M.d2,
-        M.a3, M.b3, M.c3, M.d3,
-        M.a4, M.b4, M.c4, M.d4
+        M.a1, M.a2, M.a3, M.a4,
+        M.b1, M.b2, M.b3, M.b4,
+        M.c1, M.c2, M.c3, M.c4,
+        M.d1, M.d2, M.d3, M.d4
     );
 
 }

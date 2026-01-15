@@ -78,6 +78,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             {
                 DirectX::XMStoreFloat4x4(
                     &newBones[boneIdx],
+                    // CPU matrices are row-major; transpose exactly once for HLSL buffers.
                     DirectX::XMMatrixTranspose(mesh->GetBoneMatrix(boneIdx) *
                         animation->GetNodeMatrix(mesh->GetBoneNodeIndex(boneIdx))));
             }
