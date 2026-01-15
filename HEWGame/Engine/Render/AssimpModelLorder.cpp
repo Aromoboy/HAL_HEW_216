@@ -1313,7 +1313,9 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     bone.nodeIndex = func(a_nodes[nodeIndex].parent);
     if (bone.nodeIndex != kNodeNone) {
         // Invariant: vertices already live in node/mesh space; invOffset is mesh->bone (no parent/global accumulation).
-        DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].localBind);
+        // NOTE: Use the node's local bind pose only (do not use globalBind for bone offsets).
+        const DirectX::XMMATRIX localBind = a_nodes[bone.nodeIndex].localBind;
+        const DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, localBind);
         DirectX::XMStoreFloat4x4(&bone.invOffset, invOffset);
         // ボーンの情報を設定
         a_bones.resize(1);
@@ -1359,7 +1361,8 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLord
         }
 
         // Invariant: vertices already live in node/mesh space; invOffset is mesh->bone (no parent/global accumulation).
-        DirectX::XMMATRIX invOffsetMatrix = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
+        // NOTE: Use Assimp's offset matrix directly (do not use globalBind for bone offsets).
+        const DirectX::XMMATRIX invOffsetMatrix = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
         DirectX::XMStoreFloat4x4(&boneIt->invOffset, invOffsetMatrix);
 
         // ウェイトの設定
