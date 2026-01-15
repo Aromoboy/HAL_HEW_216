@@ -182,7 +182,12 @@ namespace SweetsSpace
             InvalidEntity,
             TargetBlocked,
             TargetNotAllowed,
-            RequireCarried
+            RequireCarried,
+            CooldownActive,
+            ExistingBond,
+            MissingPhysics,
+            MissingContactPoint,
+            JointCreateFailed
         };
 
         enum class CreamBondBreakReason
@@ -263,8 +268,9 @@ namespace SweetsSpace
         void LogCreamAdhesionEvent(const char* label, const ActiveSweets* cream, const Entities::PhysicalEntity* target);
         void TickCreamContacts();
         bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
-        void TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other);
-        void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context);
+        bool TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, float touchingSeconds);
+        void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context,
+            CreamBondBreakReason reason);
         void ClearPendingBreaksForSweets(ActiveSweets* sweets);
         void ClearHitImpulsesForSweets(ActiveSweets* sweets);
         void ClearPendingCementClustersForEntity(Entities::PhysicalEntity* entity);
@@ -286,6 +292,9 @@ namespace SweetsSpace
         WeakSweetsHandle FindSweetsHandle(ActiveSweets* sweets) const;
         void RemoveCementAdjacencyNode(const WeakSweetsHandle& handle);
         void RemoveCakeAdjacencyNode(const WeakSweetsHandle& handle);
+        bool IsCreamCarried(const ActiveSweets& cream) const;
+        bool TryGetContactPoint(const Entities::PhysicalEntity& a, const Entities::PhysicalEntity& b,
+            b2Vec2& outPoint, float* outImpulse) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         SweetsRegistry* m_registry;
