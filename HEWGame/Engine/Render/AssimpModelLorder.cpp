@@ -568,8 +568,9 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             }
         }
 
-        // 頂点は常にメッシュローカル空間のまま保持し、ノード変換は骨/ノード行列側に寄せる。
-        // (skinned も non-skinned も共通: nodeTransform は invOffset 側へ折り込み)
+        // ノード変換ルール:
+        // - 頂点は常にメッシュローカル空間のまま保持する (applyNodeTransform はしない)。
+        // - nodeTransform は skinned / non-skinned 共通で invOffset 側へ折り込み、同一空間に揃える。
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
