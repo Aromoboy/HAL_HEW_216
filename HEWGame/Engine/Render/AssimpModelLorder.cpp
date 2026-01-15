@@ -526,7 +526,30 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
 
-        // Invariant: vertices already live in node/mesh space; invOffset is always inverse(globalBind).
+            const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
+            if (matchedNode)
+            {
+                meshNodeTransform.hasTransform = true;
+                meshNodeTransform.transform = GetMatrixFromAssimpMatrix(matchedNode->mTransformation);
+                meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
+                std::ostringstream oss;
+                oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
+                const aiMatrix4x4& m = matchedNode->mTransformation;
+                oss << "[" << m.a1 << "," << m.a2 << "," << m.a3 << "," << m.a4 << ";"
+                    << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
+                    << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
+                    << m.d1 << "," << m.d2 << "," << m.d3 << "," << m.d4 << "]";
+                DebugLog::DebugMessage(oss.str() + "\n");
+            }
+            else
+            {
+                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
+            }
+        }
+
+        // ノード変換ルール:
+        // - 頂点は常にメッシュローカル空間のまま保持する (applyNodeTransform はしない)。
+        // - nodeTransform は skinned / non-skinned 共通で invOffset 側へ折り込み、同一空間に揃える。
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
