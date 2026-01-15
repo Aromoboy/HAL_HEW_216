@@ -79,6 +79,7 @@ namespace SweetsSpace
             m_glueTuning.pushOutEpsilon = tuning.creamGluePushOutEpsilon;
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
             m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
+            m_glueTuning.breakForce = tuning.creamGlueBreakForce;
         }
     }
 
@@ -500,6 +501,90 @@ namespace SweetsSpace
         return speedSquared > maxSpeedSquared;
     }
 
+    bool SweetsContacts::IsGlueBreakForceExceeded(b2JointId jointId) const
+    {
+        if (m_glueTuning.breakForce <= 0.0f)
+        {
+            return false;
+        }
+
+        if (!b2Joint_IsValid(jointId))
+        {
+            return false;
+        }
+
+        const b2Vec2 force = b2Joint_GetConstraintForce(jointId);
+        if (!std::isfinite(force.x) || !std::isfinite(force.y))
+        {
+            return false;
+        }
+
+        return b2Length(force) >= m_glueTuning.breakForce;
+    }
+
+    void SweetsContacts::UpdateBreakableJoints()
+    {
+        if (m_glueTuning.breakForce <= 0.0f)
+        {
+            return;
+        }
+
+        if (!m_physicsMachine)
+        {
+            return;
+        }
+
+        for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
+        {
+            auto current = it++;
+            b2JointId jointId = current->second;
+            if (!b2Joint_IsValid(jointId))
+            {
+                CleanupInvalidJoint(current->first, jointId);
+                continue;
+            }
+
+            if (!IsGlueBreakForceExceeded(jointId))
+            {
+                continue;
+            }
+
+            ActiveSweets* cream = IsCreamTag(current->first.first->GetTag()) ? current->first.first : current->first.second;
+            ActiveSweets* fruit = (cream == current->first.first) ? current->first.second : current->first.first;
+            LogGlueDestroy("breakForce", cream, fruit);
+            m_physicsMachine->DestroyJoint(jointId);
+            if (fruit)
+            {
+                RemoveFruitCreamLink(fruit, cream);
+            }
+            m_creamWeldAnchors.erase(current->first);
+            m_creamWeldJoints.erase(current->first);
+        }
+
+        for (auto it = m_creamAnchorJoints.begin(); it != m_creamAnchorJoints.end();)
+        {
+            auto current = it++;
+            b2JointId jointId = current->second;
+            if (!b2Joint_IsValid(jointId))
+            {
+                LogGlueDestroy("destroyed", current->first, nullptr);
+                m_creamAnchorPoints.erase(current->first);
+                m_creamAnchorJoints.erase(current);
+                continue;
+            }
+
+            if (!IsGlueBreakForceExceeded(jointId))
+            {
+                continue;
+            }
+
+            LogGlueDestroy("breakForce", current->first, nullptr);
+            m_physicsMachine->DestroyJoint(jointId);
+            m_creamAnchorPoints.erase(current->first);
+            m_creamAnchorJoints.erase(current);
+        }
+    }
+
     void SweetsContacts::LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const
     {
         ++m_glueStats.rejectCount;
@@ -805,6 +890,7 @@ namespace SweetsSpace
 
     void SweetsContacts::TickDebugStats(float dt)
     {
+        UpdateBreakableJoints();
         if (!std::isfinite(dt) || dt <= 0.0f)
         {
             return;

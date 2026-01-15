@@ -74,6 +74,7 @@ namespace SweetsSpace
             float pushOutEpsilon{ 0.03f };
             float maxPushOut{ 0.25f };
             float maxSpeed{ 0.0f };
+            float breakForce{ 0.0f };
         };
 
         struct ContactAnchorData
@@ -154,6 +155,8 @@ namespace SweetsSpace
         void FreezeFruitBody(ActiveSweets& fruit);
         void UnfreezeFruitBody(ActiveSweets& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
+        bool IsGlueBreakForceExceeded(b2JointId jointId) const;
+        void UpdateBreakableJoints();
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;

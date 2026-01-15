@@ -32,6 +32,7 @@ namespace SceneGameConfig
         float creamGluePushOutEpsilon = 0.03f;
         float creamGlueMaxPushOut = 0.25f;
         float creamGlueMaxSpeed = 0.0f;
+        float creamGlueBreakForce = 0.0f;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
