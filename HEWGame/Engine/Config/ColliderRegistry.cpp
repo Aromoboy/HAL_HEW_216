@@ -180,6 +180,7 @@ namespace Physics
         float height = 0.0f;
         float width = 0.0f;
         b2Vec2 offset{ 0.0f, 0.0f };
+        b2Vec2 OsaraSwayingpower{ 0.0f, 0.0f };
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         float linearDamping = 0.0f;
 
@@ -272,6 +273,7 @@ namespace Physics
                 height = 0.0f;
                 width = 0.0f;
                 offset = b2Vec2{ 0.0f, 0.0f };
+                OsaraSwayingpower = b2Vec2{ 0.0f, 0.0f };
                 shapeDef = b2DefaultShapeDef();
                 linearDamping = 0.0f;
                 continue;
@@ -337,6 +339,27 @@ namespace Physics
                 {
                     shapeDef.material.restitution = std::clamp(*parsed, 0.0f, 1.0f);
                 }
+                continue;
+            }
+
+            if (key == "OsaraSwayingpower")
+            {
+                if (auto parsed = ParseOffsetPair(value))
+                {
+                    OsaraSwayingpower = *parsed;
+                }
+                continue;
+            }
+
+            if (key == "OsaraSwayingpowerX")
+            {
+                if (auto parsed = ParseFloat(value)) OsaraSwayingpower.x = *parsed;
+                continue;
+            }
+
+            if (key == "OsaraSwayingpowerY")
+            {
+                if (auto parsed = ParseFloat(value)) OsaraSwayingpower.y = *parsed;
                 continue;
             }
 
