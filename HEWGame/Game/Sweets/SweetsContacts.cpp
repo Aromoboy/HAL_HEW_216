@@ -504,9 +504,42 @@ namespace SweetsSpace
         return b2Length(force) >= m_glueTuning.breakForce;
     }
 
+    bool SweetsContacts::IsGlueBreakSpeedExceeded(b2JointId jointId) const
+    {
+        if (m_glueTuning.maxSpeed <= 0.0f)
+        {
+            return false;
+        }
+
+        if (!b2Joint_IsValid(jointId))
+        {
+            return false;
+        }
+
+        const b2BodyId bodyA = b2Joint_GetBodyA(jointId);
+        const b2BodyId bodyB = b2Joint_GetBodyB(jointId);
+        if (!b2Body_IsValid(bodyA) || !b2Body_IsValid(bodyB))
+        {
+            return false;
+        }
+
+        const b2Vec2 velocityA = b2Body_GetLinearVelocity(bodyA);
+        const b2Vec2 velocityB = b2Body_GetLinearVelocity(bodyB);
+        if (!std::isfinite(velocityA.x) || !std::isfinite(velocityA.y)
+            || !std::isfinite(velocityB.x) || !std::isfinite(velocityB.y))
+        {
+            return false;
+        }
+
+        const b2Vec2 relative = b2Vec2{ velocityA.x - velocityB.x, velocityA.y - velocityB.y };
+        const float speedSquared = b2LengthSquared(relative);
+        const float maxSpeedSquared = m_glueTuning.maxSpeed * m_glueTuning.maxSpeed;
+        return speedSquared > maxSpeedSquared;
+    }
+
     void SweetsContacts::UpdateBreakableJoints()
     {
-        if (m_glueTuning.breakForce <= 0.0f)
+        if (m_glueTuning.breakForce <= 0.0f && m_glueTuning.maxSpeed <= 0.0f)
         {
             return;
         }
@@ -526,14 +559,16 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (!IsGlueBreakForceExceeded(entry.jointId))
+            const bool breakForce = IsGlueBreakForceExceeded(entry.jointId);
+            const bool breakSpeed = IsGlueBreakSpeedExceeded(entry.jointId);
+            if (!breakForce && !breakSpeed)
             {
                 continue;
             }
 
             ActiveSweets* cream = entry.cream;
             ActiveSweets* fruit = entry.fruit;
-            LogGlueDestroy("breakForce", cream, fruit);
+            LogGlueDestroy(breakForce ? "breakForce" : "breakSpeed", cream, fruit);
             m_physicsMachine->DestroyJoint(entry.jointId);
             m_creamWeldJoints.erase(current->first);
             if (fruit)
@@ -554,12 +589,14 @@ namespace SweetsSpace
                 continue;
             }
 
-            if (!IsGlueBreakForceExceeded(jointId))
+            const bool breakForce = IsGlueBreakForceExceeded(jointId);
+            const bool breakSpeed = IsGlueBreakSpeedExceeded(jointId);
+            if (!breakForce && !breakSpeed)
             {
                 continue;
             }
 
-            LogGlueDestroy("breakForce", current->first, nullptr);
+            LogGlueDestroy(breakForce ? "breakForce" : "breakSpeed", current->first, nullptr);
             m_physicsMachine->DestroyJoint(jointId);
             m_creamAnchorPoints.erase(current->first);
             m_creamAnchorJoints.erase(current);

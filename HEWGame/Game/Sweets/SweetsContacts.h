@@ -161,6 +161,7 @@ namespace SweetsSpace
         void UnfreezeFruitBody(ActiveSweets& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
         bool IsGlueBreakForceExceeded(b2JointId jointId) const;
+        bool IsGlueBreakSpeedExceeded(b2JointId jointId) const;
         void UpdateBreakableJoints();
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
