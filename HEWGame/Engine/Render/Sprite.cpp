@@ -6,7 +6,7 @@ Sprite::Data Sprite::m_data;
 std::shared_ptr<VertexShader> Sprite::m_defVS;
 std::shared_ptr<PixelShader> Sprite::m_defPS;
 #ifdef _DEBUG
-bool Sprite::g_inSpritePass = false;
+int Sprite::g_spritePassDepth = 0;
 #endif
 
 void Sprite::Init()
@@ -96,7 +96,7 @@ void Sprite::Uninit()
 void Sprite::Draw()
 {
 #ifdef _DEBUG
-	assert(g_inSpritePass && "Sprite::Draw called outside of sprite pass");
+	assert(g_spritePassDepth > 0 && "Sprite::Draw called outside of sprite pass");
 #endif
 	m_data.vs->WriteBuffer(0, m_data.matrix);
 	m_data.vs->WriteBuffer(1, m_data.param);
@@ -178,7 +178,7 @@ Sprite::ScopedPassDefaults::ScopedPassDefaults()
 {
 	ResetStateToDefaults();
 #ifdef _DEBUG
-	g_inSpritePass = true;
+	++g_spritePassDepth;
 #endif
 }
 
@@ -186,6 +186,8 @@ Sprite::ScopedPassDefaults::~ScopedPassDefaults()
 {
 	ResetStateToDefaults();
 #ifdef _DEBUG
-	g_inSpritePass = false;
+	assert(g_spritePassDepth > 0 && "Sprite pass depth underflow");
+	if (g_spritePassDepth > 0)
+		--g_spritePassDepth;
 #endif
 }
