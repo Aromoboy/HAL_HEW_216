@@ -78,6 +78,7 @@ namespace SweetsSpace
             m_glueTuning.collideConnected = tuning.creamGlueCollideConnected;
             m_glueTuning.pushOutEpsilon = tuning.creamGluePushOutEpsilon;
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
+            m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
         }
     }
 
@@ -143,45 +144,52 @@ namespace SweetsSpace
             }
             else if (m_physicsMachine)
             {
-                CleanupInvalidAnchor(creamForStage);
-                if (m_creamAnchorJoints.contains(creamForStage))
+                if (IsGlueSpeedTooFast(*creamForStage) || IsGlueSpeedTooFast(*otherStage))
                 {
-                    LogGlueReject("alreadyBonded", creamForStage, otherStage);
+                    LogGlueReject("tooFast", creamForStage, otherStage);
                 }
                 else
                 {
-                    ContactAnchorData anchorData{};
-                    if (!TryGetContactAnchorData(info, anchorData))
+                    CleanupInvalidAnchor(creamForStage);
+                    if (m_creamAnchorJoints.contains(creamForStage))
                     {
-                        LogGlueReject("missingManifold", creamForStage, otherStage);
+                        LogGlueReject("alreadyBonded", creamForStage, otherStage);
                     }
                     else
                     {
-                        b2Vec2 anchor = anchorData.point;
-                        const bool creamIsShapeA = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdA);
-                        const bool creamIsShapeB = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdB);
-                        if (creamIsShapeA != creamIsShapeB)
+                        ContactAnchorData anchorData{};
+                        if (!TryGetContactAnchorData(info, anchorData))
                         {
-                            ApplyGluePushOut(*creamForStage, creamIsShapeA, anchorData, anchor);
-                        }
-                        const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
-                            *creamForStage,
-                            *otherStage,
-                            anchor,
-                            m_glueTuning.linearHertz,
-                            m_glueTuning.linearDampingRatio,
-                            m_glueTuning.angularHertz,
-                            m_glueTuning.angularDampingRatio,
-                            m_glueTuning.collideConnected);
-                        if (b2Joint_IsValid(jointId))
-                        {
-                            m_creamAnchorJoints.emplace(creamForStage, jointId);
-                            m_creamAnchorPoints.emplace(creamForStage, anchor);
-                            LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
+                            LogGlueReject("missingManifold", creamForStage, otherStage);
                         }
                         else
                         {
-                            LogGlueReject("createFailed", creamForStage, otherStage);
+                            b2Vec2 anchor = anchorData.point;
+                            const bool creamIsShapeA = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdA);
+                            const bool creamIsShapeB = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdB);
+                            if (creamIsShapeA != creamIsShapeB)
+                            {
+                                ApplyGluePushOut(*creamForStage, creamIsShapeA, anchorData, anchor);
+                            }
+                            const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                                *creamForStage,
+                                *otherStage,
+                                anchor,
+                                m_glueTuning.linearHertz,
+                                m_glueTuning.linearDampingRatio,
+                                m_glueTuning.angularHertz,
+                                m_glueTuning.angularDampingRatio,
+                                m_glueTuning.collideConnected);
+                            if (b2Joint_IsValid(jointId))
+                            {
+                                m_creamAnchorJoints.emplace(creamForStage, jointId);
+                                m_creamAnchorPoints.emplace(creamForStage, anchor);
+                                LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
+                            }
+                            else
+                            {
+                                LogGlueReject("createFailed", creamForStage, otherStage);
+                            }
                         }
                     }
                 }
@@ -216,62 +224,69 @@ namespace SweetsSpace
                 }
                 else if (m_physicsMachine)
                 {
-                    const auto fruitBindings = m_fruitToCreams.find(otherSweets);
-                    if (fruitBindings != m_fruitToCreams.end() && fruitBindings->second.contains(cream))
+                    if (IsGlueSpeedTooFast(*cream) || IsGlueSpeedTooFast(*otherSweets))
                     {
-                        LogGlueReject("alreadyBonded", cream, otherSweets);
+                        LogGlueReject("tooFast", cream, otherSweets);
                     }
                     else
                     {
-                        const JointPairKey key = JointPairKey::Make(cream, otherSweets);
-                        auto existing = m_creamWeldJoints.find(key);
-                        if (existing != m_creamWeldJoints.end())
+                        const auto fruitBindings = m_fruitToCreams.find(otherSweets);
+                        if (fruitBindings != m_fruitToCreams.end() && fruitBindings->second.contains(cream))
                         {
-                            CleanupInvalidJoint(key, existing->second);
-                        }
-
-                        if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
-                        {
-                            ContactAnchorData anchorData{};
-                            if (!TryGetContactAnchorData(info, anchorData))
-                            {
-                                LogGlueReject("missingManifold", cream, otherSweets);
-                            }
-                            else
-                            {
-                                b2Vec2 anchor = anchorData.point;
-                                const bool fruitIsShapeA = DoesShapeBelongToEntity(*otherSweets, anchorData.shapeIdA);
-                                const bool fruitIsShapeB = DoesShapeBelongToEntity(*otherSweets, anchorData.shapeIdB);
-                                if (fruitIsShapeA != fruitIsShapeB)
-                                {
-                                    ApplyGluePushOut(*otherSweets, fruitIsShapeA, anchorData, anchor);
-                                }
-                                const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
-                                    *cream,
-                                    *otherSweets,
-                                    anchor,
-                                    m_glueTuning.linearHertz,
-                                    m_glueTuning.linearDampingRatio,
-                                    m_glueTuning.angularHertz,
-                                    m_glueTuning.angularDampingRatio,
-                                    m_glueTuning.collideConnected);
-                                if (b2Joint_IsValid(jointId))
-                                {
-                                    m_creamWeldJoints.emplace(key, jointId);
-                                    m_creamWeldAnchors.emplace(key, anchor);
-                                    m_fruitToCreams[otherSweets].insert(cream);
-                                    FreezeFruitBody(*otherSweets);
-                                    LogGlueCreateFruitToCream(cream, otherSweets, anchor);
-                                }
-                                else
-                                {
-                                    LogGlueReject("createFailed", cream, otherSweets);
-                                }
-                            }
+                            LogGlueReject("alreadyBonded", cream, otherSweets);
                         }
                         else
                         {
-                            LogGlueReject("alreadyBonded", cream, otherSweets);
+                            const JointPairKey key = JointPairKey::Make(cream, otherSweets);
+                            auto existing = m_creamWeldJoints.find(key);
+                            if (existing != m_creamWeldJoints.end())
+                            {
+                                CleanupInvalidJoint(key, existing->second);
+                            }
+
+                            if (m_creamWeldJoints.find(key) == m_creamWeldJoints.end())
+                            {
+                                ContactAnchorData anchorData{};
+                                if (!TryGetContactAnchorData(info, anchorData))
+                                {
+                                    LogGlueReject("missingManifold", cream, otherSweets);
+                                }
+                                else
+                                {
+                                    b2Vec2 anchor = anchorData.point;
+                                    const bool fruitIsShapeA = DoesShapeBelongToEntity(*otherSweets, anchorData.shapeIdA);
+                                    const bool fruitIsShapeB = DoesShapeBelongToEntity(*otherSweets, anchorData.shapeIdB);
+                                    if (fruitIsShapeA != fruitIsShapeB)
+                                    {
+                                        ApplyGluePushOut(*otherSweets, fruitIsShapeA, anchorData, anchor);
+                                    }
+                                    const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                                        *cream,
+                                        *otherSweets,
+                                        anchor,
+                                        m_glueTuning.linearHertz,
+                                        m_glueTuning.linearDampingRatio,
+                                        m_glueTuning.angularHertz,
+                                        m_glueTuning.angularDampingRatio,
+                                        m_glueTuning.collideConnected);
+                                    if (b2Joint_IsValid(jointId))
+                                    {
+                                        m_creamWeldJoints.emplace(key, jointId);
+                                        m_creamWeldAnchors.emplace(key, anchor);
+                                        m_fruitToCreams[otherSweets].insert(cream);
+                                        FreezeFruitBody(*otherSweets);
+                                        LogGlueCreateFruitToCream(cream, otherSweets, anchor);
+                                    }
+                                    else
+                                    {
+                                        LogGlueReject("createFailed", cream, otherSweets);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                LogGlueReject("alreadyBonded", cream, otherSweets);
+                            }
                         }
                     }
                 }
@@ -464,6 +479,25 @@ namespace SweetsSpace
         }
 
         m_frozenFruitStates.erase(it);
+    }
+
+    bool SweetsContacts::IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const
+    {
+        if (m_glueTuning.maxSpeed <= 0.0f)
+        {
+            return false;
+        }
+
+        const b2BodyId bodyId = entity.GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return false;
+        }
+
+        const b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
+        const float speedSquared = b2LengthSquared(velocity);
+        const float maxSpeedSquared = m_glueTuning.maxSpeed * m_glueTuning.maxSpeed;
+        return speedSquared > maxSpeedSquared;
     }
 
     void SweetsContacts::LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const

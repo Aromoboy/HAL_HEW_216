@@ -73,6 +73,7 @@ namespace SweetsSpace
             bool collideConnected{ false };
             float pushOutEpsilon{ 0.03f };
             float maxPushOut{ 0.25f };
+            float maxSpeed{ 0.0f };
         };
 
         struct ContactAnchorData
@@ -152,6 +153,7 @@ namespace SweetsSpace
         bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
         void FreezeFruitBody(ActiveSweets& fruit);
         void UnfreezeFruitBody(ActiveSweets& fruit);
+        bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;
