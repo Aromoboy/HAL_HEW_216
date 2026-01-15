@@ -1197,7 +1197,8 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             node.name = name;
             node.parent = parent;
             node.children.resize(assimpNode->mNumChildren);
-            node.mat = localTransform * mat;
+            const DirectX::XMMATRIX globalTransform = localTransform * mat;
+            node.mat = globalTransform;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1207,7 +1208,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             for (UINT i = 0; i < assimpNode->mNumChildren; ++i)
             {
                 a_outNodes[nodeIndex].children[i] =
-                    func(assimpNode->mChildren[i], nodeIndex, DirectX::XMMatrixIdentity());
+                    func(assimpNode->mChildren[i], nodeIndex, globalTransform);
             }
 
             return nodeIndex;
