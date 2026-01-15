@@ -837,6 +837,15 @@ namespace SweetsSpace
         {
             IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason::RequireCarried);
             LogCreamAdhesionEvent("contact_begin_reject_not_carried", cream, target);
+            if (ShouldLogCreamPairEvent(cream, target, "begin_reject_not_carried"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream adhesion begin rejected (requireCarried="
+                    << std::boolalpha << m_creamRequireCarried << std::noboolalpha
+                    << ", isCarried=" << std::boolalpha << IsCreamCarried(*cream) << std::noboolalpha
+                    << ") cream='" << cream->GetTag() << "' target='" << target->GetTag() << "'\n";
+                LogInfoAndTrace(oss.str());
+            }
             return;
         }
 
@@ -853,6 +862,15 @@ namespace SweetsSpace
         }
 
         LogCreamAdhesionEvent("contact_begin", cream, target);
+        if (ShouldLogCreamPairEvent(cream, target, "begin_candidate"))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "cream adhesion begin candidate cream='" << cream->GetTag()
+                << "' target='" << target->GetTag()
+                << "' touchingShapes=" << candidate.touchingShapeCount
+                << " grace=" << candidate.graceRemaining << "\n";
+            LogInfoAndTrace(oss.str());
+        }
     }
 
     void SweetsContacts::UpdateCreamAdhesionFromEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
@@ -1003,10 +1021,31 @@ namespace SweetsSpace
                 continue;
             }
 
+            if (ShouldLogCreamPairEvent(candidate.cream, candidate.target, "candidate_ready"))
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "cream adhesion candidate ready cream='" << candidate.cream->GetTag()
+                    << "' target='" << candidate.target->GetTag()
+                    << "' touchingSeconds=" << candidate.timeTouching
+                    << " touchingShapes=" << candidate.touchingShapeCount
+                    << " grace=" << candidate.graceRemaining << "\n";
+                LogInfoAndTrace(oss.str());
+            }
+
             if (m_creamRequireCarried && !IsCreamCarried(*candidate.cream))
             {
                 candidate.lastRejectReason = CreamAdhesionRejectReason::RequireCarried;
                 IncrementCreamAdhesionRejectCounter(candidate.lastRejectReason);
+                if (ShouldLogCreamPairEvent(candidate.cream, candidate.target, "candidate_reject_not_carried"))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "cream adhesion candidate rejected (requireCarried="
+                        << std::boolalpha << m_creamRequireCarried << std::noboolalpha
+                        << ", isCarried=" << std::boolalpha << IsCreamCarried(*candidate.cream) << std::noboolalpha
+                        << ") cream='" << candidate.cream->GetTag()
+                        << "' target='" << candidate.target->GetTag() << "'\n";
+                    LogInfoAndTrace(oss.str());
+                }
                 it = m_creamCandidates.erase(it);
                 continue;
             }
@@ -1224,6 +1263,36 @@ namespace SweetsSpace
         if (!cream || !other)
         {
             return false;
+        }
+
+        if (ShouldLogCreamPairEvent(cream, other, "weld_attempt"))
+        {
+            const auto shapeInfo = [](const Entities::PhysicalEntity* entity)
+            {
+                if (!entity)
+                {
+                    return std::string("entity=<null>");
+                }
+
+                const b2BodyId bodyId = entity->GetBox2DBodyId();
+                if (!b2Body_IsValid(bodyId))
+                {
+                    return "body=invalid";
+                }
+
+                const int shapeCount = b2Body_GetShapeCount(bodyId);
+                std::ostringstream oss;
+                oss << "body=valid shapes=" << shapeCount;
+                return oss.str();
+            };
+
+            std::ostringstream oss;
+            oss << kLogPrefix << "cream weld attempt cream='" << cream->GetTag()
+                << "' target='" << other->GetTag()
+                << "' touchingSeconds=" << touchingSeconds
+                << " [" << shapeInfo(cream) << "]"
+                << " [" << shapeInfo(other) << "]\n";
+            LogInfoAndTrace(oss.str());
         }
 
         auto contactCounts = [&](const ActiveSweets* target)
