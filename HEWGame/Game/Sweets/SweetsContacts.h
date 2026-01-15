@@ -186,6 +186,6 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
-        std::unordered_map<ActiveSweets*, float> m_glueCooldowns;
+        std::unordered_map<ActiveSweets*, float> m_glueCooldown;
     };
 }

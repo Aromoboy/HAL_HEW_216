@@ -149,11 +149,7 @@ namespace SweetsSpace
                                         b2Body_SetLinearVelocity(refreshedGluedBody, newVelocity);
                                     }
                                 }
-                                const auto cooldownEntry = m_glueCooldowns.find(gluedFruit);
-                                const float currentCooldown = (cooldownEntry != m_glueCooldowns.end())
-                                    ? cooldownEntry->second
-                                    : 0.0f;
-                                m_glueCooldowns[gluedFruit] = std::max(currentCooldown, kGlueCooldownSeconds);
+                                m_glueCooldown[gluedFruit] = kGlueCooldownSeconds;
                             }
                         }
                     }
@@ -798,7 +794,7 @@ namespace SweetsSpace
         m_contactStates.clear();
         m_hasSweetsContact.clear();
         m_pendingGlue.clear();
-        m_glueCooldowns.clear();
+        m_glueCooldown.clear();
     }
 
     void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
@@ -810,7 +806,7 @@ namespace SweetsSpace
         RemovePendingGlueForSweets(sweets);
         if (!context || std::string(context) != "impactBreak")
         {
-            m_glueCooldowns.erase(sweets);
+            m_glueCooldown.erase(sweets);
         }
         if (m_creamWeldJoints.empty() && m_creamAnchorJoints.empty())
         {
@@ -933,7 +929,7 @@ namespace SweetsSpace
         }
         m_creamAnchorJoints.clear();
         m_creamAnchorPoints.clear();
-        m_glueCooldowns.clear();
+        m_glueCooldown.clear();
         std::vector<ActiveSweets*> frozenFruits;
         frozenFruits.reserve(m_frozenFruitStates.size());
         for (const auto& entry : m_frozenFruitStates)
@@ -1093,17 +1089,17 @@ namespace SweetsSpace
 
     void SweetsContacts::TickGlueCooldowns(float dt)
     {
-        if (!std::isfinite(dt) || dt <= 0.0f || m_glueCooldowns.empty())
+        if (!std::isfinite(dt) || dt <= 0.0f || m_glueCooldown.empty())
         {
             return;
         }
 
-        for (auto it = m_glueCooldowns.begin(); it != m_glueCooldowns.end();)
+        for (auto it = m_glueCooldown.begin(); it != m_glueCooldown.end();)
         {
             it->second = std::max(0.0f, it->second - dt);
             if (it->second <= 0.0f)
             {
-                it = m_glueCooldowns.erase(it);
+                it = m_glueCooldown.erase(it);
             }
             else
             {
@@ -1114,8 +1110,8 @@ namespace SweetsSpace
 
     bool SweetsContacts::IsGlueCooldownActive(const ActiveSweets& fruit) const
     {
-        auto it = m_glueCooldowns.find(const_cast<ActiveSweets*>(&fruit));
-        if (it == m_glueCooldowns.end())
+        auto it = m_glueCooldown.find(const_cast<ActiveSweets*>(&fruit));
+        if (it == m_glueCooldown.end())
         {
             return false;
         }
