@@ -1398,11 +1398,13 @@ DirectX::XMMATRIX AssimpModelLorder::GetMatrixFromAssimpMatrix(aiMatrix4x4 M)
 * @param[in] M assimpの行列
 * @return 変換後の行列
 */
+    // Invariant: CPU-side matrices are kept in row-major order.
+    // Transpose exactly once when uploading to HLSL (default column-major) buffers.
     return DirectX::XMMatrixSet(
-        M.a1, M.b1, M.c1, M.d1,
-        M.a2, M.b2, M.c2, M.d2,
-        M.a3, M.b3, M.c3, M.d3,
-        M.a4, M.b4, M.c4, M.d4
+        M.a1, M.a2, M.a3, M.a4,
+        M.b1, M.b2, M.b3, M.b4,
+        M.c1, M.c2, M.c3, M.c4,
+        M.d1, M.d2, M.d3, M.d4
     );
 
 }
