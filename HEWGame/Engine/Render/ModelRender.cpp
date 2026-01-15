@@ -69,12 +69,16 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
         const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
 
-        DirectX::XMFLOAT4X4 newBones[200];
+        DirectX::XMFLOAT4X4 newBones[kMaxBones];
+        for (size_t boneIdx = 0; boneIdx < kMaxBones; ++boneIdx)
+        {
+            DirectX::XMStoreFloat4x4(&newBones[boneIdx], DirectX::XMMatrixIdentity());
+        }
         if (useAnimationShader)
         {
             pVTX = ShaderList::GetVS(ShaderList::VS_ANIME);
             pVTX->Bind();
-            for (size_t boneIdx = 0; boneIdx < 47; ++boneIdx)
+            for (size_t boneIdx = 0; boneIdx < limitedBoneCount; ++boneIdx)
             {
                 DirectX::XMStoreFloat4x4(
                     &newBones[boneIdx],
