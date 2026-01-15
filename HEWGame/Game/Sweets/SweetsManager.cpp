@@ -162,7 +162,6 @@ namespace SweetsSpace
 
     void SweetsManager::ClearRetryContacts()
     {
-        m_contacts.ClearCementClusters("RetryReset");
         m_contacts.ClearCreamWeldJoints("RetryReset");
     }
 
@@ -347,16 +346,12 @@ namespace SweetsSpace
         if (sweetsA)
         {
             m_contacts.ClearContactState(sweetsA);
-            m_contacts.ClearPendingAdhesionsForSweets(sweetsA);
-            m_contacts.ClearPendingBreaksForSweets(sweetsA);
         }
 
         auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
         if (sweetsB && sweetsB != sweetsA)
         {
             m_contacts.ClearContactState(sweetsB);
-            m_contacts.ClearPendingAdhesionsForSweets(sweetsB);
-            m_contacts.ClearPendingBreaksForSweets(sweetsB);
         }
     }
 
