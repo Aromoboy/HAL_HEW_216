@@ -959,6 +959,35 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
     const auto& platform = m_stageData.GetPlatform(0);
     const float stageFloorY = platform.center.y;
+    float deltaTime = ctx.timer.DeltaTime();
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.spinEnabled)
+        {
+            obj.currentRotation += obj.spinSpeed * deltaTime;
+        }
+    }
+
+    for (auto& obj : m_stageObjects)
+    {
+        //Osara以外のモデルスキップ
+        if (!IsOsara(obj))
+        {
+            continue;
+        }
+
+        obj.swaiTime += deltaTime;
+
+        obj.transform.position.y
+            = obj.baseY + std::sin(obj.swaiTime) * obj.OsaraSwayingpower.y;
+
+        //当たり判定も動かす
+        if (obj.physicsEntity)
+        {
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+        }
+    }
+
     m_playerController.UpdatePlayerBounds({
         player.get(),
         m_gameCamera.get(),
@@ -1018,7 +1047,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     }
 
-    float deltaTime = ctx.timer.DeltaTime();
     for (auto& obj : m_stageObjects)
     {
         if (obj.spinEnabled)
@@ -1989,4 +2017,10 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
     oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
+}
+
+//Osara探す？やつ
+bool SceneGame::IsOsara(const StageObject& obj)
+{
+    return obj.modelPath.find("osara") != std::string::npos;
 }

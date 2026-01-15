@@ -66,7 +66,6 @@ namespace Stage
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
-
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);

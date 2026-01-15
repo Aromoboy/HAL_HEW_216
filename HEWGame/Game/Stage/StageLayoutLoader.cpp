@@ -124,6 +124,8 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
     constexpr Collision::CollisionLayer kStageColliderLayer = Collision::CollisionLayer::Stage;
     constexpr b2BodyType kStageBodyType = b2_staticBody;
+    //Osara用
+    constexpr b2BodyType kOsaraBodyType = b2_kinematicBody;
     constexpr bool kStageFixedRotation = true;
     constexpr bool kStageAllowRotation = false;
 
@@ -180,6 +182,10 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             DebugTrace(logPrefix + "StageLayout.csv missing model path; skipped line.\n");
             continue;
         }
+
+        std::string lower = obj.modelPath;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        obj.IsOsara = (lower.find("osara") != std::string::npos);
 
         if (!TryParseFloat(values[1], obj.transform.position.x, logPrefix, "position.x")
             || !TryParseFloat(values[2], obj.transform.position.y, logPrefix, "position.y")
@@ -274,7 +280,8 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
             colliderRequest.key = colliderKey;
             colliderRequest.transform = obj.transform;
-            colliderRequest.bodyType = kStageBodyType;
+            //colliderRequest.bodyType = kStageBodyType;
+            colliderRequest.bodyType = obj.IsOsara ? kOsaraBodyType : kStageBodyType;
             colliderRequest.fixedRotation = kStageFixedRotation;
             colliderRequest.allowRotation = kStageAllowRotation;
             colliderRequest.angularDamping = kStageAllowRotation ? 0.2f : 0.0f;
@@ -303,6 +310,8 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
                 entity->SetBoxColliderComponent(colliderBuild.collider);
                 entity->SetAllowMeshPhysics(false);
+                //紐づけ
+                obj.physicsEntity = entity;
                 result.physicsEntities.push_back(entity);
 
                 std::ostringstream oss;
@@ -312,7 +321,9 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                 DebugTrace(oss.str());
             }
         }
-
+        //baseYを保存
+        obj.baseY = obj.transform.position.y;
+        
         result.stageObjects.push_back(std::move(obj));
     }
 
