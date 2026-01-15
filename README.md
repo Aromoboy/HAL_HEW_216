@@ -739,3 +739,6 @@ Input → PrePhysics → Physics → PostPhysics → Gameplay → Camera → UI 
 
 描画は Scene::RootDraw から別経路で行う。
 SceneGame::ConfigureUpdates の登録と実行順の説明は docs/scene-lifecycle.md にまとめてある。
+
+関連ドキュメント:
+- docs/cream_adhesion.md: クリーム接着 (bond) の状態遷移、carry の参照元、デバッグ可視化。

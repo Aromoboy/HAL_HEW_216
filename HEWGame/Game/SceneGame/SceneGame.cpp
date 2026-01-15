@@ -1345,6 +1345,12 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         }
     }
 
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->DebugDrawCreamAdhesion();
+        m_sweetsManager->DebugLogCreamAdhesionRejectCounters(1.0f);
+    }
+
     if (activeCamera)
     {
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);

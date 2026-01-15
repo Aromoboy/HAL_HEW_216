@@ -33,6 +33,21 @@ namespace SweetsSpace
     class SweetsContacts
     {
     public:
+        struct CreamAdhesionRejectCounters
+        {
+            std::size_t blockedTag{ 0 };
+            std::size_t notCarried{ 0 };
+            std::size_t notAllowed{ 0 };
+            std::size_t alreadyBonded{ 0 };
+            std::size_t cooldown{ 0 };
+            std::size_t targetNotSupportedType{ 0 };
+
+            std::size_t Total() const noexcept
+            {
+                return blockedTag + notCarried + notAllowed + alreadyBonded + cooldown + targetNotSupportedType;
+            }
+        };
+
         SweetsContacts(Systems::PhysicsMachine* physicsMachine,
             SweetsRegistry* registry,
             bool* warnedMissingPhysicsMachine);
@@ -54,6 +69,16 @@ namespace SweetsSpace
         {
             return m_creamReleaseCooldownSeconds;
         }
+        const CreamAdhesionRejectCounters& GetCreamAdhesionRejectCounters() const noexcept
+        {
+            return m_creamRejectCounters;
+        }
+        void ResetCreamAdhesionRejectCounters() noexcept
+        {
+            m_creamRejectCounters = {};
+        }
+        void DebugDrawCreamAdhesion() const;
+        void DebugLogCreamAdhesionRejectCounters(float minIntervalSeconds = 1.0f);
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
@@ -182,6 +207,7 @@ namespace SweetsSpace
             InvalidEntity,
             TargetBlocked,
             TargetNotAllowed,
+            TargetNotSupportedType,
             RequireCarried,
             CooldownActive,
             ExistingBond,
@@ -267,7 +293,8 @@ namespace SweetsSpace
             ActiveSweets*& cream, Entities::PhysicalEntity*& target) const;
         void LogCreamAdhesionEvent(const char* label, const ActiveSweets* cream, const Entities::PhysicalEntity* target);
         void TickCreamContacts();
-        bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other) const;
+        bool IsAdhesionTargetAllowed(const ActiveSweets& cream, const Entities::PhysicalEntity& other,
+            CreamAdhesionRejectReason* outReason = nullptr) const;
         bool TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, float touchingSeconds);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context,
             CreamBondBreakReason reason);
@@ -295,6 +322,7 @@ namespace SweetsSpace
         bool IsCreamCarried(const ActiveSweets& cream) const;
         bool TryGetContactPoint(const Entities::PhysicalEntity& a, const Entities::PhysicalEntity& b,
             b2Vec2& outPoint, float* outImpulse) const;
+        void IncrementCreamAdhesionRejectCounter(CreamAdhesionRejectReason reason);
 
         Systems::PhysicsMachine* m_physicsMachine;
         SweetsRegistry* m_registry;
@@ -322,6 +350,8 @@ namespace SweetsSpace
         std::unordered_map<CreamAdhesionPairKey, CreamAdhesionBond, CreamAdhesionPairHash> m_creamBonds;
         float m_creamAdhesionClockSeconds{ 0.0f };
         std::size_t m_creamAdhesionEventLogCount{ 0 };
+        CreamAdhesionRejectCounters m_creamRejectCounters{};
+        float m_creamRejectLogTimestamp{ -1.0f };
 
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
