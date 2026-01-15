@@ -1086,7 +1086,15 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
                     XMVectorKeys::iterator prev = it[i];
                     --prev;
                     float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    if (i == 1)
+                    {
+                        result[i] = DirectX::XMQuaternionSlerp(prev->second, it[i]->second, rate);
+                        result[i] = DirectX::XMQuaternionNormalize(result[i]);
+                    }
+                    else
+                    {
+                        result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    }
                 }
             }
 
@@ -1155,7 +1163,15 @@ std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& p
                     XMVectorKeys::iterator prev = it[i];
                     --prev;
                     float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    if (i == 1)
+                    {
+                        result[i] = DirectX::XMQuaternionSlerp(prev->second, it[i]->second, rate);
+                        result[i] = DirectX::XMQuaternionNormalize(result[i]);
+                    }
+                    else
+                    {
+                        result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
+                    }
                 }
             }
 
