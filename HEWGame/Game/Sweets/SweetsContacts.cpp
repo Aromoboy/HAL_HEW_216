@@ -206,11 +206,7 @@ namespace SweetsSpace
             else
             {
                 CleanupInvalidAnchor(cream);
-                if (!m_creamAnchorJoints.contains(cream))
-                {
-                    LogGlueReject("notAnchored", cream, otherSweets);
-                }
-                else if (IsCreamTag(otherSweets->GetTag()))
+                if (IsCreamTag(otherSweets->GetTag()))
                 {
                     LogGlueReject("targetIsCream", cream, otherSweets);
                 }
