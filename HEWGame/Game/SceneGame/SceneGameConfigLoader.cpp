@@ -2804,19 +2804,18 @@ namespace SceneGameConfig
     {
         CreamAdhesionSettings settings{};
         settings.adhesionDelaySeconds = 0.3f;
-        settings.adhesionGraceSeconds = 0.08f;
-        settings.breakImpulseThreshold = 6.0f;
-        settings.releaseCooldownSeconds = 0.0f;
-        settings.allowedTags = { "strawberry", "kiwi", "mikan", "muscat", "melon", "blueberry", "pineapple", "banana", "cake" };
+        settings.adhesionGraceSeconds = 0.1f;
+        settings.breakImpulseThreshold = 0.0f;
+        settings.releaseCooldownSeconds = 0.2f;
+        settings.allowedTags.clear();
         settings.blockedTags = { "osara", "fairy" };
         settings.requireSupport = false;
-        settings.requireCarried = false;
+        settings.requireCarried = true;
         settings.allowAirAdhesionToSweets = true;
         settings.weldLinearHertz = 6.0f;
         settings.weldAngularHertz = 6.0f;
         settings.weldLinearDampingRatio = 0.7f;
         settings.weldAngularDampingRatio = 0.7f;
-        settings.breakImpulseThreshold = 0.0f;
 
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionCream, lines))
@@ -2926,13 +2925,6 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     settings.weldAngularDampingRatio = std::max(0.0f, *parsed);
-                }
-            }
-            else if (key == GameplayConfig::kCreamKeyBreakImpulseThreshold)
-            {
-                if (auto parsed = TryParseFloatToken(value))
-                {
-                    settings.breakImpulseThreshold = std::max(0.0f, *parsed);
                 }
             }
         }

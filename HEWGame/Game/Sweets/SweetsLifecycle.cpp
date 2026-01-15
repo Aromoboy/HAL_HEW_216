@@ -553,9 +553,8 @@ namespace SweetsSpace
         {
             m_contacts->ClearContactState(sweets.get());
             m_contacts->ClearSweetsContact(sweets.get());
-            m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
+            m_contacts->ClearCreamAdhesionForEntity(sweets.get());
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "Erase");
-            m_contacts->RemoveCementClusterForSweets(sweets.get(), "Erase");
         }
         sweets->MarkPendingDestroy();
     }
@@ -574,7 +573,6 @@ namespace SweetsSpace
 
         if (m_contacts)
         {
-            m_contacts->ClearCementClusters("ClearAllSweets");
             m_contacts->ClearCreamWeldJoints("ClearAllSweets");
             m_contacts->Reset();
         }
@@ -631,8 +629,6 @@ namespace SweetsSpace
         {
             m_contacts->ClearContactState(sweets.get());
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
-            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
-            m_contacts->RemoveCementClusterForSweets(sweets.get(), "TryMarkAsCarried");
         }
 
         if (m_physicsMachine)
@@ -687,8 +683,6 @@ namespace SweetsSpace
         if (m_contacts)
         {
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
-            m_contacts->RemoveCementAdjacencyForEntity(sweets.get());
-            m_contacts->RemoveCementClusterForSweets(sweets.get(), "ReleaseCarriedSweets");
         }
 
         if (m_physicsMachine)
@@ -774,7 +768,6 @@ namespace SweetsSpace
                 m_contacts->ClearContactState(sweets.get());
                 m_contacts->ClearSweetsContact(sweets.get());
                 m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "RegisterWithSystems");
-                m_contacts->RemoveCementClusterForSweets(sweets.get(), "RegisterWithSystems");
                 m_contacts->UnregisterSweetsHandle(sweets.get());
             }
             sweets->MarkPendingDestroy();
@@ -897,7 +890,6 @@ namespace SweetsSpace
             m_contacts->ClearContactState(sweets.get());
             m_contacts->ClearSweetsContact(sweets.get());
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), context);
-            m_contacts->RemoveCementClusterForSweets(sweets.get(), context);
         }
         sweets->SetWasEverCarried(false);
         sweets->MarkPendingDestroy();
@@ -933,11 +925,6 @@ namespace SweetsSpace
         if (!sweets)
         {
             return;
-        }
-
-        if (m_contacts)
-        {
-            m_contacts->NotifyUnregisterOrRetry();
         }
 
         if (m_scheduler)
@@ -993,7 +980,7 @@ namespace SweetsSpace
 
         if (m_contacts)
         {
-            m_contacts->ClearPendingAdhesionsForEntity(sweets.get());
+            m_contacts->ClearCreamAdhesionForEntity(sweets.get());
             m_contacts->UnregisterSweetsHandle(sweets.get());
         }
     }
