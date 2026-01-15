@@ -158,6 +158,7 @@ namespace SweetsSpace
         void LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit, const b2Vec2& anchorWorld) const;
         void CleanupInvalidJoint(const JointPairKey& key, b2JointId& jointId);
         void CleanupInvalidAnchor(ActiveSweets* cream);
+        void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
@@ -169,7 +170,7 @@ namespace SweetsSpace
         std::unordered_map<JointPairKey, b2Vec2, JointPairHash> m_creamWeldAnchors;
         std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
-        std::unordered_map<ActiveSweets*, ActiveSweets*> m_fruitToCream;
+        std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
     };
 }
