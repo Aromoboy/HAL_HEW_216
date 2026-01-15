@@ -559,29 +559,41 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             {
                 normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
             }
+            if (meshNodeTransform.hasTransform)
+            {
+                normalVec = DirectX::XMVector3TransformNormal(normalVec, normalTransform);
+                normalVec = DirectX::XMVector3Normalize(normalVec);
+            }
 
             DirectX::XMFLOAT3 normalFloat;
             DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
-            vertices[j].pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
+            DirectX::XMVECTOR posVec = DirectX::XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
+            if (meshNodeTransform.hasTransform)
+            {
+                posVec = DirectX::XMVector3TransformCoord(posVec, vertexTransform);
+            }
+            DirectX::XMFLOAT3 posFloat;
+            DirectX::XMStoreFloat3(&posFloat, posVec);
+            vertices[j].pos = posFloat;
             vertices[j].normal = normalFloat;
             vertices[j].uv = DirectX::XMFLOAT2(uv.x, uv.y);
             vertices[j].color = DirectX::XMFLOAT4(col.r, col.g, col.b, col.a);
 
-            minBounds.x = std::min(minBounds.x, pos.x);
-            minBounds.y = std::min(minBounds.y, pos.y);
-            minBounds.z = std::min(minBounds.z, pos.z);
-            maxBounds.x = std::max(maxBounds.x, pos.x);
-            maxBounds.y = std::max(maxBounds.y, pos.y);
-            maxBounds.z = std::max(maxBounds.z, pos.z);
+            minBounds.x = std::min(minBounds.x, posFloat.x);
+            minBounds.y = std::min(minBounds.y, posFloat.y);
+            minBounds.z = std::min(minBounds.z, posFloat.z);
+            maxBounds.x = std::max(maxBounds.x, posFloat.x);
+            maxBounds.y = std::max(maxBounds.y, posFloat.y);
+            maxBounds.z = std::max(maxBounds.z, posFloat.z);
             hasBounds = true;
 
-            meshMin.x = std::min(meshMin.x, pos.x);
-            meshMin.y = std::min(meshMin.y, pos.y);
-            meshMin.z = std::min(meshMin.z, pos.z);
-            meshMax.x = std::max(meshMax.x, pos.x);
-            meshMax.y = std::max(meshMax.y, pos.y);
-            meshMax.z = std::max(meshMax.z, pos.z);
+            meshMin.x = std::min(meshMin.x, posFloat.x);
+            meshMin.y = std::min(meshMin.y, posFloat.y);
+            meshMin.z = std::min(meshMin.z, posFloat.z);
+            meshMax.x = std::max(meshMax.x, posFloat.x);
+            meshMax.y = std::max(meshMax.y, posFloat.y);
+            meshMax.z = std::max(meshMax.z, posFloat.z);
             meshHasBounds = true;
         }
 
