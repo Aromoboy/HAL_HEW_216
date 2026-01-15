@@ -2458,6 +2458,14 @@ namespace SceneGameConfig
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
                 << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ", ccdPlayer=" << settings.continuousCollisionForPlayer
+                << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
+                << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
+                << ", creamGlueAngularHertz=" << settings.creamGlueAngularHertz
+                << ", creamGlueAngularDampingRatio=" << settings.creamGlueAngularDampingRatio
+                << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
+                << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
+                << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
+                << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2596,6 +2604,77 @@ namespace SceneGameConfig
                         ::DebugTrace(oss.str());
                     }
                 }
+                else if (key == "creamGlueLinearHertz")
+                {
+                    settings.creamGlueLinearHertz = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueLinearDampingRatio")
+                {
+                    settings.creamGlueLinearDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                }
+                else if (key == "creamGlueAngularHertz")
+                {
+                    settings.creamGlueAngularHertz = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueAngularDampingRatio")
+                {
+                    settings.creamGlueAngularDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                }
+                else if (key == "creamGlueCollideConnected")
+                {
+                    if (auto parsed = parseBool(value))
+                    {
+                        settings.creamGlueCollideConnected = *parsed;
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                            << lineNumber << "\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
+                else if (key == "creamGluePushOutEpsilon")
+                {
+                    settings.creamGluePushOutEpsilon = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueMaxPushOut")
+                {
+                    settings.creamGlueMaxPushOut = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueMaxSpeed")
+                {
+                    settings.creamGlueMaxSpeed = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueBreakForce")
+                {
+                    settings.creamGlueBreakForce = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueBreakImpulse")
+                {
+                    settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamGlueImpactImpulseThreshold")
+                {
+                    settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Deprecated key '" << key
+                        << "' on line " << lineNumber
+                        << " (use creamGlueBreakImpulse instead).\n";
+                    ::DebugTrace(oss.str());
+                }
+                else if (key == "creamWeldLinearHertz"
+                    || key == "creamWeldLinearDampingRatio"
+                    || key == "creamWeldAngularHertz"
+                    || key == "creamWeldAngularDampingRatio"
+                    || key == "creamWeldCollideConnected")
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Deprecated key '" << key
+                        << "' on line " << lineNumber
+                        << " (use creamGlue* settings instead).\n";
+                    ::DebugTrace(oss.str());
+                }
                 else
                 {
                     std::ostringstream oss;
@@ -2631,6 +2710,16 @@ namespace SceneGameConfig
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
             << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
+            << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
+            << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
+            << ", creamGlueAngularHertz=" << settings.creamGlueAngularHertz
+            << ", creamGlueAngularDampingRatio=" << settings.creamGlueAngularDampingRatio
+            << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
+            << ", creamGluePushOutEpsilon=" << settings.creamGluePushOutEpsilon
+            << ", creamGlueMaxPushOut=" << settings.creamGlueMaxPushOut
+            << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
+            << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
+            << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;

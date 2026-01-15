@@ -44,13 +44,15 @@ namespace Systems
         m_contactListener = std::make_shared<Box2DContactListener>(physicsMachine);
         if (m_contactListener)
         {
-            m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            m_contactListener->SetBeginContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b,
+                const ContactEventInfo& info)
                 {
-                    DispatchBeginContact(a, b);
+                    DispatchBeginContact(a, b, info);
                 });
-            m_contactListener->SetEndContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+            m_contactListener->SetEndContactCallback([this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b,
+                const ContactEventInfo& info)
                 {
-                    DispatchEndContact(a, b);
+                    DispatchEndContact(a, b, info);
                 });
 
             m_physicsMachine->SetContactListener(m_contactListener);
@@ -245,24 +247,26 @@ namespace Systems
         m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd) });
     }
 
-    void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+    void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b,
+        const ContactEventInfo& info)
     {
         for (const auto& handler : m_contactHandlers)
         {
             if (handler.onBegin)
             {
-                handler.onBegin(a, b);
+                handler.onBegin(a, b, info);
             }
         }
     }
 
-    void PhysicsRegistration::DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b)
+    void PhysicsRegistration::DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b,
+        const ContactEventInfo& info)
     {
         for (const auto& handler : m_contactHandlers)
         {
             if (handler.onEnd)
             {
-                handler.onEnd(a, b);
+                handler.onEnd(a, b, info);
             }
         }
     }

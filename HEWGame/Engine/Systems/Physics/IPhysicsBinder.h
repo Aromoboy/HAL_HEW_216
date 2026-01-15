@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include "Systems/Physics/ContactEventInfo.h"
+
 namespace Entities
 {
     class PhysicalEntity;
@@ -14,7 +16,7 @@ namespace Systems
     class IPhysicsBinder
     {
     public:
-        using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+        using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, const ContactEventInfo&)>;
 
         virtual ~IPhysicsBinder() = default;
 

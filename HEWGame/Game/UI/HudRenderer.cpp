@@ -304,5 +304,15 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
     stream << "Score " << data.score;
     stream << "  (Enter=Confirm  R=Retry)";
     stream << "\nSweets " << data.sweetsCount;
+    if (data.showGlueDebug)
+    {
+        stream << std::fixed << std::setprecision(2);
+        stream << "\nGlue anchors=" << data.glueActiveCreamAnchors
+            << " fruits=" << data.glueActiveFruitGlue
+            << " frozen=" << data.glueFrozenFruit;
+        stream << "\nGlue/sec create=" << data.glueCreatePerSec
+            << " reject=" << data.glueRejectPerSec
+            << " cleanup=" << data.glueCleanupPerSec;
+    }
     return stream.str();
 }

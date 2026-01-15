@@ -835,6 +835,11 @@ namespace SweetsSpace
             return;
         }
 
+        if (m_contacts)
+        {
+            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), context);
+        }
+
         if (m_scheduler)
         {
             sweets->ReleaseRegistrationHandle();

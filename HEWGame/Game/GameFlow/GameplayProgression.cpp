@@ -155,6 +155,11 @@ namespace GameplayProgression
                     continue;
                 }
 
+                if (!input.sweetsManager->IsAnchoredToCake(*sweets))
+                {
+                    continue;
+                }
+
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
                 if (bounds.max.y >= result.state.heightMeters)

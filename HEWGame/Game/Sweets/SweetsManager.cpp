@@ -91,10 +91,12 @@ namespace SweetsSpace
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
+        m_contacts.TickDebugStats(ctx.dt);
     }
 
     void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
     {
+        m_contacts.ProcessPendingGlue();
         m_lifecycle.OnLateUpdate(ctx);
     }
 
@@ -282,14 +284,16 @@ namespace SweetsSpace
         m_factory.SetGeneratedColliderMinThickness(thickness);
     }
 
-    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        const Systems::ContactEventInfo& info)
     {
-        m_contacts.OnContactBegin(a, b);
+        m_contacts.OnContactBegin(a, b, info);
     }
 
-    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        const Systems::ContactEventInfo& info)
     {
-        m_contacts.OnContactEnd(a, b);
+        m_contacts.OnContactEnd(a, b, info);
     }
 
     bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
@@ -300,6 +304,11 @@ namespace SweetsSpace
     bool SweetsManager::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
     {
         return m_contacts.HasEverCollidedWithSweets(sweets);
+    }
+
+    bool SweetsManager::IsAnchoredToCake(const ActiveSweets& sweets) const
+    {
+        return m_contacts.IsAnchoredToCake(sweets);
     }
 
     int SweetsManager::GetSweetsCount() const
@@ -320,6 +329,12 @@ namespace SweetsSpace
         {
             SetState(sweets, SweetsState::Stacked);
         }
+    }
+
+    bool SweetsManager::GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const
+    {
+        outSnapshot = m_contacts.BuildDebugSnapshot();
+        return true;
     }
 
     bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)

@@ -276,7 +276,8 @@ namespace Systems
                                 continue;
                         }
 
-                        BeginContact(entityA, entityB);
+                        const ContactEventInfo info{ evt.shapeIdA, evt.shapeIdB, evt.contactId };
+                        BeginContact(entityA, entityB, info);
 
                         if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
                         {
@@ -323,7 +324,8 @@ namespace Systems
                                 continue;
                         }
 
-                        EndContact(entityA, entityB);
+                        const ContactEventInfo info{ evt.shapeIdA, evt.shapeIdB, evt.contactId };
+                        EndContact(entityA, entityB, info);
                 }
 
                 // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
@@ -377,7 +379,8 @@ namespace Systems
                 }
         }
 
-        void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
+        void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB,
+            const ContactEventInfo& info)
         {
                 if (!entityA || !entityB)
                 {
@@ -386,11 +389,12 @@ namespace Systems
 
                 if (m_onBeginContact)
                 {
-                        m_onBeginContact(*entityA, *entityB);
+                        m_onBeginContact(*entityA, *entityB, info);
                 }
         }
 
-        void Box2DContactListener::EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB)
+        void Box2DContactListener::EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB,
+            const ContactEventInfo& info)
         {
                 if (!entityA || !entityB)
                 {
@@ -399,7 +403,7 @@ namespace Systems
 
                 if (m_onEndContact)
                 {
-                        m_onEndContact(*entityA, *entityB);
+                        m_onEndContact(*entityA, *entityB, info);
                 }
         }
 
