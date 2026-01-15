@@ -33,6 +33,42 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    float dt = static_cast<float>(timer.DeltaTime());
+    m_deltaTime = dt; // Draw�p�ɕێ�
+
+    switch (m_titleState)
+    {
+    case TitleState::Idle:
+        if (input.IsTrigger(Core::ActionId::Confirm)) {
+            m_titleState = TitleState::CountDown;
+            m_count = 3;
+            m_countTimer = 0.0f;
+            m_fadeAlpha = 0.0f; // �Ó]�J�n
+        }
+        break;
+
+    case TitleState::CountDown:
+        m_countTimer += dt;
+        m_fadeAlpha += dt; // �Ó]����X�ɐi�߂�
+        if (m_fadeAlpha > 1.0f) m_fadeAlpha = 1.0f;
+
+        if (m_countTimer >= 1.0f) {
+            m_countTimer = 0.0f;
+            m_count--;
+            if (m_count <= 0) {
+                m_titleState = TitleState::StartEffect;
+                m_startTimer = 0.0f;
+            }
+        }
+        break;
+
+    case TitleState::StartEffect:
+        m_startTimer += dt;
+        if (m_startTimer >= 1.0f) {
+            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+        }
+        break;
+    }
     RootUpdate(timer, input);
 }
 
@@ -72,13 +108,18 @@ void TitleScene::OnEnter()
         }
     }
 
-    // UI ボタン用テクスチャ読み込み
-    m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
-    m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
-    m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
-    m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
-    m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
-    m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
+    // UI �{�^���p�e�N�X�`���ǂݍ���
+    m_texStartRed.Create("Assets/Texture/�^�C�g�����UI5.png");
+    m_texStartGreen.Create("Assets/Texture/�^�C�g�����UI6.png");
+    m_texPowerUpRed.Create("Assets/Texture/�^�C�g�����UI3.png");
+    m_texPowerUpGreen.Create("Assets/Texture/�^�C�g�����UI4.png");
+    m_texExitRed.Create("Assets/Texture/�^�C�g�����UI1.png");
+    m_texExitGreen.Create("Assets/Texture/�^�C�g�����UI2.png");
+    m_texStartEffect.Create("Assets/Texture/start.png");
+    m_texNumber[1].Create("Assets/Texture/3-1.png");
+    m_texNumber[2].Create("Assets/Texture/2-1.png");
+    m_texNumber[3].Create("Assets/Texture/1-1.png");
+
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
@@ -87,6 +128,10 @@ void TitleScene::OnEnter()
     );
     Sprite::SetProjection(proj);
    
+    m_count = 3;
+    m_countTimer = 0.0f;
+    m_startTimer = 0.0f;
+
 }
 
 void TitleScene::OnExit()
@@ -129,8 +174,11 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-    // 更新処理（キー入力とカーソル操作）
-    // 矢印上下でカーソル移動、決定でシーン切替
+
+    if (m_titleState != TitleState::Idle) return;
+    // �X�V�����i�L�[���͂ƃJ�[�\������j
+    // ���㉺�ŃJ�[�\���ړ��A����ŃV�[���ؑ�
+
     float vertical = input->GetAxis(Core::ActionId::RotateYaw); 
     if (vertical > 0.5f)   
     {
@@ -149,8 +197,8 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         switch (static_cast<TitleMenu>(m_cursor))
         {
         case TitleMenu::Start:
-            if (m_manager)
-                m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+            m_manager->RequestSceneChange(
+                std::make_unique<SceneGame>(*m_manager));
             break;
         case TitleMenu::PowerUp:
             if (m_manager)
@@ -206,8 +254,13 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     
     (void)activeCamera;
 
+
     // エラー出ているのでコメントアウトした　ドロスより
     /*auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
+=======
+    
+    auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
+>>>>>>> Stashed changes
         {
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
@@ -227,7 +280,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
 
             // 掛け順: 画面移動 * スケーリング * 原点補正
             DirectX::XMMATRIX world = translation * scaling * centering;
-
             DirectX::XMFLOAT4X4 worldFloat;
             DirectX::XMStoreFloat4x4(&worldFloat, world);
 
@@ -249,4 +301,32 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
     drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);*/
     
+    // �Ó]�i���j
+    if (m_titleState != TitleState::Idle)
+    {
+        Sprite::SetOffset({ 640,360 });
+        Sprite::SetSize({ 1280,720 });
+        Sprite::SetColor({ 0,0,0,m_fadeAlpha });
+        Sprite::Draw();
+    }
+
+    // �J�E���g�_�E��
+    if (m_titleState == TitleState::CountDown && m_count > 0)
+    {
+        Sprite::SetTexture(&m_texNumber[m_count]);
+        Sprite::SetOffset({ 640,360 });
+        Sprite::SetSize({ 256,256 });
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
+
+    // START
+    if (m_titleState == TitleState::StartEffect)
+    {
+        Sprite::SetTexture(&m_texStartEffect);
+        Sprite::SetOffset({ 640,360 });
+        Sprite::SetSize({ 600,200 });
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
 }
