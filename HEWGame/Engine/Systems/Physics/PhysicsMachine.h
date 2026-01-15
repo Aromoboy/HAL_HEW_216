@@ -43,7 +43,7 @@ namespace Systems
         float creamGlueMaxPushOut = 0.25f;
         float creamGlueMaxSpeed = 0.0f;
         float creamGlueBreakForce = 0.0f;
-        float creamGlueImpactImpulseThreshold = 0.0f;
+        float creamGlueBreakImpulse = 0.0f;
     };
 
     class IPhysicsSystem

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -61,6 +62,53 @@ namespace
         };
         return kBlockedTags.contains(NormalizeTag(tag));
     }
+
+    struct ImpactImpulseInfo
+    {
+        b2BodyId fallingBody{ b2_nullBodyId };
+        b2BodyId gluedBody{ b2_nullBodyId };
+        float fallingMass{ 0.0f };
+        float relativeSpeedY{ 0.0f };
+        float impulse{ 0.0f };
+        b2Vec2 fallingVelocity{};
+        b2Vec2 gluedVelocity{};
+    };
+
+    std::optional<ImpactImpulseInfo> TryGetImpactImpulseInfo(
+        const SweetsSpace::ActiveSweets& fallingFruit,
+        const SweetsSpace::ActiveSweets& gluedFruit)
+    {
+        const b2BodyId fallingBody = fallingFruit.GetBox2DBodyId();
+        const b2BodyId gluedBody = gluedFruit.GetBox2DBodyId();
+        if (!b2Body_IsValid(fallingBody) || !b2Body_IsValid(gluedBody))
+        {
+            return std::nullopt;
+        }
+
+        const b2Vec2 fallingVelocity = b2Body_GetLinearVelocity(fallingBody);
+        const b2Vec2 gluedVelocity = b2Body_GetLinearVelocity(gluedBody);
+        const float relativeSpeedY = std::fabs(fallingVelocity.y - gluedVelocity.y);
+        const float fallingMass = b2Body_GetMass(fallingBody);
+        if (!std::isfinite(relativeSpeedY) || !std::isfinite(fallingMass) || fallingMass <= 0.0f)
+        {
+            return std::nullopt;
+        }
+
+        ImpactImpulseInfo info{};
+        info.fallingBody = fallingBody;
+        info.gluedBody = gluedBody;
+        info.fallingMass = fallingMass;
+        info.relativeSpeedY = relativeSpeedY;
+        info.fallingVelocity = fallingVelocity;
+        info.gluedVelocity = gluedVelocity;
+        info.impulse = fallingMass * relativeSpeedY;
+        if (!std::isfinite(info.impulse))
+        {
+            return std::nullopt;
+        }
+
+        return info;
+    }
 }
 
 namespace SweetsSpace
@@ -81,7 +129,7 @@ namespace SweetsSpace
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
             m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
             m_glueTuning.breakForce = tuning.creamGlueBreakForce;
-            m_glueTuning.impactImpulseThreshold = tuning.creamGlueImpactImpulseThreshold;
+            m_glueTuning.breakImpulse = tuning.creamGlueBreakImpulse;
         }
     }
 
@@ -114,43 +162,34 @@ namespace SweetsSpace
         {
             const bool sweetsAHasCream = m_fruitToCreams.contains(sweetsA);
             const bool sweetsBHasCream = m_fruitToCreams.contains(sweetsB);
-            if (sweetsAHasCream != sweetsBHasCream && m_glueTuning.impactImpulseThreshold > 0.0f)
+            if (sweetsAHasCream != sweetsBHasCream && m_glueTuning.breakImpulse > 0.0f)
             {
                 ActiveSweets* gluedFruit = sweetsAHasCream ? sweetsA : sweetsB;
                 ActiveSweets* fallingFruit = sweetsAHasCream ? sweetsB : sweetsA;
                 if (gluedFruit && fallingFruit)
                 {
-                    const b2BodyId fallingBody = fallingFruit->GetBox2DBodyId();
-                    const b2BodyId gluedBody = gluedFruit->GetBox2DBodyId();
-                    if (b2Body_IsValid(fallingBody) && b2Body_IsValid(gluedBody))
+                    const auto impactInfo = TryGetImpactImpulseInfo(*fallingFruit, *gluedFruit);
+                    if (impactInfo)
                     {
-                        const b2Vec2 fallingVelocity = b2Body_GetLinearVelocity(fallingBody);
-                        const b2Vec2 gluedVelocity = b2Body_GetLinearVelocity(gluedBody);
-                        const float relativeFallSpeed = std::fabs(fallingVelocity.y - gluedVelocity.y);
-                        const float fallingMass = b2Body_GetMass(fallingBody);
-                        if (std::isfinite(relativeFallSpeed) && std::isfinite(fallingMass))
+                        if (impactInfo->impulse > m_glueTuning.breakImpulse)
                         {
-                            const float impulse = fallingMass * relativeFallSpeed;
-                            if (impulse > m_glueTuning.impactImpulseThreshold)
+                            RemoveCreamWeldJointsForSweets(gluedFruit, "impactBreak");
+                            const b2BodyId refreshedGluedBody = gluedFruit->GetBox2DBodyId();
+                            if (b2Body_IsValid(refreshedGluedBody))
                             {
-                                RemoveCreamWeldJointsForSweets(gluedFruit, "impactBreak");
-                                const b2BodyId refreshedGluedBody = gluedFruit->GetBox2DBodyId();
-                                if (b2Body_IsValid(refreshedGluedBody))
+                                const float gluedMass = b2Body_GetMass(refreshedGluedBody);
+                                if (gluedMass > 0.0f && std::isfinite(gluedMass))
                                 {
-                                    const float gluedMass = b2Body_GetMass(refreshedGluedBody);
-                                    if (gluedMass > 0.0f && std::isfinite(gluedMass))
-                                    {
-                                        const b2Vec2 relativeVelocity = b2Sub(fallingVelocity, gluedVelocity);
-                                        const b2Vec2 impulseVector = b2MulSV(fallingMass, relativeVelocity);
-                                        const b2Vec2 deltaVelocity = b2MulSV(0.8f / gluedMass, impulseVector);
-                                        const b2Vec2 newVelocity = b2Add(
-                                            b2Body_GetLinearVelocity(refreshedGluedBody),
-                                            deltaVelocity);
-                                        b2Body_SetLinearVelocity(refreshedGluedBody, newVelocity);
-                                    }
+                                    const b2Vec2 relativeVelocity = b2Sub(impactInfo->fallingVelocity, impactInfo->gluedVelocity);
+                                    const b2Vec2 impulseVector = b2MulSV(impactInfo->fallingMass, relativeVelocity);
+                                    const b2Vec2 deltaVelocity = b2MulSV(0.8f / gluedMass, impulseVector);
+                                    const b2Vec2 newVelocity = b2Add(
+                                        b2Body_GetLinearVelocity(refreshedGluedBody),
+                                        deltaVelocity);
+                                    b2Body_SetLinearVelocity(refreshedGluedBody, newVelocity);
                                 }
-                                m_glueCooldown[gluedFruit] = kGlueCooldownSeconds;
                             }
+                            m_glueCooldown[gluedFruit] = kGlueCooldownSeconds;
                         }
                     }
                 }
