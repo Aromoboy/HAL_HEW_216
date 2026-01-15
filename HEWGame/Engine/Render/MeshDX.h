@@ -25,6 +25,8 @@ struct NodeDX
 	std::string			name;		// �{�[����
 	NodeIndexDX			parent;		// �e�{�[��
 	ChildrenDX			children;	// �q�{�[��
+	DirectX::XMMATRIX	localBind;	// �o�C���g�݂̋����s��
+	DirectX::XMMATRIX	globalBind;	// �o�C���g�݂̐l�ԍ��s��
 	DirectX::XMMATRIX	mat;		// �ϊ��s��
 };
 
