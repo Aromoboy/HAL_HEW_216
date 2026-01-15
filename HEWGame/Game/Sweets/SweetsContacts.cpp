@@ -808,6 +808,35 @@ namespace SweetsSpace
 
         const bool hasFoundation = it->second.foundationContacts > 0;
         const bool hasSweetsContact = it->second.sweetsContacts > 0;
+        if (hasFoundation || hasSweetsContact)
+        {
+            bool hasRealContacts = false;
+            const b2BodyId bodyId = sweets.GetBox2DBodyId();
+            if (b2Body_IsValid(bodyId))
+            {
+                const int capacity = b2Body_GetContactCapacity(bodyId);
+                if (capacity > 0)
+                {
+                    std::vector<b2ContactData> contactsBuffer(static_cast<std::size_t>(capacity));
+                    const int count = b2Body_GetContactData(bodyId, contactsBuffer.data(), capacity);
+                    for (int i = 0; i < count; ++i)
+                    {
+                        if (contactsBuffer[i].manifold.pointCount > 0)
+                        {
+                            hasRealContacts = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!hasRealContacts)
+            {
+                const_cast<SweetsContacts*>(this)->m_contactStates.erase(it);
+                return false;
+            }
+        }
+
         if (foundationOnly)
         {
             *foundationOnly = hasFoundation && !hasSweetsContact;
