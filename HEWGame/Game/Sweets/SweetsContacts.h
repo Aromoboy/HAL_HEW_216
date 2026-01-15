@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include <box2d/box2d.h>
 
@@ -23,6 +24,26 @@ namespace SweetsSpace
     class SweetsContacts
     {
     public:
+        struct GlueDebugSnapshot
+        {
+            struct GlueLink
+            {
+                b2Vec2 anchorWorld{};
+                ActiveSweets* cream{ nullptr };
+                ActiveSweets* fruit{ nullptr };
+                bool fruitFrozen{ false };
+            };
+
+            std::vector<b2Vec2> creamAnchors;
+            std::vector<GlueLink> fruitLinks;
+            int activeCreamAnchors{ 0 };
+            int activeFruitGlue{ 0 };
+            int frozenFruit{ 0 };
+            float createPerSec{ 0.0f };
+            float rejectPerSec{ 0.0f };
+            float cleanupPerSec{ 0.0f };
+        };
+
         SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
@@ -39,6 +60,8 @@ namespace SweetsSpace
         void ClearCreamWeldJoints(const char* context);
 
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
+        void TickDebugStats(float dt);
+        GlueDebugSnapshot BuildDebugSnapshot() const;
 
     private:
         struct GlueTuning
@@ -48,6 +71,34 @@ namespace SweetsSpace
             float angularHertz{ 0.0f };
             float angularDampingRatio{ 0.7f };
             bool collideConnected{ false };
+            float pushOutEpsilon{ 0.03f };
+            float maxPushOut{ 0.25f };
+        };
+
+        struct ContactAnchorData
+        {
+            b2Vec2 point{};
+            b2Vec2 normal{};
+            float separation{ 0.0f };
+            b2ShapeId shapeIdA{ b2_nullShapeId };
+            b2ShapeId shapeIdB{ b2_nullShapeId };
+        };
+
+        struct FrozenBodyState
+        {
+            b2BodyType bodyType{ b2_dynamicBody };
+            float gravityScale{ 1.0f };
+        };
+
+        struct GlueStats
+        {
+            int createCount{ 0 };
+            int rejectCount{ 0 };
+            int cleanupCount{ 0 };
+            float elapsedSeconds{ 0.0f };
+            float createPerSec{ 0.0f };
+            float rejectPerSec{ 0.0f };
+            float cleanupPerSec{ 0.0f };
         };
 
         struct ContactState
@@ -95,7 +146,12 @@ namespace SweetsSpace
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
-        bool TryGetContactAnchorWorld(const Systems::ContactEventInfo& info, b2Vec2& outAnchor) const;
+        bool TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const;
+        bool ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
+            const ContactAnchorData& anchorData, b2Vec2& outAnchor) const;
+        bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
+        void FreezeFruitBody(ActiveSweets& fruit);
+        void UnfreezeFruitBody(ActiveSweets& fruit);
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;
@@ -108,10 +164,14 @@ namespace SweetsSpace
         bool m_loggedContactNotification{ false };
 
         GlueTuning m_glueTuning{};
+        mutable GlueStats m_glueStats{};
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<JointPairKey, b2Vec2, JointPairHash> m_creamWeldAnchors;
         std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
+        std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
         std::unordered_map<ActiveSweets*, ActiveSweets*> m_fruitToCream;
+        std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
     };
 }

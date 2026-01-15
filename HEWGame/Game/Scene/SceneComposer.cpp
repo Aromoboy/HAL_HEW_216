@@ -390,6 +390,8 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.creamWeldAngularHertz = tuning.creamWeldAngularHertz;
     physicsParameters.creamWeldAngularDampingRatio = tuning.creamWeldAngularDampingRatio;
     physicsParameters.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
+    physicsParameters.creamGluePushOutEpsilon = tuning.creamGluePushOutEpsilon;
+    physicsParameters.creamGlueMaxPushOut = tuning.creamGlueMaxPushOut;
     result.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
     Systems::PhysicsMachine* physicsMachine = result.physicsBinder ? result.physicsBinder->GetPhysicsMachine() : nullptr;
     result.drawSystem = std::make_unique<Systems::DrawSystem>();

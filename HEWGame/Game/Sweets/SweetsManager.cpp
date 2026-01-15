@@ -91,6 +91,7 @@ namespace SweetsSpace
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
+        m_contacts.TickDebugStats(ctx.dt);
     }
 
     void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
@@ -322,6 +323,12 @@ namespace SweetsSpace
         {
             SetState(sweets, SweetsState::Stacked);
         }
+    }
+
+    bool SweetsManager::GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const
+    {
+        outSnapshot = m_contacts.BuildDebugSnapshot();
+        return true;
     }
 
     bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)

@@ -22,6 +22,13 @@ struct HudDisplayData
     float moveSpeedMultiplier = 1.0f;
     float moveSpeedUnitsPerSecond = 0.0f;
     int sweetsCount = 0;
+    bool showGlueDebug = false;
+    int glueActiveCreamAnchors = 0;
+    int glueActiveFruitGlue = 0;
+    int glueFrozenFruit = 0;
+    float glueCreatePerSec = 0.0f;
+    float glueRejectPerSec = 0.0f;
+    float glueCleanupPerSec = 0.0f;
 };
 
 struct HudLayoutConfig
