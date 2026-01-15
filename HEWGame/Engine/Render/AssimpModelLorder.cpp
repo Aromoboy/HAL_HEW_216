@@ -568,8 +568,15 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             }
         }
 
-        // 頂点は常にメッシュローカル空間のまま保持し、ノード変換は骨/ノード行列側に寄せる。
-        // (skinned も non-skinned も共通: nodeTransform は invOffset 側へ折り込み)
+        // Invariant: 頂点は「メッシュノード空間」に保持する (nodeTransform を頂点へ適用済み)。
+        // そのため mOffsetMatrix / invOffset も同じ空間前提で保持し、nodeTransform を二重適用しない。
+        DirectX::XMMATRIX vertexTransform = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX normalTransform = DirectX::XMMatrixIdentity();
+        if (meshNodeTransform.hasTransform)
+        {
+            vertexTransform = meshNodeTransform.transform;
+            normalTransform = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, vertexTransform));
+        }
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
@@ -602,29 +609,41 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             {
                 normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
             }
+            if (meshNodeTransform.hasTransform)
+            {
+                normalVec = DirectX::XMVector3TransformNormal(normalVec, normalTransform);
+                normalVec = DirectX::XMVector3Normalize(normalVec);
+            }
 
             DirectX::XMFLOAT3 normalFloat;
             DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
-            vertices[j].pos = DirectX::XMFLOAT3(pos.x, pos.y, pos.z);
+            DirectX::XMVECTOR posVec = DirectX::XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
+            if (meshNodeTransform.hasTransform)
+            {
+                posVec = DirectX::XMVector3TransformCoord(posVec, vertexTransform);
+            }
+            DirectX::XMFLOAT3 posFloat;
+            DirectX::XMStoreFloat3(&posFloat, posVec);
+            vertices[j].pos = posFloat;
             vertices[j].normal = normalFloat;
             vertices[j].uv = DirectX::XMFLOAT2(uv.x, uv.y);
             vertices[j].color = DirectX::XMFLOAT4(col.r, col.g, col.b, col.a);
 
-            minBounds.x = std::min(minBounds.x, pos.x);
-            minBounds.y = std::min(minBounds.y, pos.y);
-            minBounds.z = std::min(minBounds.z, pos.z);
-            maxBounds.x = std::max(maxBounds.x, pos.x);
-            maxBounds.y = std::max(maxBounds.y, pos.y);
-            maxBounds.z = std::max(maxBounds.z, pos.z);
+            minBounds.x = std::min(minBounds.x, posFloat.x);
+            minBounds.y = std::min(minBounds.y, posFloat.y);
+            minBounds.z = std::min(minBounds.z, posFloat.z);
+            maxBounds.x = std::max(maxBounds.x, posFloat.x);
+            maxBounds.y = std::max(maxBounds.y, posFloat.y);
+            maxBounds.z = std::max(maxBounds.z, posFloat.z);
             hasBounds = true;
 
-            meshMin.x = std::min(meshMin.x, pos.x);
-            meshMin.y = std::min(meshMin.y, pos.y);
-            meshMin.z = std::min(meshMin.z, pos.z);
-            meshMax.x = std::max(meshMax.x, pos.x);
-            meshMax.y = std::max(meshMax.y, pos.y);
-            meshMax.z = std::max(meshMax.z, pos.z);
+            meshMin.x = std::min(meshMin.x, posFloat.x);
+            meshMin.y = std::min(meshMin.y, posFloat.y);
+            meshMin.z = std::min(meshMin.z, posFloat.z);
+            meshMax.x = std::max(meshMax.x, posFloat.x);
+            meshMax.y = std::max(meshMax.y, posFloat.y);
+            meshMax.z = std::max(meshMax.z, posFloat.z);
             meshHasBounds = true;
         }
 
@@ -1305,13 +1324,8 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     BoneDX bone = {};
     bone.nodeIndex = func(a_nodes[nodeIndex].parent);
     if (bone.nodeIndex != kNodeNone) {
-        // 頂点はメッシュローカル空間。invOffset は「メッシュ空間 -> ボーン空間」を表し、
-        // meshNodeTransform がある場合はその逆行列をここで折り込む。
+        // Invariant: 頂点はメッシュノード空間。invOffset は「メッシュ空間 -> ボーン空間」の逆行列。
         DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].mat);
-        if (meshNodeTransform.hasTransform)
-        {
-            invOffset = invOffset * meshNodeTransform.inverse;
-        }
         DirectX::XMStoreFloat4x4(&bone.invOffset, invOffset);
         // ボーンの情報を設定
         a_bones.resize(1);
@@ -1360,15 +1374,11 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, const MeshNodeT
             continue;
         }
 
-        // 頂点はメッシュローカル空間。invOffset はメッシュ空間 -> ボーン空間の逆変換。
+        // Invariant: 頂点はメッシュノード空間。mOffsetMatrix/invOffset も同空間を前提とする。
         DirectX::XMMATRIX invOffsetMatrix;
 
         invOffsetMatrix = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
         invOffsetMatrix = mFlip * invOffsetMatrix * mScale;
-        if (meshNodeTransform.hasTransform)
-        {
-            invOffsetMatrix = invOffsetMatrix * meshNodeTransform.inverse;
-        }
 
         DirectX::XMStoreFloat4x4(&boneIt->invOffset, invOffsetMatrix);
 
