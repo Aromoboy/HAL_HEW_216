@@ -2458,6 +2458,11 @@ namespace SceneGameConfig
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
                 << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ", ccdPlayer=" << settings.continuousCollisionForPlayer
+                << ", creamWeldLinearHertz=" << settings.creamWeldLinearHertz
+                << ", creamWeldLinearDampingRatio=" << settings.creamWeldLinearDampingRatio
+                << ", creamWeldAngularHertz=" << settings.creamWeldAngularHertz
+                << ", creamWeldAngularDampingRatio=" << settings.creamWeldAngularDampingRatio
+                << ", creamWeldCollideConnected=" << settings.creamWeldCollideConnected
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2596,6 +2601,36 @@ namespace SceneGameConfig
                         ::DebugTrace(oss.str());
                     }
                 }
+                else if (key == "creamWeldLinearHertz")
+                {
+                    settings.creamWeldLinearHertz = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamWeldLinearDampingRatio")
+                {
+                    settings.creamWeldLinearDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                }
+                else if (key == "creamWeldAngularHertz")
+                {
+                    settings.creamWeldAngularHertz = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamWeldAngularDampingRatio")
+                {
+                    settings.creamWeldAngularDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                }
+                else if (key == "creamWeldCollideConnected")
+                {
+                    if (auto parsed = parseBool(value))
+                    {
+                        settings.creamWeldCollideConnected = *parsed;
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
+                            << lineNumber << "\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
                 else
                 {
                     std::ostringstream oss;
@@ -2631,6 +2666,11 @@ namespace SceneGameConfig
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
             << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
+            << ", creamWeldLinearHertz=" << settings.creamWeldLinearHertz
+            << ", creamWeldLinearDampingRatio=" << settings.creamWeldLinearDampingRatio
+            << ", creamWeldAngularHertz=" << settings.creamWeldAngularHertz
+            << ", creamWeldAngularDampingRatio=" << settings.creamWeldAngularDampingRatio
+            << ", creamWeldCollideConnected=" << settings.creamWeldCollideConnected
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;

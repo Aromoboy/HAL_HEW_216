@@ -282,14 +282,16 @@ namespace SweetsSpace
         m_factory.SetGeneratedColliderMinThickness(thickness);
     }
 
-    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        const Systems::ContactEventInfo& info)
     {
-        m_contacts.OnContactBegin(a, b);
+        m_contacts.OnContactBegin(a, b, info);
     }
 
-    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b)
+    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+        const Systems::ContactEventInfo& info)
     {
-        m_contacts.OnContactEnd(a, b);
+        m_contacts.OnContactEnd(a, b, info);
     }
 
     bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const

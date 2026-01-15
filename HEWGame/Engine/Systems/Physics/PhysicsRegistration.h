@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "Systems/Physics/ContactEventInfo.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
 namespace Entities
@@ -19,7 +20,7 @@ namespace Systems
     class PhysicsRegistration
     {
     public:
-        using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+        using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, const ContactEventInfo&)>;
 
         explicit PhysicsRegistration(PhysicsMachine& physicsMachine);
 
@@ -37,8 +38,8 @@ namespace Systems
             ContactCallback onEnd;
         };
 
-        void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
-        void DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b);
+        void DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const ContactEventInfo& info);
+        void DispatchEndContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const ContactEventInfo& info);
 
         PhysicsMachine* m_physicsMachine = nullptr;
         std::shared_ptr<Box2DContactListener> m_contactListener;

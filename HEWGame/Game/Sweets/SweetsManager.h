@@ -32,6 +32,7 @@
 #include "Sweets/SweetsRenderer.h"
 #include "Sweets/SweetsSpawner.h"
 #include "Systems/Physics/Box2DMeshBuilder.h"
+#include "Systems/Physics/ContactEventInfo.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
 namespace Core
@@ -128,8 +129,8 @@ namespace SweetsSpace
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
-        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
-        void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
+        void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         int GetSweetsCount() const;
