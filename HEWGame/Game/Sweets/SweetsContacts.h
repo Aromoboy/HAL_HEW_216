@@ -6,6 +6,7 @@
 #include <box2d/box2d.h>
 
 #include "Sweets/SweetsTypes.h"
+#include "Systems/Physics/ContactEventInfo.h"
 
 namespace Entities
 {
@@ -24,8 +25,8 @@ namespace SweetsSpace
     public:
         SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
 
-        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
-        void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b);
+        void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
+        void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
@@ -40,6 +41,15 @@ namespace SweetsSpace
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
 
     private:
+        struct GlueTuning
+        {
+            float linearHertz{ 0.0f };
+            float linearDampingRatio{ 0.7f };
+            float angularHertz{ 0.0f };
+            float angularDampingRatio{ 0.7f };
+            bool collideConnected{ false };
+        };
+
         struct ContactState
         {
             int foundationContacts{ 0 };
@@ -85,13 +95,23 @@ namespace SweetsSpace
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        bool TryGetContactAnchorWorld(const Systems::ContactEventInfo& info, b2Vec2& outAnchor) const;
+        void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
+        void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
+        void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;
+        void LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit, const b2Vec2& anchorWorld) const;
+        void CleanupInvalidJoint(const JointPairKey& key, b2JointId& jointId);
+        void CleanupInvalidAnchor(ActiveSweets* cream);
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         bool m_loggedContactNotification{ false };
 
+        GlueTuning m_glueTuning{};
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<JointPairKey, b2JointId, JointPairHash> m_creamWeldJoints;
+        std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
+        std::unordered_map<ActiveSweets*, ActiveSweets*> m_fruitToCream;
     };
 }

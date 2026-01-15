@@ -7,6 +7,8 @@
 
 #include <box2d/box2d.h>
 
+#include "Systems/Physics/ContactEventInfo.h"
+
 namespace Entities
 {
         class PhysicalEntity;
@@ -19,7 +21,7 @@ namespace Systems
         class Box2DContactListener
         {
         public:
-                using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&)>;
+                using ContactCallback = std::function<void(Entities::PhysicalEntity&, Entities::PhysicalEntity&, const ContactEventInfo&)>;
 
                 explicit Box2DContactListener(PhysicsMachine& physicsMachine);
 
@@ -34,8 +36,8 @@ namespace Systems
                 void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
 
         private:
-                void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
-                void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB);
+                void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, const ContactEventInfo& info);
+                void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, const ContactEventInfo& info);
                 Entities::PhysicalEntity* GetEntityForBody(b2BodyId bodyId) const;
                 Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
                 void LogMeshContact(const b2ContactBeginTouchEvent& evt) const;

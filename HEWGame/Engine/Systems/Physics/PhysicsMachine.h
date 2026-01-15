@@ -34,6 +34,11 @@ namespace Systems
         float smallDynamicContinuousThreshold = 0.0f;
         bool continuousCollisionForPlayerProjectiles = false;
         bool continuousCollisionForPlayer = false;
+        float creamWeldLinearHertz = 0.0f;
+        float creamWeldLinearDampingRatio = 0.7f;
+        float creamWeldAngularHertz = 0.0f;
+        float creamWeldAngularDampingRatio = 0.7f;
+        bool creamWeldCollideConnected = false;
     };
 
     class IPhysicsSystem
@@ -62,6 +67,7 @@ namespace Systems
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
         Core::IUpdatable* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
+        const PhysicsTuningParameters& GetTuningParameters() const;
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);

@@ -24,6 +24,11 @@ namespace SceneGameConfig
         float smallDynamicContinuousThreshold = 0.6f;
         bool continuousCollisionForPlayerProjectiles = true;
         bool continuousCollisionForPlayer = false;
+        float creamWeldLinearHertz = 0.0f;
+        float creamWeldLinearDampingRatio = 0.7f;
+        float creamWeldAngularHertz = 0.0f;
+        float creamWeldAngularDampingRatio = 0.7f;
+        bool creamWeldCollideConnected = false;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);

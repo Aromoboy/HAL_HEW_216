@@ -385,6 +385,11 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     physicsParameters.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
+    physicsParameters.creamWeldLinearHertz = tuning.creamWeldLinearHertz;
+    physicsParameters.creamWeldLinearDampingRatio = tuning.creamWeldLinearDampingRatio;
+    physicsParameters.creamWeldAngularHertz = tuning.creamWeldAngularHertz;
+    physicsParameters.creamWeldAngularDampingRatio = tuning.creamWeldAngularDampingRatio;
+    physicsParameters.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
     result.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
     Systems::PhysicsMachine* physicsMachine = result.physicsBinder ? result.physicsBinder->GetPhysicsMachine() : nullptr;
     result.drawSystem = std::make_unique<Systems::DrawSystem>();

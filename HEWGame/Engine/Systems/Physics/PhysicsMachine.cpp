@@ -176,6 +176,11 @@ namespace Systems
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
         m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
+        m_tuning.creamWeldLinearHertz = std::max(0.0f, tuning.creamWeldLinearHertz);
+        m_tuning.creamWeldAngularHertz = std::max(0.0f, tuning.creamWeldAngularHertz);
+        m_tuning.creamWeldLinearDampingRatio = std::clamp(tuning.creamWeldLinearDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamWeldAngularDampingRatio = std::clamp(tuning.creamWeldAngularDampingRatio, 0.0f, 1.0f);
+        m_tuning.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
             ? tuning.maxStepDt
             : (1.0f / 60.0f);
@@ -260,6 +265,11 @@ namespace Systems
     const std::vector<Entities::PhysicalEntity*>& PhysicsMachine::GetBodies() const
     {
         return m_bodies;
+    }
+
+    const PhysicsTuningParameters& PhysicsMachine::GetTuningParameters() const
+    {
+        return m_tuning;
     }
 
     void PhysicsMachine::SetGravity(float gravity)
