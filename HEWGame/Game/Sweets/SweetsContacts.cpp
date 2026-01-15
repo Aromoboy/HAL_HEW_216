@@ -216,10 +216,10 @@ namespace SweetsSpace
                 }
                 else if (m_physicsMachine)
                 {
-                    const auto fruitBinding = m_fruitToCream.find(otherSweets);
-                    if (fruitBinding != m_fruitToCream.end())
+                    const auto fruitBindings = m_fruitToCreams.find(otherSweets);
+                    if (fruitBindings != m_fruitToCreams.end() && fruitBindings->second.contains(cream))
                     {
-                        LogGlueReject(fruitBinding->second == cream ? "alreadyBonded" : "alreadyGlued", cream, otherSweets);
+                        LogGlueReject("alreadyBonded", cream, otherSweets);
                     }
                     else
                     {
@@ -259,7 +259,7 @@ namespace SweetsSpace
                                 {
                                     m_creamWeldJoints.emplace(key, jointId);
                                     m_creamWeldAnchors.emplace(key, anchor);
-                                    m_fruitToCream.emplace(otherSweets, cream);
+                                    m_fruitToCreams[otherSweets].insert(cream);
                                     FreezeFruitBody(*otherSweets);
                                     LogGlueCreateFruitToCream(cream, otherSweets, anchor);
                                 }
@@ -517,11 +517,31 @@ namespace SweetsSpace
             LogGlueDestroy("destroyed", cream, fruit);
             if (fruit)
             {
-                UnfreezeFruitBody(*fruit);
+                RemoveFruitCreamLink(fruit, cream);
             }
-            m_fruitToCream.erase(fruit);
             m_creamWeldJoints.erase(key);
             m_creamWeldAnchors.erase(key);
+        }
+    }
+
+    void SweetsContacts::RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream)
+    {
+        if (!fruit || !cream)
+        {
+            return;
+        }
+
+        auto it = m_fruitToCreams.find(fruit);
+        if (it == m_fruitToCreams.end())
+        {
+            return;
+        }
+
+        it->second.erase(cream);
+        if (it->second.empty())
+        {
+            m_fruitToCreams.erase(it);
+            UnfreezeFruitBody(*fruit);
         }
     }
 
@@ -648,9 +668,8 @@ namespace SweetsSpace
                 }
                 if (fruit)
                 {
-                    UnfreezeFruitBody(*fruit);
+                    RemoveFruitCreamLink(fruit, cream);
                 }
-                m_fruitToCream.erase(fruit);
                 m_creamWeldAnchors.erase(it->first);
                 it = m_creamWeldJoints.erase(it);
             }
@@ -672,7 +691,7 @@ namespace SweetsSpace
             m_creamAnchorPoints.erase(sweets);
         }
 
-        if (m_frozenFruitStates.contains(sweets))
+        if (m_frozenFruitStates.contains(sweets) && !m_fruitToCreams.contains(sweets))
         {
             UnfreezeFruitBody(*sweets);
         }
@@ -714,7 +733,7 @@ namespace SweetsSpace
         }
         m_creamWeldJoints.clear();
         m_creamWeldAnchors.clear();
-        m_fruitToCream.clear();
+        m_fruitToCreams.clear();
 
         for (const auto& entry : m_creamAnchorJoints)
         {
