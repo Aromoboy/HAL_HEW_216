@@ -161,8 +161,6 @@ namespace SweetsSpace
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
-        bool m_loggedContactNotification{ false };
-
         GlueTuning m_glueTuning{};
         mutable GlueStats m_glueStats{};
         std::unordered_map<ActiveSweets*, ContactState> m_contactStates;

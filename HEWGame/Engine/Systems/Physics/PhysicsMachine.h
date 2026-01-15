@@ -34,11 +34,11 @@ namespace Systems
         float smallDynamicContinuousThreshold = 0.0f;
         bool continuousCollisionForPlayerProjectiles = false;
         bool continuousCollisionForPlayer = false;
-        float creamWeldLinearHertz = 0.0f;
-        float creamWeldLinearDampingRatio = 0.7f;
-        float creamWeldAngularHertz = 0.0f;
-        float creamWeldAngularDampingRatio = 0.7f;
-        bool creamWeldCollideConnected = false;
+        float creamGlueLinearHertz = 0.0f;
+        float creamGlueLinearDampingRatio = 0.7f;
+        float creamGlueAngularHertz = 0.0f;
+        float creamGlueAngularDampingRatio = 0.7f;
+        bool creamGlueCollideConnected = false;
         float creamGluePushOutEpsilon = 0.03f;
         float creamGlueMaxPushOut = 0.25f;
     };

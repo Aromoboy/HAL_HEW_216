@@ -2458,11 +2458,11 @@ namespace SceneGameConfig
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
                 << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ", ccdPlayer=" << settings.continuousCollisionForPlayer
-                << ", creamWeldLinearHertz=" << settings.creamWeldLinearHertz
-                << ", creamWeldLinearDampingRatio=" << settings.creamWeldLinearDampingRatio
-                << ", creamWeldAngularHertz=" << settings.creamWeldAngularHertz
-                << ", creamWeldAngularDampingRatio=" << settings.creamWeldAngularDampingRatio
-                << ", creamWeldCollideConnected=" << settings.creamWeldCollideConnected
+                << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
+                << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
+                << ", creamGlueAngularHertz=" << settings.creamGlueAngularHertz
+                << ", creamGlueAngularDampingRatio=" << settings.creamGlueAngularDampingRatio
+                << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2601,27 +2601,27 @@ namespace SceneGameConfig
                         ::DebugTrace(oss.str());
                     }
                 }
-                else if (key == "creamWeldLinearHertz")
+                else if (key == "creamGlueLinearHertz")
                 {
-                    settings.creamWeldLinearHertz = std::max(0.0f, std::stof(value));
+                    settings.creamGlueLinearHertz = std::max(0.0f, std::stof(value));
                 }
-                else if (key == "creamWeldLinearDampingRatio")
+                else if (key == "creamGlueLinearDampingRatio")
                 {
-                    settings.creamWeldLinearDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    settings.creamGlueLinearDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
                 }
-                else if (key == "creamWeldAngularHertz")
+                else if (key == "creamGlueAngularHertz")
                 {
-                    settings.creamWeldAngularHertz = std::max(0.0f, std::stof(value));
+                    settings.creamGlueAngularHertz = std::max(0.0f, std::stof(value));
                 }
-                else if (key == "creamWeldAngularDampingRatio")
+                else if (key == "creamGlueAngularDampingRatio")
                 {
-                    settings.creamWeldAngularDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
+                    settings.creamGlueAngularDampingRatio = std::clamp(std::stof(value), 0.0f, 1.0f);
                 }
-                else if (key == "creamWeldCollideConnected")
+                else if (key == "creamGlueCollideConnected")
                 {
                     if (auto parsed = parseBool(value))
                     {
-                        settings.creamWeldCollideConnected = *parsed;
+                        settings.creamGlueCollideConnected = *parsed;
                     }
                     else
                     {
@@ -2638,6 +2638,18 @@ namespace SceneGameConfig
                 else if (key == "creamGlueMaxPushOut")
                 {
                     settings.creamGlueMaxPushOut = std::max(0.0f, std::stof(value));
+                }
+                else if (key == "creamWeldLinearHertz"
+                    || key == "creamWeldLinearDampingRatio"
+                    || key == "creamWeldAngularHertz"
+                    || key == "creamWeldAngularDampingRatio"
+                    || key == "creamWeldCollideConnected")
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Deprecated key '" << key
+                        << "' on line " << lineNumber
+                        << " (use creamGlue* settings instead).\n";
+                    ::DebugTrace(oss.str());
                 }
                 else
                 {
@@ -2674,11 +2686,11 @@ namespace SceneGameConfig
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
             << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
-            << ", creamWeldLinearHertz=" << settings.creamWeldLinearHertz
-            << ", creamWeldLinearDampingRatio=" << settings.creamWeldLinearDampingRatio
-            << ", creamWeldAngularHertz=" << settings.creamWeldAngularHertz
-            << ", creamWeldAngularDampingRatio=" << settings.creamWeldAngularDampingRatio
-            << ", creamWeldCollideConnected=" << settings.creamWeldCollideConnected
+            << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
+            << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
+            << ", creamGlueAngularHertz=" << settings.creamGlueAngularHertz
+            << ", creamGlueAngularDampingRatio=" << settings.creamGlueAngularDampingRatio
+            << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
             << ", creamGluePushOutEpsilon=" << settings.creamGluePushOutEpsilon
             << ", creamGlueMaxPushOut=" << settings.creamGlueMaxPushOut
             << ").\n";

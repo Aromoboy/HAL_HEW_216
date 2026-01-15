@@ -385,11 +385,11 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     physicsParameters.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
-    physicsParameters.creamWeldLinearHertz = tuning.creamWeldLinearHertz;
-    physicsParameters.creamWeldLinearDampingRatio = tuning.creamWeldLinearDampingRatio;
-    physicsParameters.creamWeldAngularHertz = tuning.creamWeldAngularHertz;
-    physicsParameters.creamWeldAngularDampingRatio = tuning.creamWeldAngularDampingRatio;
-    physicsParameters.creamWeldCollideConnected = tuning.creamWeldCollideConnected;
+    physicsParameters.creamGlueLinearHertz = tuning.creamGlueLinearHertz;
+    physicsParameters.creamGlueLinearDampingRatio = tuning.creamGlueLinearDampingRatio;
+    physicsParameters.creamGlueAngularHertz = tuning.creamGlueAngularHertz;
+    physicsParameters.creamGlueAngularDampingRatio = tuning.creamGlueAngularDampingRatio;
+    physicsParameters.creamGlueCollideConnected = tuning.creamGlueCollideConnected;
     physicsParameters.creamGluePushOutEpsilon = tuning.creamGluePushOutEpsilon;
     physicsParameters.creamGlueMaxPushOut = tuning.creamGlueMaxPushOut;
     result.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
