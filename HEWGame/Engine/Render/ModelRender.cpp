@@ -58,18 +58,11 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
 
         constexpr size_t kMaxBones = 200;
-        std::array<DirectX::XMFLOAT4X4, kMaxBones> bones{};
         const unsigned int boneCount = mesh->GetBoneCount();
         const size_t limitedBoneCount = std::min<size_t>(boneCount, kMaxBones);
+        const bool useAnimationShader = (limitedBoneCount > 0) && (animation != nullptr);
 
-        for (size_t i = 0; i < kMaxBones; ++i)
-        {
-            DirectX::XMStoreFloat4x4(&bones[i], DirectX::XMMatrixIdentity());
-        }
-
-        const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
-
-        DirectX::XMFLOAT4X4 newBones[kMaxBones];
+        std::array<DirectX::XMFLOAT4X4, kMaxBones> newBones{};
         for (size_t boneIdx = 0; boneIdx < kMaxBones; ++boneIdx)
         {
             DirectX::XMStoreFloat4x4(&newBones[boneIdx], DirectX::XMMatrixIdentity());
@@ -82,13 +75,13 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             {
                 DirectX::XMStoreFloat4x4(
                     &newBones[boneIdx],
-                    // CPU matrices are row-major; transpose exactly once for HLSL buffers.
+                    // Match master: invOffset * nodeMatrix, then transpose once for HLSL buffers.
                     DirectX::XMMatrixTranspose(mesh->GetBoneMatrix(boneIdx) *
                         animation->GetNodeMatrix(mesh->GetBoneNodeIndex(boneIdx))));
             }
         }
 
-        ShaderList::SetBones(newBones);
+        ShaderList::SetBones(newBones.data());
 
 
         if (material)
