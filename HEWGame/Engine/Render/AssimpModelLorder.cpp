@@ -1220,7 +1220,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
             node.children.resize(assimpNode->mNumChildren);
             node.localBind = localTransform;
             node.globalBind = localTransform * parentGlobal;
-            node.mat = node.globalBind;
+            node.mat = node.localBind;
 
             // ノードの一覧に追加
             a_outNodes.push_back(node);
@@ -1250,7 +1250,7 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
         DirectX::XMVECTOR scale;
         DirectX::XMVECTOR rotation;
         DirectX::XMVECTOR translation;
-        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].globalBind))
+        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].localBind))
         {
             scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
             rotation = DirectX::XMQuaternionIdentity();
