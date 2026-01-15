@@ -82,7 +82,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             }
         }
 
-        ShaderList::SetBones(newBones);
+        ShaderList::SetBones(newBones.data());
 
 
         if (material)
