@@ -253,31 +253,44 @@ namespace SweetsSpace
                         }
                         else
                         {
-                            b2Vec2 anchor = anchorData.point;
-                            const bool creamIsShapeA = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdA);
-                            const bool creamIsShapeB = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdB);
-                            if (creamIsShapeA != creamIsShapeB)
+                            const bool creamHasSupport = HasSupportingContact(*creamForStage, nullptr);
+                            bool targetHasSupport = true;
+                            if (auto* targetSweets = dynamic_cast<ActiveSweets*>(otherStage))
                             {
-                                ApplyGluePushOut(*creamForStage, creamIsShapeA, anchorData, anchor);
+                                targetHasSupport = HasSupportingContact(*targetSweets, nullptr);
                             }
-                            const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
-                                *creamForStage,
-                                *otherStage,
-                                anchor,
-                                m_glueTuning.linearHertz,
-                                m_glueTuning.linearDampingRatio,
-                                m_glueTuning.angularHertz,
-                                m_glueTuning.angularDampingRatio,
-                                m_glueTuning.collideConnected);
-                            if (b2Joint_IsValid(jointId))
+                            if (!creamHasSupport || !targetHasSupport)
                             {
-                                m_creamAnchorJoints.emplace(creamForStage, jointId);
-                                m_creamAnchorPoints.emplace(creamForStage, anchor);
-                                LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
+                                LogGlueReject("noSupport", creamForStage, otherStage);
                             }
                             else
                             {
-                                LogGlueReject("createFailed", creamForStage, otherStage);
+                                b2Vec2 anchor = anchorData.point;
+                                const bool creamIsShapeA = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdA);
+                                const bool creamIsShapeB = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdB);
+                                if (creamIsShapeA != creamIsShapeB)
+                                {
+                                    ApplyGluePushOut(*creamForStage, creamIsShapeA, anchorData, anchor);
+                                }
+                                const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
+                                    *creamForStage,
+                                    *otherStage,
+                                    anchor,
+                                    m_glueTuning.linearHertz,
+                                    m_glueTuning.linearDampingRatio,
+                                    m_glueTuning.angularHertz,
+                                    m_glueTuning.angularDampingRatio,
+                                    m_glueTuning.collideConnected);
+                                if (b2Joint_IsValid(jointId))
+                                {
+                                    m_creamAnchorJoints.emplace(creamForStage, jointId);
+                                    m_creamAnchorPoints.emplace(creamForStage, anchor);
+                                    LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
+                                }
+                                else
+                                {
+                                    LogGlueReject("createFailed", creamForStage, otherStage);
+                                }
                             }
                         }
                     }
@@ -1025,6 +1038,13 @@ namespace SweetsSpace
             if (IsGlueSpeedTooFast(*pending.cream) || IsGlueSpeedTooFast(*pending.fruit))
             {
                 LogGlueReject("tooFast", pending.cream, pending.fruit);
+                it = m_pendingGlue.erase(it);
+                continue;
+            }
+
+            if (!HasSupportingContact(*pending.cream, nullptr) || !HasSupportingContact(*pending.fruit, nullptr))
+            {
+                LogGlueReject("noSupport", pending.cream, pending.fruit);
                 it = m_pendingGlue.erase(it);
                 continue;
             }
