@@ -99,6 +99,7 @@ namespace SweetsSpace
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
 
         void RemoveCementAdjacencyForEntity(Entities::PhysicalEntity* entity);
+        void ClearPendingBreaksForSweets(ActiveSweets* sweets);
 
 
     private:
@@ -298,7 +299,6 @@ namespace SweetsSpace
         bool TryCreateCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, float touchingSeconds);
         void BreakCreamWeldJoint(ActiveSweets* cream, Entities::PhysicalEntity* other, const char* context,
             CreamBondBreakReason reason);
-        void ClearPendingBreaksForSweets(ActiveSweets* sweets);
         void ClearHitImpulsesForSweets(ActiveSweets* sweets);
         void ClearPendingCementClustersForEntity(Entities::PhysicalEntity* entity);
         void CleanupInvalidContacts();
