@@ -1182,15 +1182,8 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
     using FuncRecurciveMakeNodes = std::function < NodeIndexDX(aiNode*, NodeIndexDX, DirectX::XMMATRIX) >;
     FuncRecurciveMakeNodes func = [&func, &a_outNodes, this](aiNode* assimpNode, NodeIndexDX parent, DirectX::XMMATRIX mat)
         {
-            // assimp側で階層情報が細かく分割されている場合の処理
             std::string name = assimpNode->mName.data;
             DirectX::XMMATRIX localTransform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
-            if (name.find("$AssimpFbx") != std::string::npos)
-            {
-                // 分割前のノードに到達するまで、各行列を掛け合わせていく
-                mat = localTransform * mat;
-                return func(assimpNode->mChildren[0], parent, mat);
-            }
 
             // Assimpのノード情報を格納
             NodeDX node;
