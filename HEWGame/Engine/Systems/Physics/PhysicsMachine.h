@@ -41,6 +41,7 @@ namespace Systems
         bool creamGlueCollideConnected = false;
         float creamGluePushOutEpsilon = 0.03f;
         float creamGlueMaxPushOut = 0.25f;
+        float creamGlueMaxSpeed = 0.0f;
     };
 
     class IPhysicsSystem

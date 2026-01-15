@@ -2463,6 +2463,7 @@ namespace SceneGameConfig
                 << ", creamGlueAngularHertz=" << settings.creamGlueAngularHertz
                 << ", creamGlueAngularDampingRatio=" << settings.creamGlueAngularDampingRatio
                 << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
+                << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2639,6 +2640,10 @@ namespace SceneGameConfig
                 {
                     settings.creamGlueMaxPushOut = std::max(0.0f, std::stof(value));
                 }
+                else if (key == "creamGlueMaxSpeed")
+                {
+                    settings.creamGlueMaxSpeed = std::max(0.0f, std::stof(value));
+                }
                 else if (key == "creamWeldLinearHertz"
                     || key == "creamWeldLinearDampingRatio"
                     || key == "creamWeldAngularHertz"
@@ -2693,6 +2698,7 @@ namespace SceneGameConfig
             << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
             << ", creamGluePushOutEpsilon=" << settings.creamGluePushOutEpsilon
             << ", creamGlueMaxPushOut=" << settings.creamGlueMaxPushOut
+            << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;
