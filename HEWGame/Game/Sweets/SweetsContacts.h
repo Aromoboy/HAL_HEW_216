@@ -76,7 +76,7 @@ namespace SweetsSpace
             float maxPushOut{ 0.25f };
             float maxSpeed{ 0.0f };
             float breakForce{ 0.0f };
-            float impactImpulseThreshold{ 0.0f };
+            float breakImpulse{ 0.0f };
         };
 
         struct ContactAnchorData

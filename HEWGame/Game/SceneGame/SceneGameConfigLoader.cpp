@@ -2465,7 +2465,7 @@ namespace SceneGameConfig
                 << ", creamGlueCollideConnected=" << settings.creamGlueCollideConnected
                 << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
                 << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
-                << ", creamGlueImpactImpulseThreshold=" << settings.creamGlueImpactImpulseThreshold
+                << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2650,9 +2650,18 @@ namespace SceneGameConfig
                 {
                     settings.creamGlueBreakForce = std::max(0.0f, std::stof(value));
                 }
+                else if (key == "creamGlueBreakImpulse")
+                {
+                    settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
+                }
                 else if (key == "creamGlueImpactImpulseThreshold")
                 {
-                    settings.creamGlueImpactImpulseThreshold = std::max(0.0f, std::stof(value));
+                    settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Deprecated key '" << key
+                        << "' on line " << lineNumber
+                        << " (use creamGlueBreakImpulse instead).\n";
+                    ::DebugTrace(oss.str());
                 }
                 else if (key == "creamWeldLinearHertz"
                     || key == "creamWeldLinearDampingRatio"
@@ -2710,7 +2719,7 @@ namespace SceneGameConfig
             << ", creamGlueMaxPushOut=" << settings.creamGlueMaxPushOut
             << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
             << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
-            << ", creamGlueImpactImpulseThreshold=" << settings.creamGlueImpactImpulseThreshold
+            << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;
