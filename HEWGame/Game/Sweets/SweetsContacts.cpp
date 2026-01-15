@@ -80,7 +80,6 @@ namespace SweetsSpace
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
             m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
             m_glueTuning.breakForce = tuning.creamGlueBreakForce;
-            m_glueTuning.breakImpulse = tuning.creamGlueBreakImpulse;
         }
     }
 
@@ -186,10 +185,6 @@ namespace SweetsSpace
                             {
                                 m_creamAnchorJoints.emplace(creamForStage, jointId);
                                 m_creamAnchorPoints.emplace(creamForStage, anchor);
-                                if (!B2_IS_NULL(info.contactId))
-                                {
-                                    m_creamAnchorContacts[creamForStage] = info.contactId;
-                                }
                                 LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
                             }
                             else
@@ -509,44 +504,9 @@ namespace SweetsSpace
         return b2Length(force) >= m_glueTuning.breakForce;
     }
 
-    bool SweetsContacts::IsGlueBreakImpulseExceeded(const b2ContactId& contactId) const
-    {
-        if (m_glueTuning.breakImpulse <= 0.0f)
-        {
-            return false;
-        }
-
-        if (B2_IS_NULL(contactId) || !b2Contact_IsValid(contactId))
-        {
-            return false;
-        }
-
-        const b2ContactData data = b2Contact_GetData(contactId);
-        if (data.manifold.pointCount <= 0)
-        {
-            return false;
-        }
-
-        float maxImpulse = 0.0f;
-        const int pointCount = std::min(data.manifold.pointCount, 2);
-        for (int i = 0; i < pointCount; ++i)
-        {
-            const b2ManifoldPoint& point = data.manifold.points[i];
-            if (!std::isfinite(point.totalNormalImpulse) || !std::isfinite(point.tangentImpulse))
-            {
-                continue;
-            }
-
-            const float impulse = std::hypot(point.totalNormalImpulse, point.tangentImpulse);
-            maxImpulse = std::max(maxImpulse, impulse);
-        }
-
-        return maxImpulse >= m_glueTuning.breakImpulse;
-    }
-
     void SweetsContacts::UpdateBreakableJoints()
     {
-        if (m_glueTuning.breakForce <= 0.0f && m_glueTuning.breakImpulse <= 0.0f)
+        if (m_glueTuning.breakForce <= 0.0f)
         {
             return;
         }
@@ -566,16 +526,14 @@ namespace SweetsSpace
                 continue;
             }
 
-            ActiveSweets* cream = entry.cream;
-            ActiveSweets* fruit = entry.fruit;
-            const bool breakForce = IsGlueBreakForceExceeded(entry.jointId);
-            const bool breakImpulse = IsGlueBreakImpulseExceeded(current->first);
-            if (!breakForce && !breakImpulse)
+            if (!IsGlueBreakForceExceeded(entry.jointId))
             {
                 continue;
             }
 
-            LogGlueDestroy(breakImpulse ? "breakImpulse" : "breakForce", cream, fruit);
+            ActiveSweets* cream = entry.cream;
+            ActiveSweets* fruit = entry.fruit;
+            LogGlueDestroy("breakForce", cream, fruit);
             m_physicsMachine->DestroyJoint(entry.jointId);
             m_creamWeldJoints.erase(current->first);
             if (fruit)
@@ -592,25 +550,18 @@ namespace SweetsSpace
             {
                 LogGlueDestroy("destroyed", current->first, nullptr);
                 m_creamAnchorPoints.erase(current->first);
-                m_creamAnchorContacts.erase(current->first);
                 m_creamAnchorJoints.erase(current);
                 continue;
             }
 
-            const bool breakForce = IsGlueBreakForceExceeded(jointId);
-            const auto contactIt = m_creamAnchorContacts.find(current->first);
-            const bool breakImpulse = contactIt != m_creamAnchorContacts.end()
-                ? IsGlueBreakImpulseExceeded(contactIt->second)
-                : false;
-            if (!breakForce && !breakImpulse)
+            if (!IsGlueBreakForceExceeded(jointId))
             {
                 continue;
             }
 
-            LogGlueDestroy(breakImpulse ? "breakImpulse" : "breakForce", current->first, nullptr);
+            LogGlueDestroy("breakForce", current->first, nullptr);
             m_physicsMachine->DestroyJoint(jointId);
             m_creamAnchorPoints.erase(current->first);
-            m_creamAnchorContacts.erase(current->first);
             m_creamAnchorJoints.erase(current);
         }
     }
@@ -734,7 +685,6 @@ namespace SweetsSpace
             LogGlueDestroy("destroyed", cream, nullptr);
             m_creamAnchorJoints.erase(it);
             m_creamAnchorPoints.erase(cream);
-            m_creamAnchorContacts.erase(cream);
         }
     }
 
@@ -867,7 +817,6 @@ namespace SweetsSpace
             }
             m_creamAnchorJoints.erase(anchorIt);
             m_creamAnchorPoints.erase(sweets);
-            m_creamAnchorContacts.erase(sweets);
         }
 
         if (m_frozenFruitStates.contains(sweets) && !m_fruitToCreams.contains(sweets))
@@ -922,7 +871,6 @@ namespace SweetsSpace
         }
         m_creamAnchorJoints.clear();
         m_creamAnchorPoints.clear();
-        m_creamAnchorContacts.clear();
         std::vector<ActiveSweets*> frozenFruits;
         frozenFruits.reserve(m_frozenFruitStates.size());
         for (const auto& entry : m_frozenFruitStates)

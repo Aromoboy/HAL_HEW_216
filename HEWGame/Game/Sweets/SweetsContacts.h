@@ -76,7 +76,6 @@ namespace SweetsSpace
             float maxPushOut{ 0.25f };
             float maxSpeed{ 0.0f };
             float breakForce{ 0.0f };
-            float breakImpulse{ 0.0f };
         };
 
         struct ContactAnchorData
@@ -162,7 +161,6 @@ namespace SweetsSpace
         void UnfreezeFruitBody(ActiveSweets& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
         bool IsGlueBreakForceExceeded(b2JointId jointId) const;
-        bool IsGlueBreakImpulseExceeded(const b2ContactId& contactId) const;
         void UpdateBreakableJoints();
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
@@ -183,7 +181,6 @@ namespace SweetsSpace
         std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
         std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
-        std::unordered_map<ActiveSweets*, b2ContactId> m_creamAnchorContacts;
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
     };
