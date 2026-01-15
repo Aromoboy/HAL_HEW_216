@@ -510,26 +510,6 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         DirectX::XMMATRIX inverse = DirectX::XMMatrixIdentity();
     };
 
-    const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
-    {
-        if (!node)
-        {
-            return nullptr;
-        }
-        if (name == node->mName)
-        {
-            return node;
-        }
-        for (unsigned int childIdx = 0; childIdx < node->mNumChildren; ++childIdx)
-        {
-            if (const aiNode* found = self(self, node->mChildren[childIdx], name))
-            {
-                return found;
-            }
-        }
-        return nullptr;
-    };
-
     float3 minBounds{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
     float3 maxBounds{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
     hasBounds = false;
@@ -553,32 +533,41 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
         MeshNodeTransformDX meshNodeTransform;
-        const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
-        if (matchedNode)
+        const bool isSkinned = mesh->HasBones();
+        if (!isSkinned)
         {
-            meshNodeTransform.hasTransform = true;
-            meshNodeTransform.transform = GetMatrixFromAssimpMatrix(matchedNode->mTransformation);
-            meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
-            std::ostringstream oss;
-            oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
-            const aiMatrix4x4& m = matchedNode->mTransformation;
-            oss << "[" << m.a1 << "," << m.a2 << "," << m.a3 << "," << m.a4 << ";"
-                << m.b1 << "," << m.b2 << "," << m.b3 << "," << m.b4 << ";"
-                << m.c1 << "," << m.c2 << "," << m.c3 << "," << m.c4 << ";"
-                << m.d1 << "," << m.d2 << "," << m.d3 << "," << m.d4 << "]";
-            DebugLog::DebugMessage(oss.str() + "\n");
-        }
-        else
-        {
-            DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
+            const NodeIndexDX nodeIndex = FindNode(mesh->mName.C_Str(), a_nodes);
+            if (nodeIndex != kNodeNone)
+            {
+                meshNodeTransform.hasTransform = true;
+                meshNodeTransform.transform = a_nodes[nodeIndex].globalBind;
+                meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
+                DirectX::XMFLOAT4X4 globalMatrix{};
+                DirectX::XMStoreFloat4x4(&globalMatrix, meshNodeTransform.transform);
+                std::ostringstream oss;
+                oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
+                oss << "[" << globalMatrix._11 << "," << globalMatrix._12 << "," << globalMatrix._13 << "," << globalMatrix._14 << ";"
+                    << globalMatrix._21 << "," << globalMatrix._22 << "," << globalMatrix._23 << "," << globalMatrix._24 << ";"
+                    << globalMatrix._31 << "," << globalMatrix._32 << "," << globalMatrix._33 << "," << globalMatrix._34 << ";"
+                    << globalMatrix._41 << "," << globalMatrix._42 << "," << globalMatrix._43 << "," << globalMatrix._44 << "]";
+                DebugLog::DebugMessage(oss.str() + "\n");
+            }
+            else
+            {
+                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
+            }
         }
 
         // ノード変換ルール:
-        // - 頂点は常にメッシュローカル空間のまま保持する (applyNodeTransform はしない)。
-        // - nodeTransform は skinned / non-skinned 共通で invOffset 側へ折り込み、同一空間に揃える。
+        // - skinned: 頂点はメッシュローカル空間のまま保持する (ノード変換を適用しない)。
+        // - non-skinned: ノードのグローバル変換を頂点へ適用する。
 
-        const DirectX::XMMATRIX vertexTransform = meshNodeTransform.transform;
-        const DirectX::XMMATRIX normalTransform = DirectX::XMMatrixTranspose(meshNodeTransform.inverse);
+        const DirectX::XMMATRIX vertexTransform = meshNodeTransform.hasTransform
+            ? meshNodeTransform.transform
+            : DirectX::XMMatrixIdentity();
+        const DirectX::XMMATRIX normalTransform = meshNodeTransform.hasTransform
+            ? DirectX::XMMatrixTranspose(meshNodeTransform.inverse)
+            : DirectX::XMMatrixIdentity();
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
