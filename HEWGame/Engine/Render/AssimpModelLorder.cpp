@@ -534,38 +534,35 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
         MeshNodeTransformDX meshNodeTransform;
         const bool isSkinned = mesh->HasBones();
-        if (!isSkinned)
+        const NodeIndexDX nodeIndex = FindNode(mesh->mName.C_Str(), a_nodes);
+        if (nodeIndex != kNodeNone)
         {
-            const NodeIndexDX nodeIndex = FindNode(mesh->mName.C_Str(), a_nodes);
-            if (nodeIndex != kNodeNone)
-            {
-                meshNodeTransform.hasTransform = true;
-                meshNodeTransform.transform = a_nodes[nodeIndex].mat;
-                meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
-                DirectX::XMFLOAT4X4 globalMatrix{};
-                DirectX::XMStoreFloat4x4(&globalMatrix, meshNodeTransform.transform);
-                std::ostringstream oss;
-                oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
-                oss << "[" << globalMatrix._11 << "," << globalMatrix._12 << "," << globalMatrix._13 << "," << globalMatrix._14 << ";"
-                    << globalMatrix._21 << "," << globalMatrix._22 << "," << globalMatrix._23 << "," << globalMatrix._24 << ";"
-                    << globalMatrix._31 << "," << globalMatrix._32 << "," << globalMatrix._33 << "," << globalMatrix._34 << ";"
-                    << globalMatrix._41 << "," << globalMatrix._42 << "," << globalMatrix._43 << "," << globalMatrix._44 << "]";
-                DebugLog::DebugMessage(oss.str() + "\n");
-            }
-            else
-            {
-                DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
-            }
+            meshNodeTransform.hasTransform = true;
+            meshNodeTransform.transform = a_nodes[nodeIndex].globalBind;
+            meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
+            DirectX::XMFLOAT4X4 globalMatrix{};
+            DirectX::XMStoreFloat4x4(&globalMatrix, meshNodeTransform.transform);
+            std::ostringstream oss;
+            oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
+            oss << "[" << globalMatrix._11 << "," << globalMatrix._12 << "," << globalMatrix._13 << "," << globalMatrix._14 << ";"
+                << globalMatrix._21 << "," << globalMatrix._22 << "," << globalMatrix._23 << "," << globalMatrix._24 << ";"
+                << globalMatrix._31 << "," << globalMatrix._32 << "," << globalMatrix._33 << "," << globalMatrix._34 << ";"
+                << globalMatrix._41 << "," << globalMatrix._42 << "," << globalMatrix._43 << "," << globalMatrix._44 << "]";
+            DebugLog::DebugMessage(oss.str() + "\n");
+        }
+        else
+        {
+            DebugLog::DebugMessage(std::string("[AssimpModelLoader][CHECKPOINT F] メッシュ ") + mesh->mName.C_Str() + " に対応するノードなし\n");
         }
 
         // ノード変換ルール:
         // - skinned: 頂点はメッシュローカル空間のまま保持する (ノード変換を適用しない)。
-        // - non-skinned: ノードのローカル変換を頂点へ適用する。
+        // - non-skinned: ノードのグローバル変換を頂点へ適用する。
 
-        const DirectX::XMMATRIX vertexTransform = meshNodeTransform.hasTransform
+        const DirectX::XMMATRIX vertexTransform = (!isSkinned && meshNodeTransform.hasTransform)
             ? meshNodeTransform.transform
             : DirectX::XMMatrixIdentity();
-        const DirectX::XMMATRIX normalTransform = meshNodeTransform.hasTransform
+        const DirectX::XMMATRIX normalTransform = (!isSkinned && meshNodeTransform.hasTransform)
             ? DirectX::XMMatrixTranspose(meshNodeTransform.inverse)
             : DirectX::XMMatrixIdentity();
 
@@ -600,7 +597,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             {
                 normalVec = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
             }
-            if (meshNodeTransform.hasTransform)
+            if (!isSkinned && meshNodeTransform.hasTransform)
             {
                 normalVec = DirectX::XMVector3TransformNormal(normalVec, normalTransform);
                 normalVec = DirectX::XMVector3Normalize(normalVec);
@@ -610,7 +607,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             DirectX::XMStoreFloat3(&normalFloat, normalVec);
 
             DirectX::XMVECTOR posVec = DirectX::XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
-            if (meshNodeTransform.hasTransform)
+            if (!isSkinned && meshNodeTransform.hasTransform)
             {
                 posVec = DirectX::XMVector3TransformCoord(posVec, vertexTransform);
             }
