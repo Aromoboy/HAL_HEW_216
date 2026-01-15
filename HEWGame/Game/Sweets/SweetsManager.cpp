@@ -91,6 +91,7 @@ namespace SweetsSpace
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
+        m_contacts.TickGlueBreaks(ctx.dt);
         m_contacts.TickDebugStats(ctx.dt);
     }
 

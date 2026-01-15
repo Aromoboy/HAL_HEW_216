@@ -78,6 +78,7 @@ namespace SweetsSpace
             m_glueTuning.collideConnected = tuning.creamGlueCollideConnected;
             m_glueTuning.pushOutEpsilon = tuning.creamGluePushOutEpsilon;
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
+            m_glueTuning.breakForce = tuning.creamGlueBreakForce;
         }
     }
 
@@ -766,6 +767,81 @@ namespace SweetsSpace
         if (newState == SweetsState::Carried && sweets)
         {
             m_hasSweetsContact.erase(sweets);
+        }
+    }
+
+    void SweetsContacts::TickGlueBreaks(float dt)
+    {
+        (void)dt;
+        if (!m_physicsMachine)
+        {
+            return;
+        }
+
+        const float breakForce = m_glueTuning.breakForce;
+        const bool enableBreakForce = breakForce > 0.0f;
+        for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
+        {
+            if (!b2Joint_IsValid(it->second))
+            {
+                ActiveSweets* cream = IsCreamTag(it->first.first->GetTag()) ? it->first.first : it->first.second;
+                ActiveSweets* fruit = (cream == it->first.first) ? it->first.second : it->first.first;
+                LogGlueDestroy("destroyed", cream, fruit);
+                if (fruit)
+                {
+                    RemoveFruitCreamLink(fruit, cream);
+                }
+                m_creamWeldAnchors.erase(it->first);
+                it = m_creamWeldJoints.erase(it);
+                continue;
+            }
+
+            if (enableBreakForce)
+            {
+                const b2Vec2 force = b2Joint_GetConstraintForce(it->second);
+                if (b2Length(force) >= breakForce)
+                {
+                    ActiveSweets* cream = IsCreamTag(it->first.first->GetTag()) ? it->first.first : it->first.second;
+                    ActiveSweets* fruit = (cream == it->first.first) ? it->first.second : it->first.first;
+                    LogGlueDestroy("breakForce", cream, fruit);
+                    m_physicsMachine->DestroyJoint(it->second);
+                    if (fruit)
+                    {
+                        RemoveFruitCreamLink(fruit, cream);
+                    }
+                    m_creamWeldAnchors.erase(it->first);
+                    it = m_creamWeldJoints.erase(it);
+                    continue;
+                }
+            }
+
+            ++it;
+        }
+
+        for (auto it = m_creamAnchorJoints.begin(); it != m_creamAnchorJoints.end();)
+        {
+            if (!b2Joint_IsValid(it->second))
+            {
+                LogGlueDestroy("destroyed", it->first, nullptr);
+                m_creamAnchorPoints.erase(it->first);
+                it = m_creamAnchorJoints.erase(it);
+                continue;
+            }
+
+            if (enableBreakForce)
+            {
+                const b2Vec2 force = b2Joint_GetConstraintForce(it->second);
+                if (b2Length(force) >= breakForce)
+                {
+                    LogGlueDestroy("breakForce", it->first, nullptr);
+                    m_physicsMachine->DestroyJoint(it->second);
+                    m_creamAnchorPoints.erase(it->first);
+                    it = m_creamAnchorJoints.erase(it);
+                    continue;
+                }
+            }
+
+            ++it;
         }
     }
 

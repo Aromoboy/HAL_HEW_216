@@ -60,6 +60,7 @@ namespace SweetsSpace
         void ClearCreamWeldJoints(const char* context);
 
         void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
+        void TickGlueBreaks(float dt);
         void TickDebugStats(float dt);
         GlueDebugSnapshot BuildDebugSnapshot() const;
 
@@ -73,6 +74,7 @@ namespace SweetsSpace
             bool collideConnected{ false };
             float pushOutEpsilon{ 0.03f };
             float maxPushOut{ 0.25f };
+            float breakForce{ 0.0f };
         };
 
         struct ContactAnchorData
