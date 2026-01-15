@@ -525,8 +525,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
         bool meshHasBounds = false;
 
         DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT F] メッシュ名=" + std::string(mesh->mName.C_Str()));
-        aiMatrix4x4 nodeTransform;
-        bool hasNodeTransform = false;
+        MeshNodeTransformDX meshNodeTransform;
         {
             const auto findNode = [&](const auto& self, const aiNode* node, const aiString& name) -> const aiNode*
             {
@@ -551,8 +550,9 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             const aiNode* matchedNode = findNode(findNode, pScene->mRootNode, mesh->mName);
             if (matchedNode)
             {
-                nodeTransform = matchedNode->mTransformation;
-                hasNodeTransform = true;
+                meshNodeTransform.hasTransform = true;
+                meshNodeTransform.transform = GetMatrixFromAssimpMatrix(matchedNode->mTransformation);
+                meshNodeTransform.inverse = DirectX::XMMatrixInverse(nullptr, meshNodeTransform.transform);
                 std::ostringstream oss;
                 oss << "[AssimpModelLoader][CHECKPOINT F] 対応ノード行列 " << mesh->mName.C_Str() << " : ";
                 const aiMatrix4x4& m = matchedNode->mTransformation;
@@ -568,11 +568,8 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             }
         }
 
-        const bool applyNodeTransform = hasNodeTransform && mesh->mNumBones == 0;
-        if (applyNodeTransform)
-        {
-            DebugLog::DebugMessage("[Mesh] メッシュ '" + std::string(mesh->mName.C_Str()) + "' にノード行列を適用\n");
-        }
+        // 頂点は常にメッシュローカル空間のまま保持し、ノード変換は骨/ノード行列側に寄せる。
+        // (skinned も non-skinned も共通: nodeTransform は invOffset 側へ折り込み)
 
         // 頂点
         vertices.resize(mesh->mNumVertices);
@@ -593,11 +590,6 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
             aiColor4D col = mesh->HasVertexColors(0)
                 ? mesh->mColors[0][j]
                 : aiColor4D(1, 1, 1, 1);
-
-            if (applyNodeTransform)
-            {
-                pos = nodeTransform * pos;
-            }
 
             DirectX::XMVECTOR normalVec = DirectX::XMVectorSet(normal.x, normal.y, normal.z, 0.0f);
             const auto normalLenSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normalVec));
@@ -648,7 +640,7 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
 
         std::vector<BoneDX> bones;
         // ボーン生成
-        MakeVertexWeight(pScene, i, a_nodes, vertices, bones);
+        MakeVertexWeight(pScene, i, meshNodeTransform, a_nodes, vertices, bones);
 
         // インデックス
         indices.resize(mesh->mNumFaces * 3);
@@ -1260,17 +1252,17 @@ NodeIndexDX AssimpModelLorder::FindNode(const char* name, const std::vector<Node
     return static_cast<NodeIndexDX>(it - nodes.begin());
 }
 
-void AssimpModelLorder::MakeVertexWeight(const void* ptr, int a_meshIndex, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeight(const void* ptr, int a_meshIndex, const MeshNodeTransformDX& meshNodeTransform, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     aiMesh* assimpMesh = pScene->mMeshes[a_meshIndex];
     if (assimpMesh->HasBones())
-        MakeVertexWeightHasBone(assimpMesh, a_vertices, a_nodes, a_bones);
+        MakeVertexWeightHasBone(assimpMesh, meshNodeTransform, a_vertices, a_nodes, a_bones);
     else
-        MakeVertexWeightFromNode(ptr, assimpMesh, a_vertices, a_nodes, a_bones);
+        MakeVertexWeightFromNode(ptr, assimpMesh, meshNodeTransform, a_vertices, a_nodes, a_bones);
 }
 
-void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(scene);
     const aiMesh* assimpMesh = reinterpret_cast<const aiMesh*>(ptr);
@@ -1303,8 +1295,14 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     BoneDX bone = {};
     bone.nodeIndex = func(a_nodes[nodeIndex].parent);
     if (bone.nodeIndex != kNodeNone) {
-        // ノードに保存されている行列を逆行列として設定
-        DirectX::XMStoreFloat4x4(&bone.invOffset, DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].mat));
+        // 頂点はメッシュローカル空間。invOffset は「メッシュ空間 -> ボーン空間」を表し、
+        // meshNodeTransform がある場合はその逆行列をここで折り込む。
+        DirectX::XMMATRIX invOffset = DirectX::XMMatrixInverse(nullptr, a_nodes[bone.nodeIndex].mat);
+        if (meshNodeTransform.hasTransform)
+        {
+            invOffset = invOffset * meshNodeTransform.inverse;
+        }
+        DirectX::XMStoreFloat4x4(&bone.invOffset, invOffset);
         // ボーンの情報を設定
         a_bones.resize(1);
         a_bones[0] = bone;
@@ -1315,7 +1313,7 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
     }
 }
 
-void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
+void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones)
 {
     const aiMesh* assimpMesh = reinterpret_cast<const aiMesh*>(ptr);
     DirectX::XMMATRIX mFlip =
@@ -1347,11 +1345,15 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLord
             continue;
         }
 
-        // メッシュに割り当てられているボーンを、原点に戻す逆行列を設定
+        // 頂点はメッシュローカル空間。invOffset はメッシュ空間 -> ボーン空間の逆変換。
         DirectX::XMMATRIX invOffsetMatrix;
 
         invOffsetMatrix = GetMatrixFromAssimpMatrix(assimpBone->mOffsetMatrix);
         invOffsetMatrix = mFlip * invOffsetMatrix * mScale;
+        if (meshNodeTransform.hasTransform)
+        {
+            invOffsetMatrix = invOffsetMatrix * meshNodeTransform.inverse;
+        }
 
         DirectX::XMStoreFloat4x4(&boneIt->invOffset, invOffsetMatrix);
 

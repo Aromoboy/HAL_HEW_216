@@ -68,6 +68,13 @@ private:
 
 	using Vertices = std::vector <MeshDX::Vertex>;
 	using Indices = std::vector<unsigned long>;
+
+	struct MeshNodeTransformDX
+	{
+		bool hasTransform = false;
+		DirectX::XMMATRIX transform = DirectX::XMMatrixIdentity();
+		DirectX::XMMATRIX inverse = DirectX::XMMatrixIdentity();
+	};
 	
 
 	DirectX::XMMATRIX GetMatrixFromAssimpMatrix(aiMatrix4x4 M);
@@ -84,9 +91,9 @@ private:
         TextureCache& textureCache,
         const MaterialTuningSettings& materialTuningSettings);
 
-	void MakeVertexWeightHasBone(const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
-	void MakeVertexWeight(const void* a_ptr, int a_meshIndex, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones);
-	void MakeVertexWeightFromNode(const void* scene, const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
+	void MakeVertexWeightHasBone(const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
+	void MakeVertexWeight(const void* a_ptr, int a_meshIndex, const MeshNodeTransformDX& meshNodeTransform, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones);
+	void MakeVertexWeightFromNode(const void* scene, const void* ptr, const MeshNodeTransformDX& meshNodeTransform, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
 
 
 
