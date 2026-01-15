@@ -33,6 +33,7 @@ namespace
 #endif
 
     constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr float kGlueCooldownSeconds = 2.0f;
 
     std::string NormalizeTag(const std::string& tag)
     {
@@ -80,6 +81,7 @@ namespace SweetsSpace
             m_glueTuning.maxPushOut = tuning.creamGlueMaxPushOut;
             m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
             m_glueTuning.breakForce = tuning.creamGlueBreakForce;
+            m_glueTuning.impactImpulseThreshold = tuning.creamGlueImpactImpulseThreshold;
         }
     }
 
@@ -106,6 +108,57 @@ namespace SweetsSpace
         if (sweetsB)
         {
             UpdateContactStateBegin(sweetsB, a);
+        }
+
+        if (sweetsA && sweetsB && !IsCreamTag(sweetsA->GetTag()) && !IsCreamTag(sweetsB->GetTag()))
+        {
+            const bool sweetsAHasCream = m_fruitToCreams.contains(sweetsA);
+            const bool sweetsBHasCream = m_fruitToCreams.contains(sweetsB);
+            if (sweetsAHasCream != sweetsBHasCream && m_glueTuning.impactImpulseThreshold > 0.0f)
+            {
+                ActiveSweets* gluedFruit = sweetsAHasCream ? sweetsA : sweetsB;
+                ActiveSweets* fallingFruit = sweetsAHasCream ? sweetsB : sweetsA;
+                if (gluedFruit && fallingFruit)
+                {
+                    const b2BodyId fallingBody = fallingFruit->GetBox2DBodyId();
+                    const b2BodyId gluedBody = gluedFruit->GetBox2DBodyId();
+                    if (b2Body_IsValid(fallingBody) && b2Body_IsValid(gluedBody))
+                    {
+                        const b2Vec2 fallingVelocity = b2Body_GetLinearVelocity(fallingBody);
+                        const b2Vec2 gluedVelocity = b2Body_GetLinearVelocity(gluedBody);
+                        const float relativeFallSpeed = std::fabs(fallingVelocity.y - gluedVelocity.y);
+                        const float fallingMass = b2Body_GetMass(fallingBody);
+                        if (std::isfinite(relativeFallSpeed) && std::isfinite(fallingMass))
+                        {
+                            const float impulse = fallingMass * relativeFallSpeed;
+                            if (impulse > m_glueTuning.impactImpulseThreshold)
+                            {
+                                RemoveCreamWeldJointsForSweets(gluedFruit, "impactBreak");
+                                const b2BodyId refreshedGluedBody = gluedFruit->GetBox2DBodyId();
+                                if (b2Body_IsValid(refreshedGluedBody))
+                                {
+                                    const float gluedMass = b2Body_GetMass(refreshedGluedBody);
+                                    if (gluedMass > 0.0f && std::isfinite(gluedMass))
+                                    {
+                                        const b2Vec2 relativeVelocity = b2Sub(fallingVelocity, gluedVelocity);
+                                        const b2Vec2 impulseVector = b2MulSV(fallingMass, relativeVelocity);
+                                        const b2Vec2 deltaVelocity = b2MulSV(0.8f / gluedMass, impulseVector);
+                                        const b2Vec2 newVelocity = b2Add(
+                                            b2Body_GetLinearVelocity(refreshedGluedBody),
+                                            deltaVelocity);
+                                        b2Body_SetLinearVelocity(refreshedGluedBody, newVelocity);
+                                    }
+                                }
+                                const auto cooldownEntry = m_glueCooldowns.find(gluedFruit);
+                                const float currentCooldown = (cooldownEntry != m_glueCooldowns.end())
+                                    ? cooldownEntry->second
+                                    : 0.0f;
+                                m_glueCooldowns[gluedFruit] = std::max(currentCooldown, kGlueCooldownSeconds);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         ActiveSweets* cream = nullptr;
@@ -222,6 +275,10 @@ namespace SweetsSpace
                 else if (IsBlockedTag(otherSweets->GetTag()))
                 {
                     LogGlueReject("blockedTag", cream, otherSweets);
+                }
+                else if (IsGlueCooldownActive(*otherSweets))
+                {
+                    LogGlueReject("cooldown", cream, otherSweets);
                 }
                 else if (m_physicsMachine)
                 {
@@ -741,6 +798,7 @@ namespace SweetsSpace
         m_contactStates.clear();
         m_hasSweetsContact.clear();
         m_pendingGlue.clear();
+        m_glueCooldowns.clear();
     }
 
     void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
@@ -750,6 +808,10 @@ namespace SweetsSpace
             return;
         }
         RemovePendingGlueForSweets(sweets);
+        if (!context || std::string(context) != "impactBreak")
+        {
+            m_glueCooldowns.erase(sweets);
+        }
         if (m_creamWeldJoints.empty() && m_creamAnchorJoints.empty())
         {
             return;
@@ -871,6 +933,7 @@ namespace SweetsSpace
         }
         m_creamAnchorJoints.clear();
         m_creamAnchorPoints.clear();
+        m_glueCooldowns.clear();
         std::vector<ActiveSweets*> frozenFruits;
         frozenFruits.reserve(m_frozenFruitStates.size());
         for (const auto& entry : m_frozenFruitStates)
@@ -913,6 +976,13 @@ namespace SweetsSpace
             if (!pending.cream || !pending.fruit)
             {
                 LogGlueReject("missingSweets", pending.cream, pending.fruit);
+                it = m_pendingGlue.erase(it);
+                continue;
+            }
+
+            if (IsGlueCooldownActive(*pending.fruit))
+            {
+                LogGlueReject("cooldown", pending.cream, pending.fruit);
                 it = m_pendingGlue.erase(it);
                 continue;
             }
@@ -997,6 +1067,7 @@ namespace SweetsSpace
     void SweetsContacts::TickDebugStats(float dt)
     {
         UpdateBreakableJoints();
+        TickGlueCooldowns(dt);
         if (!std::isfinite(dt) || dt <= 0.0f)
         {
             return;
@@ -1018,6 +1089,38 @@ namespace SweetsSpace
         m_glueStats.cleanupCount = 0;
         m_glueStats.elapsedSeconds = 0.0f;
 
+    }
+
+    void SweetsContacts::TickGlueCooldowns(float dt)
+    {
+        if (!std::isfinite(dt) || dt <= 0.0f || m_glueCooldowns.empty())
+        {
+            return;
+        }
+
+        for (auto it = m_glueCooldowns.begin(); it != m_glueCooldowns.end();)
+        {
+            it->second = std::max(0.0f, it->second - dt);
+            if (it->second <= 0.0f)
+            {
+                it = m_glueCooldowns.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    bool SweetsContacts::IsGlueCooldownActive(const ActiveSweets& fruit) const
+    {
+        auto it = m_glueCooldowns.find(const_cast<ActiveSweets*>(&fruit));
+        if (it == m_glueCooldowns.end())
+        {
+            return false;
+        }
+
+        return it->second > 0.0f;
     }
 
     SweetsContacts::GlueDebugSnapshot SweetsContacts::BuildDebugSnapshot() const

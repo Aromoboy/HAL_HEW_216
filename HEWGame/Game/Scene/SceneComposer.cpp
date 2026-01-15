@@ -394,6 +394,7 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.creamGlueMaxPushOut = tuning.creamGlueMaxPushOut;
     physicsParameters.creamGlueMaxSpeed = tuning.creamGlueMaxSpeed;
     physicsParameters.creamGlueBreakForce = tuning.creamGlueBreakForce;
+    physicsParameters.creamGlueImpactImpulseThreshold = tuning.creamGlueImpactImpulseThreshold;
     result.physicsBinder = std::make_unique<Systems::PhysicsBinder>(physicsParameters);
     Systems::PhysicsMachine* physicsMachine = result.physicsBinder ? result.physicsBinder->GetPhysicsMachine() : nullptr;
     result.drawSystem = std::make_unique<Systems::DrawSystem>();
