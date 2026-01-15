@@ -1006,15 +1006,31 @@ void Model::MakeBoneNodes(const void* ptr)
 	std::function<NodeIndex(aiNode*, NodeIndex, DirectX::XMMATRIX mat)> FuncAssimpNodeConvert =
 		[&FuncAssimpNodeConvert, this](aiNode* assimpNode, NodeIndex parent, DirectX::XMMATRIX mat)
 	{
-		DirectX::XMMATRIX transform = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
+		DirectX::XMMATRIX local = GetMatrixFromAssimpMatrix(assimpNode->mTransformation);
 		std::string name = assimpNode->mName.data;
 		if (name.find("$AssimpFbx") != std::string::npos)
 		{
-			mat = transform * mat;
+			mat = local * mat;
 			return FuncAssimpNodeConvert(assimpNode->mChildren[0], parent, mat);
 		}
 		else
 		{
+			DirectX::XMMATRIX bindLocal = local * mat;
+			Transform bindTransform = {
+				DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
+				DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
+				DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
+			};
+			DirectX::XMVECTOR scale;
+			DirectX::XMVECTOR rotation;
+			DirectX::XMVECTOR translation;
+			if (DirectX::XMMatrixDecompose(&scale, &rotation, &translation, bindLocal))
+			{
+				DirectX::XMStoreFloat3(&bindTransform.scale, scale);
+				DirectX::XMStoreFloat4(&bindTransform.quaternion, rotation);
+				DirectX::XMStoreFloat3(&bindTransform.translate, translation);
+			}
+
 			// Assimpのノード情報をモデルクラスへ格納
 			Node node;
 			node.name = assimpNode->mName.data;
@@ -1024,6 +1040,7 @@ void Model::MakeBoneNodes(const void* ptr)
 
 			// ノードリストに追加
 			m_nodes.push_back(node);
+			m_bindLocal.push_back(bindTransform);
 			NodeIndex nodeIndex = static_cast<NodeIndex>(m_nodes.size() - 1);
 
 			// 子要素も同様に変換
@@ -1038,17 +1055,13 @@ void Model::MakeBoneNodes(const void* ptr)
 
 	// ノード作成
 	m_nodes.clear();
+	m_bindLocal.clear();
 	FuncAssimpNodeConvert(reinterpret_cast<const aiScene*>(ptr)->mRootNode, INDEX_NONE, DirectX::XMMatrixIdentity());
 
 	// アニメーション計算領域に、ノード数分の初期データを作成
-	Transform init = {
-		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-		DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
-	};
 	for (int i = 0; i < MAX_TRANSFORM; ++i)
 	{
-		m_nodeTransform[i].resize(m_nodes.size(), init);
+		m_nodeTransform[i] = m_bindLocal;
 	}
 }
 
@@ -1203,6 +1216,11 @@ void Model::InitAnime(AnimeNo no)
 }
 void Model::CalcAnime(AnimeTransform kind, AnimeNo no)
 {
+	if (m_bindLocal.size() == m_nodeTransform[kind].size())
+	{
+		m_nodeTransform[kind] = m_bindLocal;
+	}
+
 	Animation& anime = m_animes[no];
 	Channels::iterator channelIt = anime.channels.begin();
 	while (channelIt != anime.channels.end())
