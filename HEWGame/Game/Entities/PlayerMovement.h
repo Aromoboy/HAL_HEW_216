@@ -39,6 +39,10 @@ namespace Entities
         float m_turnRate{ 4.0f };
         float m_currentHeading{ 0.0f };
         bool m_hasCurrentHeading{ false };
+        float m_rollMaxRadians{ 0.436332f };
+        float m_rollInputRange{ 0.785398f };
+        float m_rollResponse{ 6.0f };
+        float m_currentRoll{ 0.0f };
         bool m_missingBodyLogged{ false };
         float m_moveSoundHandle{ -1.0f };
         bool m_wasMovingLastFrame{ false };
