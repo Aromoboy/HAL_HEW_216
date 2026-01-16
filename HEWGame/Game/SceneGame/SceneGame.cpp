@@ -1038,7 +1038,7 @@ void SceneGame::FireMissile()
 
     const Transform playerTransform = player->GetTransform();
     constexpr float kSpawnOffset = 1.5f;
-    const float yaw = ResolvePlayerYaw(playerTransform);
+    const float yaw = ResolvePlayerYaw(playerTransform) + m_playerSpawnTransform.missileYawOffsetRadians;
     const float3 forward = ForwardFromYaw(yaw);
     constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;
