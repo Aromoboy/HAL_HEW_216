@@ -2218,6 +2218,67 @@ namespace SceneGameConfig
         return result;
     }
 
+    MissileSettings LoadMissileSettings()
+    {
+        MissileSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionMissileSettings, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MissileSettings] Config section missing; using defaults path='"
+                << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionMissileSettings << "'.\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        int parsedFields = 0;
+        for (const auto& entry : lines)
+        {
+            const int lineNumber = static_cast<int>(entry.lineNumber);
+            const std::string key = TrimWhitespace(entry.key);
+            const std::string value = TrimWhitespace(entry.value);
+            if (key.empty() || value.empty())
+            {
+                continue;
+            }
+
+            if (key == GameplayConfig::kMissileKeyScale)
+            {
+                if (auto parsed = ParseFloat3Token(value))
+                {
+                    settings.scale = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse scale line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[MissileSettings] Ignored unknown key '" << key
+                    << "' on line " << lineNumber << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        settings.loadedFromFile = true;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[MissileSettings] Applied path='" << kGameplayConfigPath
+            << "' section='" << GameplayConfig::kSectionMissileSettings
+            << "' loaded=" << std::boolalpha << settings.loadedFromFile
+            << " parsedFields=" << parsedFields
+            << " scale=(" << settings.scale.x << ',' << settings.scale.y << ',' << settings.scale.z << ")\n";
+        DebugTrace(oss.str());
+
+        return settings;
+    }
+
     PhysicsTuningSettings LoadPhysicsTuningSettings()
     {
         PhysicsTuningSettings settings;
