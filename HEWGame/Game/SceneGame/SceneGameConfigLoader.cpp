@@ -535,7 +535,6 @@ namespace SceneGameConfig
         bool parsedGamma = false;
         bool parsedSaturation = false;
         bool parsedContrast = false;
-        bool parsedBackgroundParallax = false;
         bool parsedFogColor = false;
         bool parsedFogStart = false;
         bool parsedFogRange = false;
@@ -618,28 +617,6 @@ namespace SceneGameConfig
                     std::ostringstream oss;
                     oss << kLogPrefix << "[RenderSettings] Invalid post.contrast value='" << value
                         << "' on line=" << lineNumber << "; keeping default=" << settings.contrast << "\n";
-                    DebugTrace(oss.str());
-                }
-                continue;
-            }
-
-            if (key == "post.background.parallax")
-            {
-                if (auto parsed = TryParseFloatToken(value))
-                {
-                    settings.backgroundParallaxFactor = *parsed;
-                    parsedBackgroundParallax = true;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[RenderSettings] Parsed post.background.parallax="
-                        << settings.backgroundParallaxFactor << " from line=" << lineNumber
-                        << " path='" << kTechnicalConfigPath << "'\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[RenderSettings] Invalid post.background.parallax value='" << value
-                        << "' on line=" << lineNumber << "; keeping default=" << settings.backgroundParallaxFactor << "\n";
                     DebugTrace(oss.str());
                 }
                 continue;
@@ -988,13 +965,6 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.contrast not found; using default=" << settings.contrast
                 << " (path='" << kTechnicalConfigPath << "')\n";
-            DebugTrace(oss.str());
-        }
-        if (!parsedBackgroundParallax)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[RenderSettings] post.background.parallax not found; using default="
-                << settings.backgroundParallaxFactor << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
         if (!parsedFogColor)

@@ -62,7 +62,6 @@ namespace SceneGameConfig
         float gamma = 2.2f;
         float saturation = 0.85f;
         float contrast = 1.1f;
-        float backgroundParallaxFactor = 0.00005f;
         float3 fogColor{ 1.0f, 1.0f, 1.0f };
         float fogStart = 50.0f;
         float fogRange = 50.0f;

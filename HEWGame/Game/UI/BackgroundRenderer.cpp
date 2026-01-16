@@ -41,7 +41,6 @@ namespace
         float screenWidth,
         float screenHeight,
         float scrollOffset,
-        float parallaxFactor,
         float baseOffset01,
         float pixelsPerUnit,
         bool wrapSampling)
@@ -55,7 +54,7 @@ namespace
         constexpr float kWrapMarginPx = 0.5f;
         const float screenAspect = screenWidth / screenHeight;
         const float textureAspect = textureWidth / textureHeight;
-        const float scrollWorld = scrollOffset * parallaxFactor;
+        const float scrollWorld = scrollOffset;
         const float tileHeightWorld = (pixelsPerUnit > 0.0f) ? (textureHeight / pixelsPerUnit) : 0.0f;
         float scrollPx = scrollWorld * pixelsPerUnit;
         if (!wrapSampling && tileHeightWorld > 0.0f)
@@ -259,7 +258,6 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             viewportWidth,
             viewportHeight,
             adjustedScrollOffset,
-            layer.config.parallaxFactor,
             layer.config.baseOffset01,
             layerPixelsPerUnit,
             wrapSampling);

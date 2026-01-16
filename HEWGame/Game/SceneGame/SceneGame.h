@@ -110,7 +110,6 @@ private:
 
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
     void UpdateCameraBoundsForPhase(float heightMeters);
-    void UpdateBackgroundScrollOriginForWrap(float cameraY);
     void ApplyPlayerWrapDeltaY(float wrapDeltaY);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
@@ -177,8 +176,6 @@ protected:
     ::EffekseerRendererDX11::RendererRef m_effectRenderer;
     ::Effekseer::ManagerRef m_effectManager;
     std::unordered_map<std::string, EffectCreateData> m_effectMap;
-    float m_backgroundScrollOriginY = 0.0f;
-    std::optional<float> m_backgroundCameraLastY = std::nullopt;
     std::optional<float> m_cameraWrapMinY = std::nullopt;
     std::optional<float> m_cameraWrapMaxY = std::nullopt;
     float m_heightBonusThresholdMeters = 0.0f;

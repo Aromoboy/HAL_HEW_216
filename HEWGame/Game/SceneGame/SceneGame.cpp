@@ -722,7 +722,6 @@ void SceneGame::OnEnter()
     if (m_pManager)
     {
         m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.01f);  // ループ有効
-    }
 }
 
 void SceneGame::OnExit()
@@ -1991,8 +1990,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        UpdateBackgroundScrollOriginForWrap(baseCamera->GetPosition().y);
-        scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
+        scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
             RenderTarget* defaultRTV = GetDefaultRTV();
@@ -2384,8 +2382,6 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     m_gameCamera->SetPosition(cameraPosition);
-    m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
-    m_backgroundCameraLastY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
@@ -2510,45 +2506,7 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
         m_cameraRig->SetClampY(std::nullopt, std::nullopt);
     }
 
-    if (wrapY && m_gameCamera)
-    {
-        UpdateBackgroundScrollOriginForWrap(m_gameCamera->GetPosition().y);
     }
-}
-
-void SceneGame::UpdateBackgroundScrollOriginForWrap(float cameraY)
-{
-    if (!m_cameraRigSettings.wrapY || !m_cameraWrapMinY || !m_cameraWrapMaxY)
-    {
-        m_backgroundCameraLastY = cameraY;
-        return;
-    }
-
-    if (!IsFiniteFloat(*m_cameraWrapMinY) || !IsFiniteFloat(*m_cameraWrapMaxY))
-    {
-        m_backgroundCameraLastY = cameraY;
-        return;
-    }
-
-    const float minY = std::min(*m_cameraWrapMinY, *m_cameraWrapMaxY);
-    const float maxY = std::max(*m_cameraWrapMinY, *m_cameraWrapMaxY);
-    const float wrapRange = maxY - minY;
-    if (!IsFiniteFloat(wrapRange) || wrapRange <= 0.0f)
-    {
-        m_backgroundCameraLastY = cameraY;
-        return;
-    }
-
-    if (m_backgroundCameraLastY && IsFiniteFloat(*m_backgroundCameraLastY))
-    {
-        const float delta = cameraY - *m_backgroundCameraLastY;
-        if (std::fabs(delta) > wrapRange * 0.5f)
-        {
-            m_backgroundScrollOriginY += (delta > 0.0f ? wrapRange : -wrapRange);
-        }
-    }
-
-    m_backgroundCameraLastY = cameraY;
 }
 
 void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
@@ -2595,8 +2553,6 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
         }
     }
 
-    m_backgroundScrollOriginY += adjustedWrapDeltaY;
-    m_backgroundCameraLastY = cameraPosition.y;
 }
 
 void SceneGame::SetStageState(StageState newState)
