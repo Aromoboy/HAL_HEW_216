@@ -25,11 +25,19 @@ namespace GameplayRules
             ? rawPhaseMultiplier
             : 1.0f;
         const float totalMultiplier = input.baseScorePerMeter * phaseMultiplier;
-        result.score = static_cast<int>(std::lround(result.state.peakTowerHeight * totalMultiplier));
+        const float sanitizedElapsedSeconds = (std::isfinite(input.elapsedSeconds) && input.elapsedSeconds > 0.0f)
+            ? input.elapsedSeconds
+            : 0.0f;
+        const float timeMultiplier = std::pow(12.0f, std::floor(sanitizedElapsedSeconds / 12.0f));
+        const float baseScore = (result.state.peakTowerHeight * totalMultiplier) + static_cast<float>(input.killScore);
+        result.score = static_cast<int>(std::lround(baseScore * timeMultiplier));
 
-        const bool multiplierChanged = !std::isfinite(result.state.lastScoreLogMultiplier)
+        const bool phaseMultiplierChanged = !std::isfinite(result.state.lastScoreLogMultiplier)
             || std::fabs(result.state.lastScoreLogMultiplier - phaseMultiplier) > std::numeric_limits<float>::epsilon();
-        if (result.score != result.state.lastScoreLogValue || multiplierChanged)
+        const bool timeMultiplierChanged = !std::isfinite(result.state.lastScoreLogTimeMultiplier)
+            || std::fabs(result.state.lastScoreLogTimeMultiplier - timeMultiplier) > std::numeric_limits<float>::epsilon();
+        const bool killScoreChanged = result.state.lastScoreLogKillScore != input.killScore;
+        if (result.score != result.state.lastScoreLogValue || phaseMultiplierChanged || timeMultiplierChanged || killScoreChanged)
         {
             if (input.log)
             {
@@ -37,13 +45,18 @@ namespace GameplayRules
                 oss << input.logPrefix << "[Score] peak=" << std::fixed << std::setprecision(2) << result.state.peakTowerHeight
                     << "m phase=" << input.phaseManager->GetCurrentPhase()
                     << " phaseMultiplier=" << phaseMultiplier
+                    << " timeMultiplier=" << timeMultiplier
                     << " basePerMeter=" << input.baseScorePerMeter
+                    << " killScore=" << input.killScore
                     << " totalMultiplier=" << totalMultiplier
+                    << " baseScore=" << baseScore
                     << " score=" << result.score << "\n";
                 input.log(oss.str());
             }
             result.state.lastScoreLogValue = result.score;
             result.state.lastScoreLogMultiplier = phaseMultiplier;
+            result.state.lastScoreLogTimeMultiplier = timeMultiplier;
+            result.state.lastScoreLogKillScore = input.killScore;
         }
 
         return result;

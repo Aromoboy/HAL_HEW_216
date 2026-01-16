@@ -144,6 +144,26 @@ namespace
             return nullptr;
         }
 
+        int ResolveKillScore(const std::optional<MeteorsSpace::MeteorsType>& meteorsType)
+        {
+            if (!meteorsType)
+            {
+                return 0;
+            }
+
+            switch (*meteorsType)
+            {
+            case MeteorsSpace::MeteorsType::Mercury:
+                return 150;
+            case MeteorsSpace::MeteorsType::Meteor:
+                return 75;
+            case MeteorsSpace::MeteorsType::Meteorite:
+                return 30;
+            }
+
+            return 0;
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -985,7 +1005,12 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), missileContact->meteor);
             if (m_meteorsManager && meteors)
             {
-                m_meteorsManager->RegisterProjectileHit(meteors);
+                const std::optional<MeteorsSpace::MeteorsType> destroyedType = m_meteorsManager->RegisterProjectileHit(meteors);
+                const int killScore = ResolveKillScore(destroyedType);
+                if (killScore > 0)
+                {
+                    m_gameplayRules.AddKillScore(killScore);
+                }
             }
         }
 
@@ -999,13 +1024,18 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                     m_meteorsManager->Erase(meteors);
                 }
 
+                const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+                const std::optional<MeteorsSpace::MeteorsType> meteorsType = meteors
+                    ? manifest.Resolve(meteors->GetTag())
+                    : (contact->meteor ? manifest.Resolve(contact->meteor->GetTag()) : std::nullopt);
+                const int killScore = ResolveKillScore(meteorsType);
+                if (killScore > 0)
+                {
+                    m_gameplayRules.AddKillScore(killScore);
+                }
+
                 if (!m_playerInvulnerable)
                 {
-                    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
-                    const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->meteor
-                        ? manifest.Resolve(contact->meteor->GetTag())
-                        : std::nullopt;
-
                     int damage = 1;
                     if (meteorsType)
                     {
