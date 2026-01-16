@@ -31,6 +31,9 @@ namespace MeteorsSpace
         int simultaneousLiveTarget = 1;
         int initialSpawnPerLane = 0;
         int phaseStartBonusPerLane = 0;
+        float spawnRadius = 0.0f;
+        float spawnRadiusJitter = 0.0f;
+        float spawnMinSeparation = 0.0f;
         float mercurySpeed = 0.0f;
         float meteorSpeed = 0.0f;
         float meteoriteSpeed = 0.0f;

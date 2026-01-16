@@ -11,6 +11,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "AABB.h"
 #include "Config/ConfigSectionReader.h"
 #include "Diagnostics/Logger.h"
 #include "Meteors/BaseMeteors.h"
@@ -60,6 +61,7 @@ namespace
     constexpr float kDefaultAutoGrowthFactor = 0.9f;
     constexpr int kDefaultAutoSimultaneousIncrement = 1;
     constexpr int kDefaultAutoSimultaneousCap = 6;
+    constexpr int kSpawnPositionAttempts = 6;
 
     float SanitizeGrowthFactor(float value, float fallback = kDefaultAutoGrowthFactor)
     {
@@ -468,6 +470,9 @@ namespace MeteorsSpace
         bool hasLiveTarget = false;
         bool hasInitialPerLane = false;
         bool hasPhaseStartBonus = false;
+        bool hasSpawnRadius = false;
+        bool hasSpawnRadiusJitter = false;
+        bool hasSpawnMinSeparation = false;
         bool hasMercurySpeed = false;
         bool hasMeteorSpeed = false;
         bool hasMeteoriteSpeed = false;
@@ -484,6 +489,9 @@ namespace MeteorsSpace
             hasLiveTarget = false;
             hasInitialPerLane = false;
             hasPhaseStartBonus = false;
+            hasSpawnRadius = false;
+            hasSpawnRadiusJitter = false;
+            hasSpawnMinSeparation = false;
             hasMercurySpeed = false;
             hasMeteorSpeed = false;
             hasMeteoriteSpeed = false;
@@ -497,8 +505,8 @@ namespace MeteorsSpace
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
-                && !hasInitialPerLane && !hasPhaseStartBonus && !hasMercurySpeed && !hasMeteorSpeed
-                && !hasMeteoriteSpeed)
+                && !hasInitialPerLane && !hasPhaseStartBonus && !hasSpawnRadius && !hasSpawnRadiusJitter
+                && !hasSpawnMinSeparation && !hasMercurySpeed && !hasMeteorSpeed && !hasMeteoriteSpeed)
             {
                 return;
             }
@@ -626,6 +634,45 @@ namespace MeteorsSpace
                     hasPhaseStartBonus = true;
                 }
                 catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "spawn_radius" || normalizedKey == "spawnradius")
+            {
+                float radius = 0.0f;
+                if (TryParseFloat(entry.value, &radius))
+                {
+                    config.spawnRadius = std::max(0.0f, radius);
+                    hasSpawnRadius = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "spawn_radius_jitter" || normalizedKey == "spawnradiusjitter")
+            {
+                float jitter = 0.0f;
+                if (TryParseFloat(entry.value, &jitter))
+                {
+                    config.spawnRadiusJitter = std::max(0.0f, jitter);
+                    hasSpawnRadiusJitter = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "spawn_min_separation" || normalizedKey == "spawnminseparation")
+            {
+                float separation = 0.0f;
+                if (TryParseFloat(entry.value, &separation))
+                {
+                    config.spawnMinSeparation = std::max(0.0f, separation);
+                    hasSpawnMinSeparation = true;
+                }
+                else
                 {
                     parseError = true;
                 }
@@ -1269,6 +1316,9 @@ namespace MeteorsSpace
             << " liveTarget=" << config.simultaneousLiveTarget
             << " initialPerLane=" << config.initialSpawnPerLane
             << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
+            << " spawnRadius=" << std::fixed << std::setprecision(2) << config.spawnRadius
+            << " spawnRadiusJitter=" << std::fixed << std::setprecision(2) << config.spawnRadiusJitter
+            << " spawnMinSeparation=" << std::fixed << std::setprecision(2) << config.spawnMinSeparation
             << " mercurySpeed=" << std::fixed << std::setprecision(2) << config.mercurySpeed
             << " meteorSpeed=" << std::fixed << std::setprecision(2) << config.meteorSpeed
             << " meteoriteSpeed=" << std::fixed << std::setprecision(2) << config.meteoriteSpeed
@@ -1497,21 +1547,128 @@ namespace MeteorsSpace
     Transform MeteorsSpawner::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)
     {
         Transform transform{};
-        transform.position = originSelection.origin;
-        static bool s_flipSpawnSign = false;
-        s_flipSpawnSign = !s_flipSpawnSign;
-        std::uniform_real_distribution<float> xJitterDist(1.0f, 1.5f);
-        const float xJitter = (s_flipSpawnSign ? 1.0f : -1.0f) * xJitterDist(m_random);
-        transform.position.x += xJitter;
-        transform.position.y += m_spawnHeightOffset;
-        if (m_hasCameraBounds && m_spawnCameraOffset > 0.0f)
+        const PhaseSpawnConfig* config = nullptr;
+        if (m_activePhaseConfigIndex >= 0
+            && m_activePhaseConfigIndex < static_cast<int>(m_phaseConfigs.size()))
         {
-            const float midpointX = (m_cameraMinX + m_cameraMaxX) * 0.5f;
-            const bool spawnLeft = transform.position.x <= midpointX;
-            transform.position.x = spawnLeft
-                ? (m_cameraMinX - m_spawnCameraOffset)
-                : (m_cameraMaxX + m_spawnCameraOffset);
+            config = &m_phaseConfigs[m_activePhaseConfigIndex];
         }
+
+        const float spawnRadius = config ? config->spawnRadius : 0.0f;
+        const float spawnRadiusJitter = config ? config->spawnRadiusJitter : 0.0f;
+        const float spawnMinSeparation = config ? config->spawnMinSeparation : 0.0f;
+
+        float3 cameraCenter = originSelection.origin;
+        float cameraExtent = 0.0f;
+        if (m_hasCameraBounds)
+        {
+            cameraCenter.x = (m_cameraMinX + m_cameraMaxX) * 0.5f;
+            cameraCenter.y = (m_cameraMinY + m_cameraMaxY) * 0.5f;
+            const float halfWidth = (m_cameraMaxX - m_cameraMinX) * 0.5f;
+            const float halfHeight = (m_cameraMaxY - m_cameraMinY) * 0.5f;
+            cameraExtent = std::sqrt((halfWidth * halfWidth) + (halfHeight * halfHeight));
+        }
+
+        float radiusMargin = std::max(0.0f, spawnRadius);
+        if (radiusMargin <= 0.0f && m_spawnCameraOffset > 0.0f)
+        {
+            radiusMargin = m_spawnCameraOffset;
+        }
+
+        const float ringRadiusBase = cameraExtent + radiusMargin;
+        const float jitter = std::max(0.0f, spawnRadiusJitter);
+        std::uniform_real_distribution<float> angleDist(0.0f, 6.28318530718f);
+        std::uniform_real_distribution<float> jitterDist(-jitter, jitter);
+
+        const auto isTooCloseToLiveMeteors = [&](const float3& candidate)
+        {
+            if (!m_registry || !(spawnMinSeparation > 0.0f))
+            {
+                return false;
+            }
+
+            const float minSeparationSq = spawnMinSeparation * spawnMinSeparation;
+            const std::array<MeteorsState, 3> liveStates = {
+                MeteorsState::Active,
+                MeteorsState::Ground,
+                MeteorsState::Carried,
+            };
+
+            for (const auto state : liveStates)
+            {
+                const auto it = m_registry->StateMap().find(state);
+                if (it == m_registry->StateMap().end())
+                {
+                    continue;
+                }
+
+                for (const auto& meteors : it->second)
+                {
+                    if (!meteors || meteors->IsPendingDestroy())
+                    {
+                        continue;
+                    }
+
+                    meteors->SyncColliderBounds();
+                    const AABB bounds = meteors->GetAABB();
+
+                    float dx = 0.0f;
+                    if (candidate.x < bounds.min.x)
+                    {
+                        dx = bounds.min.x - candidate.x;
+                    }
+                    else if (candidate.x > bounds.max.x)
+                    {
+                        dx = candidate.x - bounds.max.x;
+                    }
+
+                    float dy = 0.0f;
+                    if (candidate.y < bounds.min.y)
+                    {
+                        dy = bounds.min.y - candidate.y;
+                    }
+                    else if (candidate.y > bounds.max.y)
+                    {
+                        dy = candidate.y - bounds.max.y;
+                    }
+
+                    float dz = 0.0f;
+                    if (candidate.z < bounds.min.z)
+                    {
+                        dz = bounds.min.z - candidate.z;
+                    }
+                    else if (candidate.z > bounds.max.z)
+                    {
+                        dz = candidate.z - bounds.max.z;
+                    }
+
+                    const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+                    if (distanceSq < minSeparationSq)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        float3 candidate = originSelection.origin;
+        for (int attempt = 0; attempt < kSpawnPositionAttempts; ++attempt)
+        {
+            const float radius = std::max(0.0f, ringRadiusBase + jitterDist(m_random));
+            const float angle = angleDist(m_random);
+            candidate.x = cameraCenter.x + (std::cos(angle) * radius);
+            candidate.y = cameraCenter.y + (std::sin(angle) * radius) + m_spawnHeightOffset;
+            candidate.z = originSelection.origin.z;
+
+            if (!isTooCloseToLiveMeteors(candidate))
+            {
+                break;
+            }
+        }
+
+        transform.position = candidate;
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 
@@ -1555,6 +1712,7 @@ namespace MeteorsSpace
             << sampledPitch << ',' << sampledYaw << ',' << sampledRoll
             << " rotationSource=" << (hasFactoryPreset ? "preset" : "global")
             << " scale=(" << transform.scale.x << ',' << transform.scale.y << ',' << transform.scale.z << ')'
+            << " spawn=" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z
             << " origin=" << originSelection.origin.x << ',' << originSelection.origin.y << ',' << originSelection.origin.z
             << " lane=" << originSelection.laneLabel << "\n";
         DebugTrace(oss.str());
