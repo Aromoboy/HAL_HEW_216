@@ -50,26 +50,6 @@ private:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_camera;
     bool m_inputRegistered = false;
     TextureCache* m_textureCache = nullptr;
-
-private:
-    UiState m_uiState = UiState::MainMenu;
-    int m_cursor = 0;
-    bool m_startButtonEnabled = false;
-    bool m_exitButtonEnabled = false;
-
-    Texture m_texStartRed;
-    Texture m_texStartGreen;
-    Texture m_texExitRed;
-    Texture m_texExitGreen;
-
-    struct MenuItem
-    {
-        std::unique_ptr<TitleRenderer> red;
-        std::unique_ptr<TitleRenderer> green;
-    };
-    
-    std::array<MenuItem, static_cast<int>(TitleMenu::Max)> m_menu;
-    std::unique_ptr<BackgroundRenderer> m_background;
 };
 
 #endif

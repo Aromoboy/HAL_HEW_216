@@ -1,4 +1,4 @@
-#include "Main.h"
+﻿#include "Main.h"
 
 #include <array>
 #include <filesystem>
@@ -47,14 +47,6 @@ namespace
                 }
 
                 return std::filesystem::path(buffer.data()).parent_path();
-        }
-
-        void LogBootScenario()
-        {
-                Diagnostics::LogInfo(
-                        "[Scenario] startup -> load TitleScene -> spawn 5-10 sweets -> single gameplay loop -> exit request");
-                Diagnostics::LogInfo(
-                        "[Scenario] success: no hangs across 3 runs, platform visible, >=3 sweets types readable, player stable");
         }
 
         void DrawSceneFadeOverlay(float alpha)
@@ -154,8 +146,6 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
         g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
-
-        LogBootScenario();
 
         return hr;
 }
