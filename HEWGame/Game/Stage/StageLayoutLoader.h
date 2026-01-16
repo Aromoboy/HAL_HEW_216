@@ -24,7 +24,6 @@ struct StageObject
     std::shared_ptr<ModelDX> model;
     float currentRotation = 0.0f;
     std::string colliderPresetId;
-    std::string materialKey;
 
     bool IsOsara = false;
     float swaiTime = 0.0f;

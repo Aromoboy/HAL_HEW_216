@@ -223,11 +223,6 @@ namespace Stage
         return m_guidelineModelPath;
     }
 
-    const std::string& StageData::GetGuidelineMaterialKey() const noexcept
-    {
-        return m_guidelineMaterialKey;
-    }
-
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -281,7 +276,6 @@ namespace Stage
         m_guidelineSpinAxis = normalized.guidelineSpinAxis;
         m_guidelineSpinSpeedDegPerSec = normalized.guidelineSpinSpeedDegPerSec;
         m_guidelineModelPath = normalized.guidelineModelPath;
-        m_guidelineMaterialKey = normalized.guidelineMaterialKey;
         m_heightBonusThreshold = normalized.heightBonusThreshold;
         m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
@@ -320,7 +314,6 @@ namespace Stage
             << m_guidelineSpinAxis.z << ')'
             << " guidelineSpinSpeedDegPerSec=" << m_guidelineSpinSpeedDegPerSec
             << " guidelineModelPath='" << m_guidelineModelPath << "'"
-            << " guidelineMaterialKey='" << m_guidelineMaterialKey << "'"
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"

@@ -79,8 +79,6 @@ namespace Stage
         bool guidelineSpinSpeedSet = false;
         std::string guidelineModelPath;
         bool guidelineModelPathSet = false;
-        std::string guidelineMaterialKey;
-        bool guidelineMaterialKeySet = false;
         float heightBonusThreshold = 0.0f;
         bool heightBonusThresholdSet = false;
         float heightBonusSeconds = 0.0f;

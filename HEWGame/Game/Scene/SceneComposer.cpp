@@ -112,7 +112,6 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.renderPostProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
     result.lightingSettings = SceneGameConfig::LoadLightingSettings();
     result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
-    result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
@@ -227,7 +226,6 @@ void SceneComposer::ComposeConfig(Composition& result)
             << result.stageData.GetGuidelineSpinAxis().y << ',' << result.stageData.GetGuidelineSpinAxis().z << ')'
             << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
             << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
-            << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
             << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
@@ -405,7 +403,6 @@ void SceneComposer::ComposePhysics(Composition& result)
     {
         std::shared_ptr<Render::Model> guidelineModel;
         const std::string& guidelineModelPath = result.stageData.GetGuidelineModelPath();
-        const std::string& guidelineMaterialKey = result.stageData.GetGuidelineMaterialKey();
         if (!guidelineModelPath.empty())
         {
             guidelineModel = Render::ModelCache::Instance().Get(guidelineModelPath);
@@ -418,13 +415,9 @@ void SceneComposer::ComposePhysics(Composition& result)
             }
             else
             {
-                if (!guidelineMaterialKey.empty())
-                {
-                    guidelineModel->SetMaterialKey(guidelineMaterialKey);
-                }
                 std::ostringstream oss;
                 oss << kLogPrefix << "Guideline model loaded path='" << guidelineModelPath
-                    << "' materialKey='" << guidelineMaterialKey << "'\n";
+                    << "'\n";
                 DebugTrace(oss.str());
             }
         }
@@ -442,14 +435,6 @@ void SceneComposer::ComposePhysics(Composition& result)
         else
         {
             result.guidelineActor = std::make_unique<GuidelineActor>();
-            if (result.guidelineActor && !guidelineMaterialKey.empty())
-            {
-                const auto model = result.guidelineActor->GetModel();
-                if (model)
-                {
-                    model->SetMaterialKey(guidelineMaterialKey);
-                }
-            }
         }
         if (result.guidelineActor)
         {

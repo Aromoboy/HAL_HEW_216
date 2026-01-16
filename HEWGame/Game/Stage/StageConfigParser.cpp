@@ -208,7 +208,6 @@ namespace Stage
         result.guidelineSpinAxis = StageConfigDefaults::DefaultGuidelineSpinAxis();
         result.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         result.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
-        result.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
         result.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         result.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
@@ -834,22 +833,6 @@ namespace Stage
                 {
                     result.guidelineModelPath = rawValue;
                     result.guidelineModelPathSet = true;
-                }
-            }
-            else if (key == "guidelineMaterialKey")
-            {
-                if (rawValue.empty())
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "guidelineMaterialKey on line " << lineNumber
-                        << " was empty; default material key will be used.\n";
-                    result.guidelineMaterialKey.clear();
-                    result.guidelineMaterialKeySet = true;
-                }
-                else
-                {
-                    result.guidelineMaterialKey = rawValue;
-                    result.guidelineMaterialKeySet = true;
                 }
             }
             else if (key == "heightBonusThreshold")

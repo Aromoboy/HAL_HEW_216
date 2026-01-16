@@ -19,7 +19,6 @@ namespace
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     const std::string kDefaultBackgroundTexturePath = "Assets/Texture/background.png";
     const std::string kDefaultGuidelineModelPath = "Assets/Model/GuideLine.fbx";
-    const std::string kDefaultGuidelineMaterialKey = "guideline";
     const float3 kDefaultGuidelineSpinAxis{ 0.0f, 1.0f, 0.0f };
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
@@ -96,11 +95,6 @@ namespace Stage
     const std::string& StageConfigDefaults::DefaultGuidelineModelPath()
     {
         return kDefaultGuidelineModelPath;
-    }
-
-    const std::string& StageConfigDefaults::DefaultGuidelineMaterialKey()
-    {
-        return kDefaultGuidelineMaterialKey;
     }
 
     const std::vector<float>& StageConfigDefaults::DefaultThresholds()
@@ -254,7 +248,6 @@ namespace Stage
         float3 guidelineSpinAxis = parsed.guidelineSpinAxis;
         float guidelineSpinSpeedDegPerSec = parsed.guidelineSpinSpeedDegPerSec;
         std::string guidelineModelPath = parsed.guidelineModelPath;
-        std::string guidelineMaterialKey = parsed.guidelineMaterialKey;
         float heightBonusThreshold = parsed.heightBonusThreshold;
         float heightBonusSeconds = parsed.heightBonusSeconds;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
@@ -345,14 +338,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineModelPath not specified; defaulting to '"
                 << guidelineModelPath << "'.\n";
-        }
-
-        if (!parsed.guidelineMaterialKeySet)
-        {
-            guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineMaterialKey not specified; defaulting to '"
-                << guidelineMaterialKey << "'.\n";
         }
 
         if (!parsed.heightBonusThresholdSet)
@@ -996,7 +981,6 @@ namespace Stage
         normalized.guidelineSpinAxis = guidelineSpinAxis;
         normalized.guidelineSpinSpeedDegPerSec = guidelineSpinSpeedDegPerSec;
         normalized.guidelineModelPath = std::move(guidelineModelPath);
-        normalized.guidelineMaterialKey = std::move(guidelineMaterialKey);
         normalized.heightBonusThreshold = heightBonusThreshold;
         normalized.heightBonusSeconds = heightBonusSeconds;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
@@ -1049,7 +1033,6 @@ namespace Stage
         normalized.guidelineSpinAxis = StageConfigDefaults::DefaultGuidelineSpinAxis();
         normalized.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         normalized.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
-        normalized.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;

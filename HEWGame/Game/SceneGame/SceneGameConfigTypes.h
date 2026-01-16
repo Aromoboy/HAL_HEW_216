@@ -2,8 +2,6 @@
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
-#include "MaterialTuningSettings.h"
-
 #include <DirectXMath.h>
 #include <optional>
 #include <string>
@@ -136,8 +134,6 @@ namespace SceneGameConfig
         float offsetY = 0.0f;
     };
 
-    using MaterialTuningProfile = ::MaterialTuningProfile;
-    using MaterialTuningSettings = ::MaterialTuningSettings;
 }
 
 #endif

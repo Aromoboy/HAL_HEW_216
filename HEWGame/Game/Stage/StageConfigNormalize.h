@@ -41,7 +41,6 @@ namespace Stage
         float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
         float guidelineSpinSpeedDegPerSec = 0.0f;
         std::string guidelineModelPath;
-        std::string guidelineMaterialKey;
         std::string backgroundTexturePath;
         float heightBonusThreshold = 0.0f;
         float heightBonusSeconds = 0.0f;
@@ -91,7 +90,6 @@ namespace Stage
         static const float3& DefaultGuidelineSpinAxis();
         static const std::string& DefaultBackgroundTexturePath();
         static const std::string& DefaultGuidelineModelPath();
-        static const std::string& DefaultGuidelineMaterialKey();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();
         static const std::vector<float>& DefaultMiniThresholds();

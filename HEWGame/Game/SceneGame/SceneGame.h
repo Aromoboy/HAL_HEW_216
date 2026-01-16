@@ -72,7 +72,6 @@ public:
     using RenderPostProcessSettings = SceneGameConfig::RenderPostProcessSettings;
     using SceneLightingSettings = SceneGameConfig::LightingSettings;
     using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
-    using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
     using CameraRigSettings = SceneGameConfig::CameraRigSettings;
     using GameCameraConfig = SceneGameConfig::GameCameraConfig;
 
@@ -150,7 +149,6 @@ protected:
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
-    MaterialTuningSettings m_materialTuningSettings{};
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;

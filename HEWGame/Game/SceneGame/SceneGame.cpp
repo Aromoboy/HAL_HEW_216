@@ -372,8 +372,6 @@ bool SceneGame::Load(Core::Input& input)
         return false;
     }
     m_loadFailed = false;
-    m_materialTuningSettings = composition->materialTuningSettings;
-    Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
@@ -427,41 +425,6 @@ bool SceneGame::Load(Core::Input& input)
     gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
-
-    {
-        std::ostringstream materialLog;
-        materialLog << kLogPrefix << "[MaterialTuning] Applied profiles=" << m_materialTuningSettings.profiles.size()
-            << " overrides=" << m_materialTuningSettings.overrides.size() << "\n";
-        for (const auto& entry : m_materialTuningSettings.profiles)
-        {
-            const auto& profile = entry.second;
-            materialLog << kLogPrefix << "  Profile '" << entry.first
-                << "' lightResponse=" << profile.lightResponse
-                << " sssIntensity=" << profile.sssIntensity
-                << " sssColor=(" << profile.sssColor.x << ',' << profile.sssColor.y << ',' << profile.sssColor.z << ")\n";
-        }
-        for (const auto& entry : m_materialTuningSettings.overrides)
-        {
-            const auto& overrideEntry = entry.second;
-            materialLog << kLogPrefix << "  Override '" << entry.first << "' -> profile='"
-                << overrideEntry.profileName << "'";
-            if (overrideEntry.lightResponse)
-            {
-                materialLog << " lightResponse=" << *overrideEntry.lightResponse;
-            }
-            if (overrideEntry.sssIntensity)
-            {
-                materialLog << " sssIntensity=" << *overrideEntry.sssIntensity;
-            }
-            if (overrideEntry.sssColor)
-            {
-                materialLog << " sssColor=(" << overrideEntry.sssColor->x << ','
-                    << overrideEntry.sssColor->y << ',' << overrideEntry.sssColor->z << ')';
-            }
-            materialLog << "\n";
-        }
-        DebugTrace(materialLog.str());
-    }
 
     if (m_physicsBinder)
     {

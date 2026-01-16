@@ -62,7 +62,6 @@ namespace Stage
         float3 GetGuidelineSpinAxis() const noexcept;
         float GetGuidelineSpinSpeedDegPerSec() const noexcept;
         const std::string& GetGuidelineModelPath() const noexcept;
-        const std::string& GetGuidelineMaterialKey() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         float GetHeightBonusThreshold() const noexcept;
         float GetHeightBonusSeconds() const noexcept;
@@ -105,7 +104,6 @@ namespace Stage
         float3 m_guidelineSpinAxis;
         float m_guidelineSpinSpeedDegPerSec;
         std::string m_guidelineModelPath;
-        std::string m_guidelineMaterialKey;
         std::string m_backgroundTexturePath;
         float m_heightBonusThreshold;
         float m_heightBonusSeconds;

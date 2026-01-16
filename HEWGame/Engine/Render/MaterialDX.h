@@ -1,12 +1,7 @@
 #pragma once
-#include "MaterialTuningSettings.h"
 #include "TextureDX.h"
 #include <DirectXMath.h>
 #include <memory>
-#include <string>
-
-class MaterialDX;
-void ApplyMaterialTuning(MaterialDX& material, const std::string& materialKey, const MaterialTuningSettings& settings);
 
 class MaterialDX
 {
@@ -32,8 +27,6 @@ public:
         void SetLightResponse(float lightResponse);
         void SetSssIntensity(float sssIntensity);
         void SetSssColor(const DirectX::XMFLOAT3& sssColor);
-        const std::string& GetMaterialKey() const;
-        void SetMaterialKey(std::string key);
 
 private:
 
@@ -45,5 +38,4 @@ private:
 	DirectX::XMFLOAT3 m_sssColor{ 1.0f, 1.0f, 1.0f };
 
 	std::shared_ptr<Texture2D> m_texture;
-        std::string m_materialKey;
 };
