@@ -1104,9 +1104,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 spawnExplosion(missile->GetTransform().position);
             }
 
-            if (m_pManager)
+            if (auto* sound = SoundManagerEX::GetInstance())
             {
-                m_pManager->PlaySoundEX("Assets/Audio/SE_Hit.mp3", false, 0.3f);
+                sound->PlaySoundEX("Assets/Audio/SE_Hit.mp3", false, 0.3f);
             }
         }
 
@@ -1541,9 +1541,9 @@ void SceneGame::FireMissile()
     m_fireMissileHintEnabled = true;
     m_missileFireCooldownSeconds = kMissileFireCooldownSeconds;
 
-    if (m_pManager)
+    if (auto* sound = SoundManagerEX::GetInstance())
     {
-        m_pManager->PlaySoundEX("Assets/Audio/SE_Shoot.mp3", false, 0.3f);
+        sound->PlaySoundEX("Assets/Audio/SE_Shoot.mp3", false, 0.3f);
     }
 }
 
