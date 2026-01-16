@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -40,6 +41,7 @@ public:
     void Shutdown();
     // Aspect correction is handled via the UV window; sprite size stays at 2x2 in clip space.
     void Draw(float scrollOffset, float pixelsPerUnit) const;
+    std::optional<float> GetMinLayerTextureHeightPixels() const;
 
 private:
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <sstream>
 
 #include "Stage/StageConfigParser.h"
@@ -211,6 +212,7 @@ namespace Stage
         bool verticalSpeedSet = parsed.verticalSpeedSet;
         float verticalSpeedCellsPerSec = parsed.verticalSpeedCellsPerSec;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
+        std::optional<float> backgroundSafeScrollY;
 
         if (!planeZSet)
         {
@@ -240,6 +242,18 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
                 << backgroundTexturePath << "'.\n";
+        }
+        if (parsed.backgroundSafeScrollYSet)
+        {
+            if (std::isfinite(parsed.backgroundSafeScrollY) && parsed.backgroundSafeScrollY > 0.0f)
+            {
+                backgroundSafeScrollY = parsed.backgroundSafeScrollY;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "background.safeScrollY invalid; ignoring.\n";
+            }
         }
 
         if (!platformWidthFractionSet)
@@ -649,6 +663,7 @@ namespace Stage
         normalized.playerHorizontalSpeedWorld = playerMoveSpeedWorld;
         normalized.playerVerticalSpeedWorld = verticalSpeedCellsPerSec * cellSizeWorld;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
+        normalized.backgroundSafeScrollY = backgroundSafeScrollY;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -677,6 +692,7 @@ namespace Stage
         normalized.playerHorizontalSpeedWorld = StageConfigDefaults::DefaultPlayerMoveSpeed();
         normalized.playerVerticalSpeedWorld = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec * StageConfigDefaults::kDefaultCellSizeWorld;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        normalized.backgroundSafeScrollY = std::nullopt;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

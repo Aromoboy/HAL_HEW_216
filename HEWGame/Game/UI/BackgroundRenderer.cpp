@@ -276,6 +276,36 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
     SetDepthTest(true);
 }
 
+std::optional<float> BackgroundRenderer::GetMinLayerTextureHeightPixels() const
+{
+    if (!m_ready || m_layers.empty())
+    {
+        return std::nullopt;
+    }
+
+    std::optional<float> minHeight;
+    for (const auto& layer : m_layers)
+    {
+        if (!layer.texture)
+        {
+            continue;
+        }
+
+        const float height = static_cast<float>(layer.texture->GetHeight());
+        if (!std::isfinite(height) || height <= 0.0f)
+        {
+            continue;
+        }
+
+        if (!minHeight || height < *minHeight)
+        {
+            minHeight = height;
+        }
+    }
+
+    return minHeight;
+}
+
 std::unique_ptr<Texture> BackgroundRenderer::LoadTexture(const std::string& path) const
 {
     auto texture = std::make_unique<Texture>();

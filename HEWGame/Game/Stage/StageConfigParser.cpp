@@ -161,6 +161,8 @@ namespace Stage
         result.horizontalSpeedCellsPerSec = StageConfigDefaults::kDefaultHorizontalSpeedCellsPerSec;
         result.verticalSpeedCellsPerSec = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        result.backgroundSafeScrollY = 0.0f;
+        result.backgroundSafeScrollYSet = false;
 
         for (const auto& entry : lines)
         {
@@ -573,6 +575,21 @@ namespace Stage
                 {
                     result.backgroundTexturePath = rawValue;
                     result.backgroundTextureSet = true;
+                }
+            }
+            else if (key == "background.safeScrollY")
+            {
+                try
+                {
+                    result.backgroundSafeScrollY = std::stof(rawValue);
+                    result.backgroundSafeScrollYSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse background.safeScrollY on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
                 }
             }
             else

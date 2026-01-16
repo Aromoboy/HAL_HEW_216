@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@ namespace Stage
         float playerHorizontalSpeedWorld = 0.0f;
         float playerVerticalSpeedWorld = 0.0f;
         std::string backgroundTexturePath;
+        std::optional<float> backgroundSafeScrollY;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;
