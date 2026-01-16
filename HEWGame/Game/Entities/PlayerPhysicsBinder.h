@@ -11,6 +11,7 @@ namespace Entities
 
         bool IsKinematic() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
+        void SetWrapMargin(float margin);
         void ClampScreenBounds(Player& player);
 
     private:
@@ -20,5 +21,6 @@ namespace Entities
         float m_maxScreenX = 0.0f;
         float m_minScreenY = 0.0f;
         float m_maxScreenY = 0.0f;
+        float m_wrapMargin = 0.0f;
     };
 }

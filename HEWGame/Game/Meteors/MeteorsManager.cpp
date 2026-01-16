@@ -259,11 +259,17 @@ namespace MeteorsSpace
         }
 
         meteors->SetWasEverCarried(false);
-        meteors->SetGravityScale(0.0f);
 
         if (!m_lifecycle.RegisterWithSystems(meteors))
         {
             return nullptr;
+        }
+
+        meteors->SetGravityScale(0.0f);
+        {
+            std::ostringstream log;
+            log << kLogPrefix << "Spawned meteors gravityScale=" << meteors->GetGravityScale() << "\n";
+            DebugTrace(log.str());
         }
 
         SetState(meteors, MeteorsState::Active);
