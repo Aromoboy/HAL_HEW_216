@@ -4,6 +4,8 @@
 #include "ModelCache.h"
 #include "AppGame.h"
 #include "ColliderRegistry.h"
+#include "ColliderConfigLoader.h"
+#include "GameplayConfig.h"
 #include "Systems/Physics/ColliderBuilder.h"
 #include "SceneGameConfigLoader.h"
 #include "SweetsPrototypeManifest.h"
@@ -111,6 +113,11 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     const b2BodyType playerBodyType = kPlayerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
     const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
     Physics::ColliderBuilder colliderBuilder(m_log, m_logPrefix);
+    std::map<std::string, Collision::ColliderDefinition> playerColliderDefinitions;
+    const bool hasPlayerColliderDefinitions = Collision::LoadColliderDefinitions(
+        GameplayConfig::kConfigPath,
+        GameplayConfig::kSectionPlayerColliders,
+        playerColliderDefinitions);
     Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
     colliderRequest.key = resolvedColliderKey;
     colliderRequest.transform = trans;
@@ -122,6 +129,14 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     colliderRequest.scaleOffset = true;
     colliderRequest.tuning = &config.playerColliderTuning;
     colliderRequest.allowFallback = false;
+    if (hasPlayerColliderDefinitions)
+    {
+        colliderRequest.configDefinitions = &playerColliderDefinitions;
+    }
+    if (resolvedColliderKey == "player")
+    {
+        colliderRequest.forceConfig = true;
+    }
 
     {
         const auto& registry = Physics::ColliderRegistry::Instance();
