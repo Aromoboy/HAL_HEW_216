@@ -23,7 +23,6 @@ namespace Entities
         {
             m_movementSystem.Update(*this, ctx, *m_input);
         }
-        m_physicsBinder.ClampScreenBounds(*this);
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
     }
 
