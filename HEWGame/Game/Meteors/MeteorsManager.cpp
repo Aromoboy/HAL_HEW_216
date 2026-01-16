@@ -175,6 +175,49 @@ namespace MeteorsSpace
                 }
             }
         }
+
+        if (m_physicsMachine)
+        {
+            const PhaseSpawnConfig* config = GetActiveSpawnConfig(m_spawner);
+            if (config)
+            {
+                const auto& activeMeteors = m_registry.GetByState(MeteorsState::Active);
+                for (const auto& meteors : activeMeteors)
+                {
+                    if (!meteors)
+                    {
+                        continue;
+                    }
+
+                    const float targetSpeed = ResolveSpawnSpeedForKind(*config, meteors->GetTag());
+                    if (!(targetSpeed > 0.0f))
+                    {
+                        continue;
+                    }
+
+                    const b2BodyId bodyId = m_physicsMachine->FindBody(*meteors);
+                    if (!b2Body_IsValid(bodyId))
+                    {
+                        continue;
+                    }
+
+                    const b2Vec2 velocity = b2Body_GetLinearVelocity(bodyId);
+                    const float speedSq = (velocity.x * velocity.x) + (velocity.y * velocity.y);
+                    if (speedSq <= 0.0001f)
+                    {
+                        continue;
+                    }
+
+                    const float invSpeed = 1.0f / std::sqrt(speedSq);
+                    const b2Vec2 normalizedVelocity{
+                        velocity.x * invSpeed * targetSpeed,
+                        velocity.y * invSpeed * targetSpeed
+                    };
+                    b2Body_SetLinearVelocity(bodyId, normalizedVelocity);
+                }
+            }
+        }
+
         m_lifecycle.OnUpdate(ctx);
         m_contacts.TickDebugStats(ctx.dt);
     }
