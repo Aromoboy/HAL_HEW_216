@@ -178,51 +178,6 @@ namespace Stage
         return m_pickupOffset;
     }
 
-    float StageData::GetGuidelineHeight() const noexcept
-    {
-        return m_guidelineHeight;
-    }
-
-    float StageData::GetGuidelineStep() const noexcept
-    {
-        return m_guidelineStep;
-    }
-
-    float StageData::GetGuidelineThicknessPixels() const noexcept
-    {
-        return m_guidelineThicknessPixels;
-    }
-
-    float StageData::GetGuidelineThicknessWorld() const noexcept
-    {
-        return m_guidelineThicknessWorld;
-    }
-
-    float StageData::GetGuidelineWidthPaddingWorld() const noexcept
-    {
-        return m_guidelineWidthPaddingWorld;
-    }
-
-    float StageData::GetGuidelineZOffset() const noexcept
-    {
-        return m_guidelineZOffset;
-    }
-
-    float3 StageData::GetGuidelineSpinAxis() const noexcept
-    {
-        return m_guidelineSpinAxis;
-    }
-
-    float StageData::GetGuidelineSpinSpeedDegPerSec() const noexcept
-    {
-        return m_guidelineSpinSpeedDegPerSec;
-    }
-
-    const std::string& StageData::GetGuidelineModelPath() const noexcept
-    {
-        return m_guidelineModelPath;
-    }
-
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -267,15 +222,6 @@ namespace Stage
         m_pickupMaxDistance = normalized.pickupMaxDistance;
         m_pickupDepthThreshold = normalized.pickupDepthThreshold;
         m_pickupOffset = normalized.pickupOffset;
-        m_guidelineHeight = normalized.guidelineHeight;
-        m_guidelineStep = normalized.guidelineStep;
-        m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
-        m_guidelineThicknessWorld = normalized.guidelineThicknessWorld;
-        m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
-        m_guidelineZOffset = normalized.guidelineZOffset;
-        m_guidelineSpinAxis = normalized.guidelineSpinAxis;
-        m_guidelineSpinSpeedDegPerSec = normalized.guidelineSpinSpeedDegPerSec;
-        m_guidelineModelPath = normalized.guidelineModelPath;
         m_heightBonusThreshold = normalized.heightBonusThreshold;
         m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
@@ -304,16 +250,6 @@ namespace Stage
             << " pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
             << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
-            << " guidelineHeight=" << m_guidelineHeight
-            << " guidelineStep=" << m_guidelineStep
-            << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
-            << " guidelineThicknessWorld=" << m_guidelineThicknessWorld
-            << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld
-            << " guidelineZOffset=" << m_guidelineZOffset
-            << " guidelineSpinAxis=(" << m_guidelineSpinAxis.x << ',' << m_guidelineSpinAxis.y << ','
-            << m_guidelineSpinAxis.z << ')'
-            << " guidelineSpinSpeedDegPerSec=" << m_guidelineSpinSpeedDegPerSec
-            << " guidelineModelPath='" << m_guidelineModelPath << "'"
             << " heightBonusThreshold=" << m_heightBonusThreshold
             << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <deque>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -48,16 +47,9 @@ namespace
         return NormalizeTag(tag) == kCreamKey;
     }
 
-    bool IsCakeTag(const std::string& tag)
-    {
-        static const std::string kCakeKey = NormalizeTag("cake");
-        return NormalizeTag(tag) == kCakeKey;
-    }
-
     bool IsBlockedTag(const std::string& tag)
     {
         static const std::unordered_set<std::string> kBlockedTags = {
-            NormalizeTag("osara"),
             NormalizeTag("fairy"),
             NormalizeTag("player"),
         };
@@ -213,101 +205,6 @@ namespace SweetsSpace
             }
         }
 
-        ActiveSweets* creamForStage = nullptr;
-        Entities::PhysicalEntity* otherStage = nullptr;
-        if (sweetsA && IsCreamTag(sweetsA->GetTag()) && !sweetsB)
-        {
-            creamForStage = sweetsA;
-            otherStage = b;
-        }
-        else if (sweetsB && IsCreamTag(sweetsB->GetTag()) && !sweetsA)
-        {
-            creamForStage = sweetsB;
-            otherStage = a;
-        }
-
-        if (creamForStage && otherStage && IsCakeTag(otherStage->GetTag()))
-        {
-            if (!creamForStage->WasEverCarried())
-            {
-                LogGlueReject("notActivated", creamForStage, otherStage);
-            }
-            else if (m_physicsMachine)
-            {
-                if (IsGlueSpeedTooFast(*creamForStage) || IsGlueSpeedTooFast(*otherStage))
-                {
-                    LogGlueReject("tooFast", creamForStage, otherStage);
-                }
-                else
-                {
-                    CleanupInvalidAnchor(creamForStage);
-                    if (m_creamAnchorJoints.contains(creamForStage))
-                    {
-                        LogGlueReject("alreadyBonded", creamForStage, otherStage);
-                    }
-                    else
-                    {
-                        ContactAnchorData anchorData{};
-                        if (!TryGetContactAnchorData(info, anchorData))
-                        {
-                            LogGlueReject("missingManifold", creamForStage, otherStage);
-                        }
-                        else
-                        {
-                            const bool creamHasSupport = HasSupportingContact(*creamForStage, nullptr);
-                            bool targetHasSupport = true;
-                            if (auto* targetSweets = dynamic_cast<ActiveSweets*>(otherStage))
-                            {
-                                targetHasSupport = HasSupportingContact(*targetSweets, nullptr);
-                            }
-                            if (!creamHasSupport || !targetHasSupport)
-                            {
-                                LogGlueReject("noSupport", creamForStage, otherStage);
-                            }
-                            else
-                            {
-                                b2Vec2 anchor = anchorData.point;
-                                const bool creamIsShapeA = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdA);
-                                const bool creamIsShapeB = DoesShapeBelongToEntity(*creamForStage, anchorData.shapeIdB);
-                                if (creamIsShapeA != creamIsShapeB)
-                                {
-                                    ApplyGluePushOut(*creamForStage, creamIsShapeA, anchorData, anchor);
-                                }
-                                const b2JointId jointId = m_physicsMachine->CreateWeldJoint(
-                                    *creamForStage,
-                                    *otherStage,
-                                    anchor,
-                                    m_glueTuning.linearHertz,
-                                    m_glueTuning.linearDampingRatio,
-                                    m_glueTuning.angularHertz,
-                                    m_glueTuning.angularDampingRatio,
-                                    m_glueTuning.collideConnected);
-                                if (b2Joint_IsValid(jointId))
-                                {
-                                    m_creamAnchorJoints.emplace(creamForStage, jointId);
-                                    m_creamAnchorPoints.emplace(creamForStage, anchor);
-                                    LogGlueCreateCreamToCake(creamForStage, otherStage, anchor);
-                                }
-                                else
-                                {
-                                    LogGlueReject("createFailed", creamForStage, otherStage);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
-            {
-                LogGlueReject("missingPhysicsMachine", creamForStage, otherStage);
-                *m_warnedMissingPhysicsMachine = true;
-            }
-        }
-        else if (creamForStage && otherStage)
-        {
-            LogGlueReject(IsBlockedTag(otherStage->GetTag()) ? "blockedTag" : "targetNotAllowed", creamForStage, otherStage);
-        }
-
         if (cream && otherSweets)
         {
             if (!cream->WasEverCarried())
@@ -316,7 +213,6 @@ namespace SweetsSpace
             }
             else
             {
-                CleanupInvalidAnchor(cream);
                 if (IsCreamTag(otherSweets->GetTag()))
                 {
                     LogGlueReject("targetIsCream", cream, otherSweets);
@@ -695,28 +591,6 @@ namespace SweetsSpace
             }
         }
 
-        for (auto it = m_creamAnchorJoints.begin(); it != m_creamAnchorJoints.end();)
-        {
-            auto current = it++;
-            b2JointId jointId = current->second;
-            if (!b2Joint_IsValid(jointId))
-            {
-                LogGlueDestroy("destroyed", current->first, nullptr);
-                m_creamAnchorPoints.erase(current->first);
-                m_creamAnchorJoints.erase(current);
-                continue;
-            }
-
-            if (!IsGlueBreakForceExceeded(jointId))
-            {
-                continue;
-            }
-
-            LogGlueDestroy("breakForce", current->first, nullptr);
-            m_physicsMachine->DestroyJoint(jointId);
-            m_creamAnchorPoints.erase(current->first);
-            m_creamAnchorJoints.erase(current);
-        }
     }
 
     void SweetsContacts::LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const
@@ -736,17 +610,6 @@ namespace SweetsSpace
         oss << kLogPrefix << "glue_destroy_reason=" << (reason ? reason : "<unknown>")
             << " cream='" << (cream ? cream->GetTag() : "<null>")
             << "' target='" << (target ? target->GetTag() : "<null>") << "'\n";
-        DebugTrace(oss.str());
-    }
-
-    void SweetsContacts::LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake,
-        const b2Vec2& anchorWorld) const
-    {
-        ++m_glueStats.createCount;
-        std::ostringstream oss;
-        oss << kLogPrefix << "glue_create_cream_to_cake cream='" << (cream ? cream->GetTag() : "<null>")
-            << "' cake='" << (cake ? cake->GetTag() : "<null>")
-            << "' anchorWorld=(" << anchorWorld.x << "," << anchorWorld.y << ")\n";
         DebugTrace(oss.str());
     }
 
@@ -825,22 +688,6 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsContacts::CleanupInvalidAnchor(ActiveSweets* cream)
-    {
-        if (!cream)
-        {
-            return;
-        }
-
-        auto it = m_creamAnchorJoints.find(cream);
-        if (it != m_creamAnchorJoints.end() && !b2Joint_IsValid(it->second))
-        {
-            LogGlueDestroy("destroyed", cream, nullptr);
-            m_creamAnchorJoints.erase(it);
-            m_creamAnchorPoints.erase(cream);
-        }
-    }
-
     bool SweetsContacts::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
     {
         if (foundationOnly)
@@ -898,116 +745,6 @@ namespace SweetsSpace
         return m_hasSweetsContact.find(const_cast<ActiveSweets*>(&sweets)) != m_hasSweetsContact.end();
     }
 
-    bool SweetsContacts::IsAnchoredToCake(const ActiveSweets& sweets) const
-    {
-        std::deque<ActiveSweets*> queue;
-        std::unordered_set<ActiveSweets*> visited;
-        ActiveSweets* start = const_cast<ActiveSweets*>(&sweets);
-        queue.push_back(start);
-        visited.insert(start);
-
-        std::unordered_map<ActiveSweets*, std::vector<ActiveSweets*>> creamToFruits;
-        if (!m_creamWeldJoints.empty())
-        {
-            for (const auto& entry : m_creamWeldJoints)
-            {
-                ActiveSweets* cream = entry.second.cream;
-                ActiveSweets* fruit = entry.second.fruit;
-                if (cream && fruit)
-                {
-                    creamToFruits[cream].push_back(fruit);
-                }
-            }
-        }
-
-        while (!queue.empty())
-        {
-            ActiveSweets* current = queue.front();
-            queue.pop_front();
-            if (!current)
-            {
-                continue;
-            }
-
-            if (m_creamAnchorJoints.contains(current))
-            {
-                return true;
-            }
-
-            const b2BodyId bodyId = current->GetBox2DBodyId();
-            if (b2Body_IsValid(bodyId))
-            {
-                const int capacity = b2Body_GetContactCapacity(bodyId);
-                if (capacity > 0)
-                {
-                    std::vector<b2ContactData> contacts(static_cast<std::size_t>(capacity));
-                    const int count = b2Body_GetContactData(bodyId, contacts.data(), capacity);
-                    for (int i = 0; i < count; ++i)
-                    {
-                        const b2ContactData& data = contacts[static_cast<std::size_t>(i)];
-                        if (data.manifold.pointCount <= 0)
-                        {
-                            continue;
-                        }
-
-                        const bool isShapeA = DoesShapeBelongToEntity(*current, data.shapeIdA);
-                        const bool isShapeB = DoesShapeBelongToEntity(*current, data.shapeIdB);
-                        if (isShapeA == isShapeB)
-                        {
-                            continue;
-                        }
-
-                        const b2ShapeId otherShape = isShapeA ? data.shapeIdB : data.shapeIdA;
-                        Entities::PhysicalEntity* otherEntity = GetEntityForShape(otherShape);
-                        if (!otherEntity || otherEntity == current)
-                        {
-                            continue;
-                        }
-
-                        if (IsCakeTag(otherEntity->GetTag()))
-                        {
-                            return true;
-                        }
-
-                        if (auto* otherSweets = dynamic_cast<ActiveSweets*>(otherEntity))
-                        {
-                            if (visited.insert(otherSweets).second)
-                            {
-                                queue.push_back(otherSweets);
-                            }
-                        }
-                    }
-                }
-            }
-
-            auto fruitIt = m_fruitToCreams.find(current);
-            if (fruitIt != m_fruitToCreams.end())
-            {
-                for (ActiveSweets* cream : fruitIt->second)
-                {
-                    if (cream && visited.insert(cream).second)
-                    {
-                        queue.push_back(cream);
-                    }
-                }
-            }
-
-            auto creamIt = creamToFruits.find(current);
-            if (creamIt != creamToFruits.end())
-            {
-                for (ActiveSweets* fruit : creamIt->second)
-                {
-                    if (fruit && visited.insert(fruit).second)
-                    {
-                        queue.push_back(fruit);
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
     void SweetsContacts::ClearContactState(ActiveSweets* sweets)
     {
         if (!sweets)
@@ -1047,7 +784,7 @@ namespace SweetsSpace
         {
             m_glueCooldown.erase(sweets);
         }
-        if (m_creamWeldJoints.empty() && m_creamAnchorJoints.empty())
+        if (m_creamWeldJoints.empty())
         {
             return;
         }
@@ -1104,18 +841,6 @@ namespace SweetsSpace
             }
         }
 
-        auto anchorIt = m_creamAnchorJoints.find(sweets);
-        if (anchorIt != m_creamAnchorJoints.end())
-        {
-            LogGlueDestroy(reason, sweets, nullptr);
-            if (m_physicsMachine)
-            {
-                m_physicsMachine->DestroyJoint(anchorIt->second);
-            }
-            m_creamAnchorJoints.erase(anchorIt);
-            m_creamAnchorPoints.erase(sweets);
-        }
-
         if (m_frozenFruitStates.contains(sweets) && !m_fruitToCreams.contains(sweets))
         {
             UnfreezeFruitBody(*sweets);
@@ -1124,7 +849,7 @@ namespace SweetsSpace
 
     void SweetsContacts::ClearCreamWeldJoints(const char* context)
     {
-        if (m_creamWeldJoints.empty() && m_creamAnchorJoints.empty())
+        if (m_creamWeldJoints.empty())
         {
             return;
         }
@@ -1157,17 +882,6 @@ namespace SweetsSpace
         m_creamWeldJoints.clear();
         m_pendingGlue.clear();
         m_fruitToCreams.clear();
-
-        for (const auto& entry : m_creamAnchorJoints)
-        {
-            LogGlueDestroy(reason, entry.first, nullptr);
-            if (m_physicsMachine)
-            {
-                m_physicsMachine->DestroyJoint(entry.second);
-            }
-        }
-        m_creamAnchorJoints.clear();
-        m_creamAnchorPoints.clear();
         m_glueCooldown.clear();
         std::vector<ActiveSweets*> frozenFruits;
         frozenFruits.reserve(m_frozenFruitStates.size());
@@ -1235,8 +949,6 @@ namespace SweetsSpace
                 it = m_pendingGlue.erase(it);
                 continue;
             }
-
-            CleanupInvalidAnchor(pending.cream);
 
             auto existing = m_creamWeldJoints.find(pending.contactId);
             if (existing != m_creamWeldJoints.end())
@@ -1368,18 +1080,11 @@ namespace SweetsSpace
     SweetsContacts::GlueDebugSnapshot SweetsContacts::BuildDebugSnapshot() const
     {
         GlueDebugSnapshot snapshot{};
-        snapshot.activeCreamAnchors = static_cast<int>(m_creamAnchorJoints.size());
         snapshot.activeFruitGlue = static_cast<int>(m_creamWeldJoints.size());
         snapshot.frozenFruit = static_cast<int>(m_frozenFruitStates.size());
         snapshot.createPerSec = m_glueStats.createPerSec;
         snapshot.rejectPerSec = m_glueStats.rejectPerSec;
         snapshot.cleanupPerSec = m_glueStats.cleanupPerSec;
-
-        snapshot.creamAnchors.reserve(m_creamAnchorPoints.size());
-        for (const auto& entry : m_creamAnchorPoints)
-        {
-            snapshot.creamAnchors.push_back(entry.second);
-        }
 
         snapshot.fruitLinks.reserve(m_creamWeldJoints.size());
         for (const auto& entry : m_creamWeldJoints)

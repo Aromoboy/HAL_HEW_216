@@ -16,7 +16,6 @@ namespace Core
                 , m_currentKeys{}
                 , m_previousKeys{}
                 , m_initialized(false)
-                , m_pad{}
                 , m_map{}
         {
         }
@@ -27,8 +26,6 @@ namespace Core
                 // これにより、最初のフレームで「前回なし→今回あり」のトリガー判定が行える 
                 PollKeyboardState();
                 m_previousKeys = m_currentKeys;
-
-                PollPadState();
 
                 m_initialized = true;
                 return S_OK;
@@ -41,7 +38,6 @@ namespace Core
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);
 
-                m_pad = Gamepad();
                 m_map = InputMap();
                 m_lastPolledFrame = 0;
         }
@@ -71,7 +67,6 @@ namespace Core
                         // OnUpdate 経由での遅延初期化 ポーリング結果を保存し、マッピング層が最新の入力を参照できるようにする 
                         PollKeyboardState();
                         m_previousKeys = m_currentKeys;
-                        PollPadState();
                         m_initialized = true;
                 }
                 else
@@ -79,7 +74,6 @@ namespace Core
                         // 更新順序: 前フレームを退避 → 現在のハードウェア状態を読み取り → マッピング層が参照できるよう保持 
                         m_previousKeys = m_currentKeys;
                         PollKeyboardState();
-                        PollPadState();
                 }
 
                 m_lastPolledFrame = frameIndex;
@@ -87,7 +81,7 @@ namespace Core
 
         float Input::GetAxis(ActionId action) const
         {
-                return m_map.GetAxis(action, *this, m_pad);
+                return m_map.GetAxis(action, *this);
         }
 
         bool Input::IsPress(BYTE key) const
@@ -112,7 +106,7 @@ namespace Core
 
         bool Input::IsTrigger(ActionId action) const
         {
-                return m_map.Is(action, *this, m_pad);
+                return m_map.Is(action, *this);
         }
 
         bool Input::IsRelease(ActionId action) const
@@ -168,7 +162,7 @@ namespace Core
 
         InputMap::ActionState Input::GetActionState(ActionId action) const
         {
-                return m_map.GetState(action, *this, m_pad);
+                return m_map.GetState(action, *this);
         }
 
         void Input::PollKeyboardState()
@@ -177,11 +171,6 @@ namespace Core
                 {
                         m_currentKeys.fill(0);
                 }
-        }
-
-        void Input::PollPadState(int index)
-        {
-                m_pad.Poll(index);
         }
 
         bool Input::IsKeyDown(BYTE key) const

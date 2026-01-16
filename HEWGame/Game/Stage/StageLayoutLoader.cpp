@@ -100,8 +100,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
     constexpr Collision::CollisionLayer kStageColliderLayer = Collision::CollisionLayer::Stage;
     constexpr b2BodyType kStageBodyType = b2_staticBody;
-    //Osara用
-    constexpr b2BodyType kOsaraBodyType = b2_kinematicBody;
     constexpr bool kStageFixedRotation = true;
     constexpr bool kStageAllowRotation = false;
 
@@ -141,7 +139,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             values.push_back(token);
         }
 
-        if (values.size() < 15)
+        if (values.size() < 10)
         {
             continue;
         }
@@ -159,10 +157,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             continue;
         }
 
-        std::string lower = obj.modelPath;
-        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        obj.IsOsara = (lower.find("osara") != std::string::npos);
-
         if (!TryParseFloat(values[1], obj.transform.position.x, logPrefix, "position.x")
             || !TryParseFloat(values[2], obj.transform.position.y, logPrefix, "position.y")
             || !TryParseFloat(values[3], obj.transform.position.z, logPrefix, "position.z")
@@ -176,21 +170,29 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             continue;
         }
 
-        std::string spinValue = values[10];
-        std::transform(spinValue.begin(), spinValue.end(), spinValue.begin(), ::tolower);
-
-        obj.spinEnabled = (spinValue == "true" || spinValue == "1" || spinValue == "yes" || spinValue == "on");
-        if (!TryParseFloat(values[11], obj.spinAxis.x, logPrefix, "spinAxis.x")
-            || !TryParseFloat(values[12], obj.spinAxis.y, logPrefix, "spinAxis.y")
-            || !TryParseFloat(values[13], obj.spinAxis.z, logPrefix, "spinAxis.z")
-            || !TryParseFloat(values[14], obj.spinSpeed, logPrefix, "spinSpeed"))
+        if (values.size() > 10)
         {
-            continue;
+            obj.materialKey = Trim(values[10]);
         }
-        obj.currentRotation = 0.0f;
-        if (values.size() > 15)
+        if (values.size() > 11)
         {
-            obj.colliderPresetId = NormalizeKey(values[15]);
+            obj.colliderPresetId = NormalizeKey(values[11]);
+        }
+        if (!obj.materialKey.empty())
+        {
+            const std::string normalizedMaterialKey = NormalizeKey(obj.materialKey);
+            if (IsKnownStageMaterialKey(normalizedMaterialKey, materialTuningSettings))
+            {
+                obj.materialKey = normalizedMaterialKey;
+            }
+            else
+            {
+                obj.materialKey.clear();
+            }
+        }
+        if (obj.materialKey.empty())
+        {
+            obj.materialKey = kFallbackStageMaterialKey;
         }
 
         if (kEnableStageModelVerboseLogging)
@@ -235,8 +237,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
             colliderRequest.key = colliderKey;
             colliderRequest.transform = obj.transform;
-            //colliderRequest.bodyType = kStageBodyType;
-            colliderRequest.bodyType = obj.IsOsara ? kOsaraBodyType : kStageBodyType;
+            colliderRequest.bodyType = kStageBodyType;
             colliderRequest.fixedRotation = kStageFixedRotation;
             colliderRequest.allowRotation = kStageAllowRotation;
             colliderRequest.angularDamping = kStageAllowRotation ? 0.2f : 0.0f;
@@ -276,9 +277,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
                 DebugTrace(oss.str());
             }
         }
-        //baseYを保存
-        obj.baseY = obj.transform.position.y;
-        
         result.stageObjects.push_back(std::move(obj));
     }
 

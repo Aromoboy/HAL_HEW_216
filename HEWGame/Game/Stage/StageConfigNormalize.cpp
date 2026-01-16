@@ -18,8 +18,6 @@ namespace
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
     const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     const std::string kDefaultBackgroundTexturePath = "Assets/Texture/background.png";
-    const std::string kDefaultGuidelineModelPath = "Assets/Model/GuideLine.fbx";
-    const float3 kDefaultGuidelineSpinAxis{ 0.0f, 1.0f, 0.0f };
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
     const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
@@ -52,11 +50,6 @@ namespace
 
 namespace Stage
 {
-    float StageConfigDefaults::DefaultGuidelineWidthPaddingWorld()
-    {
-        return (kDefaultPlatformWidthFraction * kPlatformGridWidthCells * kDefaultCellSizeWorld) * 0.5f;
-    }
-
     float StageConfigDefaults::DefaultPlayerMoveSpeed()
     {
         return kDefaultHorizontalSpeedCellsPerSec * kDefaultCellSizeWorld;
@@ -82,19 +75,9 @@ namespace Stage
         return kDefaultPickupOffsetLocalCells;
     }
 
-    const float3& StageConfigDefaults::DefaultGuidelineSpinAxis()
-    {
-        return kDefaultGuidelineSpinAxis;
-    }
-
     const std::string& StageConfigDefaults::DefaultBackgroundTexturePath()
     {
         return kDefaultBackgroundTexturePath;
-    }
-
-    const std::string& StageConfigDefaults::DefaultGuidelineModelPath()
-    {
-        return kDefaultGuidelineModelPath;
     }
 
     const std::vector<float>& StageConfigDefaults::DefaultThresholds()
@@ -239,15 +222,6 @@ namespace Stage
         float pickupDepthThreshold = parsed.pickupDepthThreshold;
         Stage::PickupOffsetMode pickupOffsetMode = parsed.pickupOffsetMode;
         float3 pickupOffsetLocalCells = parsed.pickupOffsetLocalCells;
-        float guidelineHeight = parsed.guidelineHeight;
-        float guidelineStep = parsed.guidelineStep;
-        float guidelineThicknessPixels = parsed.guidelineThicknessPixels;
-        float guidelineThicknessWorld = parsed.guidelineThicknessWorld;
-        float guidelineWidthPaddingWorld = parsed.guidelineWidthPaddingWorld;
-        float guidelineZOffset = parsed.guidelineZOffset;
-        float3 guidelineSpinAxis = parsed.guidelineSpinAxis;
-        float guidelineSpinSpeedDegPerSec = parsed.guidelineSpinSpeedDegPerSec;
-        std::string guidelineModelPath = parsed.guidelineModelPath;
         float heightBonusThreshold = parsed.heightBonusThreshold;
         float heightBonusSeconds = parsed.heightBonusSeconds;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
@@ -272,72 +246,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformScale not specified; using default ("
                 << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
-        }
-
-        if (!parsed.guidelineHeightSet)
-        {
-            guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineHeight not specified; defaulting to " << guidelineHeight << "\n";
-        }
-
-        if (!parsed.guidelineStepSet)
-        {
-            guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
-        }
-        if (!parsed.guidelineThicknessSet)
-        {
-            guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineThicknessPixels not specified; defaulting to "
-                << guidelineThicknessPixels << "\n";
-        }
-        if (!parsed.guidelineThicknessWorldSet)
-        {
-            guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineThicknessWorld not specified; defaulting to "
-                << guidelineThicknessWorld << "\n";
-        }
-        if (!parsed.guidelineWidthPaddingSet)
-        {
-            guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineWidthPaddingWorld not specified; defaulting to "
-                << guidelineWidthPaddingWorld << "\n";
-        }
-        if (!parsed.guidelineZOffsetSet)
-        {
-            guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineZOffset not specified; defaulting to "
-                << guidelineZOffset << "\n";
-        }
-
-        if (!parsed.guidelineSpinAxisSet)
-        {
-            guidelineSpinAxis = StageConfigDefaults::DefaultGuidelineSpinAxis();
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineSpinAxis not specified; defaulting to ("
-                << guidelineSpinAxis.x << ',' << guidelineSpinAxis.y << ',' << guidelineSpinAxis.z << ")\n";
-        }
-
-        if (!parsed.guidelineSpinSpeedSet)
-        {
-            guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineSpinSpeedDegPerSec not specified; defaulting to "
-                << guidelineSpinSpeedDegPerSec << "\n";
-        }
-
-        if (!parsed.guidelineModelPathSet)
-        {
-            guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineModelPath not specified; defaulting to '"
-                << guidelineModelPath << "'.\n";
         }
 
         if (!parsed.heightBonusThresholdSet)
@@ -835,84 +743,6 @@ namespace Stage
 
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
 
-        if (!std::isfinite(guidelineHeight))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineHeight value " << guidelineHeight
-                << " invalid; keeping parsed value.\n";
-        }
-
-        if (!std::isfinite(guidelineStep))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineStep value " << guidelineStep
-                << " invalid; keeping parsed value.\n";
-        }
-        if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineThicknessPixels value " << guidelineThicknessPixels
-                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineThicknessPixels << "\n";
-            guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
-        }
-        if (!std::isfinite(guidelineThicknessWorld) || guidelineThicknessWorld <= 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineThicknessWorld value " << guidelineThicknessWorld
-                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineThicknessWorld << "\n";
-            guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
-        }
-        if (!std::isfinite(guidelineWidthPaddingWorld) || guidelineWidthPaddingWorld < 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineWidthPaddingWorld value " << guidelineWidthPaddingWorld
-                << " invalid; using default " << StageConfigDefaults::DefaultGuidelineWidthPaddingWorld() << "\n";
-            guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
-        }
-        if (!std::isfinite(guidelineZOffset))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineZOffset value " << guidelineZOffset
-                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineZOffset << "\n";
-            guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
-        }
-
-        auto sanitizeAxis = [](const float3& value, const float3& fallback, const char* label)
-        {
-            if (!std::isfinite(value.x) || !std::isfinite(value.y) || !std::isfinite(value.z))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << label << " contains non-finite component; using fallback ("
-                    << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
-                return fallback;
-            }
-
-            const float lengthSq = (value.x * value.x) + (value.y * value.y) + (value.z * value.z);
-            if (!(lengthSq > 0.0f))
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << label << " has zero length; using fallback ("
-                    << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
-                return fallback;
-            }
-
-            const float invLength = 1.0f / std::sqrt(lengthSq);
-            return float3{ value.x * invLength, value.y * invLength, value.z * invLength };
-        };
-
-        guidelineSpinAxis = sanitizeAxis(
-            guidelineSpinAxis,
-            StageConfigDefaults::DefaultGuidelineSpinAxis(),
-            "guidelineSpinAxis");
-
-        if (!std::isfinite(guidelineSpinSpeedDegPerSec))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "guidelineSpinSpeedDegPerSec value " << guidelineSpinSpeedDegPerSec
-                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec << "\n";
-            guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
-        }
-
         if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
         {
             std::ostringstream oss;
@@ -972,15 +802,6 @@ namespace Stage
         normalized.pickupMaxDistance = pickupMaxDistance;
         normalized.pickupDepthThreshold = pickupDepthThreshold;
         normalized.pickupOffset = pickupOffset;
-        normalized.guidelineHeight = guidelineHeight;
-        normalized.guidelineStep = guidelineStep;
-        normalized.guidelineThicknessPixels = guidelineThicknessPixels;
-        normalized.guidelineThicknessWorld = guidelineThicknessWorld;
-        normalized.guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
-        normalized.guidelineZOffset = guidelineZOffset;
-        normalized.guidelineSpinAxis = guidelineSpinAxis;
-        normalized.guidelineSpinSpeedDegPerSec = guidelineSpinSpeedDegPerSec;
-        normalized.guidelineModelPath = std::move(guidelineModelPath);
         normalized.heightBonusThreshold = heightBonusThreshold;
         normalized.heightBonusSeconds = heightBonusSeconds;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
@@ -1024,15 +845,6 @@ namespace Stage
                 StageConfigDefaults::DefaultPickupOffsetLocalCells().y * StageConfigDefaults::kDefaultCellSizeWorld,
                 StageConfigDefaults::DefaultPickupOffsetLocalCells().z * StageConfigDefaults::kDefaultCellSizeWorld },
         };
-        normalized.guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
-        normalized.guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
-        normalized.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
-        normalized.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
-        normalized.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
-        normalized.guidelineZOffset = StageConfigDefaults::kDefaultGuidelineZOffset;
-        normalized.guidelineSpinAxis = StageConfigDefaults::DefaultGuidelineSpinAxis();
-        normalized.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
-        normalized.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
         normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;

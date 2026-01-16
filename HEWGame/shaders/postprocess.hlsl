@@ -52,8 +52,7 @@ cbuffer PostProcessParams : register(b0)
     float postTime;
     float grainAmount;
     int grainEnable;
-    int grainAnimate;
-    float2 padding3;
+    float padding3;
 };
 
 float LinearizeDepth(float z)
@@ -145,8 +144,7 @@ float4 PSMain(VSOut input) : SV_TARGET
     col = saturate(col);
     if (grainEnable != 0)
     {
-        float timeOffset = (grainAnimate != 0) ? postTime : 0.0f;
-        float noise = frac(sin(dot(input.position.xy + timeOffset, float2(12.9898f, 78.233f))) * 43758.5453f);
+        float noise = frac(sin(dot(input.position.xy, float2(12.9898f, 78.233f))) * 43758.5453f);
         float grain = (noise - 0.5f) * 2.0f * grainAmount;
         col = saturate(col + grain);
     }

@@ -18,19 +18,9 @@ struct StageObject
 {
     std::string modelPath;
     Transform transform;
-    bool spinEnabled = false;
-    float3 spinAxis{ 0.0f, 0.0f, 0.0f };
-    float spinSpeed = 0.0f;
     std::shared_ptr<ModelDX> model;
-    float currentRotation = 0.0f;
     std::string colliderPresetId;
-
-    bool IsOsara = false;
-    float swaiTime = 0.0f;
-    //���M�̗h��
-    b2Vec2 OsaraSwayingpower{0.0f, 0.75f};
-    //�h���O�̌��̍��W
-    float baseY = 0.0f;
+    std::string materialKey;
     std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 

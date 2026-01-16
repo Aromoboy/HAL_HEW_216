@@ -75,8 +75,7 @@ struct PostProcessParams
 	float postTime;
 	float grainAmount;
 	int grainEnable;
-	int grainAnimate;
-	DirectX::XMFLOAT2 padding3;
+	float padding3;
 };
 
 void BindPostProcessParams(
@@ -98,7 +97,6 @@ void BindPostProcessParams(
 	int fxaaEnable = 0,
 	float postTime = 0.0f,
 	float grainAmount = 0.0f,
-	int grainEnable = 0,
-	int grainAnimate = 0);
+	int grainEnable = 0);
 
 #endif

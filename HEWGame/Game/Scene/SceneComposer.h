@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "GuidelineActor.h"
 #include "SceneGame.h"
 #include "StageLayoutLoader.h"
 
@@ -37,18 +36,6 @@ public:
         float playerPickupMaxDistance = 0.0f;
         float playerPickupDepthThreshold = 0.0f;
         float playerSpeedMultiplier = 1.0f;
-        float guidelineHeightMeters = 0.0f;
-        float guidelineStepMeters = 0.0f;
-        float guidelineThicknessPixels = 0.0f;
-        float guidelineWidthPaddingWorld = 0.0f;
-        float guidelineZOffset = 0.0f;
-        float3 guidelineSpinAxis{ 0.0f, 0.0f, 0.0f };
-        float guidelineSpinSpeedDegPerSec = 0.0f;
-        float guidelineCooldownDurationSeconds = 0.0f;
-        float guidelineCooldownRemainingSeconds = 0.0f;
-        float guidelineCenterX = 0.0f;
-        float guidelineWidthWorld = 0.0f;
-        float guidelineThicknessWorld = 0.0f;
         float heightBonusThresholdMeters = 0.0f;
         float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
@@ -56,7 +43,6 @@ public:
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
-        std::unique_ptr<GuidelineActor> guidelineActor;
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
         std::unique_ptr<UIManager> uiManager;
         std::unique_ptr<BackgroundRenderer> backgroundRenderer;

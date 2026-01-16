@@ -13,6 +13,7 @@
 #include "Core/UpdateScheduler.h"
 #include "GameplayConfig.h"
 #include "ModelCache.h"
+#include "Engine/Render/ModelDX.h"
 #include "SceneGameConfigLoader.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
@@ -48,9 +49,6 @@ namespace
     constexpr float kFallbackPlayerMoveSpeed = 10.0f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
-    constexpr float kGuidelineAdvanceCooldownSeconds = 0.25f;
-    constexpr float kGuidelineThicknessMeters = 0.05f;
-
     const HudLayoutConfig kHudLayoutConfig
     {
         512u,
@@ -217,15 +215,6 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " pickupOffsetMode=" << pickupOffsetModeName(result.playerPickupOffset.mode)
             << " pickupOffsetLocalWorld=(" << result.playerPickupOffset.localOffset.x << ','
             << result.playerPickupOffset.localOffset.y << ',' << result.playerPickupOffset.localOffset.z << ')'
-            << " guidelineHeight=" << result.stageData.GetGuidelineHeight()
-            << " guidelineStep=" << result.stageData.GetGuidelineStep()
-            << " guidelineThicknessPixels=" << result.stageData.GetGuidelineThicknessPixels()
-            << " guidelineWidthPaddingWorld=" << result.stageData.GetGuidelineWidthPaddingWorld()
-            << " guidelineZOffset=" << result.stageData.GetGuidelineZOffset()
-            << " guidelineSpinAxis=(" << result.stageData.GetGuidelineSpinAxis().x << ','
-            << result.stageData.GetGuidelineSpinAxis().y << ',' << result.stageData.GetGuidelineSpinAxis().z << ')'
-            << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
-            << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
             << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
             << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
@@ -276,65 +265,6 @@ void SceneComposer::ComposeConfig(Composition& result)
 
 void SceneComposer::ComposeRules(Composition& result)
 {
-    result.guidelineHeightMeters = result.stageData.GetGuidelineHeight();
-    result.guidelineStepMeters = result.stageData.GetGuidelineStep();
-    result.guidelineThicknessPixels = result.stageData.GetGuidelineThicknessPixels();
-    result.guidelineWidthPaddingWorld = result.stageData.GetGuidelineWidthPaddingWorld();
-    result.guidelineZOffset = result.stageData.GetGuidelineZOffset();
-    result.guidelineSpinAxis = result.stageData.GetGuidelineSpinAxis();
-    result.guidelineSpinSpeedDegPerSec = result.stageData.GetGuidelineSpinSpeedDegPerSec();
-    result.guidelineCooldownDurationSeconds = kGuidelineAdvanceCooldownSeconds;
-    result.guidelineCooldownRemainingSeconds = 0.0f;
-    result.guidelineCenterX = 0.0f;
-    result.guidelineWidthWorld = 0.0f;
-    result.guidelineThicknessWorld = result.stageData.GetGuidelineThicknessWorld();
-    if (!std::isfinite(result.guidelineThicknessWorld) || result.guidelineThicknessWorld <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Guideline thickness world " << result.guidelineThicknessWorld
-            << " invalid; using fallback " << kGuidelineThicknessMeters << "\n";
-        DebugTrace(oss.str());
-        result.guidelineThicknessWorld = kGuidelineThicknessMeters;
-    }
-
-    {
-        bool boundsValid = false;
-        float minX = std::numeric_limits<float>::max();
-        float maxX = std::numeric_limits<float>::lowest();
-        for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
-        {
-            const auto& descriptor = result.stageData.GetPlatform(i);
-            if (!std::isfinite(descriptor.center.x) || !std::isfinite(descriptor.widthWorld) || descriptor.widthWorld <= 0.0f)
-            {
-                continue;
-            }
-
-            const float halfWidth = descriptor.widthWorld * 0.5f;
-            if (!std::isfinite(halfWidth) || halfWidth <= 0.0f)
-            {
-                continue;
-            }
-
-            minX = std::min(minX, descriptor.center.x - halfWidth);
-            maxX = std::max(maxX, descriptor.center.x + halfWidth);
-            boundsValid = true;
-        }
-
-        if (boundsValid)
-        {
-            result.guidelineCenterX = (minX + maxX) * 0.5f;
-            result.guidelineWidthWorld = maxX - minX;
-        }
-
-        const float widthPadding = std::max(0.0f, result.guidelineWidthPaddingWorld);
-        float paddedWidth = result.guidelineWidthWorld + (widthPadding * 2.0f);
-        if (!std::isfinite(paddedWidth) || paddedWidth <= 0.0f)
-        {
-            paddedWidth = 0.01f;
-        }
-        result.guidelineWidthWorld = paddedWidth;
-    }
-
     result.heightBonusThresholdMeters = result.stageData.GetHeightBonusThreshold();
     if (!std::isfinite(result.heightBonusThresholdMeters) || result.heightBonusThresholdMeters <= 0.0f)
     {
@@ -398,55 +328,6 @@ void SceneComposer::ComposePhysics(Composition& result)
     if (result.drawSystem)
     {
         result.drawSystem->SetStagePlaneZ(result.stageData.GetPlaneZ());
-    }
-    if (result.drawSystem && result.guidelineHeightMeters > 0.0f)
-    {
-        std::shared_ptr<Render::Model> guidelineModel;
-        const std::string& guidelineModelPath = result.stageData.GetGuidelineModelPath();
-        if (!guidelineModelPath.empty())
-        {
-            guidelineModel = Render::ModelCache::Instance().Get(guidelineModelPath);
-            if (!guidelineModel)
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Guideline model load failed path='" << guidelineModelPath
-                    << "'; fallback quad will be used.\n";
-                DebugTrace(oss.str());
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << kLogPrefix << "Guideline model loaded path='" << guidelineModelPath
-                    << "'\n";
-                DebugTrace(oss.str());
-            }
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Guideline model path empty; fallback quad will be used.\n";
-            DebugTrace(oss.str());
-        }
-
-        if (guidelineModel)
-        {
-            result.guidelineActor = std::make_unique<GuidelineActor>(guidelineModel);
-        }
-        else
-        {
-            result.guidelineActor = std::make_unique<GuidelineActor>();
-        }
-        if (result.guidelineActor)
-        {
-            const float guidelineZ = result.stageData.GetPlaneZ() + result.guidelineZOffset;
-            result.guidelineActor->UpdateGuideline(
-                result.guidelineCenterX,
-                result.guidelineHeightMeters,
-                guidelineZ,
-                result.guidelineWidthWorld,
-                result.guidelineThicknessWorld);
-            result.drawSystem->RegisterRenderable(*result.guidelineActor);
-        }
     }
     if (result.drawSystem && physicsMachine)
     {

@@ -206,10 +206,6 @@ namespace
             overrides.emplace(NormalizeForKey(model), texture);
         };
 
-        addOverride("cake.fbx", "Assets/Texture/cake.png");
-        addOverride("assets/model/cake.fbx", "Assets/Texture/cake.png");
-        addOverride("osara.fbx", "Assets/Texture/osara.png");
-        addOverride("assets/model/osara.fbx", "Assets/Texture/osara.png");
         addOverride("base.fbx", "Assets/Texture/texture_diffuse.png");
         addOverride("assets/model/base.fbx", "Assets/Texture/texture_diffuse.png");
 
@@ -272,15 +268,6 @@ namespace
             if (std::filesystem::exists(*guessed))
             {
                 return guessed;
-            }
-        }
-
-        if (normalizedModelPath.find("guideline") != std::string::npos)
-        {
-            const std::string guidelineTexture = "Assets/Texture/GuideLine.png";
-            if (std::filesystem::exists(guidelineTexture))
-            {
-                return guidelineTexture;
             }
         }
 

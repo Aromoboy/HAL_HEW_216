@@ -44,7 +44,6 @@ namespace SceneGameConfig
         bool enableVignette = true;
         bool enableBloom = true;
         bool grainEnable = false;
-        bool grainAnimate = false;
         bool enableFxaa = false;
     };
 
