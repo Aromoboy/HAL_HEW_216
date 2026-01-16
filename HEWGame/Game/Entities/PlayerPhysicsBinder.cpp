@@ -1,5 +1,7 @@
 #include "Entities/PlayerPhysicsBinder.h"
 
+#include "Entities/Player.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -27,6 +29,7 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
+    constexpr float kScreenWrapEpsilon = 1e-4f;
 }
 
 namespace Entities
@@ -78,6 +81,60 @@ namespace Entities
             << " maxY=" << m_maxScreenY;
         oss << "\n";
         PlayerDebugTrace(oss.str());
+    }
+
+    void PlayerPhysicsBinder::ClampScreenBounds(Player& player)
+    {
+        if (!m_hasScreenBounds)
+        {
+            return;
+        }
+
+        const float spanX = m_maxScreenX - m_minScreenX;
+        const float spanY = m_maxScreenY - m_minScreenY;
+        if (spanX <= kScreenWrapEpsilon && spanY <= kScreenWrapEpsilon)
+        {
+            return;
+        }
+
+        player.SyncColliderBounds();
+        const AABB bounds = player.GetAABB();
+
+        float3 position = player.GetTransform().position;
+        bool wrapped = false;
+
+        if (spanX > kScreenWrapEpsilon)
+        {
+            if (bounds.min.x < m_minScreenX)
+            {
+                position.x += spanX;
+                wrapped = true;
+            }
+            else if (bounds.max.x > m_maxScreenX)
+            {
+                position.x -= spanX;
+                wrapped = true;
+            }
+        }
+
+        if (spanY > kScreenWrapEpsilon)
+        {
+            if (bounds.min.y < m_minScreenY)
+            {
+                position.y += spanY;
+                wrapped = true;
+            }
+            else if (bounds.max.y > m_maxScreenY)
+            {
+                position.y -= spanY;
+                wrapped = true;
+            }
+        }
+
+        if (wrapped)
+        {
+            player.SetPositionViaPhysics(position);
+        }
     }
 
 }
