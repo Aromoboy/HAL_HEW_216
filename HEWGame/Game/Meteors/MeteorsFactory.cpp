@@ -684,7 +684,7 @@ namespace MeteorsSpace
                 colliderRequest.allowRotation = true;
                 colliderRequest.angularDamping = 0.2f;
                 colliderRequest.linearDamping = 0.0f;
-                colliderRequest.useRegistryLinearDamping = true;
+                colliderRequest.useRegistryLinearDamping = false;
                 colliderRequest.offset = float3{ colliderOffset.x, colliderOffset.y, 0.0f };
                 colliderRequest.scaleOffset = false;
                 colliderRequest.allowFallback = false;
@@ -1122,7 +1122,7 @@ namespace MeteorsSpace
         colliderRequest.allowRotation = true;
         colliderRequest.angularDamping = 0.2f;
         colliderRequest.linearDamping = 0.0f;
-        colliderRequest.useRegistryLinearDamping = true;
+        colliderRequest.useRegistryLinearDamping = false;
         colliderRequest.offset = float3{ scaledCenter.x, scaledCenter.y, 0.0f };
         colliderRequest.scaleOffset = false;
         colliderRequest.allowFallback = false;
