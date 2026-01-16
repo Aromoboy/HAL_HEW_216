@@ -49,9 +49,6 @@
     <Filter Include="Game\GameFlow">
       <UniqueIdentifier>{D3DA52B9-D78F-4317-952F-53362A913F24}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\PowerUp">
-      <UniqueIdentifier>{12A72A8D-5AC5-40E1-A42F-E023D4077BF8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Game\Rules">
       <UniqueIdentifier>{EC46072A-3FA3-42AB-B752-E871E09B8884}</UniqueIdentifier>
     </Filter>
@@ -290,21 +287,6 @@
     </ClCompile>
     <ClCompile Include="Game\GameFlow\PhaseManager.cpp">
       <Filter>Game\GameFlow</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp">
-      <Filter>Game\PowerUp</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\PowerUp\PowerUpManager.cpp">
-      <Filter>Game\PowerUp</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\PowerUp\PowerUpNode.cpp">
-      <Filter>Game\PowerUp</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\PowerUp\PowerUpRenderer.cpp">
-      <Filter>Game\PowerUp</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\PowerUp\PowerUpTarget.cpp">
-      <Filter>Game\PowerUp</Filter>
     </ClCompile>
     <ClCompile Include="Game\Rules\GameplayRules.cpp">
       <Filter>Game\Rules</Filter>
@@ -680,21 +662,6 @@
     </ClInclude>
     <ClInclude Include="Game\GameFlow\PhaseManager.h">
       <Filter>Game\GameFlow</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpCursor.h">
-      <Filter>Game\PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpManager.h">
-      <Filter>Game\PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpNode.h">
-      <Filter>Game\PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpRenderer.h">
-      <Filter>Game\PowerUp</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpTarget.h">
-      <Filter>Game\PowerUp</Filter>
     </ClInclude>
     <ClInclude Include="Game\Rules\GameplayRules.h">
       <Filter>Game\Rules</Filter>
