@@ -195,6 +195,7 @@ protected:
     std::shared_ptr<Render::Model> m_playerModel;
     std::shared_ptr<Render::Model> m_missileModel;
     SceneGameConfig::MissileSettings m_missileSettings{};
+    float m_missileFireCooldownSeconds = 0.0f;
     bool m_fireMissileHintEnabled = false;
     std::vector<MissileInstance> m_activeMissiles;
     std::vector<std::weak_ptr<Entities::PhysicalEntity>> m_pendingMissileRemovals;

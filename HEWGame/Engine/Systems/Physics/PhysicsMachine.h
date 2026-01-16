@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Entities
@@ -101,6 +102,14 @@ namespace Systems
 
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
+        void UnregisterBodyImmediate(Entities::PhysicalEntity& body, bool preserveColliderData);
+        void FlushPendingUnregistrations();
+
+        struct PendingUnregistration
+        {
+            Entities::PhysicalEntity* body = nullptr;
+            bool preserveColliderData = false;
+        };
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
@@ -115,5 +124,9 @@ namespace Systems
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;
         bool m_loggedFirstTick = false;
+        bool m_canDestroyBodies = false;
+        bool m_isStepping = false;
+        std::vector<PendingUnregistration> m_pendingUnregistrations;
+        std::unordered_set<Entities::PhysicalEntity*> m_pendingUnregistrationSet;
     };
 }
