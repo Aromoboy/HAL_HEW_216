@@ -1243,6 +1243,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
+        UpdateBackgroundScrollOriginForWrap(baseCamera->GetPosition().y);
         scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
@@ -1465,7 +1466,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
     std::optional<float> visualMinY = settings.clamp.minY;
     std::optional<float> visualMaxY = settings.clamp.maxY;
-    const bool shouldClampY = visualMinY || visualMaxY;
+    const bool wrapY = resolvedSettings.wrapY;
+    const bool shouldClampY = !wrapY && (visualMinY || visualMaxY);
 
     if (m_gameCamera)
     {
@@ -1527,7 +1529,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     std::optional<float> minScrollY = visualMinY;
     std::optional<float> maxScrollY = visualMaxY;
-    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    if ((shouldClampY || wrapY) && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
     {
         if (minScrollY)
         {
@@ -1549,6 +1551,17 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         maxScrollY = visualMaxY;
     }
 
+    const bool canWrapY = wrapY && minScrollY && maxScrollY;
+    if (wrapY && !canWrapY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera wrapY enabled but bounds missing; wrap disabled for this session.\n";
+        ::DebugTrace(oss.str());
+    }
+
+    m_cameraWrapMinY = canWrapY ? minScrollY : std::nullopt;
+    m_cameraWrapMaxY = canWrapY ? maxScrollY : std::nullopt;
+
     if (m_cameraRig)
     {
         m_cameraRig->SetOffset(resolvedSettings.offset);
@@ -1561,6 +1574,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetFollowPositionAxes(false, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
+        m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt, canWrapY ? maxScrollY : std::nullopt);
         m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt, shouldClampY ? maxScrollY : std::nullopt);
 
         const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
@@ -1609,6 +1623,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     m_gameCamera->SetPosition(cameraPosition);
     m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
+    m_backgroundCameraLastY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
@@ -1661,7 +1676,8 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
         }
     }
 
-    const bool shouldClampY = visualMinY || visualMaxY;
+    const bool wrapY = m_cameraRigSettings.wrapY;
+    const bool shouldClampY = !wrapY && (visualMinY || visualMaxY);
     std::optional<float> halfViewHeightWorld = std::nullopt;
     if (m_gameCamera && player)
     {
@@ -1687,7 +1703,7 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
 
     std::optional<float> minScrollY = visualMinY;
     std::optional<float> maxScrollY = visualMaxY;
-    if (shouldClampY && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
+    if ((shouldClampY || wrapY) && halfViewHeightWorld && IsFiniteFloat(*halfViewHeightWorld))
     {
         if (minScrollY)
         {
@@ -1709,8 +1725,56 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
         maxScrollY = visualMaxY;
     }
 
+    const bool canWrapY = wrapY && minScrollY && maxScrollY;
+    if (wrapY && !canWrapY)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Camera wrapY enabled but bounds missing after phase update; wrap disabled.\n";
+        ::DebugTrace(oss.str());
+    }
+
+    m_cameraWrapMinY = canWrapY ? minScrollY : std::nullopt;
+    m_cameraWrapMaxY = canWrapY ? maxScrollY : std::nullopt;
+
+    m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt,
+                          canWrapY ? maxScrollY : std::nullopt);
     m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
                            shouldClampY ? maxScrollY : std::nullopt);
+}
+
+void SceneGame::UpdateBackgroundScrollOriginForWrap(float cameraY)
+{
+    if (!m_cameraRigSettings.wrapY || !m_cameraWrapMinY || !m_cameraWrapMaxY)
+    {
+        m_backgroundCameraLastY = cameraY;
+        return;
+    }
+
+    if (!IsFiniteFloat(*m_cameraWrapMinY) || !IsFiniteFloat(*m_cameraWrapMaxY))
+    {
+        m_backgroundCameraLastY = cameraY;
+        return;
+    }
+
+    const float minY = std::min(*m_cameraWrapMinY, *m_cameraWrapMaxY);
+    const float maxY = std::max(*m_cameraWrapMinY, *m_cameraWrapMaxY);
+    const float wrapRange = maxY - minY;
+    if (!IsFiniteFloat(wrapRange) || wrapRange <= 0.0f)
+    {
+        m_backgroundCameraLastY = cameraY;
+        return;
+    }
+
+    if (m_backgroundCameraLastY && IsFiniteFloat(*m_backgroundCameraLastY))
+    {
+        const float delta = cameraY - *m_backgroundCameraLastY;
+        if (std::fabs(delta) > wrapRange * 0.5f)
+        {
+            m_backgroundScrollOriginY += (delta > 0.0f ? wrapRange : -wrapRange);
+        }
+    }
+
+    m_backgroundCameraLastY = cameraY;
 }
 
 void SceneGame::SetStageState(StageState newState)

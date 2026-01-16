@@ -39,6 +39,7 @@ public:
         std::optional<float> GetClampMaxY() const;
         float GetScrollY() const;
         void ResetVerticalScroll(const float3& targetPosition);
+        void SetWrapY(std::optional<float> minY, std::optional<float> maxY);
         void SetTranslationLocked(bool locked);
         bool IsTranslationLocked() const;
 
@@ -80,6 +81,8 @@ private:
         bool m_inheritRotation;
         std::optional<float> m_minYClamp;
         std::optional<float> m_maxYClamp;
+        std::optional<float> m_minYWrap;
+        std::optional<float> m_maxYWrap;
         float m_scrollY;
         bool m_hasScrollY;
 };
