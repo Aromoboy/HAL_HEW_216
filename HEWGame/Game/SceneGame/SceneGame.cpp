@@ -1102,6 +1102,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             {
                 spawnExplosion(missile->GetTransform().position);
             }
+
+            if (m_pManager)
+            {
+                m_pManager->PlaySoundEX("Assets/Audio/SE_Hit.mp3", false, 0.3f);
+            }
         }
 
         if (const auto contact = m_contactHandler.ConsumePlayerContact())
@@ -1534,6 +1539,11 @@ void SceneGame::FireMissile()
     m_activeMissiles.push_back(std::move(instance));
     m_fireMissileHintEnabled = true;
     m_missileFireCooldownSeconds = kMissileFireCooldownSeconds;
+
+    if (m_pManager)
+    {
+        m_pManager->PlaySoundEX("Assets/Audio/SE_Shoot.mp3", false, 0.3f);
+    }
 }
 
 void SceneGame::UpdateMissiles(float deltaSeconds)
