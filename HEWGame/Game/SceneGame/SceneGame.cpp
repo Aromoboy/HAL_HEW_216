@@ -483,9 +483,7 @@ bool SceneGame::Load(Core::Input& input)
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
     m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig(); // Source of truth: gameplay.cfg [camera.rig].
     m_cameraRigSettings = cameraSettings;
-    const SceneGameConfig::MissileSettings missileSettings = SceneGameConfig::LoadMissileSettings();
-    m_missileScale = missileSettings.scale;
-    m_missileRotationOffset = missileSettings.rotationOffset;
+    m_missileSettings = SceneGameConfig::LoadMissileSettings();
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1067,11 +1065,11 @@ void SceneGame::FireMissile()
     constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;
 
-    const float missileYaw = std::atan2(forward.y, forward.x) + m_missileRotationOffset;
+    const float missileYaw = std::atan2(forward.y, forward.x) + m_missileSettings.rotationOffset;
     Transform missileTransform{};
     missileTransform.position = playerTransform.position;
     missileTransform.rotation = float3{ 0.0f, 0.0f, missileYaw };
-    missileTransform.scale = m_missileScale;
+    missileTransform.scale = m_missileSettings.scale;
     const float3 spawnLocalOffset = m_playerSpawnTransform.missileSpawnOffset;
     const float cosYaw = std::cos(yaw);
     const float sinYaw = std::sin(yaw);
@@ -1085,25 +1083,23 @@ void SceneGame::FireMissile()
     missileTransform.position.z += spawnWorldOffset.z;
 
     Physics::BoxColliderComponent collider{};
-    constexpr float kMissileHalfWidth = 0.2f;
-    constexpr float kMissileHalfHeight = 0.1f;
-    collider.AddBox(kMissileHalfWidth, kMissileHalfHeight);
+    collider.AddBox(m_missileSettings.halfWidth, m_missileSettings.halfHeight);
 
     Physics::Box2DShapeConfig shapeConfig{};
     shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
     shapeConfig.bodyType = b2_dynamicBody;
-    shapeConfig.fixedRotation = true;
-    shapeConfig.allowRotation = false;
-    shapeConfig.linearDamping = 0.0f;
-    shapeConfig.angularDamping = 0.0f;
-    shapeConfig.density = 1.0f;
-    shapeConfig.friction = 0.1f;
-    shapeConfig.restitution = 0.0f;
+    shapeConfig.fixedRotation = m_missileSettings.fixedRotation;
+    shapeConfig.allowRotation = !m_missileSettings.fixedRotation;
+    shapeConfig.linearDamping = m_missileSettings.linearDamping;
+    shapeConfig.angularDamping = m_missileSettings.angularDamping;
+    shapeConfig.density = m_missileSettings.density;
+    shapeConfig.friction = m_missileSettings.friction;
+    shapeConfig.restitution = m_missileSettings.restitution;
 
     auto missile = std::make_shared<Entities::PhysicalEntity>(
         missileTransform,
         shapeConfig,
-        Collision::CollisionLayer::Default,
+        m_missileSettings.collisionLayer.value_or(Collision::CollisionLayer::Default),
         m_missileModel,
         nullptr,
         Core::UpdatePhase::Gameplay,
@@ -1113,7 +1109,7 @@ void SceneGame::FireMissile()
     missile->SetBoxColliderComponent(collider);
 
     m_physicsBinder->RegisterPhysicsBody(*missile);
-    missile->SetGravityScale(0.0f);
+    missile->SetGravityScale(m_missileSettings.gravityScale);
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
 
     m_drawSystem->RegisterRenderable(*missile);

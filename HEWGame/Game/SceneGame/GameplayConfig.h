@@ -24,6 +24,16 @@ namespace GameplayConfig
     inline constexpr const char* kSectionMissileSettings = "missile.settings";
     inline constexpr const char* kMissileKeyScale = "scale";
     inline constexpr const char* kMissileKeyRotationOffset = "rotationOffset";
+    inline constexpr const char* kMissileKeyHalfWidth = "halfWidth";
+    inline constexpr const char* kMissileKeyHalfHeight = "halfHeight";
+    inline constexpr const char* kMissileKeyDensity = "density";
+    inline constexpr const char* kMissileKeyFriction = "friction";
+    inline constexpr const char* kMissileKeyRestitution = "restitution";
+    inline constexpr const char* kMissileKeyFixedRotation = "fixedRotation";
+    inline constexpr const char* kMissileKeyLinearDamping = "linearDamping";
+    inline constexpr const char* kMissileKeyAngularDamping = "angularDamping";
+    inline constexpr const char* kMissileKeyGravityScale = "gravityScale";
+    inline constexpr const char* kMissileKeyCollisionLayer = "collisionLayer";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionSweetsManifest = "sweets.manifest";
