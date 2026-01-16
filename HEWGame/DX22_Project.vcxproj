@@ -72,16 +72,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -253,11 +253,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Entities\PlayerPickupSystem.cpp" />
     <ClCompile Include="Game\GameFlow\GameplayProgression.cpp" />
     <ClCompile Include="Game\GameFlow\PhaseManager.cpp" />
-    <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp" />
-    <ClCompile Include="Game\PowerUp\PowerUpManager.cpp" />
-    <ClCompile Include="Game\PowerUp\PowerUpNode.cpp" />
-    <ClCompile Include="Game\PowerUp\PowerUpRenderer.cpp" />
-    <ClCompile Include="Game\PowerUp\PowerUpTarget.cpp" />
     <ClCompile Include="Game\Rules\GameplayRules.cpp" />
     <ClCompile Include="Game\Rules\GameplayRulesSystem.cpp" />
     <ClCompile Include="Game\Rules\PlayerController.cpp" />
@@ -382,11 +377,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Entities\PlayerPickupSystem.h" />
     <ClInclude Include="Game\GameFlow\GameplayProgression.h" />
     <ClInclude Include="Game\GameFlow\PhaseManager.h" />
-    <ClInclude Include="Game\PowerUp\PowerUpCursor.h" />
-    <ClInclude Include="Game\PowerUp\PowerUpManager.h" />
-    <ClInclude Include="Game\PowerUp\PowerUpNode.h" />
-    <ClInclude Include="Game\PowerUp\PowerUpRenderer.h" />
-    <ClInclude Include="Game\PowerUp\PowerUpTarget.h" />
     <ClInclude Include="Game\Rules\GameplayRules.h" />
     <ClInclude Include="Game\Rules\GameplayRulesSystem.h" />
     <ClInclude Include="Game\Rules\PlayerController.h" />
