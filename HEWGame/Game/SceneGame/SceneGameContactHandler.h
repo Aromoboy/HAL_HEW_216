@@ -29,10 +29,18 @@ public:
         End,
     };
 
+    enum class PlayerContactSource
+    {
+        Meteor,
+        Missile,
+    };
+
     struct PlayerContactEvent
     {
         std::weak_ptr<MeteorsSpace::ActiveMeteors> meteor{};
+        Entities::PhysicalEntity* other = nullptr;
         PlayerContactType type = PlayerContactType::Begin;
+        PlayerContactSource source = PlayerContactSource::Meteor;
     };
 
     struct MissileContactEvent

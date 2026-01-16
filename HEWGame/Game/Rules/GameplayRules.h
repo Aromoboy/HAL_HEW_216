@@ -18,12 +18,16 @@ namespace GameplayRules
         float peakTowerHeight = 0.0f;
         int lastScoreLogValue = 0;
         float lastScoreLogMultiplier = 0.0f;
+        float lastScoreLogTimeMultiplier = 0.0f;
+        int lastScoreLogKillScore = 0;
     };
 
     struct ScoreInput
     {
         GameFlow::PhaseManager* phaseManager = nullptr;
         float baseScorePerMeter = 0.0f;
+        float elapsedSeconds = 0.0f;
+        int killScore = 0;
         LogFn log;
         const char* logPrefix = "";
     };

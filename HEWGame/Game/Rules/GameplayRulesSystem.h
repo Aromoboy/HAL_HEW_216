@@ -49,6 +49,7 @@ public:
     void ResetSession();
     void AddPendingBonuses(std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses);
     UpdateResult Update(const UpdateInput& input);
+    void AddKillScore(int killScore);
 
     int ComputeScore(GameFlow::PhaseManager* phaseManager);
     int ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight);
@@ -80,7 +81,10 @@ private:
     float m_maxTowerHeight = 0.0f;
     int m_phaseUpCount = 0;
     bool m_isGameClear = false;
+    int m_killScore = 0;
 
     int m_lastScoreLogValue = std::numeric_limits<int>::min();
     float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
+    float m_lastScoreLogTimeMultiplier = std::numeric_limits<float>::quiet_NaN();
+    int m_lastScoreLogKillScore = std::numeric_limits<int>::min();
 };
