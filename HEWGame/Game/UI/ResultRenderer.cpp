@@ -354,7 +354,12 @@ std::string ResultRenderer::BuildHudString(const ResultDisplayData& data) const
 
     stream << std::fixed << std::setprecision(0);
     stream << "Score " << data.score;
-    stream << "  (Enter=Restart  E=FireMissile  R=Retry)";
+    stream << "  (Enter=Restart";
+    if (data.showFireMissileHint)
+    {
+        stream << "  E=FireMissile";
+    }
+    stream << "  R=Retry)";
     stream << "\nSweets " << data.sweetsCount;
     return stream.str();
 }

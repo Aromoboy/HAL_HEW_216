@@ -162,6 +162,7 @@ protected:
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
     std::shared_ptr<Render::Model> m_missileModel;
+    bool m_fireMissileHintEnabled = false;
     struct MissileInstance
     {
         std::shared_ptr<Entities::PhysicalEntity> entity;
