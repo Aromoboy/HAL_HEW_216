@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -123,6 +124,7 @@ namespace MeteorsSpace
             m_glueTuning.maxSpeed = tuning.creamGlueMaxSpeed;
             m_glueTuning.breakForce = tuning.creamGlueBreakForce;
             m_glueTuning.breakImpulse = tuning.creamGlueBreakImpulse;
+            m_meteorRepulseImpulse = tuning.meteorRepulseImpulse;
         }
     }
 
@@ -149,6 +151,36 @@ namespace MeteorsSpace
         if (meteorsB)
         {
             UpdateContactStateBegin(meteorsB, a);
+        }
+
+        if (meteorsA && meteorsB && m_meteorRepulseImpulse > 0.0f)
+        {
+            if (!meteorsA->IsPendingDestroy()
+                && !meteorsB->IsPendingDestroy()
+                && !IsCarriedMeteors(meteorsA)
+                && !IsCarriedMeteors(meteorsB))
+            {
+                const b2BodyId bodyA = meteorsA->GetBox2DBodyId();
+                const b2BodyId bodyB = meteorsB->GetBox2DBodyId();
+                if (b2Body_IsValid(bodyA) && b2Body_IsValid(bodyB))
+                {
+                    const b2Vec2 posA = b2Body_GetPosition(bodyA);
+                    const b2Vec2 posB = b2Body_GetPosition(bodyB);
+                    const b2Vec2 delta = b2Sub(posB, posA);
+                    const float distanceSquared = b2LengthSquared(delta);
+                    if (std::isfinite(distanceSquared)
+                        && distanceSquared > std::numeric_limits<float>::epsilon())
+                    {
+                        const b2Vec2 direction = b2Normalize(delta);
+                        if (std::isfinite(direction.x) && std::isfinite(direction.y))
+                        {
+                            const b2Vec2 impulse = b2MulSV(m_meteorRepulseImpulse, direction);
+                            b2Body_ApplyLinearImpulseToCenter(bodyA, b2MulSV(-1.0f, impulse), true);
+                            b2Body_ApplyLinearImpulseToCenter(bodyB, impulse, true);
+                        }
+                    }
+                }
+            }
         }
 
         if (meteorsA && meteorsB && !IsCreamTag(meteorsA->GetTag()) && !IsCreamTag(meteorsB->GetTag()))
@@ -769,6 +801,7 @@ namespace MeteorsSpace
     {
         m_contactStates.clear();
         m_hasMeteorsContact.clear();
+        m_carriedMeteors.clear();
         m_pendingGlue.clear();
         m_glueCooldown.clear();
     }
@@ -1015,6 +1048,11 @@ namespace MeteorsSpace
         if (newState == MeteorsState::Carried && meteors)
         {
             m_hasMeteorsContact.erase(meteors);
+            m_carriedMeteors.insert(meteors);
+        }
+        else if (meteors)
+        {
+            m_carriedMeteors.erase(meteors);
         }
     }
 
@@ -1075,6 +1113,16 @@ namespace MeteorsSpace
         }
 
         return it->second > 0.0f;
+    }
+
+    bool MeteorsContacts::IsCarriedMeteors(const ActiveMeteors* meteors) const
+    {
+        if (!meteors)
+        {
+            return false;
+        }
+
+        return m_carriedMeteors.find(const_cast<ActiveMeteors*>(meteors)) != m_carriedMeteors.end();
     }
 
     MeteorsContacts::GlueDebugSnapshot MeteorsContacts::BuildDebugSnapshot() const

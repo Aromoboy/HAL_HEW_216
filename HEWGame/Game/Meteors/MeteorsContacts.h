@@ -170,13 +170,16 @@ namespace MeteorsSpace
         void RemovePendingGlueForMeteors(ActiveMeteors* meteors);
         void TickGlueCooldowns(float dt);
         bool IsGlueCooldownActive(const ActiveMeteors& fruit) const;
+        bool IsCarriedMeteors(const ActiveMeteors* meteors) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         GlueTuning m_glueTuning{};
+        float m_meteorRepulseImpulse{ 0.0f };
         mutable GlueStats m_glueStats{};
         std::unordered_map<ActiveMeteors*, ContactState> m_contactStates;
         std::unordered_set<ActiveMeteors*> m_hasMeteorsContact;
+        std::unordered_set<ActiveMeteors*> m_carriedMeteors;
         std::unordered_map<b2ContactId, PendingGlue, ContactIdHash, ContactIdEqual> m_pendingGlue;
         std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
         std::unordered_map<ActiveMeteors*, std::unordered_set<ActiveMeteors*>> m_fruitToCreams;
