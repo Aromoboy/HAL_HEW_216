@@ -52,6 +52,7 @@ namespace
             return out;
         }
 
+        constexpr float kWrapMarginPx = 0.5f;
         const float screenAspect = screenWidth / screenHeight;
         const float textureAspect = textureWidth / textureHeight;
         const float scrollWorld = scrollOffset * parallaxFactor;
@@ -86,7 +87,7 @@ namespace
             if (wrapSampling)
             {
                 baseOffsetPx = clampedBaseOffset01 * textureWidth;
-                offsetPx = WrapOffset(scrollPx + baseOffsetPx, textureWidth);
+                offsetPx = WrapOffset(scrollPx + baseOffsetPx + kWrapMarginPx, textureWidth);
                 u0 = offsetPx / textureWidth;
             }
             else
@@ -118,7 +119,7 @@ namespace
             if (wrapSampling)
             {
                 baseOffsetPx = clampedBaseOffset01 * textureHeight;
-                offsetPx = WrapOffset(scrollPx + baseOffsetPx, textureHeight);
+                offsetPx = WrapOffset(scrollPx + baseOffsetPx + kWrapMarginPx, textureHeight);
                 v0 = offsetPx / textureHeight;
             }
             else
