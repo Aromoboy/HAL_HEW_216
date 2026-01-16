@@ -2,6 +2,7 @@
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
+#include "Systems/Physics/CollisionLayer.h"
 #include <DirectXMath.h>
 #include <optional>
 #include <string>
@@ -32,6 +33,16 @@ namespace SceneGameConfig
     {
         float3 scale{ 1.0f, 1.0f, 1.0f };
         float rotationOffset = 0.0f;
+        float halfWidth = 0.2f;
+        float halfHeight = 0.1f;
+        float density = 1.0f;
+        float friction = 0.1f;
+        float restitution = 0.0f;
+        bool fixedRotation = true;
+        float linearDamping = 0.0f;
+        float angularDamping = 0.0f;
+        float gravityScale = 0.0f;
+        std::optional<Collision::CollisionLayer> collisionLayer = std::nullopt;
         bool loadedFromFile = false;
     };
 

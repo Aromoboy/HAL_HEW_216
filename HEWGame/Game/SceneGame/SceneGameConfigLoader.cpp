@@ -2,6 +2,7 @@
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
+#include "Systems/Physics/CollisionLayer.h"
 
 #include <algorithm>
 #include <cctype>
@@ -113,6 +114,61 @@ namespace
         {
             return std::nullopt;
         }
+    }
+
+    std::optional<Collision::CollisionLayer> ParseCollisionLayerToken(const std::string& value)
+    {
+        const std::string lowered = ToLowerCopy(TrimWhitespace(value));
+        if (lowered.empty())
+        {
+            return std::nullopt;
+        }
+
+        if (lowered == "default")
+        {
+            return Collision::CollisionLayer::Default;
+        }
+
+        if (lowered == "player")
+        {
+            return Collision::CollisionLayer::Player;
+        }
+
+        if (lowered == "floor")
+        {
+            return Collision::CollisionLayer::Floor;
+        }
+
+        if (lowered == "stage")
+        {
+            return Collision::CollisionLayer::Stage;
+        }
+
+        if (lowered == "sweets")
+        {
+            return Collision::CollisionLayer::Sweets;
+        }
+
+        if (auto parsed = TryParseIntToken(lowered))
+        {
+            switch (*parsed)
+            {
+            case 0:
+                return Collision::CollisionLayer::Default;
+            case 1:
+                return Collision::CollisionLayer::Player;
+            case 2:
+                return Collision::CollisionLayer::Floor;
+            case 3:
+                return Collision::CollisionLayer::Stage;
+            case 4:
+                return Collision::CollisionLayer::Sweets;
+            default:
+                return std::nullopt;
+            }
+        }
+
+        return std::nullopt;
     }
 
     std::optional<float3> ParseFloat3Token(const std::string& value)
@@ -2305,6 +2361,157 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kMissileKeyHalfWidth)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.halfWidth = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse halfWidth line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyHalfHeight)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.halfHeight = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse halfHeight line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyDensity)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.density = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse density line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyFriction)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.friction = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse friction line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyRestitution)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.restitution = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse restitution line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyFixedRotation)
+            {
+                bool parsedBool = false;
+                if (ParseBool(value, parsedBool))
+                {
+                    settings.fixedRotation = parsedBool;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse fixedRotation line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyLinearDamping)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.linearDamping = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse linearDamping line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyAngularDamping)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.angularDamping = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse angularDamping line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyGravityScale)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.gravityScale = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse gravityScale line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kMissileKeyCollisionLayer)
+            {
+                if (auto parsed = ParseCollisionLayerToken(value))
+                {
+                    settings.collisionLayer = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse collisionLayer line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -2322,7 +2529,26 @@ namespace SceneGameConfig
             << "' loaded=" << std::boolalpha << settings.loadedFromFile
             << " parsedFields=" << parsedFields
             << " scale=(" << settings.scale.x << ',' << settings.scale.y << ',' << settings.scale.z << ")"
-            << " rotationOffset=" << settings.rotationOffset << "\n";
+            << " rotationOffset=" << settings.rotationOffset
+            << " halfWidth=" << settings.halfWidth
+            << " halfHeight=" << settings.halfHeight
+            << " density=" << settings.density
+            << " friction=" << settings.friction
+            << " restitution=" << settings.restitution
+            << " fixedRotation=" << settings.fixedRotation
+            << " linearDamping=" << settings.linearDamping
+            << " angularDamping=" << settings.angularDamping
+            << " gravityScale=" << settings.gravityScale
+            << " collisionLayer=";
+        if (settings.collisionLayer)
+        {
+            oss << static_cast<int>(*settings.collisionLayer);
+        }
+        else
+        {
+            oss << "default";
+        }
+        oss << "\n";
         DebugTrace(oss.str());
 
         return settings;
