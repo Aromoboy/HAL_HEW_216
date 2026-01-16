@@ -953,6 +953,12 @@ namespace MeteorsSpace
         m_cameraMaxY = std::max(minY, maxY);
     }
 
+    void MeteorsSpawner::SetPlayerWorldPosition(const float3& position)
+    {
+        m_cachedPlayerPosition = position;
+        m_hasCachedPlayerPosition = true;
+    }
+
     void MeteorsSpawner::NotifyPhaseChanged(int newPhase)
     {
         m_currentPhase = std::max(0, newPhase);
@@ -1569,16 +1575,13 @@ namespace MeteorsSpace
             cameraExtent = std::sqrt((halfWidth * halfWidth) + (halfHeight * halfHeight));
         }
 
-        float radiusMargin = std::max(0.0f, spawnRadius);
-        if (radiusMargin <= 0.0f && m_spawnCameraOffset > 0.0f)
-        {
-            radiusMargin = m_spawnCameraOffset;
-        }
-
+        const float radiusMargin = std::max(0.0f, std::max(spawnRadius, m_spawnCameraOffset));
         const float ringRadiusBase = cameraExtent + radiusMargin;
         const float jitter = std::max(0.0f, spawnRadiusJitter);
+        const float ySpread = jitter;
         std::uniform_real_distribution<float> angleDist(0.0f, 6.28318530718f);
         std::uniform_real_distribution<float> jitterDist(-jitter, jitter);
+        std::uniform_real_distribution<float> ySpreadDist(-ySpread, ySpread);
 
         const auto isTooCloseToLiveMeteors = [&](const float3& candidate)
         {
@@ -1653,16 +1656,31 @@ namespace MeteorsSpace
             return false;
         };
 
+        const auto isTooCloseToPlayer = [&](const float3& candidate)
+        {
+            if (!m_hasCachedPlayerPosition || !(spawnMinSeparation > 0.0f))
+            {
+                return false;
+            }
+
+            const float dx = candidate.x - m_cachedPlayerPosition.x;
+            const float dy = candidate.y - m_cachedPlayerPosition.y;
+            const float dz = candidate.z - m_cachedPlayerPosition.z;
+            const float distanceSq = (dx * dx) + (dy * dy) + (dz * dz);
+            const float minSeparationSq = spawnMinSeparation * spawnMinSeparation;
+            return distanceSq < minSeparationSq;
+        };
+
         float3 candidate = originSelection.origin;
         for (int attempt = 0; attempt < kSpawnPositionAttempts; ++attempt)
         {
             const float radius = std::max(0.0f, ringRadiusBase + jitterDist(m_random));
             const float angle = angleDist(m_random);
             candidate.x = cameraCenter.x + (std::cos(angle) * radius);
-            candidate.y = cameraCenter.y + (std::sin(angle) * radius) + m_spawnHeightOffset;
+            candidate.y = cameraCenter.y + (std::sin(angle) * radius) + m_spawnHeightOffset + ySpreadDist(m_random);
             candidate.z = originSelection.origin.z;
 
-            if (!isTooCloseToLiveMeteors(candidate))
+            if (!isTooCloseToLiveMeteors(candidate) && !isTooCloseToPlayer(candidate))
             {
                 break;
             }

@@ -113,6 +113,26 @@ namespace
             return t * t * (3.0f - 2.0f * t);
         }
 
+        int ResolveKillScore(const std::optional<MeteorsSpace::MeteorsType>& meteorsType)
+        {
+            if (!meteorsType)
+            {
+                return 0;
+            }
+
+            switch (*meteorsType)
+            {
+            case MeteorsSpace::MeteorsType::Mercury:
+                return 300;
+            case MeteorsSpace::MeteorsType::Meteor:
+                return 200;
+            case MeteorsSpace::MeteorsType::Meteorite:
+                return 100;
+            }
+
+            return 0;
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -989,12 +1009,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
         if (const auto contact = m_contactHandler.ConsumePlayerContact())
         {
-            if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+            int damage = 0;
+            switch (contact->source)
             {
-                int damage = 0;
-                if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
+            case SceneGameContactHandler::PlayerContactSource::Meteor:
+                if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
                 {
-                    const auto meteors = contact->meteor.lock();
+                    auto meteors = contact->meteor.lock();
+                    if (!meteors && m_meteorsManager && contact->other)
+                    {
+                        meteors = m_meteorsManager->FindByEntity(contact->other);
+                    }
                     if (meteors)
                     {
                         m_pendingMeteorRemovals.push_back(meteors);
@@ -1028,7 +1053,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         m_gameplayRules.AddKillScore(killScore);
                     }
                 }
-                else if (contact->source == SceneGameContactHandler::PlayerContactSource::Missile)
+                break;
+            case SceneGameContactHandler::PlayerContactSource::Missile:
+                if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
                 {
                     if (contact->other)
                     {
@@ -1039,70 +1066,70 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                     }
                     damage = 4;
                 }
+                break;
+            }
 
-                if (damage > 0 && !m_playerInvulnerable)
-                {
-                    applyDamage(damage);
-                    startInvuln();
-                }
+            if (damage > 0 && !m_playerInvulnerable)
+            {
+                applyDamage(damage);
+                startInvuln();
             }
         }
 
-    if (m_playerInvulnerable)
-    {
-        m_playerInvulnSeconds = std::max(0.0f, m_playerInvulnSeconds - deltaTime);
-        if (m_playerInvulnSeconds <= 0.0f)
+        if (m_playerInvulnerable)
         {
-            m_playerInvulnerable = false;
-            m_playerBlinkTimer = 0.0f;
-            m_playerBlinkAlpha = 1.0f;
+            m_playerInvulnSeconds = std::max(0.0f, m_playerInvulnSeconds - deltaTime);
+            if (m_playerInvulnSeconds <= 0.0f)
+            {
+                m_playerInvulnerable = false;
+                m_playerBlinkTimer = 0.0f;
+                m_playerBlinkAlpha = 1.0f;
+            }
+            else
+            {
+                constexpr float kBlinkSpeed = 10.0f;
+                m_playerBlinkTimer += deltaTime;
+                const float pulse = std::sin(m_playerBlinkTimer * kBlinkSpeed) * 0.5f + 0.5f;
+                m_playerBlinkAlpha = Lerp(0.35f, 1.0f, pulse);
+            }
         }
         else
         {
-            constexpr float kBlinkIntervalSeconds = 0.1f;
-            m_playerBlinkTimer += deltaTime;
-            while (m_playerBlinkTimer >= kBlinkIntervalSeconds)
+            m_playerBlinkAlpha = 1.0f;
+        }
+
+
+        if (player)
+        {
+            player->SetRenderAlpha(m_playerBlinkAlpha);
+            player->SetInvulnerable(m_playerInvulnerable);
+        }
+
+        m_playerController.UpdatePlayerBounds({
+            player.get(),
+            m_gameCamera.get(),
+            m_meteorsManager.get(),
+            ctx.dt
+        });
+        if (m_meteorsManager)
+        {
+            float screenMinX = 0.0f;
+            float screenMaxX = 0.0f;
+            float screenMinY = 0.0f;
+            float screenMaxY = 0.0f;
+            if (m_playerController.TryGetCachedPlayerBounds(screenMinX, screenMaxX, screenMinY, screenMaxY))
             {
-                m_playerBlinkTimer -= kBlinkIntervalSeconds;
-                m_playerBlinkAlpha = (m_playerBlinkAlpha <= 0.35f) ? 1.0f : 0.35f;
+                m_meteorsManager->SetCameraBounds(screenMinX, screenMaxX, screenMinY, screenMaxY);
             }
         }
-    }
-    else
-    {
-        m_playerBlinkAlpha = 1.0f;
-    }
-
-    if (player)
-    {
-        player->SetRenderAlpha(m_playerBlinkAlpha);
-        player->SetInvulnerable(m_playerInvulnerable);
-    }
-
-    m_playerController.UpdatePlayerBounds({
-        player.get(),
-        m_gameCamera.get(),
-        m_meteorsManager.get(),
-        ctx.dt
-    });
-    if (m_meteorsManager)
-    {
-        float screenMinX = 0.0f;
-        float screenMaxX = 0.0f;
-        float screenMinY = 0.0f;
-        float screenMaxY = 0.0f;
-        if (m_playerController.TryGetCachedPlayerBounds(screenMinX, screenMaxX, screenMinY, screenMaxY))
+        if (player)
         {
-            m_meteorsManager->SetCameraBounds(screenMinX, screenMaxX, screenMinY, screenMaxY);
-        }
-    }
-    if (player)
-    {
-        if (const auto wrapEvent = player->ConsumeWrapEvent())
-        {
-            if (wrapEvent->wrappedY)
+            if (const auto wrapEvent = player->ConsumeWrapEvent())
             {
-                ApplyPlayerWrapDeltaY(wrapEvent->deltaY);
+                if (wrapEvent->wrappedY)
+                {
+                    ApplyPlayerWrapDeltaY(wrapEvent->deltaY);
+                }
             }
         }
     }
