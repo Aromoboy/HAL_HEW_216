@@ -478,6 +478,13 @@ bool SceneGame::Load(Core::Input& input)
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
+    if (m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            ConfigureInitialFrameClamp(physicsMachine->GetTuningParameters().maxStepDt);
+        }
+    }
     m_drawSystem = std::move(composition->drawSystem);
     m_meteorsManager = std::move(composition->meteorsManager);
     m_uiManager = std::move(composition->uiManager);
@@ -1038,7 +1045,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 #endif
 
-    float deltaTime = ctx.timer.DeltaTime();
+    float deltaTime = ctx.dt;
 
     if (m_stageState == StageState::Playing)
     {
