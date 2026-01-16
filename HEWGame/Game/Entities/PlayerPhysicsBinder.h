@@ -2,6 +2,8 @@
 
 namespace Entities
 {
+    class Player;
+
     class PlayerPhysicsBinder
     {
     public:
@@ -9,6 +11,7 @@ namespace Entities
 
         bool IsKinematic() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
+        void ClampScreenBounds(Player& player);
 
     private:
         bool m_isKinematic = false;
