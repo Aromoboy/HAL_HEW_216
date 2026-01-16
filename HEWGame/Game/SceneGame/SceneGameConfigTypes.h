@@ -21,6 +21,7 @@ namespace SceneGameConfig
     struct PlayerSpawnTransform
     {
         Transform transform{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
+        float3 missileSpawnOffset{ 1.5f, 0.0f, 0.0f };
         bool loadedFromFile = false;
         bool rotationFromDegrees = false;
     };

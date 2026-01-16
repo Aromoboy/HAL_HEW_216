@@ -2194,6 +2194,14 @@ namespace SceneGameConfig
                     ++parsedFields;
                 }
             }
+            else if (key == "missileSpawnOffset")
+            {
+                if (parseFloat3(value, parsed, key, lineNumber))
+                {
+                    result.missileSpawnOffset = parsed;
+                    ++parsedFields;
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -2212,6 +2220,7 @@ namespace SceneGameConfig
             << " position=(" << result.transform.position.x << ',' << result.transform.position.y << ',' << result.transform.position.z << ')'
             << " rotationRad=(" << result.transform.rotation.x << ',' << result.transform.rotation.y << ',' << result.transform.rotation.z << ')'
             << " scale=(" << result.transform.scale.x << ',' << result.transform.scale.y << ',' << result.transform.scale.z << ')'
+            << " missileSpawnOffset=(" << result.missileSpawnOffset.x << ',' << result.missileSpawnOffset.y << ',' << result.missileSpawnOffset.z << ')'
             << " rotationSource=" << (result.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
         DebugTrace(oss.str());
 

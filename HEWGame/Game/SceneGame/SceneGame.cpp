@@ -1037,7 +1037,6 @@ void SceneGame::FireMissile()
     }
 
     const Transform playerTransform = player->GetTransform();
-    constexpr float kSpawnOffset = 1.5f;
     const float yaw = ResolvePlayerYaw(playerTransform);
     const float3 forward = ForwardFromYaw(yaw);
     constexpr float kMissileSpeed = 40.0f;
@@ -1045,8 +1044,17 @@ void SceneGame::FireMissile()
 
     Transform missileTransform = playerTransform;
     missileTransform.scale = m_missileScale;
-    missileTransform.position.x += forward.x * kSpawnOffset;
-    missileTransform.position.y += forward.y * kSpawnOffset;
+    const float3 spawnLocalOffset = m_playerSpawnTransform.missileSpawnOffset;
+    const float cosYaw = std::cos(yaw);
+    const float sinYaw = std::sin(yaw);
+    const float3 spawnWorldOffset{
+        spawnLocalOffset.x * cosYaw - spawnLocalOffset.y * sinYaw,
+        spawnLocalOffset.x * sinYaw + spawnLocalOffset.y * cosYaw,
+        spawnLocalOffset.z
+    };
+    missileTransform.position.x += spawnWorldOffset.x;
+    missileTransform.position.y += spawnWorldOffset.y;
+    missileTransform.position.z += spawnWorldOffset.z;
 
     Physics::BoxColliderComponent collider{};
     constexpr float kMissileHalfWidth = 0.2f;
@@ -1089,9 +1097,9 @@ void SceneGame::FireMissile()
         const DirectX::XMFLOAT4 debugColor(1.0f, 0.2f, 0.2f, 0.9f);
         const DirectX::XMFLOAT3 lineStart(playerTransform.position.x, playerTransform.position.y, playerTransform.position.z);
         const DirectX::XMFLOAT3 lineEnd(
-            lineStart.x + forward.x * (kSpawnOffset + kForwardDebugLength),
-            lineStart.y + forward.y * (kSpawnOffset + kForwardDebugLength),
-            lineStart.z + forward.z * (kSpawnOffset + kForwardDebugLength));
+            lineStart.x + spawnWorldOffset.x + forward.x * kForwardDebugLength,
+            lineStart.y + spawnWorldOffset.y + forward.y * kForwardDebugLength,
+            lineStart.z + spawnWorldOffset.z + forward.z * kForwardDebugLength);
         Geometory::AddLine(lineStart, lineEnd, debugColor);
     }
 #endif
