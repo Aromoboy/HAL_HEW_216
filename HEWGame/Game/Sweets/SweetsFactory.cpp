@@ -919,54 +919,20 @@ namespace SweetsSpace
 
         switch (type)
         {
-        case SweetsType::Cream:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
-            return preset;
         case SweetsType::Strawberry:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.24f, 0.24f, 0.24f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.01f, 0.01f, 0.01f } };
+            preset.scale = float3{ 0.3f, 0.3f, 0.3f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.012f, 0.012f, 0.012f } };
             return preset;
         case SweetsType::Blueberry:
             preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.18f, 0.18f, 0.18f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
+            preset.scale = float3{ 0.32f, 0.32f, 0.32f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.014f, 0.014f, 0.014f } };
             return preset;
         case SweetsType::Pineapple:
             preset.spawnWeight = 0.8f;
-            preset.scale = float3{ 0.34f, 0.34f, 0.34f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.01f, 0.016f, 0.01f } };
-            return preset;
-        case SweetsType::Banana:
-            preset.spawnWeight = 0.9f;
-            preset.scale = float3{ 0.32f, 0.32f, 0.32f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.005f, 0.005f, 0.005f } };
-            return preset;
-
-        case SweetsType::Kiwi:
-            preset.spawnWeight = 0.9f;
-            preset.scale = float3{ 0.24f, 0.36f, 0.32f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.008f, 0.008f, 0.008f } };
-            return preset;
-
-        case SweetsType::Mikan:
-            preset.spawnWeight = 0.9f;
-            preset.scale = float3{ 0.24f, 0.28f, 0.32f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Box, float3{ 0.005f, 0.005f, 0.005f } };
-            return preset;
-
-        case SweetsType::Muscat:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
-            return preset;
-
-        case SweetsType::Melon:
-            preset.spawnWeight = 1.0f;
-            preset.scale = float3{ 0.26f, 0.26f, 0.26f };
-            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.003f, 0.003f, 0.003f } };
+            preset.scale = float3{ 0.36f, 0.36f, 0.36f };
+            preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.016f, 0.016f, 0.016f } };
             return preset;
 
         default:

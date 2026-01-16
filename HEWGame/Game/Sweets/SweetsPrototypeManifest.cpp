@@ -113,29 +113,12 @@ namespace SweetsSpace
 
     void SweetsPrototypeManifest::ApplyDefaults()
     {
-        Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx",
-            "Soft-serve inspired cream scoop used for sherbet prototype");
-        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx",
-            "Textured strawberry fruit with visible seeds");
-        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx",
-            "Stylized blueberry fruit with smooth shading");
-        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx",
-            "High-detail pineapple with leafy crown");
-        Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx",
-            "Low-poly curved banana fruit");
-
-        //01/09
-        Register(SweetsType::Kiwi, "Kiwi", "Assets/Model/Kiwi_High.fbx",
-            "Low-poly curved Kiwi fruit");
-
-        Register(SweetsType::Mikan, "Mikan", "Assets/Model/Mikan_high.fbx",
-            "Low-poly curved Mikan fruit");
-
-        Register(SweetsType::Muscat, "Muscat", "Assets/Model/Masukatoo_high.fbx",
-            "Low-poly curved Muscat fruit");
-
-        Register(SweetsType::Melon, "Melon", "Assets/Model/meron_high.fbx",
-            "Low-poly curved Melon fruit");
+        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/Mercury.fbx",
+            "Mercury-inspired meteor sphere with cratered surface");
+        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/meteor.fbx",
+            "Meteor model with jagged rocky silhouette");
+        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/Meteorite.fbx",
+            "Meteorite chunk with uneven, fractured surface");
 
         RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
         RegisterExtraAlias("Fairy", "Player");
@@ -196,12 +179,10 @@ namespace SweetsSpace
 
         const bool loaded = LoadOverridesFromConfig(configPath);
 
-        const std::array<SweetsType, 5> kTypes{
-            SweetsType::Cream,
+        const std::array<SweetsType, 3> kTypes{
             SweetsType::Strawberry,
             SweetsType::Blueberry,
             SweetsType::Pineapple,
-            SweetsType::Banana,
         };
         for (const auto type : kTypes)
         {
@@ -310,15 +291,9 @@ namespace SweetsSpace
             }
             auto mapToSweetsType = [](const std::string& normalized) -> std::optional<SweetsType>
             {
-                if (normalized == NormalizeKey(ToString(SweetsType::Cream)) || normalized == "sherbet") return SweetsType::Cream;
                 if (normalized == NormalizeKey(ToString(SweetsType::Strawberry))) return SweetsType::Strawberry;
                 if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
                 if (normalized == NormalizeKey(ToString(SweetsType::Pineapple))) return SweetsType::Pineapple;
-                if (normalized == NormalizeKey(ToString(SweetsType::Banana))) return SweetsType::Banana;
-                if (normalized == NormalizeKey(ToString(SweetsType::Kiwi))) return SweetsType::Kiwi;
-                if (normalized == NormalizeKey(ToString(SweetsType::Mikan))) return SweetsType::Mikan;
-                if (normalized == NormalizeKey(ToString(SweetsType::Muscat))) return SweetsType::Muscat;
-                if (normalized == NormalizeKey(ToString(SweetsType::Melon))) return SweetsType::Melon;
                 return std::nullopt;
             };
 
@@ -358,15 +333,7 @@ namespace SweetsSpace
                     description = existing ? existing->description : std::string{};
                 }
 
-                const std::string canonicalKey = ToString(*mappedType);
-                const bool isAliasForCream = (*mappedType == SweetsType::Cream) && normalizedKey == "sherbet";
-                const std::string registerKey = isAliasForCream ? canonicalKey : key;
-
-                Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
-                if (isAliasForCream || NormalizeKey(registerKey) != normalizedKey)
-                {
-                    RegisterAlias(*mappedType, key);
-                }
+                Register(*mappedType, key, resolvedPath, description, allowMeshPhysics);
                 touched.insert(*mappedType);
             }
             else if (mappedExtraKey)
@@ -468,28 +435,12 @@ namespace SweetsSpace
     {
         switch (type)
         {
-        case SweetsType::Cream:
-            return "Cream";
         case SweetsType::Strawberry:
             return "Strawberry";
         case SweetsType::Blueberry:
             return "Blueberry";
         case SweetsType::Pineapple:
             return "Pineapple";
-        case SweetsType::Banana:
-            return "Banana";
-
-
-            //01/09
-        case SweetsType::Kiwi:
-            return "Kiwi";
-        case SweetsType::Mikan:
-            return "Mikan";
-        case SweetsType::Muscat:
-            return "Muscat";
-        case SweetsType::Melon:
-            return "Melon";
-
         default:
             return "Unknown";
         }
