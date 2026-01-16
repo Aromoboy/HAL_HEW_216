@@ -244,8 +244,62 @@ namespace
             };
         }
 
+        bool DrawBodyAabbOverlay(const Entities::PhysicalEntity& entity, const Color& color)
+        {
+            b2AABB bodyAabb{};
+            if (!entity.GetBox2DBodyAABB(bodyAabb))
+            {
+                return false;
+            }
+
+            const float3 lower = Entities::PhysicalEntity::ToWorldVector(bodyAabb.lowerBound);
+            const float3 upper = Entities::PhysicalEntity::ToWorldVector(bodyAabb.upperBound);
+            const float2 corners[4] = {
+                float2{ lower.x, lower.y },
+                float2{ upper.x, lower.y },
+                float2{ upper.x, upper.y },
+                float2{ lower.x, upper.y },
+            };
+
+            std::vector<float2> worldCorners;
+            worldCorners.reserve(4u);
+            for (const auto& corner : corners)
+            {
+                worldCorners.push_back(corner);
+            }
+
+            DebugColliderRenderer::DrawHull(worldCorners, entity.GetTransform().position.z, color);
+            return true;
+        }
+
         void DrawColliderOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
+            const auto& colliderComponent = entity.GetBoxColliderComponent();
+            const bool missingColliderComponent = !colliderComponent.has_value();
+            const bool emptyColliderComponent = !missingColliderComponent && colliderComponent->Empty();
+            if (missingColliderComponent || emptyColliderComponent)
+            {
+                static std::unordered_map<const Entities::PhysicalEntity*, int> loggedStates;
+                const int currentState = missingColliderComponent ? 1 : 2;
+                const auto existing = loggedStates.find(&entity);
+                if (existing == loggedStates.end() || existing->second != currentState)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[ColliderDebug] ";
+                    if (missingColliderComponent)
+                    {
+                        oss << "Entity missing BoxColliderComponent";
+                    }
+                    else
+                    {
+                        oss << "Entity BoxColliderComponent empty";
+                    }
+                    oss << " (debug overlay uses Box2D shapes).\n";
+                    DebugTrace(oss.str());
+                    loggedStates[&entity] = currentState;
+                }
+            }
+
             b2Transform bodyTransform{};
             std::vector<b2ShapeId> shapes;
             if (!entity.CollectBox2DShapes(shapes, bodyTransform))
@@ -311,26 +365,8 @@ namespace
 
         void DrawModelBoundsOverlay(const Entities::PhysicalEntity& entity, const Color& color)
         {
-            b2AABB bodyAabb{};
-            if (entity.GetBox2DBodyAABB(bodyAabb))
+            if (DrawBodyAabbOverlay(entity, color))
             {
-                const float3 lower = Entities::PhysicalEntity::ToWorldVector(bodyAabb.lowerBound);
-                const float3 upper = Entities::PhysicalEntity::ToWorldVector(bodyAabb.upperBound);
-                const float2 corners[4] = {
-                    float2{ lower.x, lower.y },
-                    float2{ upper.x, lower.y },
-                    float2{ upper.x, upper.y },
-                    float2{ lower.x, upper.y },
-                };
-
-                std::vector<float2> worldCorners;
-                worldCorners.reserve(4u);
-                for (const auto& corner : corners)
-                {
-                    worldCorners.push_back(corner);
-                }
-
-                DebugColliderRenderer::DrawHull(worldCorners, entity.GetTransform().position.z, color);
                 return;
             }
 
@@ -1416,6 +1452,14 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
     {
         s_loggedCollidersDisabled = false;
         drawEntity(player.get());
+        if (player)
+        {
+            const auto& colliderComponent = player->GetBoxColliderComponent();
+            if (!colliderComponent || colliderComponent->Empty())
+            {
+                DrawBodyAabbOverlay(*player, fixtureColor);
+            }
+        }
 
         if (m_sweetsManager)
         {
