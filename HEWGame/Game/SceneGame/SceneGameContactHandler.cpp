@@ -93,10 +93,12 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             {
                 auto meteors = FindMeteorsByEntity(m_meteorsManager, other);
                 m_playerContact = PlayerContactEvent{ meteors, other, PlayerContactType::Begin, PlayerContactSource::Meteor };
+                return;
             }
             else if (other->GetTag() == "projectile_missile")
             {
                 m_playerContact = PlayerContactEvent{ {}, other, PlayerContactType::Begin, PlayerContactSource::Missile };
+                return;
             }
         },
         [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const Systems::ContactEventInfo& info)
@@ -123,10 +125,12 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             {
                 auto meteors = FindMeteorsByEntity(m_meteorsManager, other);
                 m_playerContact = PlayerContactEvent{ meteors, other, PlayerContactType::End, PlayerContactSource::Meteor };
+                return;
             }
             else if (other->GetTag() == "projectile_missile")
             {
                 m_playerContact = PlayerContactEvent{ {}, other, PlayerContactType::End, PlayerContactSource::Missile };
+                return;
             }
         });
 }
