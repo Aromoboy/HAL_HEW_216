@@ -993,45 +993,69 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
             {
-                std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), contact->meteor);
-                if (m_meteorsManager && meteors)
+                if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
                 {
-                    m_meteorsManager->Erase(meteors);
-                }
-
-                if (!m_playerInvulnerable)
-                {
-                    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
-                    const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->meteor
-                        ? manifest.Resolve(contact->meteor->GetTag())
-                        : std::nullopt;
-
-                    int damage = 1;
-                    if (meteorsType)
+                    std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), contact->other);
+                    if (m_meteorsManager && meteors)
                     {
-                        switch (*meteorsType)
-                        {
-                        case MeteorsSpace::MeteorsType::Mercury:
-                            damage = 3;
-                            break;
-                        case MeteorsSpace::MeteorsType::Meteor:
-                            damage = 2;
-                            break;
-                        case MeteorsSpace::MeteorsType::Meteorite:
-                            damage = 1;
-                            break;
-                        }
+                        m_meteorsManager->Erase(meteors);
                     }
 
-                    m_playerHp -= damage;
-                    m_playerInvulnerable = true;
-                    m_playerInvulnSeconds = 3.0f;
-                    m_playerBlinkTimer = 0.0f;
-                    m_playerBlinkAlpha = 0.35f;
-
-                    if (m_playerHp <= 0)
+                    if (!m_playerInvulnerable)
                     {
-                        SetStageState(StageState::TimeUp);
+                        const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+                        const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->other
+                            ? manifest.Resolve(contact->other->GetTag())
+                            : std::nullopt;
+
+                        int damage = 1;
+                        if (meteorsType)
+                        {
+                            switch (*meteorsType)
+                            {
+                            case MeteorsSpace::MeteorsType::Mercury:
+                                damage = 3;
+                                break;
+                            case MeteorsSpace::MeteorsType::Meteor:
+                                damage = 2;
+                                break;
+                            case MeteorsSpace::MeteorsType::Meteorite:
+                                damage = 1;
+                                break;
+                            }
+                        }
+
+                        m_playerHp -= damage;
+                        m_playerInvulnerable = true;
+                        m_playerInvulnSeconds = 3.0f;
+                        m_playerBlinkTimer = 0.0f;
+                        m_playerBlinkAlpha = 0.35f;
+
+                        if (m_playerHp <= 0)
+                        {
+                            SetStageState(StageState::TimeUp);
+                        }
+                    }
+                }
+                else if (contact->source == SceneGameContactHandler::PlayerContactSource::Missile)
+                {
+                    if (contact->other)
+                    {
+                        RemoveMissileByEntity(contact->other);
+                    }
+
+                    if (!m_playerInvulnerable)
+                    {
+                        m_playerHp -= 4;
+                        m_playerInvulnerable = true;
+                        m_playerInvulnSeconds = 3.0f;
+                        m_playerBlinkTimer = 0.0f;
+                        m_playerBlinkAlpha = 0.35f;
+
+                        if (m_playerHp <= 0)
+                        {
+                            SetStageState(StageState::TimeUp);
+                        }
                     }
                 }
             }
