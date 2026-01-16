@@ -60,8 +60,8 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
             if (context)
             {
-                ID3D11ShaderResourceView* srv = material->GetTexture();
-                context->PSSetShaderResources(0, 1, &srv);
+                material->BindTexture(context, 0);
+                material->BindNormalTexture(context, 1);
             }
         }
         else
@@ -70,6 +70,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
             {
                 ID3D11ShaderResourceView* nullView = nullptr;
                 context->PSSetShaderResources(0, 1, &nullView);
+                context->PSSetShaderResources(1, 1, &nullView);
             }
         }
 
@@ -80,6 +81,7 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
     {
         ID3D11ShaderResourceView* nullView = nullptr;
         context->PSSetShaderResources(0, 1, &nullView);
+        context->PSSetShaderResources(1, 1, &nullView);
     }
 }
 

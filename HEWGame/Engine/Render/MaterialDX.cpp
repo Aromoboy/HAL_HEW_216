@@ -1,9 +1,15 @@
 #include "MaterialDX.h"
-MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_texture)
+#include <utility>
+MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> diffuseTexture)
+	: MaterialDX(diffuse, ambient, specular, diffuseTexture, nullptr)
+{}
+
+MaterialDX::MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> diffuseTexture, std::shared_ptr<Texture2D> normalTexture)
 	: m_diffuse(diffuse)
 	, m_ambient(ambient)
 	, m_specular(specular)
-	, m_texture(a_texture)
+	, m_diffuseTexture(std::move(diffuseTexture))
+	, m_normalTexture(std::move(normalTexture))
 {}
 
 MaterialDX::~MaterialDX()
@@ -14,7 +20,12 @@ MaterialDX::~MaterialDX()
 //	eQb^
 ID3D11ShaderResourceView* MaterialDX::GetTexture() const
 {
-	return m_texture ? m_texture->Get() : nullptr;
+	return m_diffuseTexture ? m_diffuseTexture->Get() : nullptr;
+}
+
+ID3D11ShaderResourceView* MaterialDX::GetNormalTexture() const
+{
+	return m_normalTexture ? m_normalTexture->Get() : nullptr;
 }
 
 void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
@@ -25,6 +36,17 @@ void MaterialDX::BindTexture(ID3D11DeviceContext* context, UINT slot) const
 	}
 
 	ID3D11ShaderResourceView* textureView = GetTexture();
+	context->PSSetShaderResources(slot, 1, &textureView);
+}
+
+void MaterialDX::BindNormalTexture(ID3D11DeviceContext* context, UINT slot) const
+{
+	if (!context)
+	{
+		return;
+	}
+
+	ID3D11ShaderResourceView* textureView = GetNormalTexture();
 	context->PSSetShaderResources(slot, 1, &textureView);
 }
 
@@ -61,7 +83,12 @@ DirectX::XMFLOAT3 MaterialDX::GetSssColor() const
 
 std::shared_ptr<Texture2D> MaterialDX::GetTextureResource() const
 {
-        return m_texture;
+        return m_diffuseTexture;
+}
+
+std::shared_ptr<Texture2D> MaterialDX::GetNormalTextureResource() const
+{
+        return m_normalTexture;
 }
 
 void MaterialDX::SetDiffuse(const DirectX::XMFLOAT4& diffuse)

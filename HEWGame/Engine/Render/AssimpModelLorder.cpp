@@ -161,19 +161,33 @@ namespace
         return aliases;
     }
 
-    std::unordered_map<std::string, std::string> BuildModelTextureOverrideMap()
+    struct ModelTextureOverride
     {
-        std::unordered_map<std::string, std::string> overrides;
+        std::optional<std::string> diffuse;
+        std::optional<std::string> normal;
+    };
 
-        const auto addOverride = [&overrides](const std::string& model, const std::string& texture)
+    std::unordered_map<std::string, ModelTextureOverride> BuildModelTextureOverrideMap()
+    {
+        std::unordered_map<std::string, ModelTextureOverride> overrides;
+
+        const auto addOverride = [&overrides](const std::string& model,
+            std::optional<std::string> diffuse,
+            std::optional<std::string> normal)
         {
-            overrides.emplace(NormalizeForKey(model), texture);
+            overrides.emplace(NormalizeForKey(model), ModelTextureOverride{ std::move(diffuse), std::move(normal) });
         };
 
-        addOverride("base.fbx", "Assets/Texture/texture_diffuse.png");
-        addOverride("assets/model/base.fbx", "Assets/Texture/texture_diffuse.png");
-        addOverride("missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png");
-        addOverride("assets/model/missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png");
+        addOverride("base.fbx", "Assets/Texture/texture_diffuse.png", std::nullopt);
+        addOverride("assets/model/base.fbx", "Assets/Texture/texture_diffuse.png", std::nullopt);
+        addOverride("missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png", std::nullopt);
+        addOverride("assets/model/missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png", std::nullopt);
+        addOverride("mercury.fbx", std::nullopt, "Assets/Texture/MercuryNM.jpg");
+        addOverride("assets/model/mercury.fbx", std::nullopt, "Assets/Texture/MercuryNM.jpg");
+        addOverride("meteorite.fbx", "Assets/Texture/Meteorite_Diffuse.png", "Assets/Texture/Meteorite_Normal.png");
+        addOverride("assets/model/meteorite.fbx", "Assets/Texture/Meteorite_Diffuse.png", "Assets/Texture/Meteorite_Normal.png");
+        addOverride("meteor.fbx", "Assets/Texture/meteor.jpg", std::nullopt);
+        addOverride("assets/model/meteor.fbx", "Assets/Texture/meteor.jpg", std::nullopt);
 
         return overrides;
     }
@@ -192,9 +206,9 @@ namespace
         return std::nullopt;
     }
 
-    std::optional<std::string> ResolveTextureOverrideForModel(const std::string& normalizedModelPath)
+    std::optional<ModelTextureOverride> ResolveTextureOverrideForModel(const std::string& normalizedModelPath)
     {
-        static const std::unordered_map<std::string, std::string> kOverrides = BuildModelTextureOverrideMap();
+        static const std::unordered_map<std::string, ModelTextureOverride> kOverrides = BuildModelTextureOverrideMap();
 
         const auto directIt = kOverrides.find(NormalizeForKey(normalizedModelPath));
         if (directIt != kOverrides.end())
@@ -218,7 +232,10 @@ namespace
 
         if (auto override = ResolveTextureOverrideForModel(normalizedModelPath))
         {
-            return override;
+            if (override->diffuse)
+            {
+                return override->diffuse;
+            }
         }
 
         if (auto fromManifest = ResolveTextureFromManifest(normalizedModelPath))
@@ -269,11 +286,22 @@ namespace
         return normalized.find("missile.fbx") != std::string::npos;
     }
 
+    bool IsMeteorModel(const std::string& modelPath)
+    {
+        const std::string normalized = NormalizeForKey(modelPath);
+        return normalized.find("mercury.fbx") != std::string::npos
+            || normalized.find("meteorite.fbx") != std::string::npos
+            || normalized.find("meteor.fbx") != std::string::npos;
+    }
+
     void PreloadPbrTexturesForModel(const std::string& modelPath, ID3D11Device* device, TextureCache& textureCache)
     {
         if (!IsMissileModel(modelPath))
         {
-            return;
+            if (!IsMeteorModel(modelPath))
+            {
+                return;
+            }
         }
 
         const std::array<const char*, 5> kMissileTextures = {
@@ -284,16 +312,35 @@ namespace
             "Assets/Texture/Air to Air heat seeker_DefaultMaterial_Height_Raw.png"
         };
 
-        for (const char* texturePath : kMissileTextures)
-        {
-            std::error_code ec;
-            if (!std::filesystem::exists(texturePath, ec) || ec)
-            {
-                continue;
-            }
+        const std::array<const char*, 4> kMeteorTextures = {
+            "Assets/Texture/MercuryNM.jpg",
+            "Assets/Texture/Meteorite_Diffuse.png",
+            "Assets/Texture/Meteorite_Normal.png",
+            "Assets/Texture/meteor.jpg"
+        };
 
-            std::wstring wfull(texturePath, texturePath + std::strlen(texturePath));
-            textureCache.Load(NormalizeForKey(texturePath), device, wfull);
+        const auto preloadTextures = [&](const auto& textureList)
+        {
+            for (const char* texturePath : textureList)
+            {
+                std::error_code ec;
+                if (!std::filesystem::exists(texturePath, ec) || ec)
+                {
+                    continue;
+                }
+
+                std::wstring wfull(texturePath, texturePath + std::strlen(texturePath));
+                textureCache.Load(NormalizeForKey(texturePath), device, wfull);
+            }
+        };
+
+        if (IsMissileModel(modelPath))
+        {
+            preloadTextures(kMissileTextures);
+        }
+        else
+        {
+            preloadTextures(kMeteorTextures);
         }
     }
 
@@ -451,7 +498,8 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // マテリアル作成
     auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
-    const bool hasTextureOverride = ResolveTextureOverrideForModel(normalizedPath).has_value();
+    const auto modelOverride = ResolveTextureOverrideForModel(normalizedPath);
+    const bool hasTextureOverride = modelOverride && (modelOverride->diffuse.has_value() || modelOverride->normal.has_value());
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
         aiMesh* mesh = pScene->mMeshes[i];
@@ -711,6 +759,7 @@ AssimpModelLorder::MakeMaterial(
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
     const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
+    const auto modelOverride = ResolveTextureOverrideForModel(modelPathForFallback);
 
     if (!textureLoadingEnabled)
     {
@@ -750,6 +799,7 @@ AssimpModelLorder::MakeMaterial(
 
         // テクスチャ
         std::shared_ptr<Texture2D> texture = nullptr;
+        std::shared_ptr<Texture2D> normalTexture = nullptr;
         if (textureLoadingEnabled)
         {
             const auto loadTexture = [&](const std::string& fullPath)
@@ -759,11 +809,18 @@ AssimpModelLorder::MakeMaterial(
                 return textureCache.Load(normalizedKey, device, wfull);
             };
 
-            if (auto overridePath = ResolveTextureOverrideForModel(modelPathForFallback))
+            if (modelOverride && modelOverride->diffuse)
             {
                 DebugLog::DebugMessage(
-                    std::string("[Material] モデル別オーバーライドテクスチャを優先適用: '") + *overridePath + "'");
-                texture = loadTexture(*overridePath);
+                    std::string("[Material] モデル別オーバーライドテクスチャを優先適用: '") + *modelOverride->diffuse + "'");
+                texture = loadTexture(*modelOverride->diffuse);
+            }
+
+            if (modelOverride && modelOverride->normal)
+            {
+                DebugLog::DebugMessage(
+                    std::string("[Material] モデル別オーバーライド法線テクスチャを優先適用: '") + *modelOverride->normal + "'");
+                normalTexture = loadTexture(*modelOverride->normal);
             }
 
             aiString texPath;
@@ -914,6 +971,104 @@ AssimpModelLorder::MakeMaterial(
                     }
                 }
             }
+
+            const auto loadNormalFromAssimp = [&](aiTextureType type, const std::string& label)
+            {
+                aiString normalPath;
+                if (pScene->mMaterials[i]->GetTexture(type, 0, &normalPath) != AI_SUCCESS)
+                {
+                    return std::shared_ptr<Texture2D>(nullptr);
+                }
+
+                std::string texFile = NormalizeSeparators(normalPath.C_Str());
+                std::string textureDirectory = NormalizeSeparators(directory);
+                bool skipTextureLoading = false;
+
+                const auto hasParentTraversal = [](const std::string& value)
+                {
+                    return value.find("..\\") != std::string::npos || value.find("../") != std::string::npos;
+                };
+
+                const bool isAbsoluteWindowsPath = texFile.size() >= 3
+                    && std::isalpha(static_cast<unsigned char>(texFile[0]))
+                    && texFile[1] == ':'
+                    && (texFile[2] == '\\' || texFile[2] == '/');
+
+                const bool needsSanitize =
+                    std::filesystem::path(texFile).is_absolute()
+                    || isAbsoluteWindowsPath
+                    || hasParentTraversal(texFile);
+
+                std::string fileName = std::filesystem::path(texFile).filename().string();
+
+                if (needsSanitize)
+                {
+                    const std::string sanitizedPath = "Assets/Texture/" + fileName;
+
+                    DebugLog::DebugMessage(
+                        std::string("[Material] 法線テクスチャパスを正規化 '") + texFile +
+                        "' -> '" + sanitizedPath + "'");
+
+                    if (std::filesystem::exists(sanitizedPath))
+                    {
+                        texFile = fileName;
+                        textureDirectory = "Assets/Texture/";
+                    }
+                    else
+                    {
+                        skipTextureLoading = true;
+                    }
+                }
+
+                if (!texFile.empty() && texFile[0] == '*')
+                {
+                    const int texIndex = std::atoi(texFile.c_str() + 1);
+                    if (texIndex >= 0 && static_cast<unsigned int>(texIndex) < pScene->mNumTextures)
+                    {
+                        const aiTexture* embedded = pScene->mTextures[texIndex];
+                        const uint8_t* texData = reinterpret_cast<const uint8_t*>(embedded->pcData);
+                        const size_t byteSize = embedded->mHeight == 0
+                            ? static_cast<size_t>(embedded->mWidth)
+                            : static_cast<size_t>(embedded->mWidth) * static_cast<size_t>(embedded->mHeight) * sizeof(aiTexel);
+                        const std::string cacheKey = NormalizeForKey(textureDirectory + fileName);
+                        return textureCache.LoadFromMemory(cacheKey, device, texData, byteSize, embedded->mWidth, embedded->mHeight);
+                    }
+                }
+                else
+                {
+                    const std::filesystem::path combinedPath = std::filesystem::path(textureDirectory) / texFile;
+                    std::string full = NormalizeSeparators(combinedPath.string());
+
+                    DebugLog::DebugMessage(
+                        std::string("[AssimpModelLoader][CHECKPOINT C] マテリアル=") + std::to_string(i)
+                        + " " + label + "='" + texFile
+                        + "' modelDir=" + directory
+                        + " fullPath=" + full
+                    );
+
+                    std::error_code existEc;
+                    const bool textureExists = std::filesystem::exists(full, existEc);
+                    const bool hasNonAscii = ContainsNonAscii(texFile);
+                    if (skipTextureLoading || hasNonAscii || !textureExists || existEc)
+                    {
+                        return std::shared_ptr<Texture2D>(nullptr);
+                    }
+
+                    return loadTexture(full);
+                }
+
+                return std::shared_ptr<Texture2D>(nullptr);
+            };
+
+            if (!normalTexture)
+            {
+                normalTexture = loadNormalFromAssimp(aiTextureType_NORMALS, "normal");
+            }
+            if (!normalTexture)
+            {
+                normalTexture = loadNormalFromAssimp(aiTextureType_HEIGHT, "height");
+            }
+
             if (!texture)
             {
                 if (auto fallback = ResolveFallbackTexture(modelPathForFallback))
@@ -926,7 +1081,7 @@ AssimpModelLorder::MakeMaterial(
             }
         }
 
-        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
+        auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture, normalTexture);
         materials[i] = std::move(material);
     }
 
