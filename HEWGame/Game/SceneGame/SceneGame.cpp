@@ -894,6 +894,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_sweetsManager.get(),
         ctx.dt
     });
+    if (player)
+    {
+        if (const auto wrapDelta = player->ConsumeWrapDeltaY())
+        {
+            ApplyPlayerWrapDeltaY(*wrapDelta);
+        }
+    }
 
     switch (m_stageState)
     {
@@ -2017,6 +2024,36 @@ void SceneGame::UpdateBackgroundScrollOriginForWrap(float cameraY)
     }
 
     m_backgroundCameraLastY = cameraY;
+}
+
+void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
+{
+    if (!m_gameCamera || !IsFiniteFloat(wrapDeltaY)
+        || std::fabs(wrapDeltaY) <= std::numeric_limits<float>::epsilon())
+    {
+        return;
+    }
+
+    float3 cameraPosition = m_gameCamera->GetPosition();
+    if (!IsFiniteFloat(cameraPosition.y))
+    {
+        return;
+    }
+
+    cameraPosition.y += wrapDeltaY;
+    m_gameCamera->SetPosition(cameraPosition);
+
+    if (m_cameraRig && player)
+    {
+        const float targetY = player->GetTransform().position.y;
+        if (IsFiniteFloat(targetY))
+        {
+            m_cameraRig->ApplyExternalWrapDeltaY(wrapDeltaY, targetY);
+        }
+    }
+
+    m_backgroundScrollOriginY += wrapDeltaY;
+    m_backgroundCameraLastY = cameraPosition.y;
 }
 
 void SceneGame::SetStageState(StageState newState)

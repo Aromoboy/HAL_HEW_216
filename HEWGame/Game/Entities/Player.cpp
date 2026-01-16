@@ -1,5 +1,6 @@
 ﻿#include "Entities/Player.h"
 
+#include <cmath>
 #include <optional>
 
 namespace Entities
@@ -85,6 +86,30 @@ namespace Entities
     void Player::SetScreenBounds(float minX, float maxX, float minY, float maxY)
     {
         m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
+    }
+
+    void Player::RegisterWrapDeltaY(float deltaY)
+    {
+        if (!std::isfinite(deltaY))
+        {
+            return;
+        }
+
+        if (m_pendingWrapDeltaY)
+        {
+            *m_pendingWrapDeltaY += deltaY;
+        }
+        else
+        {
+            m_pendingWrapDeltaY = deltaY;
+        }
+    }
+
+    std::optional<float> Player::ConsumeWrapDeltaY()
+    {
+        std::optional<float> delta = m_pendingWrapDeltaY;
+        m_pendingWrapDeltaY = std::nullopt;
+        return delta;
     }
 
 }

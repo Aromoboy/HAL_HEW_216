@@ -39,6 +39,7 @@ public:
         std::optional<float> GetClampMaxY() const;
         float GetScrollY() const;
         void ResetVerticalScroll(const float3& targetPosition);
+        void ApplyExternalWrapDeltaY(float wrapDeltaY, float targetRawY);
         void SetWrapY(std::optional<float> minY, std::optional<float> maxY);
         void SetTranslationLocked(bool locked);
         bool IsTranslationLocked() const;

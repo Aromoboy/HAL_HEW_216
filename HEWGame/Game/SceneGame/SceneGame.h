@@ -96,6 +96,7 @@ private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
     void UpdateCameraBoundsForPhase(float heightMeters);
     void UpdateBackgroundScrollOriginForWrap(float cameraY);
+    void ApplyPlayerWrapDeltaY(float wrapDeltaY);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);

@@ -164,6 +164,26 @@ void CameraRig::ResetVerticalScroll(const float3& targetPosition)
         m_hasScrollY = true;
 }
 
+void CameraRig::ApplyExternalWrapDeltaY(float wrapDeltaY, float targetRawY)
+{
+        if (!std::isfinite(wrapDeltaY) || !std::isfinite(targetRawY))
+        {
+                return;
+        }
+
+        if (m_hasScrollY && std::isfinite(m_scrollY))
+        {
+                m_scrollY += wrapDeltaY;
+        }
+        else
+        {
+                m_scrollY = ClampScrollY(targetRawY);
+                m_hasScrollY = true;
+        }
+
+        m_lastTargetYRaw = targetRawY;
+}
+
 void CameraRig::SetTranslationLocked(bool locked)
 {
         if (m_lockTranslation == locked)
