@@ -104,9 +104,9 @@ namespace Entities
         return m_movementSystem.GetVerticalMoveSpeed();
     }
 
-    void Player::SetScreenBounds(float minX, float maxX, float minY, float maxY)
+    void Player::SetScreenBounds(float minX, float maxX)
     {
-        m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
+        m_physicsBinder.SetScreenBounds(minX, maxX);
     }
 
     void Player::SetPickupBox(float width, float height)
