@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "Core/IUpdatable.h"
-#include "Sweets/SweetsTypes.h"
+#include "Meteors/MeteorsTypes.h"
 
 namespace Core
 {
@@ -18,18 +18,18 @@ namespace Systems
     class PhysicsMachine;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsContacts;
-    class SweetsRegistry;
-    class SweetsSpawner;
+    class MeteorsContacts;
+    class MeteorsRegistry;
+    class MeteorsSpawner;
 
-    class SweetsLifecycle
+    class MeteorsLifecycle
     {
     public:
-        SweetsLifecycle(SweetsRegistry& registry,
-            SweetsContacts& contacts,
-            SweetsSpawner& spawner,
+        MeteorsLifecycle(MeteorsRegistry& registry,
+            MeteorsContacts& contacts,
+            MeteorsSpawner& spawner,
             Systems::DrawSystem* drawSystem,
             Systems::PhysicsMachine* physicsMachine,
             Core::UpdateScheduler* scheduler,
@@ -43,25 +43,25 @@ namespace SweetsSpace
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
-        void Erase(const std::shared_ptr<ActiveSweets>& sweets);
-        void ClearAllSweets();
+        void Erase(const std::shared_ptr<ActiveMeteors>& meteors);
+        void ClearAllMeteors();
 
-        bool TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets);
-        bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
+        bool TryMarkAsCarried(const std::shared_ptr<ActiveMeteors>& meteors);
+        bool ReleaseCarriedMeteors(const std::shared_ptr<ActiveMeteors>& meteors);
 
-        bool RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
-        void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
+        bool RegisterWithSystems(const std::shared_ptr<ActiveMeteors>& meteors);
+        void RemoveMeteorsEntry(const std::shared_ptr<ActiveMeteors>& meteors,
             DeleteReason reason,
             const char* context,
             bool logWarnings,
             DeleteBatchContext* batchContext);
 
     private:
-        void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings);
+        void UnregisterMeteorsFromSystems(const std::shared_ptr<ActiveMeteors>& meteors, const char* context, bool logWarnings);
 
-        SweetsRegistry* m_registry;
-        SweetsContacts* m_contacts;
-        SweetsSpawner* m_spawner;
+        MeteorsRegistry* m_registry;
+        MeteorsContacts* m_contacts;
+        MeteorsSpawner* m_spawner;
         Systems::DrawSystem* m_drawSystem;
         Systems::PhysicsMachine* m_physicsMachine;
         Core::UpdateScheduler* m_scheduler;
@@ -69,12 +69,12 @@ namespace SweetsSpace
         bool* m_warnedMissingPhysicsMachine;
         bool* m_warnedMissingScheduler;
 
-        std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
+        std::unordered_set<std::shared_ptr<ActiveMeteors>> m_pendingLateDeletion;
         bool m_hasHorizontalBounds{ false };
         float m_minHorizontalBound{ 0.0f };
         float m_maxHorizontalBound{ 0.0f };
         float m_horizontalBoundsMargin{ 0.0f };
         bool m_warnedMissingHorizontalBounds{ false };
-        std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
+        std::unordered_set<ActiveMeteors*> m_registeredPhysicsBodies;
     };
 }

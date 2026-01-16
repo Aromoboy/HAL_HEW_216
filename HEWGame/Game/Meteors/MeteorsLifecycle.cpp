@@ -1,4 +1,4 @@
-#include "Sweets/SweetsLifecycle.h"
+#include "Meteors/MeteorsLifecycle.h"
 
 #include <algorithm>
 #include <array>
@@ -16,10 +16,10 @@
 #include "Core/UpdateScheduler.h"
 #include "Debug.h"
 #include "Entities/PhysicalEntity.h"
-#include "Sweets/BaseSweets.h"
-#include "Sweets/SweetsContacts.h"
-#include "Sweets/SweetsRegistry.h"
-#include "Sweets/SweetsSpawner.h"
+#include "Meteors/BaseMeteors.h"
+#include "Meteors/MeteorsContacts.h"
+#include "Meteors/MeteorsRegistry.h"
+#include "Meteors/MeteorsSpawner.h"
 #include "Systems/Draw/DrawSystem.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
@@ -32,9 +32,9 @@
 
 namespace
 {
-    using SweetsSpace::DeleteReason;
-    using SweetsSpace::SweetsState;
-    using SweetsSpace::UseOutcome;
+    using MeteorsSpace::DeleteReason;
+    using MeteorsSpace::MeteorsState;
+    using MeteorsSpace::UseOutcome;
 
 #if defined(_WIN32) && defined(_DEBUG)
     void DebugTrace(const std::string& message)
@@ -48,7 +48,7 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr const char* kLogPrefix = "[MeteorsManager] ";
     constexpr float kRestVelocityThresholdSq = 0.05f * 0.05f;
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
@@ -109,24 +109,24 @@ namespace
         }
     }
 
-    const char* StateToString(SweetsState state)
+    const char* StateToString(MeteorsState state)
     {
         switch (state)
         {
-        case SweetsState::Active:
+        case MeteorsState::Active:
             return "Active";
-        case SweetsState::Stacked:
+        case MeteorsState::Stacked:
             return "Stacked";
-        case SweetsState::Ground:
+        case MeteorsState::Ground:
             return "Ground";
-        case SweetsState::Carried:
+        case MeteorsState::Carried:
             return "Carried";
         default:
             return "Unknown";
         }
     }
 
-    void UpdateBatchUsage(SweetsSpace::DeleteBatchContext* batch, SweetsSpace::UseOutcome outcome)
+    void UpdateBatchUsage(MeteorsSpace::DeleteBatchContext* batch, MeteorsSpace::UseOutcome outcome)
     {
         if (!batch)
         {
@@ -138,34 +138,34 @@ namespace
             --batch->usesRemaining;
         }
 
-        if (outcome == SweetsSpace::UseOutcome::Hit)
+        if (outcome == MeteorsSpace::UseOutcome::Hit)
         {
             ++batch->usesRemaining;
         }
     }
 
-    SweetsSpace::SweetsState EvaluateState(SweetsSpace::ActiveSweets& sweets,
-        SweetsSpace::SweetsState currentState,
-        const SweetsSpace::SweetsContacts& contacts)
+    MeteorsSpace::MeteorsState EvaluateState(MeteorsSpace::ActiveMeteors& meteors,
+        MeteorsSpace::MeteorsState currentState,
+        const MeteorsSpace::MeteorsContacts& contacts)
     {
-        if (currentState == SweetsSpace::SweetsState::Carried)
+        if (currentState == MeteorsSpace::MeteorsState::Carried)
         {
-            return SweetsSpace::SweetsState::Carried;
+            return MeteorsSpace::MeteorsState::Carried;
         }
 
-        const float speedSq = ComputeSpeedSq(sweets);
+        const float speedSq = ComputeSpeedSq(meteors);
         if (speedSq > kRestVelocityThresholdSq)
         {
-            return SweetsSpace::SweetsState::Active;
+            return MeteorsSpace::MeteorsState::Active;
         }
 
         bool foundationOnly = false;
-        bool touching = contacts.HasSupportingContact(sweets, &foundationOnly);
+        bool touching = contacts.HasSupportingContact(meteors, &foundationOnly);
         if (!touching)
         {
-            if (auto* physicsMachine = sweets.GetPhysicsMachine())
+            if (auto* physicsMachine = meteors.GetPhysicsMachine())
             {
-                const b2BodyId bodyId = physicsMachine->FindBody(sweets);
+                const b2BodyId bodyId = physicsMachine->FindBody(meteors);
                 if (b2Body_IsValid(bodyId))
                 {
                     const int capacity = b2Body_GetContactCapacity(bodyId);
@@ -190,27 +190,27 @@ namespace
         {
             if (foundationOnly)
             {
-                return SweetsSpace::SweetsState::Active;
+                return MeteorsSpace::MeteorsState::Active;
             }
 
-            return currentState == SweetsSpace::SweetsState::Stacked
-                ? SweetsSpace::SweetsState::Stacked
-                : SweetsSpace::SweetsState::Active;
+            return currentState == MeteorsSpace::MeteorsState::Stacked
+                ? MeteorsSpace::MeteorsState::Stacked
+                : MeteorsSpace::MeteorsState::Active;
         }
 
-        return SweetsSpace::SweetsState::Active;
+        return MeteorsSpace::MeteorsState::Active;
     }
 
-    bool WrapSweetsHorizontally(
-        ::SweetsSpace::ActiveSweets& sweets,
+    bool WrapMeteorsHorizontally(
+        ::MeteorsSpace::ActiveMeteors& meteors,
         const std::optional<std::pair<float, float>>& worldBounds,
         float margin,
         float fallbackLimit,
         bool* usedFallback,
         bool* wasOutOfBounds)
     {
-        sweets.SyncColliderBounds();
-        const AABB bounds = sweets.GetAABB();
+        meteors.SyncColliderBounds();
+        const AABB bounds = meteors.GetAABB();
         const float minX = bounds.min.x;
         const float maxX = bounds.max.x;
 
@@ -245,7 +245,7 @@ namespace
             return false;
         }
 
-        float3 position = sweets.GetTransform().position;
+        float3 position = meteors.GetTransform().position;
         if (minX < allowedMin)
         {
             position.x += span;
@@ -255,16 +255,16 @@ namespace
             position.x -= span;
         }
 
-        sweets.SetPositionViaPhysics(position);
+        meteors.SetPositionViaPhysics(position);
         return true;
     }
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    SweetsLifecycle::SweetsLifecycle(SweetsRegistry& registry,
-        SweetsContacts& contacts,
-        SweetsSpawner& spawner,
+    MeteorsLifecycle::MeteorsLifecycle(MeteorsRegistry& registry,
+        MeteorsContacts& contacts,
+        MeteorsSpawner& spawner,
         Systems::DrawSystem* drawSystem,
         Systems::PhysicsMachine* physicsMachine,
         Core::UpdateScheduler* scheduler,
@@ -284,16 +284,16 @@ namespace SweetsSpace
     {
     }
 
-    void SweetsLifecycle::OnUpdate(const Core::UpdateContext& ctx)
+    void MeteorsLifecycle::OnUpdate(const Core::UpdateContext& ctx)
     {
         struct PendingStateChange
         {
-            std::shared_ptr<ActiveSweets> sweets;
-            SweetsState state;
+            std::shared_ptr<ActiveMeteors> meteors;
+            MeteorsState state;
         };
 
         std::vector<PendingStateChange> stateChanges;
-        std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
+        std::vector<std::shared_ptr<ActiveMeteors>> missedMeteors;
         const auto horizontalBounds = GetHorizontalBounds();
         const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
@@ -304,15 +304,15 @@ namespace SweetsSpace
 
         for (auto& entry : m_registry->MutableStateMap())
         {
-            SweetsState bucketState = entry.first;
-            auto& sweetsList = entry.second;
+            MeteorsState bucketState = entry.first;
+            auto& meteorsList = entry.second;
 
-            auto it = sweetsList.begin();
-            while (it != sweetsList.end())
+            auto it = meteorsList.begin();
+            while (it != meteorsList.end())
             {
-                std::shared_ptr<ActiveSweets> sweets = *it;
+                std::shared_ptr<ActiveMeteors> meteors = *it;
 
-                if (!sweets)
+                if (!meteors)
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
@@ -320,37 +320,37 @@ namespace SweetsSpace
                         << " から null のスイーツを掃除したよ\n";
                     DebugTrace(oss.str());
 #endif
-                    it = sweetsList.erase(it);
+                    it = meteorsList.erase(it);
                     continue;
                 }
 
-                if (sweets->IsPendingDestroy())
+                if (meteors->IsPendingDestroy())
                 {
                     ++it;
                     continue;
                 }
 
-                if (!sweets->IsEnabled())
+                if (!meteors->IsEnabled())
                 {
 #if defined(_DEBUG)
                     std::ostringstream oss;
                     oss << kLogPrefix << "Update 無効化中だったから、状態 " << StateToString(bucketState)
-                        << " から sweets ptr=" << sweets.get() << " を片付けたよ \n";
+                        << " から meteors ptr=" << meteors.get() << " を片付けたよ \n";
                     DebugTrace(oss.str());
 #endif
-                    m_registry->Lookup().erase(sweets);
-                    it = sweetsList.erase(it);
+                    m_registry->Lookup().erase(meteors);
+                    it = meteorsList.erase(it);
                     continue;
                 }
 
-                const bool isCarried = (bucketState == SweetsState::Carried);
+                const bool isCarried = (bucketState == MeteorsState::Carried);
 
                 if (!isCarried)
                 {
                     bool usedFallbackBounds = false;
                     bool wasOutOfBounds = false;
-                    const bool wrapped = WrapSweetsHorizontally(
-                        *sweets,
+                    const bool wrapped = WrapMeteorsHorizontally(
+                        *meteors,
                         horizontalBounds,
                         m_horizontalBoundsMargin,
                         fallbackHorizontalLimit,
@@ -369,16 +369,16 @@ namespace SweetsSpace
                     {
                         if (!wrapped)
                         {
-                            missedSweets.push_back(sweets);
+                            missedMeteors.push_back(meteors);
                         }
                         ++it;
                         continue;
                     }
 
-                    const SweetsState desiredState = EvaluateState(*sweets, bucketState, *m_contacts);
+                    const MeteorsState desiredState = EvaluateState(*meteors, bucketState, *m_contacts);
                     if (desiredState != bucketState)
                     {
-                        stateChanges.push_back({ sweets, desiredState });
+                        stateChanges.push_back({ meteors, desiredState });
                     }
                 }
 
@@ -388,20 +388,20 @@ namespace SweetsSpace
 
         for (const auto& change : stateChanges)
         {
-            auto lookup = m_registry->Lookup().find(change.sweets);
-            const SweetsState previousState = (lookup != m_registry->Lookup().end()) ? lookup->second : SweetsState::Active;
-            m_registry->SetState(change.sweets, change.state);
+            auto lookup = m_registry->Lookup().find(change.meteors);
+            const MeteorsState previousState = (lookup != m_registry->Lookup().end()) ? lookup->second : MeteorsState::Active;
+            m_registry->SetState(change.meteors, change.state);
             if (m_contacts)
             {
-                m_contacts->OnStateChanged(change.sweets.get(), previousState, change.state);
+                m_contacts->OnStateChanged(change.meteors.get(), previousState, change.state);
             }
             if (m_spawner)
             {
-                m_spawner->OnStateChanged(change.sweets, previousState, change.state);
+                m_spawner->OnStateChanged(change.meteors, previousState, change.state);
             }
 #if defined(_DEBUG)
             std::ostringstream oss;
-            oss << kLogPrefix << "状態変更 ptr=" << change.sweets.get()
+            oss << kLogPrefix << "状態変更 ptr=" << change.meteors.get()
                 << " " << StateToString(previousState) << " -> "
                 << StateToString(change.state) << "\n";
             DebugTrace(oss.str());
@@ -409,14 +409,14 @@ namespace SweetsSpace
         }
 
         DeleteBatchContext missBatch{};
-        missBatch.usesRemaining = static_cast<int>(missedSweets.size());
-        for (const auto& sweets : missedSweets)
+        missBatch.usesRemaining = static_cast<int>(missedMeteors.size());
+        for (const auto& meteors : missedMeteors)
         {
-            RemoveSweetsEntry(sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch);
+            RemoveMeteorsEntry(meteors, DeleteReason::Miss, "MissDespawn", true, &missBatch);
         }
     }
 
-    void SweetsLifecycle::OnLateUpdate(const Core::UpdateContext& ctx)
+    void MeteorsLifecycle::OnLateUpdate(const Core::UpdateContext& ctx)
     {
         (void)ctx;
 
@@ -431,40 +431,40 @@ namespace SweetsSpace
 
         for (auto& entry : m_registry->MutableStateMap())
         {
-            auto& sweetsList = entry.second;
-            auto it = sweetsList.begin();
-            while (it != sweetsList.end())
+            auto& meteorsList = entry.second;
+            auto it = meteorsList.begin();
+            while (it != meteorsList.end())
             {
-                const auto& sweets = *it;
-                if (!sweets)
+                const auto& meteors = *it;
+                if (!meteors)
                 {
-                    it = sweetsList.erase(it);
+                    it = meteorsList.erase(it);
                     ++removed;
                     continue;
                 }
 
-                if (sweets->IsPendingDestroy())
+                if (meteors->IsPendingDestroy())
                 {
-                    auto watched = m_pendingLateDeletion.find(sweets);
+                    auto watched = m_pendingLateDeletion.find(meteors);
                     if (watched == m_pendingLateDeletion.end())
                     {
-                        m_pendingLateDeletion.insert(sweets);
+                        m_pendingLateDeletion.insert(meteors);
                         ++stagedThisFrame;
                         ++it;
                         continue;
                     }
 
-                    if (!sweets->IsSafeToDelete())
+                    if (!meteors->IsSafeToDelete())
                     {
-                        sweets->MarkSafeToDelete();
+                        meteors->MarkSafeToDelete();
                         ++markedSafe;
                         ++it;
                         continue;
                     }
 
-                    m_registry->Lookup().erase(sweets);
+                    m_registry->Lookup().erase(meteors);
                     m_pendingLateDeletion.erase(watched);
-                    it = sweetsList.erase(it);
+                    it = meteorsList.erase(it);
                     ++removed;
                     continue;
                 }
@@ -485,7 +485,7 @@ namespace SweetsSpace
 #endif
     }
 
-    void SweetsLifecycle::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
+    void MeteorsLifecycle::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
     {
         if (!(std::isfinite(minX) && std::isfinite(maxX)))
         {
@@ -522,7 +522,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    std::optional<std::pair<float, float>> SweetsLifecycle::GetHorizontalBounds() const
+    std::optional<std::pair<float, float>> MeteorsLifecycle::GetHorizontalBounds() const
     {
         if (!m_hasHorizontalBounds)
         {
@@ -532,28 +532,28 @@ namespace SweetsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
-    void SweetsLifecycle::Erase(const std::shared_ptr<ActiveSweets>& sweets)
+    void MeteorsLifecycle::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!sweets || !m_registry)
+        if (!meteors || !m_registry)
         {
             return;
         }
 
-        auto found = m_registry->Lookup().find(sweets);
+        auto found = m_registry->Lookup().find(meteors);
         if (found == m_registry->Lookup().end())
         {
             return;
         }
 
-        if (sweets->IsPendingDestroy())
+        if (meteors->IsPendingDestroy())
         {
             return;
         }
 
-        sweets->MarkPendingDestroy();
+        meteors->MarkPendingDestroy();
     }
 
-    void SweetsLifecycle::ClearAllSweets()
+    void MeteorsLifecycle::ClearAllMeteors()
     {
         if (!m_registry)
         {
@@ -568,7 +568,7 @@ namespace SweetsSpace
         if (m_contacts)
         {
             m_contacts->Reset();
-            m_contacts->ClearCreamWeldJoints("ClearAllSweets");
+            m_contacts->ClearCreamWeldJoints("ClearAllMeteors");
         }
 
         std::size_t staged = 0;
@@ -577,57 +577,57 @@ namespace SweetsSpace
         for (auto& entry : m_registry->MutableStateMap())
         {
             auto& list = entry.second;
-            for (auto& sweets : list)
+            for (auto& meteors : list)
             {
-                if (!sweets)
+                if (!meteors)
                 {
                     continue;
                 }
 
-                if (sweets->IsPendingDestroy())
+                if (meteors->IsPendingDestroy())
                 {
                     ++alreadyPending;
                 }
                 else
                 {
-                    sweets->MarkPendingDestroy();
-                    sweets->Enable(false);
+                    meteors->MarkPendingDestroy();
+                    meteors->Enable(false);
                     ++staged;
                 }
 
-                UnregisterSweetsFromSystems(sweets, "ClearAllSweets", true);
+                UnregisterMeteorsFromSystems(meteors, "ClearAllMeteors", true);
             }
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets で " << staged
+        oss << kLogPrefix << "ClearAllMeteors で " << staged
             << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
             << m_registry->StateMap().size() << " 状態分 \n";
         DebugTrace(oss.str());
     }
 
-    bool SweetsLifecycle::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)
+    bool MeteorsLifecycle::TryMarkAsCarried(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!sweets || !m_registry)
+        if (!meteors || !m_registry)
         {
             return false;
         }
 
-        if (sweets->IsPendingDestroy())
+        if (meteors->IsPendingDestroy())
         {
             return false;
         }
 
-        sweets->SetWasEverCarried(true);
+        meteors->SetWasEverCarried(true);
         if (m_contacts)
         {
-            m_contacts->ClearContactState(sweets.get());
-            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "TryMarkAsCarried");
+            m_contacts->ClearContactState(meteors.get());
+            m_contacts->RemoveCreamWeldJointsForMeteors(meteors.get(), "TryMarkAsCarried");
         }
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->UnregisterBody(*sweets, true);
+            m_physicsMachine->UnregisterBody(*meteors, true);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
@@ -635,69 +635,69 @@ namespace SweetsSpace
             *m_warnedMissingPhysicsMachine = true;
         }
 
-        auto previous = m_registry->SetState(sweets, SweetsState::Carried);
+        auto previous = m_registry->SetState(meteors, MeteorsState::Carried);
         if (previous && m_contacts)
         {
-            m_contacts->OnStateChanged(sweets.get(), *previous, SweetsState::Carried);
+            m_contacts->OnStateChanged(meteors.get(), *previous, MeteorsState::Carried);
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "TryMarkAsCarried 成功 tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "TryMarkAsCarried 成功 tag='" << meteors->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
 
-    bool SweetsLifecycle::ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets)
+    bool MeteorsLifecycle::ReleaseCarriedMeteors(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!sweets || !m_registry)
+        if (!meteors || !m_registry)
         {
             return false;
         }
 
-        if (sweets->IsPendingDestroy())
+        if (meteors->IsPendingDestroy())
         {
             return false;
         }
 
-        auto it = m_registry->Lookup().find(sweets);
-        if (it == m_registry->Lookup().end() || it->second != SweetsState::Carried)
+        auto it = m_registry->Lookup().find(meteors);
+        if (it == m_registry->Lookup().end() || it->second != MeteorsState::Carried)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "ReleaseCarriedSweets 却下 tag='" << sweets->GetTag() << "' state="
+            oss << kLogPrefix << "ReleaseCarriedMeteors 却下 tag='" << meteors->GetTag() << "' state="
                 << (it == m_registry->Lookup().end() ? "<unknown>" : StateToString(it->second)) << "\n";
             DebugTrace(oss.str());
             return false;
         }
 
-        auto previous = m_registry->SetState(sweets, SweetsState::Active);
+        auto previous = m_registry->SetState(meteors, MeteorsState::Active);
         if (previous && m_contacts)
         {
-            m_contacts->OnStateChanged(sweets.get(), *previous, SweetsState::Active);
+            m_contacts->OnStateChanged(meteors.get(), *previous, MeteorsState::Active);
         }
         if (m_contacts)
         {
-            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
+            m_contacts->RemoveCreamWeldJointsForMeteors(meteors.get(), "ReleaseCarriedMeteors");
         }
 
         if (m_physicsMachine)
         {
-            m_physicsMachine->RegisterBody(*sweets);
+            m_physicsMachine->RegisterBody(*meteors);
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
-            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ \n");
+            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedMeteors で物理マシンがないから、ボディがシミュレーションされないよ \n");
             *m_warnedMissingPhysicsMachine = true;
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
+        oss << kLogPrefix << "ReleaseCarriedMeteors 成功 tag='" << meteors->GetTag() << "'\n";
         DebugTrace(oss.str());
         return true;
     }
 
-    bool SweetsLifecycle::RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets)
+    bool MeteorsLifecycle::RegisterWithSystems(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return false;
         }
@@ -710,38 +710,38 @@ namespace SweetsSpace
 
             if (m_contacts)
             {
-                m_contacts->ClearContactState(sweets.get());
+                m_contacts->ClearContactState(meteors.get());
             }
-            sweets->MarkPendingDestroy();
-            sweets->Enable(false);
-            UnregisterSweetsFromSystems(sweets, "RegisterWithSystems", false);
+            meteors->MarkPendingDestroy();
+            meteors->Enable(false);
+            UnregisterMeteorsFromSystems(meteors, "RegisterWithSystems", false);
 
             if (m_registry)
             {
                 for (auto& entry : m_registry->MutableStateMap())
                 {
-                    entry.second.remove(sweets);
+                    entry.second.remove(meteors);
                 }
-                m_registry->Lookup().erase(sweets);
+                m_registry->Lookup().erase(meteors);
             }
             return false;
         };
 
         if (m_scheduler)
         {
-            auto handle = m_scheduler->Register(*sweets);
+            auto handle = m_scheduler->Register(*meteors);
             if (!handle.IsValid())
             {
-                DebugLog::DebugMessage("[SweetsLifecycle] Scheduler registration failed for sweets.\n");
-                assert(false && "Sweets scheduler registration failed.");
+                DebugLog::DebugMessage("[MeteorsLifecycle] Scheduler registration failed for meteors.\n");
+                assert(false && "Meteors scheduler registration failed.");
                 return cleanupFailedRegistration("スケジューラ登録に失敗したよ");
             }
-            sweets->SetRegistrationHandle(std::move(handle));
+            meteors->SetRegistrationHandle(std::move(handle));
         }
         else if (m_warnedMissingScheduler && !*m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << "スイーツ '" << meteors->GetTag()
                 << "' をスケジューラに登録できなかったよ スケジューラが設定されてないみたい \n";
             DebugTrace(oss.str());
             *m_warnedMissingScheduler = true;
@@ -749,40 +749,40 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            const auto& colliderComponent = sweets->GetBoxColliderComponent();
+            const auto& colliderComponent = meteors->GetBoxColliderComponent();
             const bool hasColliderComponent = static_cast<bool>(colliderComponent);
 
             if (!hasColliderComponent)
             {
                 std::ostringstream oss;
-                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
+                oss << "スイーツ '" << meteors->GetTag() << "' の物理登録を飛ばすね コライダー設定が見当たらない";
                 return cleanupFailedRegistration(oss.str());
             }
 
-            const bool alreadyRegistered = m_registeredPhysicsBodies.find(sweets.get()) != m_registeredPhysicsBodies.end()
-                || b2Body_IsValid(m_physicsMachine->FindBody(*sweets));
+            const bool alreadyRegistered = m_registeredPhysicsBodies.find(meteors.get()) != m_registeredPhysicsBodies.end()
+                || b2Body_IsValid(m_physicsMachine->FindBody(*meteors));
             if (!alreadyRegistered)
             {
-                m_physicsMachine->RegisterBody(*sweets);
+                m_physicsMachine->RegisterBody(*meteors);
             }
 
             const int fixtureCount = colliderComponent ? colliderComponent->createdFixtureCount : 0;
-            const bool hasBody = sweets->HasBox2DBody();
+            const bool hasBody = meteors->HasBox2DBody();
 
             if (!hasBody || fixtureCount <= 0)
             {
                 std::ostringstream oss;
-                oss << "スイーツ '" << sweets->GetTag() << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
+                oss << "スイーツ '" << meteors->GetTag() << "' の物理登録に失敗 hasBody=" << std::boolalpha << hasBody
                     << " fixtures=" << fixtureCount;
                 return cleanupFailedRegistration(oss.str());
             }
 
-            m_registeredPhysicsBodies.insert(sweets.get());
+            m_registeredPhysicsBodies.insert(meteors.get());
         }
         else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << "スイーツ '" << meteors->GetTag()
                 << "' を物理に登録できなかったよ 物理マシンが設定されてない \n";
             DebugTrace(oss.str());
             *m_warnedMissingPhysicsMachine = true;
@@ -790,12 +790,12 @@ namespace SweetsSpace
 
         if (m_drawSystem)
         {
-            m_drawSystem->RegisterRenderable(*sweets);
+            m_drawSystem->RegisterRenderable(*meteors);
         }
         else if (m_warnedMissingDrawSystem && !*m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "スイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << "スイーツ '" << meteors->GetTag()
                 << "' を描画登録できなかったよ ドローシステムが設定されてない \n";
             DebugTrace(oss.str());
             *m_warnedMissingDrawSystem = true;
@@ -804,55 +804,55 @@ namespace SweetsSpace
         return true;
     }
 
-    void SweetsLifecycle::RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
+    void MeteorsLifecycle::RemoveMeteorsEntry(const std::shared_ptr<ActiveMeteors>& meteors,
         DeleteReason reason,
         const char* context,
         bool logWarnings,
         DeleteBatchContext* batchContext)
     {
-        if (!sweets || !m_registry)
+        if (!meteors || !m_registry)
         {
             return;
         }
 
-        auto found = m_registry->Lookup().find(sweets);
+        auto found = m_registry->Lookup().find(meteors);
         if (found == m_registry->Lookup().end())
         {
             return;
         }
 
-        if (sweets->IsPendingDestroy())
+        if (meteors->IsPendingDestroy())
         {
             return;
         }
 
-        const SweetsState previousState = found->second;
+        const MeteorsState previousState = found->second;
         if (m_contacts)
         {
-            m_contacts->ClearContactState(sweets.get());
-            m_contacts->ClearSweetsContact(sweets.get());
-            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), context);
+            m_contacts->ClearContactState(meteors.get());
+            m_contacts->ClearMeteorsContact(meteors.get());
+            m_contacts->RemoveCreamWeldJointsForMeteors(meteors.get(), context);
         }
-        sweets->SetWasEverCarried(false);
-        sweets->MarkPendingDestroy();
-        sweets->Enable(false);
+        meteors->SetWasEverCarried(false);
+        meteors->MarkPendingDestroy();
+        meteors->Enable(false);
 
         const UseOutcome outcome = (reason == DeleteReason::Hit) ? UseOutcome::Hit : UseOutcome::Miss;
         UpdateBatchUsage(batchContext, outcome);
 
-        UnregisterSweetsFromSystems(sweets, context, logWarnings);
+        UnregisterMeteorsFromSystems(meteors, context, logWarnings);
 
         if (m_spawner)
         {
             const int remainingToStack = std::max(0, m_spawner->GetBatchStackTarget() - m_spawner->GetStackedInBatch());
-            const int liveAfterRemoval = m_spawner->CountLiveSweets();
-            m_spawner->OnSweetsRemoved(remainingToStack, liveAfterRemoval, context);
+            const int liveAfterRemoval = m_spawner->CountLiveMeteors();
+            m_spawner->OnMeteorsRemoved(remainingToStack, liveAfterRemoval, context);
         }
 
 #if defined(_DEBUG)
-        const auto& pos = sweets->GetTransform().position;
+        const auto& pos = meteors->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
+        oss << kLogPrefix << context << " でスイーツ tag='" << meteors->GetTag()
             << "' を削除 state=" << StateToString(previousState)
             << " deleteReason=" << DeleteReasonToString(reason)
             << " outcome=" << UseOutcomeToString(outcome)
@@ -862,26 +862,26 @@ namespace SweetsSpace
 #endif
     }
 
-    void SweetsLifecycle::UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings)
+    void MeteorsLifecycle::UnregisterMeteorsFromSystems(const std::shared_ptr<ActiveMeteors>& meteors, const char* context, bool logWarnings)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
 
         if (m_contacts)
         {
-            m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), context);
+            m_contacts->RemoveCreamWeldJointsForMeteors(meteors.get(), context);
         }
 
         if (m_scheduler)
         {
-            sweets->ReleaseRegistrationHandle();
+            meteors->ReleaseRegistrationHandle();
         }
         else if (logWarnings && m_warnedMissingScheduler && !*m_warnedMissingScheduler)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << context << " でスイーツ '" << meteors->GetTag()
                 << "' をスケジューラから外せなかったよ スケジューラ未設定 \n";
             DebugTrace(oss.str());
             *m_warnedMissingScheduler = true;
@@ -889,16 +889,16 @@ namespace SweetsSpace
 
         if (m_physicsMachine)
         {
-            const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
-            if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
+            const bool tracked = m_registeredPhysicsBodies.erase(meteors.get()) > 0;
+            if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*meteors)))
             {
-                m_physicsMachine->UnregisterBody(*sweets);
+                m_physicsMachine->UnregisterBody(*meteors);
             }
         }
         else if (logWarnings && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << context << " でスイーツ '" << meteors->GetTag()
                 << "' の物理登録を外せなかったよ 物理マシン未設定 \n";
             DebugTrace(oss.str());
             *m_warnedMissingPhysicsMachine = true;
@@ -906,12 +906,12 @@ namespace SweetsSpace
 
         if (m_drawSystem)
         {
-            m_drawSystem->UnregisterRenderable(*sweets);
+            m_drawSystem->UnregisterRenderable(*meteors);
         }
         else if (logWarnings && m_warnedMissingDrawSystem && !*m_warnedMissingDrawSystem)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << context << " でスイーツ '" << sweets->GetTag()
+            oss << kLogPrefix << context << " でスイーツ '" << meteors->GetTag()
                 << "' の描画登録を外せなかったよ ドローシステム未設定 \n";
             DebugTrace(oss.str());
             *m_warnedMissingDrawSystem = true;

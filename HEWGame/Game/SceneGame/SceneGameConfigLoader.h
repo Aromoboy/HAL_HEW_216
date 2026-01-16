@@ -19,7 +19,7 @@ namespace SceneGameConfig
         float hitEventThreshold = 0.0f;
         float maxStepDt = 1.0f / 60.0f;
         int maxAccumulatedSteps = 8;
-        bool continuousCollisionForSweets = true;
+        bool continuousCollisionForMeteors = true;
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.6f;
         bool continuousCollisionForPlayerProjectiles = true;

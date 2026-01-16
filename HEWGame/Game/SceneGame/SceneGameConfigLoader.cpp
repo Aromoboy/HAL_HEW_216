@@ -144,9 +144,9 @@ namespace
             return Collision::CollisionLayer::Stage;
         }
 
-        if (lowered == "sweets")
+        if (lowered == "meteors")
         {
-            return Collision::CollisionLayer::Sweets;
+            return Collision::CollisionLayer::Meteors;
         }
 
         if (auto parsed = TryParseIntToken(lowered))
@@ -162,7 +162,7 @@ namespace
             case 3:
                 return Collision::CollisionLayer::Stage;
             case 4:
-                return Collision::CollisionLayer::Sweets;
+                return Collision::CollisionLayer::Meteors;
             default:
                 return std::nullopt;
             }
@@ -2593,7 +2593,7 @@ namespace SceneGameConfig
                 << ", hitEventThreshold=" << settings.hitEventThreshold
                 << ", maxStepDt=" << settings.maxStepDt
                 << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
-                << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
+                << ", ccdMeteors=" << std::boolalpha << settings.continuousCollisionForMeteors
                 << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
                 << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
@@ -2684,11 +2684,11 @@ namespace SceneGameConfig
                 {
                     settings.maxAccumulatedSteps = std::max(1, std::stoi(value));
                 }
-                else if (key == "ccdSweets")
+                else if (key == "ccdMeteors")
                 {
                     if (auto parsed = parseBool(value))
                     {
-                        settings.continuousCollisionForSweets = *parsed;
+                        settings.continuousCollisionForMeteors = *parsed;
                     }
                     else
                     {
@@ -2845,7 +2845,7 @@ namespace SceneGameConfig
             << ", hitEventThreshold=" << settings.hitEventThreshold
             << ", maxStepDt=" << settings.maxStepDt
             << ", maxAccumulatedSteps=" << settings.maxAccumulatedSteps
-            << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
+            << ", ccdMeteors=" << std::boolalpha << settings.continuousCollisionForMeteors
             << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
             << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles

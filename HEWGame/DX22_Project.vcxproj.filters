@@ -61,7 +61,7 @@
     <Filter Include="Game\Stage">
       <UniqueIdentifier>{DA2C26D8-E94A-4407-8C2A-ADA46C74476B}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Sweets">
+    <Filter Include="Game\Meteors">
       <UniqueIdentifier>{A1B07947-156F-4001-8A74-6A522CC0D599}</UniqueIdentifier>
     </Filter>
     <Filter Include="Game\UI">
@@ -351,32 +351,32 @@
     <ClCompile Include="Game\Stage\StageLayoutLoader.cpp">
       <Filter>Game\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\BaseSweets.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\BaseMeteors.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsContacts.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsContacts.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsFactory.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsFactory.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsLifecycle.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsLifecycle.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsManager.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsManager.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsPrototypeManifest.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsPrototypeManifest.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsRegistry.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsRegistry.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsRenderer.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsRenderer.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Sweets\SweetsSpawner.cpp">
-      <Filter>Game\Sweets</Filter>
+    <ClCompile Include="Game\Meteors\MeteorsSpawner.cpp">
+      <Filter>Game\Meteors</Filter>
     </ClCompile>
     <ClCompile Include="Game\UI\BackgroundRenderer.cpp">
       <Filter>Game\UI</Filter>
@@ -723,38 +723,38 @@
     <ClInclude Include="Game\Stage\StageLayoutLoader.h">
       <Filter>Game\Stage</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\BaseSweets.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\BaseMeteors.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsContacts.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsContacts.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsFactory.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsFactory.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsKeyUtils.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsKeyUtils.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsLifecycle.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsLifecycle.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsManager.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsManager.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsPrototypeManifest.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsPrototypeManifest.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsRegistry.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsRegistry.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsRenderer.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsRenderer.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsSpawner.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsSpawner.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Sweets\SweetsTypes.h">
-      <Filter>Game\Sweets</Filter>
+    <ClInclude Include="Game\Meteors\MeteorsTypes.h">
+      <Filter>Game\Meteors</Filter>
     </ClInclude>
     <ClInclude Include="Game\UI\BackgroundRenderer.h">
       <Filter>Game\UI</Filter>

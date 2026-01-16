@@ -1,4 +1,4 @@
-#include "Sweets/SweetsContacts.h"
+#include "Meteors/MeteorsContacts.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "CollisionLayer.h"
-#include "Sweets/BaseSweets.h"
-#include "Sweets/SweetsKeyUtils.h"
-#include "SweetsPrototypeManifest.h"
+#include "Meteors/BaseMeteors.h"
+#include "Meteors/MeteorsKeyUtils.h"
+#include "MeteorsPrototypeManifest.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
 #if defined(_WIN32)
@@ -33,17 +33,17 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr const char* kLogPrefix = "[MeteorsManager] ";
     constexpr float kGlueCooldownSeconds = 2.0f;
 
     std::string NormalizeTag(const std::string& tag)
     {
-        return SweetsSpace::NormalizeKey(tag);
+        return MeteorsSpace::NormalizeKey(tag);
     }
 
     bool IsCreamTag(const std::string& tag)
     {
-        static const std::string kCreamKey = NormalizeTag(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Strawberry));
+        static const std::string kCreamKey = NormalizeTag(::MeteorsSpace::ToString(::MeteorsSpace::MeteorsType::Strawberry));
         return NormalizeTag(tag) == kCreamKey;
     }
 
@@ -68,8 +68,8 @@ namespace
     };
 
     std::optional<ImpactImpulseInfo> TryGetImpactImpulseInfo(
-        const SweetsSpace::ActiveSweets& fallingFruit,
-        const SweetsSpace::ActiveSweets& gluedFruit)
+        const MeteorsSpace::ActiveMeteors& fallingFruit,
+        const MeteorsSpace::ActiveMeteors& gluedFruit)
     {
         const b2BodyId fallingBody = fallingFruit.GetBox2DBodyId();
         const b2BodyId gluedBody = gluedFruit.GetBox2DBodyId();
@@ -104,9 +104,9 @@ namespace
     }
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    SweetsContacts::SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine)
+    MeteorsContacts::MeteorsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine)
         : m_physicsMachine(physicsMachine)
         , m_warnedMissingPhysicsMachine(warnedMissingPhysicsMachine)
     {
@@ -126,7 +126,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+    void MeteorsContacts::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
         const Systems::ContactEventInfo& info)
     {
         if (!a || !b)
@@ -134,31 +134,31 @@ namespace SweetsSpace
             return;
         }
 
-        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
-        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
-        if (!sweetsA && !sweetsB)
+        auto* meteorsA = dynamic_cast<ActiveMeteors*>(a);
+        auto* meteorsB = dynamic_cast<ActiveMeteors*>(b);
+        if (!meteorsA && !meteorsB)
         {
             return;
         }
 
-        if (sweetsA)
+        if (meteorsA)
         {
-            UpdateContactStateBegin(sweetsA, b);
+            UpdateContactStateBegin(meteorsA, b);
         }
 
-        if (sweetsB)
+        if (meteorsB)
         {
-            UpdateContactStateBegin(sweetsB, a);
+            UpdateContactStateBegin(meteorsB, a);
         }
 
-        if (sweetsA && sweetsB && !IsCreamTag(sweetsA->GetTag()) && !IsCreamTag(sweetsB->GetTag()))
+        if (meteorsA && meteorsB && !IsCreamTag(meteorsA->GetTag()) && !IsCreamTag(meteorsB->GetTag()))
         {
-            const bool sweetsAHasCream = m_fruitToCreams.contains(sweetsA);
-            const bool sweetsBHasCream = m_fruitToCreams.contains(sweetsB);
-            if (sweetsAHasCream != sweetsBHasCream && m_glueTuning.breakImpulse > 0.0f)
+            const bool meteorsAHasCream = m_fruitToCreams.contains(meteorsA);
+            const bool meteorsBHasCream = m_fruitToCreams.contains(meteorsB);
+            if (meteorsAHasCream != meteorsBHasCream && m_glueTuning.breakImpulse > 0.0f)
             {
-                ActiveSweets* gluedFruit = sweetsAHasCream ? sweetsA : sweetsB;
-                ActiveSweets* fallingFruit = sweetsAHasCream ? sweetsB : sweetsA;
+                ActiveMeteors* gluedFruit = meteorsAHasCream ? meteorsA : meteorsB;
+                ActiveMeteors* fallingFruit = meteorsAHasCream ? meteorsB : meteorsA;
                 if (gluedFruit && fallingFruit)
                 {
                     const auto impactInfo = TryGetImpactImpulseInfo(*fallingFruit, *gluedFruit);
@@ -166,7 +166,7 @@ namespace SweetsSpace
                     {
                         if (impactInfo->impulse > m_glueTuning.breakImpulse)
                         {
-                            RemoveCreamWeldJointsForSweets(gluedFruit, "impactBreak");
+                            RemoveCreamWeldJointsForMeteors(gluedFruit, "impactBreak");
                             const b2BodyId refreshedGluedBody = gluedFruit->GetBox2DBodyId();
                             if (b2Body_IsValid(refreshedGluedBody))
                             {
@@ -189,57 +189,57 @@ namespace SweetsSpace
             }
         }
 
-        ActiveSweets* cream = nullptr;
-        ActiveSweets* otherSweets = nullptr;
-        if (sweetsA && sweetsB)
+        ActiveMeteors* cream = nullptr;
+        ActiveMeteors* otherMeteors = nullptr;
+        if (meteorsA && meteorsB)
         {
-            if (IsCreamTag(sweetsA->GetTag()))
+            if (IsCreamTag(meteorsA->GetTag()))
             {
-                cream = sweetsA;
-                otherSweets = sweetsB;
+                cream = meteorsA;
+                otherMeteors = meteorsB;
             }
-            else if (IsCreamTag(sweetsB->GetTag()))
+            else if (IsCreamTag(meteorsB->GetTag()))
             {
-                cream = sweetsB;
-                otherSweets = sweetsA;
+                cream = meteorsB;
+                otherMeteors = meteorsA;
             }
         }
 
-        if (cream && otherSweets)
+        if (cream && otherMeteors)
         {
             if (!cream->WasEverCarried())
             {
-                LogGlueReject("notActivated", cream, otherSweets);
+                LogGlueReject("notActivated", cream, otherMeteors);
             }
             else
             {
-                if (IsCreamTag(otherSweets->GetTag()))
+                if (IsCreamTag(otherMeteors->GetTag()))
                 {
-                    LogGlueReject("targetIsCream", cream, otherSweets);
+                    LogGlueReject("targetIsCream", cream, otherMeteors);
                 }
-                else if (IsBlockedTag(otherSweets->GetTag()))
+                else if (IsBlockedTag(otherMeteors->GetTag()))
                 {
-                    LogGlueReject("blockedTag", cream, otherSweets);
+                    LogGlueReject("blockedTag", cream, otherMeteors);
                 }
-                else if (IsGlueCooldownActive(*otherSweets))
+                else if (IsGlueCooldownActive(*otherMeteors))
                 {
-                    LogGlueReject("cooldown", cream, otherSweets);
+                    LogGlueReject("cooldown", cream, otherMeteors);
                 }
                 else if (m_physicsMachine)
                 {
-                    if (IsGlueSpeedTooFast(*cream) || IsGlueSpeedTooFast(*otherSweets))
+                    if (IsGlueSpeedTooFast(*cream) || IsGlueSpeedTooFast(*otherMeteors))
                     {
-                        LogGlueReject("tooFast", cream, otherSweets);
+                        LogGlueReject("tooFast", cream, otherMeteors);
                     }
                     else
                     {
                         if (B2_IS_NULL(info.contactId))
                         {
-                            LogGlueReject("missingContactId", cream, otherSweets);
+                            LogGlueReject("missingContactId", cream, otherMeteors);
                         }
                         else if (m_pendingGlue.contains(info.contactId))
                         {
-                            LogGlueReject("alreadyPending", cream, otherSweets);
+                            LogGlueReject("alreadyPending", cream, otherMeteors);
                         }
                         else
                         {
@@ -253,7 +253,7 @@ namespace SweetsSpace
                             {
                                 PendingGlue pending{};
                                 pending.cream = cream;
-                                pending.fruit = otherSweets;
+                                pending.fruit = otherMeteors;
                                 pending.contactId = info.contactId;
                                 pending.shapeIdA = info.shapeIdA;
                                 pending.shapeIdB = info.shapeIdB;
@@ -261,14 +261,14 @@ namespace SweetsSpace
                             }
                             else
                             {
-                                LogGlueReject("alreadyBonded", cream, otherSweets);
+                                LogGlueReject("alreadyBonded", cream, otherMeteors);
                             }
                         }
                     }
                 }
                 else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
                 {
-                    LogGlueReject("missingPhysicsMachine", cream, otherSweets);
+                    LogGlueReject("missingPhysicsMachine", cream, otherMeteors);
                     *m_warnedMissingPhysicsMachine = true;
                 }
             }
@@ -276,7 +276,7 @@ namespace SweetsSpace
 
     }
 
-    void SweetsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+    void MeteorsContacts::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
         const Systems::ContactEventInfo& info)
     {
         if (!a || !b)
@@ -284,21 +284,21 @@ namespace SweetsSpace
             return;
         }
 
-        auto* sweetsA = dynamic_cast<ActiveSweets*>(a);
-        auto* sweetsB = dynamic_cast<ActiveSweets*>(b);
-        if (!sweetsA && !sweetsB)
+        auto* meteorsA = dynamic_cast<ActiveMeteors*>(a);
+        auto* meteorsB = dynamic_cast<ActiveMeteors*>(b);
+        if (!meteorsA && !meteorsB)
         {
             return;
         }
 
-        if (sweetsA)
+        if (meteorsA)
         {
-            UpdateContactStateEnd(sweetsA, b);
+            UpdateContactStateEnd(meteorsA, b);
         }
 
-        if (sweetsB)
+        if (meteorsB)
         {
-            UpdateContactStateEnd(sweetsB, a);
+            UpdateContactStateEnd(meteorsB, a);
         }
 
         if (!m_pendingGlue.empty() && !B2_IS_NULL(info.contactId))
@@ -308,12 +308,12 @@ namespace SweetsSpace
 
     }
 
-    bool SweetsContacts::TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const
+    bool MeteorsContacts::TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const
     {
         return TryGetContactAnchorData(info.contactId, info.shapeIdA, info.shapeIdB, outAnchor);
     }
 
-    bool SweetsContacts::TryGetContactAnchorData(const b2ContactId& contactId, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
+    bool MeteorsContacts::TryGetContactAnchorData(const b2ContactId& contactId, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
         ContactAnchorData& outAnchor) const
     {
         const auto tryShape = [&](b2ShapeId shapeId) -> bool
@@ -362,7 +362,7 @@ namespace SweetsSpace
         return tryShape(shapeIdB);
     }
 
-    bool SweetsContacts::DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const
+    bool MeteorsContacts::DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const
     {
         if (!b2Shape_IsValid(shapeId))
         {
@@ -382,7 +382,7 @@ namespace SweetsSpace
             });
     }
 
-    Entities::PhysicalEntity* SweetsContacts::GetEntityForShape(b2ShapeId shapeId) const
+    Entities::PhysicalEntity* MeteorsContacts::GetEntityForShape(b2ShapeId shapeId) const
     {
         if (!b2Shape_IsValid(shapeId))
         {
@@ -429,7 +429,7 @@ namespace SweetsSpace
         return nullptr;
     }
 
-    bool SweetsContacts::ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
+    bool MeteorsContacts::ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
         const ContactAnchorData& anchorData, b2Vec2& outAnchor) const
     {
         if (!b2Body_IsValid(movingBody.GetBox2DBodyId()))
@@ -469,7 +469,7 @@ namespace SweetsSpace
         return true;
     }
 
-    void SweetsContacts::FreezeFruitBody(ActiveSweets& fruit)
+    void MeteorsContacts::FreezeFruitBody(ActiveMeteors& fruit)
     {
         if (m_frozenFruitStates.contains(&fruit))
         {
@@ -493,7 +493,7 @@ namespace SweetsSpace
         b2Body_SetType(bodyId, b2_staticBody);
     }
 
-    void SweetsContacts::UnfreezeFruitBody(ActiveSweets& fruit)
+    void MeteorsContacts::UnfreezeFruitBody(ActiveMeteors& fruit)
     {
         const auto it = m_frozenFruitStates.find(&fruit);
         if (it == m_frozenFruitStates.end())
@@ -513,7 +513,7 @@ namespace SweetsSpace
         m_frozenFruitStates.erase(it);
     }
 
-    bool SweetsContacts::IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const
+    bool MeteorsContacts::IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const
     {
         if (m_glueTuning.maxSpeed <= 0.0f)
         {
@@ -532,7 +532,7 @@ namespace SweetsSpace
         return speedSquared > maxSpeedSquared;
     }
 
-    bool SweetsContacts::IsGlueBreakForceExceeded(b2JointId jointId) const
+    bool MeteorsContacts::IsGlueBreakForceExceeded(b2JointId jointId) const
     {
         if (m_glueTuning.breakForce <= 0.0f)
         {
@@ -553,7 +553,7 @@ namespace SweetsSpace
         return b2Length(force) >= m_glueTuning.breakForce;
     }
 
-    void SweetsContacts::UpdateBreakableJoints()
+    void MeteorsContacts::UpdateBreakableJoints()
     {
         if (m_glueTuning.breakForce <= 0.0f)
         {
@@ -580,8 +580,8 @@ namespace SweetsSpace
                 continue;
             }
 
-            ActiveSweets* cream = entry.cream;
-            ActiveSweets* fruit = entry.fruit;
+            ActiveMeteors* cream = entry.cream;
+            ActiveMeteors* fruit = entry.fruit;
             LogGlueDestroy("breakForce", cream, fruit);
             m_physicsMachine->DestroyJoint(entry.jointId);
             m_creamWeldJoints.erase(current->first);
@@ -593,7 +593,7 @@ namespace SweetsSpace
 
     }
 
-    void SweetsContacts::LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const
+    void MeteorsContacts::LogGlueReject(const char* reason, const ActiveMeteors* cream, const Entities::PhysicalEntity* target) const
     {
         ++m_glueStats.rejectCount;
         std::ostringstream oss;
@@ -603,7 +603,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsContacts::LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const
+    void MeteorsContacts::LogGlueDestroy(const char* reason, const ActiveMeteors* cream, const Entities::PhysicalEntity* target) const
     {
         ++m_glueStats.cleanupCount;
         std::ostringstream oss;
@@ -613,7 +613,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsContacts::LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit,
+    void MeteorsContacts::LogGlueCreateFruitToCream(const ActiveMeteors* cream, const ActiveMeteors* fruit,
         const b2Vec2& anchorWorld) const
     {
         ++m_glueStats.createCount;
@@ -624,12 +624,12 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsContacts::CleanupInvalidJoint(const b2ContactId& contactId, CreamWeldEntry& entry)
+    void MeteorsContacts::CleanupInvalidJoint(const b2ContactId& contactId, CreamWeldEntry& entry)
     {
         if (!b2Joint_IsValid(entry.jointId))
         {
-            ActiveSweets* cream = entry.cream;
-            ActiveSweets* fruit = entry.fruit;
+            ActiveMeteors* cream = entry.cream;
+            ActiveMeteors* fruit = entry.fruit;
             LogGlueDestroy("destroyed", cream, fruit);
             m_creamWeldJoints.erase(contactId);
             if (fruit)
@@ -639,7 +639,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsContacts::RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream)
+    void MeteorsContacts::RemoveFruitCreamLink(ActiveMeteors* fruit, ActiveMeteors* cream)
     {
         if (!fruit || !cream)
         {
@@ -668,16 +668,16 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsContacts::RemovePendingGlueForSweets(ActiveSweets* sweets)
+    void MeteorsContacts::RemovePendingGlueForMeteors(ActiveMeteors* meteors)
     {
-        if (!sweets || m_pendingGlue.empty())
+        if (!meteors || m_pendingGlue.empty())
         {
             return;
         }
 
         for (auto it = m_pendingGlue.begin(); it != m_pendingGlue.end();)
         {
-            if (it->second.cream == sweets || it->second.fruit == sweets)
+            if (it->second.cream == meteors || it->second.fruit == meteors)
             {
                 it = m_pendingGlue.erase(it);
             }
@@ -688,25 +688,25 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsContacts::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
+    bool MeteorsContacts::HasSupportingContact(const ActiveMeteors& meteors, bool* foundationOnly) const
     {
         if (foundationOnly)
         {
             *foundationOnly = false;
         }
 
-        auto it = m_contactStates.find(const_cast<ActiveSweets*>(&sweets));
+        auto it = m_contactStates.find(const_cast<ActiveMeteors*>(&meteors));
         if (it == m_contactStates.end())
         {
             return false;
         }
 
         const bool hasFoundation = it->second.foundationContacts > 0;
-        const bool hasSweetsContact = it->second.sweetsContacts > 0;
-        if (hasFoundation || hasSweetsContact)
+        const bool hasMeteorsContact = it->second.meteorsContacts > 0;
+        if (hasFoundation || hasMeteorsContact)
         {
             bool hasRealContacts = false;
-            const b2BodyId bodyId = sweets.GetBox2DBodyId();
+            const b2BodyId bodyId = meteors.GetBox2DBodyId();
             if (b2Body_IsValid(bodyId))
             {
                 const int capacity = b2Body_GetContactCapacity(bodyId);
@@ -727,62 +727,62 @@ namespace SweetsSpace
 
             if (!hasRealContacts)
             {
-                const_cast<SweetsContacts*>(this)->m_contactStates.erase(it);
+                const_cast<MeteorsContacts*>(this)->m_contactStates.erase(it);
                 return false;
             }
         }
 
         if (foundationOnly)
         {
-            *foundationOnly = hasFoundation && !hasSweetsContact;
+            *foundationOnly = hasFoundation && !hasMeteorsContact;
         }
 
-        return hasFoundation || hasSweetsContact;
+        return hasFoundation || hasMeteorsContact;
     }
 
-    bool SweetsContacts::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
+    bool MeteorsContacts::HasEverCollidedWithMeteors(const ActiveMeteors& meteors) const
     {
-        return m_hasSweetsContact.find(const_cast<ActiveSweets*>(&sweets)) != m_hasSweetsContact.end();
+        return m_hasMeteorsContact.find(const_cast<ActiveMeteors*>(&meteors)) != m_hasMeteorsContact.end();
     }
 
-    void SweetsContacts::ClearContactState(ActiveSweets* sweets)
+    void MeteorsContacts::ClearContactState(ActiveMeteors* meteors)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
 
-        m_contactStates.erase(sweets);
+        m_contactStates.erase(meteors);
     }
 
-    void SweetsContacts::ClearSweetsContact(ActiveSweets* sweets)
+    void MeteorsContacts::ClearMeteorsContact(ActiveMeteors* meteors)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
 
-        m_hasSweetsContact.erase(sweets);
+        m_hasMeteorsContact.erase(meteors);
     }
 
-    void SweetsContacts::Reset()
+    void MeteorsContacts::Reset()
     {
         m_contactStates.clear();
-        m_hasSweetsContact.clear();
+        m_hasMeteorsContact.clear();
         m_pendingGlue.clear();
         m_glueCooldown.clear();
     }
 
-    void SweetsContacts::RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context)
+    void MeteorsContacts::RemoveCreamWeldJointsForMeteors(ActiveMeteors* meteors, const char* context)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
-        RemovePendingGlueForSweets(sweets);
+        RemovePendingGlueForMeteors(meteors);
         if (!context || std::string(context) != "impactBreak")
         {
-            m_glueCooldown.erase(sweets);
+            m_glueCooldown.erase(meteors);
         }
         if (m_creamWeldJoints.empty())
         {
@@ -793,15 +793,15 @@ namespace SweetsSpace
         if (context)
         {
             const std::string contextValue = context;
-            if (contextValue == "TryMarkAsCarried" || contextValue == "ReleaseCarriedSweets")
+            if (contextValue == "TryMarkAsCarried" || contextValue == "ReleaseCarriedMeteors")
             {
                 reason = "carried";
             }
-            else if (contextValue == "ClearAllSweets")
+            else if (contextValue == "ClearAllMeteors")
             {
                 reason = "clearAll";
             }
-            else if (contextValue == "~SweetsManager")
+            else if (contextValue == "~MeteorsManager")
             {
                 reason = "destroyed";
             }
@@ -820,10 +820,10 @@ namespace SweetsSpace
 
         for (auto it = m_creamWeldJoints.begin(); it != m_creamWeldJoints.end();)
         {
-            if (it->second.cream == sweets || it->second.fruit == sweets)
+            if (it->second.cream == meteors || it->second.fruit == meteors)
             {
-                ActiveSweets* cream = it->second.cream;
-                ActiveSweets* fruit = it->second.fruit;
+                ActiveMeteors* cream = it->second.cream;
+                ActiveMeteors* fruit = it->second.fruit;
                 LogGlueDestroy(reason, cream, fruit);
                 if (m_physicsMachine)
                 {
@@ -841,13 +841,13 @@ namespace SweetsSpace
             }
         }
 
-        if (m_frozenFruitStates.contains(sweets) && !m_fruitToCreams.contains(sweets))
+        if (m_frozenFruitStates.contains(meteors) && !m_fruitToCreams.contains(meteors))
         {
-            UnfreezeFruitBody(*sweets);
+            UnfreezeFruitBody(*meteors);
         }
     }
 
-    void SweetsContacts::ClearCreamWeldJoints(const char* context)
+    void MeteorsContacts::ClearCreamWeldJoints(const char* context)
     {
         if (m_creamWeldJoints.empty())
         {
@@ -866,7 +866,7 @@ namespace SweetsSpace
         }
 
         const char* reason = "clearAll";
-        if (context && std::string(context) == "~SweetsManager")
+        if (context && std::string(context) == "~MeteorsManager")
         {
             reason = "destroyed";
         }
@@ -883,7 +883,7 @@ namespace SweetsSpace
         m_pendingGlue.clear();
         m_fruitToCreams.clear();
         m_glueCooldown.clear();
-        std::vector<ActiveSweets*> frozenFruits;
+        std::vector<ActiveMeteors*> frozenFruits;
         frozenFruits.reserve(m_frozenFruitStates.size());
         for (const auto& entry : m_frozenFruitStates)
         {
@@ -892,13 +892,13 @@ namespace SweetsSpace
                 frozenFruits.push_back(entry.first);
             }
         }
-        for (ActiveSweets* fruit : frozenFruits)
+        for (ActiveMeteors* fruit : frozenFruits)
         {
             UnfreezeFruitBody(*fruit);
         }
     }
 
-    void SweetsContacts::ProcessPendingGlue()
+    void MeteorsContacts::ProcessPendingGlue()
     {
         if (m_pendingGlue.empty())
         {
@@ -924,7 +924,7 @@ namespace SweetsSpace
             PendingGlue pending = it->second;
             if (!pending.cream || !pending.fruit)
             {
-                LogGlueReject("missingSweets", pending.cream, pending.fruit);
+                LogGlueReject("missingMeteors", pending.cream, pending.fruit);
                 it = m_pendingGlue.erase(it);
                 continue;
             }
@@ -1009,16 +1009,16 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsContacts::OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState)
+    void MeteorsContacts::OnStateChanged(ActiveMeteors* meteors, MeteorsState previousState, MeteorsState newState)
     {
         (void)previousState;
-        if (newState == SweetsState::Carried && sweets)
+        if (newState == MeteorsState::Carried && meteors)
         {
-            m_hasSweetsContact.erase(sweets);
+            m_hasMeteorsContact.erase(meteors);
         }
     }
 
-    void SweetsContacts::TickDebugStats(float dt)
+    void MeteorsContacts::TickDebugStats(float dt)
     {
         UpdateBreakableJoints();
         TickGlueCooldowns(dt);
@@ -1045,7 +1045,7 @@ namespace SweetsSpace
 
     }
 
-    void SweetsContacts::TickGlueCooldowns(float dt)
+    void MeteorsContacts::TickGlueCooldowns(float dt)
     {
         if (!std::isfinite(dt) || dt <= 0.0f || m_glueCooldown.empty())
         {
@@ -1066,9 +1066,9 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsContacts::IsGlueCooldownActive(const ActiveSweets& fruit) const
+    bool MeteorsContacts::IsGlueCooldownActive(const ActiveMeteors& fruit) const
     {
-        auto it = m_glueCooldown.find(const_cast<ActiveSweets*>(&fruit));
+        auto it = m_glueCooldown.find(const_cast<ActiveMeteors*>(&fruit));
         if (it == m_glueCooldown.end())
         {
             return false;
@@ -1077,7 +1077,7 @@ namespace SweetsSpace
         return it->second > 0.0f;
     }
 
-    SweetsContacts::GlueDebugSnapshot SweetsContacts::BuildDebugSnapshot() const
+    MeteorsContacts::GlueDebugSnapshot MeteorsContacts::BuildDebugSnapshot() const
     {
         GlueDebugSnapshot snapshot{};
         snapshot.activeFruitGlue = static_cast<int>(m_creamWeldJoints.size());
@@ -1100,34 +1100,34 @@ namespace SweetsSpace
         return snapshot;
     }
 
-    void SweetsContacts::UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other)
+    void MeteorsContacts::UpdateContactStateBegin(ActiveMeteors* meteors, Entities::PhysicalEntity* other)
     {
-        if (!sweets || !other)
+        if (!meteors || !other)
         {
             return;
         }
 
-        ContactState& state = m_contactStates[sweets];
+        ContactState& state = m_contactStates[meteors];
         const Collision::CollisionLayer otherLayer = other->GetCollisionLayer();
         if (otherLayer == Collision::CollisionLayer::Floor)
         {
             ++state.foundationContacts;
         }
-        else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
+        else if (otherLayer == Collision::CollisionLayer::Meteors && dynamic_cast<ActiveMeteors*>(other))
         {
-            ++state.sweetsContacts;
-            m_hasSweetsContact.insert(sweets);
+            ++state.meteorsContacts;
+            m_hasMeteorsContact.insert(meteors);
         }
     }
 
-    void SweetsContacts::UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other)
+    void MeteorsContacts::UpdateContactStateEnd(ActiveMeteors* meteors, Entities::PhysicalEntity* other)
     {
-        if (!sweets || !other)
+        if (!meteors || !other)
         {
             return;
         }
 
-        auto it = m_contactStates.find(sweets);
+        auto it = m_contactStates.find(meteors);
         if (it == m_contactStates.end())
         {
             return;
@@ -1139,15 +1139,15 @@ namespace SweetsSpace
         {
             --state.foundationContacts;
         }
-        else if (otherLayer == Collision::CollisionLayer::Sweets && dynamic_cast<ActiveSweets*>(other))
+        else if (otherLayer == Collision::CollisionLayer::Meteors && dynamic_cast<ActiveMeteors*>(other))
         {
-            if (state.sweetsContacts > 0)
+            if (state.meteorsContacts > 0)
             {
-                --state.sweetsContacts;
+                --state.meteorsContacts;
             }
         }
 
-        if (state.foundationContacts <= 0 && state.sweetsContacts <= 0)
+        if (state.foundationContacts <= 0 && state.meteorsContacts <= 0)
         {
             m_contactStates.erase(it);
         }

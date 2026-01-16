@@ -1,4 +1,4 @@
-#include "SweetsManager.h"
+#include "MeteorsManager.h"
 
 #include <sstream>
 
@@ -12,7 +12,7 @@
 #endif
 
 #include "Core/UpdateScheduler.h"
-#include "Sweets/BaseSweets.h"
+#include "Meteors/BaseMeteors.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
 namespace
@@ -29,15 +29,15 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr const char* kLogPrefix = "[MeteorsManager] ";
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
     class LateUpdateNode : public Core::UpdateNode
     {
     public:
-        explicit LateUpdateNode(::SweetsSpace::SweetsManager& owner)
+        explicit LateUpdateNode(::MeteorsSpace::MeteorsManager& owner)
             : Core::UpdateNode(Core::UpdatePhase::Late, 0)
             , m_owner(owner)
         {
@@ -49,10 +49,10 @@ namespace SweetsSpace
         }
 
     private:
-        ::SweetsSpace::SweetsManager& m_owner;
+        ::MeteorsSpace::MeteorsManager& m_owner;
     };
 
-    SweetsManager::SweetsManager(Systems::DrawSystem& drawSystem,
+    MeteorsManager::MeteorsManager(Systems::DrawSystem& drawSystem,
         Systems::PhysicsMachine& physicsMachine,
         Core::UpdateScheduler& scheduler)
         : m_drawSystem(&drawSystem)
@@ -78,92 +78,92 @@ namespace SweetsSpace
     {
     }
 
-    SweetsManager::~SweetsManager()
+    MeteorsManager::~MeteorsManager()
     {
-        m_contacts.ClearCreamWeldJoints("~SweetsManager");
+        m_contacts.ClearCreamWeldJoints("~MeteorsManager");
         if (m_scheduler && m_lateUpdateNode)
         {
             m_lateUpdateNode->ReleaseRegistrationHandle();
         }
     }
 
-    void SweetsManager::OnUpdate(const Core::UpdateContext& ctx)
+    void MeteorsManager::OnUpdate(const Core::UpdateContext& ctx)
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
         m_lifecycle.OnUpdate(ctx);
         m_contacts.TickDebugStats(ctx.dt);
     }
 
-    void SweetsManager::OnLateUpdate(const Core::UpdateContext& ctx)
+    void MeteorsManager::OnLateUpdate(const Core::UpdateContext& ctx)
     {
         m_contacts.ProcessPendingGlue();
         m_lifecycle.OnLateUpdate(ctx);
     }
 
-    void SweetsManager::Update(const Core::UpdateContext& ctx)
+    void MeteorsManager::Update(const Core::UpdateContext& ctx)
     {
         OnUpdate(ctx);
     }
 
-    void SweetsManager::DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera)
+    void MeteorsManager::DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera)
     {
         m_renderer.DrawAll(renderer, camera);
     }
 
-    SweetsManager::SweetsList& SweetsManager::GetByState(SweetsState state)
+    MeteorsManager::MeteorsList& MeteorsManager::GetByState(MeteorsState state)
     {
         return m_registry.GetByState(state);
     }
 
-    const SweetsManager::SweetsList& SweetsManager::GetByState(SweetsState state) const
+    const MeteorsManager::MeteorsList& MeteorsManager::GetByState(MeteorsState state) const
     {
         return m_registry.GetByState(state);
     }
 
-    float SweetsManager::GetHighestStackedHeight() const
+    float MeteorsManager::GetHighestStackedHeight() const
     {
         return m_registry.GetHighestStackedHeight();
     }
 
-    void SweetsManager::SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state)
+    void MeteorsManager::SetState(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState state)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
 
-        if (sweets->IsPendingDestroy())
+        if (meteors->IsPendingDestroy())
         {
             return;
         }
 
-        auto previous = m_registry.SetState(sweets, state);
+        auto previous = m_registry.SetState(meteors, state);
         if (!previous)
         {
             return;
         }
 
-        m_contacts.OnStateChanged(sweets.get(), *previous, state);
-        m_spawner.OnStateChanged(sweets, *previous, state);
+        m_contacts.OnStateChanged(meteors.get(), *previous, state);
+        m_spawner.OnStateChanged(meteors, *previous, state);
     }
 
-    void SweetsManager::Erase(const std::shared_ptr<ActiveSweets>& sweets)
+    void MeteorsManager::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        m_lifecycle.Erase(sweets);
+        m_lifecycle.Erase(meteors);
     }
 
-    void SweetsManager::ClearAllSweets()
+    void MeteorsManager::ClearAllMeteors()
     {
-        m_lifecycle.ClearAllSweets();
+        m_lifecycle.ClearAllMeteors();
     }
 
-    void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
+    void MeteorsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
     {
         m_phaseChangeCallback = std::move(callback);
         m_warnedMissingPhaseCallback = false;
     }
 
-    void SweetsManager::NotifyPhaseChanged(int newPhase)
+    void MeteorsManager::NotifyPhaseChanged(int newPhase)
     {
         if (newPhase < 0)
         {
@@ -194,135 +194,135 @@ namespace SweetsSpace
         }
     }
 
-    int SweetsManager::GetCurrentPhase() const noexcept
+    int MeteorsManager::GetCurrentPhase() const noexcept
     {
         return m_currentPhase;
     }
 
-    std::vector<std::pair<std::string, SweetsManager::FactoryPreset>> SweetsManager::EnumerateFactoryPresets() const
+    std::vector<std::pair<std::string, MeteorsManager::FactoryPreset>> MeteorsManager::EnumerateFactoryPresets() const
     {
         return m_factory.EnumerateFactoryPresets();
     }
 
-    Core::IUpdatable* SweetsManager::GetLateUpdateNode()
+    Core::IUpdatable* MeteorsManager::GetLateUpdateNode()
     {
         return m_lateUpdateNode.get();
     }
 
-    const Core::IUpdatable* SweetsManager::GetLateUpdateNode() const
+    const Core::IUpdatable* MeteorsManager::GetLateUpdateNode() const
     {
         return m_lateUpdateNode.get();
     }
 
-    std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
+    std::shared_ptr<ActiveMeteors> MeteorsManager::Spawn(const std::string& kind, const Transform& transform)
     {
-        auto sweets = m_factory.Create(kind, transform);
-        if (!sweets)
+        auto meteors = m_factory.Create(kind, transform);
+        if (!meteors)
         {
             return nullptr;
         }
 
-        sweets->SetWasEverCarried(false);
+        meteors->SetWasEverCarried(false);
 
-        if (!m_lifecycle.RegisterWithSystems(sweets))
+        if (!m_lifecycle.RegisterWithSystems(meteors))
         {
             return nullptr;
         }
 
-        SetState(sweets, SweetsState::Active);
+        SetState(meteors, MeteorsState::Active);
 
-        if (m_physicsMachine && sweets)
+        if (m_physicsMachine && meteors)
         {
-            const b2BodyId bodyId = m_physicsMachine->FindBody(*sweets);
+            const b2BodyId bodyId = m_physicsMachine->FindBody(*meteors);
             if (b2Body_IsValid(bodyId))
             {
                 const b2Vec2 position = b2Body_GetPosition(bodyId);
-                Transform synced = sweets->GetTransform();
+                Transform synced = meteors->GetTransform();
                 synced.position.x = position.x;
                 synced.position.y = position.y;
-                sweets->SetTransform(synced);
+                meteors->SetTransform(synced);
             }
         }
 
-        return sweets;
+        return meteors;
     }
 
-    PickupQueryResult SweetsManager::FindNearestCarryable(
+    PickupQueryResult MeteorsManager::FindNearestCarryable(
         const float3& pickupCenter,
         float halfWidth,
         float halfHeight,
         float halfDepth,
         float depthThreshold,
-        const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
+        const std::vector<std::shared_ptr<ActiveMeteors>>& exclude,
         float maxDistance) const
     {
         return m_registry.FindNearestCarryable(pickupCenter, halfWidth, halfHeight, halfDepth, depthThreshold, exclude, maxDistance);
     }
 
-    bool SweetsManager::TryMarkAsCarried(const std::shared_ptr<ActiveSweets>& sweets)
+    bool MeteorsManager::TryMarkAsCarried(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        return m_lifecycle.TryMarkAsCarried(sweets);
+        return m_lifecycle.TryMarkAsCarried(meteors);
     }
 
-    bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets)
+    bool MeteorsManager::ReleaseCarriedMeteors(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        return m_lifecycle.ReleaseCarriedSweets(sweets);
+        return m_lifecycle.ReleaseCarriedMeteors(meteors);
     }
 
-    void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
+    void MeteorsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
     {
         m_lifecycle.SetHorizontalBounds(minX, maxX, margin);
     }
 
-    void SweetsManager::SetGeneratedColliderThicknessPadding(float factor)
+    void MeteorsManager::SetGeneratedColliderThicknessPadding(float factor)
     {
         m_factory.SetGeneratedColliderThicknessPadding(factor);
     }
 
-    void SweetsManager::SetGeneratedColliderMinThickness(float thickness)
+    void MeteorsManager::SetGeneratedColliderMinThickness(float thickness)
     {
         m_factory.SetGeneratedColliderMinThickness(thickness);
     }
 
-    void SweetsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+    void MeteorsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
         const Systems::ContactEventInfo& info)
     {
         m_contacts.OnContactBegin(a, b, info);
     }
 
-    void SweetsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
+    void MeteorsManager::OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
         const Systems::ContactEventInfo& info)
     {
         m_contacts.OnContactEnd(a, b, info);
     }
 
-    bool SweetsManager::HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly) const
+    bool MeteorsManager::HasSupportingContact(const ActiveMeteors& meteors, bool* foundationOnly) const
     {
-        return m_contacts.HasSupportingContact(sweets, foundationOnly);
+        return m_contacts.HasSupportingContact(meteors, foundationOnly);
     }
 
-    bool SweetsManager::HasEverCollidedWithSweets(const ActiveSweets& sweets) const
+    bool MeteorsManager::HasEverCollidedWithMeteors(const ActiveMeteors& meteors) const
     {
-        return m_contacts.HasEverCollidedWithSweets(sweets);
+        return m_contacts.HasEverCollidedWithMeteors(meteors);
     }
 
-    int SweetsManager::GetSweetsCount() const
+    int MeteorsManager::GetMeteorsCount() const
     {
         return m_registry.CountAll();
     }
 
-    bool SweetsManager::GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const
+    bool MeteorsManager::GetGlueDebugSnapshot(MeteorsContacts::GlueDebugSnapshot& outSnapshot) const
     {
         outSnapshot = m_contacts.BuildDebugSnapshot();
         return true;
     }
 
-    bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
+    bool MeteorsManager::LoadPhaseSpawnConfig(const std::string& path)
     {
         return m_spawner.LoadPhaseSpawnConfig(path);
     }
 
-    void SweetsManager::SetSpawnOrigins(
+    void MeteorsManager::SetSpawnOrigins(
         const std::vector<float3>& primary,
         const std::vector<float3>& secondary,
         std::optional<float> spawnHeightOffset)
@@ -330,32 +330,32 @@ namespace SweetsSpace
         m_spawner.SetSpawnOrigins(primary, secondary, spawnHeightOffset);
     }
 
-    void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
+    void MeteorsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_spawner.SetRandomRotationRangeDegrees(minDegrees, maxDegrees);
     }
 
-    void SweetsManager::SetLiveSweetsCap(int cap)
+    void MeteorsManager::SetLiveMeteorsCap(int cap)
     {
-        m_spawner.SetLiveSweetsCap(cap);
+        m_spawner.SetLiveMeteorsCap(cap);
     }
 
-    void SweetsManager::SetForceGeneratedColliders(bool force)
+    void MeteorsManager::SetForceGeneratedColliders(bool force)
     {
         m_factory.SetForceGeneratedColliders(force);
     }
 
-    void SweetsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    void MeteorsManager::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
     {
         m_factory.SetForceConfigColliders(force, kinds);
     }
 
-    void SweetsManager::SetColliderConfigOverridesEnabled(bool enabled)
+    void MeteorsManager::SetColliderConfigOverridesEnabled(bool enabled)
     {
         m_factory.SetColliderConfigOverridesEnabled(enabled);
     }
 
-    void SweetsManager::ForceSpawnRefresh()
+    void MeteorsManager::ForceSpawnRefresh()
     {
         m_spawner.ForceSpawnRefresh();
     }

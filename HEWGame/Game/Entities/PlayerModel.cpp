@@ -8,7 +8,7 @@
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
-#include "SweetsPrototypeManifest.h"
+#include "MeteorsPrototypeManifest.h"
 
 #include <algorithm>
 #include <array>
@@ -208,7 +208,7 @@ namespace Entities
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
-        const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+        const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
 
         const auto* descriptor = manifest.Find("Fairy");
         const std::string modelPath = descriptor ? descriptor->modelPath : std::string{};

@@ -3,7 +3,7 @@
 #include "Core/Input.h"
 #include "Entities/Player.h"
 #include "PerspectiveCamera.h"
-#include "SweetsManager.h"
+#include "MeteorsManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -230,10 +230,10 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     input.player->SetScreenBounds(minX, maxX, minY, maxY);
 
-    if (input.sweetsManager)
+    if (input.meteorsManager)
     {
-        // Sweets wrap horizontally using the same camera-derived bounds as the player.
-        input.sweetsManager->SetHorizontalBounds(minX, maxX);
+        // Meteors wrap horizontally using the same camera-derived bounds as the player.
+        input.meteorsManager->SetHorizontalBounds(minX, maxX);
     }
 
     m_cachedPlayerMinX = minX;

@@ -10,16 +10,16 @@ namespace Systems
     class IPhysicsBinder;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsManager;
+    class MeteorsManager;
 }
 
 class SceneGameContactHandler
 {
 public:
-    void Bind(Systems::IPhysicsBinder& binder, SweetsSpace::SweetsManager* sweetsManager);
+    void Bind(Systems::IPhysicsBinder& binder, MeteorsSpace::MeteorsManager* meteorsManager);
 
 private:
-    SweetsSpace::SweetsManager* m_sweetsManager = nullptr;
+    MeteorsSpace::MeteorsManager* m_meteorsManager = nullptr;
 };

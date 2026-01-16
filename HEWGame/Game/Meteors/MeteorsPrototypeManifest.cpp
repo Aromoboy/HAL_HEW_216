@@ -1,4 +1,4 @@
-﻿#include "SweetsPrototypeManifest.h"
+﻿#include "MeteorsPrototypeManifest.h"
 
 #include <algorithm>
 #include <array>
@@ -20,8 +20,8 @@
 
 namespace
 {
-    constexpr const char* kPrototypeRoot = "Assets/Model/SweetsPrototype/";
-    constexpr const char* kLogPrefix = "[SweetsManifest] ";
+    constexpr const char* kPrototypeRoot = "Assets/Model/MeteorsPrototype/";
+    constexpr const char* kLogPrefix = "[MeteorsManifest] ";
 
 #if defined(_WIN32) && defined(_DEBUG)
     inline void ManifestDebugTrace(const std::string& message)
@@ -96,28 +96,28 @@ namespace
 
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    constexpr const char* SweetsPrototypeManifest::kDefaultConfigPath;
+    constexpr const char* MeteorsPrototypeManifest::kDefaultConfigPath;
 
-    SweetsPrototypeManifest& SweetsPrototypeManifest::Instance()
+    MeteorsPrototypeManifest& MeteorsPrototypeManifest::Instance()
     {
-        static SweetsPrototypeManifest manifest;
+        static MeteorsPrototypeManifest manifest;
         return manifest;
     }
 
-    SweetsPrototypeManifest::SweetsPrototypeManifest()
+    MeteorsPrototypeManifest::MeteorsPrototypeManifest()
     {
         ReloadFromCsv();
     }
 
-    void SweetsPrototypeManifest::ApplyDefaults()
+    void MeteorsPrototypeManifest::ApplyDefaults()
     {
-        Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/Mercury.fbx",
+        Register(MeteorsType::Strawberry, "Strawberry", "Assets/Model/Mercury.fbx",
             "Mercury-inspired meteor sphere with cratered surface");
-        Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/meteor.fbx",
+        Register(MeteorsType::Blueberry, "Blueberry", "Assets/Model/meteor.fbx",
             "Meteor model with jagged rocky silhouette");
-        Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/Meteorite.fbx",
+        Register(MeteorsType::Pineapple, "Pineapple", "Assets/Model/Meteorite.fbx",
             "Meteorite chunk with uneven, fractured surface");
 
         RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
@@ -125,10 +125,10 @@ namespace SweetsSpace
         RegisterExtra("Missile", "Assets/Model/Missile.fbx", "Air-to-air heat seeker missile model");
     }
 
-    void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description,
+    void MeteorsPrototypeManifest::Register(MeteorsType type, std::string key, std::string relativePath, std::string description,
         bool allowMeshPhysics)
     {
-        SweetsPrototypeDescriptor descriptor{};
+        MeteorsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
@@ -139,15 +139,15 @@ namespace SweetsSpace
         m_byType[type] = std::move(descriptor);
     }
 
-    void SweetsPrototypeManifest::RegisterAlias(SweetsType type, const std::string& aliasKey)
+    void MeteorsPrototypeManifest::RegisterAlias(MeteorsType type, const std::string& aliasKey)
     {
         m_lookup[NormalizeKey(aliasKey)] = type;
     }
 
-    void SweetsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description,
+    void MeteorsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description,
         bool allowMeshPhysics)
     {
-        SweetsPrototypeDescriptor descriptor{};
+        MeteorsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
@@ -158,7 +158,7 @@ namespace SweetsSpace
         m_extras[normalized] = std::move(descriptor);
     }
 
-    void SweetsPrototypeManifest::RegisterExtraAlias(const std::string& key, const std::string& aliasKey)
+    void MeteorsPrototypeManifest::RegisterExtraAlias(const std::string& key, const std::string& aliasKey)
     {
         const std::string normalizedKey = NormalizeKey(key);
         const std::string normalizedAlias = NormalizeKey(aliasKey);
@@ -168,7 +168,7 @@ namespace SweetsSpace
         }
     }
 
-    bool SweetsPrototypeManifest::ReloadFromCsv(const std::string& configPath)
+    bool MeteorsPrototypeManifest::ReloadFromCsv(const std::string& configPath)
     {
         m_byType.clear();
         m_lookup.clear();
@@ -179,10 +179,10 @@ namespace SweetsSpace
 
         const bool loaded = LoadOverridesFromConfig(configPath);
 
-        const std::array<SweetsType, 3> kTypes{
-            SweetsType::Strawberry,
-            SweetsType::Blueberry,
-            SweetsType::Pineapple,
+        const std::array<MeteorsType, 3> kTypes{
+            MeteorsType::Strawberry,
+            MeteorsType::Blueberry,
+            MeteorsType::Pineapple,
         };
         for (const auto type : kTypes)
         {
@@ -205,19 +205,19 @@ namespace SweetsSpace
         return loaded;
     }
 
-    bool SweetsPrototypeManifest::LoadOverridesFromConfig(const std::string& configPath)
+    bool MeteorsPrototypeManifest::LoadOverridesFromConfig(const std::string& configPath)
     {
         std::vector<Config::SectionLine> lines;
-        if (!Config::ReadSectionLines(configPath, GameplayConfig::kSectionSweetsManifest, lines))
+        if (!Config::ReadSectionLines(configPath, GameplayConfig::kSectionMeteorsManifest, lines))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Config section '" << GameplayConfig::kSectionSweetsManifest
+            oss << kLogPrefix << "Config section '" << GameplayConfig::kSectionMeteorsManifest
                 << "' not found at '" << configPath << "'; using built-in defaults.\n";
             ManifestDebugTrace(oss.str());
             return false;
         }
 
-        std::unordered_set<SweetsType, SweetsTypeHash> touched;
+        std::unordered_set<MeteorsType, MeteorsTypeHash> touched;
         for (const auto& entry : lines)
         {
             if (entry.key != "entry")
@@ -289,15 +289,15 @@ namespace SweetsSpace
             {
                 continue;
             }
-            auto mapToSweetsType = [](const std::string& normalized) -> std::optional<SweetsType>
+            auto mapToMeteorsType = [](const std::string& normalized) -> std::optional<MeteorsType>
             {
-                if (normalized == NormalizeKey(ToString(SweetsType::Strawberry))) return SweetsType::Strawberry;
-                if (normalized == NormalizeKey(ToString(SweetsType::Blueberry))) return SweetsType::Blueberry;
-                if (normalized == NormalizeKey(ToString(SweetsType::Pineapple))) return SweetsType::Pineapple;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Strawberry))) return MeteorsType::Strawberry;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Blueberry))) return MeteorsType::Blueberry;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Pineapple))) return MeteorsType::Pineapple;
                 return std::nullopt;
             };
 
-            std::optional<SweetsType> mappedType = mapToSweetsType(normalizedKey);
+            std::optional<MeteorsType> mappedType = mapToMeteorsType(normalizedKey);
             std::optional<std::string> mappedExtraKey;
             const auto extraIt = m_extraLookup.find(normalizedKey);
             if (!mappedType && extraIt != m_extraLookup.end())
@@ -309,7 +309,7 @@ namespace SweetsSpace
             if (!mappedType && !mappedExtraKey)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "Unknown sweets key '" << key << "' on line " << entry.lineNumber
+                warn << kLogPrefix << "Unknown meteors key '" << key << "' on line " << entry.lineNumber
                     << "; entry ignored.\n";
                 ManifestDebugTrace(warn.str());
                 continue;
@@ -376,7 +376,7 @@ namespace SweetsSpace
         return true;
     }
 
-    const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(SweetsType type) const
+    const MeteorsPrototypeDescriptor* MeteorsPrototypeManifest::Find(MeteorsType type) const
     {
         auto it = m_byType.find(type);
         if (it == m_byType.end())
@@ -386,7 +386,7 @@ namespace SweetsSpace
         return &it->second;
     }
 
-    std::optional<SweetsType> SweetsPrototypeManifest::Resolve(const std::string& key) const
+    std::optional<MeteorsType> MeteorsPrototypeManifest::Resolve(const std::string& key) const
     {
         const std::string normalized = NormalizeKey(key);
         auto it = m_lookup.find(normalized);
@@ -397,9 +397,9 @@ namespace SweetsSpace
         return it->second;
     }
 
-    std::vector<SweetsPrototypeEntry> SweetsPrototypeManifest::Enumerate() const
+    std::vector<MeteorsPrototypeEntry> MeteorsPrototypeManifest::Enumerate() const
     {
-        std::vector<SweetsPrototypeEntry> entries;
+        std::vector<MeteorsPrototypeEntry> entries;
         entries.reserve(m_byType.size());
         for (const auto& pair : m_byType)
         {
@@ -408,7 +408,7 @@ namespace SweetsSpace
         return entries;
     }
 
-    const SweetsPrototypeDescriptor* SweetsPrototypeManifest::Find(const std::string& key) const
+    const MeteorsPrototypeDescriptor* MeteorsPrototypeManifest::Find(const std::string& key) const
     {
         auto resolved = Resolve(key);
         if (resolved)
@@ -431,23 +431,23 @@ namespace SweetsSpace
         return &descriptorIt->second;
     }
 
-    std::string ToString(SweetsType type)
+    std::string ToString(MeteorsType type)
     {
         switch (type)
         {
-        case SweetsType::Strawberry:
+        case MeteorsType::Strawberry:
             return "Strawberry";
-        case SweetsType::Blueberry:
+        case MeteorsType::Blueberry:
             return "Blueberry";
-        case SweetsType::Pineapple:
+        case MeteorsType::Pineapple:
             return "Pineapple";
         default:
             return "Unknown";
         }
     }
 
-    std::optional<SweetsType> ParseSweetsType(const std::string& key)
+    std::optional<MeteorsType> ParseMeteorsType(const std::string& key)
     {
-        return SweetsPrototypeManifest::Instance().Resolve(key);
+        return MeteorsPrototypeManifest::Instance().Resolve(key);
     }
 }

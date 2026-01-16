@@ -4,7 +4,7 @@
 #include <deque>
 #include <functional>
 #include <string>
-#include "Sweets/SweetsTypes.h"
+#include "Meteors/MeteorsTypes.h"
 
 namespace Core
 {
@@ -16,9 +16,9 @@ namespace GameFlow
     class PhaseManager;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsManager;
+    class MeteorsManager;
 }
 
 namespace GameplayProgression
@@ -68,7 +68,7 @@ namespace GameplayProgression
 
     struct TowerTelemetryInput
     {
-        SweetsSpace::SweetsManager* sweetsManager = nullptr;
+        MeteorsSpace::MeteorsManager* meteorsManager = nullptr;
         GameFlow::PhaseManager* phaseManager = nullptr;
         int clearPhaseCount = 0;
         float remainingCountdownSeconds = 0.0f;

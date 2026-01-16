@@ -4,18 +4,18 @@
 
 #include "ICamera.h"
 #include "ModelRender.h"
-#include "Sweets/SweetsRegistry.h"
+#include "Meteors/MeteorsRegistry.h"
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsRenderer
+    class MeteorsRenderer
     {
     public:
-        explicit SweetsRenderer(const SweetsRegistry& registry);
+        explicit MeteorsRenderer(const MeteorsRegistry& registry);
 
         void DrawAll(Render::ModelRenderer& renderer, const std::shared_ptr<::CameraSpace::ICamera>& camera) const;
 
     private:
-        const SweetsRegistry* m_registry;
+        const MeteorsRegistry* m_registry;
     };
 }

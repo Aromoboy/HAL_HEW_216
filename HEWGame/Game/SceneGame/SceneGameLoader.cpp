@@ -8,7 +8,7 @@
 #include "GameplayConfig.h"
 #include "Systems/Physics/ColliderBuilder.h"
 #include "SceneGameConfigLoader.h"
-#include "SweetsPrototypeManifest.h"
+#include "MeteorsPrototypeManifest.h"
 #include "Systems/Draw/DrawSystem.h"
 #include "Systems/Physics/IPhysicsBinder.h"
 #include "TextureCache.h"
@@ -64,7 +64,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         }
     }
 
-    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
     const auto* fairyDescriptor = manifest.Find("Fairy");
     if (!fairyDescriptor && !result.playerModel)
     {
@@ -320,7 +320,7 @@ std::string SceneGameLoader::NormalizeColliderKey(const std::string& key)
 
 std::string SceneGameLoader::ResolvePlayerColliderKey(const std::string& key)
 {
-    const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
     const auto resolvedType = manifest.Resolve(key);
     std::string resolvedKey = NormalizeColliderKey(key);
     if (resolvedType)

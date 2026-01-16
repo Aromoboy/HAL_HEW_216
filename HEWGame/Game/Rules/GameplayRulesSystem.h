@@ -12,9 +12,9 @@ namespace GameFlow
     class PhaseManager;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsManager;
+    class MeteorsManager;
 }
 
 class GameplayRulesSystem
@@ -31,7 +31,7 @@ public:
     {
         bool isPlaying = false;
         float deltaSeconds = 0.0f;
-        SweetsSpace::SweetsManager* sweetsManager = nullptr;
+        MeteorsSpace::MeteorsManager* meteorsManager = nullptr;
         GameFlow::PhaseManager* phaseManager = nullptr;
         int clearPhaseCount = 0;
     };
