@@ -588,24 +588,7 @@ namespace MeteorsSpace
 
     void MeteorsLifecycle::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!meteors || !m_registry)
-        {
-            return;
-        }
-
-        auto found = m_registry->Lookup().find(meteors);
-        if (found == m_registry->Lookup().end())
-        {
-            return;
-        }
-
-        if (meteors->IsPendingDestroy())
-        {
-            return;
-        }
-
-        m_outOfViewSeconds.erase(meteors.get());
-        meteors->MarkPendingDestroy();
+        RemoveMeteorsEntry(meteors, DeleteReason::Hit, "PlayerHit", true, nullptr);
     }
 
     void MeteorsLifecycle::ClearAllMeteors()
