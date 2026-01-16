@@ -722,6 +722,7 @@ void SceneGame::OnEnter()
     if (m_pManager)
     {
         m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.01f);  // ループ有効
+    }
 }
 
 void SceneGame::OnExit()
