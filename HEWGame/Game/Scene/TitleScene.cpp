@@ -19,6 +19,11 @@
 #include <sstream>
 #include <string>
 
+TitleScene::TitleScene(SceneSpace::SceneManager& manager)
+    : m_manager(&manager)
+{
+}
+
 bool TitleScene::Load(Core::Input& input)
 {
     (void)input;
