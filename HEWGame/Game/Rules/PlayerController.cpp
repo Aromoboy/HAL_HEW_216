@@ -232,6 +232,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     if (input.sweetsManager)
     {
+        // Sweets wrap horizontally using the same camera-derived bounds as the player.
         input.sweetsManager->SetHorizontalBounds(minX, maxX);
     }
 

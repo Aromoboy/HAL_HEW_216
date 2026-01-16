@@ -201,17 +201,18 @@ namespace
         return SweetsSpace::SweetsState::Active;
     }
 
-    bool IsHorizontallyOutOfBounds(
+    bool WrapSweetsHorizontally(
         ::SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
         float margin,
         float fallbackLimit,
-        bool* usedFallback)
+        bool* usedFallback,
+        bool* wasOutOfBounds)
     {
         sweets.SyncColliderBounds();
         const AABB bounds = sweets.GetAABB();
-        float minX = bounds.min.x;
-        float maxX = bounds.max.x;
+        const float minX = bounds.min.x;
+        const float maxX = bounds.max.x;
 
         const float sanitizedMargin = std::max(0.0f, margin);
         float allowedMin = -fallbackLimit;
@@ -227,7 +228,35 @@ namespace
             allowedMax = worldBounds->second + sanitizedMargin;
         }
 
-        return minX < allowedMin || maxX > allowedMax;
+        const bool outOfBounds = minX < allowedMin || maxX > allowedMax;
+        if (wasOutOfBounds)
+        {
+            *wasOutOfBounds = outOfBounds;
+        }
+
+        if (!outOfBounds)
+        {
+            return false;
+        }
+
+        const float span = allowedMax - allowedMin;
+        if (span <= kHorizontalBoundsEpsilon)
+        {
+            return false;
+        }
+
+        float3 position = sweets.GetTransform().position;
+        if (minX < allowedMin)
+        {
+            position.x += span;
+        }
+        else if (maxX > allowedMax)
+        {
+            position.x -= span;
+        }
+
+        sweets.SetPositionViaPhysics(position);
+        return true;
     }
 }
 
@@ -319,12 +348,14 @@ namespace SweetsSpace
                 if (!isCarried)
                 {
                     bool usedFallbackBounds = false;
-                    const bool outOfBounds = IsHorizontallyOutOfBounds(
+                    bool wasOutOfBounds = false;
+                    const bool wrapped = WrapSweetsHorizontally(
                         *sweets,
                         horizontalBounds,
                         m_horizontalBoundsMargin,
                         fallbackHorizontalLimit,
-                        &usedFallbackBounds);
+                        &usedFallbackBounds,
+                        &wasOutOfBounds);
                     if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
                     {
                         std::ostringstream oss;
@@ -334,9 +365,12 @@ namespace SweetsSpace
                         m_warnedMissingHorizontalBounds = true;
                     }
 
-                    if (outOfBounds)
+                    if (wasOutOfBounds)
                     {
-                        missedSweets.push_back(sweets);
+                        if (!wrapped)
+                        {
+                            missedSweets.push_back(sweets);
+                        }
                         ++it;
                         continue;
                     }
