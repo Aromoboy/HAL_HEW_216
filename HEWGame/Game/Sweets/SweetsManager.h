@@ -135,7 +135,6 @@ namespace SweetsSpace
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         bool IsAnchoredToCake(const ActiveSweets& sweets) const;
         int GetSweetsCount() const;
-        void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;
     private:
         Systems::DrawSystem* m_drawSystem;

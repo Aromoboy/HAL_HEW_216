@@ -316,21 +316,6 @@ namespace SweetsSpace
         return m_registry.CountAll();
     }
 
-    void SweetsManager::OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets)
-    {
-        if (!sweets)
-        {
-            return;
-        }
-
-        const auto lookup = m_registry.Lookup().find(sweets);
-        const SweetsState currentState = (lookup != m_registry.Lookup().end()) ? lookup->second : SweetsState::Active;
-        if (currentState != SweetsState::Stacked)
-        {
-            SetState(sweets, SweetsState::Stacked);
-        }
-    }
-
     bool SweetsManager::GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const
     {
         outSnapshot = m_contacts.BuildDebugSnapshot();

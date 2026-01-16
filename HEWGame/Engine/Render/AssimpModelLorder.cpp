@@ -275,15 +275,6 @@ namespace
             }
         }
 
-        if (normalizedModelPath.find("guideline") != std::string::npos)
-        {
-            const std::string guidelineTexture = "Assets/Texture/GuideLine.png";
-            if (std::filesystem::exists(guidelineTexture))
-            {
-                return guidelineTexture;
-            }
-        }
-
         return std::nullopt;
     }
 

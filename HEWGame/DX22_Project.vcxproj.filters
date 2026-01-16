@@ -49,9 +49,6 @@
     <Filter Include="Game\GameFlow">
       <UniqueIdentifier>{D3DA52B9-D78F-4317-952F-53362A913F24}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Guide">
-      <UniqueIdentifier>{9E27D888-4BA6-4A0F-9A61-3E31B92BC901}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Game\PowerUp">
       <UniqueIdentifier>{12A72A8D-5AC5-40E1-A42F-E023D4077BF8}</UniqueIdentifier>
     </Filter>
@@ -296,12 +293,6 @@
     </ClCompile>
     <ClCompile Include="Game\GameFlow\PhaseManager.cpp">
       <Filter>Game\GameFlow</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Guide\GuidelineActor.cpp">
-      <Filter>Game\Guide</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Guide\GuidelineSystem.cpp">
-      <Filter>Game\Guide</Filter>
     </ClCompile>
     <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp">
       <Filter>Game\PowerUp</Filter>
@@ -695,12 +686,6 @@
     </ClInclude>
     <ClInclude Include="Game\GameFlow\PhaseManager.h">
       <Filter>Game\GameFlow</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Guide\GuidelineActor.h">
-      <Filter>Game\Guide</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Guide\GuidelineSystem.h">
-      <Filter>Game\Guide</Filter>
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpCursor.h">
       <Filter>Game\PowerUp</Filter>

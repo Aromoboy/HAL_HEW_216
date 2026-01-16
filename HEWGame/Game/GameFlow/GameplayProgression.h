@@ -4,8 +4,6 @@
 #include <deque>
 #include <functional>
 #include <string>
-#include <unordered_set>
-
 #include "Sweets/SweetsTypes.h"
 
 namespace Core
@@ -17,8 +15,6 @@ namespace GameFlow
 {
     class PhaseManager;
 }
-
-class GuidelineActor;
 
 namespace SweetsSpace
 {
@@ -60,51 +56,6 @@ namespace GameplayProgression
     };
 
     CountdownResult UpdateCountdown(const CountdownInput& input, CountdownState state);
-
-    struct GuidelineState
-    {
-        float heightMeters = 0.0f;
-        float stepMeters = 0.0f;
-        float cooldownRemainingSeconds = 0.0f;
-        float cooldownDurationSeconds = 0.0f;
-        float triggerCooldownSeconds = 0.0f;
-        std::unordered_set<SweetsSpace::ActiveSweets*> triggeredThisHeight;
-    };
-
-    struct GuidelineInput
-    {
-        SweetsSpace::SweetsManager* sweetsManager = nullptr;
-        GuidelineActor* guidelineActor = nullptr;
-        float guidelineCenterX = 0.0f;
-        float timeBonusSeconds = 0.0f;
-        float globalCooldownSeconds = 0.0f;
-        LogFn log;
-        const char* logPrefix = "";
-    };
-
-    struct GuidelineCheckResult
-    {
-        GuidelineState state;
-        bool crossed = false;
-        float triggerHeight = 0.0f;
-    };
-
-    GuidelineCheckResult CheckGuidelineCrossing(const GuidelineInput& input, GuidelineState state);
-    GuidelineState OnGuidelineCrossed(const GuidelineInput& input, GuidelineState state);
-    std::deque<PendingTimeBonus> ApplyGuidelineBonus(const GuidelineInput& input,
-                                                     std::deque<PendingTimeBonus> pendingBonuses,
-                                                     float triggerHeight);
-
-    struct GuidelineAdvanceResult
-    {
-        GuidelineState state;
-        std::deque<PendingTimeBonus> pendingBonuses;
-    };
-
-    GuidelineAdvanceResult HandleGuidelineAdvance(const GuidelineInput& input,
-                                                  GuidelineState state,
-                                                  std::deque<PendingTimeBonus> pendingBonuses,
-                                                  float triggerHeight);
 
     struct TowerTelemetryState
     {
