@@ -1251,9 +1251,14 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
         if (input->IsTrigger(Core::ActionId::DebugToggle))
         {
                 g_DebugDrawEnabled = !g_DebugDrawEnabled;
+                g_DrawColliders = g_DebugDrawEnabled;
+                g_DrawColliderBounds = g_DebugDrawEnabled;
                 std::ostringstream oss;
                 oss << kLogPrefix << "[DebugDraw] r.DebugDrawEnabled="
-                        << (g_DebugDrawEnabled ? 1 : 0) << " (F5).\n";
+                        << (g_DebugDrawEnabled ? 1 : 0)
+                        << " r.DebugColliders=" << (g_DrawColliders ? 1 : 0)
+                        << " r.DebugColliderBounds=" << (g_DrawColliderBounds ? 1 : 0)
+                        << " (F5).\n";
                 DebugTrace(oss.str());
         }
 
@@ -1345,8 +1350,20 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         DrawColliderOverlay(*entity, fixtureColor);
     };
 
-    if (g_DrawColliders)
+    static bool s_loggedCollidersDisabled = false;
+    if (!g_DrawColliders)
     {
+        if (!s_loggedCollidersDisabled)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ColliderDebug] Colliders hidden: r.DebugColliders=0 (toggle with F4).\n";
+            DebugTrace(oss.str());
+            s_loggedCollidersDisabled = true;
+        }
+    }
+    else
+    {
+        s_loggedCollidersDisabled = false;
         drawEntity(player.get());
 
         if (m_sweetsManager)
@@ -1368,6 +1385,11 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         for (const auto& entity : m_stagePhysicsEntities)
         {
             drawEntity(entity.get());
+        }
+
+        for (const auto& instance : m_activeMissiles)
+        {
+            drawEntity(instance.entity.get());
         }
     }
 
