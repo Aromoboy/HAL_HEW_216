@@ -68,9 +68,9 @@ namespace Entities
         m_movementSystem.SetYawOffsetRadians(yawOffsetRadians);
     }
 
-    void Player::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing)
+    void Player::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing, float maxSpeed)
     {
-        m_movementSystem.ConfigureMovement(accel, brake, turnRate, rollResponse, inputSmoothing);
+        m_movementSystem.ConfigureMovement(accel, brake, turnRate, rollResponse, inputSmoothing, maxSpeed);
     }
 
     float Player::GetMoveSpeed() const

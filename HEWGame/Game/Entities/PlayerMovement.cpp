@@ -287,7 +287,10 @@ namespace Entities
                 const float acceleration = hasInput ? m_accel : m_brake;
                 const float maxDelta = acceleration * ctx.dt;
                 float3 nextVelocity = MoveTowards(currentVelocity, desired, maxDelta);
-                nextVelocity = ClampSpeed(nextVelocity, m_maxSpeed);
+                if (m_maxSpeed > 0.0f)
+                {
+                    nextVelocity = ClampSpeed(nextVelocity, m_maxSpeed);
+                }
 
                 if (hasBody)
                 {
@@ -313,7 +316,7 @@ namespace Entities
         }
     }
 
-    void PlayerMovement::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing)
+    void PlayerMovement::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing, float maxSpeed)
     {
         auto applySetting = [&](float value, float& target, const char* label) -> bool
         {
@@ -339,6 +342,7 @@ namespace Entities
         updated = applySetting(turnRate, m_turnRate, "turnRate") || updated;
         updated = applySetting(rollResponse, m_rollResponse, "rollResponse") || updated;
         updated = applySetting(inputSmoothing, m_inputSmoothing, "inputSmoothing") || updated;
+        updated = applySetting(maxSpeed, m_maxSpeed, "maxSpeed") || updated;
 
         if (updated)
         {
@@ -348,7 +352,8 @@ namespace Entities
                 << " brake=" << m_brake
                 << " turnRate=" << m_turnRate
                 << " rollResponse=" << m_rollResponse
-                << " smoothing=" << m_inputSmoothing << "\n";
+                << " smoothing=" << m_inputSmoothing
+                << " maxSpeed=" << m_maxSpeed << "\n";
             PlayerDebugTrace(oss.str());
         }
     }

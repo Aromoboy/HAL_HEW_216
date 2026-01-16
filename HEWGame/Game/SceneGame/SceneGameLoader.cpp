@@ -274,7 +274,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
             config.playerMovementSettings.brake,
             config.playerMovementSettings.turnRate,
             config.playerMovementSettings.rollResponse,
-            config.playerMovementSettings.inputSmoothing);
+            config.playerMovementSettings.inputSmoothing,
+            config.playerMovementSettings.maxSpeed);
         result.player->SetWrapMargin(config.playerMovementSettings.wrapMargin);
         result.player->SetWrapEnabled(config.playerMovementSettings.wrapX, config.playerMovementSettings.wrapY);
         if (config.physicsBinder && boxColliderComponent && playerShapeConfig && colliderReady)
