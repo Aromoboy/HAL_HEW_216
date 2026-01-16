@@ -40,6 +40,12 @@ void TitleScene::Draw()
     RootDraw();
 }
 
+void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
+    (void)activeCamera;
+    Draw();
+}
+
 void TitleScene::OnEnter()
 {
     if (!m_camera)
