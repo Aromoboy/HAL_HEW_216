@@ -8,6 +8,7 @@
 #include "Core/Input.h"
 #include "Core/UpdateNode.h"
 #include "Systems/Physics/PhysicsBinder.h"
+#include "Systems/Physics/CollisionLayer.h"
 #include "Systems/Draw/DrawSystem.h"
 #include "BoxColliderComponent.h"
 #include "DirectX.h"
@@ -15,6 +16,7 @@
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
 #include "Sweets/BaseSweets.h"
+#include "Sweets/SweetsPrototypeManifest.h"
 #include "Render/Model.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
@@ -886,6 +888,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 m_playerSpeedMultiplier
             };
             m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+
+            if (input->IsTrigger(Core::ActionId::FireMissile))
+            {
+                FireMissile();
+            }
         }
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
@@ -972,6 +979,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_uiOverlay->Update(uiData);
     }
 
+    UpdateMissiles(ctx.dt);
+
     if (input && input->IsKeyPress(VK_RETURN))
     {
         if (m_manager)
@@ -982,6 +991,140 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         return;
     }
 
+}
+
+void SceneGame::FireMissile()
+{
+    if (!player || !m_physicsBinder || !m_drawSystem)
+    {
+        return;
+    }
+
+    if (!m_missileModel)
+    {
+        const auto* descriptor = SweetsSpace::SweetsPrototypeManifest::Instance().Find("Missile");
+        const std::string modelPath = descriptor ? descriptor->modelPath : std::string("Assets/Model/Missile.fbx");
+        m_missileModel = Render::ModelCache::Instance().Get(modelPath);
+        if (!m_missileModel)
+        {
+            DebugTrace(std::string(kLogPrefix) + "Missile model load failed; firing skipped.\n");
+            return;
+        }
+    }
+
+    const Transform playerTransform = player->GetTransform();
+    const float yaw = playerTransform.rotation.z;
+    const float3 forward{ std::cos(yaw), std::sin(yaw), 0.0f };
+    constexpr float kSpawnOffset = 1.5f;
+    constexpr float kMissileSpeed = 40.0f;
+    constexpr float kMissileLifetimeSeconds = 6.0f;
+
+    Transform missileTransform = playerTransform;
+    missileTransform.position.x += forward.x * kSpawnOffset;
+    missileTransform.position.y += forward.y * kSpawnOffset;
+
+    Physics::BoxColliderComponent collider{};
+    constexpr float kMissileHalfWidth = 0.2f;
+    constexpr float kMissileHalfHeight = 0.1f;
+    collider.AddBox(kMissileHalfWidth, kMissileHalfHeight);
+
+    Physics::Box2DShapeConfig shapeConfig{};
+    shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
+    shapeConfig.bodyType = b2_dynamicBody;
+    shapeConfig.fixedRotation = true;
+    shapeConfig.allowRotation = false;
+    shapeConfig.linearDamping = 0.0f;
+    shapeConfig.angularDamping = 0.0f;
+    shapeConfig.density = 1.0f;
+    shapeConfig.friction = 0.1f;
+    shapeConfig.restitution = 0.0f;
+
+    auto missile = std::make_shared<Entities::PhysicalEntity>(
+        missileTransform,
+        shapeConfig,
+        Collision::CollisionLayer::Default,
+        m_missileModel,
+        nullptr,
+        Core::UpdatePhase::Gameplay,
+        0,
+        "projectile_missile",
+        false);
+    missile->SetBoxColliderComponent(collider);
+
+    m_physicsBinder->RegisterPhysicsBody(*missile);
+    missile->SetGravityScale(0.0f);
+    missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
+
+    m_drawSystem->RegisterRenderable(*missile);
+
+    m_activeMissiles.push_back(MissileInstance{ std::move(missile), kMissileLifetimeSeconds });
+}
+
+void SceneGame::UpdateMissiles(float deltaSeconds)
+{
+    if (m_activeMissiles.empty())
+    {
+        return;
+    }
+
+    if (deltaSeconds < 0.0f)
+    {
+        deltaSeconds = 0.0f;
+    }
+
+    auto shouldRemove = [&](MissileInstance& instance)
+    {
+        instance.remainingSeconds -= deltaSeconds;
+        if (instance.remainingSeconds > 0.0f && instance.entity)
+        {
+            return false;
+        }
+
+        if (instance.entity)
+        {
+            if (m_drawSystem)
+            {
+                m_drawSystem->UnregisterRenderable(*instance.entity);
+            }
+            if (m_physicsBinder)
+            {
+                m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
+            }
+        }
+
+        return true;
+    };
+
+    m_activeMissiles.erase(
+        std::remove_if(m_activeMissiles.begin(), m_activeMissiles.end(), shouldRemove),
+        m_activeMissiles.end());
+}
+
+void SceneGame::ClearMissiles()
+{
+    if (m_activeMissiles.empty())
+    {
+        return;
+    }
+
+    for (auto& instance : m_activeMissiles)
+    {
+        if (!instance.entity)
+        {
+            continue;
+        }
+
+        if (m_drawSystem)
+        {
+            m_drawSystem->UnregisterRenderable(*instance.entity);
+        }
+        if (m_physicsBinder)
+        {
+            m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
+        }
+    }
+
+    m_activeMissiles.clear();
 }
 
 
@@ -1877,6 +2020,8 @@ void SceneGame::ResetPlaySession()
     {
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
     }
+
+    ClearMissiles();
 
     if (player)
     {
