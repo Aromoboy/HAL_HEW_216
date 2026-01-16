@@ -150,7 +150,9 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
             << "' invalid; attempting fallback collider.\n";
         LogMessage(m_log, oss.str());
 
+        SceneGameConfig::PlayerColliderTuning fallbackTuning{};
         colliderRequest.allowFallback = true;
+        colliderRequest.tuning = &fallbackTuning;
         Physics::ColliderBuilder::BuildResult fallbackBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
         if (colliderHasShapes(fallbackBuild) && shapeConfigIsValid(fallbackBuild))
         {
@@ -159,20 +161,24 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         }
     }
 
-    if (colliderBuild.collider && !colliderBuild.collider->Empty())
+    if (colliderReady)
     {
-        boxColliderComponent = colliderBuild.collider;
+        if (colliderBuild.collider && !colliderBuild.collider->Empty())
+        {
+            boxColliderComponent = colliderBuild.collider;
+        }
+        if (colliderBuild.shapeConfig && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None)
+        {
+            playerShapeConfig = colliderBuild.shapeConfig;
+        }
+        playerColliderHalfExtents = colliderBuild.halfExtents;
+        playerColliderOffset = colliderBuild.centerOffset;
     }
-    if (colliderBuild.shapeConfig && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None)
-    {
-        playerShapeConfig = colliderBuild.shapeConfig;
-    }
-    playerColliderHalfExtents = colliderBuild.halfExtents;
-    playerColliderOffset = colliderBuild.centerOffset;
-    if (!colliderReady)
+    else
     {
         std::ostringstream oss;
-        oss << m_logPrefix << "[PlayerCollider] Fallback collider build failed; physics registration will still be attempted.\n";
+        oss << m_logPrefix << "[PlayerCollider] ERROR: fallback collider build failed for key='"
+            << resolvedColliderKey << "'; skipping physics registration to prevent missing collider.\n";
         LogMessage(m_log, oss.str());
     }
 
@@ -231,7 +237,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
         result.player->SetYawOffsetRadians(config.playerSpawnTransform.playerYawOffsetRadians);
-        if (config.physicsBinder)
+        if (config.physicsBinder && boxColliderComponent && playerShapeConfig && colliderReady)
         {
             config.physicsBinder->RegisterPhysicsBody(*result.player);
         }
