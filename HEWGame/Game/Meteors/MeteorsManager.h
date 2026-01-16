@@ -161,6 +161,7 @@ namespace MeteorsSpace
         bool m_hasCachedPlayerPosition{ false };
         std::mt19937 m_random;
         std::unordered_map<ActiveMeteors*, int> m_meteorsHitCounts;
+        std::unordered_map<ActiveMeteors*, float> m_spawnHomingTimers;
     };
 
 }

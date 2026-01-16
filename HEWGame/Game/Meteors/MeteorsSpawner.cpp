@@ -473,6 +473,7 @@ namespace MeteorsSpace
         bool hasSpawnRadius = false;
         bool hasSpawnRadiusJitter = false;
         bool hasSpawnMinSeparation = false;
+        bool hasInitialHomingSeconds = false;
         bool hasMercurySpeed = false;
         bool hasMeteorSpeed = false;
         bool hasMeteoriteSpeed = false;
@@ -492,6 +493,7 @@ namespace MeteorsSpace
             hasSpawnRadius = false;
             hasSpawnRadiusJitter = false;
             hasSpawnMinSeparation = false;
+            hasInitialHomingSeconds = false;
             hasMercurySpeed = false;
             hasMeteorSpeed = false;
             hasMeteoriteSpeed = false;
@@ -506,7 +508,8 @@ namespace MeteorsSpace
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
                 && !hasInitialPerLane && !hasPhaseStartBonus && !hasSpawnRadius && !hasSpawnRadiusJitter
-                && !hasSpawnMinSeparation && !hasMercurySpeed && !hasMeteorSpeed && !hasMeteoriteSpeed)
+                && !hasSpawnMinSeparation && !hasInitialHomingSeconds
+                && !hasMercurySpeed && !hasMeteorSpeed && !hasMeteoriteSpeed)
             {
                 return;
             }
@@ -683,6 +686,19 @@ namespace MeteorsSpace
                 if (TryParseFloat(entry.value, &offset))
                 {
                     config.spawnHeightOffset = offset;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "initial_homing_seconds" || normalizedKey == "initialhomingseconds")
+            {
+                float seconds = 0.0f;
+                if (TryParseFloat(entry.value, &seconds))
+                {
+                    config.initialHomingSeconds = std::max(0.0f, seconds);
+                    hasInitialHomingSeconds = true;
                 }
                 else
                 {
@@ -969,6 +985,16 @@ namespace MeteorsSpace
     {
         m_cachedPlayerPosition = position;
         m_hasCachedPlayerPosition = true;
+    }
+
+    std::optional<float3> MeteorsSpawner::GetCachedPlayerWorldPosition() const
+    {
+        if (!m_hasCachedPlayerPosition)
+        {
+            return std::nullopt;
+        }
+
+        return m_cachedPlayerPosition;
     }
 
     void MeteorsSpawner::NotifyPhaseChanged(int newPhase)
@@ -1374,6 +1400,7 @@ namespace MeteorsSpace
             << " spawnRadiusJitter=" << std::fixed << std::setprecision(2) << config.spawnRadiusJitter
             << " spawnMinSeparation=" << std::fixed << std::setprecision(2) << config.spawnMinSeparation
             << " spawnHeightOffset=" << std::fixed << std::setprecision(2) << config.spawnHeightOffset
+            << " initialHomingSeconds=" << std::fixed << std::setprecision(2) << config.initialHomingSeconds
             << " mercurySpeed=" << std::fixed << std::setprecision(2) << config.mercurySpeed
             << " meteorSpeed=" << std::fixed << std::setprecision(2) << config.meteorSpeed
             << " meteoriteSpeed=" << std::fixed << std::setprecision(2) << config.meteoriteSpeed
