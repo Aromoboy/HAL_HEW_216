@@ -100,6 +100,9 @@ private:
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 #endif
+    void FireMissile();
+    void UpdateMissiles(float deltaSeconds);
+    void ClearMissiles();
     void SetStageState(StageState newState);
     void OnStageStart();
     void OnStageClear();
@@ -158,6 +161,13 @@ protected:
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;
+    std::shared_ptr<Render::Model> m_missileModel;
+    struct MissileInstance
+    {
+        std::shared_ptr<Entities::PhysicalEntity> entity;
+        float remainingSeconds = 0.0f;
+    };
+    std::vector<MissileInstance> m_activeMissiles;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
