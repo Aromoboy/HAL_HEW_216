@@ -877,16 +877,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 #endif
 
-    const auto& platform = m_stageData.GetPlatform(0);
-    const float stageFloorY = platform.center.y;
     float deltaTime = ctx.timer.DeltaTime();
 
     m_playerController.UpdatePlayerBounds({
         player.get(),
         m_gameCamera.get(),
         m_sweetsManager.get(),
-        ctx.dt,
-        stageFloorY
+        ctx.dt
     });
 
     switch (m_stageState)
